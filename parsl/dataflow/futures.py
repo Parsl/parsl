@@ -45,11 +45,9 @@ class AppFuture(Future):
 
     def update_parent(self, fut):
         self.parent = fut
-        print (super(), type(super()) )
 
     def result(self, timeout=None):
-        print("FOooo")
-        logger.debug("In results")
+        #print("FOooo")
         logger.debug("Waiting on result of %s on %s", id(self), id(self.parent))
 
         if self.parent :

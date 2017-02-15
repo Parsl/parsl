@@ -49,32 +49,62 @@ class DataFlowKernel(object):
 
 
     def handle_update(self, task_id, future):
+        ''' This function is called only as a callback from a task being done
+        Move done task from runnable -> done
+        Move newly doable tasks from pending -> runnable , and launch
+        '''
         if future.done():
             logger.debug("Completed : %s with %s", task_id, future)
         else:
             logger.debug("Failed    : %s with %s", task_id, future)
+
+        # Identify tasks that have resolved dependencies and launch
         to_delete = []
         for task in list(self.pending.keys()):
             if self._count_deps(self.pending[task]['depends'], task) == 0 :
                 # We can now launch *task*
                 logger.debug("Task : %s is now runnable", task)
-                self.runnable[task] = self.pending[task]
+                try:
+                    self.runnable[task] = self.pending[task]
+                except KeyError:
+                    continue
+
                 to_delete.extend([task])
                 exec_fu = self.launch_task(self.runnable[task]['executable'], task)
                 logger.debug("Updating parent of %s to %s", self.runnable[task]['app_fu'],
                              exec_fu)
-
+                # Update the App_future with the Future from launch.
                 self.runnable[task]['app_fu'].update_parent(exec_fu)
                 self.runnable[task]['exec_fu'] = exec_fu
 
-        logger.debug("Deleteing : %s", to_delete)
+        #logger.debug("Deleteing : %s", to_delete)
         for task in to_delete:
             try:
                 del self.pending[task]
             except KeyError:
                 logger.debug("Caught KeyError on %s deleting from pending", task)
                 pass
+
+        # Move the done task from runnable to done
+        try:
+            self.done[task_id] = self.runnable[task_id]
+            del self.runnable[task_id]
+        except KeyError:
+            logger.debug("Caught KeyError on %s deleting from runnable", task_id)
+        finally:
+            self.write_status_log()
+
         return
+
+
+    def write_status_log(self):
+        logger.debug("Pending:%d   Runnable:%d   Done:%d", len(self.pending),
+                     len(self.runnable), len(self.done))
+
+    def print_status_log(self):
+        print("Pending:{0}   Runnable:{1}   Done:{2}".format( len(self.pending),
+                                                              len(self.runnable),
+                                                              len(self.done)) )
 
     def launch_task(self, executable, task_id):
         ''' Handle the actual submission of the task to the executor layer
