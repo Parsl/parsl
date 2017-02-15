@@ -36,7 +36,7 @@ class DataFlowKernel(object):
         self.executor        = executor
 
     @staticmethod
-    def _count_deps(depends):
+    def _count_deps(depends, task_id):
         ''' Count the number of unresolved futures in the list depends'''
         count = 0
         for dep in depends:
@@ -44,9 +44,37 @@ class DataFlowKernel(object):
                 if not dep.done():
                     count += 1
 
-        logger.debug("Counted deps : {0} on {1}".format(count, depends))
+        logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count
 
+
+    def handle_update(self, task_id, future):
+        if future.done():
+            logger.debug("Completed : %s with %s", task_id, future)
+        else:
+            logger.debug("Failed    : %s with %s", task_id, future)
+        to_delete = []
+        for task in list(self.pending.keys()):
+            if self._count_deps(self.pending[task]['depends'], task) == 0 :
+                # We can now launch *task*
+                logger.debug("Task : %s is now runnable", task)
+                self.runnable[task] = self.pending[task]
+                to_delete.extend([task])
+                exec_fu = self.launch_task(self.runnable[task]['executable'], task)
+                logger.debug("Updating parent of %s to %s", self.runnable[task]['app_fu'],
+                             exec_fu)
+
+                self.runnable[task]['app_fu'].update_parent(exec_fu)
+                self.runnable[task]['exec_fu'] = exec_fu
+
+        logger.debug("Deleteing : %s", to_delete)
+        for task in to_delete:
+            try:
+                del self.pending[task]
+            except KeyError:
+                logger.debug("Caught KeyError on %s deleting from pending", task)
+                pass
+        return
 
     def launch_task(self, executable, task_id):
         ''' Handle the actual submission of the task to the executor layer
@@ -54,7 +82,9 @@ class DataFlowKernel(object):
         We should most likely add a callback at this point
         '''
         logger.debug("Submitting to executor : %s", task_id)
-        return self.executor.submit(executable)
+        exec_fu = self.executor.submit(executable)
+        exec_fu.add_done_callback(partial(self.handle_update, task_id))
+        return exec_fu
 
     def submit (self, executable, depends, callback):
         ''' Add task to the dataflow system.
@@ -68,8 +98,8 @@ class DataFlowKernel(object):
         Returns:
                (AppFuture) [DataFutures,]
         '''
-        dep_cnt  = self._count_deps(depends)
         task_id  = uuid.uuid4()
+        dep_cnt  = self._count_deps(depends, task_id)
         task_def = { 'depends'    : depends,
                      'executable' : executable,
                      'callback'   : callback,
@@ -104,7 +134,7 @@ class DataFlowKernel(object):
                 self.fut_task_lookup[fut] = []
                 self.fut_task_lookup[fut].extend([task_id])
 
-
+        logger.debug("Launched : %s with %s", task_id, task_def['app_fu'])
         return task_def['app_fu']
 
 
@@ -140,11 +170,15 @@ class DataFlowKernel(object):
     def current_state(self):
         print("Pending :")
         for item in self.pending:
-            print("Task{0:5} : DepCnt:{1} | Deps:{2}".format(item, self.pending[item]['dep_cnt'],
-                                                             self.pending[item]['depends']))
-        print("Lookup  :")
-        for item in self.fut_task_lookup:
-            print("{0:10} : {1}".format(item, self.fut_task_lookup[item]))
+            print(self.pending[item])
+            print("Task{0} : DepCnt:{1} | Deps:{2}".format(item, self.pending[item]['dep_cnt'], 1))
+                                                             #self.pending[item]['depends']))
+
+                  #self.pending[item]['depends']))
+
+                #print("Lookup  :")
+        #for item in self.fut_task_lookup:
+        #    print("{0:10} : {1}".format(item, self.fut_task_lookup[item]))
 
 
 

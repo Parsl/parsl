@@ -48,6 +48,10 @@ class AppFuture(Future):
         print (super(), type(super()) )
 
     def result(self, timeout=None):
+        print("FOooo")
+        logger.debug("In results")
+        logger.debug("Waiting on result of %s on %s", id(self), id(self.parent))
+
         if self.parent :
             return self.parent.result(timeout=timeout)
         else:

@@ -30,6 +30,21 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     logger.addHandler(handler)
 
 
+def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
+    ''' Add a stream log handler
+    '''
+
+    if format_string is None:
+        format_string = "%(asctime)s %(name)s [%(levelname)s] %(message)s"
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    handler = logging.FileHandler(filename)
+    handler.setLevel(level)
+    formatter = logging.Formatter(format_string)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 
 class NullHandler (logging.Handler):
     ''' Setup default logging to /dev/null since this is library.
