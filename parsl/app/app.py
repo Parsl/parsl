@@ -1,14 +1,17 @@
 """ Definitions for the @App decorator and the App classes
+
+
 """
 
 import sys
 import logging
 import subprocess
+from concurrent.futures import Future
 
 logger = logging.getLogger(__name__)
 
 from parsl.app.futures import DataFuture
-
+from parsl.dataflow.dflow import DataFlowKernel
 class APP (object):
     """ Encapsulates the generic App
     """
@@ -39,7 +42,7 @@ class APP (object):
 
         try :
             logger.debug("Launching app : {0}".format(self.executable))
-            proc = subprocess.Popen(self.executable, stdout=std_out, stderr=std_err, shell=True)
+            proc = subprocess.Popen(self.executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
             proc.wait()
         except Exception as e:
             logger.error("Caught exception : {0}".format(e))
@@ -58,6 +61,23 @@ class APP (object):
 
     def __call__(self, *args, **kwargs):
         logger.debug("In __Call__")
+
+        # Identify the futures in the inputs
+        logger.debug("Received : %s ", kwargs['inputs'])
+
+        input_deps = [item for item in kwargs['inputs']
+                      if isinstance(item, Future) or issubclass(type(item), Future)]
+
+        # kwargs['inputs'] is a list of strings or DataFutures
+        newlist = []
+        for item in kwargs['inputs']:
+            if isinstance(item, DataFuture):
+                newlist.append(item.filepath)
+            else:
+                newlist.append(item)
+        kwargs['inputs'] = newlist
+
+
         def tracer(frame, event, arg):
             if event=='return':
                 self._locals = frame.f_locals.copy()
@@ -71,16 +91,18 @@ class APP (object):
             # disable tracer and replace with old one
             sys.setprofile(None)
 
-        logger.debug("Submitting via : {0}".format( self.executor))
+        logger.debug("Submitting via : %s",  self.executor)
         #print(kwargs)
-        logger.debug("cmd    : ", self._locals['cmd_line'])
+        logger.debug("cmd    : %s", self._locals['cmd_line'])
         self.executable = self._locals['cmd_line'].format(**kwargs)
-        logger.debug("Exec : {0}".format(self.executable))
+        logger.debug("Exec   : %s", self.executable)
 
+        if type(self.executor) == DataFlowKernel:
+            app_fut = self.executor.submit(self._callable, input_deps, None)
+        else:
+            app_fut = self.executor.submit(self._callable)
 
-        app_fut = self.executor.submit(self._callable)
-
-        out_futs = [DataFuture(app_fut, o) for o in kwargs['outputs'] ]
+        out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
         return app_fut, out_futs
         #return self.executor.submit(self.test)
 
@@ -98,16 +120,16 @@ class BashApp(APP):
 def App(apptype, executor):
     # App Decorator
 
-    logger.debug('Apptype : ')
-    logger.debug('Executor : ')
+    logger.debug('Apptype : %s', apptype)
+    logger.debug('Executor : %s', type(executor))
 
     app_def = { "exec_type" : apptype,
-                "inputs" : [],
-                "outputs" : [],
-                "env" : {} }
+                "inputs"    : [],
+                "outputs"   : [],
+                "env"       : {} }
 
     def Exec(f):
-        logger.debug("Decorator Exec : ", f)
+        logger.debug("Decorator Exec : %s", f)
         return APP(f, executor, **app_def)
 
     return Exec
