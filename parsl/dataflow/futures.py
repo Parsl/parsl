@@ -1,4 +1,6 @@
-""" We have two basic types of futures:
+""" AppFuture
+
+    We have two basic types of futures:
     1. DataFutures which represent data objects
     2. AppFutures which represent the futures on App/Leaf tasks.
     This module implements the AppFutures

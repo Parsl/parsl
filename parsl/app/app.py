@@ -12,12 +12,16 @@ logger = logging.getLogger(__name__)
 
 from parsl.app.futures import DataFuture
 from parsl.dataflow.dflow import DataFlowKernel
+
+
 class APP (object):
     """ Encapsulates the generic App
     """
 
     def __init__ (self, func, executor, inputs=[], outputs=[], env={},
                   walltime=60, exec_type="bash"):
+        ''' Constructor
+        '''
         self.func       = func
         self.inputs     = inputs
         self.executor   = executor
@@ -29,6 +33,8 @@ class APP (object):
         logger.debug('__init__ ')
 
     def _callable(self):
+        ''' The callable fn for external apps.
+        '''
         import time
         import subprocess
         start_t = time.time()
@@ -54,28 +60,25 @@ class APP (object):
         logger.debug("RunCommand Completed {0}".format(self.executable))
         return self.exec_duration
 
-    def test(self):
-        import time
-        time.sleep(0)
-        return 100
-
     def __call__(self, *args, **kwargs):
         logger.debug("In __Call__")
 
-        # Identify the futures in the inputs
-        logger.debug("Received : %s ", kwargs['inputs'])
+        input_deps = []
+        if 'inputs' in kwargs:
+            # Identify the futures in the inputs
+            logger.debug("Received : %s ", kwargs['inputs'])
 
-        input_deps = [item for item in kwargs['inputs']
-                      if isinstance(item, Future) or issubclass(type(item), Future)]
+            input_deps = [item for item in kwargs['inputs']
+                          if isinstance(item, Future) or issubclass(type(item), Future)]
 
-        # kwargs['inputs'] is a list of strings or DataFutures
-        newlist = []
-        for item in kwargs['inputs']:
-            if isinstance(item, DataFuture):
-                newlist.append(item.filepath)
-            else:
-                newlist.append(item)
-        kwargs['inputs'] = newlist
+            # kwargs['inputs'] is a list of strings or DataFutures
+            newlist = []
+            for item in kwargs['inputs']:
+                if isinstance(item, DataFuture):
+                    newlist.append(item.filepath)
+                else:
+                    newlist.append(item)
+            kwargs['inputs'] = newlist
 
 
         def tracer(frame, event, arg):
@@ -104,7 +107,6 @@ class APP (object):
 
         out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
         return app_fut, out_futs
-        #return self.executor.submit(self.test)
 
 class BashApp(APP):
     """ Extend App to cover the Bash App
