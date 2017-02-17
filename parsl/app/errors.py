@@ -11,3 +11,9 @@ class NotFutureError(ParslError):
     that expected a future.
     '''
     pass
+
+class InvalidAppTypeError(ParslError):
+    ''' An invalid app type was requested from the the @App decorator.
+    '''
+    pass
+

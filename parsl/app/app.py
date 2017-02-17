@@ -11,8 +11,9 @@ from concurrent.futures import Future
 logger = logging.getLogger(__name__)
 
 from parsl.app.futures import DataFuture
+from parsl.app.errors import *
 from parsl.dataflow.dflow import DataFlowKernel
-
+from functools import partial
 
 class APP (object):
     """ Encapsulates the generic App
@@ -108,15 +109,62 @@ class APP (object):
         out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
         return app_fut, out_futs
 
-class BashApp(APP):
-    """ Extend App to cover the Bash App
+
+class PythonApp(object):
+    """ Extend App to cover the Python App
     TODO : Well, this needs a lot of work.
     """
     def __init__ (self, func, executor, inputs=[], outputs=[], env={},
-                  walltime=60, exec_type="bash"):
-        ''' Initialize the bash app
+                  walltime=60, exec_type='python'):
+        ''' Initialize the python app
         '''
-        super(BashApp, self).__init__(*args, **kwargs)
+        self.func       = func
+        self.inputs     = inputs
+        self.executor   = executor
+        self.outputs    = outputs
+        self.exec_type  = exec_type
+        self.status     = 'created'
+        self.stdout     = 'STDOUT.txt'
+        self.stderr     = 'STDERR.txt'
+        logger.debug('__init__ ')
+
+    def __call__(self, *args, **kwargs):
+        logger.debug("In __Call__")
+
+        input_deps = []
+
+        input_deps.extend([item for item in args
+                           if isinstance(item, Future) or issubclass(type(item), Future)])
+
+        if 'inputs' in kwargs:
+            # Identify the futures in the inputs
+            logger.debug("Received : %s ", kwargs['inputs'])
+
+            input_deps.extend([item for item in kwargs['inputs']
+                               if isinstance(item, Future) or issubclass(type(item), Future)])
+
+            # kwargs['inputs'] is a list of strings or DataFutures
+            newlist = []
+            for item in kwargs['inputs']:
+                if isinstance(item, DataFuture):
+                    newlist.append(item.filepath)
+                else:
+                    newlist.append(item)
+            kwargs['inputs'] = newlist
+
+
+        logger.debug("Submitting via : %s",  self.executor)
+
+        self.executable = partial(self.func, *args, **kwargs)
+        logger.debug("Exec   : %s", self.executable)
+
+        if type(self.executor) == DataFlowKernel:
+            app_fut = self.executor.submit(self.executable, input_deps, None)
+        else:
+            app_fut = self.executor.submit(self.executable)
+
+        out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
+        return app_fut, out_futs
 
 
 def App(apptype, executor):
@@ -130,11 +178,22 @@ def App(apptype, executor):
                 "outputs"   : [],
                 "env"       : {} }
 
-    def Exec(f):
-        logger.debug("Decorator Exec : %s", f)
-        return APP(f, executor, **app_def)
+    if apptype == 'bash' :
+        def Exec(f):
+            logger.debug("Decorator Exec : %s", f)
+            return APP(f, executor, **app_def)
 
-    return Exec
+        return Exec
+
+    elif apptype == 'python' :
+        def Exec(f):
+            logger.debug("Decorator Exec : %s", f)
+            return PythonApp(f, executor, **app_def)
+
+        return Exec
+    else:
+        raise InvalidAppTypeError("Valid @App types are 'bash' or 'python'")
+
 
 if __name__ == '__main__' :
 

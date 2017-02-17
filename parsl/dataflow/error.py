@@ -10,4 +10,3 @@ class DuplicateTaskError(DataFlowExceptions):
 
 class MissingFutError(DataFlowExceptions):
     pass
-
