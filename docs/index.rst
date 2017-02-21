@@ -18,15 +18,11 @@ Contents:
 
 
 .. _dev_docs:
+.. toctree::
+   :maxdepth: 4
+   :caption: Developer Documentation
 
-.. automodule:: parsl
-    :members:
-
-.. autoclass:: parsl.app.app
-    :members:
-
-.. automodule:: parsl.dataflow.dflow
-    :members:
+   dev_docs
 
 
 

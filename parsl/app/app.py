@@ -1,5 +1,8 @@
-""" Definitions for the @App decorator and the App classes
+""" Parsl Apps
+==============
 
+Here lies the definitions for the @App decorator and the APP classes.
+The APP class encapsulates a generic leaf task that can be executed asynchronously.
 
 """
 

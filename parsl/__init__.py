@@ -1,6 +1,5 @@
-'''
-Parsl
-=====
+'''Parsl
+========
 
 Parallel Scripting Library, designed to enable efficient workflow execution.
 
