@@ -6,12 +6,27 @@
 Parsl - Parallel Scripting Library
 ##################################
 
-This is an experiment on bringing `data dependency based implicit parallelism <http://swift-lang.org/main/>`_ to Python.
+This is an experiment on bringing `data dependency based implicit parallelism <https://github.com/swift-lang/swift-e-lab/>`_ to Python.
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
+   :caption: User Guide
+
+   userguide/overview
+
+
+.. _dev_docs:
+
+.. automodule:: parsl
+    :members:
+
+.. autoclass:: parsl.app.app
+    :members:
+
+.. automodule:: parsl.dataflow.dflow
+    :members:
 
 
 

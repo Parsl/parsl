@@ -1,7 +1,9 @@
 ''' DataFlow Kernel.
 
 Track dependencies, and execute runnable tasks as dependencies resolve.
+
 '''
+
 import copy
 import uuid
 from functools import partial
@@ -27,7 +29,7 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, executor):
-        """ Initialize
+        """ Initialize the DataFlowKernel
         """
         self.pending         = {}
         self.fut_task_lookup = {}
@@ -37,7 +39,8 @@ class DataFlowKernel(object):
 
     @staticmethod
     def _count_deps(depends, task_id):
-        ''' Count the number of unresolved futures in the list depends'''
+        ''' Internal. Count the number of unresolved futures in the list depends'''
+
         count = 0
         for dep in depends:
             if isinstance(dep, Future) or issubclass(type(dep), Future):
@@ -53,6 +56,7 @@ class DataFlowKernel(object):
         Move done task from runnable -> done
         Move newly doable tasks from pending -> runnable , and launch
         '''
+
         if future.done():
             logger.debug("Completed : %s with %s", task_id, future)
         else:
@@ -111,6 +115,7 @@ class DataFlowKernel(object):
 
         We should most likely add a callback at this point
         '''
+
         logger.debug("Submitting to executor : %s", task_id)
         exec_fu = self.executor.submit(executable)
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
@@ -128,6 +133,7 @@ class DataFlowKernel(object):
         Returns:
                (AppFuture) [DataFutures,]
         '''
+
         task_id  = uuid.uuid4()
         dep_cnt  = self._count_deps(depends, task_id)
         task_def = { 'depends'    : depends,
@@ -172,6 +178,7 @@ class DataFlowKernel(object):
         ''' Iterate over the pending tasks
         For tasks with dep_cnt == 0, copy task to runnable, and make the callback
         '''
+
         runnable = []
         for task in self.pending:
             if self.pending[task]['dep_cnt'] == 0:
@@ -188,6 +195,9 @@ class DataFlowKernel(object):
         return
 
     def future_resolved(self, fut):
+        ''' Implemeting the future_resolved check
+        '''
+
         if fut not in self.fut_task_lookup:
             print("fut not in fut_task_lookup")
             raise MissingFutError("Missing task:{0} in fut_task_lookup".format(fut))
@@ -198,6 +208,7 @@ class DataFlowKernel(object):
                 self.pending[task_id]['dep_cnt'] -= 1
 
     def current_state(self):
+        
         print("Pending :")
         for item in self.pending:
             print(self.pending[item])
