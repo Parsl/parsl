@@ -10,6 +10,6 @@ setup(
     author_email='yadu@uchicago.edu',
     license='Apache 2.0',
     package_data={'': ['LICENSE']},
-    packages=['parsl'],
+    packages=['parsl', 'parsl.app', 'parsl.dataflow'],
     install_requires=[],
 )
