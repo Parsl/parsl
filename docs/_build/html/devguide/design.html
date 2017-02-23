@@ -1,0 +1,291 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Design and Rationale &mdash; Parsl 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="Parsl 0.1 documentation" href="../index.html"/>
+        <link rel="next" title="Developer Documentation" href="dev_docs.html"/>
+        <link rel="prev" title="Futures" href="../userguide/futures.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Parsl
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../userguide/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguide/apps.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguide/futures.html">Futures</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Developer Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Design and Rationale</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#swift-vs-parsl">Swift vs Parsl</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-evaluation">Parallel Evaluation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mappers">Mappers</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="dev_docs.html">Developer Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Parsl</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Design and Rationale</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/devguide/design.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="design-and-rationale">
+<h1>Design and Rationale<a class="headerlink" href="#design-and-rationale" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="swift-vs-parsl">
+<h2>Swift vs Parsl<a class="headerlink" href="#swift-vs-parsl" title="Permalink to this headline">¶</a></h2>
+<p>The following text is not well structured, and is mostly a brain dump that needs to be organized.
+Moving from swift to an established language (python) came with it&#8217;s own tradeoffs. We get the backing
+of a rich and very well known language to handle the language aspects as well as the libraries.
+However, we lose the parallel evaluation of every statement in a statement. The thesis is that what we
+lose is minimal and will not affect 95% of our workflows. This is not yet substanciated.</p>
+<div class="section" id="parallel-evaluation">
+<h3>Parallel Evaluation<a class="headerlink" href="#parallel-evaluation" title="Permalink to this headline">¶</a></h3>
+<p>In swift every statement is evaluated in parallel.</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">y</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>We see that y and z are assigned values in different order when we run swift multiple times. Swift evaluates both statements in parallel and the order in which they complete is mostly random.</p>
+<p>We will <em>not</em> have this behavior in Python. Each statement is evaluated in order.</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="p">[]</span> <span class="n">array</span><span class="p">;</span>
+<span class="n">foreach</span> <span class="n">v</span><span class="p">,</span><span class="n">i</span> <span class="n">in</span> <span class="p">[</span><span class="mi">1</span><span class="o">:</span><span class="mi">5</span><span class="p">]</span> <span class="p">{</span>
+   <span class="n">array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">v</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">foreach</span> <span class="n">v</span> <span class="n">in</span> <span class="n">array</span> <span class="p">{</span>
+   <span class="n">trace</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Another consequence is that in swift a foreach loop that consumes results in an array, need not wait for the foreach loop that fill the array. In the above example, the second foreach loop makes progress along with the first foreach loop as it fills the array.</p>
+<p>In parsl, a for loop that launches tasks has to complete launches before the control may proceed to
+the statement.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">futures</span> <span class="o">=</span> <span class="p">{};</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">futures</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">app_double</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fut_array</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">futures</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The first for loop first fills the futures dict before control can proceed to the second for loop that consumes the contents.</p>
+<p>The main conclusion here is that, if the iteration space is sufficiently large (or the app launches are throttled) then it is possible that tasks that are further down the control flow have to wait regardless of their dependencies being resolved.</p>
+</div>
+<div class="section" id="mappers">
+<h3>Mappers<a class="headerlink" href="#mappers" title="Permalink to this headline">¶</a></h3>
+<p>There are two choices here :</p>
+<ol class="arabic simple">
+<li>Have the user define the mappers and data objects</li>
+<li>Have the data objects be created only by Apps.</li>
+</ol>
+<p>In swift, the user defines file mappings like this :</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="cp"># Mapping a single file</span>
+<span class="n">file</span> <span class="n">f</span> <span class="o">&lt;</span><span class="s">&quot;f.txt&quot;</span><span class="o">&gt;</span><span class="p">;</span>
+
+<span class="cp"># Array of files</span>
+<span class="n">file</span> <span class="n">texts</span><span class="p">[]</span> <span class="o">&lt;</span><span class="n">filesys_mapper</span><span class="p">;</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s">&quot;.txt&quot;</span><span class="o">&gt;</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Whether the files mapped to an array are inputs or outputs to be created are inferred from whether they
+are on the left-handside or right-handside of an assignment. Variables on the left-handside are inferred
+to be outputs that have future like behavior. To avoid conflicting values being assigned to the same
+variable, swift variables are all immutable.</p>
+<p>For instance, the following is a major concern <em>if</em> variables were not immutable:</p>
+<div class="highlight-c"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="n">trace</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The results that trace would print would be non-deterministic, if x were mutable. In swift the above code
+would raise an error. However this is perfectly legal in python, and the x would take the last value it
+was assigned.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="dev_docs.html" class="btn btn-neutral float-right" title="Developer Documentation" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../userguide/futures.html" class="btn btn-neutral" title="Futures" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Yadu Nand Babuji.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

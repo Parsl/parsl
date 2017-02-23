@@ -1,0 +1,282 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Parsl Tutorial &mdash; Parsl 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="Parsl 0.1 documentation" href="../index.html"/>
+        <link rel="next" title="Overview" href="../userguide/overview.html"/>
+        <link rel="prev" title="Quickstart" href="quickstart.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Parsl
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Quickstart</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Parsl Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#dependencies">Dependencies</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../userguide/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguide/apps.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userguide/futures.html">Futures</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../devguide/design.html">Design and Rationale</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devguide/dev_docs.html">Developer Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Parsl</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Parsl Tutorial</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/quick/tutorial.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="parsl-tutorial">
+<h1>Parsl Tutorial<a class="headerlink" href="#parsl-tutorial" title="Permalink to this headline">¶</a></h1>
+<p>0 to Parsl in 10 minutes.</p>
+<p>Parsl library allows you to markup of function for parallel execution.
+When a parallel function is invoked a proxy for the results from the function
+is returned in the form of <code class="docutils literal"><span class="pre">futures</span></code>. <code class="docutils literal"><span class="pre">futures</span></code> are basically a placeholder
+for a result from a parallel function that allows you to check the status, get
+exceptions in case of errors and get results once they are available. <code class="docutils literal"><span class="pre">futures</span></code>
+returned by a function can be passed to another parallel function to specify
+dependencies.</p>
+<p>Parsl provides an <code class="docutils literal"><span class="pre">App</span></code> decorator to markup a function as a parallel function.
+Two kinds of <code class="docutils literal"><span class="pre">App</span></code> &#8216;s are currently supported : <strong>bash</strong> and <strong>python</strong>.
+The <code class="docutils literal"><span class="pre">App</span></code> decorator also accepts an <code class="docutils literal"><span class="pre">executor</span></code> which represents an execution
+resource such as threads, processes or even remote workers.</p>
+<p>Here&#8217;s an example using a <strong>bash</strong> app:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Import Parsl</span>
+<span class="kn">from</span> <span class="nn">parsl</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">parsl</span>
+
+<span class="c1"># Create a pool of 4 processes</span>
+<span class="n">workers</span> <span class="o">=</span> <span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+<span class="c1"># Here we define a bash app</span>
+<span class="nd">@App</span><span class="p">(</span><span class="s1">&#39;bash&#39;</span><span class="p">,</span> <span class="n">dfk</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">echo_to_file</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="p">[],</span>             <span class="c1"># List of futures or python objects</span>
+                 <span class="n">outputs</span><span class="o">=</span><span class="p">[],</span>            <span class="c1"># List of output files</span>
+                 <span class="n">stderr</span><span class="o">=</span><span class="s1">&#39;std.err&#39;</span><span class="p">,</span>      <span class="c1"># File to which STDERR is logged</span>
+                 <span class="n">stdout</span><span class="o">=</span><span class="s1">&#39;std.out&#39;</span><span class="p">):</span>     <span class="c1"># File to which STDOUT is logged</span>
+
+    <span class="c1"># A bash script is assigned to a special variable named cmd_line</span>
+    <span class="c1"># The string provided is formatted with the args, and kwargs to the fn echo_to_file</span>
+    <span class="n">cmd_line</span> <span class="o">=</span> <span class="s1">&#39;echo {inputs} &gt; {outputs[0]}&#39;</span>
+
+
+<span class="n">fu</span><span class="p">,</span> <span class="n">outs</span> <span class="o">=</span> <span class="n">echo_to_file</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Hello World&quot;</span><span class="p">],</span> <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;hello.txt&#39;</span><span class="p">])</span>
+<span class="n">fu</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Here&#8217;s an example of similar behavior with a pure <strong>python</strong> app:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># Import Parsl</span>
+<span class="kn">from</span> <span class="nn">parsl</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">parsl</span>
+
+<span class="c1"># Create a pool of 4 processes</span>
+<span class="n">workers</span> <span class="o">=</span> <span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+<span class="c1"># Here we define a bash app</span>
+<span class="nd">@App</span><span class="p">(</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="n">dfk</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">echo_to_file</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="n">outputs</span><span class="o">=</span><span class="p">[]):</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+        <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">True</span>
+
+
+<span class="n">fu</span><span class="p">,</span> <span class="n">outs</span> <span class="o">=</span> <span class="n">echo_to_file</span><span class="p">(</span><span class="s2">&quot;Hello World&quot;</span><span class="p">,</span> <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;hello.txt&#39;</span><span class="p">])</span>
+<span class="n">fu</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="section" id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<p>The above example shows you how to define app</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../userguide/overview.html" class="btn btn-neutral float-right" title="Overview" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="quickstart.html" class="btn btn-neutral" title="Quickstart" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Yadu Nand Babuji.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
