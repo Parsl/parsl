@@ -26,14 +26,19 @@ doesn't log anything. However the following helper functions are provided for lo
 
 '''
 
+from parsl.version import VERSION
 from parsl.app.app import APP, App
 from parsl.app.executors import ThreadPoolExecutor, ProcessPoolExecutor
 import logging
 import parsl.app.errors
+
 from parsl.dataflow.dflow import DataFlowKernel
+from parsl.app.app_factory import AppFactoryFactory
+APP_FACTORY_FACTORY = AppFactoryFactory('central')
+#print(APP_FACTORY)
 
 __author__  = 'Yadu Nand Babuji'
-__version__ = '0.1.0'
+__version__ = VERSION
 
 __all__ = ['App', 'DataFlowKernel', 'ThreadPoolExecutor', 'ProcessPoolExecutor']
 
@@ -50,7 +55,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     '''
 
     if format_string is None:
-        format_string = "%(asctime)s %(name)s [%(levelname)s] %(message)s"
+        format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
@@ -91,5 +96,6 @@ class NullHandler (logging.Handler):
     '''
     def emit(self, record):
         pass
+
 
 logging.getLogger('parsl').addHandler(NullHandler())

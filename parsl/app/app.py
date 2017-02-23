@@ -9,6 +9,7 @@ The APP class encapsulates a generic leaf task that can be executed asynchronous
 import sys
 import logging
 import subprocess
+from inspect import signature
 from concurrent.futures import Future
 
 logger = logging.getLogger(__name__)
@@ -18,22 +19,37 @@ from parsl.app.errors import *
 from parsl.dataflow.dflow import DataFlowKernel
 from functools import partial
 
+
 class APP (object):
     """ Encapsulates the generic App
     """
 
-    def __init__ (self, func, executor, inputs=[], outputs=[], env={},
-                  walltime=60, exec_type="bash"):
-        ''' Constructor
+    def __init__ (self, func, executor, walltime=60, exec_type="bash"):
+        ''' Constructor for the APP object.
+
+        Args:
+             func (function): Takes the function to be made into an App
+             executor (executor): Executor for the execution resource
+
+        Kwargs:
+             walltime (int) : Walltime in seconds for the app execution
+             exec_type (string) : App type (bash|python)
+
+        Returns:
+             APP object.
+
         '''
+        self.__name__   = func.__name__
         self.func       = func
-        self.inputs     = inputs
         self.executor   = executor
-        self.outputs    = outputs
         self.exec_type  = exec_type
         self.status     = 'created'
-        self.stdout     = 'STDOUT.txt'
-        self.stderr     = 'STDERR.txt'
+
+        sig = signature(func)
+        self.stdout  = sig.parameters['stdout'].default if 'stdout' in sig.parameters else None
+        self.stderr  = sig.parameters['stderr'].default if 'stderr' in sig.parameters else None
+        self.inputs  = sig.parameters['inputs'].default if 'inputs' in sig.parameters else []
+        self.outputs = sig.parameters['outputs'].default if 'outputs' in sig.parameters else []
         logger.debug('__init__ ')
 
     def _callable(self):
@@ -45,27 +61,31 @@ class APP (object):
         if self.exec_type != "bash":
             raise NotImplemented
 
-        logger.debug("Running app : bash")
-        std_out = open(self.stdout, 'w')
-        std_err = open(self.stderr, 'w')
+        #logger.debug("Running app : bash")
+        std_out = open(self.stdout, 'w') if self.stdout else None
+        std_err = open(self.stderr, 'w') if self.stderr else None
         start_time = time.time()
 
         try :
-            logger.debug("Launching app : {0}".format(self.executable))
+            logger.debug("id:{0} Executing app : {1}".format(id(self), self.executable))
             proc = subprocess.Popen(self.executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
             proc.wait()
+            self.returncode = proc.returncode
         except Exception as e:
             logger.error("Caught exception : {0}".format(e))
             self.error = e
             self.status = 'failed'
-            return -1
+            raise AppException("App caught exception : {0}".format(proc.returncode), e)
 
         self.exec_duration = time.time() - start_t
-        logger.debug("RunCommand Completed {0}".format(self.executable))
-        return self.exec_duration
+        #logger.debug("RunCommand Completed %s ", self.executable)
+        return self.returncode
 
     def __call__(self, *args, **kwargs):
-        logger.debug("In __Call__")
+
+
+        self.stdout = kwargs.get('stdout', self.stdout)
+        self.stderr = kwargs.get('stderr', self.stderr)
 
         input_deps = []
         if 'inputs' in kwargs:
@@ -98,12 +118,12 @@ class APP (object):
             # disable tracer and replace with old one
             sys.setprofile(None)
 
-        logger.debug("Submitting via : %s",  self.executor)
-        #print(kwargs)
-        logger.debug("cmd    : %s", self._locals['cmd_line'])
-        self.executable = self._locals['cmd_line'].format(**kwargs)
-        logger.debug("Exec   : %s", self.executable)
 
+        #print(kwargs)
+        self.executable = self._locals['cmd_line'].format(**kwargs)
+        #logger.debug("Exec   : %s", self.executable)
+
+        logger.debug("Submitting %s",  self.executable)
         if type(self.executor) == DataFlowKernel:
             app_fut = self.executor.submit(self._callable, input_deps, None)
         else:
@@ -170,27 +190,35 @@ class PythonApp(object):
         return app_fut, out_futs
 
 
-def App(apptype, executor):
-    # App Decorator
+def App(apptype, executor, walltime=60):
+    ''' The App decorator function
+    Args:
+        apptype (string) : Apptype can be bash|python
+        executor (Executor) : Executor object wrapping threads/process pools etc.
 
+    Kwargs:
+        walltime (int) : Walltime for app in seconds, default=60
+
+    Returns:
+         An AppFactory object, which when called runs the apps through the
+    executor.
+    '''
     logger.debug('Apptype : %s', apptype)
     logger.debug('Executor : %s', type(executor))
 
     app_def = { "exec_type" : apptype,
-                "inputs"    : [],
-                "outputs"   : [],
-                "env"       : {} }
+                "walltime"  : walltime }
+
+    # Todo: fold this behavior into an AppFactory Factory
 
     if apptype == 'bash' :
         def Exec(f):
-            logger.debug("Decorator Exec : %s", f)
             return APP(f, executor, **app_def)
 
         return Exec
 
     elif apptype == 'python' :
         def Exec(f):
-            logger.debug("Decorator Exec : %s", f)
             return PythonApp(f, executor, **app_def)
 
         return Exec

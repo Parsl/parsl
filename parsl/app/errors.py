@@ -17,3 +17,9 @@ class InvalidAppTypeError(ParslError):
     '''
     pass
 
+
+class AppException(ParslError):
+    ''' An error raised during execution of an app.
+    What this exception contains depends entirely on context
+    '''
+    pass
