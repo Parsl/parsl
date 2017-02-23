@@ -12,17 +12,26 @@ Contents:
 
 .. toctree::
    :maxdepth: 3
+   :caption: Quickstart
+
+   quick/quickstart.rst
+   quick/tutorial.rst
+
+.. toctree::
+   :maxdepth: 3
    :caption: User Guide
 
    userguide/overview
-
+   userguide/apps
+   userguide/futures
 
 .. _dev_docs:
 .. toctree::
    :maxdepth: 4
    :caption: Developer Documentation
 
-   dev_docs
+   devguide/design
+   devguide/dev_docs
 
 
 

@@ -34,7 +34,7 @@
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
     <link rel="top" title="Parsl 0.1 documentation" href="#"/>
-        <link rel="next" title="Parsl - UserGuide" href="userguide/overview.html"/> 
+        <link rel="next" title="Quickstart" href="quick/quickstart.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -83,13 +83,21 @@
           
             
             
-                <p class="caption"><span class="caption-text">User Guide</span></p>
+                <p class="caption"><span class="caption-text">Quickstart</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="userguide/overview.html">Parsl - UserGuide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick/tutorial.html">Parsl Tutorial</a></li>
+</ul>
+<p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="userguide/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="userguide/apps.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="userguide/futures.html">Futures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Developer Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="dev_docs.html">Developer Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devguide/design.html">Design and Rationale</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devguide/dev_docs.html">Developer Documentation</a></li>
 </ul>
 
             
@@ -138,11 +146,27 @@
 <h1>Parsl - Parallel Scripting Library<a class="headerlink" href="#parsl-parallel-scripting-library" title="Permalink to this headline">¶</a></h1>
 <p>This is an experiment on bringing <a class="reference external" href="https://github.com/swift-lang/swift-e-lab/">data dependency based implicit parallelism</a> to Python.</p>
 <p>Contents:</p>
+<div class="toctree-wrapper compound" id="quickstart">
+<p class="caption"><span class="caption-text">Quickstart</span><a class="headerlink" href="#quickstart" title="Permalink to this toctree">¶</a></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quick/quickstart.html">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quick/quickstart.html#requirements">Requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quick/tutorial.html">Parsl Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quick/tutorial.html#dependencies">Dependencies</a></li>
+</ul>
+</li>
+</ul>
+</div>
 <div class="toctree-wrapper compound" id="user-guide">
 <p class="caption"><span class="caption-text">User Guide</span><a class="headerlink" href="#user-guide" title="Permalink to this toctree">¶</a></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="userguide/overview.html">Parsl - UserGuide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="userguide/overview.html#concepts">Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="userguide/overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="userguide/apps.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="userguide/futures.html">Futures</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="userguide/futures.html#appfutures">AppFutures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="userguide/futures.html#datafutures">DataFutures</a></li>
 </ul>
 </li>
 </ul>
@@ -150,10 +174,18 @@
 <div class="toctree-wrapper compound" id="developer-documentation">
 <span id="dev-docs"></span><p class="caption"><span class="caption-text">Developer Documentation</span><a class="headerlink" href="#developer-documentation" title="Permalink to this toctree">¶</a></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="dev_docs.html">Developer Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="dev_docs.html#parsl">Parsl</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="dev_docs.html#importing">Importing</a></li>
-<li class="toctree-l3"><a class="reference internal" href="dev_docs.html#logging">Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devguide/design.html">Design and Rationale</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="devguide/design.html#swift-vs-parsl">Swift vs Parsl</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="devguide/design.html#parallel-evaluation">Parallel Evaluation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="devguide/design.html#mappers">Mappers</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="devguide/dev_docs.html">Developer Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="devguide/dev_docs.html#parsl">Parsl</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="devguide/dev_docs.html#importing">Importing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="devguide/dev_docs.html#logging">Logging</a></li>
 </ul>
 </li>
 </ul>
@@ -177,7 +209,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="userguide/overview.html" class="btn btn-neutral float-right" title="Parsl - UserGuide" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="quick/quickstart.html" class="btn btn-neutral float-right" title="Quickstart" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>

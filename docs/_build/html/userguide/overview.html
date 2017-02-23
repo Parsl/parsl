@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Parsl - UserGuide &mdash; Parsl 0.1 documentation</title>
+  <title>Overview &mdash; Parsl 0.1 documentation</title>
   
 
   
@@ -34,7 +34,7 @@
               href="../genindex.html"/>
         <link rel="search" title="Search" href="../search.html"/>
     <link rel="top" title="Parsl 0.1 documentation" href="../index.html"/>
-        <link rel="next" title="Developer Documentation" href="../dev_docs.html"/>
+        <link rel="next" title="Apps" href="apps.html"/>
         <link rel="prev" title="Parsl - Parallel Scripting Library" href="../index.html"/> 
 
   
@@ -84,16 +84,22 @@
           
             
             
-                <p class="caption"><span class="caption-text">User Guide</span></p>
+                <p class="caption"><span class="caption-text">Tutorial</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Parsl - UserGuide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#concepts">Concepts</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="apps.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="futures.html">Futures</a></li>
 </ul>
-</li>
+<p class="caption"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="apps.html">Apps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="futures.html">Futures</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Developer Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../dev_docs.html">Developer Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devguide/design.html">Design and Rationale</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devguide/dev_docs.html">Developer Documentation</a></li>
 </ul>
 
             
@@ -124,7 +130,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="../index.html">Docs</a> &raquo;</li>
       
-    <li>Parsl - UserGuide</li>
+    <li>Overview</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -138,15 +144,25 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="parsl-userguide">
-<h1>Parsl - UserGuide<a class="headerlink" href="#parsl-userguide" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
 <p>Parsl is designed to enable the composition of asynchronous workflows in python. This is done in two steps:</p>
 <ol class="arabic simple">
-<li>Enable the markup of functions as parallel functions.</li>
+<li>Enable the markup of functions as parallel functions or <code class="docutils literal"><span class="pre">App</span></code> &#8216;s.</li>
 <li>Specify the data dependencies between functions.</li>
 </ol>
-<div class="section" id="concepts">
-<h2>Concepts<a class="headerlink" href="#concepts" title="Permalink to this headline">¶</a></h2>
+<p>In Parsl the execution of an <code class="docutils literal"><span class="pre">App</span></code> yields <a class="reference external" href="https://en.wikipedia.org/wiki/Futures_and_promises">futures</a>.
+These futures can be passed to other <code class="docutils literal"><span class="pre">App</span></code> &#8216;s as inputs, establishing a data-dependency. This allows
+you to create <a class="reference external" href="https://en.wikipedia.org/wiki/Directed_acyclic_graph">directed acyclic graphs</a>
+implictly. <code class="docutils literal"><span class="pre">App</span></code> &#8216;s which have all their dependencies resolved are slated for execution in parallel.
+This allows Parsl to exploit all parallelism to fullest extent at the granularity expressed by the user.</p>
+<p>A simple for Map Reduce job is as simple as this :</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">splits</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">fu</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">app_double</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+<span class="n">total</span> <span class="o">=</span> <span class="n">app_sum</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="n">fu</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 
@@ -157,7 +173,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../dev_docs.html" class="btn btn-neutral float-right" title="Developer Documentation" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="apps.html" class="btn btn-neutral float-right" title="Apps" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../index.html" class="btn btn-neutral" title="Parsl - Parallel Scripting Library" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
