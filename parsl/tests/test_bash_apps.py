@@ -18,7 +18,7 @@ dfk = DataFlowKernel(workers)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {inputs[0]} > {outputs[0]}'
 
-def test_parallel_for (n):
+def test_parallel_for (n=10):
 
     outdir='outputs'
     if not os.path.exists(outdir):
@@ -42,8 +42,6 @@ def test_parallel_for (n):
 
     [d[i].result() for i in d]
     print("Duration : {0}s".format(time.time() - start))
-    #print([d[i][0].done() for i in d] )
-    #print([d[i][0].exception() for i in d] )
     assert len(os.listdir('outputs/')) == n , "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
                                                                                     n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")

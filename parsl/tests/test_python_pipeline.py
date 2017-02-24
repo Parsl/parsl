@@ -8,7 +8,7 @@ import time
 import shutil
 import argparse
 
-parsl.set_stream_logger()
+#parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(workers)
@@ -27,7 +27,7 @@ def slow_increment(x, dur):
 def test_increment(depth=5):
     futs = {0:0}
     for i in range(1,depth):
-        futs[i], _ = increment( futs[i-1] )
+        futs[i] = increment( futs[i-1] )
 
     print([ futs[i].result() for i in futs if type(futs[i]) != int ])
 
@@ -39,6 +39,7 @@ if __name__ == '__main__' :
     args   = parser.parse_args()
 
     if args.debug:
+        pass
         parsl.set_stream_logger()
 
     test_increment(depth=int(args.width))

@@ -8,7 +8,7 @@ import time
 import shutil
 import argparse
 
-
+#parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(workers)
 
@@ -21,12 +21,12 @@ def echo(x, string, stdout=None):
     print(string)
     return x*5
 
-def test_parallel_for (n):
+def test_parallel_for (n=10):
 
     d = {}
     start = time.time()
     for i in range(0,n):
-        d[i], _ = double(i)
+        d[i] = double(i)
         #time.sleep(0.01)
 
     assert len(d.keys())   == n , "Only {0}/{1} keys in dict".format(len(d.keys()), n)
@@ -40,7 +40,7 @@ def test_parallel_for (n):
 def test_stdout():
 
     string = "Hello World!"
-    fu, _ = echo (10, string, stdout='std.out')
+    fu = echo (10, string, stdout='std.out')
     fu.result()
 
     with open('std.out', 'r') as f:

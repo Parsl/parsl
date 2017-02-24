@@ -7,7 +7,6 @@ from parsl import *
 
 from parsl.app.app_factory import AppFactoryFactory, AppFactory
 
-parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=4)
 
 @App('bash', workers)
