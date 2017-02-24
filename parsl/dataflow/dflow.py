@@ -1,7 +1,20 @@
-''' DataFlow Kernel.
+''' DataFlowKernel.
+====================
 
-Track dependencies, and execute runnable tasks as dependencies resolve.
+The DataFlowKernel adds dependency awareness to an existing executor.
+It is responsible for managing futures, such that when dependencies are resolved, pending tasks
+move to the runnable state.
 
+Here's a simplified diagram of what happens internally::
+
+    User             |        DFK         |    Executor
+    ----------------------------------------------------------
+                     |                    |
+          Task-------+> +Submit           |
+        App_Fu<------+--|                 |
+                     |  Dependencies met  |
+                     |         task-------+--> +Submit
+                     |        Ex_Fu<------+----|
 '''
 
 import copy
@@ -16,20 +29,16 @@ from parsl.dataflow.futures import AppFuture
 logger = logging.getLogger(__name__)
 
 class DataFlowKernel(object):
-    """ Manage futures, Data futures etc...
-
-    User             |        DFK         |    Executor
-    ----------------------------------------------------------
-                     |                    |
-          Task-------+> +Submit           |
-        App_Fu<------+--|                 |
-                     |  Dependencies met  |
-                     |         task-------+--> +Submit
-                     |        Ex_Fu<------+----|
+    """ DataFlowKernel
     """
 
     def __init__(self, executor):
         """ Initialize the DataFlowKernel
+        Args:
+            executor (Executor): An executor object.
+
+        Returns:
+            DataFlowKernel object
         """
         self.pending         = {}
         self.fut_task_lookup = {}
@@ -55,6 +64,10 @@ class DataFlowKernel(object):
         ''' This function is called only as a callback from a task being done
         Move done task from runnable -> done
         Move newly doable tasks from pending -> runnable , and launch
+
+        Args:
+             task_id (string) : Task id which is a uuid string
+             future (Future) : The future object corresponding to the task which makes this callback
         '''
 
         if future.done():
@@ -102,10 +115,25 @@ class DataFlowKernel(object):
 
 
     def write_status_log(self):
+        ''' Write status log.
+
+        Args:
+           None
+
+        Kwargs:
+           None
+        '''
         logger.debug("Pending:%d   Runnable:%d   Done:%d", len(self.pending),
                      len(self.runnable), len(self.done))
 
     def print_status_log(self):
+        ''' Print status log in terms of pending, runnable and done tasks
+        Args:
+           None
+
+        Kwargs:
+           None
+        '''
         print("Pending:{0}   Runnable:{1}   Done:{2}".format( len(self.pending),
                                                               len(self.runnable),
                                                               len(self.done)) )
@@ -114,6 +142,13 @@ class DataFlowKernel(object):
         ''' Handle the actual submission of the task to the executor layer
 
         We should most likely add a callback at this point
+
+        Args:
+            executable (callable) : A callable object
+            task_id (uuid string) : A uuid string that uniquely identifies the task
+
+        Returns:
+            Future that tracks the execution of the submitted executable
         '''
 
         logger.debug("Submitting to executor : %s", task_id)
@@ -196,6 +231,9 @@ class DataFlowKernel(object):
 
     def future_resolved(self, fut):
         ''' Implemeting the future_resolved check
+
+        Args:
+            fut (Future) : The future to check for
         '''
 
         if fut not in self.fut_task_lookup:
@@ -208,7 +246,8 @@ class DataFlowKernel(object):
                 self.pending[task_id]['dep_cnt'] -= 1
 
     def current_state(self):
-        
+        ''' Do not use this.
+        ''' 
         print("Pending :")
         for item in self.pending:
             print(self.pending[item])
