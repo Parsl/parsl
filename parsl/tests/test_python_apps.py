@@ -43,6 +43,8 @@ def test_stdout():
     fu = echo (10, string, stdout='std.out')
     fu.result()
 
+    assert os.path.exists('std.out'), "STDOUT was not captured to 'std.out'"
+
     with open('std.out', 'r') as f:
         assert f.read() == string, "String did not match output file"
     print("[TEST STATUS] test_stdout [SUCCESS]")
