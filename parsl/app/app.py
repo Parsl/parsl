@@ -1,10 +1,11 @@
-""" Parsl Apps
-==============
+'''
+Parsl Apps
+==========
 
 Here lies the definitions for the @App decorator and the APP classes.
 The APP class encapsulates a generic leaf task that can be executed asynchronously.
 
-"""
+'''
 
 import sys
 import logging
@@ -20,7 +21,7 @@ from parsl.dataflow.dflow import DataFlowKernel
 from functools import partial
 
 
-class APP (object):
+class AppBase (object):
     """ Encapsulates the generic App
     """
 
@@ -46,11 +47,21 @@ class APP (object):
         self.status     = 'created'
 
         sig = signature(func)
-        self.stdout  = sig.parameters['stdout'].default if 'stdout' in sig.parameters else None
-        self.stderr  = sig.parameters['stderr'].default if 'stderr' in sig.parameters else None
-        self.inputs  = sig.parameters['inputs'].default if 'inputs' in sig.parameters else []
+        self.stdout  = sig.parameters['stdout'].default  if 'stdout'  in sig.parameters else None
+        self.stderr  = sig.parameters['stderr'].default  if 'stderr'  in sig.parameters else None
+        self.inputs  = sig.parameters['inputs'].default  if 'inputs'  in sig.parameters else []
         self.outputs = sig.parameters['outputs'].default if 'outputs' in sig.parameters else []
-        logger.debug('__init__ ')
+
+    def __call__ (self, *args, **kwargs):
+        ''' The __call__ function must be implemented in the subclasses
+        '''
+        raise NotImplemented
+
+
+class BashApp(AppBase):
+
+    def __init__ (self, func, executor, walltime=60):
+        super().__init__ (func, executor, walltime=60, exec_type="bash")
 
     def _callable(self):
         ''' The callable fn for external apps.
@@ -81,8 +92,24 @@ class APP (object):
         #logger.debug("RunCommand Completed %s ", self.executable)
         return self.returncode
 
-    def __call__(self, *args, **kwargs):
+    def _trace_cmdline(self, *args, **kwargs):
+        def tracer(frame, event, arg):
+            if event=='return':
+                self._locals = frame.f_locals.copy()
 
+        # Activate tracer
+        sys.setprofile(tracer)
+        try:
+            # trace the function call
+            res = self.func(*args, **kwargs)
+        finally:
+            # disable tracer and replace with old one
+            sys.setprofile(None)
+
+        return self._locals['cmd_line']
+
+
+    def __call__(self, *args, **kwargs):
 
         self.stdout = kwargs.get('stdout', self.stdout)
         self.stderr = kwargs.get('stderr', self.stderr)
@@ -104,24 +131,10 @@ class APP (object):
                     newlist.append(item)
             kwargs['inputs'] = newlist
 
+        cmd_line = self._trace_cmdline(*args, **kwargs)
 
-        def tracer(frame, event, arg):
-            if event=='return':
-                self._locals = frame.f_locals.copy()
-
-        # Activate tracer
-        sys.setprofile(tracer)
-        try:
-            # trace the function call
-            res = self.func(*args, **kwargs)
-        finally:
-            # disable tracer and replace with old one
-            sys.setprofile(None)
-
-
-        #print(kwargs)
-        self.executable = self._locals['cmd_line'].format(**kwargs)
-        #logger.debug("Exec   : %s", self.executable)
+        self.executable = cmd_line.format(**kwargs)
+        logger.debug("Exec   : %s", self.executable)
 
         logger.debug("Submitting %s",  self.executable)
         if type(self.executor) == DataFlowKernel:
@@ -133,61 +146,45 @@ class APP (object):
         return app_fut, out_futs
 
 
-class PythonApp(object):
+class PythonApp(AppBase):
     """ Extend App to cover the Python App
     TODO : Well, this needs a lot of work.
     """
-    def __init__ (self, func, executor, inputs=[], outputs=[], env={},
-                  walltime=60, exec_type='python'):
-        ''' Initialize the python app
+    def __init__ (self, func, executor, walltime=60):
+        ''' Initialize the super. This bit is the same for both bash & python apps.
         '''
-        self.func       = func
-        self.inputs     = inputs
-        self.executor   = executor
-        self.outputs    = outputs
-        self.exec_type  = exec_type
-        self.status     = 'created'
-        self.stdout     = 'STDOUT.txt'
-        self.stderr     = 'STDERR.txt'
-        logger.debug('__init__ ')
+        super().__init__ (func, executor, walltime=60, exec_type="python")
 
     def __call__(self, *args, **kwargs):
-        logger.debug("In __Call__")
+        ''' This is where the call to a python app is handled
 
-        input_deps = []
+        Args:
+             Arbitrary
+        Kwargs:
+             Arbitrary
 
-        input_deps.extend([item for item in args
-                           if isinstance(item, Future) or issubclass(type(item), Future)])
+        Returns:
+             If outputs=[...] was a kwarg then:
+                   App_fut, [Data_Futures...]
+             else:
+                   App_fut
 
-        if 'inputs' in kwargs:
-            # Identify the futures in the inputs
-            logger.debug("Received : %s ", kwargs['inputs'])
-
-            input_deps.extend([item for item in kwargs['inputs']
-                               if isinstance(item, Future) or issubclass(type(item), Future)])
-
-            # kwargs['inputs'] is a list of strings or DataFutures
-            newlist = []
-            for item in kwargs['inputs']:
-                if isinstance(item, DataFuture):
-                    newlist.append(item.filepath)
-                else:
-                    newlist.append(item)
-            kwargs['inputs'] = newlist
-
-
-        logger.debug("Submitting via : %s",  self.executor)
-
-        self.executable = partial(self.func, *args, **kwargs)
-        logger.debug("Exec   : %s", self.executable)
-
+        '''
         if type(self.executor) == DataFlowKernel:
-            app_fut = self.executor.submit(self.executable, input_deps, None)
+            logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
+            #app_fut = self.executor.submit(self.executable, input_deps, None)
+            app_fut = self.executor.submit((self.func, args, kwargs), None, None)
         else:
+            logger.debug("Submitting to Executor: %s",  self.executor)
+            self.executable = partial(self.func, *args, **kwargs)
+            logger.debug("Exec   : %s", self.executable)
             app_fut = self.executor.submit(self.executable)
 
         out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
-        return app_fut, out_futs
+        if out_futs:
+            return app_fut, out_futs
+        else:
+            return app_fut
 
 
 def App(apptype, executor, walltime=60):
@@ -209,10 +206,3 @@ def App(apptype, executor, walltime=60):
         return APP_FACTORY_FACTORY.make(apptype, executor, f, walltime=walltime)
 
     return Exec
-
-
-if __name__ == '__main__' :
-
-    app = APP ("echo 'hi'")
-
-    print(app())

@@ -7,7 +7,7 @@ import logging
 from inspect import signature
 logger = logging.getLogger(__name__)
 
-from parsl.app.app import APP
+from parsl.app.app import BashApp
 from parsl.app.app import PythonApp
 
 
@@ -83,7 +83,7 @@ class AppFactoryFactory(object) :
              object (AppFactory)
         '''
         self.name  = name
-        self.apps  =  { 'bash'   : APP,
+        self.apps  =  { 'bash'   : BashApp,
                         'python' : PythonApp }
 
     def make (self, kind, executor, f, **kwargs):
