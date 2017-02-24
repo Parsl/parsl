@@ -63,7 +63,7 @@ class BashApp(AppBase):
     def __init__ (self, func, executor, walltime=60):
         super().__init__ (func, executor, walltime=60, exec_type="bash")
 
-    def _callable(self):
+    def _callable(self, *args, **kwargs):
         ''' The callable fn for external apps.
         '''
         import time
@@ -110,41 +110,52 @@ class BashApp(AppBase):
 
 
     def __call__(self, *args, **kwargs):
+        ''' This is where the call to a python app is handled
 
-        self.stdout = kwargs.get('stdout', self.stdout)
-        self.stderr = kwargs.get('stderr', self.stderr)
+        Args:
+             Arbitrary
+        Kwargs:
+             Arbitrary
 
-        input_deps = []
-        if 'inputs' in kwargs:
-            # Identify the futures in the inputs
-            logger.debug("Received : %s ", kwargs['inputs'])
+        Returns:
+             If outputs=[...] was a kwarg then:
+                   App_fut, [Data_Futures...]
+             else:
+                   App_fut
 
-            input_deps = [item for item in kwargs['inputs']
-                          if isinstance(item, Future) or issubclass(type(item), Future)]
-
-            # kwargs['inputs'] is a list of strings or DataFutures
-            newlist = []
-            for item in kwargs['inputs']:
-                if isinstance(item, DataFuture):
-                    newlist.append(item.filepath)
-                else:
-                    newlist.append(item)
-            kwargs['inputs'] = newlist
-
+        '''
         cmd_line = self._trace_cmdline(*args, **kwargs)
+        # TODO : The format system doesn't take *args yet.
+        self.executable = cmd_line.format(**kwargs)
 
+        if type(self.executor) == DataFlowKernel:
+            logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
+            #app_fut = self.executor.submit(self.executable, input_deps, None)
+            app_fut = self.executor.submit((self._callable, args, kwargs), None, None)
+        else:
+            logger.debug("Submitting to Executor: %s",  self.executor)
+            app_fut = self.executor.submit(partial(self._callable, *args, **kwargs))
+
+        out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
+        if out_futs:
+            return app_fut, out_futs
+        else:
+            return app_fut
+
+
+        '''
         self.executable = cmd_line.format(**kwargs)
         logger.debug("Exec   : %s", self.executable)
 
         logger.debug("Submitting %s",  self.executable)
         if type(self.executor) == DataFlowKernel:
-            app_fut = self.executor.submit(self._callable, input_deps, None)
+            app_fut = self.executor.submit(self._callable, None, None)
         else:
             app_fut = self.executor.submit(self._callable)
 
         out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
         return app_fut, out_futs
-
+        '''
 
 class PythonApp(AppBase):
     """ Extend App to cover the Python App
