@@ -8,7 +8,8 @@ import time
 import shutil
 import argparse
 
-workers = ThreadPoolExecutor(max_workers=1)
+workers = ThreadPoolExecutor(max_workers=8)
+#parsl.set_stream_logger()
 #workers = ProcessPoolExecutor(max_workers=4)
 #dfk = DataFlowKernel(workers)
 
@@ -27,8 +28,9 @@ def test_parallel_for (n):
 
     d = {}
 
+    start = time.time()
     for i in range(0,n):
-        d[i] = echo_to_file(inputs=['Hello World {0}'.format(i)],
+        d[i], _ = echo_to_file(inputs=['Hello World {0}'.format(i)],
                             outputs=['{0}/out.{1}.txt'.format(outdir, i)],
                             stdout='d/std.{1}.out'.format(outdir, i),
                             stderr='d/std.{1}.err'.format(outdir, i),
@@ -36,7 +38,9 @@ def test_parallel_for (n):
         #time.sleep(0.01)
 
     assert len(d.keys())   == n , "Only {0}/{1} keys in dict".format(len(d.keys()), n)
-    time.sleep(1)
+
+    [d[i].result() for i in d]
+    print("Duration : {0}s".format(time.time() - start))
     #print([d[i][0].done() for i in d] )
     #print([d[i][0].exception() for i in d] )
     assert len(os.listdir('outputs/')) == n , "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
