@@ -143,20 +143,6 @@ class BashApp(AppBase):
             return app_fut
 
 
-        '''
-        self.executable = cmd_line.format(**kwargs)
-        logger.debug("Exec   : %s", self.executable)
-
-        logger.debug("Submitting %s",  self.executable)
-        if type(self.executor) == DataFlowKernel:
-            app_fut = self.executor.submit(self._callable, None, None)
-        else:
-            app_fut = self.executor.submit(self._callable)
-
-        out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
-        return app_fut, out_futs
-        '''
-
 class PythonApp(AppBase):
     """ Extend App to cover the Python App
     TODO : Well, this needs a lot of work.
@@ -181,6 +167,7 @@ class PythonApp(AppBase):
                    App_fut
 
         '''
+
         if type(self.executor) == DataFlowKernel:
             logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
             #app_fut = self.executor.submit(self.executable, input_deps, None)
