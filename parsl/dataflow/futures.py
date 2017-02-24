@@ -45,8 +45,31 @@ class AppFuture(Future):
         super().__init__()
         self.parent   = parent
 
+
+    def parent_callback(self, executor_fu):
+        ''' Callback from executor future to update the parent.
+        Args:
+            executor_fu (Future): Future returned by the executor along with callback
+
+        Updates the super() with the result() or exception()
+        '''
+        logger.debug("App_fu updated with executor_Fu state")
+
+        if executor_fu.done() == True:
+            super().set_result(executor_fu.result())
+
+        e = executor_fu.exception()
+        if e:
+            super().set_exception(e)
+
+
     def update_parent(self, fut):
+        ''' Handle the case where the user has called result on the AppFuture
+        before the parent exists. Add a callback to the parent to update the
+        state
+        '''
         self.parent = fut
+        fut.add_done_callback(self.parent_callback)
 
     def result(self, timeout=None):
         #print("FOooo")
