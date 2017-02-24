@@ -1,10 +1,13 @@
-from parsl import *
-import parsl
-
 import os
 import time
 import shutil
 import argparse
+
+from nose.tools import nottest
+
+from parsl import *
+import parsl
+
 workers = ThreadPoolExecutor(max_workers=4)
 
 @App('bash', workers)
@@ -13,7 +16,7 @@ def command_not_found(stderr='std.err', stdout='std.out'):
 
 @App('bash', workers)
 def bash_misuse(stderr='std.err', stdout='std.out'):
-    cmd_line = 'if else'
+    cmd_line = 'exit(15)'
 
 @App('bash', workers)
 def div_0(stderr='std.err', stdout='std.out'):
@@ -28,7 +31,7 @@ def not_executable(stderr='std.err', stdout='std.out'):
     cmd_line = '/dev/null'
 
 test_matrix = { div_0             : {'exit_code' : 1 },
-                bash_misuse       : {'exit_code' : 2 },
+                bash_misuse       : {'exit_code' : 15 },
                 command_not_found : {'exit_code' : 127 },
                 invalid_exit      : {'exit_code' : 128 },
                 not_executable    : {'exit_code' : 126 } }
@@ -46,6 +49,7 @@ def test_div_0(test_fn=div_0):
     os.remove('std.out')
     return True
 
+@nottest
 def test_bash_misuse(test_fn=bash_misuse):
 
     err_code = test_matrix[test_fn]['exit_code']
@@ -68,6 +72,7 @@ def test_command_not_found(test_fn=command_not_found):
     os.remove('std.out')
     return True
 
+@nottest
 def test_invalid_exit(test_fn=invalid_exit):
 
     err_code = test_matrix[test_fn]['exit_code']

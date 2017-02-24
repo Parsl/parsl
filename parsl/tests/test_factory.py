@@ -28,20 +28,13 @@ def test_factory():
     app_f_2 = appff.make('python', workers, app_3, walltime=60)
     assert type(app_f_2) == AppFactory , "AppFactoryFactory made the wrong type"
 
+def test_factory_names():
+    appff = AppFactoryFactory('main')
+    print(appff)
+    print(appff.__repr__())
+
 
 if __name__ == '__main__' :
 
     test_factory()
-    #for i in range(0,100):
-    #    x, _ = app_f_2(10)
-
-    #app_f_2(20)
-    #print("Name: ", app_f.__repr__())
-
-    #print("App_1 type : ", type(app_f))
-
-    #futs = {}
-    #for i in range(0, 4):
-    #    futs[i], _ = app_1()
-
-
+    test_factory_names()
