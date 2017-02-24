@@ -103,7 +103,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#logging">Logging</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#dataflowkernel">DataFlowKernel.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dataflowkernel">DataFlowKernel</a></li>
 </ul>
 </li>
 </ul>
@@ -210,22 +210,6 @@ For tasks with dep_cnt == 0, copy task to runnable, and make the callback</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="parsl.DataFlowKernel.current_state">
-<code class="descname">current_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsl.DataFlowKernel.current_state" title="Permalink to this definition">¶</a></dt>
-<dd><p>Do not use this.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="parsl.DataFlowKernel.future_resolved">
-<code class="descname">future_resolved</code><span class="sig-paren">(</span><em>fut</em><span class="sig-paren">)</span><a class="headerlink" href="#parsl.DataFlowKernel.future_resolved" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implemeting the future_resolved check</p>
-<dl class="docutils">
-<dt>Args:</dt>
-<dd>fut (Future) : The future to check for</dd>
-</dl>
-</dd></dl>
-
-<dl class="method">
 <dt id="parsl.DataFlowKernel.handle_update">
 <code class="descname">handle_update</code><span class="sig-paren">(</span><em>task_id</em>, <em>future</em><span class="sig-paren">)</span><a class="headerlink" href="#parsl.DataFlowKernel.handle_update" title="Permalink to this definition">¶</a></dt>
 <dd><p>This function is called only as a callback from a task being done
@@ -255,14 +239,31 @@ task_id (uuid string) : A uuid string that uniquely identifies the task</dd>
 <dl class="method">
 <dt id="parsl.DataFlowKernel.print_status_log">
 <code class="descname">print_status_log</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsl.DataFlowKernel.print_status_log" title="Permalink to this definition">¶</a></dt>
-<dd><p>Print status log in terms of pending, runnable and done tasks
-Args:</p>
-<blockquote>
-<div>None</div></blockquote>
+<dd><p>Print status log in terms of pending, runnable and done tasks</p>
 <dl class="docutils">
+<dt>Args:</dt>
+<dd>None</dd>
 <dt>Kwargs:</dt>
 <dd>None</dd>
 </dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="parsl.DataFlowKernel.sanitize_and_wrap">
+<em class="property">static </em><code class="descname">sanitize_and_wrap</code><span class="sig-paren">(</span><em>task_id</em>, <em>func</em>, <em>args</em>, <em>kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#parsl.DataFlowKernel.sanitize_and_wrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function should be called <strong>ONLY</strong> when all the futures we track
+have been resolved. If the user hid futures a level below, we will not catch
+it, and will (most likely) result in a type error .</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>task_id (uuid str) : Task id
+func (Function) : App function
+args (List) : Positional args to app function
+kwargs (Dict) : Kwargs to app function</dd>
+<dt>Return:</dt>
+<dd>partial Function evaluated with all dependencies in  args, kwargs and</dd>
+</dl>
+<p>kwargs[&#8216;inputs&#8217;] evaluated.</p>
 </dd></dl>
 
 <dl class="method">
@@ -296,14 +297,26 @@ and launch the task</dd>
 
 </div>
 </div>
-<dl class="attribute">
-<dt id="parsl.app.app">
-<code class="descclassname">parsl.app.</code><code class="descname">app</code><a class="headerlink" href="#parsl.app.app" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference internal" href="#parsl.app.app" title="parsl.app.app"><code class="xref py py-class docutils literal"><span class="pre">parsl.app.app</span></code></a></p>
+<dl class="class">
+<dt id="parsl.app.app.AppBase">
+<em class="property">class </em><code class="descclassname">parsl.app.app.</code><code class="descname">AppBase</code><span class="sig-paren">(</span><em>func</em>, <em>executor</em>, <em>walltime=60</em>, <em>exec_type='bash'</em><span class="sig-paren">)</span><a class="headerlink" href="#parsl.app.app.AppBase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encapsulates the generic App</p>
 </dd></dl>
 
+<dl class="class">
+<dt id="parsl.app.app.PythonApp">
+<em class="property">class </em><code class="descclassname">parsl.app.app.</code><code class="descname">PythonApp</code><span class="sig-paren">(</span><em>func</em>, <em>executor</em>, <em>walltime=60</em><span class="sig-paren">)</span><a class="headerlink" href="#parsl.app.app.PythonApp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extend App to cover the Python App
+TODO : Well, this needs a lot of work.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="parsl.app.app.BashApp">
+<em class="property">class </em><code class="descclassname">parsl.app.app.</code><code class="descname">BashApp</code><span class="sig-paren">(</span><em>func</em>, <em>executor</em>, <em>walltime=60</em><span class="sig-paren">)</span><a class="headerlink" href="#parsl.app.app.BashApp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <span class="target" id="module-parsl.dataflow.dflow"></span><div class="section" id="dataflowkernel">
-<h2>DataFlowKernel.<a class="headerlink" href="#dataflowkernel" title="Permalink to this headline">¶</a></h2>
+<h2>DataFlowKernel<a class="headerlink" href="#dataflowkernel" title="Permalink to this headline">¶</a></h2>
 <p>The DataFlowKernel adds dependency awareness to an existing executor.
 It is responsible for managing futures, such that when dependencies are resolved, pending tasks
 move to the runnable state.</p>
@@ -326,22 +339,6 @@ move to the runnable state.</p>
 <code class="descname">check_fulfilled</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsl.dataflow.dflow.DataFlowKernel.check_fulfilled" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterate over the pending tasks
 For tasks with dep_cnt == 0, copy task to runnable, and make the callback</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="parsl.dataflow.dflow.DataFlowKernel.current_state">
-<code class="descname">current_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsl.dataflow.dflow.DataFlowKernel.current_state" title="Permalink to this definition">¶</a></dt>
-<dd><p>Do not use this.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="parsl.dataflow.dflow.DataFlowKernel.future_resolved">
-<code class="descname">future_resolved</code><span class="sig-paren">(</span><em>fut</em><span class="sig-paren">)</span><a class="headerlink" href="#parsl.dataflow.dflow.DataFlowKernel.future_resolved" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implemeting the future_resolved check</p>
-<dl class="docutils">
-<dt>Args:</dt>
-<dd>fut (Future) : The future to check for</dd>
-</dl>
 </dd></dl>
 
 <dl class="method">
@@ -374,14 +371,31 @@ task_id (uuid string) : A uuid string that uniquely identifies the task</dd>
 <dl class="method">
 <dt id="parsl.dataflow.dflow.DataFlowKernel.print_status_log">
 <code class="descname">print_status_log</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parsl.dataflow.dflow.DataFlowKernel.print_status_log" title="Permalink to this definition">¶</a></dt>
-<dd><p>Print status log in terms of pending, runnable and done tasks
-Args:</p>
-<blockquote>
-<div>None</div></blockquote>
+<dd><p>Print status log in terms of pending, runnable and done tasks</p>
 <dl class="docutils">
+<dt>Args:</dt>
+<dd>None</dd>
 <dt>Kwargs:</dt>
 <dd>None</dd>
 </dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="parsl.dataflow.dflow.DataFlowKernel.sanitize_and_wrap">
+<em class="property">static </em><code class="descname">sanitize_and_wrap</code><span class="sig-paren">(</span><em>task_id</em>, <em>func</em>, <em>args</em>, <em>kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#parsl.dataflow.dflow.DataFlowKernel.sanitize_and_wrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function should be called <strong>ONLY</strong> when all the futures we track
+have been resolved. If the user hid futures a level below, we will not catch
+it, and will (most likely) result in a type error .</p>
+<dl class="docutils">
+<dt>Args:</dt>
+<dd>task_id (uuid str) : Task id
+func (Function) : App function
+args (List) : Positional args to app function
+kwargs (Dict) : Kwargs to app function</dd>
+<dt>Return:</dt>
+<dd>partial Function evaluated with all dependencies in  args, kwargs and</dd>
+</dl>
+<p>kwargs[&#8216;inputs&#8217;] evaluated.</p>
 </dd></dl>
 
 <dl class="method">

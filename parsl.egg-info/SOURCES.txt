@@ -1,0 +1,17 @@
+setup.py
+parsl/__init__.py
+parsl.egg-info/PKG-INFO
+parsl.egg-info/SOURCES.txt
+parsl.egg-info/dependency_links.txt
+parsl.egg-info/top_level.txt
+parsl/app/__init__.py
+parsl/app/app.py
+parsl/app/errors.py
+parsl/app/executors.py
+parsl/app/func_future.py
+parsl/app/futures.py
+parsl/app/mult.py
+parsl/dataflow/__init__.py
+parsl/dataflow/dflow.py
+parsl/dataflow/error.py
+parsl/dataflow/futures.py
