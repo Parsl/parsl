@@ -9,8 +9,6 @@ import shutil
 import argparse
 import random
 
-parsl.set_stream_logger()
-
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(workers)
 
@@ -31,18 +29,18 @@ def test_increment(depth=5):
 
     x = sum([ futs[i].result() for i in futs if type(futs[i]) != int ])
     assert x == sum(range(1,depth)), "[TEST] increment [FAILED]"
-    print("[TEST] increment [SUCCESS]")
+
 
 
 def test_slow_increment(depth=5):
     futs = {0:0}
     for i in range(1,depth):
-        futs[i]  = slow_increment( futs[i-1], random.randint(0,100)/1000)
+        futs[i]  = slow_increment( futs[i-1], 0.01)
 
     x = sum([futs[i].result()    for i in futs if type(futs[i]) != int ])
 
     assert x == sum(range(1,depth)), "[TEST] slow_increment [FAILED]"
-    print("[TEST] slow_increment [SUCCESS]")
+
 
 if __name__ == '__main__' :
 
@@ -54,7 +52,15 @@ if __name__ == '__main__' :
     if args.debug:
         parsl.set_stream_logger()
 
-    test_increment(depth=int(args.width))
-    test_slow_increment(depth=int(args.width))
+    tests = [test_increment, test_slow_increment]
+    for width in [10, 100, 1000]:
+        for test in tests:
+            try:
+                test(depth=int(width))
 
-    
+            except AssertionError as e:
+                print("[TEST]  %s width:%s [FAILED]" % (test.__name__, width ))
+                print(e)
+
+            else:
+                print("[TEST]  %s width:%s type [SUCCESS]" % (test.__name__, width))
