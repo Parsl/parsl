@@ -1,7 +1,8 @@
 ''' Testing bash apps
 '''
-from parsl import *
 import parsl
+from parsl import *
+
 
 import os
 import time
@@ -11,9 +12,9 @@ import argparse
 workers = ThreadPoolExecutor(max_workers=8)
 #parsl.set_stream_logger()
 #workers = ProcessPoolExecutor(max_workers=4)
-#dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(workers)
 
-@App('bash', workers)
+@App('bash', dfk)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {inputs[0]} > {outputs[0]}'
 
