@@ -203,27 +203,12 @@ def App(apptype, executor, walltime=60):
          An AppFactory object, which when called runs the apps through the
     executor.
     '''
-    logger.debug('Apptype : %s', apptype)
-    logger.debug('Executor : %s', type(executor))
+    from parsl import APP_FACTORY_FACTORY
 
-    app_def = { "exec_type" : apptype,
-                "walltime"  : walltime }
+    def Exec(f):
+        return APP_FACTORY_FACTORY.make(apptype, executor, f, walltime=walltime)
 
-    # Todo: fold this behavior into an AppFactory Factory
-
-    if apptype == 'bash' :
-        def Exec(f):
-            return APP(f, executor, **app_def)
-
-        return Exec
-
-    elif apptype == 'python' :
-        def Exec(f):
-            return PythonApp(f, executor, **app_def)
-
-        return Exec
-    else:
-        raise InvalidAppTypeError("Valid @App types are 'bash' or 'python'")
+    return Exec
 
 
 if __name__ == '__main__' :
