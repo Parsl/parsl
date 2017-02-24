@@ -1,6 +1,15 @@
 from setuptools import setup
 from parsl.version import VERSION
 
+install_requires = [
+    ]
+
+tests_require = [
+    'mock>=1.0.0',
+    'nose',
+    'pytest'
+    ]
+
 setup(
     name='parsl',
     version=VERSION,
@@ -12,5 +21,6 @@ setup(
     license='Apache 2.0',
     package_data={'': ['LICENSE']},
     packages=['parsl', 'parsl.app', 'parsl.dataflow'],
-    install_requires=[],
+    install_requires=install_requires,
+    #tests_require=tests_require
 )
