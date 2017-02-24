@@ -1,5 +1,6 @@
-'''Parsl
-========
+'''
+Parsl
+=====
 
 Parallel Scripting Library, designed to enable efficient workflow execution.
 
@@ -27,7 +28,7 @@ doesn't log anything. However the following helper functions are provided for lo
 '''
 
 from parsl.version import VERSION
-from parsl.app.app import APP, App
+from parsl.app.app import App
 from parsl.app.executors import ThreadPoolExecutor, ProcessPoolExecutor
 import logging
 import parsl.app.errors
@@ -55,7 +56,8 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     '''
 
     if format_string is None:
-        format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
+        #format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
+        format_string = "%(asctime)s %(name)s [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
