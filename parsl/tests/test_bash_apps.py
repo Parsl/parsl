@@ -18,6 +18,23 @@ dfk = DataFlowKernel(workers)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {inputs[0]} > {outputs[0]}'
 
+@App('bash', dfk)
+def foo(x, y, outputs=[]):
+    cmd_line = '''echo {0}
+    echo {0} {1} &> {outputs[0]}
+    '''
+
+def test_command_format_1 ():
+
+    app_fu, data_fus = foo(1, 4, outputs=['a.txt'])
+
+    result = data_fus[0].result()
+    #print("Result in data_fus : ", result)
+    contents = open(result, 'r').read()
+    #print("Got contents : ", contents)
+    assert contents == "1 4\n", 'Output does not match expected string "1 4", Got: "{0}"'.format(contents)
+    return True
+
 def test_parallel_for (n=10):
 
     outdir='outputs'
@@ -58,6 +75,6 @@ if __name__ == '__main__' :
     if args.debug:
         parsl.set_stream_logger()
 
-    x = test_parallel_for(int(args.count))
-
+    #x = test_parallel_for(int(args.count))
+    y = test_command_format_1()
     #raise_error(0)
