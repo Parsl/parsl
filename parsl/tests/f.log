@@ -1,76 +1,132 @@
-2017-02-24 00:11:01,057 parsl.app.app_factory [DEBUG]  In factory call : (1, 0.1) {}
-2017-02-24 00:11:01,058 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f4f236c9e48>
-2017-02-24 00:11:01,058 parsl.dataflow.dflow [DEBUG]  Task:89c4928a-5ced-48b4-8628-886ed99a6d14   dep_cnt:0  deps:[]
-2017-02-24 00:11:01,058 parsl.dataflow.dflow [DEBUG]  89c4928a-5ced-48b4-8628-886ed99a6d14 Sanitizing (1, 0.1) {}
-2017-02-24 00:11:01,058 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 89c4928a-5ced-48b4-8628-886ed99a6d14
-2017-02-24 00:11:01,058 parsl.dataflow.dflow [DEBUG]  Launched : 89c4928a-5ced-48b4-8628-886ed99a6d14 with <AppFuture at 0x7f4f22ff3978 state=running>
-2017-02-24 00:11:01,058 parsl.app.app_factory [DEBUG]  In factory call : (2, 0.1) {}
-2017-02-24 00:11:01,058 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f4f236c9e48>
-2017-02-24 00:11:01,058 parsl.dataflow.dflow [DEBUG]  Task:de3b4cd7-f7ff-4c8d-8180-5ad814426141   dep_cnt:0  deps:[]
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  de3b4cd7-f7ff-4c8d-8180-5ad814426141 Sanitizing (2, 0.1) {}
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  Submitting to executor : de3b4cd7-f7ff-4c8d-8180-5ad814426141
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  Launched : de3b4cd7-f7ff-4c8d-8180-5ad814426141 with <AppFuture at 0x7f4f22ff3a20 state=running>
-2017-02-24 00:11:01,059 parsl.app.app_factory [DEBUG]  In factory call : (3, 0.1) {}
-2017-02-24 00:11:01,059 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f4f236c9e48>
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  Task:bbcbf0a9-1751-4545-b3fc-772f43d2a109   dep_cnt:0  deps:[]
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  bbcbf0a9-1751-4545-b3fc-772f43d2a109 Sanitizing (3, 0.1) {}
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  Submitting to executor : bbcbf0a9-1751-4545-b3fc-772f43d2a109
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  Launched : bbcbf0a9-1751-4545-b3fc-772f43d2a109 with <AppFuture at 0x7f4f22ff3c18 state=running>
-2017-02-24 00:11:01,059 parsl.app.app_factory [DEBUG]  In factory call : (4, 0.1) {}
-2017-02-24 00:11:01,059 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f4f236c9e48>
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  Task:688dd090-7c71-4e6e-8668-58a90417d15c   dep_cnt:0  deps:[]
-2017-02-24 00:11:01,059 parsl.dataflow.dflow [DEBUG]  688dd090-7c71-4e6e-8668-58a90417d15c Sanitizing (4, 0.1) {}
-2017-02-24 00:11:01,060 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 688dd090-7c71-4e6e-8668-58a90417d15c
-2017-02-24 00:11:01,060 parsl.dataflow.dflow [DEBUG]  Launched : 688dd090-7c71-4e6e-8668-58a90417d15c with <AppFuture at 0x7f4f22ff3ef0 state=running>
-2017-02-24 00:11:01,060 parsl.app.app_factory [DEBUG]  In factory call : (5, 0.1) {}
-2017-02-24 00:11:01,060 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f4f236c9e48>
-2017-02-24 00:11:01,060 parsl.dataflow.dflow [DEBUG]  Task:d4014f5e-1fb8-4d6b-9e16-41405c6ce3cf   dep_cnt:0  deps:[]
-2017-02-24 00:11:01,060 parsl.dataflow.dflow [DEBUG]  d4014f5e-1fb8-4d6b-9e16-41405c6ce3cf Sanitizing (5, 0.1) {}
-2017-02-24 00:11:01,060 parsl.dataflow.dflow [DEBUG]  Submitting to executor : d4014f5e-1fb8-4d6b-9e16-41405c6ce3cf
-2017-02-24 00:11:01,060 parsl.dataflow.dflow [DEBUG]  Launched : d4014f5e-1fb8-4d6b-9e16-41405c6ce3cf with <AppFuture at 0x7f4f23006198 state=pending>
-2017-02-24 00:11:01,060 parsl.app.app_factory [DEBUG]  In factory call : (<AppFuture at 0x7f4f22ff3978 state=running>, <AppFuture at 0x7f4f22ff3a20 state=running>, <AppFuture at 0x7f4f22ff3c18 state=running>, <AppFuture at 0x7f4f22ff3ef0 state=running>, <AppFuture at 0x7f4f23006198 state=pending>) {}
-2017-02-24 00:11:01,060 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f4f236c9e48>
-2017-02-24 00:11:01,060 parsl.dataflow.dflow [DEBUG]  Task:d3b837a4-f195-424a-92d3-e39240d80130   dep_cnt:5  deps:[<AppFuture at 0x7f4f22ff3978 state=running>, <AppFuture at 0x7f4f22ff3a20 state=running>, <AppFuture at 0x7f4f22ff3c18 state=running>, <AppFuture at 0x7f4f22ff3ef0 state=running>, <AppFuture at 0x7f4f23006198 state=pending>]
-2017-02-24 00:11:01,060 parsl.dataflow.dflow [DEBUG]  Launched : d3b837a4-f195-424a-92d3-e39240d80130 with <AppFuture at 0x7f4f230061d0 state=pending>
-2017-02-24 00:11:01,060 parsl.dataflow.futures [DEBUG]  Waiting on result of 139977866371536 on 9982352
-2017-02-24 00:11:01,158 parsl.dataflow.dflow [DEBUG]  Completed : 89c4928a-5ced-48b4-8628-886ed99a6d14 with <Future at 0x7f4f22ff3828 state=finished returned int>
-2017-02-24 00:11:01,158 parsl.dataflow.dflow [DEBUG]  Task:d3b837a4-f195-424a-92d3-e39240d80130   dep_cnt:4  deps:[<AppFuture at 0x7f4f22ff3978 state=finished returned int>, <AppFuture at 0x7f4f22ff3a20 state=running>, <AppFuture at 0x7f4f22ff3c18 state=running>, <AppFuture at 0x7f4f22ff3ef0 state=running>, <AppFuture at 0x7f4f23006198 state=pending>]
-2017-02-24 00:11:01,158 parsl.dataflow.dflow [DEBUG]  Pending:1   Runnable:4   Done:1
-2017-02-24 00:11:01,159 parsl.dataflow.dflow [DEBUG]  Completed : de3b4cd7-f7ff-4c8d-8180-5ad814426141 with <Future at 0x7f4f22ff3588 state=finished returned int>
-2017-02-24 00:11:01,159 parsl.dataflow.dflow [DEBUG]  Task:d3b837a4-f195-424a-92d3-e39240d80130   dep_cnt:3  deps:[<AppFuture at 0x7f4f22ff3978 state=finished returned int>, <AppFuture at 0x7f4f22ff3a20 state=finished returned int>, <AppFuture at 0x7f4f22ff3c18 state=running>, <AppFuture at 0x7f4f22ff3ef0 state=running>, <AppFuture at 0x7f4f23006198 state=running>]
-2017-02-24 00:11:01,159 parsl.dataflow.dflow [DEBUG]  Pending:1   Runnable:3   Done:2
-2017-02-24 00:11:01,159 parsl.dataflow.dflow [DEBUG]  Completed : bbcbf0a9-1751-4545-b3fc-772f43d2a109 with <Future at 0x7f4f22ff35c0 state=finished returned int>
-2017-02-24 00:11:01,159 parsl.dataflow.dflow [DEBUG]  Task:d3b837a4-f195-424a-92d3-e39240d80130   dep_cnt:2  deps:[<AppFuture at 0x7f4f22ff3978 state=finished returned int>, <AppFuture at 0x7f4f22ff3a20 state=finished returned int>, <AppFuture at 0x7f4f22ff3c18 state=finished returned int>, <AppFuture at 0x7f4f22ff3ef0 state=running>, <AppFuture at 0x7f4f23006198 state=running>]
-2017-02-24 00:11:01,159 parsl.dataflow.dflow [DEBUG]  Pending:1   Runnable:2   Done:3
-2017-02-24 00:11:01,160 parsl.dataflow.dflow [DEBUG]  Completed : 688dd090-7c71-4e6e-8668-58a90417d15c with <Future at 0x7f4f22ff3a90 state=finished returned int>
-2017-02-24 00:11:01,160 parsl.dataflow.dflow [DEBUG]  Task:d3b837a4-f195-424a-92d3-e39240d80130   dep_cnt:1  deps:[<AppFuture at 0x7f4f22ff3978 state=finished returned int>, <AppFuture at 0x7f4f22ff3a20 state=finished returned int>, <AppFuture at 0x7f4f22ff3c18 state=finished returned int>, <AppFuture at 0x7f4f22ff3ef0 state=finished returned int>, <AppFuture at 0x7f4f23006198 state=running>]
-2017-02-24 00:11:01,160 parsl.dataflow.dflow [DEBUG]  Pending:1   Runnable:1   Done:4
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  Completed : d4014f5e-1fb8-4d6b-9e16-41405c6ce3cf with <Future at 0x7f4f22ff3c88 state=finished returned int>
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  Task:d3b837a4-f195-424a-92d3-e39240d80130   dep_cnt:0  deps:[<AppFuture at 0x7f4f22ff3978 state=finished returned int>, <AppFuture at 0x7f4f22ff3a20 state=finished returned int>, <AppFuture at 0x7f4f22ff3c18 state=finished returned int>, <AppFuture at 0x7f4f22ff3ef0 state=finished returned int>, <AppFuture at 0x7f4f23006198 state=finished returned int>]
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  Task : d3b837a4-f195-424a-92d3-e39240d80130 is now runnable
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  d4014f5e-1fb8-4d6b-9e16-41405c6ce3cf Sanitizing (<AppFuture at 0x7f4f22ff3978 state=finished returned int>, <AppFuture at 0x7f4f22ff3a20 state=finished returned int>, <AppFuture at 0x7f4f22ff3c18 state=finished returned int>, <AppFuture at 0x7f4f22ff3ef0 state=finished returned int>, <AppFuture at 0x7f4f23006198 state=finished returned int>) {}
-2017-02-24 00:11:01,259 parsl.dataflow.futures [DEBUG]  Waiting on result of 139977866295672 on 139977866295336
-2017-02-24 00:11:01,259 parsl.dataflow.futures [DEBUG]  Waiting on result of 139977866295840 on 139977866294664
-2017-02-24 00:11:01,259 parsl.dataflow.futures [DEBUG]  Waiting on result of 139977866296344 on 139977866294720
-2017-02-24 00:11:01,259 parsl.dataflow.futures [DEBUG]  Waiting on result of 139977866297072 on 139977866295952
-2017-02-24 00:11:01,259 parsl.dataflow.futures [DEBUG]  Waiting on result of 139977866371480 on 139977866296456
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  Submitting to executor : d3b837a4-f195-424a-92d3-e39240d80130
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  Updating parent of <AppFuture at 0x7f4f230061d0 state=pending> to <Future at 0x7f4f22ff3358 state=pending>
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:1   Done:5
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  Completed : d3b837a4-f195-424a-92d3-e39240d80130 with <Future at 0x7f4f22ff3358 state=finished returned int>
-2017-02-24 00:11:01,259 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:0   Done:6
-**************************************************
-Fan out :  [<AppFuture at 0x7f4f22ff3978 state=running>, <AppFuture at 0x7f4f22ff3a20 state=running>, <AppFuture at 0x7f4f22ff3c18 state=running>, <AppFuture at 0x7f4f22ff3ef0 state=running>, <AppFuture at 0x7f4f23006198 state=pending>]
-[(<AppFuture at 0x7f4f22ff3978 state=running>, False), (<AppFuture at 0x7f4f22ff3a20 state=running>, False), (<AppFuture at 0x7f4f22ff3c18 state=running>, False), (<AppFuture at 0x7f4f22ff3ef0 state=running>, False), (<AppFuture at 0x7f4f23006198 state=pending>, False)]
-Traceback (most recent call last):
-  File "test_python_mapred.py", line 78, in <module>
-    test(width=int(args.width))
-  File "test_python_mapred.py", line 58, in test_mapred_type2
-    assert r  == red.result(), "[TEST] MapRed type2 expected %s, got %s" % (r, red.result())
-  File "/home/yadu/src/parsl/parsl/dataflow/futures.py", line 58, in result
-    return super().result(timeout=timeout)
-  File "/usr/lib/python3.4/concurrent/futures/_base.py", line 397, in result
-    self._condition.wait(timeout)
-  File "/usr/lib/python3.4/threading.py", line 290, in wait
-    waiter.acquire()
-KeyboardInterrupt
+2017-02-25 00:38:15,261 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 0'], 'stderr': 'd/std.0.err', 'outputs': ['outputs/out.0.txt'], 'stdout': 'd/std.0.out'}
+2017-02-25 00:38:15,261 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,261 parsl.dataflow.dflow [DEBUG]  Task:79aebf07-3c6f-486f-9217-f5aa63eeb8e4   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,261 parsl.dataflow.dflow [DEBUG]  79aebf07-3c6f-486f-9217-f5aa63eeb8e4 Sanitizing () {'inputs': ['Hello World 0'], 'stdout': 'd/std.0.out', 'outputs': ['outputs/out.0.txt'], 'stderr': 'd/std.0.err'}
+2017-02-25 00:38:15,261 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 79aebf07-3c6f-486f-9217-f5aa63eeb8e4
+2017-02-25 00:38:15,261 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,262 parsl.dataflow.dflow [DEBUG]  Launched : 79aebf07-3c6f-486f-9217-f5aa63eeb8e4 with <AppFuture at 0x7f6f3ff3d4a8 state=running>
+2017-02-25 00:38:15,262 parsl.app.app [DEBUG]  After  : echo Hello World 0 > outputs/out.0.txt
+2017-02-25 00:38:15,262 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.0.txt
+2017-02-25 00:38:15,262 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 1'], 'stderr': 'd/std.1.err', 'outputs': ['outputs/out.1.txt'], 'stdout': 'd/std.1.out'}
+2017-02-25 00:38:15,262 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,262 parsl.dataflow.dflow [DEBUG]  Task:4802dfa0-7525-4439-ac28-2d6c3a04022f   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,262 parsl.dataflow.dflow [DEBUG]  4802dfa0-7525-4439-ac28-2d6c3a04022f Sanitizing () {'inputs': ['Hello World 1'], 'stdout': 'd/std.1.out', 'outputs': ['outputs/out.1.txt'], 'stderr': 'd/std.1.err'}
+2017-02-25 00:38:15,262 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 4802dfa0-7525-4439-ac28-2d6c3a04022f
+2017-02-25 00:38:15,263 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,263 parsl.dataflow.dflow [DEBUG]  Launched : 4802dfa0-7525-4439-ac28-2d6c3a04022f with <AppFuture at 0x7f6f3ff3dbe0 state=running>
+2017-02-25 00:38:15,263 parsl.app.app [DEBUG]  id:140115791042320 Executing app : echo Hello World 0 > outputs/out.0.txt
+2017-02-25 00:38:15,263 parsl.app.app [DEBUG]  After  : echo Hello World 1 > outputs/out.1.txt
+2017-02-25 00:38:15,263 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.1.txt
+2017-02-25 00:38:15,264 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 2'], 'stderr': 'd/std.2.err', 'outputs': ['outputs/out.2.txt'], 'stdout': 'd/std.2.out'}
+2017-02-25 00:38:15,264 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,264 parsl.dataflow.dflow [DEBUG]  Task:10e20a45-a9bd-4193-bdcf-d64762b72008   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,264 parsl.dataflow.dflow [DEBUG]  10e20a45-a9bd-4193-bdcf-d64762b72008 Sanitizing () {'inputs': ['Hello World 2'], 'stdout': 'd/std.2.out', 'outputs': ['outputs/out.2.txt'], 'stderr': 'd/std.2.err'}
+2017-02-25 00:38:15,264 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 10e20a45-a9bd-4193-bdcf-d64762b72008
+2017-02-25 00:38:15,264 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,265 parsl.dataflow.dflow [DEBUG]  Launched : 10e20a45-a9bd-4193-bdcf-d64762b72008 with <AppFuture at 0x7f6f3ff3ddd8 state=running>
+2017-02-25 00:38:15,265 parsl.app.app [DEBUG]  After  : echo Hello World 2 > outputs/out.2.txt
+2017-02-25 00:38:15,265 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.2.txt
+2017-02-25 00:38:15,265 parsl.app.app [DEBUG]  id:140115791041424 Executing app : echo Hello World 1 > outputs/out.1.txt
+2017-02-25 00:38:15,265 parsl.dataflow.dflow [DEBUG]  Completed : 79aebf07-3c6f-486f-9217-f5aa63eeb8e4 with <Future at 0x7f6f3ff3d7b8 state=finished returned int>
+2017-02-25 00:38:15,266 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 3'], 'stderr': 'd/std.3.err', 'outputs': ['outputs/out.3.txt'], 'stdout': 'd/std.3.out'}
+2017-02-25 00:38:15,266 parsl.app.app [DEBUG]  id:140115791042824 Executing app : echo Hello World 2 > outputs/out.2.txt
+2017-02-25 00:38:15,266 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:2   Done:1
+2017-02-25 00:38:15,267 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,267 parsl.dataflow.dflow [DEBUG]  Task:00f03aa3-6eed-48c9-9dda-072700d15d9d   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,268 parsl.dataflow.dflow [DEBUG]  Completed : 4802dfa0-7525-4439-ac28-2d6c3a04022f with <Future at 0x7f6f3ff3d550 state=finished returned int>
+2017-02-25 00:38:15,268 parsl.dataflow.dflow [DEBUG]  00f03aa3-6eed-48c9-9dda-072700d15d9d Sanitizing () {'inputs': ['Hello World 3'], 'stdout': 'd/std.3.out', 'outputs': ['outputs/out.3.txt'], 'stderr': 'd/std.3.err'}
+2017-02-25 00:38:15,268 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:2   Done:2
+2017-02-25 00:38:15,268 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 00f03aa3-6eed-48c9-9dda-072700d15d9d
+2017-02-25 00:38:15,268 parsl.dataflow.dflow [DEBUG]  Completed : 10e20a45-a9bd-4193-bdcf-d64762b72008 with <Future at 0x7f6f3ff3d940 state=finished returned int>
+2017-02-25 00:38:15,268 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:1   Done:3
+2017-02-25 00:38:15,269 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,269 parsl.app.app [DEBUG]  After  : echo Hello World 3 > outputs/out.3.txt
+2017-02-25 00:38:15,269 parsl.app.app [DEBUG]  id:140115791043720 Executing app : echo Hello World 3 > outputs/out.3.txt
+2017-02-25 00:38:15,269 parsl.dataflow.dflow [DEBUG]  Launched : 00f03aa3-6eed-48c9-9dda-072700d15d9d with <AppFuture at 0x7f6f3ff4f2b0 state=running>
+2017-02-25 00:38:15,269 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.3.txt
+2017-02-25 00:38:15,270 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 4'], 'stderr': 'd/std.4.err', 'outputs': ['outputs/out.4.txt'], 'stdout': 'd/std.4.out'}
+2017-02-25 00:38:15,270 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,270 parsl.dataflow.dflow [DEBUG]  Task:ae7b5bed-d57c-41ab-8edd-4c395dc45877   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,270 parsl.dataflow.dflow [DEBUG]  ae7b5bed-d57c-41ab-8edd-4c395dc45877 Sanitizing () {'inputs': ['Hello World 4'], 'stdout': 'd/std.4.out', 'outputs': ['outputs/out.4.txt'], 'stderr': 'd/std.4.err'}
+2017-02-25 00:38:15,270 parsl.dataflow.dflow [DEBUG]  Submitting to executor : ae7b5bed-d57c-41ab-8edd-4c395dc45877
+2017-02-25 00:38:15,270 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,270 parsl.dataflow.dflow [DEBUG]  Completed : 00f03aa3-6eed-48c9-9dda-072700d15d9d with <Future at 0x7f6f3ff3dcc0 state=finished returned int>
+2017-02-25 00:38:15,270 parsl.app.app [DEBUG]  After  : echo Hello World 4 > outputs/out.4.txt
+2017-02-25 00:38:15,271 parsl.dataflow.dflow [DEBUG]  Launched : ae7b5bed-d57c-41ab-8edd-4c395dc45877 with <AppFuture at 0x7f6f3ff4f390 state=running>
+2017-02-25 00:38:15,271 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:1   Done:4
+2017-02-25 00:38:15,271 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.4.txt
+2017-02-25 00:38:15,271 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 5'], 'stderr': 'd/std.5.err', 'outputs': ['outputs/out.5.txt'], 'stdout': 'd/std.5.out'}
+2017-02-25 00:38:15,271 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,271 parsl.app.app [DEBUG]  id:140115791043832 Executing app : echo Hello World 4 > outputs/out.4.txt
+2017-02-25 00:38:15,271 parsl.dataflow.dflow [DEBUG]  Task:4823edf4-4d39-462f-909d-20667162a6cc   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,272 parsl.dataflow.dflow [DEBUG]  4823edf4-4d39-462f-909d-20667162a6cc Sanitizing () {'inputs': ['Hello World 5'], 'stdout': 'd/std.5.out', 'outputs': ['outputs/out.5.txt'], 'stderr': 'd/std.5.err'}
+2017-02-25 00:38:15,272 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 4823edf4-4d39-462f-909d-20667162a6cc
+2017-02-25 00:38:15,272 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,272 parsl.app.app [DEBUG]  After  : echo Hello World 5 > outputs/out.5.txt
+2017-02-25 00:38:15,272 parsl.dataflow.dflow [DEBUG]  Launched : 4823edf4-4d39-462f-909d-20667162a6cc with <AppFuture at 0x7f6f3ff4f710 state=running>
+2017-02-25 00:38:15,273 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.5.txt
+2017-02-25 00:38:15,273 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 6'], 'stderr': 'd/std.6.err', 'outputs': ['outputs/out.6.txt'], 'stdout': 'd/std.6.out'}
+2017-02-25 00:38:15,273 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,273 parsl.dataflow.dflow [DEBUG]  Completed : ae7b5bed-d57c-41ab-8edd-4c395dc45877 with <Future at 0x7f6f3ff4f080 state=finished returned int>
+2017-02-25 00:38:15,273 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:1   Done:5
+2017-02-25 00:38:15,273 parsl.dataflow.dflow [DEBUG]  Task:bea877a2-188a-438b-8497-46679b4224a4   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,273 parsl.dataflow.dflow [DEBUG]  bea877a2-188a-438b-8497-46679b4224a4 Sanitizing () {'inputs': ['Hello World 6'], 'stdout': 'd/std.6.out', 'outputs': ['outputs/out.6.txt'], 'stderr': 'd/std.6.err'}
+2017-02-25 00:38:15,273 parsl.dataflow.dflow [DEBUG]  Submitting to executor : bea877a2-188a-438b-8497-46679b4224a4
+2017-02-25 00:38:15,274 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,274 parsl.app.app [DEBUG]  id:140115791042992 Executing app : echo Hello World 5 > outputs/out.5.txt
+2017-02-25 00:38:15,274 parsl.app.app [DEBUG]  After  : echo Hello World 6 > outputs/out.6.txt
+2017-02-25 00:38:15,274 parsl.dataflow.dflow [DEBUG]  Launched : bea877a2-188a-438b-8497-46679b4224a4 with <AppFuture at 0x7f6f3ff4fa20 state=running>
+2017-02-25 00:38:15,275 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.6.txt
+2017-02-25 00:38:15,275 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 7'], 'stderr': 'd/std.7.err', 'outputs': ['outputs/out.7.txt'], 'stdout': 'd/std.7.out'}
+2017-02-25 00:38:15,275 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,275 parsl.dataflow.dflow [DEBUG]  Task:491129ac-7d2c-4447-8df3-8adba9836eb2   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,275 parsl.dataflow.dflow [DEBUG]  491129ac-7d2c-4447-8df3-8adba9836eb2 Sanitizing () {'inputs': ['Hello World 7'], 'stdout': 'd/std.7.out', 'outputs': ['outputs/out.7.txt'], 'stderr': 'd/std.7.err'}
+2017-02-25 00:38:15,275 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 491129ac-7d2c-4447-8df3-8adba9836eb2
+2017-02-25 00:38:15,276 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,276 parsl.app.app [DEBUG]  After  : echo Hello World 7 > outputs/out.7.txt
+2017-02-25 00:38:15,276 parsl.dataflow.dflow [DEBUG]  Launched : 491129ac-7d2c-4447-8df3-8adba9836eb2 with <AppFuture at 0x7f6f3ff4fc88 state=running>
+2017-02-25 00:38:15,276 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.7.txt
+2017-02-25 00:38:15,276 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 8'], 'stderr': 'd/std.8.err', 'outputs': ['outputs/out.8.txt'], 'stdout': 'd/std.8.out'}
+2017-02-25 00:38:15,276 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,276 parsl.dataflow.dflow [DEBUG]  Task:5457e639-1943-4d7b-8034-794c107ab9d2   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,276 parsl.dataflow.dflow [DEBUG]  5457e639-1943-4d7b-8034-794c107ab9d2 Sanitizing () {'inputs': ['Hello World 8'], 'stdout': 'd/std.8.out', 'outputs': ['outputs/out.8.txt'], 'stderr': 'd/std.8.err'}
+2017-02-25 00:38:15,276 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 5457e639-1943-4d7b-8034-794c107ab9d2
+2017-02-25 00:38:15,276 parsl.dataflow.dflow [DEBUG]  Launched : 5457e639-1943-4d7b-8034-794c107ab9d2 with <AppFuture at 0x7f6f3ff4fef0 state=pending>
+2017-02-25 00:38:15,277 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.8.txt
+2017-02-25 00:38:15,277 parsl.app.app [DEBUG]  id:140115791044280 Executing app : echo Hello World 6 > outputs/out.6.txt
+2017-02-25 00:38:15,277 parsl.app.app_factory [DEBUG]  In factory call : () {'inputs': ['Hello World 9'], 'stderr': 'd/std.9.err', 'outputs': ['outputs/out.9.txt'], 'stdout': 'd/std.9.out'}
+2017-02-25 00:38:15,277 parsl.dataflow.dflow [DEBUG]  Completed : 4823edf4-4d39-462f-909d-20667162a6cc with <Future at 0x7f6f3ff3dd68 state=finished returned int>
+2017-02-25 00:38:15,277 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,279 parsl.app.app [DEBUG]  After  : echo Hello World 8 > outputs/out.8.txt
+2017-02-25 00:38:15,278 parsl.app.app [DEBUG]  Submitting to DataFlowKernel : <parsl.dataflow.dflow.DataFlowKernel object at 0x7f6f40612e48>
+2017-02-25 00:38:15,279 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:3   Done:6
+2017-02-25 00:38:15,280 parsl.dataflow.dflow [DEBUG]  Task:530e52f5-f9f3-4945-bea9-9a7ae856d3cb   dep_cnt:0  deps:[]
+2017-02-25 00:38:15,280 parsl.app.app [DEBUG]  id:140115791117000 Executing app : echo Hello World 8 > outputs/out.8.txt
+2017-02-25 00:38:15,280 parsl.dataflow.dflow [DEBUG]  530e52f5-f9f3-4945-bea9-9a7ae856d3cb Sanitizing () {'inputs': ['Hello World 9'], 'stdout': 'd/std.9.out', 'outputs': ['outputs/out.9.txt'], 'stderr': 'd/std.9.err'}
+2017-02-25 00:38:15,280 parsl.dataflow.dflow [DEBUG]  Submitting to executor : 530e52f5-f9f3-4945-bea9-9a7ae856d3cb
+2017-02-25 00:38:15,281 parsl.dataflow.dflow [DEBUG]  Launched : 530e52f5-f9f3-4945-bea9-9a7ae856d3cb with <AppFuture at 0x7f6f3ff4f320 state=pending>
+2017-02-25 00:38:15,283 parsl.app.futures [DEBUG]  Filepath : /home/yadu/src/parsl/parsl/tests/outputs/out.9.txt
+2017-02-25 00:38:15,277 parsl.app.app [DEBUG]  id:140115791116216 Executing app : echo Hello World 7 > outputs/out.7.txt
+2017-02-25 00:38:15,284 parsl.app.app [DEBUG]  Before : echo {inputs[0]} > {outputs[0]}
+2017-02-25 00:38:15,284 parsl.dataflow.dflow [DEBUG]  Completed : bea877a2-188a-438b-8497-46679b4224a4 with <Future at 0x7f6f3ff3df98 state=finished returned int>
+2017-02-25 00:38:15,284 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791041704 on 140115791042488
+2017-02-25 00:38:15,286 parsl.dataflow.dflow [DEBUG]  Completed : 5457e639-1943-4d7b-8034-794c107ab9d2 with <Future at 0x7f6f3ff4fb00 state=finished returned int>
+2017-02-25 00:38:15,286 parsl.app.app [DEBUG]  After  : echo Hello World 9 > outputs/out.9.txt
+2017-02-25 00:38:15,287 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:3   Done:7
+2017-02-25 00:38:15,287 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791043552 on 140115791041872
+2017-02-25 00:38:15,287 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:2   Done:8
+2017-02-25 00:38:15,287 parsl.app.app [DEBUG]  id:140115791117728 Executing app : echo Hello World 9 > outputs/out.9.txt
+2017-02-25 00:38:15,287 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791044056 on 140115791042880
+2017-02-25 00:38:15,288 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791114928 on 140115791043776
+2017-02-25 00:38:15,289 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791115152 on 140115791114368
+2017-02-25 00:38:15,289 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791116048 on 140115791043944
+2017-02-25 00:38:15,289 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791116832 on 140115791044504
+2017-02-25 00:38:15,289 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791117448 on 140115791116272
+2017-02-25 00:38:15,289 parsl.dataflow.dflow [DEBUG]  Completed : 491129ac-7d2c-4447-8df3-8adba9836eb2 with <Future at 0x7f6f3ff4f7f0 state=finished returned int>
+2017-02-25 00:38:15,289 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:1   Done:9
+2017-02-25 00:38:15,289 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791118064 on 140115791117056
+2017-02-25 00:38:15,290 parsl.dataflow.futures [DEBUG]  Waiting on result of 140115791115040 on 140115791116160
+2017-02-25 00:38:15,293 parsl.dataflow.dflow [DEBUG]  Completed : 530e52f5-f9f3-4945-bea9-9a7ae856d3cb with <Future at 0x7f6f3ff4f780 state=finished returned int>
+2017-02-25 00:38:15,293 parsl.dataflow.dflow [DEBUG]  Pending:0   Runnable:0   Done:10
+Duration : 0.03214716911315918s
+[TEST STATUS] test_parallel_for [SUCCESS]
