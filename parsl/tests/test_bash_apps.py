@@ -29,9 +29,9 @@ def test_command_format_1 ():
     app_fu, data_fus = foo(1, 4, outputs=['a.txt'])
 
     result = data_fus[0].result()
-    #print("Result in data_fus : ", result)
+    print("Result in data_fus : ", result)
     contents = open(result, 'r').read()
-    #print("Got contents : ", contents)
+    print("Got contents : ", contents)
     assert contents == "1 4\n", 'Output does not match expected string "1 4", Got: "{0}"'.format(contents)
     return True
 
