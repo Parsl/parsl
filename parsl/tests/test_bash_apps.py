@@ -28,6 +28,7 @@ def test_command_format_1 ():
 
     app_fu, data_fus = foo(1, 4, outputs=['a.txt'])
 
+    print(data_fus[0].done())
     result = data_fus[0].result()
     print("Result in data_fus : ", result)
     contents = open(result, 'r').read()
