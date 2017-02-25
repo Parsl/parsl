@@ -38,6 +38,6 @@ For testing:
 .. |build-status| image:: https://travis-ci.org/swift-lang/swift-e-lab.svg?branch=master
    :target: https://travis-ci.org/swift-lang/swift-e-lab
    :alt: Build status
-.. |docs| image:: https://travis-ci.org/swift-lang/swift-e-lab.svg?branch=master
-   :target: http://parsl.readthedocs.io/en/latest/
-   :alt: Build status
+.. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=latest
+   :target: http://parsl.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
