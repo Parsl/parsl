@@ -72,6 +72,9 @@ class BashApp(AppBase):
         if self.exec_type != "bash":
             raise NotImplemented
 
+        logger.debug("Before : %s", self.executable)
+        self.executable = self.executable.format(*args, **kwargs)
+        logger.debug("After  : %s", self.executable )
         #logger.debug("Running app : bash")
         std_out = open(self.stdout, 'w') if self.stdout else None
         std_err = open(self.stderr, 'w') if self.stderr else None
@@ -126,7 +129,7 @@ class BashApp(AppBase):
         '''
         cmd_line = self._trace_cmdline(*args, **kwargs)
         # TODO : The format system doesn't take *args yet.
-        self.executable = cmd_line.format(**kwargs)
+        self.executable = cmd_line #.format(**kwargs)
 
         if type(self.executor) == DataFlowKernel:
             logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
