@@ -34,11 +34,11 @@ class DataFuture(Future):
     is resolved i.e file exists, then the DataFuture is assumed to be resolved.
     """
 
-    def __init__ (self, fut, filepath, filetype='local'):
+    def __init__ (self, fut, filepath, parent=None, filetype='local'):
         super().__init__()
         self.filetype = filetype
         self.filepath = os.path.abspath(os.path.expanduser(filepath))
-        self.parent   = None
+        self.parent   = parent
 
         if fut == None:
             logger.debug("Setting result to filepath since no future was passed")
@@ -56,7 +56,7 @@ class DataFuture(Future):
         if not self.parent :
             return self.parent.result(timeout=timeout)
         else:
-            return self.filepath
+            return super().result(timeout=timeout)
 
     def cancel(self):
         if self.parent:

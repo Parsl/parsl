@@ -139,7 +139,7 @@ class BashApp(AppBase):
             logger.debug("Submitting to Executor: %s",  self.executor)
             app_fut = self.executor.submit(partial(self._callable, *args, **kwargs))
 
-        out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
+        out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
         if out_futs:
             return app_fut, out_futs
         else:
@@ -181,7 +181,7 @@ class PythonApp(AppBase):
             logger.debug("Exec   : %s", self.executable)
             app_fut = self.executor.submit(self.executable)
 
-        out_futs = [DataFuture(app_fut, o) for o in kwargs.get('outputs', []) ]
+        out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
         if out_futs:
             return app_fut, out_futs
         else:
