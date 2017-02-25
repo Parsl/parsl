@@ -39,5 +39,5 @@ For testing:
    :target: https://travis-ci.org/swift-lang/swift-e-lab
    :alt: Build status
 .. |docs| image:: https://travis-ci.org/swift-lang/swift-e-lab.svg?branch=master
-   :target: 
+   :target: http://parsl.readthedocs.io/en/latest/
    :alt: Build status
