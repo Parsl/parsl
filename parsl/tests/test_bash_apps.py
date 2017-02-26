@@ -3,6 +3,7 @@
 import parsl
 from parsl import *
 
+from nose.tools import nottest
 
 import os
 import time
@@ -24,6 +25,7 @@ def foo(x, y, outputs=[]):
     echo {0} {1} &> {outputs[0]}
     '''
 
+@nottest
 def test_command_format_1 ():
 
     app_fu, data_fus = foo(1, 4, outputs=['a.txt'])
