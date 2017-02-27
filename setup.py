@@ -19,6 +19,8 @@ setup(
     author='Yadu Nand Babuji',
     author_email='yadu@uchicago.edu',
     license='Apache 2.0',
+    download_url = 'https://github.com/swift-lang/swift-e-lab/archive/0.1.tar.gz',
+    keywords = ['Workflows', 'Scientific computing'],
     package_data={'': ['LICENSE']},
     packages=['parsl', 'parsl.app', 'parsl.dataflow'],
     install_requires=install_requires,
