@@ -2,7 +2,7 @@ Parsl - Parallel Scripting Library
 ==================================
 |licence| |build-status| |docs|
 
-Parsl is a parallel scripting library that enable easy parallelism and workflow design.
+Parsl is a parallel scripting library that enables easy parallelism and workflow design.
 
 
 QuickStart
