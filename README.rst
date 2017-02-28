@@ -4,9 +4,39 @@ Parsl - Parallel Scripting Library
 
 Parsl is a parallel scripting library that enables easy parallelism and workflow design.
 
+.. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
+   :target: https://github.com/swift-lang/swift-e-lab/blob/master/LICENSE
+   :alt: Apache Licence V2.0
+.. |build-status| image:: https://travis-ci.org/swift-lang/swift-e-lab.svg?branch=master
+   :target: https://travis-ci.org/swift-lang/swift-e-lab
+   :alt: Build status
+.. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=latest
+   :target: http://parsl.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
 
 QuickStart
 ==========
+
+Parsl is now available on PyPI:
+
+1. Download Parsl::
+
+    $ git clone https://github.com/swift-lang/swift-e-lab.git parsl
+
+2. Install Parsl::
+
+    $ pip install parsl
+
+3. Install Jupyter for Tutorial notebooks::
+
+    $ pip3 install jupyter
+
+.. note:: For more detailed info on setting up Jupyter with Python3.5 go `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
+
+
+For Developers
+--------------
 
 1. Download Parsl::
 
@@ -25,6 +55,8 @@ Requirements
 Parsl requires the following :
 
 * Python 3.5+
+* Jupyter (for running notebook Tutorial), with Python3.5+ kernel
+
 
 For testing:
 
@@ -32,12 +64,3 @@ For testing:
 * coverage
 
 
-.. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
-   :target: https://github.com/swift-lang/swift-e-lab/blob/master/LICENSE
-   :alt: Apache Licence V2.0
-.. |build-status| image:: https://travis-ci.org/swift-lang/swift-e-lab.svg?branch=master
-   :target: https://travis-ci.org/swift-lang/swift-e-lab
-   :alt: Build status
-.. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=latest
-   :target: http://parsl.readthedocs.io/en/latest/?badge=latest
-   :alt: Documentation Status
