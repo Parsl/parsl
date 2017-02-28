@@ -17,8 +17,7 @@ documentation `here <parsl.readthedocs.io>`__
     from parsl import *
 
 Parsl's DataFlowKernel acts as a layer over any pool of execution
-resources, in our case a pool of
-[threads](https://en.wikipedia.org/wiki/Thread\_(computing).
+resources, in our case a pool of `threads <https://en.wikipedia.org/wiki/Thread\_(computing)>`_
 
 .. code:: python
 
