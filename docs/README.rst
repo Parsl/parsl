@@ -11,6 +11,7 @@ has to be converted to .rst format, and placed under docs/quick/Tutorial.rst.
 The command to make the convertion is:
 
 >>> jupyter nbconvert --to rst Tutorial.ipynb
+>>> sed -i 's/ipython3/python/g' Tutorial.rst
 
 Builds
 ------
