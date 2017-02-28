@@ -147,7 +147,7 @@ outputs list is returned in addition to the AppFuture.
         ls ;
         '''
 
-    sim_fut, data_futs = sim_mol_dyn(5, 2, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
+    sim_fut, data_futs = sim_mol_dyn(5, 3, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
 
 .. code:: python
 
