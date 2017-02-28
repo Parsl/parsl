@@ -113,7 +113,8 @@ was assigned.
 Remote-Execution
 ^^^^^^^^^^^^^^^^
 
-In Swift/K, remote execution is handled by `coasters <http://swift-lang.org/guides/trunk/userguide/userguide.html#_how_swift_implements_the_site_execution_model>`. This is a pilot mechanism that supports
+In Swift/K, remote execution is handled by `coasters <http://swift-lang.org/guides/trunk/userguide/userguide.html#_how_swift_implements_the_site_execution_model>`_.
+This is a pilot mechanism that supports
 dynamic resource provisioning from cluster managers such as PBS, Slurm, Condor and handles data
 transport from the client to the workers. Swift/T on the other hand is designed to run as an MPI job on
 a single HPC resource. Swift/T utilized shared-filesystems that almost every HPC resource has.
@@ -123,7 +124,7 @@ the remote-execution aspect.
 
 Here is a set of features that should be implemented or borrowed :
 
-* [Must have] New remote execution system must have the `executor interface <https://docs.python.org/3/library/concurrent.futures.html#executor-objects>`.
+* [Must have] New remote execution system must have the `executor interface <https://docs.python.org/3/library/concurrent.futures.html#executor-objects>`_.
 * [Must have] Executors must be memory efficient wrt to holding jobs in memory.
 * [Must have] Continue to support both BashApps and PythonApps.
 * [?] Capable of using templates to submit jobs to Cluster resource managers.
