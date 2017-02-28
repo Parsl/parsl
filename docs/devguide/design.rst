@@ -9,7 +9,7 @@ Swift vs Parsl
 The following text is not well structured, and is mostly a brain dump that needs to be organized.
 Moving from swift to an established language (python) came with it's own tradeoffs. We get the backing
 of a rich and very well known language to handle the language aspects as well as the libraries.
-However, we lose the parallel evaluation of every statement in a statement. The thesis is that what we
+However, we lose the parallel evaluation of every statement in a script. The thesis is that what we
 lose is minimal and will not affect 95% of our workflows. This is not yet substanciated.
 
 Parallel Evaluation
