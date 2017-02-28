@@ -19,4 +19,9 @@ Builds
 As of now, builds are automatically done by readthedocs.io and published to parsl.readthedocs.io
 upon git commits.
 
+Dev_Docs
+--------
+
+The developer documentation for the codebase is embedded in the codebase and imported through
+docs/devguide/dev_docs.rst. So do not be alarmed to see no text within the .rst file.
 
