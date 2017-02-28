@@ -1,2 +1,5 @@
 *~
 *.pyc
+build/*
+dist/*
+parsl.egg-info/*
