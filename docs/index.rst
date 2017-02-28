@@ -15,7 +15,7 @@ Contents:
    :caption: Quickstart
 
    quick/quickstart.rst
-   quick/tutorial.rst
+   quick/Tutorial.rst
 
 .. toctree::
    :maxdepth: 3
