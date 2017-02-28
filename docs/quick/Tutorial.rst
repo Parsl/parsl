@@ -10,7 +10,7 @@ function can run in parallel when all their inputs are ready.
 For a deeper dive into examples and documentation, please refer our
 documentation `here <parsl.readthedocs.io>`__
 
-.. code:: ipython3
+.. code:: python
 
     # Import Parsl
     import parsl
@@ -20,7 +20,7 @@ Parsl's DataFlowKernel acts as a layer over any pool of execution
 resources, in our case a pool of
 [threads](https://en.wikipedia.org/wiki/Thread\_(computing).
 
-.. code:: ipython3
+.. code:: python
 
     # Let's create a pool of threads to execute our f
     workers = ThreadPoolExecutor(max_workers=4)
@@ -35,7 +35,7 @@ World!'. This function is made an App using the **@App** decorator. The
 decorator itself takes the type of app ('python'\|'bash') and the
 DataFlowKernel object as arguments.
 
-.. code:: ipython3
+.. code:: python
 
     # Here we define our first App function, a simple python app that returns a string
     @App('python', dfk)
@@ -57,7 +57,7 @@ It is important to note that while done(), just gives you the current
 status, the result() call blocks execution till the App is complete and
 the result is available.
 
-.. code:: ipython3
+.. code:: python
 
     # Check status 
     print("Status: ", app_future.done())
@@ -87,7 +87,7 @@ average. The dependency chain looks like this :
                         |
     Future            avg_pi
 
-.. code:: ipython3
+.. code:: python
 
     @App('python', dfk)
     def pi(total):
@@ -111,7 +111,7 @@ average. The dependency chain looks like this :
     a, b, c = pi(10**6), pi(10**6), pi(10**6)
     avg_pi  = mysum(a, b, c)
 
-.. code:: ipython3
+.. code:: python
 
     # Print the results
     print("A: {0:5} B: {1:5} B: {1:5}".format(a.result(), b.result(), c.result()))
@@ -138,7 +138,7 @@ In addition if a list of output filenames are provided via the
 outputs=[], a list of DataFutures corresponding to each filename in the
 outputs list is returned in addition to the AppFuture.
 
-.. code:: ipython3
+.. code:: python
 
     @App('bash', dfk)
     def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
@@ -151,6 +151,6 @@ outputs list is returned in addition to the AppFuture.
         
     sim_fut, data_futs = sim_mol_dyn(5, 2, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
 
-.. code:: ipython3
+.. code:: python
 
     print(sim_fut, data_futs)
