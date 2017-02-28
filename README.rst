@@ -18,7 +18,9 @@ Parsl is a parallel scripting library that enables easy parallelism and workflow
 QuickStart
 ==========
 
-Parsl is now available on PyPI:
+Parsl is now available on PyPI, but first make sure you have Python3.5+
+
+   >>> python3 --version
 
 1. Download Parsl::
 
@@ -26,7 +28,7 @@ Parsl is now available on PyPI:
 
 2. Install Parsl::
 
-    $ pip install parsl
+    $ pip3 install parsl
 
 3. Install Jupyter for Tutorial notebooks::
 
