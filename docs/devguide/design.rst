@@ -12,10 +12,21 @@ of a rich and very well known language to handle the language aspects as well as
 However, we lose the parallel evaluation of every statement in a script. The thesis is that what we
 lose is minimal and will not affect 95% of our workflows. This is not yet substanciated.
 
+Please note that there are two Swift languages: `Swift/K <http://swift-lang.org/main/>`
+and `Swift/T <http://swift-lang.org/Swift-T/index.php>`_ . These have diverged in syntax and behavior.
+Swift/K is designed for grids and clusters runs the java based
+`Karajan <https://wiki.cogkit.org/wiki/Karajan>`_ (hence, /K) execution framework.
+Swift/T is a completely new implementation of Swift/K for high-performance computing. Swift/T uses
+Turbine(hence, /T) and and
+`ADLB <http://www.mcs.anl.gov/project/adlb-asynchronous-dynamic-load-balancer>` runtime libraries for 
+highly scalable dataflow processing over MPI,
+without single-node bottlenecks.
+
+
 Parallel Evaluation
 ^^^^^^^^^^^^^^^^^^^
 
-In Swift, every statement is evaluated in parallel.
+In Swift (K&T), every statement is evaluated in parallel.
 
 .. code-block:: c
 
@@ -60,7 +71,11 @@ The main conclusion here is that, if the iteration space is sufficiently large (
 Mappers
 ^^^^^^^
 
-In Swift, a mapper is ...
+In Swift/K, a mapper is a mechanism to map files to variables. Swift need's to know files
+on disk so that it could move them to remote sites for execution or as inputs to applications.
+Mapped file variables also indicate to swift that, when files are created on remote sites, they
+need to be staged back. Swift/K provides several mappers which makes it convenient to map files on
+disk to file variables.
 
 There are two choices here :
 
@@ -95,5 +110,22 @@ The results that trace would print would be non-deterministic, if x were mutable
 would raise an error. However this is perfectly legal in python, and the x would take the last value it
 was assigned.
 
+Remote-Execution
+^^^^^^^^^^^^^^^^
 
+In Swift/K, remote execution is handled by `coasters <http://swift-lang.org/guides/trunk/userguide/userguide.html#_how_swift_implements_the_site_execution_model>`. This is a pilot mechanism that supports
+dynamic resource provisioning from cluster managers such as PBS, Slurm, Condor and handles data
+transport from the client to the workers. Swift/T on the other hand is designed to run as an MPI job on
+a single HPC resource. Swift/T utilized shared-filesystems that almost every HPC resource has.
+
+To be useful, Parsl will need to support remote execution and file transfers. Here we will discuss just
+the remote-execution aspect.
+
+Here is a set of features that should be implemented or borrowed :
+
+* [Must have] New remote execution system must have the `executor interface <https://docs.python.org/3/library/concurrent.futures.html#executor-objects>`.
+* [Must have] Executors must be memory efficient wrt to holding jobs in memory.
+* [Must have] Continue to support both BashApps and PythonApps.
+* [?] Capable of using templates to submit jobs to Cluster resource managers.
+* [?] Dynamically launch and shutdown workers.
 
