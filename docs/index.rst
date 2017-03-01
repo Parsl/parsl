@@ -32,7 +32,7 @@ Contents:
 
    devguide/design
    devguide/dev_docs
-
+   devguide/packaging
 
 
 Indices and tables
