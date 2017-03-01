@@ -7,7 +7,7 @@ wraps python functions into Apps with the **@App** decorator. Decorated
 function can run in parallel when all their inputs are ready.
 
 For a deeper dive into examples and documentation, please refer our
-documentation `here <parsl.readthedocs.io>`__
+documentation `here <parsl.readthedocs.io>`_
 
 .. code:: python
 
@@ -16,11 +16,11 @@ documentation `here <parsl.readthedocs.io>`__
     from parsl import *
 
 Parsl's DataFlowKernel acts as a layer over any pool of execution
-resources, in our case a pool of `threads <https://en.wikipedia.org/wiki/Thread\_(computing)>`_
+resources, in our case a pool of `threads <https://en.wikipedia.org/wiki/Thread_(computing)>`_
 
 .. code:: python
 
-    # Let's create a pool of threads to execute our f
+    # Let's create a pool of threads to execute our functions
     workers = ThreadPoolExecutor(max_workers=4)
     # We pass the workers to the DataFlowKernel which will execute our Apps over the workers.
     dfk = DataFlowKernel(workers)
