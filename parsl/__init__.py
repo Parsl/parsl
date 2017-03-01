@@ -31,7 +31,7 @@ from parsl.version import VERSION
 from parsl.app.app import App
 from parsl.app.executors import ThreadPoolExecutor, ProcessPoolExecutor
 import logging
-import parsl.app.errors
+#import parsl.app.errors
 
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app_factory import AppFactoryFactory
@@ -44,15 +44,16 @@ __version__ = VERSION
 __all__ = ['App', 'DataFlowKernel', 'ThreadPoolExecutor', 'ProcessPoolExecutor']
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
-    ''' Add a stream log handler
+    '''
+    Add a stream log handler
 
     Args:
-        name (string) : Set the logger name
-        level (logging.LEVEL) : Set to logging.DEBUG by default
-        format_string (sting) : Set to None by default
+         - name (string) : Set the logger name.
+         - level (logging.LEVEL) : Set to logging.DEBUG by default.
+         - format_string (sting) : Set to None by default.
 
     Returns:
-        None
+         - None
     '''
 
     if format_string is None:
@@ -72,13 +73,13 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
     ''' Add a stream log handler
 
     Args:
-        filename (string) : Name of the file to write logs to
-        name (string) : Logger name
-        level (loggig.LEVEL) : Set the logging level.
-        format_string (string) : Set the format string
+        - filename (string): Name of the file to write logs to
+        - name (string): Logger name
+        - level (logging.LEVEL): Set the logging level.
+        - format_string (string): Set the format string
 
     Returns:
-        None
+       -  None
     '''
 
     if format_string is None:
@@ -95,7 +96,9 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
 
 class NullHandler (logging.Handler):
     ''' Setup default logging to /dev/null since this is library.
+
     '''
+
     def emit(self, record):
         pass
 
