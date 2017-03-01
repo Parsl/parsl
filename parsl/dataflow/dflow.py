@@ -43,6 +43,7 @@ class DataFlowKernel(object):
         Returns:
             DataFlowKernel object
         """
+
         self.pending         = {}
         self.fut_task_lookup = {}
         self.runnable        = {}
@@ -129,6 +130,7 @@ class DataFlowKernel(object):
         Kwargs:
            None
         '''
+
         logger.debug("Pending:%d   Runnable:%d   Done:%d", len(self.pending),
                      len(self.runnable), len(self.done))
 
@@ -141,6 +143,7 @@ class DataFlowKernel(object):
         Kwargs:
            None
         '''
+
         print("Pending:{0}   Runnable:{1}   Done:{2}".format( len(self.pending),
                                                               len(self.runnable),
                                                               len(self.done)) )
@@ -217,9 +220,10 @@ class DataFlowKernel(object):
              kwargs (Dict) : Kwargs to app function
 
         Return:
-             partial Function evaluated with all dependencies in  args, kwargs and
-        kwargs['inputs'] evaluated.
+             partial Function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
+
         '''
+
         # Todo: This function is not tested.
         logger.debug("%s Sanitizing %s %s", task_id, args, kwargs)
 

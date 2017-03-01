@@ -6,7 +6,13 @@ class DataFlowExceptions(Exception):
     pass
 
 class DuplicateTaskError(DataFlowExceptions):
+    """ Raised by the DataFlowKernel when it finds that a job with the same task-id has been
+    launched before.
+    """
     pass
 
 class MissingFutError(DataFlowExceptions):
+    """ Raised when a particular future is not found within the dataflowkernel's datastructures.
+    Deprecated.
+    """
     pass

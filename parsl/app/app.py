@@ -99,6 +99,11 @@ class BashApp(AppBase):
         return self.returncode
 
     def _trace_cmdline(self, *args, **kwargs):
+        ''' Internal function used to trace the values set to the special variable
+        cmd_line in the function body.
+
+        '''
+
         def tracer(frame, event, arg):
             if event=='return':
                 self._locals = frame.f_locals.copy()

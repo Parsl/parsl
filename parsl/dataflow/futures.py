@@ -48,11 +48,16 @@ class AppFuture(Future):
 
     def parent_callback(self, executor_fu):
         ''' Callback from executor future to update the parent.
+
         Args:
-            executor_fu (Future): Future returned by the executor along with callback
+            - executor_fu (Future): Future returned by the executor along with callback
+
+        Returns:
+            - None
 
         Updates the super() with the result() or exception()
         '''
+
         logger.debug("App_fu updated with executor_Fu state")
 
         if executor_fu.done() == True:
