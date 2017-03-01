@@ -1,5 +1,4 @@
-'''
-Parsl Apps
+'''Parsl Apps
 ==========
 
 Here lies the definitions for the @App decorator and the APP classes.
@@ -22,22 +21,26 @@ from functools import partial
 
 
 class AppBase (object):
-    """ Encapsulates the generic App
+    """
+    This is the base class that defines the two external facing functions that an App must define.
+    The  __init__ () which is called when the interpretor sees the definition of the decorated
+    function, and the __call__ () which is invoked when a decorated function is called by the user.
+
     """
 
     def __init__ (self, func, executor, walltime=60, exec_type="bash"):
         ''' Constructor for the APP object.
 
         Args:
-             func (function): Takes the function to be made into an App
-             executor (executor): Executor for the execution resource
+             - func (function): Takes the function to be made into an App
+             - executor (executor): Executor for the execution resource
 
         Kwargs:
-             walltime (int) : Walltime in seconds for the app execution
-             exec_type (string) : App type (bash|python)
+             - walltime (int) : Walltime in seconds for the app execution
+             - exec_type (string) : App type (bash|python)
 
         Returns:
-             APP object.
+             - APP object.
 
         '''
         self.__name__   = func.__name__
@@ -116,9 +119,10 @@ class BashApp(AppBase):
         ''' This is where the call to a python app is handled
 
         Args:
-             Arbitrary
+             - Arbitrary
+
         Kwargs:
-             Arbitrary
+             - Arbitrary
 
         Returns:
              If outputs=[...] was a kwarg then:
@@ -147,8 +151,8 @@ class BashApp(AppBase):
 
 
 class PythonApp(AppBase):
-    """ Extend App to cover the Python App
-    TODO : Well, this needs a lot of work.
+    """ Extends AppBase to cover the Python App
+
     """
     def __init__ (self, func, executor, walltime=60):
         ''' Initialize the super. This bit is the same for both bash & python apps.
@@ -159,9 +163,9 @@ class PythonApp(AppBase):
         ''' This is where the call to a python app is handled
 
         Args:
-             Arbitrary
+             - Arbitrary
         Kwargs:
-             Arbitrary
+             - Arbitrary
 
         Returns:
              If outputs=[...] was a kwarg then:
@@ -190,6 +194,7 @@ class PythonApp(AppBase):
 
 def App(apptype, executor, walltime=60):
     ''' The App decorator function
+
     Args:
         apptype (string) : Apptype can be bash|python
         executor (Executor) : Executor object wrapping threads/process pools etc.
@@ -198,9 +203,9 @@ def App(apptype, executor, walltime=60):
         walltime (int) : Walltime for app in seconds, default=60
 
     Returns:
-         An AppFactory object, which when called runs the apps through the
-    executor.
+         An AppFactory object, which when called runs the apps through the executor.
     '''
+
     from parsl import APP_FACTORY_FACTORY
 
     def Exec(f):
