@@ -94,14 +94,14 @@ class DataFlowKernel(object):
 
             if self._count_deps(self.tasks[tid]['depends'], tid) == 0:
                 # We can now launch *task*
-                logger.debug("Task : %s is now runnable", task)
+                logger.debug("Task : %s is now runnable", tid)
                 executable = self.sanitize_and_wrap(tid,
                                                     self.tasks[tid]['func'],
                                                     self.tasks[tid]['args'],
                                                     self.tasks[tid]['kwargs'])
 
                 self.tasks[tid]['status'] = States.running
-                exec_fu = self.launch_task(executable, task)
+                exec_fu = self.launch_task(executable, tid)
 
                 self.tasks[tid]['app_fu'].update_parent(exec_fu)
                 self.tasks[tid]['exec_fu'] = exec_fu
