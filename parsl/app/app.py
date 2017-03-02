@@ -78,9 +78,13 @@ class BashApp(AppBase):
         logger.debug("Before : %s", self.executable)
         self.executable = self.executable.format(*args, **kwargs)
         logger.debug("After  : %s", self.executable )
-        #logger.debug("Running app : bash")
+
+        # Updating stdout, stderr if values passed at call time.
+        self.stdout = kwargs.get('stdout', None) or self.stdout
+        self.stderr = kwargs.get('stderr', None) or self.stderr
         std_out = open(self.stdout, 'w') if self.stdout else None
         std_err = open(self.stderr, 'w') if self.stderr else None
+
         start_time = time.time()
 
         try :
