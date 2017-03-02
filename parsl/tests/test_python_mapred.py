@@ -30,6 +30,9 @@ def accumulate_t(*args):
 
 
 def test_mapred_type1(width=5):
+    ''' MapReduce test with the reduce stage taking futures in inputs=[]
+    '''
+
     futs = []
     for i in range(1,width+1):
         fu = fan_out(i, random.randint(0,5)/10)
@@ -44,6 +47,9 @@ def test_mapred_type1(width=5):
 
 
 def test_mapred_type2(width=5):
+    ''' MapReduce test with the reduce stage taking futures on the args
+    '''
+
     futs = []
     for i in range(1,width+1):
         fu = fan_out(i, i/10)
