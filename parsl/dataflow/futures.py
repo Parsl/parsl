@@ -78,7 +78,7 @@ class AppFuture(Future):
 
     def result(self, timeout=None):
         #print("FOooo")
-        logger.debug("Waiting on result of %s on %s", id(self), id(self.parent))
+        logger.debug("Waiting on result of %s on %s", self.__str__(), self.parent.__str__())
 
         if self.parent :
             return self.parent.result(timeout=timeout)
