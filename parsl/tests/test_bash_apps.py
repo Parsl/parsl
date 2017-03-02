@@ -4,6 +4,7 @@ import parsl
 from parsl import *
 
 from nose.tools import nottest
+print("Parsl version: ", parsl.__version__)
 
 import os
 import time
@@ -20,27 +21,39 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {inputs[0]} > {outputs[0]}'
 
 @App('bash', dfk)
-def foo(x, y, outputs=[]):
-    cmd_line = '''echo {0}
-    echo {0} {1} &> {outputs[0]}
+def foo(x, y, stdout=None):
+    cmd_line = '''echo {0} {1}
     '''
 
-@nottest
+
 def test_command_format_1 ():
+    ''' Testing command format for BashApps
+    '''
 
-    app_fu, data_fus = foo(1, 4, outputs=['a.txt'])
+    stdout = 'std.out'
+    if os.path.exists(stdout):
+        os.remove(stdout)
 
-    app_fu.result()
-    #print(data_fus[0].done())
-    result = data_fus[0].result()
-    print("Result in data_fus : ", result)
-    contents = open(result, 'r').read()
-    print("Got contents : ", contents)
-    assert contents == "1 4\n", 'Output does not match expected string "1 4", Got: "{0}"'.format(contents)
+    app_fu = foo(1, 4, stdout=stdout)
+    print("App_fu : ", app_fu)
+    contents = None
+
+    assert app_fu.result() == 0 , "BashApp exited with an error code : {0}".format(app_fu.result())
+
+    with open(stdout, 'r') as stdout_f :
+        contents = stdout_f.read()
+        print("Contents : ", contents)
+
+    if os.path.exists('stdout_file'):
+        os.remove(stdout)
+
+    assert contents == '1 4\n', 'Output does not match expected string "1 4", Got: "{0}"'.format(contents)
     return True
 
-def test_parallel_for (n=10):
 
+def test_parallel_for (n=10):
+    ''' Testing a simple parallel for loop
+    '''
     outdir='outputs'
     if not os.path.exists(outdir):
         os.makedirs(outdir)
@@ -53,18 +66,19 @@ def test_parallel_for (n=10):
     start = time.time()
     for i in range(0,n):
         d[i], _ = echo_to_file(inputs=['Hello World {0}'.format(i)],
-                            outputs=['{0}/out.{1}.txt'.format(outdir, i)],
-                            stdout='d/std.{1}.out'.format(outdir, i),
-                            stderr='d/std.{1}.err'.format(outdir, i),
-        )
+                               outputs=['{0}/out.{1}.txt'.format(outdir, i)],
+                               stdout='{0}/std.{1}.out'.format(outdir, i),
+                               stderr='{0}/std.{1}.err'.format(outdir, i),
+                           )
         #time.sleep(0.01)
 
     assert len(d.keys())   == n , "Only {0}/{1} keys in dict".format(len(d.keys()), n)
 
     [d[i].result() for i in d]
     print("Duration : {0}s".format(time.time() - start))
-    assert len(os.listdir('outputs/')) == n , "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
-                                                                                    n, outdir)
+    stdout_file_count = len([item for item in os.listdir(outdir) if item.endswith('.out')])
+    assert stdout_file_count == n , "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
+                                                                          n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
 
