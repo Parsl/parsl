@@ -20,12 +20,14 @@ Here's a simplified diagram of what happens internally::
 
 import copy
 import uuid
-from functools import partial
-from parsl.dataflow.error import *
 import logging
-from concurrent.futures import Future
-from parsl.dataflow.futures import AppFuture
 from inspect import signature
+from concurrent.futures import Future
+from functools import partial
+
+from parsl.dataflow.error import *
+from parsl.dataflow.states import States
+from parsl.dataflow.futures import AppFuture
 
 # Exceptions
 
@@ -44,10 +46,12 @@ class DataFlowKernel(object):
             DataFlowKernel object
         """
 
-        self.pending         = {}
+        #self.pending         = {}
+        #self.runnable        = {}
+        #self.done            = {}
+
         self.fut_task_lookup = {}
-        self.runnable        = {}
-        self.done            = {}
+        self.tasks           = {}
         self.executor        = executor
 
     @staticmethod
@@ -73,50 +77,34 @@ class DataFlowKernel(object):
              future (Future) : The future object corresponding to the task which makes this callback
         '''
 
+
         if future.done():
             logger.debug("Completed : %s with %s", task_id, future)
+            self.tasks[task_id]['status'] = States.done
         else:
             logger.debug("Failed    : %s with %s", task_id, future)
+            self.tasks[task_id]['status'] = States.failed
 
         # Identify tasks that have resolved dependencies and launch
         to_delete = []
-        for task in list(self.pending.keys()):
-            if self._count_deps(self.pending[task]['depends'], task) == 0 :
+        for tid in self.tasks:
+            # Skip all non-pending tasks
+            if self.tasks[tid]['status'] != States.pending:
+                continue
+
+            if self._count_deps(self.tasks[tid]['depends'], tid) == 0:
                 # We can now launch *task*
                 logger.debug("Task : %s is now runnable", task)
-                try:
-                    self.runnable[task] = self.pending[task]
-                except KeyError:
-                    continue
+                executable = self.sanitize_and_wrap(tid,
+                                                    self.tasks[tid]['func'],
+                                                    self.tasks[tid]['args'],
+                                                    self.tasks[tid]['kwargs'])
 
-                to_delete.extend([task])
-                self.runnable[task]['executable'] = self.sanitize_and_wrap(task_id,
-                                                                           self.pending[task]['func'],
-                                                                           self.pending[task]['args'],
-                                                                           self.pending[task]['kwargs'])
-                exec_fu = self.launch_task(self.runnable[task]['executable'], task)
-                logger.debug("Updating parent of %s to %s", self.runnable[task]['app_fu'],
-                             exec_fu)
-                # Update the App_future with the Future from launch.
-                self.runnable[task]['app_fu'].update_parent(exec_fu)
-                self.runnable[task]['exec_fu'] = exec_fu
+                self.tasks[tid]['status'] = States.running
+                exec_fu = self.launch_task(executable, task)
 
-        #logger.debug("Deleteing : %s", to_delete)
-        for task in to_delete:
-            try:
-                del self.pending[task]
-            except KeyError:
-                logger.debug("Caught KeyError on %s deleting from pending", task)
-                pass
-
-        # Move the done task from runnable to done
-        try:
-            self.done[task_id] = self.runnable[task_id]
-            del self.runnable[task_id]
-        except KeyError:
-            logger.debug("Caught KeyError on %s deleting from runnable", task_id)
-        finally:
-            self.write_status_log()
+                self.tasks[tid]['app_fu'].update_parent(exec_fu)
+                self.tasks[tid]['exec_fu'] = exec_fu
 
         return
 
@@ -131,8 +119,20 @@ class DataFlowKernel(object):
            None
         '''
 
-        logger.debug("Pending:%d   Runnable:%d   Done:%d", len(self.pending),
-                     len(self.runnable), len(self.done))
+        state_lens = {States.pending : 0,
+                      States.runnable: 0,
+                      States.running : 0,
+                      States.done    : 0,
+                      States.failed  : 0,
+                      States.dep_fail: 0}
+
+        for tid in self.tasks:
+            state_lens[self.tasks[tid]['status']] += 1
+
+        logger.debug("Pending:%d   Runnable:%d   Done:%d", state_lens[States.pending],
+                     state_lens[States.runnable],
+                     state_lens[States.done])
+
 
     def print_status_log(self):
         ''' Print status log in terms of pending, runnable and done tasks
@@ -144,9 +144,19 @@ class DataFlowKernel(object):
            None
         '''
 
-        print("Pending:{0}   Runnable:{1}   Done:{2}".format( len(self.pending),
-                                                              len(self.runnable),
-                                                              len(self.done)) )
+        state_lens = {States.pending : 0,
+                      States.runnable: 0,
+                      States.running : 0,
+                      States.done    : 0,
+                      States.failed  : 0,
+                      States.dep_fail: 0}
+
+        for tid in self.tasks:
+            state_lens[self.tasks[tid]['status']] += 1
+
+        print("Pending:{0}   Runnable:{1}   Done:{2}".format( state_lens[States.pending],
+                                                              state_lens[States.runnable],
+                                                              state_lens[States.done] ))
 
     def launch_task(self, executable, task_id):
         ''' Handle the actual submission of the task to the executor layer
@@ -281,34 +291,28 @@ class DataFlowKernel(object):
                      'callback'   : callback,
                      'dep_cnt'    : dep_cnt,
                      'exec_fu'    : None,
+                     'status'     : States.pending,
                      'app_fu'     : None  }
 
-        if dep_cnt == 0 :
-            # Send to runnable queue
-            if task_id in self.runnable:
-                raise DuplicateTaskError("Task {0} in pending list".format(task_id))
+        if task_id in self.tasks:
+            raise DuplicateTaskError("Task {0} in pending list".format(task_id))
+        else:
+            self.tasks[task_id] = task_def
 
-            else:
-                self.runnable[task_id] = task_def
+        if dep_cnt == 0 :
+            # Set to running
+            logger.debug("Setting task:%s to running", task_id)
 
             executable = self.sanitize_and_wrap(task_id, _func, _args, _kwargs)
-            task_def['exec_fu']    = self.launch_task(executable, task_id)
-            task_def['app_fu']     = AppFuture(task_def['exec_fu'])
-            self.runnable[task_id] = task_def
-
+            self.tasks[task_id]['status']  = States.running
+            self.tasks[task_id]['exec_fu'] = self.launch_task(executable, task_id)
+            self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'])
+            logger.debug("Task : %s ", self.tasks[task_id])
         else:
-            # Send to pending queue
-            if task_id in self.pending:
-                raise DuplicateTaskError("Task {0} in pending list".format(task_id))
+            # Send to pending
+            self.tasks[task_id]['status']  = States.pending
+            self.tasks[task_id]['app_fu']  = AppFuture(None)
 
-            else:
-                task_def['app_fu'] = AppFuture(None)
-                self.pending[task_id] = task_def
-
-        for fut in depends:
-            if fut not in self.fut_task_lookup:
-                self.fut_task_lookup[fut] = []
-                self.fut_task_lookup[fut].extend([task_id])
 
         logger.debug("Launched : %s with %s", task_id, task_def['app_fu'])
         return task_def['app_fu']
