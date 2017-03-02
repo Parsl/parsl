@@ -12,7 +12,7 @@ you to create `directed acyclic graphs <https://en.wikipedia.org/wiki/Directed_a
 implictly. ``Apps`` that have all their dependencies resolved are slated for execution in parallel.
 This allows Parsl to exploit all parallelism to fullest extent at the granularity expressed by the user.
 
-A simple for Map Reduce job is as simple as this :
+A MapReduce job can be as simple as this:
 
 .. code-block:: python
 
