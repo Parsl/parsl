@@ -53,10 +53,27 @@ class DataFuture(Future):
         logger.debug("Filepath : %s", self.filepath)
 
     def result(self, timeout=None):
-        if not self.parent :
-            return self.parent.result(timeout=timeout)
+        ''' A blocking call that returns either the result or raises an exception.
+
+        Kwargs:
+            - timeout (int): Timeout in seconds
+
+        Returns:
+            - If App completed successfully returns the filepath.
+
+        Raises:
+            - Exception raised by app if failed.
+
+        '''
+
+        logger.debug("Requesting Result from Datafuture : %s", self.__str__)
+        if self.parent :
+            self.parent.result(timeout=timeout)
+
         else:
-            return super().result(timeout=timeout)
+            super().result(timeout=timeout)
+
+        return self.filepath
 
     def cancel(self):
         if self.parent:
