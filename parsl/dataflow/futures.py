@@ -104,16 +104,25 @@ class AppFuture(Future):
             return False
 
     def done(self):
+        ''' Check if the future is done.
+        If a parent is set, we return the status of the parent.
+        else, there is no parent assigned, meaning the status is False.
+
+        Returns:
+              - True : If the future has successfully resolved.
+              - False : Pending resolution
+        '''
+
         if self.parent:
             return self.parent.done()
         else:
-            return True
+            return False
 
     def exception(self, timeout=None):
         if self.parent:
             return self.parent.exception(timeout=timeout)
         else:
-            return True
+            return False
 
     def add_done_callback(self, fn):
         if self.parent:

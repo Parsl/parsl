@@ -61,6 +61,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in depends:
             if isinstance(dep, Future) or issubclass(type(dep), Future):
+                logger.debug("Task:%s dep:%s done:%s", task_id, dep, dep.done())
                 if not dep.done():
                     count += 1
 
@@ -103,8 +104,12 @@ class DataFlowKernel(object):
                 self.tasks[tid]['status'] = States.running
                 exec_fu = self.launch_task(executable, tid)
 
-                self.tasks[tid]['app_fu'].update_parent(exec_fu)
-                self.tasks[tid]['exec_fu'] = exec_fu
+                try:
+                    self.tasks[tid]['app_fu'].update_parent(exec_fu)
+                    self.tasks[tid]['exec_fu'] = exec_fu
+                except AttributeError as e:
+                    logger.error("Caught AttributeError at update_parent for task:%s", tid)
+                    raise e
 
         return
 
@@ -119,7 +124,8 @@ class DataFlowKernel(object):
            None
         '''
 
-        state_lens = {States.pending : 0,
+        state_lens = {States.unsched : 0,
+                      States.pending : 0,
                       States.runnable: 0,
                       States.running : 0,
                       States.done    : 0,
@@ -144,7 +150,8 @@ class DataFlowKernel(object):
            None
         '''
 
-        state_lens = {States.pending : 0,
+        state_lens = {States.unsched : 0,
+                      States.pending : 0,
                       States.runnable: 0,
                       States.running : 0,
                       States.done    : 0,
@@ -235,7 +242,7 @@ class DataFlowKernel(object):
         '''
 
         # Todo: This function is not tested.
-        logger.debug("%s Sanitizing %s %s", task_id, args, kwargs)
+        logger.debug("Task:%s Sanitizing %s %s", task_id, args, kwargs)
 
         # Replace item in args
         new_args = []
@@ -291,7 +298,7 @@ class DataFlowKernel(object):
                      'callback'   : callback,
                      'dep_cnt'    : dep_cnt,
                      'exec_fu'    : None,
-                     'status'     : States.pending,
+                     'status'     : States.unsched,
                      'app_fu'     : None  }
 
         if task_id in self.tasks:
@@ -301,20 +308,19 @@ class DataFlowKernel(object):
 
         if dep_cnt == 0 :
             # Set to running
-            logger.debug("Setting task:%s to running", task_id)
-
+            logger.debug("Task:%s setting to running", task_id)
             executable = self.sanitize_and_wrap(task_id, _func, _args, _kwargs)
-            self.tasks[task_id]['status']  = States.running
             self.tasks[task_id]['exec_fu'] = self.launch_task(executable, task_id)
             self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'])
+            self.tasks[task_id]['status']  = States.running
             logger.debug("Task : %s ", self.tasks[task_id])
         else:
             # Send to pending
-            self.tasks[task_id]['status']  = States.pending
+            logger.debug("Task:%s setting to pending", task_id)
             self.tasks[task_id]['app_fu']  = AppFuture(None)
+            self.tasks[task_id]['status']  = States.pending
 
-
-        logger.debug("Launched : %s with %s", task_id, task_def['app_fu'])
+        logger.debug("Task:%s Launched with AppFut:%s", task_id, task_def['app_fu'])
         return task_def['app_fu']
 
 
