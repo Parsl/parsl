@@ -25,10 +25,22 @@ def slow_increment(x, dur):
 
 
 def test_increment(depth=5):
+    ''' Test simple pipeline A->B...->N
+    '''
     futs = {0:0}
     for i in range(1,depth):
         futs[i] = increment( futs[i-1] )
 
+    print([ futs[i].result() for i in futs if type(futs[i]) != int ])
+
+def test_increment_slow(depth=4):
+    ''' Test simple pipeline A->B...->N with delay
+    '''
+    futs = {0:0}
+    for i in range(1,depth):
+        futs[i] = slow_increment( futs[i-1] , 0.5)
+
+    print(futs[i])
     print([ futs[i].result() for i in futs if type(futs[i]) != int ])
 
 if __name__ == '__main__' :
@@ -42,4 +54,5 @@ if __name__ == '__main__' :
         pass
         parsl.set_stream_logger()
 
-    test_increment(depth=int(args.width))
+    #test_increment(depth=int(args.width))
+    test_increment_slow(depth=int(args.width))

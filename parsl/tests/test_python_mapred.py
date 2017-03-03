@@ -3,6 +3,8 @@
 import parsl
 from parsl import *
 
+print("VERSION : ", parsl.__version__)
+
 import os
 import time
 import shutil
@@ -35,7 +37,7 @@ def test_mapred_type1(width=5):
 
     futs = []
     for i in range(1,width+1):
-        fu = fan_out(i, random.randint(0,5)/10)
+        fu = fan_out(i, 1)
         futs.extend([fu])
 
     print("Fan out : ", futs)
@@ -52,7 +54,7 @@ def test_mapred_type2(width=5):
 
     futs = []
     for i in range(1,width+1):
-        fu = fan_out(i, i/10)
+        fu = fan_out(i, 0.1)
         futs.extend([fu])
 
     print("Fan out : ", futs)
