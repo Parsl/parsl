@@ -11,8 +11,9 @@ import time
 import shutil
 import argparse
 
-workers = ThreadPoolExecutor(max_workers=8)
 #parsl.set_stream_logger()
+workers = ThreadPoolExecutor(max_workers=8)
+
 #workers = ProcessPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(workers)
 

@@ -21,7 +21,7 @@ def echo(x, string, stdout=None):
     print(string)
     return x*5
 
-def test_parallel_for (n=10):
+def test_parallel_for (n=2):
 
     d = {}
     start = time.time()
@@ -29,6 +29,7 @@ def test_parallel_for (n=10):
         d[i] = double(i)
         #time.sleep(0.01)
 
+    print("Exception : ", d[0].exception())
     assert len(d.keys())   == n , "Only {0}/{1} keys in dict".format(len(d.keys()), n)
 
     [d[i].result() for i in d]
