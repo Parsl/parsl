@@ -137,6 +137,9 @@ Here is a set of features that should be implemented or borrowed :
 * [?] Capable of using templates to submit jobs to Cluster resource managers.
 * [?] Dynamically launch and shutdown workers.
 
+.. note::
+   Since the current roadmap to remote execution is through ipython-parallel, we will limit ourselves to Python3.5
+   to avoid library naming issues.
 
 
 Availability of Python3.5 on target resources
