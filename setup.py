@@ -2,9 +2,11 @@ from setuptools import setup
 from parsl.version import VERSION
 
 install_requires = [
+    'ipyparallel'
     ]
 
 tests_require = [
+    'ipyparallel',
     'mock>=1.0.0',
     'nose',
     'pytest'
