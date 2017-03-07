@@ -78,7 +78,6 @@ class DataFlowKernel(object):
              future (Future) : The future object corresponding to the task which makes this callback
         '''
 
-
         if future.done():
             logger.debug("Completed : %s with %s", task_id, future)
             self.tasks[task_id]['status'] = States.done
@@ -96,13 +95,12 @@ class DataFlowKernel(object):
             if self._count_deps(self.tasks[tid]['depends'], tid) == 0:
                 # We can now launch *task*
                 logger.debug("Task : %s is now runnable", tid)
-                executable = self.sanitize_and_wrap(tid,
-                                                    self.tasks[tid]['func'],
-                                                    self.tasks[tid]['args'],
-                                                    self.tasks[tid]['kwargs'])
-
+                new_args, kwargs = self.sanitize_and_wrap(task_id,
+                                                          self.tasks[tid]['args'],
+                                                          self.tasks[tid]['kwargs'])
                 self.tasks[tid]['status'] = States.running
-                exec_fu = self.launch_task(executable, tid)
+                exec_fu = self.launch_task(task_id, self.tasks[tid]['func'], *new_args, **kwargs)
+                self.tasks[task_id]['exec_fu'] = exec_fu
 
                 try:
                     self.tasks[tid]['app_fu'].update_parent(exec_fu)
@@ -165,21 +163,24 @@ class DataFlowKernel(object):
                                                               state_lens[States.runnable],
                                                               state_lens[States.done] ))
 
-    def launch_task(self, executable, task_id):
+    def launch_task(self, task_id, executable, *args, **kwargs):
         ''' Handle the actual submission of the task to the executor layer
 
         We should most likely add a callback at this point
 
         Args:
-            executable (callable) : A callable object
             task_id (uuid string) : A uuid string that uniquely identifies the task
+            executable (callable) : A callable object
+            args (list of positional args)
+            kwargs (list of keyword args)
+
 
         Returns:
             Future that tracks the execution of the submitted executable
         '''
 
         logger.debug("Submitting to executor : %s", task_id)
-        exec_fu = self.executor.submit(executable)
+        exec_fu = self.executor.submit(executable, *args, **kwargs)
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
         return exec_fu
 
@@ -225,7 +226,7 @@ class DataFlowKernel(object):
         return count, depends
 
     @staticmethod
-    def sanitize_and_wrap(task_id, func, args, kwargs):
+    def sanitize_and_wrap(task_id, args, kwargs):
         ''' This function should be called **ONLY** when all the futures we track
         have been resolved. If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error .
@@ -269,10 +270,10 @@ class DataFlowKernel(object):
                     new_inputs.extend([dep])
             kwargs['inputs'] = new_inputs
 
-        return partial(func, *new_args, **kwargs)
+        return new_args, kwargs
 
 
-    def submit (self, executable, depends, callback):
+    def submit (self, func, *args, **kwargs):
         ''' Add task to the dataflow system.
 
         If all deps are met :
@@ -285,17 +286,16 @@ class DataFlowKernel(object):
                (AppFuture) [DataFutures,]
         '''
 
-        _func, _args, _kwargs = executable
-
+        logger.warn("Function in submit: %s", func)
         task_id  = uuid.uuid4()
-        dep_cnt, depends = self._count_all_deps(task_id, _args, _kwargs)
+        dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
         #dep_cnt  = self._count_deps(depends, task_id)
         task_def = { 'depends'    : depends,
-                     'func'       : _func,
-                     'args'       : _args,
-                     'kwargs'     : _kwargs,
-                     'callback'   : callback,
+                     'func'       : func,
+                     'args'       : args,
+                     'kwargs'     : kwargs,
+                     'callback'   : None,
                      'dep_cnt'    : dep_cnt,
                      'exec_fu'    : None,
                      'status'     : States.unsched,
@@ -309,8 +309,8 @@ class DataFlowKernel(object):
         if dep_cnt == 0 :
             # Set to running
             logger.debug("Task:%s setting to running", task_id)
-            executable = self.sanitize_and_wrap(task_id, _func, _args, _kwargs)
-            self.tasks[task_id]['exec_fu'] = self.launch_task(executable, task_id)
+            new_args, kwargs = self.sanitize_and_wrap(task_id, args, kwargs)
+            self.tasks[task_id]['exec_fu'] = self.launch_task(task_id, func, *new_args, **kwargs)
             self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'])
             self.tasks[task_id]['status']  = States.running
             logger.debug("Task : %s ", self.tasks[task_id])
@@ -343,75 +343,3 @@ class DataFlowKernel(object):
         for task in runnable:
             del self.pending[task]
         return
-
-
-
-
-def cbk_fun(*args):
-    print("Callback ", *args)
-
-
-def increment(number):
-    return number + 1
-
-def test_linear(N):
-    dfk = DFlowKernel()
-
-    dfk.add_task(0, [], partial(increment, 1))
-    for item in range(1, N):
-        dfk.add_task(item, [item-1], partial(increment, item))
-
-    print("*"*40, "\nCurrent State , b fulfilled")
-    dfk.current_state()
-
-    #dfk.future_resolved(0)
-
-def simple_tests():
-    dfk = DFlowKernel()
-    dfk.add_task(1, ['a', 'b'], partial(cbk_fun, 1, ['a', 'b']) )
-    dfk.current_state()
-    dfk.add_task(2, ['a', 'b'], partial(cbk_fun, 2, ['a', 'b', 'v']) )
-    print("*"*40, "\nCurrent State")
-    dfk.current_state()
-
-    print("*"*40)
-    #dfk.future_resolved('a')
-
-    print("*"*40, "\nCurrent State")
-    dfk.current_state()
-    dfk.check_fulfilled()
-
-
-    #dfk.future_resolved('b')
-    print("*"*40, "\nCurrent State , b fulfilled")
-    dfk.current_state()
-    dfk.check_fulfilled()
-
-
-    print("*"*40, "\nCurrent State , END")
-    dfk.current_state()
-
-if __name__ == '__main__' :
-
-    test_linear(3)
-    #simple_tests()
-
-
-"""
-    def future_resolved(self, fut):
-        ''' Implemeting the future_resolved check
-
-        Args:
-            fut (Future) : The future to check for
-        '''
-
-        if fut not in self.fut_task_lookup:
-            print("fut not in fut_task_lookup")
-            raise MissingFutError("Missing task:{0} in fut_task_lookup".format(fut))
-        else:
-            for task_id in self.fut_task_lookup.get(fut, None):
-                print("Found : ", task_id)
-                print("Dep table : ", self.pending[task_id])
-                self.pending[task_id]['dep_cnt'] -= 1
-
-"""
