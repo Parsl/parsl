@@ -61,5 +61,5 @@ if __name__ == '__main__' :
         parsl.set_stream_logger()
 
     x = test_parallel_for(int(args.count))
-    x = test_stdout()
+    #x = test_stdout()
     #raise_error(0)

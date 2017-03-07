@@ -11,6 +11,7 @@ import time
 import shutil
 import argparse
 
+#parsl.set_stream_logger()
 
 workers = IPyParallelExecutor()
 dfk = DataFlowKernel(workers)
@@ -29,7 +30,7 @@ def test_command_format_1 ():
     ''' Testing command format for BashApps
     '''
 
-    stdout = 'std.out'
+    stdout = os.path.abspath('std.out')
     if os.path.exists(stdout):
         os.remove(stdout)
 
@@ -53,7 +54,7 @@ def test_command_format_1 ():
 def test_parallel_for (n=10):
     ''' Testing a simple parallel for loop
     '''
-    outdir='outputs'
+    outdir=os.path.abspath('outputs')
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     else:
