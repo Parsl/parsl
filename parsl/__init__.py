@@ -29,7 +29,9 @@ doesn't log anything. However the following helper functions are provided for lo
 
 from parsl.version import VERSION
 from parsl.app.app import App
-from parsl.app.executors import ThreadPoolExecutor, ProcessPoolExecutor
+#from parsl.app.executors import ThreadPoolExecutor, ProcessPoolExecutor
+from parsl.executors.threads import ThreadPoolExecutor
+from parsl.executors.ipp import IPyParallelExecutor
 import logging
 #import parsl.app.errors
 
@@ -41,7 +43,7 @@ APP_FACTORY_FACTORY = AppFactoryFactory('central')
 __author__  = 'Yadu Nand Babuji'
 __version__ = VERSION
 
-__all__ = ['App', 'DataFlowKernel', 'ThreadPoolExecutor', 'ProcessPoolExecutor']
+__all__ = ['App', 'DataFlowKernel', 'ThreadPoolExecutor', 'IPyParallelExecutor']
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     '''
