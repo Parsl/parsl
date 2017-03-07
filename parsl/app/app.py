@@ -61,6 +61,49 @@ class AppBase (object):
         raise NotImplemented
 
 
+def bash_executor(executable, *args, **kwargs):
+    ''' The callable fn for external apps.
+    '''
+    import time
+    import subprocess
+    import logging
+    logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
+
+    start_t = time.time()
+
+    logging.debug("Executable string : %s", executable)
+
+    executable = executable.format(*args, **kwargs)
+
+    print("*"*40)
+    print("Executable : ", executable)
+
+    # Updating stdout, stderr if values passed at call time.
+    stdout = kwargs.get('stdout', None)
+    stderr = kwargs.get('stderr', None)
+    logging.debug("Stdout  : %s", stdout)
+    logging.debug("Stderr  : %s", stderr)
+
+    std_out = open(stdout, 'w') if stdout else None
+    std_err = open(stderr, 'w') if stderr else None
+
+    start_time = time.time()
+
+    try :
+        #logger.debug("id:{0} Executing app : {1}".format(id(self), self.executable))
+        proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
+        proc.wait()
+        returncode = proc.returncode
+    except Exception as e:
+        #logger.error("Caught exception : {0}".format(e))
+        error = e
+        status = 'failed'
+        raise AppException("App caught exception : {0}".format(proc.returncode), e)
+
+    exec_duration = time.time() - start_t
+    return returncode
+
+
 class BashApp(AppBase):
 
     def __init__ (self, func, executor, walltime=60):
@@ -75,9 +118,7 @@ class BashApp(AppBase):
         if self.exec_type != "bash":
             raise NotImplemented
 
-        logger.debug("Before : %s", self.executable)
         self.executable = self.executable.format(*args, **kwargs)
-        logger.debug("After  : %s", self.executable )
 
         # Updating stdout, stderr if values passed at call time.
         self.stdout = kwargs.get('stdout', None) or self.stdout
@@ -88,12 +129,12 @@ class BashApp(AppBase):
         start_time = time.time()
 
         try :
-            logger.debug("id:{0} Executing app : {1}".format(id(self), self.executable))
+            #logger.debug("id:{0} Executing app : {1}".format(id(self), self.executable))
             proc = subprocess.Popen(self.executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
             proc.wait()
             self.returncode = proc.returncode
         except Exception as e:
-            logger.error("Caught exception : {0}".format(e))
+            #logger.error("Caught exception : {0}".format(e))
             self.error = e
             self.status = 'failed'
             raise AppException("App caught exception : {0}".format(proc.returncode), e)
@@ -101,6 +142,7 @@ class BashApp(AppBase):
         self.exec_duration = time.time() - start_t
         #logger.debug("RunCommand Completed %s ", self.executable)
         return self.returncode
+
 
     def _trace_cmdline(self, *args, **kwargs):
         ''' Internal function used to trace the values set to the special variable
@@ -141,16 +183,18 @@ class BashApp(AppBase):
 
         '''
         cmd_line = self._trace_cmdline(*args, **kwargs)
-        # TODO : The format system doesn't take *args yet.
+
         self.executable = cmd_line #.format(**kwargs)
 
         if type(self.executor) == DataFlowKernel:
             logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
-            #app_fut = self.executor.submit(self.executable, input_deps, None)
-            app_fut = self.executor.submit((self._callable, args, kwargs), None, None)
+            #app_fut = self.executor.submit(self._callable, *args, **kwargs)
+            app_fut = self.executor.submit(bash_executor, cmd_line, *args, **kwargs)
+
         else:
             logger.debug("Submitting to Executor: %s",  self.executor)
-            app_fut = self.executor.submit(partial(self._callable, *args, **kwargs))
+            #app_fut = self.executor.submit(self._callable, *args, **kwargs)
+            app_fut = self.executor.submit(bash_executor, cmd_line, *args, **kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
         if out_futs:
@@ -186,13 +230,11 @@ class PythonApp(AppBase):
 
         if type(self.executor) == DataFlowKernel:
             logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
-            #app_fut = self.executor.submit(self.executable, input_deps, None)
-            app_fut = self.executor.submit((self.func, args, kwargs), None, None)
+            app_fut = self.executor.submit(self.func, *args, **kwargs)
+
         else:
             logger.debug("Submitting to Executor: %s",  self.executor)
-            self.executable = partial(self.func, *args, **kwargs)
-            logger.debug("Exec   : %s", self.executable)
-            app_fut = self.executor.submit(self.executable)
+            app_fut = self.executor.submit(self.func, *args, **kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
         if out_futs:
