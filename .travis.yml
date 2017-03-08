@@ -11,8 +11,7 @@ install:
 # command to run tests
 script:
     - pip install -r test-requirements.txt
-    - ipcluster start -n 2 --daemon
+    - ipcluster start -n 2 &
     - sleep 30
     - nosetests -v parsl/tests/test_threads
-    - nosetests -v parsl/tests/test_ipp
     - ipcluster stop
