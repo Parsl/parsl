@@ -45,6 +45,7 @@ def test_div_0(test_fn=div_0):
     assert f.result() == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                   err_code,
                                                                                   f.result())
+    os.listdir('.')
     os.remove('std.err')
     os.remove('std.out')
     return True
