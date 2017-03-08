@@ -11,7 +11,6 @@ class ThreadPoolExecutor(ParslExecutor):
     def __init__ (self, max_workers=2, thread_name_prefix=''):
         ''' Initialize the thread pool
         '''
-        logger.warn("In threadpool : %s", max_workers)
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
 
 
