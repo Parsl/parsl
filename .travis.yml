@@ -12,6 +12,7 @@ install:
 script:
     - pip install -r test-requirements.txt
     - ipcluster start -n 2 &
-    - sleep 30
     - nosetests -v parsl/tests/test_threads
+    - sleep 60
+    - nosetests -v parsl/tests/test_ipp
     - ipcluster stop
