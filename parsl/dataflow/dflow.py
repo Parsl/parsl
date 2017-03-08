@@ -286,7 +286,6 @@ class DataFlowKernel(object):
                (AppFuture) [DataFutures,]
         '''
 
-        logger.warn("Function in submit: %s", func)
         task_id  = uuid.uuid4()
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
