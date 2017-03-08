@@ -9,7 +9,7 @@ The APP class encapsulates a generic leaf task that can be executed asynchronous
 import sys
 import logging
 import subprocess
-from inspect import signature
+from inspect import signature, Parameter
 from concurrent.futures import Future
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,11 @@ class AppBase (object):
         self.status     = 'created'
 
         sig = signature(func)
+        self.kwargs     = {}
+        for s in sig.parameters:
+            if sig.parameters[s].default != Parameter.empty:
+                self.kwargs[s] = sig.parameters[s].default
+
         self.stdout  = sig.parameters['stdout'].default  if 'stdout'  in sig.parameters else None
         self.stderr  = sig.parameters['stderr'].default  if 'stderr'  in sig.parameters else None
         self.inputs  = sig.parameters['inputs'].default  if 'inputs'  in sig.parameters else []
@@ -71,12 +76,10 @@ def bash_executor(executable, *args, **kwargs):
 
     start_t = time.time()
 
-    logging.debug("Executable string : %s", executable)
+    #logging.debug("Executable string : %s", executable)
+    print("Executable string : %s", executable)
 
     executable = executable.format(*args, **kwargs)
-
-    print("*"*40)
-    print("Executable : ", executable)
 
     # Updating stdout, stderr if values passed at call time.
     stdout = kwargs.get('stdout', None)
@@ -118,11 +121,14 @@ class BashApp(AppBase):
         if self.exec_type != "bash":
             raise NotImplemented
 
+
+        self.kwargs.update(kwargs)
+
         self.executable = self.executable.format(*args, **kwargs)
 
         # Updating stdout, stderr if values passed at call time.
-        self.stdout = kwargs.get('stdout', None) or self.stdout
-        self.stderr = kwargs.get('stderr', None) or self.stderr
+        self.stdout = self.kwargs.get('stdout', None) or self.stderr
+        self.stderr = self.kwargs.get('stderr', None) or self.stderr
         std_out = open(self.stdout, 'w') if self.stdout else None
         std_err = open(self.stderr, 'w') if self.stderr else None
 
@@ -182,19 +188,20 @@ class BashApp(AppBase):
                    App_fut
 
         '''
-        cmd_line = self._trace_cmdline(*args, **kwargs)
 
+        cmd_line = self._trace_cmdline(*args, **kwargs)
+        self.kwargs.update(kwargs)
         self.executable = cmd_line #.format(**kwargs)
 
         if type(self.executor) == DataFlowKernel:
             logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
             #app_fut = self.executor.submit(self._callable, *args, **kwargs)
-            app_fut = self.executor.submit(bash_executor, cmd_line, *args, **kwargs)
+            app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
 
         else:
             logger.debug("Submitting to Executor: %s",  self.executor)
             #app_fut = self.executor.submit(self._callable, *args, **kwargs)
-            app_fut = self.executor.submit(bash_executor, cmd_line, *args, **kwargs)
+            app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
         if out_futs:
