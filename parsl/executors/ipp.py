@@ -13,7 +13,7 @@ class IPyParallelExecutor(ParslExecutor):
         '''
         self.executor = Client()
         self.lb_view  = self.executor.load_balanced_view()
-        logger.warn("Started client : %s", max_workers)
+        logger.debug("Started client : %s", max_workers)
 
 
     def submit (self,  *args, **kwargs):
