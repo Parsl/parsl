@@ -2,7 +2,7 @@
 '''
 import parsl
 from parsl import *
-from nose.tools import nottest
+#from nose.tools import nottest
 import os
 import time
 import shutil
@@ -15,12 +15,22 @@ dfk = DataFlowKernel(workers)
 
 @App('python', dfk)
 def double(x):
-    return x*5
+    return x*2
 
 @App('python', dfk)
 def echo(x, string, stdout=None):
     print(string)
     return x*5
+
+def test_simple (n=10):
+
+    start = time.time()
+    x = double(n)
+    print("Result : ", x.result())
+    assert x.result() == n*2 , "Expected double to return:{0} instead got:{1}".format(n*2, x.result())
+    print("Duration : {0}s".format(time.time() - start))
+    print("[TEST STATUS] test_parallel_for [SUCCESS]")
+    return True
 
 def test_parallel_for (n=10):
 
@@ -37,7 +47,8 @@ def test_parallel_for (n=10):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
 
-@nottest
+
+#@nottest
 def test_stdout():
 
     string = "Hello World!"
@@ -60,6 +71,8 @@ if __name__ == '__main__' :
     if args.debug:
         parsl.set_stream_logger()
 
-    x = test_parallel_for(int(args.count))
+    x = test_simple(int(args.count))
+    #x = test_parallel_for(int(args.count))
+
     #x = test_stdout()
     #raise_error(0)
