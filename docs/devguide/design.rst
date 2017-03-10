@@ -122,9 +122,9 @@ Remote-Execution
 
 In Swift/K, remote execution is handled by `coasters <http://swift-lang.org/guides/trunk/userguide/userguide.html#_how_swift_implements_the_site_execution_model>`_.
 This is a pilot mechanism that supports dynamic resource provisioning from cluster managers such as PBS,
- Slurm, Condor and handles data transport from the client to the workers. Swift/T on the other hand is 
+Slurm, Condor and handles data transport from the client to the workers. Swift/T on the other hand is
 designed to run as an MPI job on a single HPC resource. Swift/T utilized shared-filesystems that almost
- every HPC resource has.
+every HPC resource has.
 
 To be useful, Parsl will need to support remote execution and file transfers. Here we will discuss just
 the remote-execution aspect.

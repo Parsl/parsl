@@ -38,20 +38,20 @@ def runner(incoming_q, outgoing_q):
 
     The messages posted on the incoming_q will be of the form :
 
-    {
-      "task_id" : <uuid.uuid4 string>,
-      "buffer"  : serialized buffer containing the fn, args and kwargs
-    }
+       {
+          "task_id" : <uuid.uuid4 string>,
+          "buffer"  : serialized buffer containing the fn, args and kwargs
+       }
 
     If ``None`` is received, the runner will exit.
 
     Response messages should be of the form:
 
-    {
-      "task_id" : <uuid.uuid4 string>,
-      "result"  : serialized buffer containing result
-      "exception" : serialized exception object
-    }
+       {
+          "task_id" : <uuid.uuid4 string>,
+          "result"  : serialized buffer containing result
+          "exception" : serialized exception object
+       }
 
     On exiting the runner will post ``None`` to the outgoing_q
 
@@ -178,26 +178,27 @@ class TurbineExecutor(ParslExecutor):
         for task status messages and updating tasks with results/exceptions/updates
 
         It expects the following messages:
-        {
-           "task_id" : <task_id>
-           "result"  : serialized result object, if task succeeded
-           ... more tags could be added later
-        }
 
-        {
-           "task_id" : <task_id>
-           "exception" : serialized exception object, on failure
-        }
+            {
+               "task_id" : <task_id>
+               "result"  : serialized result object, if task succeeded
+               ... more tags could be added later
+            }
+
+            {
+               "task_id" : <task_id>
+               "exception" : serialized exception object, on failure
+            }
 
         We don't support these yet, but they could be added easily as heartbeat.
 
-        {
-           "task_id" : <task_id>
-           "cpu_stat" : <>
-           "mem_stat" : <>
-           "io_stat"  : <>
-           "started"  : tstamp
-        }
+            {
+               "task_id" : <task_id>
+               "cpu_stat" : <>
+               "mem_stat" : <>
+               "io_stat"  : <>
+               "started"  : tstamp
+            }
 
         The None message is a die request.
         None
@@ -261,7 +262,6 @@ class TurbineExecutor(ParslExecutor):
         else:
             logging.debug("Management thread already exists, returning")
 
-
     def shutdown(self):
         ''' Shutdown method, to kill the threads and workers.
         '''
@@ -274,11 +274,15 @@ class TurbineExecutor(ParslExecutor):
         self.worker.join()
         return True
 
-    def __init__ (self, max_workers=2, thread_name_prefix=''):
+    def __init__ (self, swift_attribs=None):
         ''' Initialize the thread pool
         Trying to implement the emews model.
 
+        Kwargs:
+            - swift_attribs : Takes a dict of swift attribs. Fot future.
+
         '''
+
         logger.debug("In __init__")
         self.mp_manager = mp.Manager()
         self.Outgoing_Q = self.mp_manager.Queue()
@@ -295,9 +299,16 @@ class TurbineExecutor(ParslExecutor):
         self.tasks   = {}
 
     def submit (self, func, *args, **kwargs):
-        ''' Submits work to the thread pool
+        ''' Submits work to the the Outgoing_Q, an external process listens on this queue for new work.
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
+
+        Args:
+            - func (callable) : Callable function
+            - *args (list) : List of arbitrary positional arguments.
+
+        Kwargs:
+            - **kwargs (dict) : A dictionary of arbitrary keyword args for func.
 
         Returns:
               Future

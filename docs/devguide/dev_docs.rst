@@ -82,9 +82,24 @@ Exceptions
 .. autoclass:: parsl.dataflow.error.MissingFutError
 
 
-Executor
-========
+Executors
+=========
+
+Executors are abstractions that represent compute resources to which you could submit arbitrary App tasks. These resources
+themselves can (sometimes) scale to fit demand better.
+
+We currently have thread pools, remote workers from `ipyparallel <https://ipyparallel.readthedocs.io/en/latest/>`_, and an
+incomplete Swift/T executor for HPC systems.
+
+
+
+
+Swift/Turbine Executor
+----------------------
 
 .. autoclass:: parsl.executors.swift_t.TurbineExecutor
-   :members:
-      
+   :members: _queue_management_worker, weakred_cb, _start_queue_management_thread, shutdown, __init__, submit, scale_out, scale_in
+
+.. autofunction:: parsl.executors.swift_t.runner
+
+                  
