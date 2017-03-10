@@ -158,18 +158,18 @@ class TurbineExecutor(ParslExecutor):
 
     .. code:: python
 
-                 |  Data   |  Executor   |   IPC      | External Process(es)
-                 |  Flow   |             |            |
-            Task | Kernel  |             |            |
-          +----->|-------->|------------>|Outgoing_Q -|-> Worker_Process
-          |      |         |             |            |    |         |
-    Parsl<---Fut-|         |             |            |  result   exception
-              ^  |         |             |            |    |         |
-              |  |         |   Q_mngmnt  |            |    V         V
-              |  |         |    Thread<--|Incoming_Q<-|--- +---------+
-              |  |         |      |      |            |
-              |  |         |      |      |            |
-              +----update_fut-----+
+                        |  Data   |  Executor   |   IPC      | External Process(es)
+                        |  Flow   |             |            |
+                   Task | Kernel  |             |            |
+                 +----->|-------->|------------>|Outgoing_Q -|-> Worker_Process
+                        |      |         |             |            |    |         |
+           Parsl<---Fut-|         |             |            |  result   exception
+                     ^  |         |             |            |    |         |
+                     |  |         |   Q_mngmnt  |            |    V         V
+                     |  |         |    Thread<--|Incoming_Q<-|--- +---------+
+                     |  |         |      |      |            |
+                     |  |         |      |      |            |
+                     +----update_fut-----+
 
     '''
 
