@@ -81,3 +81,10 @@ Exceptions
 
 .. autoclass:: parsl.dataflow.error.MissingFutError
 
+
+Executor
+========
+
+.. autoclass:: parsl.executors.swift_t.TurbineExecutor
+   :members:
+      
