@@ -162,7 +162,7 @@ class TurbineExecutor(ParslExecutor):
                         |  Flow   |             |            |
                    Task | Kernel  |             |            |
                  +----->|-------->|------------>|Outgoing_Q -|-> Worker_Process
-                        |      |         |             |            |    |         |
+                 |      |         |             |            |    |         |
            Parsl<---Fut-|         |             |            |  result   exception
                      ^  |         |             |            |    |         |
                      |  |         |   Q_mngmnt  |            |    V         V
