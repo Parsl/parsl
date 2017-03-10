@@ -31,6 +31,7 @@ Contents:
    :caption: Developer Documentation
 
    devguide/design
+   devguide/roadmap
    devguide/dev_docs
    devguide/packaging
 
