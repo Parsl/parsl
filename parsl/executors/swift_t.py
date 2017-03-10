@@ -156,6 +156,8 @@ class TurbineExecutor(ParslExecutor):
 
     Here's a simple diagram
 
+    .. code:: python
+
                  |  Data   |  Executor   |   IPC      | External Process(es)
                  |  Flow   |             |            |
             Task | Kernel  |             |            |
