@@ -77,7 +77,6 @@ def bash_executor(executable, *args, **kwargs):
     start_t = time.time()
 
     #logging.debug("Executable string : %s", executable)
-    print("Executable string : %s", executable)
 
     executable = executable.format(*args, **kwargs)
 
