@@ -8,13 +8,23 @@ class IPyParallelExecutor(ParslExecutor):
     ''' The Ipython parallel executor
     '''
 
-    def __init__ (self, max_workers=2, thread_name_prefix=''):
+    def __init__ (self, execution_provider=None):
         ''' Initialize the thread pool
         '''
         self.executor = Client()
+        if execution_provider:
+            self.scaling_enable = True
+        else:
+            self.scaling_enable = False
+
+        self.execution_provider = execution_provider
         self.lb_view  = self.executor.load_balanced_view()
         logger.debug("Started client : %s", max_workers)
 
+
+    @property
+    def scaling_enabled(self):
+        return self.scaling_enabled
 
     def submit (self,  *args, **kwargs):
         ''' Submits work to the thread pool
@@ -28,15 +38,20 @@ class IPyParallelExecutor(ParslExecutor):
         logger.debug("Got kwargs : %s,", kwargs)
         return self.lb_view.apply_async(*args, **kwargs)
 
-    def scale_out (self, workers=1):
+    def scale_out (self, *args, **kwargs):
         ''' Scales out the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:
              NotImplemented exception
         '''
+        if self.execution_provider :
+            r = self.execution_provider.scale_out(*args, **kwargs)
+        else:
+            logger.error("No execution provider available")
+            r = None
 
-        raise NotImplemented
+        return r
 
     def scale_in (self, workers=1):
         ''' Scale in the number of active workers by 1
@@ -45,6 +60,11 @@ class IPyParallelExecutor(ParslExecutor):
         Raises:
              NotImplemented exception
         '''
+        if self.execution_provider :
+            r = self.execution_provider.scale_in(*args, **kwargs)
+        else:
+            logger.error("No execution provider available")
+            r = None
 
-        raise NotImplemented
+        return r
 
