@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#SBATCH --job-name=$jobname
+#SBATCH --output=/scratch/midway/yadunand/parsl/parsl/tests/test_ipp/parsl-test-0.1.submit.stdout
+#SBATCH --error=/scratch/midway/yadunand/parsl/parsl/tests/test_ipp/parsl-test-0.1.submit.stdout
+#SBATCH --nodes=$nodes
+#SBATCH --partition=$queue
+#SBATCH --time=$walltime
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+
+
+cat <<EOF > ipengine.json
+$ipengine_json
+EOF
+
+ipengine --file=ipengine.json &>> /scratch/midway/yadunand/parsl/parsl/tests/test_ipp/$jobname.log
