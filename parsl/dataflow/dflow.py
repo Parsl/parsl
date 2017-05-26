@@ -86,8 +86,7 @@ class DataFlowKernel(object):
             self.tasks[task_id]['status'] = States.failed
 
         # Identify tasks that have resolved dependencies and launch
-        to_delete = []
-        for tid in self.tasks:
+        for tid in list(self.tasks):
             # Skip all non-pending tasks
             if self.tasks[tid]['status'] != States.pending:
                 continue
