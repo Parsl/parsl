@@ -53,6 +53,7 @@ class DataFlowKernel(object):
         self.fut_task_lookup = {}
         self.tasks           = {}
         self.executor        = executor
+        self.scalable        = self.executor.scaling_enabled
 
     @staticmethod
     def _count_deps(depends, task_id):
