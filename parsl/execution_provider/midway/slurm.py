@@ -54,8 +54,15 @@ class Midway(ExecutionProvider):
             logger.error("Could not open engine_json : ", self.engine_file)
             raise e
 
-        #print(self.config['engine_json'])
         self.resources = []
+
+        logger.debug("Config : %s" % self.config)
+
+        for engine in range(0, config["min_engines"]) :
+            self.scale_out(config["min_engines"], 1)
+
+        #print(self.config['engine_json'])
+
 
     def submit (self, *args, **kwargs):
         submit_template = None
@@ -65,12 +72,19 @@ class Midway(ExecutionProvider):
 
     def scale_out (self, size, name=None):
         from datetime import datetime
+
+        ipengine_json = None
+        with open( os.path.expanduser("~/.ipython/profile_default/security/ipcontroller-engine.json"), 'r') as f:
+            ipengine_json = f.read()
+
         job_name = "midway.parsl_auto.{0}".format(datetime.now().strftime("%Y-%m-%d_%H:%M:%S"))
         script_name = job_name + ".submit"
         submit_script = None
 
-        with open("./midway.template.submit", 'r') as f:
-            submit_script = Template(f.read()).safe_substitute(**self.config, nodes=1, jobname=job_name)
+        with open(os.path.join(os.path.dirname(__file__), './midway.template.submit'), 'r') as f:
+            submit_script = Template(f.read()).safe_substitute(**self.config, nodes=1,
+                                                               jobname=job_name,
+                                                               ipengine_json=ipengine_json)
 
         with open(script_name, 'w') as f:
             f.write(submit_script)
@@ -149,4 +163,3 @@ if __name__ == "__main__" :
     pool1.status()
     pool1.scale_in(1)
     pool1.scale_in(1)
-
