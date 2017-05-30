@@ -24,7 +24,7 @@ setup(
     download_url = 'https://github.com/swift-lang/swift-e-lab/archive/0.1.tar.gz',
 
     package_data={'': ['LICENSE']},
-    packages=['parsl', 'parsl.app', 'parsl.dataflow'],
+    packages=['parsl', 'parsl.app', 'parsl.dataflow', 'parsl.executors', 'parsl.execution_provider'],
     install_requires=install_requires,
     classifiers = [
         # Maturity
