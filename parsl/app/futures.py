@@ -52,6 +52,10 @@ class DataFuture(Future):
 
         logger.debug("Filepath : %s", self.filepath)
 
+    @property
+    def filename(self):
+        return self.filepath
+
     def result(self, timeout=None):
         ''' A blocking call that returns either the result or raises an exception.
 
