@@ -11,6 +11,10 @@ Parsl is now available on PyPI, but first make sure you have Python3.5+
 
    >>> python3 --version
 
+
+Installing on Linux
+-------------------
+
 1. Download Parsl::
 
     $ git clone https://github.com/swift-lang/swift-e-lab.git parsl
@@ -23,7 +27,21 @@ Parsl is now available on PyPI, but first make sure you have Python3.5+
 
     $ pip3 install jupyter
 
-.. note:: For more detailed info on setting up Jupyter with Python3.5 go `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
+    .. note:: For more detailed info on setting up Jupyter with Python3.5 go `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
+
+Installing on Mac OS
+--------------------
+
+1. If you do not have python3.5 or greater installed, make sure to download and install python3.6.1 from `here <https://www.python.org/downloads/mac-osx/>`_ ::
+
+    $ curl https://www.python.org/ftp/python/3.6.1/python-3.6.1-macosx10.6.pkg
+    $ open python-3.6.1-macosx10.6.pkg
+    # Follow the wizard to install the package
+
+2. Install Parsl::
+
+    $ python3 -m pip install parsl
+
 
 
 For Developers
@@ -31,7 +49,7 @@ For Developers
 
 1. Download Parsl::
 
-    $ git clone https://github.com/swift-lang/swift-e-lab.git parsl
+    $ git clone https://github.com/Parsl/parsl.git
 
 2. Install::
 
