@@ -16,6 +16,7 @@ pool1_config = {"site"        : "pool1",
                 "max_engines" : 4,
                 "engines_per_node" : 1,
                 "nodes_per_job" : 1,
+                "account" : 'pi-wilde' # Replace with your account
 }
 
 
