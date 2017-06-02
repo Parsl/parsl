@@ -29,7 +29,6 @@ doesn't log anything. However the following helper functions are provided for lo
 
 from parsl.version import VERSION
 from parsl.app.app import App
-#from parsl.app.executors import ThreadPoolExecutor, ProcessPoolExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.executors.ipp import IPyParallelExecutor
 
