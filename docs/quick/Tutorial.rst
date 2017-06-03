@@ -1,3 +1,4 @@
+
 Parsl Tutorial
 --------------
 
@@ -7,18 +8,19 @@ wraps python functions into Apps with the **@App** decorator. Decorated
 function can run in parallel when all their inputs are ready.
 
 For a deeper dive into examples and documentation, please refer our
-documentation `here <parsl.readthedocs.io>`_
+documentation `here <parsl.readthedocs.io>`__
 
-.. code:: python
+.. code:: ipython3
 
     # Import Parsl
     import parsl
     from parsl import *
 
 Parsl's DataFlowKernel acts as a layer over any pool of execution
-resources, in our case a pool of `threads <https://en.wikipedia.org/wiki/Thread_(computing)>`_
+resources, in our case a pool of
+[threads](https://en.wikipedia.org/wiki/Thread\_(computing).
 
-.. code:: python
+.. code:: ipython3
 
     # Let's create a pool of threads to execute our functions
     workers = ThreadPoolExecutor(max_workers=4)
@@ -33,13 +35,13 @@ World!'. This function is made an App using the **@App** decorator. The
 decorator itself takes the type of app ('python'\|'bash') and the
 DataFlowKernel object as arguments.
 
-.. code:: python
+.. code:: ipython3
 
     # Here we define our first App function, a simple python app that returns a string
     @App('python', dfk)
     def hello ():
         return 'Hello World!'
-
+    
     app_future = hello()
 
 Futures
@@ -48,18 +50,18 @@ Futures
 Unlike a regular python function, when an App is called it returns an
 AppFuture.
 `Futures <https://en.wikipedia.org/wiki/Futures_and_promises>`__ act as
-a proxy to the results or exceptions that the App will produce once it's
-execution completes. You can ask a future object it's status with
-future.done() or ask it to wait for it's result with the result() call.
-It is important to note that while done(), just gives you the current
-status, the result() call blocks execution till the App is complete and
-the result is available.
+a proxy to the results or exceptions that the App will produce once its
+execution completes. You can ask a future object its status with
+future.done() or ask it to wait for its result with the result() call.
+It is important to note that while the done() call just gives you the
+current status, the result() call blocks execution till the App is
+complete and the result is available.
 
-.. code:: python
+.. code:: ipython3
 
-    # Check status
+    # Check status 
     print("Status: ", app_future.done())
-
+    
     # Get result
     print("Result: ", app_future.result())
 
@@ -85,11 +87,11 @@ average. The dependency chain looks like this :
                         |
     Future            avg_pi
 
-.. code:: python
+.. code:: ipython3
 
     @App('python', dfk)
     def pi(total):
-        import random      # App functions have to import modules they will use.
+        import random      # App functions have to import modules they will use.     
         width = 10000      # Set the size of the box in which we drop random points
         center = width/2
         c2  = center**2
@@ -101,18 +103,30 @@ average. The dependency chain looks like this :
             if (x-center)**2 + (y-center)**2 < c2:
                 count += 1
         return (count*4/total)
-
+    
     @App('python', dfk)
     def mysum(a,b,c):
         return (a+b+c)/3
 
+Parallelism
+~~~~~~~~~~~
+
+Here we call the function **pi()** three times, each of which run
+independently in parallel. We then call the next app **mysum()** with
+the three app futures that were returned from the **pi()** calls. Since
+**mysum()** is also a parsl app, it returns an app future immediately,
+but defers execution (blocks) until all the futures passed to it as
+inputs have resolved.
+
+.. code:: ipython3
+
     a, b, c = pi(10**6), pi(10**6), pi(10**6)
     avg_pi  = mysum(a, b, c)
 
-.. code:: python
+.. code:: ipython3
 
     # Print the results
-    print("A: {0:5} B: {1:5} B: {1:5}".format(a.result(), b.result(), c.result()))
+    print("A: {0:5} B: {1:5} B: {2:5}".format(a.result(), b.result(), c.result()))
     print("Average: {0:5}".format(avg_pi.result()))
 
 Bash Apps
@@ -136,19 +150,19 @@ In addition if a list of output filenames are provided via the
 outputs=[], a list of DataFutures corresponding to each filename in the
 outputs list is returned in addition to the AppFuture.
 
-.. code:: python
+.. code:: ipython3
 
     @App('bash', dfk)
     def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
         # The bash app function, requires that the bash script is assigned to the special variable
         # cmd_line. Positional and Keyword args to the fn() are formatted into the cmd_line string
-        cmd_line = '''echo "{0}" > {outputs[0]}
-        sleep {1};
-        ls ;
+        cmd_line = '''echo "{0}" > {outputs[0]} 
+        sleep {1}; 
+        ls ;    
         '''
-
+    # We call sim_mol_dyn with 
     sim_fut, data_futs = sim_mol_dyn(5, 3, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
 
-.. code:: python
+.. code:: ipython3
 
     print(sim_fut, data_futs)
