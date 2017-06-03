@@ -3,7 +3,7 @@ Quickstart
 
 | To try the parsl tutorial online go `here <try.parsl-project.org>`_
 
-| Getting the latest Parsl is easy, but requires a few steps.
+| Getting the latest Parsl is easy, and requires just a few steps:
 
 
 Installing
