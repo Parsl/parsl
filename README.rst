@@ -7,7 +7,7 @@ Parsl is a parallel scripting library that enables easy parallelism and workflow
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
    :alt: Apache Licence V2.0
-.. |build-status| image:: https://travis-ci.org/swift-lang/swift-e-lab.svg?branch=master
+.. |build-status| image:: https://travis-ci.org/Parsl/parsl.svg?branch=master
    :target: https://travis-ci.org/Parsl/parsl
    :alt: Build status
 .. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=latest
@@ -42,7 +42,7 @@ For Developers
 
 1. Download Parsl::
 
-    $ git clone https://github.com/swift-lang/swift-e-lab.git parsl
+    $ git clone https://github.com/Parsl/parsl.git parsl
 
 2. Install::
 
