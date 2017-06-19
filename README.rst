@@ -5,10 +5,10 @@ Parsl - Parallel Scripting Library
 Parsl is a parallel scripting library that enables easy parallelism and workflow design.
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
-   :target: https://github.com/swift-lang/swift-e-lab/blob/master/LICENSE
+   :target: https://github.com/Parsl/parsl/blob/master/LICENSE
    :alt: Apache Licence V2.0
 .. |build-status| image:: https://travis-ci.org/swift-lang/swift-e-lab.svg?branch=master
-   :target: https://travis-ci.org/swift-lang/swift-e-lab
+   :target: https://travis-ci.org/Parsl/parsl
    :alt: Build status
 .. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=latest
    :target: http://parsl.readthedocs.io/en/latest/?badge=latest
@@ -24,7 +24,7 @@ Parsl is now available on PyPI, but first make sure you have Python3.5+
 
 1. Download Parsl::
 
-    $ git clone https://github.com/swift-lang/swift-e-lab.git parsl
+    $ git clone https://github.com/Parsl/parsl.git parsl
 
 2. Install Parsl::
 
