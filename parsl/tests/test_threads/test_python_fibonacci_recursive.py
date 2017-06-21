@@ -13,11 +13,12 @@ def fibonacci(n):
         return 1
     else:
         return fibonacci(n - 1).result() + fibonacci(n - 2).result()
-    
-parser = argparse.ArgumentParser()
-parser.add_argument("-a", "--num", action = "store", dest = "a", type = int)
-args = parser.parse_args()
-x = args.a
+x = 5
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--num", default = '5', action = "store", dest = "a", type = int)
+    args = parser.parse_args()
+    x = args.a
 results = []
 for i in range(x):
     results.append(fibonacci(i))
