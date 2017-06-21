@@ -1,72 +1,168 @@
+
 Parsl Tutorial
-==============
+--------------
 
-0 to Parsl in 10 minutes.
+Parsl allows you to write functions that execute in parallel and tie
+them together with dependencies to create workflows in python. Parsl
+wraps python functions into Apps with the **@App** decorator. Decorated
+function can run in parallel when all their inputs are ready.
 
-Parsl library allows you to markup of function for parallel execution.
-When a parallel function is invoked a proxy for the results from the function
-is returned in the form of ``futures``. ``futures`` are basically a placeholder
-for a result from a parallel function that allows you to check the status, get
-exceptions in case of errors and get results once they are available. ``futures``
-returned by a function can be passed to another parallel function to specify
-dependencies.
+For a deeper dive into examples and documentation, please refer our
+documentation `here <parsl.readthedocs.io>`__
 
-Parsl provides an ``App`` decorator to markup a function as a parallel function.
-Two kinds of ``App`` 's are currently supported : **bash** and **python**.
-The ``App`` decorator also accepts an ``executor`` which represents an execution
-resource such as threads, processes or even remote workers.
-
-Here's an example using a **bash** app:
-
-.. code-block:: python
+.. code:: ipython3
 
     # Import Parsl
-    from parsl import *
     import parsl
-
-    # Create a pool of 4 processes
-    workers = ProcessPoolExecutor(max_workers=4)
-
-    # Here we define a bash app
-    @App('bash', dfk)
-    def echo_to_file(inputs=[],             # List of futures or python objects
-                     outputs=[],            # List of output files
-                     stderr='std.err',      # File to which STDERR is logged
-                     stdout='std.out'):     # File to which STDOUT is logged
-
-        # A bash script is assigned to a special variable named cmd_line
-        # The string provided is formatted with the args, and kwargs to the fn echo_to_file
-        cmd_line = 'echo {inputs} > {outputs[0]}'
-
-
-    fu, outs = echo_to_file(inputs=["Hello World"], outputs=['hello.txt'])
-    fu.wait()
-
-Here's an example of similar behavior with a pure **python** app:
-
-.. code-block:: python
-
-    # Import Parsl
     from parsl import *
-    import parsl
 
-    # Create a pool of 4 processes
-    workers = ProcessPoolExecutor(max_workers=4)
+Parsl's DataFlowKernel acts as a layer over any pool of execution
+resources, in our case a pool of
+[threads](https://en.wikipedia.org/wiki/Thread\_(computing).
 
-    # Here we define a bash app
+.. code:: ipython3
+
+    # Let's create a pool of threads to execute our functions
+    workers = ThreadPoolExecutor(max_workers=4)
+    # We pass the workers to the DataFlowKernel which will execute our Apps over the workers.
+    dfk = DataFlowKernel(workers)
+
+Hello World App
+~~~~~~~~~~~~~~~
+
+Let's define a simple python function that returns the string 'Hello
+World!'. This function is made an App using the **@App** decorator. The
+decorator itself takes the type of app ('python'\|'bash') and the
+DataFlowKernel object as arguments.
+
+.. code:: ipython3
+
+    # Here we define our first App function, a simple python app that returns a string
     @App('python', dfk)
-    def echo_to_file(string, outputs=[]):
-        import os
-        with open(outputs[0], 'w') as outfile:
-            outfile.write(string)
-        return True
+    def hello ():
+        return 'Hello World!'
+    
+    app_future = hello()
 
+Futures
+~~~~~~~
 
-    fu, outs = echo_to_file("Hello World", outputs=['hello.txt'])
-    fu.wait()
+Unlike a regular python function, when an App is called it returns an
+AppFuture.
+`Futures <https://en.wikipedia.org/wiki/Futures_and_promises>`__ act as
+a proxy to the results or exceptions that the App will produce once its
+execution completes. You can ask a future object its status with
+future.done() or ask it to wait for its result with the result() call.
+It is important to note that while the done() call just gives you the
+current status, the result() call blocks execution till the App is
+complete and the result is available.
 
+.. code:: ipython3
 
-Dependencies
-------------
+    # Check status 
+    print("Status: ", app_future.done())
+    
+    # Get result
+    print("Result: ", app_future.result())
 
-The above example shows you how to define app 
+Data Dependencies
+~~~~~~~~~~~~~~~~~
+
+When a future created by an App is passed as inputs to another, a data
+dependency is created. Parsl ensures that Apps are executed as their
+dependencies are resolved.
+
+Let's see an example of this using the `monte-carlo
+method <https://en.wikipedia.org/wiki/Monte_Carlo_method#History>`__ to
+calculate pi. We call 3 iterations of this slow function, and take the
+average. The dependency chain looks like this :
+
+::
+
+    App Calls    pi()  pi()   pi()
+                  \     |     /
+    Futures        a    b    c
+                    \   |   /
+    App Call         mysum()
+                        |
+    Future            avg_pi
+
+.. code:: ipython3
+
+    @App('python', dfk)
+    def pi(total):
+        import random      # App functions have to import modules they will use.     
+        width = 10000      # Set the size of the box in which we drop random points
+        center = width/2
+        c2  = center**2
+        count = 0
+        for i in range(total):
+            # Drop a random point in the box.
+            x,y = random.randint(1, width),random.randint(1, width)
+            # Count points within the circle
+            if (x-center)**2 + (y-center)**2 < c2:
+                count += 1
+        return (count*4/total)
+    
+    @App('python', dfk)
+    def mysum(a,b,c):
+        return (a+b+c)/3
+
+Parallelism
+~~~~~~~~~~~
+
+Here we call the function **pi()** three times, each of which run
+independently in parallel. We then call the next app **mysum()** with
+the three app futures that were returned from the **pi()** calls. Since
+**mysum()** is also a parsl app, it returns an app future immediately,
+but defers execution (blocks) until all the futures passed to it as
+inputs have resolved.
+
+.. code:: ipython3
+
+    a, b, c = pi(10**6), pi(10**6), pi(10**6)
+    avg_pi  = mysum(a, b, c)
+
+.. code:: ipython3
+
+    # Print the results
+    print("A: {0:5} B: {1:5} B: {2:5}".format(a.result(), b.result(), c.result()))
+    print("Average: {0:5}".format(avg_pi.result()))
+
+Bash Apps
+~~~~~~~~~
+
+Science aplications often use external software that are invoked from
+the command line. For instance parameter sweeps with molecular dynamics
+software such as `LAMMPS <http://lammps.sandia.gov/>`__ are very common.
+Next we will see a simple mocked up science workflow composed of bash
+apps.
+
+In a bash app function, there are a few special reserved keyword
+arguments:
+
+-  inputs (List) : A list of strings or DataFutures
+-  outputs (List) : A list of output file paths
+-  stdout (str) : redirects STDOUT to string filename
+-  stderr (str) : redirects STDERR to string filename
+
+In addition if a list of output filenames are provided via the
+outputs=[], a list of DataFutures corresponding to each filename in the
+outputs list is returned in addition to the AppFuture.
+
+.. code:: ipython3
+
+    @App('bash', dfk)
+    def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
+        # The bash app function, requires that the bash script is assigned to the special variable
+        # cmd_line. Positional and Keyword args to the fn() are formatted into the cmd_line string
+        cmd_line = '''echo "{0}" > {outputs[0]} 
+        sleep {1}; 
+        ls ;    
+        '''
+    # We call sim_mol_dyn with 
+    sim_fut, data_futs = sim_mol_dyn(5, 3, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
+
+.. code:: ipython3
+
+    print(sim_fut, data_futs)
