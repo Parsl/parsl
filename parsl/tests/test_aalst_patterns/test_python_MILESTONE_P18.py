@@ -38,7 +38,6 @@ def test_milestone():
         if i.done() == True:
             print(cubed(r).result())
             return 
-    #print (s.result())
 
 
 if __name__ == '__main__':
