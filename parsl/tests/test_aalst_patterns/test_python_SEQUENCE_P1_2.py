@@ -7,21 +7,21 @@ workers = ThreadPoolExecutor(max_workers = 4)
 dfk = DataFlowKernel(workers)
 
 @App('python', dfk)
-def book_flight():
+def rand():
     x = random.randint(1, 1000)
     return x
 
 @App('python', dfk)
-def add_air_miles(x):
+def multiply_rand(x):
     return x * random.randint(1, 10)
 
-def test_air_sequence(x = 5):
+def test_sequence(x = 5):
     flights = []
     miles = []
     for i in range(x):
-        flights.append(book_flight())
+        flights.append(rand())
     for j in range(len(flights)):
-        miles.append(add_air_miles(flights[j].result()))
+        miles.append(multiply_rand(flights[j].result()))
     for k in range(len(miles)):
         print(miles[k].result())
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--flight", default = "5", action = "store", dest = "a", type = int)
     args = parser.parse_args()
-    test_air_sequence(args.a)
+    test_sequence(args.a)
     
                    
     
