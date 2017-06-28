@@ -1,3 +1,6 @@
+# A point in the process where, based on a decision or workflow control data, one of a number 
+# branches is chosen 
+
 import parsl
 from parsl import *
 import random
