@@ -1,3 +1,6 @@
+#An activity in a workflow process is enabled after the completion of 
+#another activity in the same process 
+
 import parsl
 from parsl import *
 import random 

@@ -1,3 +1,6 @@
+# A point in the workflow process where when one of several branches is  
+# activated, the other branches are withdrawn 
+
 import parsl
 from parsl import *
 import random

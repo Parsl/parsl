@@ -1,3 +1,6 @@
+# A point in the workflow were two or more separate branches, that are not 
+# being executed in parallel,  come together into one branch  
+
 import parsl
 from parsl import *
 import argparse

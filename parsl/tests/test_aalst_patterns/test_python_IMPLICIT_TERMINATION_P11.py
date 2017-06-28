@@ -1,7 +1,11 @@
+# A given process is terminated once there are no longer any active activities
+# in the workflow 
+
 import parsl
 from parsl import *
 import random
 import argparse
+import time
 
 workers = ThreadPoolExecutor(max_workers = 10)
 dfk = DataFlowKernel(workers)
@@ -16,8 +20,14 @@ def square(x):
     return x**2
 
 @App('python', dfk)
-def increment_one(x):
+def increment(x):
     return x + 1
+
+@App('python', dfk)
+def increment_slow(x):
+    time.sleep(5)
+    return x + 1
+    
 
 @App('python', dfk)
 def sum_elements(x, y):
@@ -26,12 +36,11 @@ def sum_elements(x, y):
 
 def test_implicit_termination(x = 5):
     numbers = []
+    numbers.append(increment_slow(rand().result()))
     for i in range(x):
         y = rand().result()
-        numbers.append(square(increment_one(y).result()))
-    while numbers[2].done() != True:
-        pass
-    print(numbers[2].result())
+        numbers.append(square(increment(y).result()).result())
+    print(numbers[0].result())
     return
 
 if __name__ == '__main__':

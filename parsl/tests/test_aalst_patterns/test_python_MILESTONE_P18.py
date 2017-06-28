@@ -1,3 +1,7 @@
+# An activity is enabled only if a certain milestone has been reached
+# and has not expired yet. For example, if there are three activities A, B, and C,
+# A may only be enabled if B has been executed and C has not been executed
+
 import parsl
 from parsl import *
 import random

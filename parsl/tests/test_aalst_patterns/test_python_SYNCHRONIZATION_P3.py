@@ -1,3 +1,6 @@
+# In this workflow, there is a point in the process where multiple subprocesses/activities
+# converge into one single thread of control 
+
 import parsl
 from parsl import *
 import random

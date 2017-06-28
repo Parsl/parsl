@@ -1,3 +1,6 @@
+# A point in a workflow process where one or more activities can
+# be repeated 
+
 import parsl
 from parsl import *
 import random 

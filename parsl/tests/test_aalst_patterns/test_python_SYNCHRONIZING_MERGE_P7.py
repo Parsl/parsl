@@ -1,3 +1,6 @@
+# A point in the workflow process where multiple paths converge into one single thread with 
+# synchronization 
+
 import parsl
 from parsl import *
 import random

@@ -1,3 +1,6 @@
+# A point in the workflow process where an enabled activity is disabled, or
+# a thread waiting for execution is removed 
+
 import parsl
 from parsl import *
 import random

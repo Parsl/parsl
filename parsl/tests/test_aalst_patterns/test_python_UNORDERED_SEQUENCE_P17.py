@@ -1,3 +1,7 @@
+# A set of activities is executed in an arbitrary order. Each activity
+# in the set is executed, and no two activities are active at the same
+# time 
+
 import parsl
 from parsl import *
 import random

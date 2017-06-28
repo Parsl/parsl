@@ -1,3 +1,6 @@
+#In this pattern, multiple instances of an activity can be enabled, with the
+# number of instances of a given activity known at design time  
+
 import parsl
 from parsl import *
 import random

@@ -1,3 +1,7 @@
+#In this workflow pattern, multiple instances of an activity can
+# be created. Each time a new instance is created, a new thread is created that
+# is independent of all the other threads 
+
 import parsl
 from parsl import *
 import random

@@ -1,3 +1,6 @@
+# A "discriminator" is a point in a workflow process that waits for one of the incoming branches to complete before 
+# beginning the subsequent activity 
+
 import parsl
 from parsl import *
 import random

@@ -1,3 +1,5 @@
+# A point in a workflow process where an instance of an activity is removed completely
+
 import parsl
 from parsl import *
 import random
@@ -47,9 +49,10 @@ def test_withdraw(x = 3):
         squares.append(square(r))
         increments.append(increment(r))
     r = random.randint(1, 30)
+    print(r)
     if r > 20:
         del cubes[:]
-    if r <= 20 and r > 10:
+    if r < 20 and r > 10:
         del squares[:]
     if r < 10:
         del increments[:]
