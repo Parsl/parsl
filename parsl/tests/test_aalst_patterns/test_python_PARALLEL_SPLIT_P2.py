@@ -1,3 +1,7 @@
+#A point in the workflow process where a single thread of control splits into multiple
+#threads of control which can be executed in parallel, this allows calls to be executed either 
+#simultaneously or in any order 
+
 import parsl
 from parsl import *
 import random

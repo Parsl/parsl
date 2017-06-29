@@ -1,3 +1,6 @@
+# A point in the workflow process where one of several branches is chosen baced on a decision or 
+# workflow control data 
+
 import parsl
 from parsl import *
 import argparse
