@@ -103,7 +103,7 @@ def bash_executor(executable, *args, **kwargs):
         raise AppException("App caught exception : {0}".format(proc.returncode), e)
     finally:
         if returncode != 0:
-            raise AppException("App Failed exit code: {0}".format(proc.returncode))
+            raise AppFailure("App Failed exit code: {0}".format(proc.returncode), proc.returncode)
 
     # TODO : Add support for globs here
     missing = []
