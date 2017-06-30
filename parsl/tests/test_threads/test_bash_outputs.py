@@ -11,7 +11,7 @@ import time
 import shutil
 import argparse
 
-parsl.set_stream_logger()
+#parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=8)
 
 #workers = ProcessPoolExecutor(max_workers=4)

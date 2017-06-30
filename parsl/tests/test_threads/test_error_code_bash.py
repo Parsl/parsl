@@ -34,7 +34,8 @@ test_matrix = { div_0             : {'exit_code' : 1 },
                 bash_misuse       : {'exit_code' : 15 },
                 command_not_found : {'exit_code' : 127 },
                 invalid_exit      : {'exit_code' : 128 },
-                not_executable    : {'exit_code' : 126 } }
+                not_executable    : {'exit_code' : 126 }
+              }
 
 
 
@@ -42,9 +43,13 @@ def test_div_0(test_fn=div_0):
 
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
-    assert f.result() == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                  err_code,
-                                                                                  f.result())
+    try:
+        x = f.result()
+    except Exception as e:
+        print("Caught exception", e)
+        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
+                                                                                      err_code,
+                                                                                      e.exitcode)
     print(os.listdir('.'))
     os.remove('std.err')
     os.remove('std.out')
@@ -55,9 +60,13 @@ def test_bash_misuse(test_fn=bash_misuse):
 
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
-    assert f.result() == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                  err_code,
-                                                                                  f.result())
+    try:
+        x = f.result()
+    except Exception as e:
+        print("Caught exception", e)
+        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
+                                                                                      err_code,
+                                                                                      e.exitcode)
     os.remove('std.err')
     os.remove('std.out')
     return True
@@ -66,9 +75,14 @@ def test_command_not_found(test_fn=command_not_found):
 
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
-    assert f.result() == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                  err_code,
-                                                                                  f.result())
+    try:
+        x = f.result()
+    except Exception as e:
+        print("Caught exception", e)
+        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
+                                                                                      err_code,
+                                                                                      e.exitcode)
+
     os.remove('std.err')
     os.remove('std.out')
     return True
@@ -78,9 +92,13 @@ def test_invalid_exit(test_fn=invalid_exit):
 
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
-    assert f.result() == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                  err_code,
-                                                                                  f.result())
+    try:
+        x = f.result()
+    except Exception as e:
+        print("Caught exception", e)
+        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
+                                                                                      err_code,
+                                                                                      e.exitcode)
     os.remove('std.err')
     os.remove('std.out')
     return True
@@ -89,22 +107,27 @@ def test_not_executable(test_fn=not_executable):
 
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
-    res = f.result()
-    print (res)
-    assert f.result() == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                  err_code,
-                                                                                  f.result())
+    try:
+        x = f.result()
+    except Exception as e:
+        print("Caught exception", e)
+        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
+                                                                                      err_code,
+                                                                                      e.exitcode)
     os.remove('std.err')
     os.remove('std.out')
     return True
 
 def run_app(test_fn, err_code):
-
     f = test_fn()
     print(f)
-    assert f.result() == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                  err_code,
-                                                                                  f.result())
+    try:
+        x = f.result()
+    except Exception as e:
+        print("Caught exception", e)
+        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
+                                                                                      err_code,
+                                                                                      e.exitcode)
     os.remove('std.err')
     os.remove('std.out')
     return True
