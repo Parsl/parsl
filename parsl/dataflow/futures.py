@@ -44,7 +44,7 @@ class AppFuture(Future):
     def __init__ (self, parent):
         super().__init__()
         self.parent   = parent
-
+        self._outputs = []
 
     def parent_callback(self, executor_fu):
         ''' Callback from executor future to update the parent.
@@ -60,6 +60,9 @@ class AppFuture(Future):
 
         logger.debug("App_fu updated with executor_Fu state")
 
+        logger.debug("TRACING STATE executor_fu state : %s", exeuctor_fu._state)
+
+        super()._state = executor_fu._state
         if executor_fu.done() == True:
             super().set_result(executor_fu.result())
 
@@ -129,6 +132,10 @@ class AppFuture(Future):
             return self.parent.add_done_callback(fn)
         else:
             return None
+
+    @property
+    def outputs(self):
+        return self._outputs
 
     def __repr__(self):
         if self.parent:
