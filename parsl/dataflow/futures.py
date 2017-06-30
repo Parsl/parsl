@@ -58,11 +58,11 @@ class AppFuture(Future):
         Updates the super() with the result() or exception()
         '''
 
-        logger.debug("App_fu updated with executor_Fu state")
+        #logger.debug("App_fu updated with executor_Fu state")
 
-        logger.debug("TRACING STATE executor_fu state : %s", exeuctor_fu._state)
+        #logger.debug("TRACING STATE executor_fu state : %s", exeuctor_fu._state)
 
-        super()._state = executor_fu._state
+        #super()._state = executor_fu._state
         if executor_fu.done() == True:
             super().set_result(executor_fu.result())
 
