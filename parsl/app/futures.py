@@ -50,6 +50,7 @@ class DataFuture(Future):
             else:
                 raise NotFutureError("DataFuture can be created only with a FunctionFuture on None")
 
+        logger.debug("Creating DataFuture with parent : %s", parent)
         logger.debug("Filepath : %s", self.filepath)
 
     @property
@@ -116,8 +117,10 @@ class DataFuture(Future):
             return None
 
     def __repr__(self):
+        logger.debug("[PLEASE REMOVE] Datafuture: %s Parent: %s", id(self), self.parent)
         if self.parent:
             with self.parent._condition:
+                logger.debug("[PLEASE REMOVE] Parent state: %s", self.parent._state)
                 if self.parent._state == FINISHED:
                     if self.parent._exception:
                         return '<%s at %#x state=%s raised %s>' % (
