@@ -98,14 +98,15 @@ class DataFuture(Future):
 
         if self.parent :
             if self.parent.done():
+                # This explicit call to raise exceptions might be redundant.
+                # the result() call *should* raise an exception if there's one
                 e = self.parent.parent_exception
                 if e :
                     raise e
                 else :
-                    self.parent.result(timeout=1)
+                    self.parent.result(timeout=timeout)
             else:
-                self.parent.add_done_callback(self.parent_callback)
-
+                self.parent.result(timeout=timeout)
 
         return self.filepath
 
