@@ -101,20 +101,21 @@ def test_fut_case_4():
     '''
     ''' Testing the behavior of DataFutures where there are no dependencies
     '''
-    output_f = 'test_fut_case_4.txt'
-    app_1, [data_1] = delay_incr(1, delay=0.5, outputs=[output_f])
-    app_2, [data_2] = delay_incr(app_1, delay=0.5, outputs=[output_f])
+    output_f1 = 'test_fut_case_4_f1.txt'
+    output_f2 = 'test_fut_case_4_f2.txt'
+    app_1, [data_1] = delay_incr(1, delay=0.5, outputs=[output_f1])
+    app_2, [data_2] = delay_incr(app_1, delay=0.5, outputs=[output_f2])
 
     status = data_2.done()
     result = data_2.result()
     print ("App_fu  : ", app_2)
     print ("Data_fu : ", data_2)
 
-
-    assert os.path.basename(result) == output_f , \
-        "DataFuture did not return the filename, got : {0}".format(result)
     print("Status : ", status)
     print("Result : ", result)
+
+    assert os.path.basename(result) == output_f2 , \
+        "DataFuture did not return the filename, got : {0}".format(result)
 
     contents = get_contents(result)
     assert contents == '3', 'Output does not match expected "3", got: "{0}"'.format(result)
@@ -132,5 +133,6 @@ if __name__ == '__main__' :
         parsl.set_stream_logger()
 
     #x = test_parallel_for(int(args.count))
-    y = test_fut_case_3() 
+    #y = test_fut_case_3()
+    y = test_fut_case_4()
     #raise_error(0)
