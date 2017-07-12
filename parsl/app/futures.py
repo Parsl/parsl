@@ -34,11 +34,32 @@ class DataFuture(Future):
     is resolved i.e file exists, then the DataFuture is assumed to be resolved.
     """
 
+    def parent_callback(self, parent_fu):
+        ''' Callback from executor future to update the parent.
+
+        Args:
+            - executor_fu (Future): Future returned by the executor along with callback
+
+        Returns:
+            - None
+
+        Updates the super() with the result() or exception()
+        '''
+
+        if parent_fu.done() == True:
+            e = parent_fu._exception
+            if e :
+                super().set_exception(e)
+            else:
+                super().set_result(parent_fu.result())
+        return
+
     def __init__ (self, fut, filepath, parent=None, filetype='local'):
         super().__init__()
         self.filetype = filetype
         self.filepath = os.path.abspath(os.path.expanduser(filepath))
         self.parent   = parent
+        self._exception = None
 
         if fut == None:
             logger.debug("Setting result to filepath since no future was passed")
@@ -47,11 +68,13 @@ class DataFuture(Future):
         else:
             if isinstance(fut, Future):
                 self.parent = fut
+                self.parent.add_done_callback(self.parent_callback)
             else:
                 raise NotFutureError("DataFuture can be created only with a FunctionFuture on None")
 
         logger.debug("Creating DataFuture with parent : %s", parent)
         logger.debug("Filepath : %s", self.filepath)
+
 
     @property
     def filename(self):
@@ -59,6 +82,8 @@ class DataFuture(Future):
 
     def result(self, timeout=None):
         ''' A blocking call that returns either the result or raises an exception.
+        Assumptions : A DataFuture always has a parent AppFuture. The AppFuture does callbacks when
+        setup.
 
         Kwargs:
             - timeout (int): Timeout in seconds
@@ -71,12 +96,16 @@ class DataFuture(Future):
 
         '''
 
-        logger.debug("Requesting Result from Datafuture : %s", self.__str__)
         if self.parent :
-            self.parent.result(timeout=timeout)
+            if self.parent.done():
+                e = self.parent.parent_exception
+                if e :
+                    raise e
+                else :
+                    self.parent.result(timeout=1)
+            else:
+                self.parent.add_done_callback(self.parent_callback)
 
-        else:
-            super().result(timeout=timeout)
 
         return self.filepath
 
@@ -117,10 +146,9 @@ class DataFuture(Future):
             return None
 
     def __repr__(self):
-        logger.debug("[PLEASE REMOVE] Datafuture: %s Parent: %s", id(self), self.parent)
+
         if self.parent:
             with self.parent._condition:
-                logger.debug("[PLEASE REMOVE] Parent state: %s", self.parent._state)
                 if self.parent._state == FINISHED:
                     if self.parent._exception:
                         return '<%s at %#x state=%s raised %s>' % (
