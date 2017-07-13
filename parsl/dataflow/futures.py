@@ -40,12 +40,6 @@ class AppFuture(Future):
     scheduled. THat is a case we need to cover.
 
     """
-
-    def __init__ (self, parent):
-        super().__init__()
-        self.parent   = parent
-
-
     def parent_callback(self, executor_fu):
         ''' Callback from executor future to update the parent.
 
@@ -58,14 +52,21 @@ class AppFuture(Future):
         Updates the super() with the result() or exception()
         '''
 
-        logger.debug("App_fu updated with executor_Fu state")
-
         if executor_fu.done() == True:
             super().set_result(executor_fu.result())
 
         e = executor_fu.exception()
         if e:
             super().set_exception(e)
+
+
+    def __init__ (self, parent):
+        super().__init__()
+        self.parent   = parent
+        #if self.parent:
+        #    parent.add_done_callback(self.parent_callback)
+        self._outputs = []
+
 
 
     def update_parent(self, fut):
@@ -77,10 +78,11 @@ class AppFuture(Future):
         fut.add_done_callback(self.parent_callback)
 
     def result(self, timeout=None):
-        #print("FOooo")
-        logger.debug("Waiting on result of %s on %s", self.__str__(), self.parent.__str__())
 
         if self.parent :
+            x = self.parent._exception
+            if x :
+                raise x
             return self.parent.result(timeout=timeout)
         else:
             return super().result(timeout=timeout)
@@ -129,6 +131,10 @@ class AppFuture(Future):
             return self.parent.add_done_callback(fn)
         else:
             return None
+
+    @property
+    def outputs(self):
+        return self._outputs
 
     def __repr__(self):
         if self.parent:

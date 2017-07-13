@@ -69,6 +69,7 @@ class AppBase (object):
 def bash_executor(executable, *args, **kwargs):
     ''' The callable fn for external apps.
     '''
+    import os
     import time
     import subprocess
     import logging
@@ -92,7 +93,6 @@ def bash_executor(executable, *args, **kwargs):
     start_time = time.time()
 
     try :
-        #logger.debug("id:{0} Executing app : {1}".format(id(self), self.executable))
         proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
         proc.wait()
         returncode = proc.returncode
@@ -101,6 +101,19 @@ def bash_executor(executable, *args, **kwargs):
         error = e
         status = 'failed'
         raise AppException("App caught exception : {0}".format(proc.returncode), e)
+    finally:
+        if returncode != 0:
+            raise AppFailure("App Failed exit code: {0}".format(proc.returncode), proc.returncode)
+
+    # TODO : Add support for globs here
+    missing = []
+    for outputfile in kwargs.get('outputs', []):
+        logger.debug("Checking existence of file or glob  %s ", outputfile)
+        if not os.path.exists(outputfile):
+            missing.extend([outputfile])
+    if missing:
+        raise MissingOutputs("Missing outputs", missing)
+
 
     exec_duration = time.time() - start_t
     return returncode
@@ -203,6 +216,7 @@ class BashApp(AppBase):
             app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
+        app_fut._outputs = out_futs
         if out_futs:
             return app_fut, out_futs
         else:
@@ -243,6 +257,7 @@ class PythonApp(AppBase):
             app_fut = self.executor.submit(self.func, *args, **kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
+        app_fut._outputs = out_futs
         if out_futs:
             return app_fut, out_futs
         else:

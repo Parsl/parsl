@@ -28,6 +28,7 @@ from functools import partial
 from parsl.dataflow.error import *
 from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
+from parsl.app.futures import DataFuture
 
 # Exceptions
 
@@ -37,10 +38,14 @@ class DataFlowKernel(object):
     """ DataFlowKernel
     """
 
-    def __init__(self, executor):
+    def __init__(self, executor, lazy_fail=True, fail_retries=2):
         """ Initialize the DataFlowKernel
         Args:
             executor (Executor): An executor object.
+
+        KWargs:
+            lazy_fail(Bool) : Default=True, determine failure behavior
+            fail_retries(int): Default=2, Set the number of retry attempts in case of failure
 
         Returns:
             DataFlowKernel object
@@ -50,6 +55,8 @@ class DataFlowKernel(object):
         #self.runnable        = {}
         #self.done            = {}
 
+        self.lazy_fail       = lazy_fail
+        self.fail_retries    = 2
         self.fut_task_lookup = {}
         self.tasks           = {}
         self.executor        = executor
@@ -65,7 +72,6 @@ class DataFlowKernel(object):
                 if not dep.done():
                     count += 1
 
-        logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count
 
     def handle_update(self, task_id, future):
@@ -77,13 +83,16 @@ class DataFlowKernel(object):
              task_id (string) : Task id which is a uuid string
              future (Future) : The future object corresponding to the task which makes this callback
         '''
-
         if future.done():
+
+            # Untested
+            if not self.lazy_fail:
+                # Fail early
+                if future._exception:
+                    future.result()
+
             logger.debug("Completed : %s with %s", task_id, future)
             self.tasks[task_id]['status'] = States.done
-        else:
-            logger.debug("Failed    : %s with %s", task_id, future)
-            self.tasks[task_id]['status'] = States.failed
 
         # Identify tasks that have resolved dependencies and launch
         for tid in list(self.tasks):
@@ -94,19 +103,36 @@ class DataFlowKernel(object):
             if self._count_deps(self.tasks[tid]['depends'], tid) == 0:
                 # We can now launch *task*
                 logger.debug("Task : %s is now runnable", tid)
-                new_args, kwargs = self.sanitize_and_wrap(task_id,
-                                                          self.tasks[tid]['args'],
-                                                          self.tasks[tid]['kwargs'])
-                self.tasks[tid]['status'] = States.running
-                exec_fu = self.launch_task(task_id, self.tasks[tid]['func'], *new_args, **kwargs)
-                self.tasks[task_id]['exec_fu'] = exec_fu
+                new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
+                                                                      self.tasks[tid]['args'],
+                                                                      self.tasks[tid]['kwargs'])
 
-                try:
-                    self.tasks[tid]['app_fu'].update_parent(exec_fu)
-                    self.tasks[tid]['exec_fu'] = exec_fu
-                except AttributeError as e:
-                    logger.error("Caught AttributeError at update_parent for task:%s", tid)
-                    raise e
+                if not exceptions :
+                    # There are no dependency errors
+                    self.tasks[tid]['status'] = States.running
+                    exec_fu = self.launch_task(task_id, self.tasks[tid]['func'], *new_args, **kwargs)
+                    self.tasks[task_id]['exec_fu'] = exec_fu
+                    try:
+                        self.tasks[tid]['app_fu'].update_parent(exec_fu)
+                        self.tasks[tid]['exec_fu'] = exec_fu
+                    except AttributeError as e:
+                        logger.error("Caught AttributeError at update_parent for task:%s", tid)
+                        raise e
+                else:
+                    # Raise a dependency exception
+                    self.tasks[tid]['status'] = States.dep_fail
+                    try:
+                        fu = Future()
+                        self.tasks[tid]['exec_fu'] = fu
+                        self.tasks[tid]['app_fu'].update_parent(fu)
+                        fu.set_exception(DependencyError(exceptions,
+                                                         "Input dependencies failure",
+                                                         None))
+                        print(self.tasks[tid]['app_fu'])
+
+                    except AttributeError as e:
+                        logger.error("Caught AttributeError at update_parent for task:%s", tid)
+                        raise e
 
         return
 
@@ -241,14 +267,16 @@ class DataFlowKernel(object):
 
         '''
 
-        # Todo: This function is not tested.
-        logger.debug("Task:%s Sanitizing %s %s", task_id, args, kwargs)
+        dep_failures = []
 
         # Replace item in args
         new_args = []
         for dep in args :
             if isinstance(dep, Future) or issubclass(type(dep), Future):
-                new_args.extend([dep.result()])
+                try :
+                    new_args.extend([dep.result()])
+                except Exception as e:
+                    dep_failures.extend([e])
             else:
                 new_args.extend([dep])
 
@@ -256,20 +284,26 @@ class DataFlowKernel(object):
         for key in kwargs:
             dep = kwargs[key]
             if isinstance(dep, Future) or issubclass(type(dep), Future):
-                kwargs[key] = dep.result()
+                try :
+                    kwargs[key] = dep.result()
+                except Exception as e:
+                    dep_failures.extend(e)
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
             new_inputs = []
             for dep in kwargs['inputs']:
-                #dep = kwargs['inputs']
                 if isinstance(dep, Future) or issubclass(type(dep), Future):
-                    new_inputs.extend([dep.result()])
+                    try :
+                        new_inputs.extend([dep.result()])
+                    except Exception as e:
+                        dep_failures.extend(e)
+
                 else:
                     new_inputs.extend([dep])
             kwargs['inputs'] = new_inputs
 
-        return new_args, kwargs
+        return new_args, kwargs, dep_failures
 
 
     def submit (self, func, *args, **kwargs):
@@ -306,15 +340,20 @@ class DataFlowKernel(object):
 
         if dep_cnt == 0 :
             # Set to running
-            logger.debug("Task:%s setting to running", task_id)
-            new_args, kwargs = self.sanitize_and_wrap(task_id, args, kwargs)
-            self.tasks[task_id]['exec_fu'] = self.launch_task(task_id, func, *new_args, **kwargs)
-            self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'])
-            self.tasks[task_id]['status']  = States.running
-            logger.debug("Task : %s ", self.tasks[task_id])
+            new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id, args, kwargs)
+            if not exceptions:
+                self.tasks[task_id]['exec_fu'] = self.launch_task(task_id, func, *new_args, **kwargs)
+                self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'])
+                self.tasks[task_id]['status']  = States.running
+            else:
+                self.tasks[task_id]['exec_fu'] = None
+                app_fu = AppFuture(self.tasks[task_id]['exec_fu'])
+                app_fu.set_exception(DependencyError(exceptions, "Failures in input dependencies", None))
+                self.tasks[task_id]['app_fu']  = app_fu
+                self.tasks[task_id]['status']  = States.dep_fail
         else:
-            # Send to pending
-            logger.debug("Task:%s setting to pending", task_id)
+            # Send to pending, create the AppFuture with no parent and have it set
+            # when an executor future is available.
             self.tasks[task_id]['app_fu']  = AppFuture(None)
             self.tasks[task_id]['status']  = States.pending
 
