@@ -2,6 +2,16 @@
 
 
 """
+<bash>
+Foreach ….
+    10 K app calls in parallel
+
+<bash 30 s> wait on all for loop -> .csv
+
+Foreach .. from .csv
+    100K app calls in parallel. Needs softImage
+
+<Bash> wait on all for loop
 
 """
 
@@ -59,6 +69,16 @@ def light_app (dir, dur, inputs=[], outputs=[], stdout=None, stderr=None):
     cmd_line = 'cd {0}; echo "light_app" > {outputs[0]} ; sleep {1}'
     return cmd_line
 
+@App('bash', dfk)
+def csv_maker (dir, count, dur, inputs=[], outputs=[], stdout=None, stderr=None):
+
+    cmd_line = '''cd {0};
+    # create a file with count lines
+    shuf -i 1-{1} &> {outputs[0]}
+    sleep {2}
+    '''
+    return cmd_line
+
 def main(count):
 
     # <Bash app >
@@ -74,20 +94,22 @@ def main(count):
         light_loop.extend([loop1])
 
     # <Bash app dependent on for loop>
-    c2 = catter('.', 2, inputs=light_loop, stdout='outputs/catter2.out', stderr='outputs/catter2.err')
+    c2, [csv_file] = csv_maker('.', count*10, 0, inputs=light_loop, outputs=['csv_maker.csv'],
+                   stdout='outputs/catter2.out', stderr='outputs/catter2.err')
 
+    # This is a blocking call that forces the workflow to wait for the csv_file to be produced.
+    lines = open(csv_file.result(), 'r').readlines()
     mid_loop = []
+
     # Foreach parallel loop 10K calls
-    for i in range(count*10):
-        if i % 1000 :
-            print("Launching medium: ", i)
+    for i in lines:
+        i = i.strip()
         outname = 'outputs/mid{0}'.format(i)
         loop1, _ = light_app('.', 0, inputs=[c1], outputs=[outname+'.txt'], stdout=outname+'.out')
         mid_loop.extend([loop1])
 
     # <Bash app dependent on mid for loop>
     c3 = catter('.', 3, inputs=mid_loop, stdout='outputs/catter3.out', stderr='outputs/catter3.err')
-
     return c3
 
 
