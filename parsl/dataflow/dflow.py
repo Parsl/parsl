@@ -102,15 +102,16 @@ class DataFlowKernel(object):
 
             if self._count_deps(self.tasks[tid]['depends'], tid) == 0:
                 # We can now launch *task*
-                logger.debug("Task : %s is now runnable", tid)
                 new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
                                                                       self.tasks[tid]['args'],
                                                                       self.tasks[tid]['kwargs'])
 
                 if not exceptions :
+                    logger.debug("[{0}] Launching Task".format(tid))
                     # There are no dependency errors
                     self.tasks[tid]['status'] = States.running
-                    exec_fu = self.launch_task(task_id, self.tasks[tid]['func'], *new_args, **kwargs)
+                    #exec_fu = self.launch_task(task_id, self.tasks[tid]['func'], *new_args, **kwargs)
+                    exec_fu = self.launch_task(tid, self.tasks[tid]['func'], *new_args, **kwargs)
                     self.tasks[task_id]['exec_fu'] = exec_fu
                     try:
                         self.tasks[tid]['app_fu'].update_parent(exec_fu)
@@ -119,6 +120,7 @@ class DataFlowKernel(object):
                         logger.error("Caught AttributeError at update_parent for task:%s", tid)
                         raise e
                 else:
+                    logger.debug("[{0}] Deferring Task due to dependency failure".format(tid))
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
                     try:
@@ -204,7 +206,7 @@ class DataFlowKernel(object):
             Future that tracks the execution of the submitted executable
         '''
 
-        logger.debug("Submitting to executor : %s", task_id)
+        #logger.debug("Submitting to executor : %s", task_id)
         exec_fu = self.executor.submit(executable, *args, **kwargs)
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
         return exec_fu
