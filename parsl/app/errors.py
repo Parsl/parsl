@@ -24,6 +24,21 @@ class AppException(ParslError):
     '''
     pass
 
+class AppBadFormatting(ParslError):
+    ''' An error raised during formatting of a bash function
+    What this exception contains depends entirely on context
+    Contains:
+    reason (string)
+    exitcode (int)
+    retries (int/None)
+    '''
+
+    def __init__(self, reason, exitcode, retries=None):
+        self.reason = reason
+        self.exitcode = exitcode
+        self.retries = retries
+
+
 class AppFailure(ParslError):
     ''' An error raised during execution of an app.
     What this exception contains depends entirely on context
