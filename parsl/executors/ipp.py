@@ -13,18 +13,17 @@ class IPyParallelExecutor(ParslExecutor):
         '''
         self.executor = Client()
         if execution_provider:
-            self.scaling_enable = True
+            self._scaling_enabled = True
         else:
-            self.scaling_enable = False
+            self._scaling_enabled = False
 
         self.execution_provider = execution_provider
         self.lb_view  = self.executor.load_balanced_view()
-        logger.debug("Started client : %s", max_workers)
-
+        logger.debug("Starting executor")
 
     @property
     def scaling_enabled(self):
-        return self.scaling_enabled
+        return self._scaling_enabled
 
     def submit (self,  *args, **kwargs):
         ''' Submits work to the thread pool
@@ -68,3 +67,8 @@ class IPyParallelExecutor(ParslExecutor):
 
         return r
 
+
+if __name__ == "__main__" :
+
+    pool1_config = {"poolname" : "pool1",
+                    "queue"    : "foo" }

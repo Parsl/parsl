@@ -30,6 +30,10 @@ def invalid_exit(stderr='std.err', stdout='std.out'):
 def not_executable(stderr='std.err', stdout='std.out'):
     cmd_line = '/dev/null'
 
+@App('bash', workers)
+def bad_format(stderr='std.err', stdout='std.out'):
+    cmd_line = 'echo {0}'
+
 test_matrix = { div_0             : {'exit_code' : 1 },
                 bash_misuse       : {'exit_code' : 15 },
                 command_not_found : {'exit_code' : 127 },
@@ -37,6 +41,18 @@ test_matrix = { div_0             : {'exit_code' : 1 },
                 not_executable    : {'exit_code' : 126 }
               }
 
+
+
+
+def test_bash_formatting():
+
+    f = bad_format()
+    try:
+        x = f.result()
+    except Exception as e:
+        print("Caught exception", e)
+        assert type(e) == parsl.app.errors.AppBadFormatting, "Expected AppBadFormatting got : {0}".format(e)
+    return True
 
 
 def test_div_0(test_fn=div_0):
@@ -138,6 +154,10 @@ if __name__ == '__main__' :
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
     args   = parser.parse_args()
 
+    print(test_bash_formatting())
+
+    exit(0)
+    
     if args.debug:
         parsl.set_stream_logger()
 

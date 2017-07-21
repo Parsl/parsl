@@ -100,7 +100,7 @@ class DataFuture(Future):
             if self.parent.done():
                 # This explicit call to raise exceptions might be redundant.
                 # the result() call *should* raise an exception if there's one
-                e = self.parent.parent_exception
+                e = self.parent._exception
                 if e :
                     raise e
                 else :
