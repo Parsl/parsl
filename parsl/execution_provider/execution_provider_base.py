@@ -31,10 +31,11 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
 
-class ResourceAbstrator(object):
+    @abstractmethod
+    def status (self, *args, **kwargs):
+        ''' Scale in method. We should have the scale in method simply take resource object
+        which will have the scaling methods, scale_in itself should be a corinine, since
+        scaling tasks can be slow.
+        '''
 
-    def __init__ (self, name):
-        self.name = name
-
-
-    def register_
+        pass
