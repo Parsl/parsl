@@ -2,10 +2,38 @@ from abc import ABCMeta, abstractmethod
 
 class ExecutionProvider(metaclass=ABCMeta):
     """ Define the strict interface for all Execution Provider
+
+    script_string ------->  submit
+           id     <-----------+
+
+    [ ids ]       ------->  status
+    [statuses]   <------------+
+
+    [ ids ]       ------->  cancel
+    [cancel]     <------------+
+
     """
 
     @abstractmethod
     def submit(self, *args, **kwargs):
+        ''' We haven't yet decided on what the args to this can be,
+        whether it should just be func, args, kwargs or be the partially evaluated
+        fn
+        '''
+
+        pass
+
+    @abstractmethod
+    def status(self, ids, **kwargs):
+        ''' We haven't yet decided on what the args to this can be,
+        whether it should just be func, args, kwargs or be the partially evaluated
+        fn
+        '''
+
+        pass
+
+    @abstractmethod
+    def cancel(self, ids, **kwargs):
         ''' We haven't yet decided on what the args to this can be,
         whether it should just be func, args, kwargs or be the partially evaluated
         fn
