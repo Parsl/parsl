@@ -77,9 +77,10 @@ def bash_executor(executable, *args, **kwargs):
 
     start_t = time.time()
 
-    #logging.debug("Executable string : %s", executable)
-
-    executable = executable.format(*args, **kwargs)
+    try:
+        executable = executable.format(*args, **kwargs)
+    except IndexError:
+        raise AppBadFormatting("App Formatting Failed", None)
 
     # Updating stdout, stderr if values passed at call time.
     stdout = kwargs.get('stdout', None)
@@ -207,13 +208,10 @@ class BashApp(AppBase):
 
         if type(self.executor) == DataFlowKernel:
             logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
-            #app_fut = self.executor.submit(self._callable, *args, **kwargs)
-            app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
-
         else:
             logger.debug("Submitting to Executor: %s",  self.executor)
-            #app_fut = self.executor.submit(self._callable, *args, **kwargs)
-            app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
+
+        app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
