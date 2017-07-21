@@ -31,14 +31,17 @@ def delay_incr(x, delay=0, outputs=[]):
     import time
     import os
     if outputs :
+        bufsize=0
         with open(outputs[0], 'w') as outs:
             outs.write(str(x+1))
     time.sleep(delay)
     return x+1
 
 def get_contents(filename):
+    c = None
     with open(filename, 'r') as f:
-        return f.read()
+        c = f.read()
+    return c
 
 def test_fut_case_1():
     ''' Testing the behavior of AppFutures where there are no dependencies
@@ -59,7 +62,7 @@ def test_fut_case_2():
     ''' Testing the behavior of DataFutures where there are no dependencies
     '''
     output_f = 'test_fut_case_2.txt'
-    app_fu, [data_fu] = delay_incr(1, delay=0.5, outputs=[output_f])
+    app_fu, [data_fu] = delay_incr(1, delay=10, outputs=[output_f])
 
     status = data_fu.done()
     result = data_fu.result()
@@ -69,11 +72,11 @@ def test_fut_case_2():
 
     assert os.path.basename(result) == output_f , \
         "DataFuture did not return the filename, got : {0}".format(result)
-    print("Status : ", status)
+    print("Status : ", data_fu.done())
     print("Result : ", result)
 
     contents = get_contents(result)
-    assert contents == '2', 'Output does not match expected "2", got: "{0}"'.format(result)
+    assert contents == '2', 'Output does not match expected "2", got: "{0}"'.format(contents)
     return True
 
 def test_fut_case_3():
@@ -133,6 +136,7 @@ if __name__ == '__main__' :
         parsl.set_stream_logger()
 
     #x = test_parallel_for(int(args.count))
+    #y = test_fut_case_2()
     #y = test_fut_case_3()
     y = test_fut_case_4()
     #raise_error(0)
