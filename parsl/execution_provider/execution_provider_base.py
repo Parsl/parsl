@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, asbtractproperty
 
 class ExecutionProvider(metaclass=ABCMeta):
     """ Define the strict interface for all Execution Provider
@@ -66,4 +66,11 @@ class ExecutionProvider(metaclass=ABCMeta):
         scaling tasks can be slow.
         '''
 
+        pass
+
+    @abstractproperty
+    def scaling_enabled(self):
+        ''' The callers of ParslExecutors need to differentiate between Executors
+        and Executors wrapped in a resource provider
+        '''
         pass
