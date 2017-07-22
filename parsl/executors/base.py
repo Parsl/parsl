@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 class ParslExecutor(metaclass=ABCMeta):
     """ Define the strict interface for all Executor classes
@@ -30,4 +30,9 @@ class ParslExecutor(metaclass=ABCMeta):
 
         pass
 
-    
+    @abstractproperty
+    def scaling_enabled(self):
+        ''' The callers of ParslExecutors need to differentiate between Executors
+        and Executors wrapped in a resource provider
+        '''
+        pass

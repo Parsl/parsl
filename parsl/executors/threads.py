@@ -12,7 +12,12 @@ class ThreadPoolExecutor(ParslExecutor):
         ''' Initialize the thread pool
         '''
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        self._scaling_enabled = False
 
+
+    @property
+    def scaling_enabled(self):
+        return self._scaling_enabled
 
     def submit (self, *args, **kwargs):
         ''' Submits work to the thread pool
