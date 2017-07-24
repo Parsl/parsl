@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod, asbtractproperty
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 class ExecutionProvider(metaclass=ABCMeta):
     """ Define the strict interface for all Execution Provider
