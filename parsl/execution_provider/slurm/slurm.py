@@ -11,12 +11,18 @@ import parsl.execution_provider.error as ep_error
 logger = logging.getLogger(__name__)
 
 def execute_wait (cmd, walltime):
+    ''' Synchronously execute a commandline string on the shell.
+    Args:
+         - cmd (string) : Commandline string to execute
+         - walltime (int) : walltime in seconds, this is not really used now. 
+    
+    '''
     retcode = -1
     stdout = None
     stderr = None
     try :
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        proc.wait()
+        proc.wait(timeout=walltime)
         stdout = proc.stdout.read()
         stderr = proc.stderr.read()
         retcode = proc.returncode
@@ -64,7 +70,7 @@ class Slurm(ExecutionProvider):
     # Status
     ###########################################################################################################
     def _get_job_status(self, job_id):
-        retcode, stdout, stderr = execute_wait("squeue {0}".format(script_name), 1)
+        retcode, stdout, stderr = execute_wait("squeue {0}".format(script_name), 3)
         print("Stdout : ", stdout)
 
     def _status(self):
@@ -84,7 +90,7 @@ class Slurm(ExecutionProvider):
         jobs_missing = list(self.resources.keys())
         print("Jobs_missing : ", jobs_missing)
 
-        retcode, stdout, stderr = execute_wait("squeue --job {0}".format(job_id_list), 1)
+        retcode, stdout, stderr = execute_wait("squeue --job {0}".format(job_id_list), 3)
         for line in stdout.split('\n'):
             parts = line.split()
             if parts and parts[0] != 'JOBID' :
@@ -179,7 +185,7 @@ class Slurm(ExecutionProvider):
 
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        retcode, stdout, stderr = execute_wait("sbatch {0}".format(script_path), 1)
+        retcode, stdout, stderr = execute_wait("sbatch {0}".format(script_path), 3)
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
@@ -211,7 +217,7 @@ class Slurm(ExecutionProvider):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = execute_wait("scancel {0}".format(job_id_list), 1)
+        retcode, stdout, stderr = execute_wait("scancel {0}".format(job_id_list), 3)
         rets = None
         if retcode == 0 :
             for jid in job_ids:
@@ -233,7 +239,7 @@ class Slurm(ExecutionProvider):
         else :
             for resource in self.resources[0:size]:
                 print("Cancelling : ", resource['job_id'])
-                retcode, stdout, stderr = execute_wait("scancel {0}".format(resource['job_id']), 1)
+                retcode, stdout, stderr = execute_wait("scancel {0}".format(resource['job_id']), 3)
                 print(retcode, stdout, stderr)
 
         return count
