@@ -1,10 +1,12 @@
 import os
 import logging
 import subprocess
+import math
 from datetime import datetime
 from string import Template
 from parsl.execution_provider.execution_provider_base import ExecutionProvider
 from parsl.execution_provider.slurm.template import template_string
+import parsl.execution_provider.error as ep_error
 
 logger = logging.getLogger(__name__)
 
@@ -47,22 +49,14 @@ class Slurm(ExecutionProvider):
 
     def __init__ (self, config):
 
+        self.config = config
         self.sitename = config['site']
-        # These are the defaults that will be overriden by the user
-        self.config   = {"execution" :
-                         {"options"  :
-                          {"submit_script_dir" : ".scripts"}
-                          }
-                         }
-        self.config.update(config)
+        self.current_blocksize = 0
 
-        logger.debug("Writing submit scripts to : ", self.config["execution"]["options"]["submit_script_dir"])
         if not os.path.exists(self.config["execution"]["options"]["submit_script_dir"]):
             os.makedirs(self.config["execution"]["options"]["submit_script_dir"])
 
         self.resources = []
-        print("Template : ", template_string)
-        logger.debug("Slurm Config : %s" % self.config)
 
     ###########################################################################################################
     # Status
@@ -71,11 +65,18 @@ class Slurm(ExecutionProvider):
         retcode, stdout, stderr = execute_wait("squeue {0}".format(script_name), 1)
         print("Stdout : ", stdout)
 
-    def status (self, job_ids):
-        ''' Docs pending
+    def _status(self):
+        ''' Returns the status list for a list of job_ids
+        Args:
+        self.
+        job_ids : [<job_id> ...]
+
+        Returns :
+        [status...]
         '''
 
         job_id_list  = ','.join([j['job_id'] for j in self.resources])
+
         retcode, stdout, stderr = execute_wait("squeue --job {0}".format(job_id_list), 1)
         for line in stdout.split('\n'):
             parts = line.split()
@@ -86,7 +87,24 @@ class Slurm(ExecutionProvider):
                 for job in self.resources:
                     if job['job_id'] == job_id :
                         job['status'] = status
-        print(self.resources)
+
+
+    def status (self, job_ids):
+        '''  Get the status of a list of jobs identified by their ids.
+        Args:
+            - job_ids (List of ids) : List of identifiers for the jobs
+
+        Returns:
+            - List of status codes.
+
+        '''
+        self._status()
+        print("Resources :  ", self.resources)
+        print("job_ids   :  ", job_ids)
+
+        return [job['status'] for job in self.resources if job['job_id'] in job_ids ] 
+        #return [self.resources[jobid]['status'] for jobid in self.resources if ]
+
 
     ###########################################################################################################
     # Submit
@@ -96,32 +114,68 @@ class Slurm(ExecutionProvider):
         Load the template string with config values and write the generated submit script to
         a submit script file.
         '''
+
         try:
-            submit_script = Template(template_string).safe_substitute(**self.config,
-                                                                      jobname=job_name)
+            submit_script = Template(template_string).substitute(**configs,
+                                                                 jobname=job_name)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            return False
+            raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
+
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
-            logger.error("Error : %s", e)
+            raise(ep_error.ScriptPathError(script_filename, e))
 
         return True
 
-    def submit (self, cmd_string, size):
-        job_name = "midway.parsl_auto.{0}".format(datetime.now().strftime("%Y-%m-%d_%H:%M:%S"))
-        script_name = job_name + ".submit"
-        submit_script = None
+    def submit (self, cmd_string, blocksize):
+        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
+        Submit returns an ID that corresponds to the task that was just submitted.
 
-        job_config = self.config
-        ret = self._write_submit_script(template_string, script_name, job_name, self.config)
-        retcode, stdout, stderr = execute_wait("sbatch {0}".format(script_name), 1)
-        print ("retcode : ", retcode)
-        print ("stdout  : ", stdout)
-        print ("stderr  : ", stderr)
+        If tasks_per_node <  1:
+             1/tasks_per_node is provisioned
+
+        If tasks_per_node == 1:
+             A single node is provisioned
+
+        If tasks_per_node >  1 :
+             tasks_per_node * blocksize number of nodes are provisioned.
+
+        Args:
+             - cmd_string  :(String) Commandline invocation to be made on the remote side.
+             - blocksize   :(float)
+
+        Returns:
+             - None: At capacity, cannot provision more
+             - job_id: (string) Identifier for the job
+
+        '''
+
+        if self.current_blocksize >= self.config["execution"]["options"]["max_parallelism"]:
+            logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
+            return None
+
+        job_name = "midway.parsl_auto.{0}".format(datetime.now().strftime("%Y-%m-%d_%H:%M:%S"))
+        script_path = "{0}/job_name.submit".format(self.config["execution"]["options"]["submit_script_dir"])
+
+        nodes = math.ceil(float(blocksize) / self.config["execution"]["options"]["tasks_per_node"])
+        logger.debug("Requesting blocksize:%s tasks_per_node:%s nodes:%s", blocksize,
+                     self.config["execution"]["options"]["tasks_per_node"],nodes)
+
+        job_config = self.config["execution"]["options"]
+        job_config["nodes"] = nodes
+        job_config["slurm_overrides"] = job_config.get("slurm_overrides", '')
+        job_config["user_script"] = cmd_string
+
+        ret = self._write_submit_script(template_string, script_path, job_name, job_config)
+
+        retcode, stdout, stderr = execute_wait("sbatch {0}".format(script_path), 1)
+        logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
+                      stdout.strip(), stderr.strip())
+
         job_id = None
 
         if retcode == 0 :
@@ -129,8 +183,8 @@ class Slurm(ExecutionProvider):
                 if line.startswith("Submitted batch job"):
                     job_id = line.split("Submitted batch job")[1].strip()
                     self.resources.extend([{'job_id' : job_id,
-                                            'status' : 'submitted',
-                                            'size'   : size }])
+                                            'status' : 'PENDING',
+                                            'blocksize'   : blocksize }])
         else:
             print("Submission of command to scale_out failed")
 
@@ -162,7 +216,6 @@ class Slurm(ExecutionProvider):
     def scaling_enabled(self):
         return True
 
-    
     @property
     def current_capacity(self):
         return self
@@ -175,16 +228,4 @@ class Slurm(ExecutionProvider):
 
 if __name__ == "__main__" :
 
-    conf = { "site" : "pool1",
-             "queue" : "bigmem",
-             "maxnodes" : 4,
-             "walltime" : '00:04:00',
-             "controller" : "10.50.181.1:50001" }
-
-    pool1 = Midway(conf)
-    pool1.scale_out(1)
-    pool1.scale_out(1)
-    print("Pool resources : ", pool1.resources)
-    pool1.status()
-    pool1.scale_in(1)
-    pool1.scale_in(1)
+    print("None")
