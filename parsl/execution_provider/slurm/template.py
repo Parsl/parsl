@@ -1,8 +1,8 @@
 template_string = '''#!/bin/bash
 
 #SBATCH --job-name=$jobname
-#SBATCH --output=$submit_script_dir/parsl-$jobname.submit.stdout
-#SBATCH --error=$submit_script_dir/parsl-$jobname.submit.stderr
+#SBATCH --output=$submit_script_dir/$jobname.submit.stdout
+#SBATCH --error=$submit_script_dir/$jobname.submit.stderr
 #SBATCH --nodes=$nodes
 #SBATCH --partition=$queue
 #SBATCH --time=$walltime
