@@ -25,7 +25,7 @@ DEFAULT_LOCATION = 'us-east-2'
 class EC2(ExecutionProvider):
 
     def __init__(self, config):
-
+        """Initialize provider"""
         self.config = self.read_configs(config)
         self.set_instance_vars()
         try:
@@ -34,8 +34,12 @@ class EC2(ExecutionProvider):
             self.create_vpc().id
             self.logger.write("{} NOTICE No State File. Cannot load previous options. Creating new infrastructure\n".format(
                 str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+            self.write_state_file()
 
     def read_state_file(self):
+        """If this script has been run previously, it will be persisitent
+        by writing resource ids to state file. On run, the script looks for a state file
+        before creating new infrastructure"""
         try:
             fh = open('awsproviderstate.json', 'r')
             state = json.load(fh)
@@ -47,15 +51,16 @@ class EC2(ExecutionProvider):
             raise e
 
     def set_instance_vars(self):
+        """Initialize instance variables"""
         self.sitename = self.config['site']
         self.session = self.create_session(self.config)
         self.client = self.session.client('ec2')
         self.ec2 = self.session.resource('ec2')
         try:
-            self.logger = open(self.config['logfile'], 'a')
+            self.logger = open(os.path.expanduser(self.config['logfile'], 'a'))
         except KeyError as e:
             self.logger = open('awsprovider.log', 'a')
-            self.logger.write("{} NOTICE Log file not found. Created new log file.\n".format(
+            self.logger.write("{} NOTICE Log file not found. Using Default Log Location.\n".format(
                 str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
         self.instances = []
         self.instance_states = {}
@@ -64,18 +69,26 @@ class EC2(ExecutionProvider):
         self.sn_ids = []
 
     def _read_conf(self, config_file):
+        """read config file"""
         config = json.load(open(config_file, 'r'))
         return config
 
     def pretty_configs(self, configs):
+        """prettyprint config"""
         printer = pprint.PrettyPrinter(indent=4)
         printer.pprint(configs)
 
     def read_configs(self, config_file):
+        """Read config file"""
         config = self._read_conf(config_file)
         return config
 
     def create_session(self, config={}):
+        """Create boto3 session. If config contains ec2credentialsfile, it will use
+        that file, if not, it will check for a ~/.aws/credentials file and use that.
+        If not found, it will look for environment variables containing aws auth
+        information. If none of those options work, it will let boto attempt to 
+        figure out who you are. if that fails, we cannot proceed"""
         if 'ec2credentialsfile' in config:
             config['ec2credentialsfile'] = os.path.expanduser(
                 config['ec2credentialsfile'])
@@ -88,7 +101,7 @@ class EC2(ExecutionProvider):
                            'AWSAccessKeyId': cred_lines[1].split(' = ')[1],
                            'AWSSecretKey': cred_lines[2].split(' = ')[1]}
             config.update(credentials)
-            session = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
+            session     = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
                                             aws_secret_access_key=credentials['AWSSecretKey'],)
             return session
         elif os.path.isfile(os.path.expanduser('~/.aws/credentials')):
@@ -116,17 +129,23 @@ class EC2(ExecutionProvider):
                 exit(-1)
 
     def create_vpc(self):
-        # Create the VPC
-        vpc = self.ec2.create_vpc(
-            CidrBlock='172.32.0.0/16',
-            AmazonProvidedIpv6CidrBlock=False,
-        )
+        """Create and configure VPC"""
+        try:
+            vpc = self.ec2.create_vpc(
+                CidrBlock='172.32.0.0/16',
+                AmazonProvidedIpv6CidrBlock=False,
+            )
+        except Exception as e:
+            self.logger.write("{} ERROR {}\n".format(
+                e,
+                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
         # Create an Internet Gateway and attach it to the VPC
         internet_gateway = self.ec2.create_internet_gateway()
         internet_gateway.attach_to_vpc(VpcId=vpc.vpc_id)  # Returns None
+        self.internet_gateway = internet_gateway.id
         # Route Table
         route_table = self.config_route_table(vpc, internet_gateway)
-
+        self.route_table = route_table.id
         availability_zones = self.client.describe_availability_zones()
         for num, zone in enumerate(availability_zones['AvailabilityZones']):
             if zone['State'] == "available":
@@ -145,6 +164,9 @@ class EC2(ExecutionProvider):
         return vpc
 
     def security_group(self, vpc):
+        """Create and configure security group.
+        Allows all ICMP in, all tcp and udp in within vpc
+        """
         sg = vpc.create_security_group(
             GroupName="private-subnet",
             Description="security group for remote executors")
@@ -197,6 +219,7 @@ class EC2(ExecutionProvider):
         return sg
 
     def config_route_table(self, vpc, internet_gateway):
+        """Configure route table for vpc"""
         route_table = vpc.create_route_table()
         route_ig_ipv4 = route_table.create_route(
             DestinationCidrBlock='0.0.0.0/0',
@@ -207,14 +230,19 @@ class EC2(ExecutionProvider):
     # print(vpc.id)
 
     def scale_out(self, size):
+        """Scale cluster out (larger)"""
         for i in range(size * self.config['nodeGranularity']):
             self.spin_up_instance()
 
     def scale_in(self, size):
+        """Scale cluster in (smaller)"""
         for i in range(size * self.config['nodeGranularity']):
             self.shut_down_instance()
 
     def spin_up_instance(self):
+        """Starts an instance in the vpc in first available
+        subnet. Starts up n instances at a time where n is 
+        node granularity from config"""
         instance_type = self.config['instancetype']
         subnet = self.sn_ids[0]
         ami_id = self.config['AMIID']
@@ -241,6 +269,8 @@ class EC2(ExecutionProvider):
         return instance
 
     def shut_down_instance(self, instances=None):
+        """Shuts down a list of instances if provided or the last 
+        instance started up if none provided"""
         if instances and len(self.instances > 0):
             term = self.client.terminate_instances(InstanceIds=instances)
         elif len(self.instances) > 0:
@@ -249,12 +279,14 @@ class EC2(ExecutionProvider):
         else:
             self.logger.write("{} WARN No Instances to shut down.\n".format(
                 str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
-            return 0
+            return -1
         self.get_instance_state()
         self.write_state_file()
         return term
 
     def get_instance_state(self, instances=None):
+        """Get stateus of all instances on EC2 which were started by this
+        file"""
         if instances:
             desc = self.client.describe_instances(InstanceIds=instances)
         else:
@@ -278,6 +310,8 @@ class EC2(ExecutionProvider):
         instances = self.instances
 
     def show_summary(self):
+        """Print summary of current AWS state to 
+        log and to console"""
         self.get_instance_state()
         status_string = "EC2 Summary({}):\n\tVPC IDs: {}\n\tSubnet IDs: \
 {}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n".format(
@@ -314,13 +348,18 @@ class EC2(ExecutionProvider):
         self.shut_down_instance(self.instances)
         self.instances = []
         try:
-            self.client.delete_security_group(GroupId=self.sg_id)
+            self.client.delete_internet_gateway(
+                InternetGatewayId=self.internet_gateway)
+            self.internet_gateway = None
+            self.client.delete_route_table(RouteTableId=self.route_table)
+            self.route_table = None
             for subnet in list(self.sn_ids):
                 # Cast to list ensures that this is a copy
                 # Which is important because it means that
                 # the length of the list won't change during iteration
                 self.client.delete_subnet(SubnetId=subnet)
                 self.sn_ids.remove(subnet)
+            self.client.delete_security_group(GroupId=self.sg_id)
             self.sg_id = None
             self.client.delete_vpc(VpcId=self.vpc_id)
             self.vpc_id = None
@@ -331,11 +370,18 @@ class EC2(ExecutionProvider):
                         "%Y-%m-%d %H:%M:%S",
                         time.localtime()),
                     e))
+            raise e
+        self.show_summary()
         self.write_state_file()
+        os.remove('awsproviderstate.json')
 
 
 if __name__ == '__main__':
     conf = "providerconf.json"
     provider = EC2(conf)
+    # provider.scale_out(1)
+    print(provider.show_summary())
+    # provider.scale_in(1)
+    provider.status()
     provider.teardown()
     print(provider.show_summary())
