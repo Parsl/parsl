@@ -14,8 +14,16 @@ def execute_wait (cmd, walltime):
     ''' Synchronously execute a commandline string on the shell.
     Args:
          - cmd (string) : Commandline string to execute
-         - walltime (int) : walltime in seconds, this is not really used now. 
-    
+         - walltime (int) : walltime in seconds, this is not really used now.
+
+    Returns:
+         A tuple of the following:
+         retcode : Return code from the execution, -1 on fail
+         stdout  : stdout string
+         stderr  : stderr string
+
+    Raises:
+         None.
     '''
     retcode = -1
     stdout = None
@@ -55,6 +63,10 @@ class Slurm(ExecutionProvider):
     '''
 
     def __init__ (self, config):
+        ''' Initialize the Slurm class
+        Args:
+             - Config (dict): Dictionary with all the config options.
+        '''
 
         self.config = config
         self.sitename = config['site']
@@ -69,10 +81,6 @@ class Slurm(ExecutionProvider):
     ###########################################################################################################
     # Status
     ###########################################################################################################
-    def _get_job_status(self, job_id):
-        retcode, stdout, stderr = execute_wait("squeue {0}".format(script_name), 3)
-        print("Stdout : ", stdout)
-
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
         Args:
