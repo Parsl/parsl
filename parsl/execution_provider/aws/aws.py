@@ -32,6 +32,7 @@ class EC2(ExecutionProvider):
             self.read_state_file()
         except Exception as e:
             self.create_vpc().id
+            self.logger.write("{} NOTICE No State File. Cannot load previous options. Creating new infrastructure\n".format(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
 
     def read_state_file(self):
         try:
@@ -53,6 +54,7 @@ class EC2(ExecutionProvider):
             self.logger = open(self.config['logfile'], 'a')
         except KeyError as e:
             self.logger = open('awsprovider.log', 'a')
+            self.logger.write("{} NOTICE Log file not found. Created new log file.\n".format(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
         self.instances = []
         self.instance_states = {}
         self.vpc_id = 0
@@ -102,8 +104,13 @@ class EC2(ExecutionProvider):
                                             aws_secret_access_key=credentials['AWSSecretKey'],)
             return session
         else:
-            print("Cannot find credentials")
-            exit(-1)
+            try:
+                session = boto3.session.Session()
+                return session
+            except Exception as e:
+                print("Cannot find credentials")
+                self.logger.write("{} ERROR Credentials not found. Cannot Continue\n".format(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+                exit(-1)
 
     def create_vpc(self):
         # Create the VPC
@@ -210,10 +217,12 @@ class EC2(ExecutionProvider):
         ami_id = self.config['AMIID']
         total_instances = len(self.instances) + self.config['nodeGranularity']
         if total_instances > self.config['maxNodes']:
-            print(
-                "You have requested more instances ({}) than your maxNodes ({}). Cannot Continue".format(
+            warning = "{} WARN You have requested more instances ({}) than your maxNodes ({}). Cannot Continue\n".format(
+                    str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())),
                     total_instances,
-                    self.config['maxNodes']))
+                    self.config['maxNodes'])
+            print(warning)
+            self.logger.write(warning)
             return -1
         instance = self.ec2.create_instances(
             InstanceType=instance_type,
@@ -229,16 +238,16 @@ class EC2(ExecutionProvider):
         return instance
 
     def shut_down_instance(self, instances=None):
-        if instances:
+        if instances and len(self.instances > 0):
             term = self.client.terminate_instances(InstanceIds=instances)
-        else:
+        elif len(self.instances) > 0:
             instance = self.instances.pop()
-            try:
-                self.instance_states.pop(instance)
-            except KeyError:
-                pass
             term = self.client.terminate_instances(InstanceIds=[instance])
+        else:
+            self.logger.write("{} WARN No Instances to shut down.\n".format(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+            return 0
         self.get_instance_state()
+        self.write_state_file()
         return term
 
     def get_instance_state(self, instances=None):
@@ -294,10 +303,16 @@ class EC2(ExecutionProvider):
         fh.write(json.dumps(state, indent=4))
 
     def teardown(self):
+        """Terminate all EC2 instances, delete all subnets, 
+        delete security group, delete vpc
+        and reset all instance variables
+        """
         pass
+
 
 
 if __name__ == '__main__':
     conf = "providerconf.json"
     provider = EC2(conf)
+    provider.teardown()
     print(provider.show_summary())
