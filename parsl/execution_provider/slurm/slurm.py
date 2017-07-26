@@ -2,7 +2,7 @@ import os
 import logging
 import subprocess
 import math
-from datetime import datetime
+import time
 from string import Template
 from parsl.execution_provider.execution_provider_base import ExecutionProvider
 from parsl.execution_provider.slurm.template import template_string
@@ -39,7 +39,6 @@ def execute_wait (cmd, walltime):
         print("Caught exception : {0}".format(e))
         logger.warn("Execution of command [%s] failed due to \n %s ",  (cmd, e))
 
-    print("RunCommand Completed {0}".format(cmd))
     return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
 
@@ -91,25 +90,21 @@ class Slurm(ExecutionProvider):
         [status...]
         '''
 
-        #job_id_list  = ','.join([j['job_id'] for j in self.resources])
-
         job_id_list  = ','.join(self.resources.keys())
 
         jobs_missing = list(self.resources.keys())
-        print("Jobs_missing : ", jobs_missing)
 
         retcode, stdout, stderr = execute_wait("squeue --job {0}".format(job_id_list), 3)
         for line in stdout.split('\n'):
             parts = line.split()
             if parts and parts[0] != 'JOBID' :
-                print("Parts : ", parts)
                 job_id = parts[0]
                 status = translate_table.get(parts[4], 'UNKNOWN')
                 self.resources[job_id]['status'] = status
                 jobs_missing.remove(job_id)
 
-        # We are filling in the blanks for missing jobs, we might lose some information
-        # about why the jobs failed.
+        # squeue does not report on jobs that are not running. So we are filling in the
+        # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = translate_table['CD']
@@ -134,11 +129,24 @@ class Slurm(ExecutionProvider):
         '''
         Load the template string with config values and write the generated submit script to
         a submit script file.
+
+        Args:
+              - template_string (string) : The template string to be used for the writing submit script
+              - script_filename (string) : Name of the submit script
+              - job_name (string) : job name
+              - configs (dict) : configs that get pushed into the template
+
+        Returns:
+              - True: on success
+        Raises:
+              SchedulerMissingArgs : If template is missing args
+              ScriptPathError : Unable to write submit script out
         '''
 
         try:
             submit_script = Template(template_string).substitute(**configs,
                                                                  jobname=job_name)
+            print("Script_filename : ", script_filename)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
@@ -152,7 +160,7 @@ class Slurm(ExecutionProvider):
 
         return True
 
-    def submit (self, cmd_string, blocksize):
+    def submit (self, cmd_string, blocksize, job_name="parsl.auto"):
         ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -169,6 +177,9 @@ class Slurm(ExecutionProvider):
              - cmd_string  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float)
 
+        Kwargs:
+             - job_name (String): Name for job, must be unique
+
         Returns:
              - None: At capacity, cannot provision more
              - job_id: (string) Identifier for the job
@@ -179,8 +190,10 @@ class Slurm(ExecutionProvider):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
             return None
 
-        job_name = "midway.parsl_auto.{0}".format(datetime.now().strftime("%Y-%m-%d_%H:%M:%S"))
-        script_path = "{0}/job_name.submit".format(self.config["execution"]["options"]["submit_script_dir"])
+        job_name = "parsl.{0}.{1}".format(job_name,time.time())
+
+        script_path = "{0}/{1}.submit".format(self.config["execution"]["options"]["submit_script_dir"],
+                                              job_name)
 
         nodes = math.ceil(float(blocksize) / self.config["execution"]["options"]["tasks_per_node"])
         logger.debug("Requesting blocksize:%s tasks_per_node:%s nodes:%s", blocksize,
