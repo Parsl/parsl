@@ -32,7 +32,8 @@ class EC2(ExecutionProvider):
             self.read_state_file()
         except Exception as e:
             self.create_vpc().id
-            self.logger.write("{} NOTICE No State File. Cannot load previous options. Creating new infrastructure\n".format(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+            self.logger.write("{} NOTICE No State File. Cannot load previous options. Creating new infrastructure\n".format(
+                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
 
     def read_state_file(self):
         try:
@@ -54,7 +55,8 @@ class EC2(ExecutionProvider):
             self.logger = open(self.config['logfile'], 'a')
         except KeyError as e:
             self.logger = open('awsprovider.log', 'a')
-            self.logger.write("{} NOTICE Log file not found. Created new log file.\n".format(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+            self.logger.write("{} NOTICE Log file not found. Created new log file.\n".format(
+                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
         self.instances = []
         self.instance_states = {}
         self.vpc_id = 0
@@ -109,7 +111,8 @@ class EC2(ExecutionProvider):
                 return session
             except Exception as e:
                 print("Cannot find credentials")
-                self.logger.write("{} ERROR Credentials not found. Cannot Continue\n".format(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+                self.logger.write("{} ERROR Credentials not found. Cannot Continue\n".format(
+                    str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
                 exit(-1)
 
     def create_vpc(self):
@@ -204,11 +207,11 @@ class EC2(ExecutionProvider):
     # print(vpc.id)
 
     def scale_out(self, size):
-        for i in range(size*self.config['nodeGranularity']):
+        for i in range(size * self.config['nodeGranularity']):
             self.spin_up_instance()
 
     def scale_in(self, size):
-        for i in range(size*self.config['nodeGranularity']):
+        for i in range(size * self.config['nodeGranularity']):
             self.shut_down_instance()
 
     def spin_up_instance(self):
@@ -218,9 +221,9 @@ class EC2(ExecutionProvider):
         total_instances = len(self.instances) + self.config['nodeGranularity']
         if total_instances > self.config['maxNodes']:
             warning = "{} WARN You have requested more instances ({}) than your maxNodes ({}). Cannot Continue\n".format(
-                    str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())),
-                    total_instances,
-                    self.config['maxNodes'])
+                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())),
+                total_instances,
+                self.config['maxNodes'])
             print(warning)
             self.logger.write(warning)
             return -1
@@ -244,7 +247,8 @@ class EC2(ExecutionProvider):
             instance = self.instances.pop()
             term = self.client.terminate_instances(InstanceIds=[instance])
         else:
-            self.logger.write("{} WARN No Instances to shut down.\n".format(str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+            self.logger.write("{} WARN No Instances to shut down.\n".format(
+                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
             return 0
         self.get_instance_state()
         self.write_state_file()
@@ -303,12 +307,12 @@ class EC2(ExecutionProvider):
         fh.write(json.dumps(state, indent=4))
 
     def teardown(self):
-        """Terminate all EC2 instances, delete all subnets, 
+        """Terminate all EC2 instances, delete all subnets,
         delete security group, delete vpc
         and reset all instance variables
         """
         self.shut_down_instance(self.instances)
-        self.instances=[]
+        self.instances = []
         try:
             self.client.delete_security_group(GroupId=self.sg_id)
             for subnet in list(self.sn_ids):
@@ -321,9 +325,13 @@ class EC2(ExecutionProvider):
             self.client.delete_vpc(VpcId=self.vpc_id)
             self.vpc_id = None
         except Exception as e:
-            self.logger.write("{} ERROR {}\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),e))
+            self.logger.write(
+                "{} ERROR {}\n".format(
+                    time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime()),
+                    e))
         self.write_state_file()
-
 
 
 if __name__ == '__main__':
