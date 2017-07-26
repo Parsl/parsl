@@ -10,18 +10,14 @@ import boto3
 from botocore.exceptions import ClientError
 
 
-WORKER_USERDATA = '''#!/bin/bash
-export JAVA=/usr/local/bin/jdk1.7.0_51/bin
-export SWIFT=/usr/local/bin/swift-trunk/bin
-export PATH=$JAVA:$SWIFT:$PATH
-export WORKER_LOGGING_LEVEL=TRACE
+WORKER_USERDATA = '''
 sudo apt-get install -y python3
 sudo apt-get install -y python3-pip
 sudo pip3 install ipyparallel
 sudo pip3 install parsl
 '''
 
-EC2_LOCATIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
+AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 
 DEFAULT_LOCATION = 'us-east-2'
 
@@ -304,5 +300,4 @@ class EC2(ExecutionProvider):
 if __name__ == '__main__':
     conf = "providerconf.json"
     provider = EC2(conf)
-    provider.scale_in(1)
     print(provider.show_summary())
