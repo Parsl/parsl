@@ -87,7 +87,7 @@ class EC2(ExecutionProvider):
         """Create boto3 session. If config contains ec2credentialsfile, it will use
         that file, if not, it will check for a ~/.aws/credentials file and use that.
         If not found, it will look for environment variables containing aws auth
-        information. If none of those options work, it will let boto attempt to 
+        information. If none of those options work, it will let boto attempt to
         figure out who you are. if that fails, we cannot proceed"""
         if 'ec2credentialsfile' in config:
             config['ec2credentialsfile'] = os.path.expanduser(
@@ -101,7 +101,7 @@ class EC2(ExecutionProvider):
                            'AWSAccessKeyId': cred_lines[1].split(' = ')[1],
                            'AWSSecretKey': cred_lines[2].split(' = ')[1]}
             config.update(credentials)
-            session     = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
+            session = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
                                             aws_secret_access_key=credentials['AWSSecretKey'],)
             return session
         elif os.path.isfile(os.path.expanduser('~/.aws/credentials')):
@@ -241,7 +241,7 @@ class EC2(ExecutionProvider):
 
     def spin_up_instance(self):
         """Starts an instance in the vpc in first available
-        subnet. Starts up n instances at a time where n is 
+        subnet. Starts up n instances at a time where n is
         node granularity from config"""
         instance_type = self.config['instancetype']
         subnet = self.sn_ids[0]
@@ -269,7 +269,7 @@ class EC2(ExecutionProvider):
         return instance
 
     def shut_down_instance(self, instances=None):
-        """Shuts down a list of instances if provided or the last 
+        """Shuts down a list of instances if provided or the last
         instance started up if none provided"""
         if instances and len(self.instances > 0):
             term = self.client.terminate_instances(InstanceIds=instances)
@@ -310,7 +310,7 @@ class EC2(ExecutionProvider):
         instances = self.instances
 
     def show_summary(self):
-        """Print summary of current AWS state to 
+        """Print summary of current AWS state to
         log and to console"""
         self.get_instance_state()
         status_string = "EC2 Summary({}):\n\tVPC IDs: {}\n\tSubnet IDs: \
