@@ -4,6 +4,7 @@ import os
 import pprint
 import json
 import time
+import logging
 
 from parsl.execution_provider.execution_provider_base import ExecutionProvider
 import boto3
@@ -22,19 +23,38 @@ AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 DEFAULT_LOCATION = 'us-east-2'
 
 
-class EC2(ExecutionProvider):
+class EC2Provider(ExecutionProvider):
 
     def __init__(self, config):
         """Initialize provider"""
         self.config = self.read_configs(config)
         self.set_instance_vars()
+        self.config_logger()
         try:
             self.read_state_file()
         except Exception as e:
             self.create_vpc().id
-            self.logger.write("{} NOTICE No State File. Cannot load previous options. Creating new infrastructure\n".format(
-                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+            self.logger.info("No State File. Cannot load previous options. Creating new infrastructure\n")
             self.write_state_file()
+
+    def config_logger(self):
+        """Configure Logger"""
+        logger = logging.getLogger("EC2Provider")
+        logger.setLevel(logging.INFO)
+        fh = logging.FileHandler('awsprovider.log')
+        fh.setLevel(logging.INFO)
+        # create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        fh.setFormatter(formatter)
+        # add the handlers to logger
+        logger.addHandler(ch)
+        logger.addHandler(fh)
+        self.logger = logger
+        self.logger.info("Custom log file not found. Using Default Log Location.\n")
 
     def read_state_file(self):
         """If this script has been run previously, it will be persisitent
@@ -56,12 +76,6 @@ class EC2(ExecutionProvider):
         self.session = self.create_session(self.config)
         self.client = self.session.client('ec2')
         self.ec2 = self.session.resource('ec2')
-        try:
-            self.logger = open(os.path.expanduser(self.config['logfile'], 'a'))
-        except KeyError as e:
-            self.logger = open('awsprovider.log', 'a')
-            self.logger.write("{} NOTICE Log file not found. Using Default Log Location.\n".format(
-                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
         self.instances = []
         self.instance_states = {}
         self.vpc_id = 0
@@ -87,7 +101,7 @@ class EC2(ExecutionProvider):
         """Create boto3 session. If config contains ec2credentialsfile, it will use
         that file, if not, it will check for a ~/.aws/credentials file and use that.
         If not found, it will look for environment variables containing aws auth
-        information. If none of those options work, it will let boto attempt to
+        information. If none of those options work, it will let boto attempt to 
         figure out who you are. if that fails, we cannot proceed"""
         if 'ec2credentialsfile' in config:
             config['ec2credentialsfile'] = os.path.expanduser(
@@ -101,7 +115,7 @@ class EC2(ExecutionProvider):
                            'AWSAccessKeyId': cred_lines[1].split(' = ')[1],
                            'AWSSecretKey': cred_lines[2].split(' = ')[1]}
             config.update(credentials)
-            session = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
+            session     = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
                                             aws_secret_access_key=credentials['AWSSecretKey'],)
             return session
         elif os.path.isfile(os.path.expanduser('~/.aws/credentials')):
@@ -123,9 +137,7 @@ class EC2(ExecutionProvider):
                 session = boto3.session.Session()
                 return session
             except Exception as e:
-                print("Cannot find credentials")
-                self.logger.write("{} ERROR Credentials not found. Cannot Continue\n".format(
-                    str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+                self.logger.error("Credentials not found. Cannot Continue\n")
                 exit(-1)
 
     def create_vpc(self):
@@ -136,9 +148,7 @@ class EC2(ExecutionProvider):
                 AmazonProvidedIpv6CidrBlock=False,
             )
         except Exception as e:
-            self.logger.write("{} ERROR {}\n".format(
-                e,
-                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+            self.logger.error("{}\n".format(e))
         # Create an Internet Gateway and attach it to the VPC
         internet_gateway = self.ec2.create_internet_gateway()
         internet_gateway.attach_to_vpc(VpcId=vpc.vpc_id)  # Returns None
@@ -241,19 +251,17 @@ class EC2(ExecutionProvider):
 
     def spin_up_instance(self):
         """Starts an instance in the vpc in first available
-        subnet. Starts up n instances at a time where n is
+        subnet. Starts up n instances at a time where n is 
         node granularity from config"""
         instance_type = self.config['instancetype']
         subnet = self.sn_ids[0]
         ami_id = self.config['AMIID']
         total_instances = len(self.instances) + self.config['nodeGranularity']
         if total_instances > self.config['maxNodes']:
-            warning = "{} WARN You have requested more instances ({}) than your maxNodes ({}). Cannot Continue\n".format(
-                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())),
+            warning = "You have requested more instances ({}) than your maxNodes ({}). Cannot Continue\n".format(
                 total_instances,
                 self.config['maxNodes'])
-            print(warning)
-            self.logger.write(warning)
+            self.logger.warn(warning)
             return -1
         instance = self.ec2.create_instances(
             InstanceType=instance_type,
@@ -269,7 +277,7 @@ class EC2(ExecutionProvider):
         return instance
 
     def shut_down_instance(self, instances=None):
-        """Shuts down a list of instances if provided or the last
+        """Shuts down a list of instances if provided or the last 
         instance started up if none provided"""
         if instances and len(self.instances > 0):
             term = self.client.terminate_instances(InstanceIds=instances)
@@ -277,8 +285,7 @@ class EC2(ExecutionProvider):
             instance = self.instances.pop()
             term = self.client.terminate_instances(InstanceIds=[instance])
         else:
-            self.logger.write("{} WARN No Instances to shut down.\n".format(
-                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))))
+            self.logger.warn("No Instances to shut down.\n")
             return -1
         self.get_instance_state()
         self.write_state_file()
@@ -310,12 +317,11 @@ class EC2(ExecutionProvider):
         instances = self.instances
 
     def show_summary(self):
-        """Print summary of current AWS state to
+        """Print summary of current AWS state to 
         log and to console"""
         self.get_instance_state()
-        status_string = "EC2 Summary({}):\n\tVPC IDs: {}\n\tSubnet IDs: \
+        status_string = "EC2 Summary:\n\tVPC IDs: {}\n\tSubnet IDs: \
 {}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n".format(
-            str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())),
             self.vpc_id,
             self.sn_ids,
             self. sg_id,
@@ -327,7 +333,7 @@ class EC2(ExecutionProvider):
                 state, self.instance_states[state])
         status_string += "\n"
         self.write_state_file()
-        self.logger.write(status_string)
+        self.logger.info(status_string)
         return status_string
 
     def write_state_file(self):
@@ -364,12 +370,9 @@ class EC2(ExecutionProvider):
             self.client.delete_vpc(VpcId=self.vpc_id)
             self.vpc_id = None
         except Exception as e:
-            self.logger.write(
-                "{} ERROR {}\n".format(
-                    time.strftime(
-                        "%Y-%m-%d %H:%M:%S",
-                        time.localtime()),
-                    e))
+            self.logger.error(
+                "{}\n".format(e)
+                )
             raise e
         self.show_summary()
         self.write_state_file()
@@ -378,7 +381,7 @@ class EC2(ExecutionProvider):
 
 if __name__ == '__main__':
     conf = "providerconf.json"
-    provider = EC2(conf)
+    provider = EC2Provider(conf)
     # provider.scale_out(1)
     print(provider.show_summary())
     # provider.scale_in(1)
