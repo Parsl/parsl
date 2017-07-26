@@ -41,6 +41,7 @@ translate_table = { 'PD' :  'PENDING',
                     'RV' : 'FAILED', #(revoked) and
                     'SE' : 'FAILED' } # (special exit state
 
+
 class Slurm(ExecutionProvider):
     ''' Slurm Execution Provider
 
@@ -56,7 +57,8 @@ class Slurm(ExecutionProvider):
         if not os.path.exists(self.config["execution"]["options"]["submit_script_dir"]):
             os.makedirs(self.config["execution"]["options"]["submit_script_dir"])
 
-        self.resources = []
+        # Dictionary that keeps track of jobs, keyed on job_id
+        self.resources = {}
 
     ###########################################################################################################
     # Status
@@ -66,7 +68,7 @@ class Slurm(ExecutionProvider):
         print("Stdout : ", stdout)
 
     def _status(self):
-        ''' Returns the status list for a list of job_ids
+        ''' Internal: Do not call. Returns the status list for a list of job_ids
         Args:
         self.
         job_ids : [<job_id> ...]
@@ -75,7 +77,12 @@ class Slurm(ExecutionProvider):
         [status...]
         '''
 
-        job_id_list  = ','.join([j['job_id'] for j in self.resources])
+        #job_id_list  = ','.join([j['job_id'] for j in self.resources])
+
+        job_id_list  = ','.join(self.resources.keys())
+
+        jobs_missing = list(self.resources.keys())
+        print("Jobs_missing : ", jobs_missing)
 
         retcode, stdout, stderr = execute_wait("squeue --job {0}".format(job_id_list), 1)
         for line in stdout.split('\n'):
@@ -84,10 +91,14 @@ class Slurm(ExecutionProvider):
                 print("Parts : ", parts)
                 job_id = parts[0]
                 status = translate_table.get(parts[4], 'UNKNOWN')
-                for job in self.resources:
-                    if job['job_id'] == job_id :
-                        job['status'] = status
+                self.resources[job_id]['status'] = status
+                jobs_missing.remove(job_id)
 
+        # We are filling in the blanks for missing jobs, we might lose some information
+        # about why the jobs failed.
+        for missing_job in jobs_missing:
+            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+                self.resources[missing_job]['status'] = translate_table['CD']
 
     def status (self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
@@ -99,11 +110,7 @@ class Slurm(ExecutionProvider):
 
         '''
         self._status()
-        print("Resources :  ", self.resources)
-        print("job_ids   :  ", job_ids)
-
-        return [job['status'] for job in self.resources if job['job_id'] in job_ids ] 
-        #return [self.resources[jobid]['status'] for jobid in self.resources if ]
+        return [self.resources[jid]['status'] for jid in job_ids]
 
 
     ###########################################################################################################
@@ -182,9 +189,9 @@ class Slurm(ExecutionProvider):
             for line in stdout.split('\n'):
                 if line.startswith("Submitted batch job"):
                     job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources.extend([{'job_id' : job_id,
-                                            'status' : 'PENDING',
-                                            'blocksize'   : blocksize }])
+                    self.resources[job_id] = {'job_id' : job_id,
+                                              'status' : 'PENDING',
+                                              'blocksize'   : blocksize }
         else:
             print("Submission of command to scale_out failed")
 
@@ -194,7 +201,26 @@ class Slurm(ExecutionProvider):
     # Cancel
     ###########################################################################################################
     def cancel(self, job_ids):
-        raise NotImplemented
+        ''' Cancels the jobs specified by a list of job ids
+
+        Args:
+        job_ids : [<job_id> ...]
+
+        Returns :
+        [True/False...] : If the cancel operation fails the entire list will be False.
+        '''
+
+        job_id_list = ' '.join(job_ids)
+        retcode, stdout, stderr = execute_wait("scancel {0}".format(job_id_list), 1)
+        rets = None
+        if retcode == 0 :
+            for jid in job_ids:
+                self.resources[jid]['status'] = translate_table['CA'] # Setting state to cancelled
+            rets = [True for i in job_ids]
+        else:
+            rets = [False for i in job_ids]
+
+        return rets
 
     def scale_out (self, size, name=None):
         pass
