@@ -307,7 +307,22 @@ class EC2(ExecutionProvider):
         delete security group, delete vpc
         and reset all instance variables
         """
-        pass
+        self.shut_down_instance(self.instances)
+        self.instances=[]
+        try:
+            self.client.delete_security_group(GroupId=self.sg_id)
+            for subnet in list(self.sn_ids):
+                # Cast to list ensures that this is a copy
+                # Which is important because it means that
+                # the length of the list won't change during iteration
+                self.client.delete_subnet(SubnetId=subnet)
+                self.sn_ids.remove(subnet)
+            self.sg_id = None
+            self.client.delete_vpc(VpcId=self.vpc_id)
+            self.vpc_id = None
+        except Exception as e:
+            self.logger.write("{} ERROR {}\n".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),e))
+        self.write_state_file()
 
 
 
