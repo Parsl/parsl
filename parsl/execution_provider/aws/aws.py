@@ -7,36 +7,28 @@ import time
 import logging
 
 from parsl.execution_provider.execution_provider_base import ExecutionProvider
-from parsl.execution_provider.aws.template import template_string
+import parsl.execution_provider.aws.template
 import parsl.execution_provider.error as ep_error
+
 import boto3
 from botocore.exceptions import ClientError
 from string import Template
-
-
-
-WORKER_USERDATA = '''
-sudo apt-get install -y python3
-sudo apt-get install -y python3-pip
-sudo pip3 install ipyparallel
-sudo pip3 install parsl
-'''
 
 AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 
 DEFAULT_REGION = 'us-east-2'
 
-translate_table = {'PD': 'PENDING',
+translate_table = { 'PD': 'PENDING',
                     'R': 'RUNNING',
                     'CA': 'CANCELLED',
-                    'CF': 'PENDING',  # (configuring),
-                    'CG': 'RUNNING',  # (completing),
+                    'CF': 'PENDING',   # (configuring),
+                    'CG': 'RUNNING',   # (completing),
                     'CD': 'COMPLETED',
-                    'F': 'FAILED',  # (failed),
-                    'TO': 'TIMEOUT',  # (timeout),
-                    'NF': 'FAILED',  # (node failure),
-                    'RV': 'FAILED',  # (revoked) and
-                    'SE': 'FAILED'}  # (special exit state
+                    'F': 'FAILED',     # (failed),
+                    'TO': 'TIMEOUT',   # (timeout),
+                    'NF': 'FAILED',    # (node failure),
+                    'RV': 'FAILED',    # (revoked) and
+                    'SE': 'FAILED'}    # (special exit state
 
 
 class EC2Provider(ExecutionProvider):
@@ -301,7 +293,7 @@ class EC2Provider(ExecutionProvider):
             KeyName=self.config['AWSKeyName'],
             SubnetId=subnet,
             SecurityGroupIds=[self.sg_id],
-            UserData=WORKER_USERDATA)
+            UserData=template.template_string)
         self.instances.append(instance[0].id)
         self.logger.info(
             "Started up 1 instance. Instance type:{}".format(instance_type))
