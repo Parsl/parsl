@@ -7,8 +7,12 @@ import time
 import logging
 
 from parsl.execution_provider.execution_provider_base import ExecutionProvider
+from parsl.execution_provider.aws.template import template_string
+import parsl.execution_provider.error as ep_error
 import boto3
 from botocore.exceptions import ClientError
+from string import Template
+
 
 
 WORKER_USERDATA = '''
@@ -20,7 +24,19 @@ sudo pip3 install parsl
 
 AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 
-DEFAULT_LOCATION = 'us-east-2'
+DEFAULT_REGION = 'us-east-2'
+
+translate_table = {'PD': 'PENDING',
+                    'R': 'RUNNING',
+                    'CA': 'CANCELLED',
+                    'CF': 'PENDING',  # (configuring),
+                    'CG': 'RUNNING',  # (completing),
+                    'CD': 'COMPLETED',
+                    'F': 'FAILED',  # (failed),
+                    'TO': 'TIMEOUT',  # (timeout),
+                    'NF': 'FAILED',  # (node failure),
+                    'RV': 'FAILED',  # (revoked) and
+                    'SE': 'FAILED'}  # (special exit state
 
 
 class EC2Provider(ExecutionProvider):
@@ -30,31 +46,52 @@ class EC2Provider(ExecutionProvider):
         self.config = self.read_configs(config)
         self.set_instance_vars()
         self.config_logger()
+        if not os.path.exists(
+            self.config["execution"]["options"]["submit_script_dir"]):
+            os.makedirs(self.config["execution"]
+                        ["options"]["submit_script_dir"])
         try:
             self.read_state_file()
         except Exception as e:
             self.create_vpc().id
-            self.logger.info("No State File. Cannot load previous options. Creating new infrastructure\n")
+            self.logger.info(
+                "No State File. Cannot load previous options. Creating new infrastructure\n")
             self.write_state_file()
+
+    def set_instance_vars(self):
+        """Initialize instance variables"""
+        self.current_blocksize = 0
+        self.sitename = self.config['site']
+        self.session = self.create_session(self.config)
+        self.client = self.session.client('ec2')
+        self.ec2 = self.session.resource('ec2')
+        self.instances = []
+        self.instance_states = {}
+        self.vpc_id = 0
+        self.sg_id = 0
+        self.sn_ids = []
 
     def config_logger(self):
         """Configure Logger"""
         logger = logging.getLogger("EC2Provider")
         logger.setLevel(logging.INFO)
+        if not os.path.isfile('awsprovider.log'):
+            with open('awsprovider.log', 'w') as temp_log:
+                temp_log.write("Creating new log file.\n")
         fh = logging.FileHandler('awsprovider.log')
         fh.setLevel(logging.INFO)
         # create console handler with a higher log level
         ch = logging.StreamHandler()
         ch.setLevel(logging.ERROR)
         # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
         fh.setFormatter(formatter)
         # add the handlers to logger
         logger.addHandler(ch)
         logger.addHandler(fh)
         self.logger = logger
-        self.logger.info("Custom log file not found. Using Default Log Location.\n")
 
     def read_state_file(self):
         """If this script has been run previously, it will be persisitent
@@ -70,17 +107,15 @@ class EC2Provider(ExecutionProvider):
         except Exception as e:
             raise e
 
-    def set_instance_vars(self):
-        """Initialize instance variables"""
-        self.sitename = self.config['site']
-        self.session = self.create_session(self.config)
-        self.client = self.session.client('ec2')
-        self.ec2 = self.session.resource('ec2')
-        self.instances = []
-        self.instance_states = {}
-        self.vpc_id = 0
-        self.sg_id = 0
-        self.sn_ids = []
+    def write_state_file(self):
+        fh = open('awsproviderstate.json', 'w')
+        state = {}
+        state['vpcID'] = self.vpc_id
+        state['sgID'] = self.sg_id
+        state['snIDs'] = self.sn_ids
+        state['instances'] = self.instances
+        state["instanceState"] = self.instance_states
+        fh.write(json.dumps(state, indent=4))
 
     def _read_conf(self, config_file):
         """read config file"""
@@ -98,10 +133,11 @@ class EC2Provider(ExecutionProvider):
         return config
 
     def create_session(self, config={}):
-        """Create boto3 session. If config contains ec2credentialsfile, it will use
-        that file, if not, it will check for a ~/.aws/credentials file and use that.
+        """Create boto3 session.
+        If config contains ec2credentialsfile, it will use that file, if not,
+        it will check for a ~/.aws/credentials file and use that.
         If not found, it will look for environment variables containing aws auth
-        information. If none of those options work, it will let boto attempt to 
+        information. If none of those options work, it will let boto attempt to
         figure out who you are. if that fails, we cannot proceed"""
         if 'ec2credentialsfile' in config:
             config['ec2credentialsfile'] = os.path.expanduser(
@@ -115,7 +151,7 @@ class EC2Provider(ExecutionProvider):
                            'AWSAccessKeyId': cred_lines[1].split(' = ')[1],
                            'AWSSecretKey': cred_lines[2].split(' = ')[1]}
             config.update(credentials)
-            session     = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
+            session = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
                                             aws_secret_access_key=credentials['AWSSecretKey'],)
             return session
         elif os.path.isfile(os.path.expanduser('~/.aws/credentials')):
@@ -137,7 +173,7 @@ class EC2Provider(ExecutionProvider):
                 session = boto3.session.Session()
                 return session
             except Exception as e:
-                self.logger.error("Credentials not found. Cannot Continue\n")
+                self.logger.error("Credentials not found. Cannot Continue")
                 exit(-1)
 
     def create_vpc(self):
@@ -149,11 +185,9 @@ class EC2Provider(ExecutionProvider):
             )
         except Exception as e:
             self.logger.error("{}\n".format(e))
-        # Create an Internet Gateway and attach it to the VPC
         internet_gateway = self.ec2.create_internet_gateway()
         internet_gateway.attach_to_vpc(VpcId=vpc.vpc_id)  # Returns None
         self.internet_gateway = internet_gateway.id
-        # Route Table
         route_table = self.config_route_table(vpc, internet_gateway)
         self.route_table = route_table.id
         availability_zones = self.client.describe_availability_zones()
@@ -162,7 +196,6 @@ class EC2Provider(ExecutionProvider):
                 subnet = vpc.create_subnet(
                     CidrBlock='172.32.{}.0/20'.format(16 * num),
                     AvailabilityZone=zone['ZoneName'])
-                # Associate it with subnet
                 route_table.associate_with_subnet(SubnetId=subnet.id)
                 self.sn_ids.append(subnet.id)
             else:
@@ -184,9 +217,9 @@ class EC2Provider(ExecutionProvider):
         ip_ranges = [{
             'CidrIp': '172.32.0.0/16'
         }]
-        """
-        Allows all ICMP in, all tcp and udp in within vpc
-        """
+
+        # Allows all ICMP in, all tcp and udp in within vpc
+
         inPerms = [{
             'IpProtocol': 'TCP',
             'FromPort': 0,
@@ -203,9 +236,7 @@ class EC2Provider(ExecutionProvider):
             'ToPort': -1,
             'IpRanges': [{'CidrIp': '0.0.0.0/0'}],
         }]
-        """
-        Allows all TCP out, all tcp and udp out within vpc
-        """
+        # Allows all TCP out, all tcp and udp out within vpc
         outPerms = [{
             'IpProtocol': 'TCP',
             'FromPort': 0,
@@ -236,22 +267,21 @@ class EC2Provider(ExecutionProvider):
             GatewayId=internet_gateway.internet_gateway_id)
         return route_table
 
-    # vpc = create_vpc(ec2, client)
-    # print(vpc.id)
-
     def scale_out(self, size):
         """Scale cluster out (larger)"""
         for i in range(size * self.config['nodeGranularity']):
             self.spin_up_instance()
+        self.current_blocksize += size * self.config['nodeGranularity']
 
     def scale_in(self, size):
         """Scale cluster in (smaller)"""
         for i in range(size * self.config['nodeGranularity']):
             self.shut_down_instance()
+        self.current_blocksize -= size*self.config['nodeGranularity']
 
     def spin_up_instance(self):
         """Starts an instance in the vpc in first available
-        subnet. Starts up n instances at a time where n is 
+        subnet. Starts up n instances at a time where n is
         node granularity from config"""
         instance_type = self.config['instancetype']
         subnet = self.sn_ids[0]
@@ -273,17 +303,23 @@ class EC2Provider(ExecutionProvider):
             SecurityGroupIds=[self.sg_id],
             UserData=WORKER_USERDATA)
         self.instances.append(instance[0].id)
+        self.logger.info(
+            "Started up 1 instance. Instance type:{}".format(instance_type))
         self.write_state_file()
         return instance
 
     def shut_down_instance(self, instances=None):
-        """Shuts down a list of instances if provided or the last 
+        """Shuts down a list of instances if provided or the last
         instance started up if none provided"""
         if instances and len(self.instances > 0):
             term = self.client.terminate_instances(InstanceIds=instances)
+            self.logger.info(
+                "Shut down {} instances (ids:{}".format(
+                    len(instances), str(instances)))
         elif len(self.instances) > 0:
             instance = self.instances.pop()
             term = self.client.terminate_instances(InstanceIds=[instance])
+            self.logger.info("Shut down 1 instance (id:{})".format(instance))
         else:
             self.logger.warn("No Instances to shut down.\n")
             return -1
@@ -306,25 +342,137 @@ class EC2Provider(ExecutionProvider):
         self.write_state_file()
         return self.instance_states
 
-    def submit(self):
-        client = self.client
+    ###########################################################################################################
+    # Status
+    ###########################################################################################################
+    def _status(self):
+        ''' Internal: Do not call. Returns the status list for a list of job_ids
+        Args:
+        self.
+        job_ids : [<job_id> ...]
+        Returns :
+        [status...]
+        '''
 
-    def status(self):
-        return self.get_instance_state()
+        job_id_list  = ','.join(self.resources.keys())
 
-    def cancel(self):
-        client = self.client
-        instances = self.instances
+        jobs_missing = list(self.resources.keys())
+
+        retcode, stdout, stderr = execute_wait("squeue --job {0}".format(job_id_list), 3)
+        for line in stdout.split('\n'):
+            parts = line.split()
+            if parts and parts[0] != 'JOBID' :
+                job_id = parts[0]
+                status = translate_table.get(parts[4], 'UNKNOWN')
+                self.resources[job_id]['status'] = status
+                jobs_missing.remove(job_id)
+
+        # squeue does not report on jobs that are not running. So we are filling in the
+        # blanks for missing jobs, we might lose some information about why the jobs failed.
+        for missing_job in jobs_missing:
+            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+                self.resources[missing_job]['status'] = translate_table['CD']
+
+    def status (self, job_ids):
+        '''  Get the status of a list of jobs identified by their ids.
+        Args:
+            - job_ids (List of ids) : List of identifiers for the jobs
+        Returns:
+            - List of status codes.
+        '''
+        self._status()
+        return [self.resources[jid]['status'] for jid in job_ids]
+
+    ###########################################################################################################
+    # Submit
+    ###########################################################################################################
+    def submit (self, cmd_string, blocksize, job_name="parsl.auto"):
+        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
+        Submit returns an ID that corresponds to the task that was just submitted.
+        If tasks_per_node <  1:
+             1/tasks_per_node is provisioned
+        If tasks_per_node == 1:
+             A single node is provisioned
+        If tasks_per_node >  1 :
+             tasks_per_node * blocksize number of nodes are provisioned.
+        Args:
+             - cmd_string  :(String) Commandline invocation to be made on the remote side.
+             - blocksize   :(float)
+        Kwargs:
+             - job_name (String): Name for job, must be unique
+        Returns:
+             - None: At capacity, cannot provision more
+             - job_id: (string) Identifier for the job
+        '''
+
+        if self.current_blocksize >= self.config["execution"]["options"]["max_parallelism"]:
+            logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
+            return None
+
+        job_name = "parsl.{0}.{1}".format(job_name,time.time())
+
+        script_path = "{0}/{1}.submit".format(self.config["execution"]["options"]["submit_script_dir"],
+                                              job_name)
+
+        nodes = math.ceil(float(blocksize) / self.config["execution"]["options"]["tasks_per_node"])
+        logger.debug("Requesting blocksize:%s tasks_per_node:%s nodes:%s", blocksize,
+                     self.config["execution"]["options"]["tasks_per_node"],nodes)
+
+        job_config = self.config["execution"]["options"]
+        job_config["nodes"] = nodes
+        job_config["slurm_overrides"] = job_config.get("slurm_overrides", '')
+        job_config["user_script"] = cmd_string
+
+        retcode, stdout, stderr = execute_wait("sbatch {0}".format(script_path), 3)
+        logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
+                      stdout.strip(), stderr.strip())
+
+        job_id = None
+
+        if retcode == 0 :
+            for line in stdout.split('\n'):
+                if line.startswith("Submitted batch job"):
+                    job_id = line.split("Submitted batch job")[1].strip()
+                    self.resources[job_id] = {'job_id' : job_id,
+                                              'status' : 'PENDING',
+                                              'blocksize'   : blocksize }
+        else:
+            print("Submission of command to scale_out failed")
+
+        return job_id
+
+    ###########################################################################################################
+    # Cancel
+    ###########################################################################################################
+    def cancel(self, job_ids):
+        ''' Cancels the jobs specified by a list of job ids
+        Args:
+        job_ids : [<job_id> ...]
+        Returns :
+        [True/False...] : If the cancel operation fails the entire list will be False.
+        '''
+
+        job_id_list = ' '.join(job_ids)
+        retcode, stdout, stderr = execute_wait("scancel {0}".format(job_id_list), 3)
+        rets = None
+        if retcode == 0 :
+            for jid in job_ids:
+                self.resources[jid]['status'] = translate_table['CA'] # Setting state to cancelled
+            rets = [True for i in job_ids]
+        else:
+            rets = [False for i in job_ids]
+
+        return rets
 
     def show_summary(self):
-        """Print summary of current AWS state to 
-        log and to console"""
+        """Print human readable summary of current
+        AWS state to log and to console"""
         self.get_instance_state()
         status_string = "EC2 Summary:\n\tVPC IDs: {}\n\tSubnet IDs: \
 {}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n".format(
             self.vpc_id,
             self.sn_ids,
-            self. sg_id,
+            self.sg_id,
             self.instances)
         status_string += "\tInstance States:\n\t\t"
         self.get_instance_state()
@@ -335,16 +483,6 @@ class EC2Provider(ExecutionProvider):
         self.write_state_file()
         self.logger.info(status_string)
         return status_string
-
-    def write_state_file(self):
-        fh = open('awsproviderstate.json', 'w')
-        state = {}
-        state['vpcID'] = self.vpc_id
-        state['sgID'] = self.sg_id
-        state['snIDs'] = self.sn_ids
-        state['instances'] = self.instances
-        state["instanceState"] = self.instance_states
-        fh.write(json.dumps(state, indent=4))
 
     def teardown(self):
         """Terminate all EC2 instances, delete all subnets,
@@ -371,8 +509,7 @@ class EC2Provider(ExecutionProvider):
             self.vpc_id = None
         except Exception as e:
             self.logger.error(
-                "{}\n".format(e)
-                )
+                "{}".format(e))
             raise e
         self.show_summary()
         self.write_state_file()
