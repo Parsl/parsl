@@ -10,8 +10,6 @@ from parsl.execution_provider.execution_provider_base import ExecutionProvider
 import parsl.execution_provider.aws.template
 import parsl.execution_provider.error as ep_error
 
-import boto3
-from botocore.exceptions import ClientError
 from string import Template
 
 AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
@@ -43,12 +41,13 @@ class EC2Provider(ExecutionProvider):
             self.config["execution"]["options"]["submit_script_dir"]):
             os.makedirs(self.config["execution"]
                         ["options"]["submit_script_dir"])
+
         try:
-            self.read_state_file()
+            self.read_state_file(config['recover_from_state_file'])
+
         except Exception as e:
             self.create_vpc().id
-            self.logger.info(
-                "No State File. Cannot load previous options. Creating new infrastructure\n")
+            self.logger.info("No State File. Cannot load previous options. Creating new infrastructure")
             self.write_state_file()
 
     def set_instance_vars(self):
@@ -64,13 +63,14 @@ class EC2Provider(ExecutionProvider):
         self.sg_id = 0
         self.sn_ids = []
 
-    def read_state_file(self):
+    def read_state_file(self, state_file_path):
         """If this script has been run previously, it will be persisitent
         by writing resource ids to state file. On run, the script looks for a state file
         before creating new infrastructure"""
         try:
-            fh = open('awsproviderstate.json', 'r')
-            state = json.load(fh)
+            state = None
+            with open(state_file_path, 'r') as fh:
+                state = json.load(fh)
             self.vpc_id = state['vpcID']
             self.sg_id = state['sgID']
             self.sn_ids = state['snIDs']
@@ -78,15 +78,15 @@ class EC2Provider(ExecutionProvider):
         except Exception as e:
             raise e
 
-    def write_state_file(self):
-        fh = open('awsproviderstate.json', 'w')
-        state = {}
-        state['vpcID'] = self.vpc_id
-        state['sgID'] = self.sg_id
-        state['snIDs'] = self.sn_ids
-        state['instances'] = self.instances
-        state["instanceState"] = self.instance_states
-        fh.write(json.dumps(state, indent=4))
+    def write_state_file(self, state_file_path):
+        state = {'vpcID' : self.vpc_id,
+                 'sgID' : self.sg_id,
+                 'snIDs' : self.sn_ids,
+                 'instances' : self.instances,
+                 "instanceState" : self.instance_states }
+
+        with open(state_file_path, 'w') as fh :
+            fh.write(json.dumps(state, indent=4))
 
     def _read_conf(self, config_file):
         """read config file"""
