@@ -37,7 +37,8 @@ class EC2Provider(ExecutionProvider):
         """Initialize provider"""
         self.config = self.read_configs(config)
         self.set_instance_vars()
-        self.config_logger()
+        self.logger = logging.getLogger(__name__)
+
         if not os.path.exists(
             self.config["execution"]["options"]["submit_script_dir"]):
             os.makedirs(self.config["execution"]
@@ -62,28 +63,6 @@ class EC2Provider(ExecutionProvider):
         self.vpc_id = 0
         self.sg_id = 0
         self.sn_ids = []
-
-    def config_logger(self):
-        """Configure Logger"""
-        logger = logging.getLogger("EC2Provider")
-        logger.setLevel(logging.INFO)
-        if not os.path.isfile('awsprovider.log'):
-            with open('awsprovider.log', 'w') as temp_log:
-                temp_log.write("Creating new log file.\n")
-        fh = logging.FileHandler('awsprovider.log')
-        fh.setLevel(logging.INFO)
-        # create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        fh.setFormatter(formatter)
-        # add the handlers to logger
-        logger.addHandler(ch)
-        logger.addHandler(fh)
-        self.logger = logger
 
     def read_state_file(self):
         """If this script has been run previously, it will be persisitent
