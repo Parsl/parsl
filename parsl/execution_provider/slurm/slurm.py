@@ -61,6 +61,9 @@ class Slurm(ExecutionProvider):
     This provider uses sbatch to submit, squeue for status and scancel to cancel jobs.
     '''
 
+    def __repr__ (self):
+        return "<Slurm Execution Provider for site:{0}>".format(self.sitename)
+
     def __init__ (self, config):
         ''' Initialize the Slurm class
         Args:
@@ -76,6 +79,7 @@ class Slurm(ExecutionProvider):
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
+
 
     ###########################################################################################################
     # Status
