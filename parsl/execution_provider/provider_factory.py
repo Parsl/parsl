@@ -19,7 +19,7 @@ from parsl.execution_provider.aws.aws import EC2Provider
 from parsl.execution_provider.local.local import Local
 
 # Channels
-from parsl.pipes.ssh_cl import SshClClient
+from parsl.channels.ssh_cl import SshClClient
 
 class ExecProviderFactory (object):
 
