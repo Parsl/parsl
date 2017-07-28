@@ -1,3 +1,4 @@
+import os
 import logging
 from ipyparallel import Client
 from parsl.executors.base import ParslExecutor
@@ -8,18 +9,73 @@ class IPyParallelExecutor(ParslExecutor):
     ''' The Ipython parallel executor
     '''
 
-    def __init__ (self, execution_provider=None):
-        ''' Initialize the thread pool
+
+    def compose_launch_cmd(self, filepath, engine_dir):
+        ''' Reads the json contents from filepath and uses that to compose the engine launch command
         '''
+
+        self.engine_file = os.path.expanduser(filepath)
+
+        engine_json = None
+        try:
+            with open (self.engine_file, 'r') as f:
+                engine_json = f.read()
+
+        except OSError as e:
+            logger.error("Could not open engine_json : ", self.engine_file)
+            raise e
+
+        return '''cd {0}
+cat <<EOF > ipengine.json
+{1}
+EOF
+
+mkdir -p '.ipengine_logs'
+ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
+'''.format(engine_dir, engine_json)
+
+
+    def __init__ (self, execution_provider=None,
+                  engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
+                  engine_dir='.',
+                  config = None):
+        ''' Initialize the thread pool
+
+        Args:
+             - self
+
+        KWargs:
+             - execution_provider (ExecutionProvider object)
+             -
+        '''
+
         self.executor = Client()
-        if execution_provider:
-            self._scaling_enabled = True
-        else:
-            self._scaling_enabled = False
+        self.launch_cmd = self.compose_launch_cmd(engine_json_file, engine_dir)
+        self.config = config
 
         self.execution_provider = execution_provider
+        self.engines = []
+
+        if execution_provider:
+            self._scaling_enabled = True
+            logger.debug("Starting IpyParallelExecutor with provider:%s", execution_provider)
+            try:
+                for i in range(self.config["execution"]["options"].get("init_parallelism", 0)):
+                    eng = self.execution_provider.submit(self.launch_cmd, 1)
+                    self.engines.extend(eng)
+
+            except Exception as e:
+                logging.debug("Scaling out failed at init failed : %s", e)
+
+        else:
+            self._scaling_enabled = False
+            logger.debug("Starting IpyParallelExecutor with no provider")
+
+
+
         self.lb_view  = self.executor.load_balanced_view()
         logger.debug("Starting executor")
+
 
     @property
     def scaling_enabled(self):
@@ -45,7 +101,7 @@ class IPyParallelExecutor(ParslExecutor):
              NotImplemented exception
         '''
         if self.execution_provider :
-            r = self.execution_provider.scale_out(*args, **kwargs)
+            r = self.execution_provider.submit(self.launch_cmd, *args, **kwargs)
         else:
             logger.error("No execution provider available")
             r = None
