@@ -253,22 +253,6 @@ class Slurm(ExecutionProvider):
 
         return rets
 
-    def scale_out (self, size, name=None):
-        pass
-
-    def scale_in (self, size):
-        count = 0
-        if not self.resources :
-            print("No resources online, cannot scale down")
-
-        else :
-            for resource in self.resources[0:size]:
-                print("Cancelling : ", resource['job_id'])
-                retcode, stdout, stderr = execute_wait("scancel {0}".format(resource['job_id']), 3)
-                print(retcode, stdout, stderr)
-
-        return count
-
     @property
     def scaling_enabled(self):
         return True
