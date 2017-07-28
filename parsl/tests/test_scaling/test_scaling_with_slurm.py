@@ -20,7 +20,10 @@ def test_config_A ():
     '''
     config = {  "site" : "midway_westmere",
                 "execution" :
-                { "options" :
+                {  "executor" : "ipp",
+                   "provider" : "slurm",
+                   "channel"  : "local",
+                   "options" :
                   {"init_parallelism" : 2,
                    "max_parallelism" : 2,
                    "min_parallelism" : 0,
