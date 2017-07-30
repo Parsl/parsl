@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 
 import os
@@ -17,20 +16,21 @@ AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
 
 DEFAULT_REGION = 'us-east-2'
 
-translate_table = { 'PD': 'PENDING',
-                    'R': 'RUNNING',
-                    'CA': 'CANCELLED',
-                    'CF': 'PENDING',   # (configuring),
-                    'CG': 'RUNNING',   # (completing),
-                    'CD': 'COMPLETED',
-                    'F': 'FAILED',     # (failed),
-                    'TO': 'TIMEOUT',   # (timeout),
-                    'NF': 'FAILED',    # (node failure),
-                    'RV': 'FAILED',    # (revoked) and
-                    'SE': 'FAILED'}    # (special exit state
+translate_table = {'PD': 'PENDING',
+                   'R': 'RUNNING',
+                   'CA': 'CANCELLED',
+                   'CF': 'PENDING',  # (configuring),
+                   'CG': 'RUNNING',  # (completing),
+                   'CD': 'COMPLETED',
+                   'F': 'FAILED',  # (failed),
+                   'TO': 'TIMEOUT',  # (timeout),
+                   'NF': 'FAILED',  # (node failure),
+                   'RV': 'FAILED',  # (revoked) and
+                   'SE': 'FAILED'}  # (special exit state
 
-template_string = """#!/bin/bash
+template_string = """
 cd ~
+sudo apt-get update -y
 sudo apt-get update -y
 sudo apt-get install -y python3
 sudo apt-get install -y python3-pip
@@ -46,18 +46,17 @@ class EC2Provider(ExecutionProvider):
         """Initialize provider"""
         self.config = self.read_configs(config)
         self.set_instance_vars()
-        self.logger = logging.getLogger(__name__)
-
-        if not os.path.exists(
-            self.config["execution"]["options"]["submit_script_dir"]):
-            os.makedirs(self.config["execution"]
-                        ["options"]["submit_script_dir"])
+        self.config_logger()
+        # if not os.path.exists(
+        #     self.config["execution"]["options"]["submit_script_dir"]):
+        #     os.makedirs(self.config["execution"]
+        #                 ["options"]["submit_script_dir"])
         try:
-            self.read_state_file(config['recover_from_state_file'])
-
+            self.read_state_file()
         except Exception as e:
             self.create_vpc().id
-            self.logger.info("No State File. Cannot load previous options. Creating new infrastructure")
+            self.logger.info(
+                "No State File. Cannot load previous options. Creating new infrastructure\n")
             self.write_state_file()
 
     def set_instance_vars(self):
@@ -73,14 +72,35 @@ class EC2Provider(ExecutionProvider):
         self.sg_id = 0
         self.sn_ids = []
 
-    def read_state_file(self, state_file_path):
+    def config_logger(self):
+        """Configure Logger"""
+        logger = logging.getLogger("EC2Provider")
+        logger.setLevel(logging.INFO)
+        if not os.path.isfile('awsprovider.log'):
+            with open('awsprovider.log', 'w') as temp_log:
+                temp_log.write("Creating new log file.\n")
+        fh = logging.FileHandler('awsprovider.log')
+        fh.setLevel(logging.INFO)
+        # create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # create formatter and add it to the handlers
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        fh.setFormatter(formatter)
+        # add the handlers to logger
+        logger.addHandler(ch)
+        logger.addHandler(fh)
+        self.logger = logger
+
+    def read_state_file(self):
         """If this script has been run previously, it will be persisitent
         by writing resource ids to state file. On run, the script looks for a state file
         before creating new infrastructure"""
         try:
-            state = None
-            with open(state_file_path, 'r') as fh:
-                state = json.load(fh)
+            fh = open('awsproviderstate.json', 'r')
+            state = json.load(fh)
             self.vpc_id = state['vpcID']
             self.sg_id = state['sgID']
             self.sn_ids = state['snIDs']
@@ -88,15 +108,15 @@ class EC2Provider(ExecutionProvider):
         except Exception as e:
             raise e
 
-    def write_state_file(self, state_file_path):
-        state = {'vpcID' : self.vpc_id,
-                 'sgID' : self.sg_id,
-                 'snIDs' : self.sn_ids,
-                 'instances' : self.instances,
-                 "instanceState" : self.instance_states }
-
-        with open(state_file_path, 'w') as fh :
-            fh.write(json.dumps(state, indent=4))
+    def write_state_file(self):
+        fh = open('awsproviderstate.json', 'w')
+        state = {}
+        state['vpcID'] = self.vpc_id
+        state['sgID'] = self.sg_id
+        state['snIDs'] = self.sn_ids
+        state['instances'] = self.instances
+        state["instanceState"] = self.instance_states
+        fh.write(json.dumps(state, indent=4))
 
     def _read_conf(self, config_file):
         """read config file"""
@@ -161,7 +181,7 @@ class EC2Provider(ExecutionProvider):
         """Create and configure VPC"""
         try:
             vpc = self.ec2.create_vpc(
-                CidrBlock='172.32.0.0/16',
+                CidrBlock='10.0.0.0/16',
                 AmazonProvidedIpv6CidrBlock=False,
             )
         except Exception as e:
@@ -175,8 +195,10 @@ class EC2Provider(ExecutionProvider):
         for num, zone in enumerate(availability_zones['AvailabilityZones']):
             if zone['State'] == "available":
                 subnet = vpc.create_subnet(
-                    CidrBlock='172.32.{}.0/20'.format(16 * num),
+                    CidrBlock='10.0.{}.0/20'.format(16 * num),
                     AvailabilityZone=zone['ZoneName'])
+                subnet.meta.client.modify_subnet_attribute(
+                    SubnetId=subnet.id, MapPublicIpOnLaunch={"Value": True})
                 route_table.associate_with_subnet(SubnetId=subnet.id)
                 self.sn_ids.append(subnet.id)
             else:
@@ -210,13 +232,13 @@ class EC2Provider(ExecutionProvider):
             'FromPort': 0,
             'ToPort': 65535,
             'IpRanges': ip_ranges,
-        }, 
-        {
-            'IpProtocol': 'SSH',
+        },
+            {
+            'IpProtocol': 'TCP',
             'FromPort': 0,
             'ToPort': 65535,
             'IpRanges': [{'CidrIp': '128.135.0.0/16'}],
-        },{
+        }, {
             'IpProtocol': 'ICMP',
             'FromPort': -1,
             'ToPort': -1,
@@ -259,24 +281,31 @@ class EC2Provider(ExecutionProvider):
         for i in range(size * self.config['nodeGranularity']):
             instances.append(self.spin_up_instance(cmd_string=cmd_string))
         self.current_blocksize += size * self.config['nodeGranularity']
-        self.logger.info("started {} instances".format(size*self.config['nodeGranularity']))
+        self.logger.info(
+            "started {} instances".format(
+                size * self.config['nodeGranularity']))
         return instances
 
     def scale_in(self, size):
         """Scale cluster in (smaller)"""
         for i in range(size * self.config['nodeGranularity']):
             self.shut_down_instance()
-        self.current_blocksize -= size*self.config['nodeGranularity']
+        self.current_blocksize -= size * self.config['nodeGranularity']
 
     def xstr(self, s):
-        return '' if s == None else s
+        return '' if s is None else s
 
     def spin_up_instance(self, cmd_string):
         """Starts an instance in the vpc in first available
         subnet. Starts up n instances at a time where n is
         node granularity from config"""
         escaped_command = self.xstr(cmd_string)
-        command = template_string + "\n{}\n{}".format(self.ipyparallel_configuration(), escaped_command)
+        command = "#!/bin/bash\nsed -i 's/us-east-2\.ec2\.//g' /etc/apt/sources.list\n" + \
+            template_string + \
+            "\n{}\n{}".format(
+                self.ipyparallel_configuration(),
+                escaped_command)
+        print(command)
         instance_type = self.config['instancetype']
         subnet = self.sn_ids[0]
         ami_id = self.config['AMIID']
@@ -334,17 +363,19 @@ class EC2Provider(ExecutionProvider):
         return self.instance_states
 
     def ipyparallel_configuration(self):
-        config=''
+        config = ''
         try:
             with open(os.path.expanduser(self.config['iPyParallelConfigFile'])) as f:
                 config = f.read().strip()
         except Exception as e:
             self.logger.error(e)
-            self.logger.info("Couldn't find user ipyparallel config file. Trying default location.")
+            self.logger.info(
+                "Couldn't find user ipyparallel config file. Trying default location.")
             with open(os.path.expanduser("~/.ipython/profile_parallel/security/ipcontroller-engine.json")) as f:
                 config = f.read().strip()
         else:
-            self.logger.error("Cannot find iPyParallel config file. Cannot proceed.")
+            self.logger.error(
+                "Cannot find iPyParallel config file. Cannot proceed.")
             return -1
         ipptemplate = """
 cat <<EOF > ipengine.json
@@ -359,7 +390,7 @@ ipengine --file=ipengine.json""".format(config)
     #######################################################
     # Status
     #######################################################
-    def status (self, job_ids):
+    def status(self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
         Args:
             - job_ids (List of ids) : List of identifiers for the jobs
@@ -371,7 +402,7 @@ ipengine --file=ipengine.json""".format(config)
     ########################################################
     # Submit
     ########################################################
-    def submit (self, cmd_string, blocksize=1, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize=1, job_name="parsl.auto"):
         return self.scale_out(cmd_string=cmd_string, size=blocksize)
 
     ########################################################
@@ -434,6 +465,7 @@ ipengine --file=ipengine.json""".format(config)
             raise e
         self.show_summary()
         os.remove(self.config['stateFilePath'])
+
     def scaling_enabled():
         return True
     # @atexit.register
@@ -448,4 +480,3 @@ if __name__ == '__main__':
     print(provider.show_summary())
     # provider.scale_in(1)
     print(provider.show_summary())
-
