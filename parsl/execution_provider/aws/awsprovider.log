@@ -1,25 +1,2 @@
-Creating new log file.
-2017-07-30 00:50:33,339 - EC2Provider - ERROR - 'iPyParallelConfigFile'
-2017-07-30 00:50:33,339 - EC2Provider - INFO - Couldn't find user ipyparallel config file. Trying default location.
-2017-07-30 00:52:21,751 - EC2Provider - ERROR - 'iPyParallelConfigFile'
-2017-07-30 00:52:21,751 - EC2Provider - INFO - Couldn't find user ipyparallel config file. Trying default location.
-2017-07-30 00:52:22,992 - EC2Provider - INFO - Started up 1 instance. Instance type:t2.nano
-2017-07-30 00:52:22,992 - EC2Provider - INFO - started 1 instances
-2017-07-30 00:52:23,733 - EC2Provider - INFO - EC2 Summary:
-	VPC IDs: vpc-d3b9f8ba
-	Subnet IDs: ['subnet-224c1d4b', 'subnet-be52c0c5', 'subnet-cc19bd81']
-	Security Group ID: sg-3c22ce54
-	Running Instance IDs: ['i-0c6991dd74edc151a']
-	Instance States:
-		Instance ID: i-0c6991dd74edc151a  State: pending
-		
 
-2017-07-30 00:52:23,934 - EC2Provider - INFO - EC2 Summary:
-	VPC IDs: vpc-d3b9f8ba
-	Subnet IDs: ['subnet-224c1d4b', 'subnet-be52c0c5', 'subnet-cc19bd81']
-	Security Group ID: sg-3c22ce54
-	Running Instance IDs: ['i-0c6991dd74edc151a']
-	Instance States:
-		Instance ID: i-0c6991dd74edc151a  State: pending
-		
 
