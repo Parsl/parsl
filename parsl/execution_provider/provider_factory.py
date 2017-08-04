@@ -55,14 +55,13 @@ class ExecProviderFactory (object):
         channel = config['execution']['channel']
 
         if provider not in self.execution_providers:
-            print("[ERROR] %s is not a known execution_provider", provider)
+            logger.debug("[ERROR] %s is not a known execution_provider", provider)
             exit(-1)
         if executor not in self.executors:
-            print("[ERROR] {%s is not a known execution_provider", executor)
+            logger.debug("[ERROR] %s is not a known executor", executor)
             exit(-1)
         if channel not in self.channels:
-            print("[ERROR] %s is not a known execution_provider", channel)
-            exit(-1)
+            logger.debug("[ERROR] %s is not a known channel", channel)
 
         print("Foo")
         ep = self.execution_providers[provider](config)
