@@ -36,17 +36,19 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
 
 
     def __init__ (self, execution_provider=None,
+                  reuse_controller=True,
                   engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                   engine_dir='.',
                   config = None):
-        ''' Initialize the thread pool
+        ''' Initialize the IPyParallel pool
 
         Args:
              - self
 
         KWargs:
              - execution_provider (ExecutionProvider object)
-             -
+             - reuse_controller (Bool) : If True ipp executor will attempt to connect to an available
+               controller.
         '''
 
         self.executor = Client()
@@ -55,6 +57,10 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
 
         self.execution_provider = execution_provider
         self.engines = []
+
+        if reuse_controller:
+            # Reuse existing controller if one is available
+            pass
 
         if execution_provider:
             self._scaling_enabled = True
