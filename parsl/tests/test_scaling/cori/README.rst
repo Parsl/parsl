@@ -43,25 +43,27 @@ Parsl Config:
 
 Here's a config for Cori that starts with a request for 2 nodes.
 
-.. code ::python
+.. code:: python3
 
-     config = {  "site" : "midway_westmere",
-              "execution" :
-              {  "executor" : "ipp",
-                 "provider" : "slurm",
-                 "channel"  : "local",
-                 "options" :
-                 {"init_parallelism" : 2,      # Starts with 2 nodes
-                  "max_parallelism" : 2,       # Limits this run to 2 nodes
-                  "min_parallelism" : 0,  
-                  "tasks_per_node"  : 1,       # One engine per node
-                  "nodes_granularity" : 1,     # Request one node per slurm request
-                  "partition" : "debug",       # Send request to the debug partition
-                  "walltime" : "00:05:00",     # Walltime 
-                 "slurm_overrides" : "#SBATCH --constraint=haswell", # All additional slurm constraints
-                  "submit_script_dir" : ".scripts"
-                 }
-              }
+     config = {"site" : "cori-debug",
+               "execution" :
+                  {"executor" : "ipp",
+                   "provider" : "slurm",
+                   "channel"  : "local",
+                   "options" :
+                       {"init_parallelism" : 2,      # Starts with 2 nodes
+                        "max_parallelism" : 2,       # Limits this run to 2 nodes
+                        "min_parallelism" : 0,  
+                        "tasks_per_node"  : 1,       # One engine per node
+                        "nodes_granularity" : 1,     # Request one node per slurm request
+                        "partition" : "debug",       # Send request to the debug partition
+                        "walltime" : "00:05:00",     # Walltime 
+                        "slurm_overrides" : "#SBATCH --constraint=haswell", # All additional slurm constraints
+                        "submit_script_dir" : ".scripts"
+                       }
+                   }
               } 
+              
+
 
 
