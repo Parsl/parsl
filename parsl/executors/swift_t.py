@@ -256,7 +256,7 @@ class TurbineExecutor(ParslExecutor):
             self._queue_management_thread = threading.Thread (target=self._queue_management_worker)
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
-            
+
         else:
             logging.debug("Management thread already exists, returning")
 
