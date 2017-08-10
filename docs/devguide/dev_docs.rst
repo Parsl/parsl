@@ -145,12 +145,6 @@ ExecutionProvider
 .. autoclass:: parsl.execution_provider.execution_provider_base.ExecutionProvider
    :members:  __init__, submit, status, cancel, scaling_enabled
 
-ExecutionProvider
------------------
-
-.. autoclass:: parsl.execution_provider.execution_provider_base.ExecutionProvider
-   :members:  __init__, submit, status, cancel, scaling_enabled
-
 
 Slurm
 -----
@@ -166,3 +160,13 @@ Amazon Web Services
 
 .. autoclass:: parsl.execution_provider.aws.aws.EC2Provider
    :members:
+
+Azure
+-----
+
+.. autoclass:: parsl.execution_provider.azure.azureProvider.AzureProvider
+   :members:
+
+.. autoclass:: parsl.execution_provider.azure.azureDeployer.Deployer
+   :members:
+
