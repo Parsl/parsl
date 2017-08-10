@@ -3,18 +3,23 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 class ExecutionProvider(metaclass=ABCMeta):
     """ Define the strict interface for all Execution Provider
 
-    script_string ------->  submit
-           id     <-----------+
+    .. code:: python
 
-    [ ids ]       ------->  status
-    [statuses]   <------------+
-
-    [ ids ]       ------->  cancel
-    [cancel]     <------------+
-
-    [True/False]  <-------  scaling_enabled
-
-    """
+                                +------------------
+                                |
+          script_string ------->|  submit
+               id      <--------|---+
+                                |
+          [ ids ]       ------->|  status
+          [statuses]   <--------|----+
+                                |
+          [ ids ]       ------->|  cancel
+          [cancel]     <--------|----+
+                                |
+          [True/False] <--------|  scaling_enabled
+                                |
+                                +-------------------
+     """
 
     @abstractmethod
     def submit(self, *args, **kwargs):
