@@ -93,13 +93,25 @@ Exceptions
 Executors
 =========
 
-Executors are abstractions that represent compute resources to which you could submit arbitrary App tasks. These resources
-themselves can (sometimes) scale to fit demand better.
+Executors are abstractions that represent available compute resources to which you
+could submit arbitrary App tasks. An executor initialized with an Execution Provider
+can dynamically scale with the resources requirements of the workflow.
 
-We currently have thread pools, remote workers from `ipyparallel <https://ipyparallel.readthedocs.io/en/latest/>`_, and an
-incomplete Swift/T executor for HPC systems.
+We currently have thread pools for local execution, remote workers from `ipyparallel <https://ipyparallel.readthedocs.io/en/latest/>`_ for executing on high throughput
+systems such as campus clusters, and a Swift/T executor for HPC systems.
+
+ParslExecutor
+-------------
 
 
+
+ThreadPoolExecutor
+------------------
+
+.. autoclass:: parsl.executors.threads.ThreadPoolExecutor
+   :members:  __init__, submit, scale_out, scale_in, shutdown, scaling_enabled
+
+.. autofunction:: parsl.executors.swift_t.runner
 
 
 Swift/Turbine Executor
