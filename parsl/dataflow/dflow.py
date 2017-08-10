@@ -54,7 +54,7 @@ class DataFlowKernel(object):
         #self.pending         = {}
         #self.runnable        = {}
         #self.done            = {}
-
+        self.task_count      = 0
         self.lazy_fail       = lazy_fail
         self.fail_retries    = 2
         self.fut_task_lookup = {}
@@ -322,7 +322,9 @@ class DataFlowKernel(object):
                (AppFuture) [DataFutures,]
         '''
 
-        task_id  = uuid.uuid4()
+        #task_id  = uuid.uuid4()
+        task_id = self.task_count
+        self.task_count += 1
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
         #dep_cnt  = self._count_deps(depends, task_id)
