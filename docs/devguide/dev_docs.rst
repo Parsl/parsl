@@ -113,6 +113,12 @@ ThreadPoolExecutor
 .. autoclass:: parsl.executors.threads.ThreadPoolExecutor
    :members:  __init__, submit, scale_out, scale_in, shutdown, scaling_enabled
 
+IPyParallelExecutor
+------------------
+
+.. autoclass:: parsl.executors.threads.ThreadPoolExecutor
+   :members:  __init__, submit, scale_out, scale_in, shutdown, scaling_enabled, compose_launch_cmd
+
 
 Swift/Turbine Executor
 ----------------------
@@ -122,4 +128,41 @@ Swift/Turbine Executor
 
 .. autofunction:: parsl.executors.swift_t.runner
 
-                  
+
+Execution Providers
+===================
+
+Execution providers are responsible for managing execution resources with a Local
+Resource Manager (LRM). For instance, campus clusters and supercomputers generally have
+schedulers such as Slurm, PBS, Condor and. Clouds on the other hand have API interfaces
+that allow much more fine grain composition of an execution environment. An execution
+provider abstracts these resources and provides a single uniform interface to them.
+
+
+ExecutionProvider
+-----------------
+
+.. autoclass:: parsl.execution_provider.execution_provider_base.ExecutionProvider
+   :members:  __init__, submit, status, cancel, scaling_enabled
+
+ExecutionProvider
+-----------------
+
+.. autoclass:: parsl.execution_provider.execution_provider_base.ExecutionProvider
+   :members:  __init__, submit, status, cancel, scaling_enabled
+
+
+Slurm
+-----
+
+.. autoclass:: parsl.execution_provider.slurm.slurm.Slurm
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submite_script, current_capacity
+
+.. autofunction:: parsl.execution_provider.slurm.slurm.execute_wait
+
+
+Amazon Web Services
+-------------------
+
+.. autoclass:: parsl.execution_provider.aws.aws.EC2Provider
+   :members:
