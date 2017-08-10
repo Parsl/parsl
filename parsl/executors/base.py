@@ -5,9 +5,8 @@ class ParslExecutor(metaclass=ABCMeta):
     This is a metaclass that only enforces concrete implementations of
     functionality by the child classes.
 
-    .. note:: Shutdown is currently missing, as it is not yet supported by
-    some of the executors (threads for eg)
-
+    .. note:: Shutdown is currently missing, as it is not yet supported by some of the executors (threads for eg).
+    
     """
 
     @abstractmethod
