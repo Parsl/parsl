@@ -58,7 +58,10 @@ translate_table = { 'PD' :  'PENDING',
 class Slurm(ExecutionProvider):
     ''' Slurm Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel jobs.
+    This provider uses sbatch to submit, squeue for status and scancel to cancel
+    jobs. The sbatch script to be used is created from a template file in this
+    same module.
+
     '''
 
     def __repr__ (self):
