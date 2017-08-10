@@ -6,7 +6,16 @@ from parsl.executors.base import ParslExecutor
 logger = logging.getLogger(__name__)
 
 class IPyParallelExecutor(ParslExecutor):
-    ''' The Ipython parallel executor
+    ''' The Ipython parallel executor.
+    This executor allows us to take advantage of multiple processes running locally
+    or remotely via  IPythonParallel's pilot execution system.
+
+    .. note:: Some deficiencies with this executor are:
+             1. Ipengine's execute one task at a time. This means one engine per core
+    is necessary to exploit the full parallelism of a node.
+             2. No notion of remaining walltime.
+             3. Lack of throttling means tasks could be queued up on a worker.
+
     '''
 
 
