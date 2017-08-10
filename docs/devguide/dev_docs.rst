@@ -103,6 +103,8 @@ systems such as campus clusters, and a Swift/T executor for HPC systems.
 ParslExecutor
 -------------
 
+.. autoclass:: parsl.executors.base.ParslExecutor
+   :members:  __init__, submit, scale_out, scale_in, scaling_enabled
 
 
 ThreadPoolExecutor
@@ -110,8 +112,6 @@ ThreadPoolExecutor
 
 .. autoclass:: parsl.executors.threads.ThreadPoolExecutor
    :members:  __init__, submit, scale_out, scale_in, shutdown, scaling_enabled
-
-.. autofunction:: parsl.executors.swift_t.runner
 
 
 Swift/Turbine Executor
