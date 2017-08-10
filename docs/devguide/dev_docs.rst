@@ -47,7 +47,7 @@ Futures
 =======
 
 Futures are returned as proxies to a parallel execution initiated by a call to an ``App``.
-We have two kinds of apps: AppFutures and DataFutures.
+We have two kinds of futures in Parsl: AppFutures and DataFutures.
 
 
 AppFutures
@@ -74,6 +74,14 @@ Exceptions
 .. autoclass:: parsl.app.errors.InvalidAppTypeError
 
 .. autoclass:: parsl.app.errors.AppException
+
+.. autoclass:: parsl.app.errors.AppBadFormatting
+
+.. autoclass:: parsl.app.errors.AppFailure
+
+.. autoclass:: parsl.app.errors.MissingOutputs
+
+.. autoclass:: parsl.app.errors.DependencyError
 
 .. autoclass:: parsl.dataflow.error.DataFlowExceptions
 
