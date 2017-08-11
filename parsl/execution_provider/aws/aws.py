@@ -410,6 +410,8 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
     # Submit
     ########################################################
     def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
+        """Submit an ipyparalel pilot job which will connect to an ipp controller specified
+        by your ipp config file and run cmd_string on the instance being started up."""
         return self.scale_out(cmd_string=cmd_string, size=blocksize)
 
     ########################################################
