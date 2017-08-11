@@ -26,12 +26,8 @@ translate_table = {'PD': 'PENDING',
 template_string = """
 cd ~
 sudo apt-get update -y
-sudo apt-get update -y
-sudo apt-get install -y python3
-sudo apt-get install -y python3-pip
-sudo apt-get install -y ipython
-sudo pip3 install ipyparallel
-sudo pip3 install parsl
+sudo apt-get install -y python3 python3-pip ipython
+sudo pip3 install ipyparallel parsl
 """
 
 class AzureProvider(ExecutionProvider):
