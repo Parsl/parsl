@@ -159,14 +159,14 @@ Amazon Web Services
 -------------------
 
 .. autoclass:: parsl.execution_provider.aws.aws.EC2Provider
-   :members:
+    :members:  __init__, submit, status, cancel, read_state_file, show_summary, create_session, create_vpc, spin_up_instance, shut_down_instance, get_instance_state, teardown, scale_in, scale_out
 
 Azure
 -----
 
 .. autoclass:: parsl.execution_provider.azure.azureProvider.AzureProvider
-   :members:
+   :members:  __init__, submit, status, cancel
 
 .. autoclass:: parsl.execution_provider.azure.azureDeployer.Deployer
-   :members:
+   :members: __init__, deploy, destroy
 

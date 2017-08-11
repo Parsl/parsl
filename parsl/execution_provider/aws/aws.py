@@ -37,6 +37,8 @@ sudo apt-get install -y python3-pip
 sudo apt-get install -y ipython
 sudo pip3 install ipyparallel
 sudo pip3 install parsl
+pip3 install numpy
+pip3 install scipy
 """
 
 
@@ -83,7 +85,7 @@ class EC2Provider(ExecutionProvider):
         fh.setLevel(logging.INFO)
         # create console handler with a higher log level
         ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
+        ch.setLevel(logging.CRITICAL)
         # create formatter and add it to the handlers
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -243,6 +245,11 @@ class EC2Provider(ExecutionProvider):
             'FromPort': -1,
             'ToPort': -1,
             'IpRanges': [{'CidrIp': '0.0.0.0/0'}],
+        }, {
+            'IpProtocol': 'TCP',
+            'FromPort': 0,
+            'ToPort': 65535,
+            'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
         }]
         # Allows all TCP out, all tcp and udp out within vpc
         outPerms = [{
@@ -305,7 +312,6 @@ class EC2Provider(ExecutionProvider):
             "\n{}\n{}".format(
                 self.ipyparallel_configuration(),
                 escaped_command)
-        print(command)
         instance_type = self.config['instancetype']
         subnet = self.sn_ids[0]
         ami_id = self.config['AMIID']
@@ -371,7 +377,7 @@ class EC2Provider(ExecutionProvider):
             self.logger.error(e)
             self.logger.info(
                 "Couldn't find user ipyparallel config file. Trying default location.")
-            with open(os.path.expanduser("~/.ipython/profile_parallel/security/ipcontroller-engine.json")) as f:
+            with open(os.path.expanduser("~/.ipython/profile_default/security/ipcontroller-engine.json")) as f:
                 config = f.read().strip()
         else:
             self.logger.error(
@@ -384,7 +390,8 @@ EOF
 
 mkdir -p '.ipengine_logs'
 sleep 5
-ipengine --file=ipengine.json""".format(config)
+ipengine --file=ipengine.json &> ipengine.log &
+ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return ipptemplate
 
     #######################################################
@@ -402,7 +409,7 @@ ipengine --file=ipengine.json""".format(config)
     ########################################################
     # Submit
     ########################################################
-    def submit(self, cmd_string, blocksize=1, job_name="parsl.auto"):
+    def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
         return self.scale_out(cmd_string=cmd_string, size=blocksize)
 
     ########################################################
