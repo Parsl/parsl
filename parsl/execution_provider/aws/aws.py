@@ -234,22 +234,11 @@ class EC2Provider(ExecutionProvider):
             'FromPort': 0,
             'ToPort': 65535,
             'IpRanges': ip_ranges,
-        },
-            {
-            'IpProtocol': 'TCP',
-            'FromPort': 0,
-            'ToPort': 65535,
-            'IpRanges': [{'CidrIp': '128.135.0.0/16'}],
         }, {
             'IpProtocol': 'ICMP',
             'FromPort': -1,
             'ToPort': -1,
             'IpRanges': [{'CidrIp': '0.0.0.0/0'}],
-        }, {
-            'IpProtocol': 'TCP',
-            'FromPort': 0,
-            'ToPort': 65535,
-            'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
         }]
         # Allows all TCP out, all tcp and udp out within vpc
         outPerms = [{
