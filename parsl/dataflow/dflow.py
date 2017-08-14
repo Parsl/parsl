@@ -290,7 +290,7 @@ class DataFlowKernel(object):
                 try :
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    dep_failures.extend(e)
+                    dep_failures.extend([e])
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
@@ -300,7 +300,7 @@ class DataFlowKernel(object):
                     try :
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        dep_failures.extend(e)
+                        dep_failures.extend([e])
 
                 else:
                     new_inputs.extend([dep])
