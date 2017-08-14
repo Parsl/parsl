@@ -69,6 +69,7 @@ class Slurm(ExecutionProvider):
 
     def __init__ (self, config):
         ''' Initialize the Slurm class
+
         Args:
              - Config (dict): Dictionary with all the config options.
         '''
@@ -89,12 +90,12 @@ class Slurm(ExecutionProvider):
     ###########################################################################################################
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
-        Args:
-        self.
-        job_ids : [<job_id> ...]
 
-        Returns :
-        [status...]
+        Args:
+              self
+
+        Returns:
+              [status...] : Status list of all jobs
         '''
 
         job_id_list  = ','.join(self.resources.keys())
@@ -118,6 +119,7 @@ class Slurm(ExecutionProvider):
 
     def status (self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
+
         Args:
             - job_ids (List of ids) : List of identifiers for the jobs
 
@@ -145,6 +147,7 @@ class Slurm(ExecutionProvider):
 
         Returns:
               - True: on success
+
         Raises:
               SchedulerMissingArgs : If template is missing args
               ScriptPathError : Unable to write submit script out
@@ -205,7 +208,7 @@ class Slurm(ExecutionProvider):
         nodes = math.ceil(float(blocksize) / self.config["execution"]["options"]["tasks_per_node"])
         logger.debug("Requesting blocksize:%s tasks_per_node:%s nodes:%s", blocksize,
                      self.config["execution"]["options"]["tasks_per_node"],nodes)
-
+        
         job_config = self.config["execution"]["options"]
         job_config["nodes"] = nodes
         job_config["slurm_overrides"] = job_config.get("slurm_overrides", '')
