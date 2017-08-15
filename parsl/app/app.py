@@ -107,11 +107,16 @@ def bash_executor(executable, *args, **kwargs):
             raise AppFailure("App Failed exit code: {0}".format(proc.returncode), proc.returncode)
 
     # TODO : Add support for globs here
+
     missing = []
     for outputfile in kwargs.get('outputs', []):
-        logger.debug("Checking existence of file or glob  %s ", outputfile)
-        if not os.path.exists(outputfile):
+        fpath = outputfile
+        if type(outputfile) != str:
+            fpath = outputfile.filepath
+
+        if not os.path.exists(fpath):
             missing.extend([outputfile])
+
     if missing:
         raise MissingOutputs("Missing outputs", missing)
 
