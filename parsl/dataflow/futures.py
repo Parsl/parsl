@@ -60,13 +60,13 @@ class AppFuture(Future):
             super().set_exception(e)
 
 
-    def __init__ (self, parent):
+    def __init__ (self, parent, tid=None):
+        self.tid = tid
         super().__init__()
         self.parent   = parent
         #if self.parent:
         #    parent.add_done_callback(self.parent_callback)
         self._outputs = []
-
 
 
     def update_parent(self, fut):
