@@ -57,7 +57,7 @@ class DataFuture(Future):
 
     def __init__ (self, fut, file_obj, parent=None, tid=None):
         super().__init__()
-        self.tid = tid
+        self._tid = tid
         if type(file_obj) == str:
             self.file_obj = File(file_obj)
         else:
@@ -78,6 +78,10 @@ class DataFuture(Future):
 
         logger.debug("Creating DataFuture with parent : %s", parent)
         logger.debug("Filepath : %s", self.filepath)
+
+    @property
+    def tid(self):
+        return self._tid
 
     @property
     def filepath(self):
