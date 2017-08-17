@@ -36,6 +36,16 @@ class File(object):
 
     @property
     def filepath(self):
+        ''' Returns the resolved filepath on the side where it is called from.
+        File.filepath returns the appropriate filepath when called from within
+        an app running remotely as well as regular python on the client side.
+
+        Args:
+            - self
+        Returns:
+             - filepath (string)
+
+        '''
         if 'exec_site' not in globals() or self.staging == 'direct':
             # Assume local and direct
             return self.path
