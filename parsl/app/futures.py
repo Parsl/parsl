@@ -3,10 +3,10 @@
     2. AppFutures which represent the futures on App/Leaf tasks.
     This module implements the DataFutures.
 """
+import os
+import logging
 from concurrent.futures import Future
 from parsl.data_provider.files import File
-import logging
-import os
 import parsl.app.errors
 
 logger = logging.getLogger(__name__)
@@ -47,22 +47,22 @@ class DataFuture(Future):
         Updates the super() with the result() or exception()
         '''
 
-        if parent_fu.done() == True:
+        if parent_fu.done() is True:
             e = parent_fu._exception
-            if e :
+            if e:
                 super().set_exception(e)
             else:
                 super().set_result(parent_fu.result())
         return
 
-    def __init__ (self, fut, file_obj, parent=None, tid=None):
+    def __init__(self, fut, file_obj, parent=None, tid=None):
         super().__init__()
         self._tid = tid
         if type(file_obj) == str:
             self.file_obj = File(file_obj)
         else:
             self.file_obj = file_obj
-        self.parent   = parent
+        self.parent = parent
         self._exception = None
 
         if fut == None:
@@ -107,14 +107,14 @@ class DataFuture(Future):
 
         '''
 
-        if self.parent :
+        if self.parent:
             if self.parent.done():
                 # This explicit call to raise exceptions might be redundant.
                 # the result() call *should* raise an exception if there's one
                 e = self.parent._exception
-                if e :
+                if e:
                     raise e
-                else :
+                else:
                     self.parent.result(timeout=timeout)
             else:
                 self.parent.result(timeout=timeout)
@@ -173,7 +173,7 @@ class DataFuture(Future):
                             self.__class__.__name__,
                             id(self),
                             _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.filepath + '_file' )
+                            self.filepath + '_file')
                 return '<%s at %#x state=%s>' % (
                     self.__class__.__name__,
                     id(self),
@@ -188,37 +188,29 @@ class DataFuture(Future):
 
 
 
-def AppFuture(Future):
-
-    def __init__ (self, fut, filepath):
-
-        super().__init__()
-
-
-
 def testing_nonfuture():
     fpath = '~/shuffled.txt'
     df = DataFuture(None, fpath)
-    print (df)
-    print ("Result : ", df.filepath)
+    print(df)
+    print("Result : ", df.filepath)
     assert df.filepath == os.path.abspath(os.path.expanduser(fpath))
 
 if __name__ == "__main__":
     #logging.basicConfig(filename='futures.testing.log',level=logging.DEBUG)
     import sys
     import random
-    logging.basicConfig(stream=sys.stdout,level=logging.DEBUG)
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     logger.debug("Begin Testing")
 
     with open('shuffled.txt', 'w') as testfile:
-        nums = list(range(0,10000))
+        nums = list(range(0, 10000))
         random.shuffle(nums)
         for item in nums:
             testfile.write("{0}\n".format(item))
 
     foo = Future()
-    df  = DataFuture(foo, './shuffled.txt')
-    dx  = DataFuture(foo, '~/shuffled.txt')
+    df = DataFuture(foo, './shuffled.txt')
+    dx = DataFuture(foo, '~/shuffled.txt')
 
     print(foo.done())
     print(df.done())
