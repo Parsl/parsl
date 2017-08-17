@@ -226,6 +226,17 @@ class BashApp(AppBase):
             return app_fut
 
 
+
+def app_wrapper (func):
+
+    def wrapper(*args, **kwargs):
+        logger.debug("App wrapper begins")
+        x = func(*args, **kwargs)
+        logger.debug("App wrapper ends")
+        return x
+
+    return wrapper
+
 class PythonApp(AppBase):
     """ Extends AppBase to cover the Python App
 
@@ -234,6 +245,7 @@ class PythonApp(AppBase):
         ''' Initialize the super. This bit is the same for both bash & python apps.
         '''
         super().__init__ (func, executor, walltime=60, exec_type="python")
+
 
     def __call__(self, *args, **kwargs):
         ''' This is where the call to a python app is handled
@@ -250,14 +262,8 @@ class PythonApp(AppBase):
                    App_fut
 
         '''
-
-        if type(self.executor) == DataFlowKernel:
-            logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
-            app_fut = self.executor.submit(self.func, *args, **kwargs)
-
-        else:
-            logger.debug("Submitting to Executor: %s",  self.executor)
-            app_fut = self.executor.submit(self.func, *args, **kwargs)
+        #logger.debug("Submitting to : %s", self.executor )
+        app_fut = self.executor.submit(app_wrapper(self.func), *args, **kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
