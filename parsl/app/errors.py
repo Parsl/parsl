@@ -36,6 +36,7 @@ class AppBadFormatting(ParslError):
     '''
 
     def __init__(self, reason, exitcode, retries=None):
+        super().__init__()
         self.reason = reason
         self.exitcode = exitcode
         self.retries = retries
@@ -51,6 +52,7 @@ class AppFailure(ParslError):
     '''
 
     def __init__(self, reason, exitcode, retries=None):
+        super().__init__()
         self.reason = reason
         self.exitcode = exitcode
         self.retries = retries
@@ -66,6 +68,7 @@ class MissingOutputs(ParslError):
     '''
 
     def __init__(self, reason, outputs):
+        super().__init__()
         self.reason = reason
         self.outputs = outputs
 
@@ -85,6 +88,7 @@ class DependencyError(ParslError):
     '''
 
     def __init__(self, dependent_exceptions, reason, outputs):
+        super().__init__()
         self.dependent_exceptions = dependent_exceptions
         self.reason = reason
         self.outputs = outputs
@@ -94,5 +98,3 @@ class DependencyError(ParslError):
 
     def __str__(self):
         return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
-
-
