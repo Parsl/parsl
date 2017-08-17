@@ -1,4 +1,10 @@
+''' Define the File Type.
 
+The primary purpose of the File object is to track the protocol to be used
+to transfer the file as well as to give the appropriate filepath depending
+on where(client-side, remote-side, intermediary-side) the File.filepath is
+being called from
+'''
 
 class File(object):
     ''' The Parsl File Class. This is planned to be a very simple class that simply
@@ -6,7 +12,7 @@ class File(object):
     systems to enable to appropriate transfer of files.
     '''
 
-    def __init__ (self, url, cache=False, caching_dir=".", staging='direct'):
+    def __init__(self, url, cache=False, caching_dir=".", staging='direct'):
         ''' Construct a File object from a url string
 
         Args:
@@ -19,12 +25,13 @@ class File(object):
         self.protocol = protocol[0] if protocol else 'file'
         self.path = path
         self.cache = cache
+        self.caching_dir = caching_dir
         self.staging = staging
 
-    def __str__ (self):
+    def __str__(self):
         return self.url
 
-    def __repr__ (self):
+    def __repr__(self):
         return self.__str__()
 
     @property
@@ -36,3 +43,14 @@ class File(object):
             # Return self.path for now
             return self.path
 
+    def stage_in(self):
+        ''' The stage_in call transports the file from the side of origin
+        to the local side
+        '''
+        pass
+
+    def stage_out(self):
+        ''' The stage_out call transports the file from local filesystem
+        to the origin side
+        '''
+        pass
