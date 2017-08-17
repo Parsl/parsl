@@ -348,18 +348,18 @@ class DataFlowKernel(object):
             new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id, args, kwargs)
             if not exceptions:
                 self.tasks[task_id]['exec_fu'] = self.launch_task(task_id, func, *new_args, **kwargs)
-                self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'])
+                self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'], tid=task_id)
                 self.tasks[task_id]['status']  = States.running
             else:
                 self.tasks[task_id]['exec_fu'] = None
-                app_fu = AppFuture(self.tasks[task_id]['exec_fu'])
+                app_fu = AppFuture(self.tasks[task_id]['exec_fu'], tid=task_id)
                 app_fu.set_exception(DependencyError(exceptions, "Failures in input dependencies", None))
                 self.tasks[task_id]['app_fu']  = app_fu
                 self.tasks[task_id]['status']  = States.dep_fail
         else:
             # Send to pending, create the AppFuture with no parent and have it set
             # when an executor future is available.
-            self.tasks[task_id]['app_fu']  = AppFuture(None)
+            self.tasks[task_id]['app_fu']  = AppFuture(None, tid=task_id)
             self.tasks[task_id]['status']  = States.pending
 
         logger.debug("Task:%s Launched with AppFut:%s", task_id, task_def['app_fu'])

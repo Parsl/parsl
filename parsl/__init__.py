@@ -31,6 +31,7 @@ from parsl.version import VERSION
 from parsl.app.app import App
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.executors.ipp import IPyParallelExecutor
+from parsl.data_provider.files import File
 
 import parsl.execution_provider
 import logging

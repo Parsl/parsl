@@ -107,11 +107,16 @@ def bash_executor(executable, *args, **kwargs):
             raise AppFailure("App Failed exit code: {0}".format(proc.returncode), proc.returncode)
 
     # TODO : Add support for globs here
+
     missing = []
     for outputfile in kwargs.get('outputs', []):
-        logger.debug("Checking existence of file or glob  %s ", outputfile)
-        if not os.path.exists(outputfile):
+        fpath = outputfile
+        if type(outputfile) != str:
+            fpath = outputfile.filepath
+
+        if not os.path.exists(fpath):
             missing.extend([outputfile])
+
     if missing:
         raise MissingOutputs("Missing outputs", missing)
 
@@ -124,44 +129,6 @@ class BashApp(AppBase):
 
     def __init__ (self, func, executor, walltime=60):
         super().__init__ (func, executor, walltime=60, exec_type="bash")
-
-    def _callable(self, *args, **kwargs):
-        ''' The callable fn for external apps.
-        '''
-        import time
-        import subprocess
-        start_t = time.time()
-        if self.exec_type != "bash":
-            raise NotImplemented
-
-
-        self.kwargs.update(kwargs)
-
-        self.executable = self.executable.format(*args, **kwargs)
-
-        # Updating stdout, stderr if values passed at call time.
-        self.stdout = self.kwargs.get('stdout', None) or self.stderr
-        self.stderr = self.kwargs.get('stderr', None) or self.stderr
-        std_out = open(self.stdout, 'w') if self.stdout else None
-        std_err = open(self.stderr, 'w') if self.stderr else None
-
-        start_time = time.time()
-
-        try :
-            #logger.debug("id:{0} Executing app : {1}".format(id(self), self.executable))
-            proc = subprocess.Popen(self.executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
-            proc.wait()
-            self.returncode = proc.returncode
-        except Exception as e:
-            #logger.error("Caught exception : {0}".format(e))
-            self.error = e
-            self.status = 'failed'
-            raise AppException("App caught exception : {0}".format(proc.returncode), e)
-
-        self.exec_duration = time.time() - start_t
-        #logger.debug("RunCommand Completed %s ", self.executable)
-        return self.returncode
-
 
     def _trace_cmdline(self, *args, **kwargs):
         ''' Internal function used to trace the values set to the special variable
@@ -186,7 +153,7 @@ class BashApp(AppBase):
 
 
     def __call__(self, *args, **kwargs):
-        ''' This is where the call to a python app is handled
+        ''' This is where the call to a Bash app is handled
 
         Args:
              - Arbitrary
@@ -204,22 +171,29 @@ class BashApp(AppBase):
 
         cmd_line = self._trace_cmdline(*args, **kwargs)
         self.kwargs.update(kwargs)
-        self.executable = cmd_line #.format(**kwargs)
-
-        if type(self.executor) == DataFlowKernel:
-            logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
-        else:
-            logger.debug("Submitting to Executor: %s",  self.executor)
+        self.executable = cmd_line
 
         app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
 
-        out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
+        logger.debug("Tid : %s" % app_fut.tid)
+        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid) for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
         if out_futs:
             return app_fut, out_futs
         else:
             return app_fut
 
+
+
+def app_wrapper (func):
+
+    def wrapper(*args, **kwargs):
+        logger.debug("App wrapper begins")
+        x = func(*args, **kwargs)
+        logger.debug("App wrapper ends")
+        return x
+
+    return wrapper
 
 class PythonApp(AppBase):
     """ Extends AppBase to cover the Python App
@@ -229,6 +203,7 @@ class PythonApp(AppBase):
         ''' Initialize the super. This bit is the same for both bash & python apps.
         '''
         super().__init__ (func, executor, walltime=60, exec_type="python")
+
 
     def __call__(self, *args, **kwargs):
         ''' This is where the call to a python app is handled
@@ -245,16 +220,11 @@ class PythonApp(AppBase):
                    App_fut
 
         '''
+        #logger.debug("Submitting to : %s", self.executor )
+        #app_fut = self.executor.submit(app_wrapper(self.func), *args, **kwargs)
+        app_fut = self.executor.submit(self.func, *args, **kwargs)
 
-        if type(self.executor) == DataFlowKernel:
-            logger.debug("Submitting to DataFlowKernel : %s",  self.executor)
-            app_fut = self.executor.submit(self.func, *args, **kwargs)
-
-        else:
-            logger.debug("Submitting to Executor: %s",  self.executor)
-            app_fut = self.executor.submit(self.func, *args, **kwargs)
-
-        out_futs = [DataFuture(app_fut, o, parent=app_fut) for o in kwargs.get('outputs', []) ]
+        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid) for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
         if out_futs:
             return app_fut, out_futs

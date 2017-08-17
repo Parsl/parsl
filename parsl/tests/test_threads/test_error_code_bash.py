@@ -9,28 +9,29 @@ from parsl import *
 import parsl
 
 workers = ThreadPoolExecutor(max_workers=4)
+dfk = DataFlowKernel(workers)
 
-@App('bash', workers)
+@App('bash', dfk)
 def command_not_found(stderr='std.err', stdout='std.out'):
     cmd_line = 'catdogcat'
 
-@App('bash', workers)
+@App('bash', dfk)
 def bash_misuse(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit(15)'
 
-@App('bash', workers)
+@App('bash', dfk)
 def div_0(stderr='std.err', stdout='std.out'):
     cmd_line = '$((5/0))'
 
-@App('bash', workers)
+@App('bash', dfk)
 def invalid_exit(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit 3.141'
 
-@App('bash', workers)
+@App('bash', dfk)
 def not_executable(stderr='std.err', stdout='std.out'):
     cmd_line = '/dev/null'
 
-@App('bash', workers)
+@App('bash', dfk)
 def bad_format(stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {0}'
 

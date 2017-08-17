@@ -4,6 +4,7 @@
     This module implements the DataFutures.
 """
 from concurrent.futures import Future
+from parsl.data_provider.files import File
 import logging
 import os
 import parsl.app.errors
@@ -54,16 +55,19 @@ class DataFuture(Future):
                 super().set_result(parent_fu.result())
         return
 
-    def __init__ (self, fut, filepath, parent=None, filetype='local'):
+    def __init__ (self, fut, file_obj, parent=None, tid=None):
         super().__init__()
-        self.filetype = filetype
-        self.filepath = os.path.abspath(os.path.expanduser(filepath))
+        self._tid = tid
+        if type(file_obj) == str:
+            self.file_obj = File(file_obj)
+        else:
+            self.file_obj = file_obj
         self.parent   = parent
         self._exception = None
 
         if fut == None:
             logger.debug("Setting result to filepath since no future was passed")
-            self.set_result = self.filepath
+            self.set_result = self.file_obj
 
         else:
             if isinstance(fut, Future):
@@ -75,10 +79,17 @@ class DataFuture(Future):
         logger.debug("Creating DataFuture with parent : %s", parent)
         logger.debug("Filepath : %s", self.filepath)
 
+    @property
+    def tid(self):
+        return self._tid
+
+    @property
+    def filepath(self):
+        return self.file_obj.filepath
 
     @property
     def filename(self):
-        return self.filepath
+        return self.file_obj.filepath
 
     def result(self, timeout=None):
         ''' A blocking call that returns either the result or raises an exception.
@@ -108,7 +119,7 @@ class DataFuture(Future):
             else:
                 self.parent.result(timeout=timeout)
 
-        return self.filepath
+        return self.file_obj.filepath
 
     def cancel(self):
         if self.parent:
@@ -162,7 +173,7 @@ class DataFuture(Future):
                             self.__class__.__name__,
                             id(self),
                             _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.filetype + '_file' )
+                            self.filepath + '_file' )
                 return '<%s at %#x state=%s>' % (
                     self.__class__.__name__,
                     id(self),
