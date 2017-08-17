@@ -12,16 +12,16 @@ from parsl.execution_provider.execution_provider_base import ExecutionProvider
 from azureDeployer import Deployer
 
 translate_table = {'PD': 'PENDING',
-                    'R': 'RUNNING',
-                    'CA': 'CANCELLED',
-                    'CF': 'PENDING',  # (configuring),
-                    'CG': 'RUNNING',  # (completing),
-                    'CD': 'COMPLETED',
-                    'F': 'FAILED',  # (failed),
-                    'TO': 'TIMEOUT',  # (timeout),
-                    'NF': 'FAILED',  # (node failure),
-                    'RV': 'FAILED',  # (revoked) and
-                    'SE': 'FAILED'}  # (special exit state
+                   'R': 'RUNNING',
+                   'CA': 'CANCELLED',
+                   'CF': 'PENDING',  # (configuring),
+                   'CG': 'RUNNING',  # (completing),
+                   'CD': 'COMPLETED',
+                   'F': 'FAILED',  # (failed),
+                   'TO': 'TIMEOUT',  # (timeout),
+                   'NF': 'FAILED',  # (node failure),
+                   'RV': 'FAILED',  # (revoked) and
+                   'SE': 'FAILED'}  # (special exit state
 
 template_string = """
 cd ~
@@ -30,19 +30,25 @@ sudo apt-get install -y python3 python3-pip ipython
 sudo pip3 install ipyparallel parsl
 """
 
+
 class AzureProvider(ExecutionProvider):
     def __init__(self, config):
+        """Initialize Azure provider. Uses Azure python sdk to provide execution resources"""
         self.config = self.read_configs(config)
         self.config_logger()
-        credentials = UserPassCredentials(self.config['username'], self.config['pass'])
+        credentials = UserPassCredentials(
+            self.config['username'], self.config['pass'])
         subscription_id = self.config['subscriptionId']
 
         # self.resource_client = ResourceManagementClient(credentials, subscription_id)
         # self.storage_client = StorageManagementClient(credentials, subscription_id)
 
         self.resource_group_name = 'my_resource_group'
-        self.deployer = Deployer(subscription_id, self.resource_group_name, self.read_configs(config))
-        
+        self.deployer = Deployer(
+            subscription_id,
+            self.resource_group_name,
+            self.read_configs(config))
+
     def config_logger(self):
         """Configure Logger"""
         logger = logging.getLogger("AzureProvider")
@@ -74,17 +80,19 @@ class AzureProvider(ExecutionProvider):
         return config
 
     def ipyparallel_configuration(self):
-        config=''
+        config = ''
         try:
             with open(os.path.expanduser(self.config['iPyParallelConfigFile'])) as f:
                 config = f.read().strip()
         except Exception as e:
             self.logger.error(e)
-            self.logger.info("Couldn't find user ipyparallel config file. Trying default location.")
+            self.logger.info(
+                "Couldn't find user ipyparallel config file. Trying default location.")
             with open(os.path.expanduser("~/.ipython/profile_parallel/security/ipcontroller-engine.json")) as f:
                 config = f.read().strip()
         else:
-            self.logger.error("Cannot find iPyParallel config file. Cannot proceed.")
+            self.logger.error(
+                "Cannot find iPyParallel config file. Cannot proceed.")
             return -1
         ipptemplate = """
 cat <<EOF> ipengine.json
@@ -97,12 +105,15 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return ipptemplate
 
     def submit(self):
+        """Uses AzureDeployer to spin up an instance and connect it to the ipyparallel controller"""
         self.deployer.deploy()
 
     def status(self):
+        """Get status of azure VM. Not implemented yet."""
         raise NotImplemented
 
     def cancel(self):
+        """Destroy an azure VM"""
         self.deployer.destroy()
 
     def scale_in(self):
@@ -116,4 +127,3 @@ if __name__ == '__main__':
     config = "azureconf.json"
     provider = AzureProvider(config)
     provider.submit()
-
