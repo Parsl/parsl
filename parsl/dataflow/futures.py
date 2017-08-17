@@ -61,13 +61,16 @@ class AppFuture(Future):
 
 
     def __init__ (self, parent, tid=None):
-        self.tid = tid
+        self._tid = tid
         super().__init__()
         self.parent   = parent
         #if self.parent:
         #    parent.add_done_callback(self.parent_callback)
         self._outputs = []
 
+    @property
+    def tid(self):
+        return self._tid
 
     def update_parent(self, fut):
         ''' Handle the case where the user has called result on the AppFuture
