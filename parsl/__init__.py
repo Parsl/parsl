@@ -15,8 +15,9 @@ To get all the required functionality, we suggest importing the library as follo
 Logging
 -------
 
-Following the general logging philosophy of python libraries, by default `Parsl <https://github.com/swift-lang/swift-e-lab/>`_
-doesn't log anything. However the following helper functions are provided for logging:
+Following the general logging philosophy of python libraries, by default
+`Parsl <https://github.com/swift-lang/swift-e-lab/>`_ doesn't log anything.
+However the following helper functions are provided for logging:
 
 1. set_stream_logger
     This sets the logger to the StreamHandler. This is quite useful when working from
@@ -26,23 +27,21 @@ doesn't log anything. However the following helper functions are provided for lo
     This sets the logging to a file. This is ideal for reporting issues to the dev team.
 
 '''
+import logging
 
 from parsl.version import VERSION
 from parsl.app.app import App
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.data_provider.files import File
-
 import parsl.execution_provider
-import logging
-#import parsl.app.errors
 
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app_factory import AppFactoryFactory
 APP_FACTORY_FACTORY = AppFactoryFactory('central')
 #print(APP_FACTORY)
 
-__author__  = 'Yadu Nand Babuji'
+__author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
 __all__ = ['App', 'DataFlowKernel', 'ThreadPoolExecutor', 'IPyParallelExecutor']
@@ -98,7 +97,7 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
     logger.addHandler(handler)
 
 
-class NullHandler (logging.Handler):
+class NullHandler(logging.Handler):
     ''' Setup default logging to /dev/null since this is library.
 
     '''
