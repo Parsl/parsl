@@ -29,12 +29,15 @@ I'd recommend downloading the latest source and adding the source path to your P
 Running IPP
 ===========
 
-In order to run Parsl apps on Cori nodes, we need to first start an IPython controller on the login node,
-figuring out the IP address to use for the controller is a bit of a hassle on Cori. The internal IP addresses
-used that allows the compute nodes to contact the login nodes is usually : 128.55.144.130 + CoriLoginServer number.
-For eg Cori03 has 128.55.144.133 and Cori09 uses 128.55.144.139.
+In order to run Parsl apps on Cori nodes, we need to first start an IPython controller on the login node.
 
->>> ipcontroller --port=5XXXX --ip=<InternalIPAddress> 
+>>> ipcontroller --port=5XXXX --ip=*
+
+.. note:: If you are timeout errors from ipengines in the submit script logs it is most likely due to
+          connectivity issues between the controller and engine.In which case, try specifying the internal
+          IP addresses uses on the login node. On Cori the address used for login nodes that  allows the
+          compute nodes to contact the login nodes is usually : 128.55.144.130 + CoriLoginServer number.
+          For eg Cori03 has 128.55.144.133 and Cori09 uses 128.55.144.139.
 
 Once the ipcontroller is started in a separate terminal or in a screen session, we can now run parsl scripts.
 
