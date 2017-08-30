@@ -1,6 +1,6 @@
 Parsl - Parallel Scripting Library
 ==================================
-|licence| |build-status| |docs|
+|licence| |build-status| |docs| |citation|
 
 Parsl is a parallel scripting library that enables easy parallelism and workflow design.
 The latest version available on PyPi is v0.2.2 .
@@ -14,7 +14,9 @@ The latest version available on PyPi is v0.2.2 .
 .. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=latest
    :target: http://parsl.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
-
+.. |citation|
+   :target: https://github.com/Parsl/parsl/blob/master/CITATION
+   :alt: Preferred Citation
 
 QuickStart
 ==========
@@ -55,7 +57,7 @@ For Developers
 Requirements
 ============
 
-Parsl requires the following :
+Parsl requires the following:
 
 * Python 3.5+
 * Jupyter (for running notebook Tutorial), with Python3.5+ kernel
@@ -66,4 +68,9 @@ For testing:
 * nose
 * coverage
 
+Citation
+========
 
+If you use Parsl, please cite:
+
+Babuji, Yadu, Brizius, Alison, Chard, Kyle, Foster, Ian, Katz, Daniel S., Wilde, Michael, & Wozniak, Justin. (2017, August 30). Introducing Parsl: A Python Parallel Scripting Library. Zenodo. http://doi.org/10.5281/zenodo.853492
