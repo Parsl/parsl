@@ -7,7 +7,6 @@ import os
 import logging
 from concurrent.futures import Future
 from parsl.data_provider.files import File
-import parsl.app.errors
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +55,20 @@ class DataFuture(Future):
         return
 
     def __init__(self, fut, file_obj, parent=None, tid=None):
+        ''' Construct the DataFuture object. If the file_obj is a string convert
+        to a File.
+
+        Args:
+            - fut (AppFuture) : AppFuture that this DataFuture will track
+            - file_obj (string/File obj) : Something representing file(s)
+
+        Kwargs:
+            - parent ()
+            - tid (task_id) : Task id that this DataFuture tracks
+        '''
         super().__init__()
         self._tid = tid
-        if type(file_obj) == str:
+        if isinstance(file_obj, str):
             self.file_obj = File(file_obj)
         else:
             self.file_obj = file_obj
@@ -81,15 +91,21 @@ class DataFuture(Future):
 
     @property
     def tid(self):
+        ''' Returns the task_id of the task that will resolve this DataFuture
+        '''
         return self._tid
 
     @property
     def filepath(self):
+        ''' Filepath of the File object this datafuture represents
+        '''
         return self.file_obj.filepath
 
     @property
     def filename(self):
-        return self.file_obj.filepath
+        ''' Filepath of the File object this datafuture represents
+        '''
+        return self.filepath
 
     def result(self, timeout=None):
         ''' A blocking call that returns either the result or raises an exception.
@@ -122,6 +138,10 @@ class DataFuture(Future):
         return self.file_obj.filepath
 
     def cancel(self):
+        ''' Cancel the task that this DataFuture is tracking.
+
+            Note: This may not work
+        '''
         if self.parent:
             return self.parent.cancel
         else:
