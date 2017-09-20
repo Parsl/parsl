@@ -11,12 +11,9 @@ Make sure you have python3.6 and Parsl installed with all it's dependencies.
 Running IPP
 ===========
 
-In order to run Parsl apps on Midway nodes, we need to first start an IPython controller on the login node,
-figuring out the IP address to use for the controller is a bit of a hassle on Midway. The internal IP addresses
-used that allows the compute nodes to contact the login nodes is similar to 128.135.112.73 on swift.rcc.uchicago.edu.
-This varies between login nodes.
+In order to run Parsl apps on Midway nodes, we need to first start an IPython controller on the login node.
 
->>> ipcontroller --port=5XXXX --ip=<InternalIPAddress>
+>>> ipcontroller --port=5XXXX --ip=*
 
 Once the ipcontroller is started in a separate terminal or in a screen session, we can now run parsl scripts.
 
