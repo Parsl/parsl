@@ -174,8 +174,8 @@ class Slurm(ExecutionProvider):
         ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
-        If tasks_per_node <  1:
-             1/tasks_per_node is provisioned
+        If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
+        
 
         If tasks_per_node == 1:
              A single node is provisioned
@@ -200,6 +200,11 @@ class Slurm(ExecutionProvider):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
             return None
 
+        # Note: Fix this later to avoid confusing behavior.
+        # We should always allocate blocks in integer counts of node_granularity
+        if blocksize < self.config["execution"]["options"]["node_granularity"]:
+            blocksize = self.config["execution"]["options"]["node_granularity"]
+
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
         script_path = "{0}/{1}.submit".format(self.config["execution"]["options"]["submit_script_dir"],
@@ -208,7 +213,7 @@ class Slurm(ExecutionProvider):
         nodes = math.ceil(float(blocksize) / self.config["execution"]["options"]["tasks_per_node"])
         logger.debug("Requesting blocksize:%s tasks_per_node:%s nodes:%s", blocksize,
                      self.config["execution"]["options"]["tasks_per_node"],nodes)
-        
+
         job_config = self.config["execution"]["options"]
         job_config["nodes"] = nodes
         job_config["slurm_overrides"] = job_config.get("slurm_overrides", '')
