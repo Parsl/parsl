@@ -13,7 +13,7 @@ Cori makes Python3.6 available via Conda. We'll use these packages to install Pa
 Now let's create a Conda virtual environment to isolate the following package installations and activate it.
  
 >>> conda create --name parsl-env
->>> source activat parsl-env
+>>> source activate parsl-env
 
 If the last step worked your prompt is now prefixed by (parsl-env). Let's install the packages:
 
