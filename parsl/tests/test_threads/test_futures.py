@@ -62,7 +62,8 @@ def test_fut_case_2():
     ''' Testing the behavior of DataFutures where there are no dependencies
     '''
     output_f = 'test_fut_case_2.txt'
-    app_fu, [data_fu] = delay_incr(1, delay=10, outputs=[output_f])
+    app_fu = delay_incr(1, delay=10, outputs=[output_f])
+    data_fu = app_fu.outputs[0]
 
     status = data_fu.done()
     result = data_fu.result()
@@ -106,8 +107,10 @@ def test_fut_case_4():
     '''
     output_f1 = 'test_fut_case_4_f1.txt'
     output_f2 = 'test_fut_case_4_f2.txt'
-    app_1, [data_1] = delay_incr(1, delay=0.5, outputs=[output_f1])
-    app_2, [data_2] = delay_incr(app_1, delay=0.5, outputs=[output_f2])
+    app_1 = delay_incr(1, delay=0.5, outputs=[output_f1])
+    data_1 = app_1.outputs[0]
+    app_2 = delay_incr(app_1, delay=0.5, outputs=[output_f2])
+    data_2 = app_2.outputs[0]
 
     status = data_2.done()
     result = data_2.result()
