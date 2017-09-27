@@ -21,7 +21,8 @@ def cat (inputs=[], outputs=[], stdout=None, stderr=None):
 def test_files():
 
     fs = [File('data/' + f) for f in os.listdir('data')]
-    x, [d_x] = cat (inputs=fs, outputs=['cat_out.txt'], stdout='f_app.out', stderr='f_app.err')
+    x = cat (inputs=fs, outputs=['cat_out.txt'], stdout='f_app.out', stderr='f_app.err')
+    d_x = x.outputs[0]
     print(x.result())
     print(d_x, type(d_x))
 
@@ -45,10 +46,11 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1,depth):
         print("Launching {0} with {1}".format(i, prev))
-        fu, [prev] = increment(inputs=[prev], # Depend on the future from previous call
+        fu = increment(inputs=[prev], # Depend on the future from previous call
                                outputs=[File("test{0}.txt".format(i))], # Name the file to be created here
                                stdout="incr{0}.out".format(i),
                                stderr="incr{0}.err".format(i))
+        [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
 
