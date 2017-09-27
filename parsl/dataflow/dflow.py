@@ -229,26 +229,25 @@ class DataFlowKernel(object):
         depends = []
         count   = 0
         for dep in args :
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
+            if isinstance(dep, Future) or issubclass(dep.__class__, Future):
                 if not dep.done():
                     count += 1
-                    depends.extend([dep])
+                depends.extend([dep])
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
+            if isinstance(dep, Future) or issubclass(dep.__class__, Future):
                 if not dep.done():
                     count += 1
-                    depends.extend([dep])
+                depends.extend([dep])
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
-            dep = kwargs[key]
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
+            if issubclass(dep.__class__, Future) or isinstance(dep, Future):
                 if not dep.done():
                     count += 1
-                    depends.extend([dep])
+                depends.extend([dep])
 
         logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count, depends
@@ -322,9 +321,9 @@ class DataFlowKernel(object):
                (AppFuture) [DataFutures,]
         '''
 
-        #task_id  = uuid.uuid4()
         task_id = self.task_count
         self.task_count += 1
+
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
         #dep_cnt  = self._count_deps(depends, task_id)
