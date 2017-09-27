@@ -42,10 +42,11 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1,depth):
         print("Launching {0} with {1}".format(i, prev))
-        fu, [prev] = increment(inputs=[prev], # Depend on the future from previous call
+        fu  = increment(inputs=[prev], # Depend on the future from previous call
                                outputs=["test{0}.txt".format(i)], # Name the file to be created here
                                stdout="incr{0}.out".format(i),
                                stderr="incr{0}.err".format(i))
+        [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
 
@@ -57,7 +58,7 @@ def test_increment(depth=5):
 
 
 def test_increment_slow(depth=5, dur=0.5):
-    ''' Test simple pipeline A->B...->N
+    ''' Test simple pipeline slow (sleep.5) A->B...->N
     '''
     # Create the first file
     open("test0.txt", 'w').write('0\n')
@@ -68,11 +69,12 @@ def test_increment_slow(depth=5, dur=0.5):
     print("**************TYpe : ", type(dur), dur)
     for i in range(1,depth):
         print("Launching {0} with {1}".format(i, prev))
-        fu, [prev] = slow_increment(dur,
+        fu = slow_increment(dur,
                                     inputs=[prev], # Depend on the future from previous call
                                     outputs=["test{0}.txt".format(i)], # Name the file to be created here
                                     stdout="incr{0}.out".format(i),
                                     stderr="incr{0}.err".format(i))
+        [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
 
