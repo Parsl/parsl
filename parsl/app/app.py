@@ -178,10 +178,8 @@ class BashApp(AppBase):
         logger.debug("Tid : %s" % app_fut.tid)
         out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid) for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
-        if out_futs:
-            return app_fut, out_futs
-        else:
-            return app_fut
+
+        return app_fut
 
 
 
@@ -226,10 +224,8 @@ class PythonApp(AppBase):
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid) for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
-        if out_futs:
-            return app_fut, out_futs
-        else:
-            return app_fut
+
+        return app_fut
 
 
 def App(apptype, executor, walltime=60):
