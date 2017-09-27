@@ -66,11 +66,10 @@ def test_parallel_for (n=10):
 
     start = time.time()
     for i in range(0,n):
-        d[i], _ = echo_to_file(inputs=['Hello World {0}'.format(i)],
-                               outputs=['{0}/out.{1}.txt'.format(outdir, i)],
-                               stdout='{0}/std.{1}.out'.format(outdir, i),
-                               stderr='{0}/std.{1}.err'.format(outdir, i),
-                           )
+        d[i] = echo_to_file(inputs=['Hello World {0}'.format(i)],
+                            outputs=['{0}/out.{1}.txt'.format(outdir, i)],
+                            stdout='{0}/std.{1}.out'.format(outdir, i),
+                            stderr='{0}/std.{1}.err'.format(outdir, i))
         #time.sleep(0.01)
 
     assert len(d.keys())   == n , "Only {0}/{1} keys in dict".format(len(d.keys()), n)
