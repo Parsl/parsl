@@ -175,7 +175,6 @@ class Slurm(ExecutionProvider):
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
-        
 
         If tasks_per_node == 1:
              A single node is provisioned
