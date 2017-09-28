@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#SBATCH --job-name=$jobname
+#SBATCH --output=parsl-test-0.1.submit.stdout
+#SBATCH --error=parsl-test-0.1.submit.stderr
+#SBATCH --nodes=$nodes
+#SBATCH --partition=$queue
+#SBATCH --time=$walltime
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --account=$account
+
+
+cat <<EOF > ipengine.json
+$ipengine_json
+EOF
+
+mkdir -p '.ipengine_logs'
+ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
