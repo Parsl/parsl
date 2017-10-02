@@ -12,11 +12,11 @@ to a variety of compute resources.
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/libsubmit/blob/master/LICENSE
    :alt: Apache Licence V2.0
-.. |build-status| image:: https://travis-ci.org/Parsl/parsl.svg?branch=master
+.. |build-status| image:: https://travis-ci.org/Parsl/libsubmit.svg?branch=master
    :target: https://travis-ci.org/Parsl/libsubmit
    :alt: Build status
-.. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=latest
-   :target: http://parsl.readthedocs.io/en/latest/?badge=latest
+.. |docs| image:: https://readthedocs.org/projects/libsubmit/badge/?version=latest
+   :target: http://libsubmit.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
 
