@@ -1,5 +1,5 @@
 from setuptools import setup
-from parsl.version import VERSION
+from libsubmit.version import VERSION
 
 install_requires = [
     'ipyparallel',
