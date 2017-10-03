@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from libsubmit import errors
+from libsubmit.error import *
 from libsubmit.slurm.slurm import Slurm
 from libsubmit.aws.aws import EC2Provider
 from libsubmit.azure.azureProvider import AzureProvider
