@@ -9,7 +9,7 @@ import atexit
 
 from azure.common.credentials import UserPassCredentials
 from libsubmit.execution_provider_base import ExecutionProvider
-from azureDeployer import Deployer
+from libsubmit.azure.azureDeployer import Deployer
 
 translate_table = {'PD': 'PENDING',
                    'R': 'RUNNING',
