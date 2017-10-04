@@ -1,1 +1,5 @@
 ipyparallel
+boto3
+azure
+haikunator
+python-novaclient

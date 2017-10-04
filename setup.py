@@ -5,6 +5,8 @@ install_requires = [
     'ipyparallel',
     'boto3',
     'azure'
+    'haikunator',
+    'python-novaclient'
     ]
 
 tests_require = [
