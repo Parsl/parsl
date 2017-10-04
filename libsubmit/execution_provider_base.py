@@ -26,6 +26,12 @@ class ExecutionProvider(metaclass=ABCMeta):
         ''' We haven't yet decided on what the args to this can be,
         whether it should just be func, args, kwargs or be the partially evaluated
         fn
+
+        Returns:
+             - A job identifier, this could be an integer, string etc
+
+        Raises:
+             - ExecutionProviderExceptions or its subclasses
         '''
 
         pass
@@ -35,6 +41,17 @@ class ExecutionProvider(metaclass=ABCMeta):
         ''' We haven't yet decided on what the args to this can be,
         whether it should just be func, args, kwargs or be the partially evaluated
         fn
+
+        Args:
+             - A list of job identifiers
+
+        Returns:
+             - A list of status from ['PENDING', 'RUNNING', 'CANCELLED', 'COMPLETED',
+               'FAILED', 'TIMEOUT']
+
+        Raises:
+             - ExecutionProviderExceptions or its subclasses
+
         '''
 
         pass
@@ -44,6 +61,15 @@ class ExecutionProvider(metaclass=ABCMeta):
         ''' We haven't yet decided on what the args to this can be,
         whether it should just be func, args, kwargs or be the partially evaluated
         fn
+
+        Args:
+             - A list of job identifiers
+
+        Returns:
+             - A list of status from cancelling the job which can be True, False
+
+        Raises:
+             - ExecutionProviderExceptions or its subclasses
         '''
 
         pass
