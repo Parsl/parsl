@@ -4,7 +4,7 @@ from libsubmit.version import VERSION
 install_requires = [
     'ipyparallel',
     'boto3',
-    'azure'
+    'azure',
     'haikunator',
     'python-novaclient'
     ]
