@@ -27,3 +27,14 @@ class ScriptPathError(ExecutionProviderExceptions):
         return "Unable to write submit script:{0} Reason:{1}".format(self.script_path,
                                                                      self.reason)
 
+class OptionalModuleMissing(ExecutionProviderExceptions):
+    ''' Error raised a required module is missing for a optional/extra provider
+    '''
+    def __init__ (self, module_names, reason):
+        self.module_names = module_names
+        self.reason = reason
+
+    def __repr__ (self):
+        return "Unable to Initialize provider.Missing:{0},  Reason:{1}".format(self.module_names,
+                                                                               self.reason)
+
