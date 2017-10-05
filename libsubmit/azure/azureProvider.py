@@ -5,6 +5,7 @@ import time
 import logging
 import atexit
 from libsubmit.execution_provider_base import ExecutionProvider
+from libsubmit.error import *
 
 try :
     from azure.common.credentials import UserPassCredentials
