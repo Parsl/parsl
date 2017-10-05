@@ -8,6 +8,7 @@ import logging
 import atexit
 
 from libsubmit.execution_provider_base import ExecutionProvider
+from libsubmit.error import *
 
 try :
     import boto3
@@ -52,13 +53,14 @@ pip3 install scipy
 class EC2Provider(ExecutionProvider):
 
     def __init__(self, config):
+
+        if not _boto_enabled :
+            raise OptionalModuleMissing(['boto3'], "AWS Provider requires boto3 module.")
+
         """Initialize provider"""
         self.config = self.read_configs(config)
         self.set_instance_vars()
         self.config_logger()
-
-        if not _boto_enabled :
-            raise OptionalModuleMissing(['boto3'], "AWS Provider requires boto3 module.")
 
         try:
             self.read_state_file()
