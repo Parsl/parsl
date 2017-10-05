@@ -5,8 +5,8 @@ import math
 import time
 from string import Template
 from libsubmit.execution_provider_base import ExecutionProvider
-import libsubmit.error as ep_error
 from libsubmit.exec_utils import execute_no_wait
+
 logger = logging.getLogger(__name__)
 
 

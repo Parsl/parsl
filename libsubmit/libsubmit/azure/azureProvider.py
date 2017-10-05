@@ -1,15 +1,20 @@
-#!/bin/bash
-
 import os
 import pprint
 import json
 import time
 import logging
 import atexit
-
-from azure.common.credentials import UserPassCredentials
 from libsubmit.execution_provider_base import ExecutionProvider
-from libsubmit.azure.azureDeployer import Deployer
+from libsubmit.error import *
+
+try :
+    from azure.common.credentials import UserPassCredentials
+    from libsubmit.azure.azureDeployer import Deployer
+
+except ImportError :
+    _azure_enabled = False
+else:
+    _azure_enabled = True
 
 translate_table = {'PD': 'PENDING',
                    'R': 'RUNNING',
@@ -36,6 +41,10 @@ class AzureProvider(ExecutionProvider):
         """Initialize Azure provider. Uses Azure python sdk to provide execution resources"""
         self.config = self.read_configs(config)
         self.config_logger()
+
+        if not _azure_enabled :
+            raise OptionalModuleMissing(['azure', 'haikunator'], "Azure Provider requires the azure and haikunator modules.")
+
         credentials = UserPassCredentials(
             self.config['username'], self.config['pass'])
         subscription_id = self.config['subscriptionId']

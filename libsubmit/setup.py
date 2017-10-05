@@ -2,11 +2,7 @@ from setuptools import setup
 from libsubmit.version import VERSION
 
 install_requires = [
-    'ipyparallel',
-    'boto3',
-    'azure',
-    'haikunator',
-    'python-novaclient'
+    'ipyparallel'
     ]
 
 tests_require = [
@@ -29,6 +25,11 @@ setup(
     package_data={'': ['LICENSE']},
     packages=['libsubmit'],
     install_requires=install_requires,
+    extras_require = {
+        'aws' : ['boto3'],
+        'azure' : ['azure', 'haikunator'],
+        'jetstream' : ['python-novaclient']
+        },
     classifiers = [
         # Maturity
         'Development Status :: 3 - Alpha',
