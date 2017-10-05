@@ -36,7 +36,6 @@ def set_stream_logger(name='libsubmit', level=logging.DEBUG, format_string=None)
     '''
 
     if format_string is None:
-        #format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
         format_string = "%(asctime)s %(name)s [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
@@ -46,7 +45,6 @@ def set_stream_logger(name='libsubmit', level=logging.DEBUG, format_string=None)
     formatter = logging.Formatter(format_string)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
 
 def set_file_logger(filename, name='libsubmit', level=logging.DEBUG, format_string=None):
     ''' Add a stream log handler
