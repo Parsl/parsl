@@ -3,27 +3,8 @@ import logging
 import subprocess
 from string import Template
 from libsubmit.execution_provider_base import ExecutionProvider
-
+from libsubmit.exec_utils import execute_wait
 logger = logging.getLogger(__name__)
-
-def execute_wait (cmd, walltime):
-    retcode = -1
-    stdout = None
-    stderr = None
-    try :
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        proc.wait()
-        stdout = proc.stdout.read()
-        stderr = proc.stderr.read()
-        retcode = proc.returncode
-
-    except Exception as e:
-        print("Caught exception : {0}".format(e))
-        logger.warn("Execution of command [%s] failed due to \n %s ",  (cmd, e))
-
-    print("RunCommand Completed {0}".format(cmd))
-    return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
-
 
 translate_table = { 'PD' :  'PENDING',
                     'R'  :  'RUNNING',
