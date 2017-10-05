@@ -7,21 +7,22 @@ Here are the steps:
 
 .. code:: bash
 
-      # Depending on permission all of the following might have to be run as root.
-      sudo su
+   # Create a new git tag :
+   git tag <MAJOR>.<MINOR>.<BUG_REV>
+   # Push tag to github :
+   git push origin <TAG_NAME>
 
-      # Make sure to have twine installed
-      pip3 install twine
+   # Depending on permission all of the following might have to be run as root.
+   sudo su
 
-      # Create a source distribution
-      python3 setup.py sdist
+   # Make sure to have twine installed
+   pip3 install twine
 
-      # Create a wheel package, which is a prebuilt package
-      python3 setup.py bdist_wheel
+   # Create a source distribution
+   python3 setup.py sdist
 
-      # Register | One time only
-      # Register the package with pypi using twine
-      twine register dist/parsl-<VERSION>-py3-none-any.whl
+   # Create a wheel package, which is a prebuilt package
+   python3 setup.py bdist_wheel
 
-      # Upload the package with twine
-      twine upload dist/*
+   # Upload the package with twine
+   twine upload dist/*
