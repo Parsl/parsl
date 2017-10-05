@@ -1,15 +1,23 @@
-import novaclient
-from novaclient import api_versions
-from novaclient import client
-from novaclient import exceptions as exc
-import novaclient.extension
-from novaclient.i18n import _
-from novaclient import utils
 import sys
 import os
 import configparser
 import ast
 import logging
+
+try :
+    import novaclient
+    from novaclient import api_versions
+    from novaclient import client
+    from novaclient import exceptions as exc
+    import novaclient.extension
+    from novaclient.i18n import _
+    from novaclient import utils
+
+except ImportError:
+    _nova_enabled = False
+else:
+    _nova_enabled = True
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +42,10 @@ class Jetstream(object):
         self.blocks = {}
         self.pool   = poolname
         controller_file = "~/.ipython/profile_default/security/ipcontroller-engine.json"
+
+        if not _nova_enabled :
+            raise OptionalModuleMissing(['python-novaclient'], "Jetstream Provider requires the python-novaclient module.")
+        
 
         self.client = client.Client(api_versions.APIVersion("2.0"),
                                     config['sites.jetstream']['OS_USERNAME'],
