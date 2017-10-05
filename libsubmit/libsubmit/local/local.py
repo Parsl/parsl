@@ -5,7 +5,6 @@ import math
 import time
 from string import Template
 from libsubmit.execution_provider_base import ExecutionProvider
-import libsubmit.error as ep_error
 
 logger = logging.getLogger(__name__)
 
