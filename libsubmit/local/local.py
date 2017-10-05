@@ -6,36 +6,9 @@ import time
 from string import Template
 from libsubmit.execution_provider_base import ExecutionProvider
 import libsubmit.error as ep_error
-
+from libsubmit.exec_utils import execute_no_wait
 logger = logging.getLogger(__name__)
 
-def execute_no_wait (cmd, walltime):
-    ''' Synchronously execute a commandline string on the shell.
-    Args:
-         - cmd (string) : Commandline string to execute
-         - walltime (int) : walltime in seconds, this is not really used now.
-
-    Returns:
-         A tuple of the following:
-         retcode : Return code from the execution, -1 on fail
-         stdout  : stdout string
-         stderr  : stderr string
-
-    Raises:
-         None.
-    '''
-    retcode = -1
-    stdout = None
-    stderr = None
-    try :
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        pid = proc.pid
-
-    except Exception as e:
-        print("Caught exception : {0}".format(e))
-        logger.warn("Execution of command [%s] failed due to \n %s ",  (cmd, e))
-
-    return pid, proc
 
 
 translate_table = { 'PD' :  'PENDING',
