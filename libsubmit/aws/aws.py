@@ -8,8 +8,15 @@ import logging
 import atexit
 
 from libsubmit.execution_provider_base import ExecutionProvider
-import boto3
-from botocore.exceptions import ClientError
+
+try :
+    import boto3
+    from botocore.exceptions import ClientError
+
+except ImportError:
+    _boto_enabled = False
+else:
+    _boto_enabled = True
 
 
 AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
@@ -49,10 +56,10 @@ class EC2Provider(ExecutionProvider):
         self.config = self.read_configs(config)
         self.set_instance_vars()
         self.config_logger()
-        # if not os.path.exists(
-        #     self.config["execution"]["options"]["submit_script_dir"]):
-        #     os.makedirs(self.config["execution"]
-        #                 ["options"]["submit_script_dir"])
+
+        if not _boto_enabled :
+            raise OptionalModuleMissing(['boto3'], "AWS Provider requires boto3 module.")
+
         try:
             self.read_state_file()
         except Exception as e:
