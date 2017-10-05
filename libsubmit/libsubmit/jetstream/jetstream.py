@@ -18,6 +18,7 @@ except ImportError:
 else:
     _nova_enabled = True
 
+from libsubmit.error import *
 
 logger = logging.getLogger(__name__)
 
