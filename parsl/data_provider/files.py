@@ -64,3 +64,9 @@ class File(object):
         to the origin side
         '''
         pass
+
+
+if __name__ == '__main__' :
+
+    x = File('./files.py')
+
