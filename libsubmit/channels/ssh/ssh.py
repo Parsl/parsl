@@ -114,7 +114,8 @@ class SshChannel ():
                 print("Caught unknown error with script_dir e:",e)
 
         try:
-            status = self.sftp_client.put(local_source, remote_dest, confirm=True)
+            s = self.sftp_client.put(local_source, remote_dest, confirm=True)
+            status = True
         except IOError as e:
             print ("Caught IOerror : {0}", e)
 
