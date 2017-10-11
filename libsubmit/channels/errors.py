@@ -88,3 +88,18 @@ class SSHException(ChannelError):
         self.reason = "Error connecting or establishing an SSH session"
         self.hostname = hostname
         self.e = e
+
+class FileCopyException(ChannelError):
+    ''' File copy operation failed
+
+    Contains:
+    reason(string)
+    e (paramiko exception object)
+    hostname (string)
+    '''
+
+    def __init__(self, e, hostname):
+        super().__init__()
+        self.reason = "File copy failed due to {0}".format(e)
+        self.hostname = hostname
+        self.e = e
