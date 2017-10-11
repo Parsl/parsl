@@ -19,7 +19,7 @@ from parsl.execution_provider.aws.aws import EC2Provider
 from parsl.execution_provider.local.local import Local
 
 # Channels
-from parsl.channels.ssh_cl import SshClClient
+#from libsubmit import SshChannel, LocalChannel
 
 class ExecProviderFactory (object):
 
@@ -42,8 +42,9 @@ class ExecProviderFactory (object):
                                      'local' : Local,
                                      'aws' : EC2Provider }
 
-        self.channels = { 'ssh-cl' : SshClClient,
-                          'local' : None }
+        self.channels = { 'ssh-cl' : None,
+                          'local'  : None
+                        }
 
 
     def make (self, config):
