@@ -9,7 +9,7 @@ echo "--------ENV VARS----------"
 env
 echo "--------------------------"
 
-$cobalt_overrides
+$overrides
 
 $user_script
 
