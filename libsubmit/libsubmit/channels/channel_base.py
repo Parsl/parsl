@@ -20,6 +20,17 @@ class Channel (metaclass=ABCMeta):
         '''
         pass
 
+    @abstractproperty
+    def script_dir(self):
+        '''
+        Args:
+            - None
+
+        Returns:
+            - Channel script dir
+        '''
+        pass
+
     @abstractmethod
     def execute_no_wait(self, cmd, walltime, *args, **kwargs):
         ''' Optional. THis is infrequently used.
@@ -43,7 +54,7 @@ class Channel (metaclass=ABCMeta):
             dest_dir (string) : Absolute path of the directory to move to
 
         Returns:
-            status (Bool) : True if the transfer succeeded.
+            destination_path (string)
         '''
         pass
 
