@@ -38,3 +38,15 @@ class OptionalModuleMissing(ExecutionProviderExceptions):
         return "Unable to Initialize provider.Missing:{0},  Reason:{1}".format(self.module_names,
                                                                                self.reason)
 
+
+class ChannelRequired(ExecutionProviderExceptions):
+    ''' Execution provider requires a channel.
+    '''
+    def __init__ (self, provider, reason):
+        self.provider = module_names
+        self.reason = reason
+
+    def __repr__ (self):
+        return "Unable to Initialize provider.Provider:{0}, Reason:{1}".format(self.provider,
+                                                                               self.reason)
+
