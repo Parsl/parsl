@@ -8,7 +8,7 @@ class LocalChannel (Channel):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__ (self, userhome, envs):
+    def __init__ (self, userhome, envs, channel_script_dir="./.scripts"):
         '''
         Args:
         userhome : This is provided as a way to override and set a specific userhome
@@ -16,7 +16,13 @@ class LocalChannel (Channel):
         shell
         '''
         self.userhome = userhome
+        self.hostname = "localhost"
         self.envs     = envs
+        self.channel_script_dir = os.path.abspath(channel_script_dir)
+
+    @property
+    def script_dir(self):
+        return self.channel_script_dir
 
     def execute_wait (self, cmd, walltime):
         ''' Synchronously execute a commandline string on the shell.
@@ -100,7 +106,10 @@ class LocalChannel (Channel):
             os.copyfile(source, local_dest)
 
         except OSerror as e:
-            raise FileCopyException(
+            raise FileCopyException(e, self.hostname)
+
+        return local_dest
+
 
     def close(self ):
         ''' There's nothing to close here, and this really doesn't do anything
