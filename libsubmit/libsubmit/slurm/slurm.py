@@ -197,8 +197,9 @@ class Slurm(ExecutionProvider):
 
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        self.channel.push_file(script_path, self.channel.script_dir)
-        retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(script_path), 3)
+        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
+
+        retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(channel_script_path), 3)
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
