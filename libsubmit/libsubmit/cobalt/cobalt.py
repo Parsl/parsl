@@ -280,7 +280,7 @@ if __name__ == "__main__" :
                         "max_walltime" : "00:25:00",
                         "account" : "ExM",
                         "submit_script_dir" : ".scripts",
-                        "cobalt_overrides" : "",
+                        "overrides" : "",
                         }
                    }
               }
