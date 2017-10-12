@@ -32,6 +32,17 @@ def test_error_3 ( ):
     else:
         assert type(e) == BadHostKeyException, "Expected SSException, got :{0}".format(e)
 
+def test_error_3 ( ):
+    ''' This should work
+    '''
+    try :
+        connect_and_list("edison.nersc.gov", "yadunand")
+    except BadHostKeyException as e:
+        print("Caught exception BadHostKeyException: ",e)
+    else:
+        assert False, "Expected SSException, got :{0}".format(e)
+
+
 if __name__ == "__main__" :
 
     tests = [ test_error_1, test_error_2, test_error_3 ]

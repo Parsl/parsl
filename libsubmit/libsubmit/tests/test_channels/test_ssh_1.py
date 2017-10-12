@@ -7,20 +7,42 @@ def connect_and_list(hostname, username):
     return out
 
 
-def test_connect_1 ():
+def test_midway ():
+    ''' Test ssh channels to midway
+    '''
+    url = 'midway.rcc.uchicago.edu'
+    uname = 'yadunand'
+    out = connect_and_list(url, uname)
+    print("Sitename :{0}  hostname:{1}".format(url, out))
 
-    sites = {'midway' : {'url': 'midway.rcc.uchicago.edu',
-                         'uname' : 'yadunand'},
-             'swift'  : {'url': 'swift.rcc.uchicago.edu',
-                         'uname' : 'yadunand'},
-             'cori'   : {'url': 'cori.nersc.gov',
-                         'uname' : 'yadunand'}
-             }
+def test_beagle ():
+    ''' Test ssh channels to beagle
+    '''
+    url = 'login04.beagle.ci.uchicago.edu'
+    uname = 'yadunandb'
+    out = connect_and_list(url, uname)
+    print("Sitename :{0}  hostname:{1}".format(url, out))
 
-    for site in sites.values():
-        out = connect_and_list(site['url'], site['uname'])
-        print("Sitename :{0}  hostname:{1}".format(site['url'],
-                                                   out))
+def test_osg ():
+    ''' Test ssh connectivity to osg
+    '''
+    url = 'login.osgconnect.net'
+    uname = 'yadunand'
+    out = connect_and_list(url, uname)
+    print("Sitename :{0}  hostname:{1}".format(url, out))
+
+
+
+def test_cori ():
+    ''' Test ssh connectivity to cori
+    '''
+    url = 'cori.nersc.gov'
+    uname = 'yadunand'
+    out = connect_and_list(url, uname)
+    print("Sitename :{0}  hostname:{1}".format(url, out))
+
+    
+
 if __name__ == "__main__":
 
-    test_connect_1()
+    pass
