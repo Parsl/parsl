@@ -80,3 +80,9 @@ class ExecutionProvider(metaclass=ABCMeta):
         and Executors wrapped in a resource provider
         '''
         pass
+
+    @abstractproperty
+    def channels_required(self):
+        ''' Returns Bool, depending on need for channels
+        '''
+        pass
