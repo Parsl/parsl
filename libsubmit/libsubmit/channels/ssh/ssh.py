@@ -138,15 +138,18 @@ class SshChannel ():
                 # Directory already exists. Nothing to do
                 pass
             else :
-                print("Caught unknown error with script_dir e:",e)
+                logger.error("File push failed due to SFTP client failure")
+                raise FileCopyException(e, self.hostname)
+
 
         try:
             s = self.sftp_client.put(local_source, remote_dest, confirm=True)
             status = True
-        except IOError as e:
-            print ("Caught IOerror : {0}", e)
+        except Exception as e:
+            logger.error("File push failed")
+            raise FileCopyException(e, self.hostname)
 
-        return status
+        return remote_dest
 
     def close(self):
         return self.ssh_client.close()
