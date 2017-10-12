@@ -6,7 +6,6 @@ import time
 from string import Template
 from libsubmit.execution_provider_base import ExecutionProvider
 from libsubmit.slurm.template import template_string
-from libsubmit.exec_utils import execute_wait
 
 import libsubmit.error as ep_error
 
@@ -35,15 +34,20 @@ class Slurm(ExecutionProvider):
     '''
 
     def __repr__ (self):
-        return "<Slurm Execution Provider for site:{0}>".format(self.sitename)
+        return "<Slurm Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
 
-    def __init__ (self, config):
+    def __init__ (self, config, channel=None):
         ''' Initialize the Slurm class
 
         Args:
              - Config (dict): Dictionary with all the config options.
         '''
 
+        self.channel = channel
+        if self.channel == None:
+            logger.error("Provider:Slurm cannot be initialized without a channel")
+            raise(ep_error.ChannelRequired(self.__class__.__name__,
+                                           "Missing a channel to execute commands"))
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
@@ -54,6 +58,9 @@ class Slurm(ExecutionProvider):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
+    @property
+    def channels_required(self):
+        return True
 
     ###########################################################################################################
     # Status
@@ -72,7 +79,7 @@ class Slurm(ExecutionProvider):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = execute_wait("squeue --job {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("squeue --job {0}".format(job_id_list), 3)
         for line in stdout.split('\n'):
             parts = line.split()
             if parts and parts[0] != 'JOBID' :
@@ -185,12 +192,13 @@ class Slurm(ExecutionProvider):
 
         job_config = self.config["execution"]["options"]
         job_config["nodes"] = nodes
-        job_config["slurm_overrides"] = job_config.get("slurm_overrides", '')
+        job_config["overrides"] = job_config.get("overrides", '')
         job_config["user_script"] = cmd_string
 
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        retcode, stdout, stderr = execute_wait("sbatch {0}".format(script_path), 3)
+        self.channel.push_file(script_path, self.channel.script_dir)
+        retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(script_path), 3)
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
@@ -222,7 +230,7 @@ class Slurm(ExecutionProvider):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = execute_wait("scancel {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("scancel {0}".format(job_id_list), 3)
         rets = None
         if retcode == 0 :
             for jid in job_ids:
