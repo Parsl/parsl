@@ -2,11 +2,13 @@ from setuptools import setup
 from libsubmit.version import VERSION
 
 install_requires = [
-    'ipyparallel'
+    'ipyparallel',
+    'paramiko'
     ]
 
 tests_require = [
     'ipyparallel',
+    'paramiko',
     'mock>=1.0.0',
     'nose',
     'pytest'
