@@ -1,4 +1,5 @@
 ipyparallel
+paramiko
 boto3
 azure
 haikunator
