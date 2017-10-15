@@ -131,8 +131,7 @@ class Slurm(ExecutionProvider):
         '''
 
         try:
-            submit_script = Template(template_string).substitute(**configs,
-                                                                 jobname=job_name)
+            submit_script = Template(template_string).substitute( jobname=job_name, **configs)
             print("Script_filename : ", script_filename)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
