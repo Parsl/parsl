@@ -7,7 +7,7 @@ template_string = '''#!/bin/bash
 #SBATCH --partition=$partition
 #SBATCH --time=$walltime
 #SBATCH --ntasks-per-node=$tasks_per_node
-$slurm_overrides
+$overrides
 
 $user_script
 '''
