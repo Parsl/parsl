@@ -70,6 +70,10 @@ class EC2Provider(ExecutionProvider):
                 "No State File. Cannot load previous options. Creating new infrastructure\n")
             self.write_state_file()
 
+    @property
+    def channels_required(self):
+        return False
+
     def set_instance_vars(self):
         """Initialize instance variables"""
         self.current_blocksize = 0
