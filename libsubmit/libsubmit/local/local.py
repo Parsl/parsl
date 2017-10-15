@@ -30,7 +30,7 @@ class Local(ExecutionProvider):
     This provider uses sbatch to submit, squeue for status and scancel to cancel jobs.
     '''
 
-    def __init__ (self, config):
+    def __init__ (self, config, channel_script_dir=None):
         ''' Initialize the Slurm class
         Args:
              - Config (dict): Dictionary with all the config options.
@@ -40,8 +40,17 @@ class Local(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
 
+        if channel_script_dir:
+            self.channel_script_dir = channel_script_dir
+        else:
+            self.channel_script_dir = os.path.abspath("./.scripts")
+
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
+
+    @property
+    def script_dir(self):
+        return self.channel_script_dir
 
     ###########################################################################################################
     # Status
@@ -133,6 +142,10 @@ class Local(ExecutionProvider):
     @property
     def current_capacity(self):
         return len(self.resources)
+
+    @property
+    def channels_required(self):
+        return False
 
 
 if __name__ == "__main__" :
