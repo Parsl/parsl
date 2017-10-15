@@ -41,6 +41,9 @@ class Slurm(ExecutionProvider):
 
         Args:
              - Config (dict): Dictionary with all the config options.
+
+        KWargs:
+             - Channel (None): A channel is required for slurm.
         '''
 
         self.channel = channel
@@ -60,6 +63,8 @@ class Slurm(ExecutionProvider):
 
     @property
     def channels_required(self):
+        ''' Returns Bool on whether a channel is required
+        '''
         return True
 
     ###########################################################################################################
@@ -247,7 +252,11 @@ class Slurm(ExecutionProvider):
 
     @property
     def current_capacity(self):
-        return self
+        ''' Returns the current blocksize.
+        This may need to return more information in the futures :
+        { minsize, maxsize, current_requested }
+        '''
+        return self.current_blocksize
 
     def _test_add_resource (self, job_id):
         self.resources.extend([{'job_id' : job_id,
