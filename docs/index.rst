@@ -13,42 +13,69 @@ interfaces that allow much more fine grain composition of an execution environme
 An execution provider abstracts these resources and provides a single uniform
 interface to them.
 
+ExecutionProviders
+------------------
 
-ExecutionProvider
------------------
+An execution provider is basically an adapter to various types of execution resources. The providers abstract
+away the interfaces provided by various systems to request, monitor, and cancel computate resources.
 
 .. autoclass:: libsubmit.execution_provider_base.ExecutionProvider
-   :members:  __init__, submit, status, cancel, scaling_enabled
+   :members:  __init__, submit, status, cancel, scaling_enabled, channels_required
 
 
 Slurm
------
+^^^^^
 
 .. autoclass:: libsubmit.slurm.slurm.Slurm
-   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submite_script, current_capacity
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
-.. autofunction:: libsubmit.slurm.slurm.execute_wait
+Cobalt
+^^^^^^
+
+.. autoclass:: libsubmit.cobalt.cobalt.Cobalt
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+
+Local
+^^^^^
+
+.. autoclass:: libsubmit.cobalt.cobalt.Cobalt
+   :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
 
 
-Amazon Web Services
--------------------
 
-.. autoclass:: libsubmit.aws.aws.EC2Provider
-    :members:  __init__, submit, status, cancel, read_state_file, show_summary, create_session, create_vpc, spin_up_instance, shut_down_instance, get_instance_state, teardown, scale_in, scale_out
+Channels
+--------
 
-Azure
------
+For certain resources such as campus clusters or supercomputers at research laboratories, resource requirements
+may require authentication. For instance some resources may allow access to their job schedulers from only
+their login-nodes which require you to authenticate on through SSH, GSI-SSH and sometimes even require
+two factor authentication. Channels are simple abstractions that enable the ExecutionProvider component to talk
+to the resource managers of compute facilities. The simplest Channel, *LocalChannel* simply executes commands
+locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
-.. autoclass:: libsubmit.azure.azureProvider.AzureProvider
-   :members:  __init__, submit, status, cancel
+.. autoclass:: libsubmit.channels.channel_base.Channel
+   :members:  execute_wait, script_dir, execute_no_wait, push_file, close
 
-.. autoclass:: libsubmit.azure.azureDeployer.Deployer
-   :members: __init__, deploy, destroy
+LocalChannel
+^^^^^^^^^^^^
+.. autoclass:: libsubmit.channels.local.local.LocalChannel
+   :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
+
+SshChannel
+^^^^^^^^^^^^
+.. autoclass:: libsubmit.channels.ssh.ssh.SshChannel
+   :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
+
+SshILChannel
+^^^^^^^^^^^^
+.. autoclass:: libsubmit.channels.ssh_il.ssh_il.SshILChannel
+   :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
+
 
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
 
