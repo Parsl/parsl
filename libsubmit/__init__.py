@@ -24,7 +24,7 @@ __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
 __all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'Jetstream', 'Midway', 'Local',
-           'LocalChannel', 'SshChannel']
+           'LocalChannel', 'SshChannel', 'SshILChannel']
 
 def set_stream_logger(name='libsubmit', level=logging.DEBUG, format_string=None):
     '''
