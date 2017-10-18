@@ -76,26 +76,20 @@ class Condor(ExecutionProvider):
 
         job_id_list  = ' '.join(self.resources.keys())
 
-        # Condor job tracking is a bit inverted from SLURM. Assume all jobs are
-        # completed unless we can condor_q them
-        jobs_completed = list(self.resources.keys()) 
-
         retcode, stdout, stderr = self.channel.execute_wait("condor_q {0} -af:jr JobStatus".format(job_id_list), 3)
 
         '''
         Example output: 
 
-        $ condor_q 34520408.5 -af:jr JobStatus
-        34520408.5 1
+        $ condor_q 34524642.0 34524643.0 -af:jr JobStatus
+        34524642.0 2
+        34524643.0 1
         '''
+
 
         for line in stdout.split('\n'):
             parts = line.split()
             job_id = parts[0]
-            try:
-                jobs_completed.remove(job_id)
-            except Exception as e:
-                logger.error("Could not remove job id %s from list of job ids %s" % (job_id, jobs_completed))
             status = translate_table.get(parts[1], 'UNKNOWN')
             self.resources[job_id]['status'] = status
 
