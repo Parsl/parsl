@@ -9,7 +9,7 @@ described below.
 
 The config structure looks like this:
 
-.. code-block:: pool
+.. code-block:: python
 
    config = { "poolName" : <string: Name of the pool>,
               "provider" : <string: Name of provider>,
