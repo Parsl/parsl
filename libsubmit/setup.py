@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from libsubmit.version import VERSION
 
 install_requires = [
@@ -25,7 +25,7 @@ setup(
     license='Apache 2.0',
     download_url = 'https://github.com/Parsl/libsubmit/archive/master.zip',
     package_data={'': ['LICENSE']},
-    packages=['libsubmit'],
+    packages=find_packages(),
     install_requires=install_requires,
     extras_require = {
         'aws' : ['boto3'],
