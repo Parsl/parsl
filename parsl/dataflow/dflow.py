@@ -29,7 +29,7 @@ from parsl.dataflow.error import *
 from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
 from parsl.app.futures import DataFuture
-
+from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 # Exceptions
 
 logger = logging.getLogger(__name__)
@@ -38,12 +38,15 @@ class DataFlowKernel(object):
     """ DataFlowKernel
     """
 
-    def __init__(self, executor, lazy_fail=True, fail_retries=2):
+    def __init__(self, config=None, executors=None, lazy_fail=True, fail_retries=2):
         """ Initialize the DataFlowKernel
-        Args:
-            executor (Executor): An executor object.
+
+        Please note that keyword args passed to the DFK here will always override
+        options passed in via the config.
 
         KWargs:
+            config (Dict) : A single data object encapsulating all config attributes
+            executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
             lazy_fail(Bool) : Default=True, determine failure behavior
             fail_retries(int): Default=2, Set the number of retry attempts in case of failure
 
@@ -51,16 +54,28 @@ class DataFlowKernel(object):
             DataFlowKernel object
         """
 
-        #self.pending         = {}
-        #self.runnable        = {}
-        #self.done            = {}
+        self.config          = config
+        if self.config :
+            # Create the executors
+            epf = EPF()
+            self.executors = epf.make(self.config)
+
+            # set global vars from config
+            self.lazy_fail = self.config["globals"].get("lazyFail", lazy_fail)
+            self.fail_retires = self.config["globals"].get("fail_retries", fail_retries)
+
+        else:
+            self.fail_retries = fail_retries
+            self.lazy_fail    = lazy_fail
+            self.executors    = executors
+
         self.task_count      = 0
-        self.lazy_fail       = lazy_fail
-        self.fail_retries    = 2
         self.fut_task_lookup = {}
         self.tasks           = {}
-        self.executor       = executor
-        self.scalable        = self.executor.scaling_enabled
+
+        self.executor = self.executors[0]
+        logger.warn("Using only executor: {0}".format(self.executor))
+
 
     @staticmethod
     def _count_deps(depends, task_id):
