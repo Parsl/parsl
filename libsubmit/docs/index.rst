@@ -37,7 +37,6 @@ Contents:
    userguide/overview
    userguide/configuring
 
-.. _dev_docs:
 .. toctree::
    :maxdepth: 4
    :caption: Developer Documentation
