@@ -8,14 +8,14 @@ class LocalChannel (Channel):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__ (self, userhome, envs, channel_script_dir="./.scripts"):
+    def __init__ (self, userhome=".", envs={}, channel_script_dir="./.scripts"):
         '''
-        Args:
-        userhome : This is provided as a way to override and set a specific userhome
-        envs (dict) : A dictionary of env variables to be set when launching the
-        shell
+        KwArgs:
+             userhome (string): (default='.') This is provided as a way to override and set a specific userhome
+             envs (dict) : A dictionary of env variables to be set when launching the shell
+             channel_script_dir (string): (default="./.scripts") Directory to place scripts
         '''
-        self.userhome = userhome
+        self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
         self.envs     = envs
         self.channel_script_dir = os.path.abspath(channel_script_dir)
