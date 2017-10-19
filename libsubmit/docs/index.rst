@@ -13,6 +13,14 @@ interfaces that allow much more fine grain composition of an execution environme
 An execution provider abstracts these resources and provides a single uniform
 interface to them.
 
+This module provides the following functionality:
+
+   1. A standard interface to schedulers
+   2. Support for submitting, monitoring and cancelling jobs
+   3. A modular design, making it simple to add support for new resources.
+   4. Support for pushing files from client side to resources.
+
+
 Contents:
 
 .. toctree::
@@ -27,6 +35,7 @@ Contents:
    :caption: User Guide
 
    userguide/overview
+   userguide/configuring
 
 .. _dev_docs:
 .. toctree::
