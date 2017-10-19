@@ -8,7 +8,7 @@ import argparse
 import time 
 
 workers = ThreadPoolExecutor(max_workers = 4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
 def rand():
