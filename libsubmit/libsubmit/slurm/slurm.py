@@ -55,8 +55,8 @@ class Slurm(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
 
-        if not os.path.exists(self.config["execution"]["options"]["submit_script_dir"]):
-            os.makedirs(self.config["execution"]["options"]["submit_script_dir"])
+        if not os.path.exists(self.config["execution"]["script_dir"]):
+            os.makedirs(self.config["execution"]["script_dir"])
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
