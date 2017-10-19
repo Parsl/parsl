@@ -2,7 +2,8 @@ from setuptools import setup
 from parsl.version import VERSION
 
 install_requires = [
-    'ipyparallel'
+    'ipyparallel',
+    'libsubmit>=0.2.0'
     ]
 
 tests_require = [
@@ -17,12 +18,11 @@ setup(
     version=VERSION,
     description='Simple data dependent workflows in Python',
     long_description='Simple and easy parallel workflows system for Python',
-    url='https://github.com/swift-lang/swift-e-lab',
+    url='https://github.com/Parsl/parsl',
     author='Yadu Nand Babuji',
     author_email='yadu@uchicago.edu',
     license='Apache 2.0',
-    download_url = 'https://github.com/swift-lang/swift-e-lab/archive/0.1.tar.gz',
-
+    download_url = 'https://github.com/Parsl/parsl/archive/0.2.1.tar.gz',
     package_data={'': ['LICENSE']},
     packages=['parsl', 'parsl.app', 'parsl.dataflow', 'parsl.executors',
               'parsl.execution_provider', 'parsl.data_provider'],
@@ -39,5 +39,5 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     keywords = ['Workflows', 'Scientific computing'],
-    #tests_require=tests_reequire
+    #tests_require=tests_require
 )
