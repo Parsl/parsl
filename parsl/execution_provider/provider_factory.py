@@ -41,6 +41,7 @@ class ExecProviderFactory (object):
         self.execution_providers = { 'slurm' : Slurm,
                                      'local' : Local,
                                      'aws' : EC2Provider,
+                                     'cobalt' : Cobalt,
                                      None : lambda *args, **kwargs : None }
 
         self.channels = { 'ssh' : SshChannel,
