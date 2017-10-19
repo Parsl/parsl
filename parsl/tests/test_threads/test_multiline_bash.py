@@ -7,7 +7,7 @@ import shutil
 import argparse
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def multi_line(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):

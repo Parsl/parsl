@@ -12,7 +12,7 @@ import argparse
 # Let's create a pool of threads to execute our functions
 workers = ThreadPoolExecutor(max_workers=4)
 # We pass the workers to the DataFlowKernel which will execute our Apps over the workers.
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('bash', dfk)

@@ -9,7 +9,7 @@ from parsl import *
 import parsl
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def command_not_found(stderr='std.err', stdout='std.out'):
