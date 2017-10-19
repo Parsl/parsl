@@ -75,12 +75,17 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
             self._scaling_enabled = True
             logger.debug("Starting IpyParallelExecutor with provider:%s", execution_provider)
             try:
-                for i in range(self.config["execution"]["options"].get("init_parallelism", 0)):
+                logger.debug("Attempting scale out -----------------")
+                for i in range(self.config["execution"]["block"].get("initBlocks", 1)):
                     eng = self.execution_provider.submit(self.launch_cmd, 1)
+                    logger.debug("Launched block : {0}:{1}".format(i, eng))
                     self.engines.extend(eng)
 
             except Exception as e:
-                logging.debug("Scaling out failed at init failed : %s", e)
+                logger.error("Class:{0} Dir:{1}".format(type(e), dir(e)))
+                logger.error("Scaling out failed : %s", e)
+                raise e
+                             
 
         else:
             self._scaling_enabled = False
