@@ -3,7 +3,7 @@ from parsl.version import VERSION
 
 install_requires = [
     'ipyparallel',
-    'libsubmit>=0.2.0'
+    'libsubmit>=0.2.1'
     ]
 
 tests_require = [
