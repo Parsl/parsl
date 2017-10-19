@@ -69,11 +69,13 @@ class DataFlowKernel(object):
             self.lazy_fail    = lazy_fail
             self.executors    = executors
 
+        logger.debug("Created executors : ", self.executors)
         self.task_count      = 0
         self.fut_task_lookup = {}
         self.tasks           = {}
 
-        self.executor = self.executors[0]
+        first = self.config["sites"][0]["site"]
+        self.executor = self.executors[first]
         logger.warn("Using only executor: {0}".format(self.executor))
 
 
