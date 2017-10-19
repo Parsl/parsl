@@ -9,7 +9,7 @@ described below.
 
 The config structure looks like this:
 
-.. code-block:: json
+.. code-block:: pool
 
    config = { "poolName" : <string: Name of the pool>,
               "provider" : <string: Name of provider>,
@@ -17,13 +17,13 @@ The config structure looks like this:
               "minBlocks" : <int: Minimum number of blocks>,
               "maxBlocks" : <int: Maximum number of blocks>,
               "initBlocks" : <int: Initial number of blocks>,
-              "block" : { # Specify the shape of the block
+              "block" : {     # Specify the shape of the block
                   "nodes" : <int: Number of blocs, integer>,
-                  "taskblocks" : <int: Number of task blocks in each block>,
+                  "taskBlocks" : <int: Number of task blocks in each block>,
                   "walltime" : <string: walltime in HH:MM:SS format for the block>
                   "options" : { # These are provider specific options
                        "partition" : <string: Name of partition/queue>,
                        "account" : <string: Account id>,
                        "overrides" : <string: String to override and specify options to scheduler>
                   }
-              }
+            }
