@@ -31,31 +31,58 @@ class Cobalt(ExecutionProvider):
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
+    { "execution" : {
+         "executor" : "ipp",
+         "provider" : "slurm",  # LIKELY SHOULD BE BOUND TO SITE                                                                                                        
+         "script_dir" : ".scripts",
+         "block" : { # Definition of a block                                                                                                                            
+             "nodes" : 1,            # of nodes in that block                                                                                                           
+             "taskBlocks" : 1,        # total tasks in a block                                                                                                          
+             "walltime" : "00:05:00",
+             "scriptDir" : "."
+             "Options" : {
+                  "partition" : "debug",
+                  "account" : "pi-wilde",
+                  "overrides" : "#SBATCH--constraint=haswell"
+             }
+         }
+    }
+
     '''
 
     def __repr__ (self):
         return "<Cobalt Execution Provider for site:{0}>".format(self.sitename)
 
-    def __init__ (self, config):
+    def __init__ (self, config, channel=None):
         ''' Initialize the Cobalt class
 
         Args:
              - Config (dict): Dictionary with all the config options.
         '''
+        self.channel = channel
+        if self.channel == None:
+            logger.error("Provider:Cobalt cannot be initialized without a channel")
+            raise(ep_error.ChannelRequired(self.__class__.__name__,
+                                           "Missing a channel to execute commands"))
 
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
 
-        self.max_walltime = wtime_to_minutes(self.config["execution"]["options"].get("max_walltime", '01:00:00'))
+        self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
         
-        if not os.path.exists(self.config["execution"]["options"].get("submit_script_dir", '.scripts')):
-            os.makedirs(self.config["execution"]["options"]["submit_script_dir"])
+        if not os.path.exists(self.config["execution"]["block"].get("scriptDir", '.scripts')):
+            os.makedirs(self.config["execution"]["block"]["scriptDir"])
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-
+    @property
+    def channels_required(self):
+        ''' Returns Bool on whether a channel is required
+        '''
+        return True
+    
     ###########################################################################################################
     # Status
     ###########################################################################################################
@@ -73,7 +100,7 @@ class Cobalt(ExecutionProvider):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = execute_wait("qstat -u $USER", 3)
+        retcode, stdout, stderr = self.channel.execute_wait("qstat -u $USER", 3)
         for line in stdout.split('\n'):
             if line.startswith('=') : continue
 
@@ -174,39 +201,51 @@ class Cobalt(ExecutionProvider):
 
         '''
 
-        if self.current_blocksize >= self.config["execution"]["options"]["max_parallelism"]:
+        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
             return None
 
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.config["execution"]["options"]["node_granularity"]:
-            blocksize = self.config["execution"]["options"]["node_granularity"]
+        if blocksize < self.config["execution"]["block"].get("nodes", 1):
+            blocksize = self.config["execution"]["block"].get("nodes",1)
             
             
-        account_opt = "-A {0}".format(self.config["execution"]["options"].get("account", ''))
+        # Set account options
+        account_opt = ''
+        if self.config["execution"]["block"]["options"].get("account", None):            
+            account_opt = "-A {0}".format(self.config["execution"]["block"]["options"]["account"])
 
+        # Set job name
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
-        script_path = "{0}/{1}.submit".format(self.config["execution"]["options"]["submit_script_dir"],
+        # Set script path
+        script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
                                               job_name)
+        script_path = os.path.abspath(script_path)
 
-        nodes = math.ceil(float(blocksize) / self.config["execution"]["options"]["tasks_per_node"])
-        logger.debug("Requesting blocksize:%s tasks_per_node:%s nodes:%s", blocksize,
-                     self.config["execution"]["options"]["tasks_per_node"],nodes)
+        # Calculate nodes
+        nodes = self.config["execution"]["block"].get("nodes", 1)
+        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
+                     nodes,
+                     self.config["execution"]["block"].get("taskBlocks", 1))
 
-        job_config = self.config["execution"]["options"]
+        job_config = self.config["execution"]["block"]["options"]
         job_config["nodes"] = nodes
-        job_config["slurm_overrides"] = job_config.get("slurm_overrides", '')
+        job_config["overrides"] = job_config.get("overrides", '')
         job_config["user_script"] = cmd_string
 
 
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        retcode, stdout, stderr = execute_wait("qsub -n {0} -t {1} {2} {3}".format(nodes,
-                                                                                   self.max_walltime,
-                                                                                   account_opt,
-                                                                                   script_path), 3)
+        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
+
+        retcode, stdout, stderr = self.channel.execute_wait(
+            "qsub -n {0} -t {1} {2} {3}".format(nodes,
+                                                self.max_walltime,
+                                                account_opt,
+                                                channel_script_path), 3)
+
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
@@ -238,7 +277,7 @@ class Cobalt(ExecutionProvider):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = execute_wait("scancel {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("scancel {0}".format(job_id_list), 3)
         rets = None
         if retcode == 0 :
             for jid in job_ids:
@@ -266,24 +305,23 @@ class Cobalt(ExecutionProvider):
 if __name__ == "__main__" :
 
     
-    config = {"site" : "cooley",
-              "execution" :
-                  {"executor" : "ipp",
-                   "provider" : "cobalt",
-                   "channel"  : "local",
-                   "options"  :
-                       {"init_parallelism" : 2,
-                        "max_parallelism" : 2,
-                        "min_parallelism" : 0,
-                        "tasks_per_node"  : 1,
-                        "node_granularity" : 1,
-                        "max_walltime" : "00:25:00",
-                        "account" : "ExM",
-                        "submit_script_dir" : ".scripts",
-                        "overrides" : "",
-                        }
-                   }
-              }
+    config = {  "site" : "cooley",
+                "execution" :
+                    {"executor" : "ipp",
+                     "provider" : "cobalt",
+                     "block"  : {
+                         "initParallelism" : 2,
+                         "maxParallelism" : 2,
+                         "minParallelism" : 0,
+                         "walltime" : "00:25:00",
+                         "options" : {
+                             "account" : "ExM",
+                             "submit_script_dir" : ".scripts",
+                             "overrides" : "",
+                             }
+                         }
+                     }
+                }
 
     p = Cobalt(config)
     p._status()
