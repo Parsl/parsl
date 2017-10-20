@@ -63,20 +63,20 @@ class DataFlowKernel(object):
             # set global vars from config
             self.lazy_fail = self.config["globals"].get("lazyFail", lazy_fail)
             self.fail_retires = self.config["globals"].get("fail_retries", fail_retries)
+            first = self.config["sites"][0]["site"]
+            self.executor = self.executors[first]
+            logger.warn("Using only executor: {0}".format(self.executor))
+            
 
         else:
             self.fail_retries = fail_retries
             self.lazy_fail    = lazy_fail
             self.executors    = executors
+            self.executor     = executors[0]
 
-        logger.debug("Created executors : ", self.executors)
         self.task_count      = 0
         self.fut_task_lookup = {}
         self.tasks           = {}
-
-        first = self.config["sites"][0]["site"]
-        self.executor = self.executors[first]
-        logger.warn("Using only executor: {0}".format(self.executor))
 
 
     @staticmethod
