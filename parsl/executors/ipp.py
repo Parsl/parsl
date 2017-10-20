@@ -2,6 +2,7 @@ import os
 import logging
 from ipyparallel import Client
 from parsl.executors.base import ParslExecutor
+from parsl.executors.errors import *
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +80,13 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
                 for i in range(self.config["execution"]["block"].get("initBlocks", 1)):
                     eng = self.execution_provider.submit(self.launch_cmd, 1)
                     logger.debug("Launched block : {0}:{1}".format(i, eng))
-                    self.engines.extend(eng)
+                    if not eng:
+                        raise(ScalingFailed(self.execution_provider.sitename, 
+                                            "Ipp executor failed to scale via execution_provider"))
+                    self.engines.extend([eng])
+                logger.debug("scale out done-----------------")
 
             except Exception as e:
-                logger.error("Class:{0} Dir:{1}".format(type(e), dir(e)))
                 logger.error("Scaling out failed : %s", e)
                 raise e
                              
