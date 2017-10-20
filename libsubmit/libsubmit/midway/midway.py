@@ -48,7 +48,7 @@ class Midway(ExecutionProvider):
     def submit (self, *args, **kwargs):
         submit_template = None
         print("Not implemented")
-        logging.debug("Submit job")
+        logger.debug("Submit job")
         raise NotImplementedError
 
     def scale_out (self, size, name=None):
