@@ -11,21 +11,16 @@ import libsubmit.error as ep_error
 
 logger = logging.getLogger(__name__)
 
-translate_table = { 'PD' :  'PENDING',
-                    'R'  :  'RUNNING',
-                    'CA' : 'CANCELLED',
-                    'CF' : 'PENDING', #(configuring),
-                    'CG' : 'RUNNING', # (completing),
-                    'CD' : 'COMPLETED',
-                    'F'  : 'FAILED', # (failed),
-                    'TO' : 'TIMEOUT', # (timeout),
-                    'NF' : 'FAILED', # (node failure),
-                    'RV' : 'FAILED', #(revoked) and
-                    'SE' : 'FAILED' } # (special exit state
+translate_table = { 'queued'  :  'PENDING',
+                    'starting' : 'PENDING',
+                    'running' :  'RUNNING',
+                    'exiting' : 'COMPLETED',
+                    'killing' : 'COMPLETED'
+                  } # (special exit state
 
 
 class Cobalt(ExecutionProvider):
-    ''' Slurm Execution Provider
+    ''' Cobalt Execution Provider
 
     This provider uses sbatch to submit, squeue for status and scancel to cancel
     jobs. The sbatch script to be used is created from a template file in this
@@ -33,7 +28,7 @@ class Cobalt(ExecutionProvider):
 
     { "execution" : {
          "executor" : "ipp",
-         "provider" : "slurm",  # LIKELY SHOULD BE BOUND TO SITE                                                                                                        
+         "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE                                                                                                        
          "script_dir" : ".scripts",
          "block" : { # Definition of a block                                                                                                                            
              "nodes" : 1,            # of nodes in that block                                                                                                           
@@ -160,11 +155,26 @@ class Cobalt(ExecutionProvider):
         '''
 
         try:
+            script_dir = os.path.dirname(script_filename)
+            if script_dir :
+                os.makedirs(script_dir)
+
+        except Exception as e:
+            if e.errno == 17:
+                pass
+            else:
+                logger.error("Unable to create script_dir:{0} due to:{1}".format(
+                        script_dir,
+                        e))
+                raise(ep_error.ScriptPathError(script_filename, e ))
+
+        try:
             submit_script = Template(template_string).substitute(**configs,
                                                                  jobname=job_name)
-            print("Script_filename : ", script_filename)
+            
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
+            os.chmod(script_filename, 0o777)
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
@@ -234,33 +244,45 @@ class Cobalt(ExecutionProvider):
         job_config["nodes"] = nodes
         job_config["overrides"] = job_config.get("overrides", '')
         job_config["user_script"] = cmd_string
-
-
+        
+        logger.debug("Writing submit script")
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
+
+        print("*"*40, "Executing : ", "qsub -n {0} -t {1} {2} {3}".format(nodes,
+                                                                          self.max_walltime,
+                                                                          account_opt,
+                                                                          channel_script_path))
 
         retcode, stdout, stderr = self.channel.execute_wait(
             "qsub -n {0} -t {1} {2} {3}".format(nodes,
                                                 self.max_walltime,
                                                 account_opt,
                                                 channel_script_path), 3)
-
+            
+        # TODO : FIX this block
+        if retcode != 0 :
+            print("Returncode : {0}".format(retcode))
+            print("Launch failed stdout:\n{0}  \nstderr:{1}\n".format(stdout, stderr))
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
         job_id = None
 
         if retcode == 0 :
-            for line in stdout.split('\n'):
-                if line.startswith("Submitted batch job"):
-                    job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources[job_id] = {'job_id' : job_id,
-                                              'status' : 'PENDING',
-                                              'blocksize'   : blocksize }
+            print("Return code is zero")
+            # We should be getting only one line back
+            job_id = stdout.strip()
+            self.resources[job_id] = {'job_id' : job_id,
+                                      'status' : 'PENDING',
+                                      'blocksize'   : blocksize }
         else:
-            print("Submission of command to scale_out failed")
+            logger.error("Submission of command to scale_out failed: {0}".format(stderr))
+            raise(ep_error.ScaleOutFailed(self.__class__,
+                                          "Request to submit job to local scheduler failed"))
 
+        logger.debug("Returning job id : {0}".format(job_id))
         return job_id
 
     ###########################################################################################################
@@ -277,7 +299,7 @@ class Cobalt(ExecutionProvider):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.channel.execute_wait("scancel {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("qdel {0}".format(job_id_list), 3)
         rets = None
         if retcode == 0 :
             for jid in job_ids:
