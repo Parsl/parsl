@@ -17,7 +17,8 @@ class LocalChannel (Channel):
         '''
         self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
-        self.envs     = envs
+        local_env     = os.environ.copy()
+        self.envs     = local_env.update(envs)
         self.channel_script_dir = os.path.abspath(channel_script_dir)
 
     @property
@@ -57,6 +58,9 @@ class LocalChannel (Channel):
         except Exception as e:
             print("Caught exception : {0}".format(e))
             logger.warn("Execution of command [%s] failed due to \n %s ",  (cmd, e))
+            # Set retcode to non-zero so that this can be handled in the provider.
+            if retcode == 0:
+                retcode = -1
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
@@ -98,15 +102,16 @@ class LocalChannel (Channel):
         is not necessary, and nothing is done. Else a copy is made.
         '''
 
-        if os.path.dirpath(source) == dest_dir:
-            return True
-
         local_dest = dest_dir + '/' + os.path.basename(source)
-        try:
-            os.copyfile(source, local_dest)
 
-        except OSerror as e:
-            raise FileCopyException(e, self.hostname)
+        # Only attempt to copy if the target dir and source dir are different
+        if os.path.dirname(source) != dest_dir:
+            try:
+                os.copyfile(source, local_dest)
+                os.chmod(local_dest, 0o777)
+
+            except OSerror as e:
+                raise FileCopyException(e, self.hostname)
 
         return local_dest
 
