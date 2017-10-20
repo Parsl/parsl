@@ -131,7 +131,7 @@ class SshChannel ():
         remote_dest = remote_dir + '/' + os.path.basename(local_source)
 
         try:
-            self.sftp_client.mkdir(remote_dir)
+            self.sftp_client.mkdir(remote_dir)            
         except IOError as e:
             if e.errno == 2:
                 raise BadScriptPath(e, self.hostname)
@@ -147,6 +147,8 @@ class SshChannel ():
 
         try:
             s = self.sftp_client.put(local_source, remote_dest, confirm=True)
+            # Set perm because some systems require the script to be executable
+            s = self.sftp_client.chmod(remote_dest, 0o777)
             status = True
         except Exception as e:
             logger.error("File push failed")
