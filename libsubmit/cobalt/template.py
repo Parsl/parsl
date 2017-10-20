@@ -1,12 +1,9 @@
-template_string = '''#!/bin/bash
+template_string = '''#!/bin/bash -e
 
 echo "Starting Cobalt job script"
 
 echo "----Cobalt Nodefile: -----"
 cat $$COBALT_NODEFILE
-echo "--------------------------"
-echo "--------ENV VARS----------"
-env
 echo "--------------------------"
 
 $overrides
