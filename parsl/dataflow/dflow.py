@@ -21,6 +21,8 @@ Here's a simplified diagram of what happens internally::
 import copy
 import uuid
 import logging
+import atexit
+import signal
 from inspect import signature
 from concurrent.futures import Future
 from functools import partial
@@ -65,8 +67,6 @@ class DataFlowKernel(object):
             self.fail_retires = self.config["globals"].get("fail_retries", fail_retries)
             first = self.config["sites"][0]["site"]
             self.executor = self.executors[first]
-            logger.warn("Using only executor: {0}".format(self.executor))
-            
 
         else:
             self.fail_retries = fail_retries
@@ -78,6 +78,8 @@ class DataFlowKernel(object):
         self.fut_task_lookup = {}
         self.tasks           = {}
 
+        logger.warn("Using executor: {0}".format(self.executor))
+        atexit.register(self.cleanup)
 
     @staticmethod
     def _count_deps(depends, task_id):
@@ -401,3 +403,16 @@ class DataFlowKernel(object):
         for task in runnable:
             del self.pending[task]
         return
+
+
+    def cleanup (self):
+        '''  DataFlowKernel cleanup. This might involve killing resources explicitly and
+        sending die messages to IPP workers
+        '''
+        logger.debug("DFK cleanup initiated")
+        print(self.executors)
+        for executor in self.executors.values() :
+            if executor.scaling_enabled :
+                logger.warn("This is not well tested behavior")
+                job_ids = executor.execution_provider.resources.keys()
+                executor.scale_in(job_ids)
