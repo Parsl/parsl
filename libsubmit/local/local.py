@@ -3,10 +3,11 @@ import logging
 import subprocess
 import math
 import time
+import signal
 from string import Template
 from libsubmit.execution_provider_base import ExecutionProvider
 from libsubmit.exec_utils import execute_no_wait
-
+import libsubmit.error as ep_error
 logger = logging.getLogger(__name__)
 
 
@@ -30,12 +31,15 @@ class Local(ExecutionProvider):
     This provider uses sbatch to submit, squeue for status and scancel to cancel jobs.
     '''
 
-    def __init__ (self, config, channel_script_dir=None):
+    def __repr__ (self):
+        return "<Local Execution Provider for site:{0}>".format(self.sitename)
+
+    def __init__ (self, config, channel_script_dir=None, channel=None):
         ''' Initialize the Slurm class
         Args:
              - Config (dict): Dictionary with all the config options.
         '''
-
+        self.channel = channel
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
@@ -51,6 +55,12 @@ class Local(ExecutionProvider):
     @property
     def script_dir(self):
         return self.channel_script_dir
+
+    @property
+    def channels_required(self):
+        ''' Returns Bool on whether a channel is required
+        '''
+        return False
 
     ###########################################################################################################
     # Status
@@ -106,7 +116,7 @@ class Local(ExecutionProvider):
         '''
 
         job_id, proc = execute_no_wait(cmd_string, 3)
-        logging.debug("Started pid:%s proc:%s ", job_id, proc)
+        logger.debug("Started pid:%s proc:%s ", job_id, proc)
         self.resources[job_id] = {'job_id' : job_id,
                                   'status' : 'RUNNING',
                                   'blocksize' : blocksize,
@@ -128,8 +138,9 @@ class Local(ExecutionProvider):
         '''
 
         for job in job_ids:
-            print("Killing : ", job)
-            self.resources[job]['proc'].kill()
+            logger.debug("Terminating job/proc_id : {0}".format(job))
+            # Here we are assuming that for local, the job_ids are the process id's
+            os.killpg(os.getpgid(job), signal.SIGTERM)
             self.resources[job]['status'] = 'CANCELLED'
         rets = [True for i in job_ids]
 

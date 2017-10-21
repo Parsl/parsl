@@ -1,4 +1,8 @@
+import os
 import subprocess
+import logging
+
+logger = logging.getLogger(__name__)
 
 def execute_wait (cmd, walltime):
     '''  ***DEPRECATED***
@@ -21,7 +25,7 @@ def execute_wait (cmd, walltime):
     stdout = None
     stderr = None
     try :
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
         proc.wait(timeout=walltime)
         stdout = proc.stdout.read()
         stderr = proc.stderr.read()
@@ -53,7 +57,7 @@ def execute_no_wait (cmd, walltime):
     stdout = None
     stderr = None
     try :
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
         pid = proc.pid
 
     except Exception as e:
