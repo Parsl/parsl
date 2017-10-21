@@ -6,7 +6,7 @@ template_string = '''#!/bin/bash
 #SBATCH --nodes=$nodes
 #SBATCH --partition=$partition
 #SBATCH --time=$walltime
-#SBATCH --ntasks-per-node=$tasks_per_node
+#SBATCH --ntasks-per-node=$taskBlocks
 $overrides
 
 $user_script
