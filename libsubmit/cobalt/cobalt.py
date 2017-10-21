@@ -28,11 +28,11 @@ class Cobalt(ExecutionProvider):
 
     { "execution" : {
          "executor" : "ipp",
-         "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE                                                                                                        
+         "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
          "script_dir" : ".scripts",
-         "block" : { # Definition of a block                                                                                                                            
-             "nodes" : 1,            # of nodes in that block                                                                                                           
-             "taskBlocks" : 1,        # total tasks in a block                                                                                                          
+         "block" : { # Definition of a block
+             "nodes" : 1,            # of nodes in that block
+             "taskBlocks" : 1,        # total tasks in a block
              "walltime" : "00:05:00",
              "scriptDir" : "."
              "Options" : {
@@ -65,7 +65,7 @@ class Cobalt(ExecutionProvider):
         self.current_blocksize = 0
 
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
-        
+
         if not os.path.exists(self.config["execution"]["block"].get("scriptDir", '.scripts')):
             os.makedirs(self.config["execution"]["block"]["scriptDir"])
 
@@ -77,7 +77,7 @@ class Cobalt(ExecutionProvider):
         ''' Returns Bool on whether a channel is required
         '''
         return True
-    
+
     ###########################################################################################################
     # Status
     ###########################################################################################################
@@ -107,7 +107,7 @@ class Cobalt(ExecutionProvider):
                 if job_id not in self.resources : continue
 
                 status = translate_table.get(parts[4], 'UNKNOWN')
-                
+
                 self.resources[job_id]['status'] = status
                 jobs_missing.remove(job_id)
 
@@ -171,7 +171,7 @@ class Cobalt(ExecutionProvider):
         try:
             submit_script = Template(template_string).substitute(**configs,
                                                                  jobname=job_name)
-            
+
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
             os.chmod(script_filename, 0o777)
@@ -219,11 +219,11 @@ class Cobalt(ExecutionProvider):
         # We should always allocate blocks in integer counts of node_granularity
         if blocksize < self.config["execution"]["block"].get("nodes", 1):
             blocksize = self.config["execution"]["block"].get("nodes",1)
-            
-            
+
+
         # Set account options
         account_opt = ''
-        if self.config["execution"]["block"]["options"].get("account", None):            
+        if self.config["execution"]["block"]["options"].get("account", None):
             account_opt = "-A {0}".format(self.config["execution"]["block"]["options"]["account"])
 
         # Set job name
@@ -244,7 +244,7 @@ class Cobalt(ExecutionProvider):
         job_config["nodes"] = nodes
         job_config["overrides"] = job_config.get("overrides", '')
         job_config["user_script"] = cmd_string
-        
+
         logger.debug("Writing submit script")
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
@@ -260,7 +260,7 @@ class Cobalt(ExecutionProvider):
                                                 self.max_walltime,
                                                 account_opt,
                                                 channel_script_path), 3)
-            
+
         # TODO : FIX this block
         if retcode != 0 :
             print("Returncode : {0}".format(retcode))
@@ -326,7 +326,7 @@ class Cobalt(ExecutionProvider):
 
 if __name__ == "__main__" :
 
-    
+
     config = {  "site" : "cooley",
                 "execution" :
                     {"executor" : "ipp",
