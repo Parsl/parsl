@@ -15,15 +15,14 @@ config = {
               "channel" : "local",
               #"hostname" : "cooleylogin1.alcf.anl.gov",
               #"username" : "yadunand"
-              
           },
           "execution" : {
               "executor" : "ipp",
-              "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE                 
+              "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
               "script_dir" : ".scripts",
-              "block" : { # Definition of a block                                     
-                  "nodes" : 1,            # of nodes in that block                    
-                  "taskBlocks" : 1,       # total tasks in a block                   
+              "block" : { # Definition of a block
+                  "nodes" : 1,            # of nodes in that block
+                  "taskBlocks" : 1,       # total tasks in a block
                   "walltime" : "00:05:00",
                   "initBlocks" : 2,
                   "minBlocks" : 0,
