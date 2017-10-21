@@ -176,39 +176,46 @@ class Slurm(ExecutionProvider):
 
         '''
 
-        if self.current_blocksize >= self.config["execution"]["options"]["max_parallelism"]:
+        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
             return None
 
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.config["execution"]["options"]["node_granularity"]:
-            blocksize = self.config["execution"]["options"]["node_granularity"]
+        if blocksize < self.config["execution"]["block"].get("nodes", 1):
+            blocksize = self.config["execution"]["block"].get("nodes",1)
 
+        # Set job name
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
-        script_path = "{0}/{1}.submit".format(self.config["execution"]["options"]["submit_script_dir"],
+        # Set script path
+        script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
                                               job_name)
+        script_path = os.path.abspath(script_path)
 
-        nodes = math.ceil(float(blocksize) / self.config["execution"]["options"]["tasks_per_node"])
-        logger.debug("Requesting blocksize:%s tasks_per_node:%s nodes:%s", blocksize,
-                     self.config["execution"]["options"]["tasks_per_node"],nodes)
+        # Calculate nodes
+        nodes = self.config["execution"]["block"].get("nodes", 1)
+        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
+                     nodes,
+                     self.config["execution"]["block"].get("taskBlocks", 1))
 
-        job_config = self.config["execution"]["options"]
+        job_config = self.config["execution"]["block"]["options"]
+        # TODO : script_path might need to change to accommodate script dir set via channels
+        job_config["submit_script_dir"] = script_path
         job_config["nodes"] = nodes
+        job_config["taskBlocks"] = self.config["execution"]["block"].get("taskBlocks", 1)
+        job_config["walltime"] = self.config["execution"]["block"].get("walltime", "00:20:00")
         job_config["overrides"] = job_config.get("overrides", '')
         job_config["user_script"] = cmd_string
 
+        logger.debug("Writing submit script")
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(channel_script_path), 3)
-        logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
-                      stdout.strip(), stderr.strip())
 
         job_id = None
-
         if retcode == 0 :
             for line in stdout.split('\n'):
                 if line.startswith("Submitted batch job"):
@@ -218,6 +225,7 @@ class Slurm(ExecutionProvider):
                                               'blocksize'   : blocksize }
         else:
             print("Submission of command to scale_out failed")
+            logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         return job_id
 
