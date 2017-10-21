@@ -20,10 +20,10 @@ def test_factory_1() :
           "execution" : {
               "executor" : "ipp",
               "provider" : "slurm",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
+              "scriptDir" : ".scripts",
               "block" : { # Definition of a block
                   "nodes" : 1,            # of nodes in that block
-                  "taskblocks" : 1,        # total tasks in a block
+                  "taskBlocks" : 1,        # total tasks in a block
                   "walltime" : "00:05:00",
                   "Options" : {
                       "partition" : "debug",
@@ -50,9 +50,9 @@ def test_factory_2() :
                    "provider" : "local",
                    "channel"  : "None",
                    "options" :
-                  {"init_parallelism" : 2,
-                   "max_parallelism" : 2,
-                   "min_parallelism" : 0,
+                  {"initParallelism" : 2,
+                   "maxParallelism" : 2,
+                   "minParallelism" : 0,
                    "walltime" : "00:25:00",
                   }
                 }}
