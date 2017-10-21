@@ -132,7 +132,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
 
         return r
 
-    def scale_in (self, workers=1):
+    def scale_in (self, *args, **kwargs):
         ''' Scale in the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
@@ -140,7 +140,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
              NotImplemented exception
         '''
         if self.execution_provider :
-            r = self.execution_provider.scale_in(*args, **kwargs)
+            r = self.execution_provider.cancel(*args, **kwargs)
         else:
             logger.error("No execution provider available")
             r = None
