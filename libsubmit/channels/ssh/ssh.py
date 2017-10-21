@@ -19,7 +19,7 @@ class SshChannel ():
     '''
 
     def __init__ (self, hostname, username=None, password=None,
-                  channel_script_dir=None, **kwargs):
+                  scriptDir=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -44,8 +44,8 @@ class SshChannel ():
         self.ssh_client.load_system_host_keys()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        if channel_script_dir:
-            self.channel_script_dir = channel_script_dir
+        if scriptDir:
+            self.channel_script_dir = scriptDir
         else:
             self.channel_script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
 
@@ -131,7 +131,7 @@ class SshChannel ():
         remote_dest = remote_dir + '/' + os.path.basename(local_source)
 
         try:
-            self.sftp_client.mkdir(remote_dir)            
+            self.sftp_client.mkdir(remote_dir)
         except IOError as e:
             if e.errno == 2:
                 raise BadScriptPath(e, self.hostname)
