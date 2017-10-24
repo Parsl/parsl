@@ -1,91 +1,75 @@
 Roadmap
 =======
 
+.. role:: blue
 
-Here's a rough layout of the vision for Parsl.
+This is a list of features that Parsl has or will have.  Features that exist today are marked in blue.
 
+Data management
+---------------
 
-    Parsl1.0 -> Parsl2.0 -> Parsl3.0
+* :blue:`File abstraction to support representation of local and remote files.`
+* Support for a variety of common data access protocols (e.g., local, HTTP, Globus).
+* Input/output staging models that support transparent movement of data from source to a location on which it is accessible for compute. This includes staging to/from the client (script execution location), service (pilot job controller location), and worker node.
+* Support for creation of a sandbox and execution within this environment for systems without a shared file system, to isolate data and simplify script code. Sandbox execution can optionally be turned off in extreme scale environments.
+* Support for data caching at multiple levels and across sites.
 
+Execution core and parallelism (DFK)
+------------------------------------
 
+* Support for application and data futures within scripts
+* Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution according to data dependencies and throttled by resource limits
+* Well defined state transition model for task lifecycle
+* More efficient algorithms for managing dependency resolution.
+* Scheduling and allocation algorithms that determine job placement based on job and data requirements (including deadlines) as well as site capabilities
+* Logic to manage (provision, resize) execution resource block based on job requirements, and fitting tasks into the resource blocks
+* Retry logic to support recovery and fault tolerance
 
-Parsl 1.0
+Resource provisioning and execution
+-----------------------------------
+
+* Uniform abstraction for execution resources (to support resource provisioning, job submission, allocation management) on cluster, cloud, and supercomputing resources
+* Support for different execution models on any execution provider (e.g., pilot jobs using Ipython parallel on clusters and extreme-scale execution using Swift/T on supercomputers)
+* Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
+* API/method for {adding entries to, viewing entries} in repository
+* Support for remote execution using SSH and OAuth-based authentication
+* Utilizing multiple sites for a single script’s execution
+* IPP workers to support multiple threads of execution per node.
+* Support for user-defined containers as Parsl apps and orchestration of workflows comprised of containers
+
+Visualization, debugging, fault tolerance
+-----------------------------------------
+
+* Support for exception handling
+* Interface for accessing real-time state and audit logs
+* Visualization library that enables users to introspect graph, task, and data dependencies, as well as observe state of executed/executing tasks
+* Integration of visualization into jupyter
+* Support for visualizing dead/dying parts of the task graph and retrying with updates to the task.
+* Retry model to selectively re-execute only the failed branches of a workflow graph
+* Fault tolerance support for individual task execution
+
+Authentication and authorization
+--------------------------------
+
+* Seamless authentication using OAuth-based methods within Parsl scripts (e.g., native app grants)
+* Support for arbitrary identity providers and pass through to execution resources (including 2FA)
+* Support for transparent/scoped access to external services (e.g., Globus transfer)
+
+Ecosystem
 ---------
 
-In this round of development, we develop towards the goal of creating a Python library that allows dataflow based
-parallel workflows in python. Parsl workflows will execute over a wide range of computation resources such as Clouds,
-clusters, grids and HPC systems.
+* Support for CWL, ability to execute CWL workflows and use CWL app descriptions
+* Creation of library of Parsl apps and workflows
+* Provenance capture/export in standard formats
+* Automatic metrics capture and reporting to understand Parsl usage
 
-In this model, the user gets the familiarity of python with a few extensions that add parallelism to their scripts.
-Libraries are fully supported to the extent that objects passed between parallel and serial sections of the scripts
-are serializable. Here are a few articles on limitations of serialization:
+Documentation / Tutorials:
+--------------------------
 
-`Dill vs Pickle by Matt Rocklin <http://matthewrocklin.com/blog/work/2013/12/05/Parallelism-and-Serialization>`_
-`Mike McKerns on Stackoverflow about Dill limitations <http://stackoverflow.com/questions/32757656/what-are-the-pitfalls-of-using-dill-to-serialise-scikit-learn-statsmodels-models>`_
-
-IPyParallel and Security
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-One major concern with ipyparallel is the lack of security on the ZeroMQ channels used.
-ZeroMQ does support encrypted channels now and we should be able to swap out the existing pipes for one with encryption.
-
-Here are some articles:
-
-`Using ZeroMQ security <http://hintjens.com/blog:48>`_
-`Outlines lack of security in ipyparallel due to zmq <http://ipyparallel.readthedocs.io/en/latest/security.html>`_
-`Security blame game <http://ipyparallel.readthedocs.io/en/latest/security.html>`_
-
-
-
-Parsl 2.0
----------
-
-Parsl 2.0 is an attempt at translating a limited python script to Swift/T and/or Swift/K.
-
-
-Parsl 3.0
----------
-
-Parsl 3.0 is a futurized minimal subset of python. In this environment we override __call__, get and set vars to futurize the language.
-This means that once an atomic type variable is set it cannot be updated.
-
-Immutability
-^^^^^^^^^^^^
-
-For saneness in a parallel execution environment, variables are immutable. This avoids race conditions:
-
-.. code:: python
-
-      x = 5
-      x = 6
-      print(x) # In a parallel env, the output printed here is non-deterministic.
-
-
-Future returns
-^^^^^^^^^^^^^^
-
-Arbitrary unpacking of returns could be supported, as long as function definitions have hints on the list of output objects.
-The following would be hard to do:
-
-.. code:: python
-
-   def foo(x):
-       if x < 5 :
-           return 1,2,3
-       else:
-           return 5
-
-   # Do we return one future or a tuple with 3 futures in it.
-   p = foo(x)
-
-
-
-Libraries
-^^^^^^^^^
-
-One of the best perks of using python besides not having to design the language itself is the rich set of libraries.
-It is unclear at this point if this model would support much of parallelism except at the outer most level, with no
-attempts to parallelize libraries.
+* Documentation about Parsl and its features
+* Documentation about supported sites and how to use them
+* Self-guided Jupyter notebook tutorials on Parsl features
+* Hands-on tutorial suitable for webinars and meetings
 
 
 
