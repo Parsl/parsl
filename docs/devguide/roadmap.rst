@@ -1,24 +1,27 @@
 Roadmap
 =======
 
-.. role:: blue
 
-This is a list of features that Parsl has or will have.  Features that exist today are marked in blue.
+This is a list of features that Parsl has or will have.  Features that exist today are marked in bold.
 
 Data management
 ---------------
 
-* :blue:`File abstraction to support representation of local and remote files.`
-* Support for a variety of common data access protocols (e.g., local, HTTP, Globus).
+* **File abstraction to support representation of local and remote files.**
+* Support for a variety of common data access protocols (e.g., **local**, HTTP, Globus).
 * Input/output staging models that support transparent movement of data from source to a location on which it is accessible for compute. This includes staging to/from the client (script execution location), service (pilot job controller location), and worker node.
 * Support for creation of a sandbox and execution within this environment for systems without a shared file system, to isolate data and simplify script code. Sandbox execution can optionally be turned off in extreme scale environments.
 * Support for data caching at multiple levels and across sites.
 
+.. todo::
+   Add diagram for staging
+
+
 Execution core and parallelism (DFK)
 ------------------------------------
 
-* Support for application and data futures within scripts
-* Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution according to data dependencies and throttled by resource limits
+* **Support for application and data futures within scripts**
+* **Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution according to data dependencies and throttled by resource limits**
 * Well defined state transition model for task lifecycle
 * More efficient algorithms for managing dependency resolution.
 * Scheduling and allocation algorithms that determine job placement based on job and data requirements (including deadlines) as well as site capabilities
@@ -28,11 +31,11 @@ Execution core and parallelism (DFK)
 Resource provisioning and execution
 -----------------------------------
 
-* Uniform abstraction for execution resources (to support resource provisioning, job submission, allocation management) on cluster, cloud, and supercomputing resources
-* Support for different execution models on any execution provider (e.g., pilot jobs using Ipython parallel on clusters and extreme-scale execution using Swift/T on supercomputers)
+* **Uniform abstraction for execution resources (to support resource provisioning, job submission, allocation management) on cluster, cloud, and supercomputing resources**
+* **Support for different execution models on any execution provider (e.g., pilot jobs using Ipython parallel on clusters and extreme-scale execution using Swift/T on supercomputers)**
 * Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
 * API/method for {adding entries to, viewing entries} in repository
-* Support for remote execution using SSH and OAuth-based authentication
+* Support for remote execution using **SSH** and OAuth-based authentication
 * Utilizing multiple sites for a single script’s execution
 * IPP workers to support multiple threads of execution per node.
 * Support for user-defined containers as Parsl apps and orchestration of workflows comprised of containers
@@ -40,7 +43,7 @@ Resource provisioning and execution
 Visualization, debugging, fault tolerance
 -----------------------------------------
 
-* Support for exception handling
+* **Support for exception handling**
 * Interface for accessing real-time state and audit logs
 * Visualization library that enables users to introspect graph, task, and data dependencies, as well as observe state of executed/executing tasks
 * Integration of visualization into jupyter
