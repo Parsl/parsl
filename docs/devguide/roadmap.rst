@@ -2,7 +2,21 @@ Roadmap
 =======
 
 
-This is a list of features that Parsl has or will have.  Features that exist today are marked in bold.
+Sufficient capabilities to use Parsl in many common situations already exist.  This document indicates where Parsl is going; it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold. Help in providing any of the yet-to-be-developed capabilities is welcome.
+
+Core Functionality
+---------------------
+
+* **Parsl has the ability to execute standard python code and to asynchronously execute tasks, called Apps.**
+    * **Any Python function annotated with "@App" is an App.**
+    * **Apps can be Python functions or bash scripts that wrap external applications.**
+* **Asynchronous tasks return futures, which other tasks can use as inputs.**
+    * **This builds an implicit data flow graph.**
+* **Asynchronous tasks can execute locally on threads or as separate processes.**
+* **Asynchronous tasks can execute on a remote resource.**
+    * **libsubmit (to be renamed) provides this functionality.**
+    * **A shared filesystem is assumed; data staging (of files) is not yet supported.**
+* **The Data Flow Kernel (DFK) schedules Parsl task execution (based on dataflow).**
 
 Data management
 ---------------
@@ -21,7 +35,7 @@ Execution core and parallelism (DFK)
 ------------------------------------
 
 * **Support for application and data futures within scripts**
-* **Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution according to data dependencies and throttled by resource limits**
+* **Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution ordered by data dependencies and throttled by resource limits**
 * Well defined state transition model for task lifecycle
 * More efficient algorithms for managing dependency resolution.
 * Scheduling and allocation algorithms that determine job placement based on job and data requirements (including deadlines) as well as site capabilities
