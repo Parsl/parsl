@@ -58,6 +58,7 @@ class DataFlowKernel(object):
 
         self.config          = config
         if self.config :
+            self._executors_managed = True
             # Create the executors
             epf = EPF()
             self.executors = epf.make(self.config)
@@ -69,6 +70,7 @@ class DataFlowKernel(object):
             self.executor = self.executors[first]
 
         else:
+            self._executors_managed = False
             self.fail_retries = fail_retries
             self.lazy_fail    = lazy_fail
             self.executors    = executors
@@ -410,7 +412,11 @@ class DataFlowKernel(object):
         sending die messages to IPP workers
         '''
         logger.debug("DFK cleanup initiated")
-        print(self.executors)
+        # We do not need to cleanup if the executors are managed outside
+        # the DFK
+        if not self._executors_managed :
+            return
+
         for executor in self.executors.values() :
             if executor.scaling_enabled :
                 logger.warn("This is not well tested behavior")
