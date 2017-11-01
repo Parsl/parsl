@@ -89,7 +89,6 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
             except Exception as e:
                 logger.error("Scaling out failed : %s", e)
                 raise e
-                             
 
         else:
             self._scaling_enabled = False
