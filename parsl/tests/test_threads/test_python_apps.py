@@ -1,4 +1,4 @@
-''' Testing bash apps
+''' Testing python apps
 '''
 import parsl
 from parsl import *

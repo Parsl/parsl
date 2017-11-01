@@ -1,5 +1,6 @@
-''' Testing bash apps
+''' Testing python pipeline
 '''
+
 import parsl
 from parsl import *
 

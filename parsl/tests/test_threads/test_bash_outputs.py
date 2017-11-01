@@ -20,7 +20,7 @@ dfk = DataFlowKernel(executors=[workers])
 @App('bash', dfk)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {inputs[0]} > {outputs[0]}'
-
+    return cmd_line
 
 
 def test_parallel_for (n=10):

@@ -125,6 +125,80 @@ def bash_executor(executable, *args, **kwargs):
     return returncode
 
 
+def remote_side_bash_executor(func, *args, **kwargs):
+    ''' The callable fn for external apps.
+    This is the function that executes the bash app type function that returns
+    the commandline string. This string is reformatted with the *args, and **kwargs
+    from call time.
+    '''
+
+    import os
+    import time
+    import subprocess
+    import logging
+    logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
+
+    start_t = time.time()
+
+    # Try to run the func to compose the commandline
+    try:
+        # Execute the func to get the commandline
+        partial_cmdline = func(*args, **kwargs)
+        # Reformat the commandline with current args and kwargs
+        executable = partial_cmdline.format(*args, **kwargs)
+
+    except IndexError as e:
+        raise AppBadFormatting("AppFormatting failed during cmd_line resolution {0}".format(e), None)
+
+    except Exception as e:
+        logging.error("Caught exception during cmd_line resolution : {0}".format(e))
+        raise e
+
+    # Updating stdout, stderr if values passed at call time.
+    stdout = kwargs.get('stdout', None)
+    stderr = kwargs.get('stderr', None)
+    logging.debug("Stdout  : %s", stdout)
+    logging.debug("Stderr  : %s", stderr)
+
+    std_out = open(stdout, 'w') if stdout else None
+    std_err = open(stderr, 'w') if stderr else None
+
+    start_time = time.time()
+
+    returncode = None
+    try :
+        proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
+        proc.wait()
+        returncode = proc.returncode
+
+    except Exception as e:
+        error = e
+        status = 'failed'
+        raise AppException("App caught exception : {0}".format(proc.returncode), e)
+
+    finally:
+        if returncode != 0:
+            raise AppFailure("App Failed exit code: {0}".format(proc.returncode), proc.returncode)
+
+    # TODO : Add support for globs here
+
+    missing = []
+    for outputfile in kwargs.get('outputs', []):
+        fpath = outputfile
+        if type(outputfile) != str:
+            fpath = outputfile.filepath
+
+        if not os.path.exists(fpath):
+            missing.extend([outputfile])
+
+    if missing:
+        raise MissingOutputs("Missing outputs", missing)
+
+
+    exec_duration = time.time() - start_t
+    return returncode
+
+
 class BashApp(AppBase):
 
     def __init__ (self, func, executor, walltime=60):
@@ -168,15 +242,21 @@ class BashApp(AppBase):
                    App_fut
 
         '''
+        trace_method = False
 
-        cmd_line = self._trace_cmdline(*args, **kwargs)
+        # Update kwargs in the app definition with one's passed in at calltime
         self.kwargs.update(kwargs)
-        self.executable = cmd_line
 
-        app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
+        #cmd_line = self._trace_cmdline(*args, **kwargs)
+        #self.executable = cmd_line
+        #app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
+
+        print("Func : ", self.func(*args, **self.kwargs))
+        app_fut = self.executor.submit(remote_side_bash_executor, self.func, *args, **self.kwargs)
 
         logger.debug("Tid : %s" % app_fut.tid)
-        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid) for o in kwargs.get('outputs', []) ]
+        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
+                    for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
 
         return app_fut

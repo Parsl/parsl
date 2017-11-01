@@ -1,4 +1,4 @@
-''' Testing bash apps
+''' Testing python map_reduce
 '''
 import parsl
 from parsl import *

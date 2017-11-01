@@ -23,6 +23,7 @@ def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
     sleep {1};
     ls ;
     '''
+    return cmd_line
 
 def test_data_future_result () :
     ''' Testing the behavior of a result call on DataFutures

@@ -12,10 +12,11 @@ workers = ThreadPoolExecutor(max_workers=4)
 @App('bash', workers)
 def app_1(stderr='std.err', stdout='std.out'):
     cmd_line = "echo 'Hello world'"
-
+    return cmd_line
 
 def app_2(stderr='std.err', stdout='std.out'):
     cmd_line = "echo 'Hello world'"
+    return cmd_line
 
 def app_3(x):
     return x*2

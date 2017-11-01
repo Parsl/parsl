@@ -15,6 +15,7 @@ dfk = DataFlowKernel(executors=[workers])
 @App('bash', dfk)
 def app1(inputs=[], outputs=[], stdout=None, stderr=None, mock=False ):
     cmd_line = '''echo 'test' > {outputs[0]}'''
+    return cmd_line
 
 @App('bash', dfk)
 def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False ):
@@ -22,7 +23,7 @@ def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False ):
     with open('somefile.txt', 'w') as f:
         f.write("%s\n" % inputs[0])
     cmd_line = '''echo '{inputs[0]}' > {outputs[0]}'''
-
+    return cmd_line
 
 def test_behavior():
     app1_future = app1(inputs = [],
