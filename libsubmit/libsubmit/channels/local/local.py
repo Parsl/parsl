@@ -1,6 +1,10 @@
 from libsubmit.channels.channel_base import Channel
 import subprocess
 import os
+import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LocalChannel (Channel):
 
@@ -8,7 +12,7 @@ class LocalChannel (Channel):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__ (self, userhome=".", envs={}, channel_script_dir="./.scripts"):
+    def __init__ (self, userhome=".", envs={}, scriptDir="./.scripts", **kwargs):
         '''
         KwArgs:
              userhome (string): (default='.') This is provided as a way to override and set a specific userhome
@@ -19,7 +23,7 @@ class LocalChannel (Channel):
         self.hostname = "localhost"
         local_env     = os.environ.copy()
         self.envs     = local_env.update(envs)
-        self.channel_script_dir = os.path.abspath(channel_script_dir)
+        self.channel_script_dir = os.path.abspath(scriptDir)
 
     @property
     def script_dir(self):
@@ -107,7 +111,7 @@ class LocalChannel (Channel):
         # Only attempt to copy if the target dir and source dir are different
         if os.path.dirname(source) != dest_dir:
             try:
-                os.copyfile(source, local_dest)
+                shutil.copyfile(source, local_dest)
                 os.chmod(local_dest, 0o777)
 
             except OSerror as e:
