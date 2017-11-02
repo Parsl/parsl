@@ -157,6 +157,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     # Updating stdout, stderr if values passed at call time.
     stdout = kwargs.get('stdout', None)
     stderr = kwargs.get('stderr', None)
+    timeout = kwargs.get('walltime', None)
     logging.debug("Stdout  : %s", stdout)
     logging.debug("Stderr  : %s", stderr)
 
@@ -168,17 +169,22 @@ def remote_side_bash_executor(func, *args, **kwargs):
     returncode = None
     try :
         proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
-        proc.wait()
+        proc.wait(timeout=timeout)
         returncode = proc.returncode
 
+    except subprocess.TimeoutExpired as e:
+        print("Timeout")
+        status = 'failed'
+        raise AppTimeout("App exceeded walltime: {0}".format(timeout), e)
+
     except Exception as e:
+        print ("Caught exception : ", e)
         error = e
         status = 'failed'
         raise AppException("App caught exception : {0}".format(proc.returncode), e)
 
-    finally:
-        if returncode != 0:
-            raise AppFailure("App Failed exit code: {0}".format(proc.returncode), proc.returncode)
+    if returncode != 0:
+        raise AppFailure("App Failed exit code: {0}".format(proc.returncode), proc.returncode)
 
     # TODO : Add support for globs here
 
@@ -193,7 +199,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     if missing:
         raise MissingOutputs("Missing outputs", missing)
-
 
     exec_duration = time.time() - start_t
     return returncode
@@ -251,7 +256,6 @@ class BashApp(AppBase):
         #self.executable = cmd_line
         #app_fut = self.executor.submit(bash_executor, cmd_line, *args, **self.kwargs)
 
-        print("Func : ", self.func(*args, **self.kwargs))
         app_fut = self.executor.submit(remote_side_bash_executor, self.func, *args, **self.kwargs)
 
         logger.debug("Tid : %s" % app_fut.tid)

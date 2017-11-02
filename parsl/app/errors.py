@@ -24,7 +24,11 @@ class AppException(ParslError):
     ''' An error raised during execution of an app.
     What this exception contains depends entirely on context
     '''
-    pass
+    def __repr__(self):
+        return "{0} Reason:{1}".format(self.__class__, self.reason)
+
+    def __str__(self):
+        return self.__repr__()
 
 class AppBadFormatting(ParslError):
     ''' An error raised during formatting of a bash function
@@ -42,7 +46,7 @@ class AppBadFormatting(ParslError):
         self.retries = retries
 
 
-class AppFailure(ParslError):
+class AppFailure(AppException):
     ''' An error raised during execution of an app.
     What this exception contains depends entirely on context
     Contains:
@@ -55,6 +59,21 @@ class AppFailure(ParslError):
         super().__init__()
         self.reason = reason
         self.exitcode = exitcode
+        self.retries = retries
+
+class AppTimeout(AppException):
+    ''' An error raised during execution of an app when it exceeds its allotted walltime
+
+    Contains:
+    reason(string)
+    exitcode(int)
+    retries(int/None)
+    '''
+
+    def __init__(self, reason, exitcode, retries=None):
+        super().__init__()
+        self.reason = reason
+        self.exitcode = -55
         self.retries = retries
 
 
