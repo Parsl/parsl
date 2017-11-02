@@ -34,7 +34,6 @@ class Cobalt(ExecutionProvider):
              "nodes" : 1,            # of nodes in that block
              "taskBlocks" : 1,        # total tasks in a block
              "walltime" : "00:05:00",
-             "scriptDir" : "."
              "options" : {
                   "partition" : "debug",
                   "account" : "pi-wilde",
@@ -69,8 +68,8 @@ class Cobalt(ExecutionProvider):
 
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
-        if not os.path.exists(self.config["execution"]["block"].get("scriptDir", '.scripts')):
-            os.makedirs(self.config["execution"]["block"]["scriptDir"])
+        if not os.path.exists(self.config["execution"].get("scriptDir", '.scripts')):
+            os.makedirs(self.config["execution"]["scriptDir"])
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
