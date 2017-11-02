@@ -35,7 +35,7 @@ class Cobalt(ExecutionProvider):
              "taskBlocks" : 1,        # total tasks in a block
              "walltime" : "00:05:00",
              "scriptDir" : "."
-             "Options" : {
+             "options" : {
                   "partition" : "debug",
                   "account" : "pi-wilde",
                   "overrides" : "#SBATCH--constraint=haswell"
@@ -249,16 +249,23 @@ class Cobalt(ExecutionProvider):
         job_config["nodes"] = nodes
         job_config["overrides"] = job_config.get("overrides", '')
         job_config["user_script"] = cmd_string
+        
+        # Get queue request if requested
+        self.queue = ''
+        if job_config.get("queue", None):
+            self.queue = "-q {0}".format(job_config["queue"])
+
 
         logger.debug("Writing submit script")
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        print("*"*40, "Executing : ", "qsub -n {0} -t {1} {2} {3}".format(nodes,
-                                                                          self.max_walltime,
-                                                                          account_opt,
-                                                                          channel_script_path))
+        print("*"*40, "Executing : ", "qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
+                                                                              self.queue,
+                                                                              self.max_walltime,
+                                                                              account_opt,
+                                                                              channel_script_path))
 
         retcode, stdout, stderr = self.channel.execute_wait(
             "qsub -n {0} -t {1} {2} {3}".format(nodes,
