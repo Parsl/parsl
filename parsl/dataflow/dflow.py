@@ -32,6 +32,7 @@ from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
 from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
+import parsl.dataflow.start_controller as sc
 # Exceptions
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,9 @@ class DataFlowKernel(object):
 
         self.config          = config
         if self.config :
+            # Start IPP controllers if the user requests it
+            self.controller_proc = sc.init_controller(self.config)
+
             self._executors_managed = True
             # Create the executors
             epf = EPF()
@@ -67,7 +71,7 @@ class DataFlowKernel(object):
             self.lazy_fail = self.config["globals"].get("lazyFail", lazy_fail)
             self.fail_retires = self.config["globals"].get("fail_retries", fail_retries)
             first = self.config["sites"][0]["site"]
-            self.executor = self.executors[first]
+            self.executor = self.executors[first]        
 
         else:
             self._executors_managed = False
@@ -416,6 +420,9 @@ class DataFlowKernel(object):
         # the DFK
         if not self._executors_managed :
             return
+
+        if self.controller_proc:
+            sc.shutdown_controller(self.controller_proc)
 
         for executor in self.executors.values() :
             if executor.scaling_enabled :
