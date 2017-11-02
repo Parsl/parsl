@@ -29,7 +29,7 @@ class Cobalt(ExecutionProvider):
     { "execution" : {
          "executor" : "ipp",
          "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
-         "script_dir" : ".scripts",
+         "scriptDir" : ".scripts",
          "block" : { # Definition of a block
              "nodes" : 1,            # of nodes in that block
              "taskBlocks" : 1,        # total tasks in a block
@@ -42,18 +42,21 @@ class Cobalt(ExecutionProvider):
              }
          }
     }
-
     '''
 
     def __repr__ (self):
         return "<Cobalt Execution Provider for site:{0}>".format(self.sitename)
 
     def __init__ (self, config, channel=None):
-        ''' Initialize the Cobalt class
+        ''' Initialize the Cobalt execution provider class
 
         Args:
              - Config (dict): Dictionary with all the config options.
+
+        KWargs :
+             - channel (channel object) : default=None A channel object
         '''
+
         self.channel = channel
         if self.channel == None:
             logger.error("Provider:Cobalt cannot be initialized without a channel")
@@ -76,6 +79,7 @@ class Cobalt(ExecutionProvider):
     def channels_required(self):
         ''' Returns Bool on whether a channel is required
         '''
+
         return True
 
     ###########################################################################################################
@@ -128,6 +132,7 @@ class Cobalt(ExecutionProvider):
             - List of status codes.
 
         '''
+
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
