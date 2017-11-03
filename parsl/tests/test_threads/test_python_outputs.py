@@ -1,4 +1,4 @@
-''' Testing bash apps
+''' Testing python outputs
 '''
 import parsl
 from parsl import *
@@ -10,7 +10,7 @@ import argparse
 
 #parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
 def double(x, outputs=[]):

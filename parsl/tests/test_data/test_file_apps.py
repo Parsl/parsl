@@ -7,16 +7,16 @@ from parsl.data_provider.files import File
 #parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=8)
-dfk = DataFlowKernel(workers)
-
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('bash', dfk)
 def cat (inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
-    cmd_line = '''echo %s
+    return '''echo %s
     cat %s &> {outputs[0]}
     ''' % (infiles, infiles)
+
 
 def test_files():
 
@@ -30,7 +30,7 @@ def test_files():
 @App('bash', dfk)
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
-    cmd_line = '''
+    return '''
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
     '''

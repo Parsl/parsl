@@ -1,4 +1,4 @@
-''' Testing bash apps
+''' Testing python map_reduce
 '''
 import parsl
 from parsl import *
@@ -14,7 +14,7 @@ import random
 #parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
 def fan_out(x, dur):

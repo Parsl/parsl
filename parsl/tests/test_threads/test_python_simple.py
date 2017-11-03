@@ -1,4 +1,4 @@
-''' Testing bash apps
+''' Testing simple python apps
 '''
 import parsl
 from parsl import *
@@ -10,7 +10,7 @@ import argparse
 import random
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
 def increment(x):

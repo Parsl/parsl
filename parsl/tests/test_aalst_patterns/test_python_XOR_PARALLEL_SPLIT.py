@@ -11,7 +11,7 @@ import argparse
 #parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=100)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
 def random():

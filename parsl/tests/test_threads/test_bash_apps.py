@@ -15,16 +15,18 @@ import argparse
 workers = ThreadPoolExecutor(max_workers=8)
 
 #workers = ProcessPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {inputs[0]} > {outputs[0]}'
+    return cmd_line
 
 @App('bash', dfk)
 def foo(x, y, stdout=None):
     cmd_line = '''echo {0} {1}
     '''
+    return cmd_line
 
 
 def test_command_format_1 ():

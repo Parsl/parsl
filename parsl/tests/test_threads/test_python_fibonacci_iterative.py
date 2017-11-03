@@ -4,7 +4,7 @@ from parsl import *
 import argparse
 
 workers = ThreadPoolExecutor(max_workers = 6)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
 def get_num(first, second):

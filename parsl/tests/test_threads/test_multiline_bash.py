@@ -7,7 +7,7 @@ import shutil
 import argparse
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def multi_line(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
@@ -17,6 +17,7 @@ def multi_line(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     echo "Testing STDOUT"
     echo "Testing STDERR" 1>&2
     '''
+    return cmd_line
 
 def run_test():
 

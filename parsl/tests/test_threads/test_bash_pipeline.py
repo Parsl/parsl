@@ -11,7 +11,7 @@ import argparse
 #parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('bash', dfk)
@@ -21,6 +21,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
     '''
+    return cmd_line
 
 @App('bash', dfk)
 def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
@@ -29,7 +30,7 @@ def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
     echo $(($x+1)) > {outputs[0]}
     sleep {0}
     '''
-
+    return cmd_line
 
 def test_increment(depth=5):
     ''' Test simple pipeline A->B...->N

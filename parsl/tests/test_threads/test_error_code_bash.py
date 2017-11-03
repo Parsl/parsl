@@ -9,31 +9,37 @@ from parsl import *
 import parsl
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def command_not_found(stderr='std.err', stdout='std.out'):
     cmd_line = 'catdogcat'
+    return cmd_line
 
 @App('bash', dfk)
 def bash_misuse(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit(15)'
+    return cmd_line
 
 @App('bash', dfk)
 def div_0(stderr='std.err', stdout='std.out'):
     cmd_line = '$((5/0))'
+    return cmd_line
 
 @App('bash', dfk)
 def invalid_exit(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit 3.141'
+    return cmd_line
 
 @App('bash', dfk)
 def not_executable(stderr='std.err', stdout='std.out'):
     cmd_line = '/dev/null'
+    return cmd_line
 
 @App('bash', dfk)
 def bad_format(stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {0}'
+    return cmd_line
 
 test_matrix = { div_0             : {'exit_code' : 1 },
                 bash_misuse       : {'exit_code' : 15 },
@@ -158,7 +164,7 @@ if __name__ == '__main__' :
     print(test_bash_formatting())
 
     exit(0)
-    
+
     if args.debug:
         parsl.set_stream_logger()
 

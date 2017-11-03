@@ -2,6 +2,7 @@ import os
 import logging
 from ipyparallel import Client
 from parsl.executors.base import ParslExecutor
+from parsl.executors.errors import *
 
 logger = logging.getLogger(__name__)
 
@@ -75,12 +76,19 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
             self._scaling_enabled = True
             logger.debug("Starting IpyParallelExecutor with provider:%s", execution_provider)
             try:
-                for i in range(self.config["execution"]["options"].get("init_parallelism", 0)):
+                logger.debug("Attempting scale out -----------------")
+                for i in range(self.config["execution"]["block"].get("initBlocks", 1)):
                     eng = self.execution_provider.submit(self.launch_cmd, 1)
-                    self.engines.extend(eng)
+                    logger.debug("Launched block : {0}:{1}".format(i, eng))
+                    if not eng:
+                        raise(ScalingFailed(self.execution_provider.sitename, 
+                                            "Ipp executor failed to scale via execution_provider"))
+                    self.engines.extend([eng])
+                logger.debug("scale out done-----------------")
 
             except Exception as e:
-                logging.debug("Scaling out failed at init failed : %s", e)
+                logger.error("Scaling out failed : %s", e)
+                raise e
 
         else:
             self._scaling_enabled = False
@@ -123,7 +131,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
 
         return r
 
-    def scale_in (self, workers=1):
+    def scale_in (self, *args, **kwargs):
         ''' Scale in the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
@@ -131,7 +139,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
              NotImplemented exception
         '''
         if self.execution_provider :
-            r = self.execution_provider.scale_in(*args, **kwargs)
+            r = self.execution_provider.cancel(*args, **kwargs)
         else:
             logger.error("No execution provider available")
             r = None
