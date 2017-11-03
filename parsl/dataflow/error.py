@@ -36,3 +36,18 @@ class DependencyError(DataFlowExceptions):
 
     def __str__ (self):
         return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
+
+
+class ControllerErr(DataFlowExceptions):
+    ''' Error raise by IPP controller
+    '''
+    def __init__(self, reason):
+        self.reason = reason
+
+    def __repr__ (self):
+        return "Controller init failed:Reason:{0}".format(self.reason)
+
+    def __str__ (self):
+        return self.__repr__()
+
+
