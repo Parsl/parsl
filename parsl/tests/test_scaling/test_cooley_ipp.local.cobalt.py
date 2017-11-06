@@ -2,11 +2,46 @@ from parsl import *
 import parsl
 import libsubmit
 
-parsl.set_stream_logger()
-print(parsl.__version__)
-print(libsubmit.__version__)
-
-from libsubmit import Cobalt
+'''
+config = {
+        "sites" : [
+                    { "site" : "ALCF_Cooley_Remote",
+                                "auth" : {
+                                                  "channel" : "local",
+                                                  #"channel"  : "ssh-il",
+                                                  "hostname" : "cooleylogin1.alcf.anl.gov",
+                                                  "username" : "yadunand",
+                                                  "scriptDir" : "/home/yadunand/parsl_scripts/"
+                                              },
+                                "execution" : {
+                                                  "executor" : "ipp",
+                                                  "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
+                                                  "scriptDir" : ".scripts",
+                                                  "block" : { # Definition of a block
+                                                                        "nodes" : 1,            # of nodes in that block
+                                                                        "taskBlocks" : 1,       # total tasks in a block
+                                                                        "walltime" : "00:05:00",
+                                                                        "initBlocks" : 1,
+                                                                        "minBlocks" : 0,
+                                                                        "maxBlocks" : 1,
+                                                                        "scriptDir" : ".",
+                                                                        "options" : {
+                                                                                                  "partition" : "debug",
+                                                                                                  "overrides" : "source /home/yadunand/setup_cooley_env.sh"
+                                                                                              }
+                                                                    }
+                                              }
+                              }
+                    ],
+        "globals" : {
+                    "lazyErrors" : True
+                },
+        "controller" : {
+                    "ip" : "10.230.1.250"
+                }
+    }
+'''
+dfk = DataFlowKernel(config=config)
 
 config = {
     "sites" : [
