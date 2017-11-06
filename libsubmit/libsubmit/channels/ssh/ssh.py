@@ -133,6 +133,7 @@ class SshChannel ():
         try:
             self.sftp_client.mkdir(remote_dir)
         except IOError as e:
+            logger.error("Pushing {0} to {1} failed".format(local_source, remote_dir))
             if e.errno == 2:
                 raise BadScriptPath(e, self.hostname)
             elif e.errno == 13:
