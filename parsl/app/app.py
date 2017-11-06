@@ -284,7 +284,7 @@ class PythonApp(AppBase):
     def __init__ (self, func, executor, walltime=60):
         ''' Initialize the super. This bit is the same for both bash & python apps.
         '''
-        super().__init__ (func, executor, walltime=60, exec_type="python")
+        super().__init__ (func, executor, walltime=walltime, exec_type="python")
 
 
     def __call__(self, *args, **kwargs):
