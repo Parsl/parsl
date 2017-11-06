@@ -36,9 +36,6 @@ class AppFuture(Future):
     We are simply wrapping a AppFuture, and adding the specific case where, if the future
     is resolved i.e file exists, then the DataFuture is assumed to be resolved.
 
-    It is possible that result might be called on the AppFuture before it has even been
-    scheduled. THat is a case we need to cover.
-
     """
     def parent_callback(self, executor_fu):
         ''' Callback from executor future to update the parent.
@@ -51,13 +48,11 @@ class AppFuture(Future):
 
         Updates the super() with the result() or exception()
         '''
-
         if executor_fu.done() == True:
-            super().set_result(executor_fu.result())
-
-        e = executor_fu.exception()
-        if e:
-            super().set_exception(e)
+            try :
+                super().set_result(executor_fu.result())
+            except Exception as e:
+                super().set_exception(e)
 
 
     def __init__ (self, parent, tid=None):
