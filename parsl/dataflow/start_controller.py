@@ -1,7 +1,11 @@
+import os
+import sys
 import subprocess
 import time
 import random
 import logging
+import signal
+
 from parsl.dataflow.error import *
 
 logger = logging.getLogger(__name__)
@@ -64,7 +68,7 @@ class Controller(object):
         try:
             opts = ['ipcontroller', reuse_string, self.port, self.publicIp]
             logger.debug("Start opts: %s" % opts)
-            self.proc = subprocess.Popen(opts, stdout=stdout, stderr=stderr)
+            self.proc = subprocess.Popen(opts, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
         except Exception as e:
             msg = "IPPController failed to start: {0}".format(e)
             logger.error(msg)
@@ -81,6 +85,9 @@ class Controller(object):
             return
 
         try:
-            self.proc.kill()
+            pgid = os.getpgpid(self.proc.pid)
+            os.killpg(pgid, signal.SIGTERM)
+            time.sleep(0.1)
+            os.killpg(pgid, signal.SIGKILL)
         except:
             logger.error("Failed to kill the ipcontroller process[{0}]".format(self.proc.pid))
