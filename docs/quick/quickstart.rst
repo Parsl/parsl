@@ -36,7 +36,7 @@ Installing on Mac OS
 1. Install Conda and setup python3.6 following instructions `here <https://conda.io/docs/user-guide/install/macos.html>`_::
 
      $ conda create --name parsl_py36 python=3.6
-     $ conda activate parsl_py36
+     $ source activate parsl_py36
 
 2. Install Parsl::
 
