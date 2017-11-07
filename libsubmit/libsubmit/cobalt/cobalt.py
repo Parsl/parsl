@@ -260,29 +260,28 @@ class Cobalt(ExecutionProvider):
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        print("*"*40, "Executing : ", "qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
-                                                                              self.queue,
-                                                                              self.max_walltime,
-                                                                              account_opt,
-                                                                              channel_script_path))
-
+        logger.debug("Executing : qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
+                                                                         self.queue,
+                                                                         self.max_walltime,
+                                                                         account_opt,
+                                                                         channel_script_path))
+        
         retcode, stdout, stderr = self.channel.execute_wait(
-            "qsub -n {0} -t {1} {2} {3}".format(nodes,
-                                                self.max_walltime,
-                                                account_opt,
-                                                channel_script_path), 3)
+            "qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
+                                                    self.queue,
+                                                    self.max_walltime,
+                                                    account_opt,
+                                                    channel_script_path), 5)
 
         # TODO : FIX this block
         if retcode != 0 :
-            print("Returncode : {0}".format(retcode))
-            print("Launch failed stdout:\n{0}  \nstderr:{1}\n".format(stdout, stderr))
+            logger.error("Launch failed stdout:\n{0}  \nstderr:{1}\n".format(stdout, stderr))
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
         job_id = None
 
         if retcode == 0 :
-            print("Return code is zero")
             # We should be getting only one line back
             job_id = stdout.strip()
             self.resources[job_id] = {'job_id' : job_id,
