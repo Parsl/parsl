@@ -33,11 +33,10 @@ Installing on Linux
 Installing on Mac OS
 ^^^^^^^^^^^^^^^^^^^^
 
-1. If you do not have python3.5 or greater installed, make sure to download and install python3.6.1 from `here <https://www.python.org/downloads/mac-osx/>`_ ::
+1. Install Conda and setup python3.6 following instructions `here <https://conda.io/docs/user-guide/install/macos.html>`_::
 
-     $ curl https://www.python.org/ftp/python/3.6.1/python-3.6.1-macosx10.6.pkg
-     $ open python-3.6.1-macosx10.6.pkg
-     # Follow the wizard to install the package
+     $ conda create --name parsl_py36 python=3.6
+     $ conda activate parsl_py36
 
 2. Install Parsl::
 
