@@ -114,7 +114,7 @@ class LocalChannel (Channel):
                 shutil.copyfile(source, local_dest)
                 os.chmod(local_dest, 0o777)
 
-            except OSerror as e:
+            except OSError as e:
                 raise FileCopyException(e, self.hostname)
 
         return local_dest
