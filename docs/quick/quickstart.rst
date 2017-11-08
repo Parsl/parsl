@@ -11,7 +11,7 @@ Installing
 
 Parsl is now available on PyPI, but first make sure you have Python3.5+
 
-   >>> python3 --version
+>>> python3 --version
 
 
 Installing on Linux
