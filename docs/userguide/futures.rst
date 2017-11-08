@@ -4,8 +4,8 @@ Futures
 =======
 
 When a python function is invoked, the python interpreter waits for the function to complete execution
-and returns the results. With long running functions we may not want to wait for completion and may
-want it to be asynchronous. So, in lieu of the results, we return a `future <https://en.wikipedia.org/wiki/Futures_and_promises>`_.
+and returns the results. In case of long running functions we may not want to wait for completion and may
+want the function to be asynchronous. So, in lieu of the results, we return a `future <https://en.wikipedia.org/wiki/Futures_and_promises>`_.
 A future is essentially a token that allows us to track the status of an asynchronous task so that we may check the status,
 results, exceptions, etc. A future is a proxy for a result that is not yet available.
 
@@ -18,7 +18,7 @@ AppFutures are inherited from the python's `concurrent library <https://docs.pyt
 An AppFuture is returned by a call to any function that is decorated with Parsl's ``@App`` decorator.
 There are four key functionalities that an AppFuture offers us :
 
-1. An AppFuture allows us to check on the current status of launched parsl app and does not wait for it.
+1. An AppFuture allows us to check on the current status of launched parsl app, without waiting for it to complete.
 
    .. code-block:: python
 
@@ -49,7 +49,8 @@ There are four key functionalities that an AppFuture offers us :
       # the result from the app *10*
       print(doubled_x.result())
 
-3. The AppFuture itself can be passed to another decorate app. The apps can will wait till all of the AppFutures that are inputs are resolved and then proceed with execution.
+3. The AppFuture itself can be passed to another decorated app. Such and app will wait untill all of the AppFutures
+   that are inputs are resolved and then proceed with execution.
 
    .. code-block:: python
 
@@ -101,16 +102,16 @@ DataFutures
 
 Similar to AppFutures, DataFuture are inherited from the python's `concurrent library <https://docs.python.org/3/library/concurrent.futures.html>`_.
 While AppFutures represent an asynchronous app task, the DataFuture represents the files it produces.
-With Bash applications data flows from one app to another via files. Therefore Parsl needs to
-keep track of the files produced by app and this is done by specifying the filenames of outputs as a
-keyword argument to apps. A list of DataFutures each corresponding to the filenames in the ``outputs``
-keyword args is available through the ``outputs`` attribute of the AppFuture.
+With Bash applications, data flows from one app to another via files. Therefore Parsl needs to
+keep track of the files produced by an app. This is done by specifying the filenames of outputs as a
+keyword argument to apps. A list of DataFutures each of which corresponds to the filenames in the ``outputs``
+keyword args, is available through the ``outputs`` attribute of the AppFuture.
 
 Here's an example :
 
 .. code-block:: python
 
-      # This app echo's the string passed to it to the first file specified in the
+      # This app echoes the string passed to it to the first file specified in the
       # outputs list
       @App('bash', data_flow_kernel)
       def echo(message, outputs=[]):
