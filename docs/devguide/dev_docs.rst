@@ -111,13 +111,13 @@ ThreadPoolExecutor
 ------------------
 
 .. autoclass:: parsl.executors.threads.ThreadPoolExecutor
-   :members:  __init__, submit, scale_out, scale_in, shutdown, scaling_enabled
+   :members:  __init__, submit, scale_out, scale_in, scaling_enabled
 
 IPyParallelExecutor
-------------------
+-------------------
 
 .. autoclass:: parsl.executors.threads.ThreadPoolExecutor
-   :members:  __init__, submit, scale_out, scale_in, shutdown, scaling_enabled, compose_launch_cmd
+   :members:  __init__, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd
 
 
 Swift/Turbine Executor
