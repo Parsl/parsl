@@ -18,6 +18,31 @@ translate_table = { 'queued'  :  'PENDING',
                     'killing' : 'COMPLETED'
                   } # (special exit state
 
+def singleNodeLauncher (cmd_string, taskBlocks, walltime=None):
+    ''' Worker launcher that wraps the job with the framework to launch
+    multiple ipengines in parallel
+    '''
+    
+    x = '''export CORES=$(grep -c ^processor /proc/cpuinfo)
+echo "Found cores : $CORES"
+WORKERCOUNT={1}
+
+CMD ( ) {{
+{0}
+}}
+
+for COUNT in $(seq 1 1 $WORKERCOUNT)
+do
+    echo "Launching worker: $COUNT"
+    CMD &
+done
+wait
+echo "All workers done"
+'''.format(cmd_string, taskBlocks)
+    return x
+
+Launchers = {"singleNode" : singleNodeLauncher }
+
 
 class Cobalt(ExecutionProvider):
     ''' Cobalt Execution Provider
@@ -34,6 +59,7 @@ class Cobalt(ExecutionProvider):
              "nodes" : 1,            # of nodes in that block
              "taskBlocks" : 1,        # total tasks in a block
              "walltime" : "00:05:00",
+             "launcher" : "singleNode"
              "options" : {
                   "partition" : "debug",
                   "account" : "pi-wilde",
@@ -246,8 +272,13 @@ class Cobalt(ExecutionProvider):
 
         job_config = self.config["execution"]["block"]["options"]
         job_config["nodes"] = nodes
-        job_config["overrides"] = job_config.get("overrides", '')
-        job_config["user_script"] = cmd_string
+        job_config["overrides"] = job_config.get("overrides", '')        
+
+        # Wrap the cmd_string
+        lname = self.config["execution"]["block"].get("launcher", "singleNode")
+        launcher = Launchers.get(lname, None)        
+        job_config["user_script"] = launcher(cmd_string, 
+                                             self.config["execution"]["block"]["taskBlocks"])
         
         # Get queue request if requested
         self.queue = ''
