@@ -22,6 +22,10 @@ class IPyParallelExecutor(ParslExecutor):
 
     def compose_launch_cmd(self, filepath, engine_dir):
         ''' Reads the json contents from filepath and uses that to compose the engine launch command
+
+        Args:
+            filepath: Path to the engine file
+            engine_dir : CWD for the engines .
         '''
 
         self.engine_file = os.path.expanduser(filepath)

@@ -1,2 +1,2 @@
 ipyparallel
-libsubmit>=0.2.2
+libsubmit>=0.2.3
