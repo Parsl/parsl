@@ -22,7 +22,8 @@ class Controller(object):
         config["controller"]
 
         KWargs:
-              "publicIp" (string): <internal_ip |Default: *>,
+              "publicIp" (string): <internal_ip |Default: "*">,
+              "interfaces" (string): <interfaces for zero_mq to listen on| Default: "*">,
               "port" (int): <port |Default: rand between 50000, 60000,
               "portRange" (string): <string <port_min>,<port_max>,
               "reuse" (bool): <Reuse an existing controller>
