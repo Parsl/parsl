@@ -1,8 +1,10 @@
 from libsubmit.channels.channel_base import Channel
 import subprocess
 import os
+import errno
 import shutil
 import logging
+from libsubmit.channels.errors import *
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,12 @@ class LocalChannel (Channel):
         local_env     = os.environ.copy()
         self.envs     = local_env.update(envs)
         self.channel_script_dir = os.path.abspath(scriptDir)
+        try:
+            os.makedirs(self.channel_script_dir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                logger.error("Failed to create scriptDir : {0}".format(scriptDir))
+                raise BadScriptPath(e, self.hostname)
 
     @property
     def script_dir(self):
