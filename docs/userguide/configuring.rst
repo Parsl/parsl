@@ -20,7 +20,7 @@ described to parsl. There are two ways to do this:
    .. code-block:: python
 
       from parsl import *
-      config = config = {
+      config = {
           "sites" : [
               { "site" : "Local_Threads",
                 "auth" : { "channel" : None },
