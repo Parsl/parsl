@@ -24,8 +24,8 @@ New functionality
 
 * Execution providers have been restructured to a separate repo: `libsubmit <https://github.com/Parsl/libsubmit>`_
 
-* Bash app styles have changes to return the commandline string rather than be assigned to the special keyword `cmd_line`
-  Please refer `RFC #37 <https://github.com/Parsl/parsl/issues/37>`_ for more details. This is a **non-backward** compatible change.
+* Bash app styles have changes to return the commandline string rather than be assigned to the special keyword `cmd_line`.
+  Please refer to `RFC #37 <https://github.com/Parsl/parsl/issues/37>`_ for more details. This is a **non-backward** compatible change.
 
 * Output files from apps are now made available as an attribute of the AppFuture.
   Please refer `#26 <Output files from apps #26>`_ for more details. This is a **non-backward** compatible change ::
