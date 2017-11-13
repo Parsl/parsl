@@ -14,7 +14,7 @@ Parsl is a Python-based parallel scripting library that supports development and
    :caption: Quickstart
 
    quick/quickstart.rst
-   quick/Tutorial.rst
+   quick/tutorial.rst
 
 .. toctree::
    :maxdepth: 3
@@ -30,6 +30,7 @@ Parsl is a Python-based parallel scripting library that supports development and
    :maxdepth: 4
    :caption: Developer Documentation
 
+   devguide/changelog
    devguide/design
    devguide/roadmap
    devguide/dev_docs
