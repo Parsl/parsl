@@ -6,9 +6,9 @@ import time
 import re
 from string import Template
 from libsubmit.execution_provider_base import ExecutionProvider
-from libsubmit.slurm.template import template_string
-from libsubmit.exec_utils import execute_wait
-
+from libsubmit.condor.template import template_string
+from libsubmit.exec_utils import execute_wait, wtime_to_minutes
+from libsubmit.launchers import Launchers
 import libsubmit.error as ep_error
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class Condor(ExecutionProvider):
     def __repr__ (self):
         return "<Condor Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
 
-    def __init__ (self, config):
+    def __init__ (self, config, channel=None):
         ''' Initialize the Condor class
 
         Args:
@@ -49,8 +49,10 @@ class Condor(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
 
-        if not os.path.exists(self.config["execution"]["options"]["submit_script_dir"]):
-            os.makedirs(self.config["execution"]["options"]["submit_script_dir"])
+        self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
+
+        if not os.path.exists(self.config["execution"].get("scriptDir", '.scripts')):
+            os.makedirs(self.config["execution"]["scriptDir"])
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -129,6 +131,7 @@ class Condor(ExecutionProvider):
               ScriptPathError : Unable to write submit script out
         '''
 
+        # This section needs to be brought upto par with the cobalt provider.
         try:
             submit_script = Template(template_string).substitute(**configs,
                                                                  jobname=job_name)
@@ -165,11 +168,33 @@ class Condor(ExecutionProvider):
         5 job(s) submitted to cluster 118907.
         1 job(s) submitted to cluster 118908.
         '''
+        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
+            logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
+            return None
 
-        blocksize = 1
-        job_config["nodes"] = 1
-        job_config["condor_overrides"] = job_config.get("condor_overrides", '')
+        # Note: Fix this later to avoid confusing behavior.
+        # We should always allocate blocks in integer counts of node_granularity
+        if blocksize < self.config["execution"]["block"].get("nodes", 1):
+            blocksize = self.config["execution"]["block"].get("nodes",1)
+
+        # Set job name
+        job_name = "parsl.{0}.{1}".format(job_name,time.time())
+
+        # Set script path
+        script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
+                                              job_name)
+        script_path = os.path.abspath(script_path)
+
+        # Calculate nodes
+        nodes = self.config["execution"]["block"].get("nodes", 1)
+
+        job_config = {}
+        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["partition"] = self.config["execution"]["block"]["options"].get("partition", "default")
+        job_config["nodes"] = nodes
+        job_config["condor_overrides"] = self.config["execution"]["block"]["options"].get("condor_overrides", '')
         job_config["user_script"] = cmd_string
+        job_config["tasks_per_node"] =  1
 
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
