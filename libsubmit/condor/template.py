@@ -1,25 +1,11 @@
-# template_string = '''#!/bin/bash
-#
-# #SBATCH --job-name=$jobname
-# #SBATCH --output=$submit_script_dir/$jobname.submit.stdout
-# #SBATCH --error=$submit_script_dir/$jobname.submit.stderr
-# #SBATCH --nodes=$nodes
-# #SBATCH --partition=$partition
-# #SBATCH --time=$walltime
-# #SBATCH --ntasks-per-node=$tasks_per_node
-# $slurm_overrides
-#
-# $user_script
-# '''
-
 template_string = '''#!/bin/bash
 Universe = vanilla
 
 Executable = $user_script
 
-Output = $submit_script_dir/$jobname.out.\$(Cluster).\$(Process)
-Error = $submit_script_dir/$jobname.err.\$(Cluster).\$(Process)
-Log = $submit_script_dir/$jobname.\$(Cluster)
+Output = $submit_script_dir/${jobname}.out.$$(Cluster).$$(Process)
+Error = $submit_script_dir/${jobname}.err.$$(Cluster).$$(Process)
+Log = $submit_script_dir/${jobname}.$$(Cluster)
 
 leave_in_queue = true
 
