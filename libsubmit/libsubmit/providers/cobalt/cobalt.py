@@ -4,59 +4,76 @@ import subprocess
 import math
 import time
 from string import Template
-from libsubmit.execution_provider_base import ExecutionProvider
-from libsubmit.slurm.template import template_string
-
+from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.providers.cobalt.template import template_string
+from libsubmit.exec_utils import execute_wait, wtime_to_minutes
+from libsubmit.launchers import Launchers
 import libsubmit.error as ep_error
 
 logger = logging.getLogger(__name__)
 
-translate_table = { 'PD' :  'PENDING',
-                    'R'  :  'RUNNING',
-                    'CA' : 'CANCELLED',
-                    'CF' : 'PENDING', #(configuring),
-                    'CG' : 'RUNNING', # (completing),
-                    'CD' : 'COMPLETED',
-                    'F'  : 'FAILED', # (failed),
-                    'TO' : 'TIMEOUT', # (timeout),
-                    'NF' : 'FAILED', # (node failure),
-                    'RV' : 'FAILED', #(revoked) and
-                    'SE' : 'FAILED' } # (special exit state
+translate_table = { 'queued'  :  'PENDING',
+                    'starting' : 'PENDING',
+                    'running' :  'RUNNING',
+                    'exiting' : 'COMPLETED',
+                    'killing' : 'COMPLETED'
+                  } # (special exit state
 
 
-class Slurm(ExecutionProvider):
-    ''' Slurm Execution Provider
+
+
+class Cobalt(ExecutionProvider):
+    ''' Cobalt Execution Provider
 
     This provider uses sbatch to submit, squeue for status and scancel to cancel
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
+    { "execution" : {
+         "executor" : "ipp",
+         "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
+         "scriptDir" : ".scripts",
+         "block" : { # Definition of a block
+             "nodes" : 1,            # of nodes in that block
+             "taskBlocks" : 1,        # total tasks in a block
+             "walltime" : "00:05:00",
+             "launcher" : "singleNode"
+             "options" : {
+                  "partition" : "debug",
+                  "account" : "pi-wilde",
+                  "overrides" : "#SBATCH--constraint=haswell"
+             }
+         }
+    }
     '''
 
     def __repr__ (self):
-        return "<Slurm Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
+        return "<Cobalt Execution Provider for site:{0}>".format(self.sitename)
 
     def __init__ (self, config, channel=None):
-        ''' Initialize the Slurm class
+        ''' Initialize the Cobalt execution provider class
 
         Args:
              - Config (dict): Dictionary with all the config options.
 
-        KWargs:
-             - Channel (None): A channel is required for slurm.
+        KWargs :
+             - channel (channel object) : default=None A channel object
         '''
 
         self.channel = channel
         if self.channel == None:
-            logger.error("Provider:Slurm cannot be initialized without a channel")
+            logger.error("Provider:Cobalt cannot be initialized without a channel")
             raise(ep_error.ChannelRequired(self.__class__.__name__,
                                            "Missing a channel to execute commands"))
+
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
 
-        if not os.path.exists(self.config["execution"]["script_dir"]):
-            os.makedirs(self.config["execution"]["script_dir"])
+        self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
+
+        if not os.path.exists(self.config["execution"].get("scriptDir", '.scripts')):
+            os.makedirs(self.config["execution"]["scriptDir"])
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -65,6 +82,7 @@ class Slurm(ExecutionProvider):
     def channels_required(self):
         ''' Returns Bool on whether a channel is required
         '''
+
         return True
 
     ###########################################################################################################
@@ -80,19 +98,27 @@ class Slurm(ExecutionProvider):
               [status...] : Status list of all jobs
         '''
 
-        job_id_list  = ','.join(self.resources.keys())
+        #job_id_list  = ','.join(self.resources.keys())
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = self.channel.execute_wait("squeue --job {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("qstat -u $USER", 3)
         for line in stdout.split('\n'):
-            parts = line.split()
-            if parts and parts[0] != 'JOBID' :
+            if line.startswith('=') : continue
+
+            parts = line.upper().split()
+            if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
+                print(parts)
+
+                if job_id not in self.resources : continue
+
                 status = translate_table.get(parts[4], 'UNKNOWN')
+
                 self.resources[job_id]['status'] = status
                 jobs_missing.remove(job_id)
 
+        print("Jobs list : " , self.resources)
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
@@ -109,12 +135,13 @@ class Slurm(ExecutionProvider):
             - List of status codes.
 
         '''
+
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
 
     ###########################################################################################################
-    # Submit
+    # Write submit script
     ###########################################################################################################
     def _write_submit_script(self, template_string, script_filename, job_name, configs):
         '''
@@ -136,10 +163,26 @@ class Slurm(ExecutionProvider):
         '''
 
         try:
-            submit_script = Template(template_string).substitute( jobname=job_name, **configs)
-            print("Script_filename : ", script_filename)
+            script_dir = os.path.dirname(script_filename)
+            if script_dir :
+                os.makedirs(script_dir)
+
+        except Exception as e:
+            if e.errno == 17:
+                pass
+            else:
+                logger.error("Unable to create script_dir:{0} due to:{1}".format(
+                        script_dir,
+                        e))
+                raise(ep_error.ScriptPathError(script_filename, e ))
+
+        try:
+            submit_script = Template(template_string).substitute(**configs,
+                                                                 jobname=job_name)
+
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
+            os.chmod(script_filename, 0o777)
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
@@ -185,6 +228,12 @@ class Slurm(ExecutionProvider):
         if blocksize < self.config["execution"]["block"].get("nodes", 1):
             blocksize = self.config["execution"]["block"].get("nodes",1)
 
+
+        # Set account options
+        account_opt = ''
+        if self.config["execution"]["block"]["options"].get("account", None):
+            account_opt = "-A {0}".format(self.config["execution"]["block"]["options"]["account"])
+
         # Set job name
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
@@ -200,33 +249,59 @@ class Slurm(ExecutionProvider):
                      self.config["execution"]["block"].get("taskBlocks", 1))
 
         job_config = self.config["execution"]["block"]["options"]
-        # TODO : script_path might need to change to accommodate script dir set via channels
-        job_config["submit_script_dir"] = script_path
         job_config["nodes"] = nodes
-        job_config["taskBlocks"] = self.config["execution"]["block"].get("taskBlocks", 1)
-        job_config["walltime"] = self.config["execution"]["block"].get("walltime", "00:20:00")
-        job_config["overrides"] = job_config.get("overrides", '')
-        job_config["user_script"] = cmd_string
+        job_config["overrides"] = job_config.get("overrides", '')        
+
+        # Wrap the cmd_string
+        lname = self.config["execution"]["block"].get("launcher", "singleNode")
+        launcher = Launchers.get(lname, None)        
+        job_config["user_script"] = launcher(cmd_string, 
+                                             self.config["execution"]["block"]["taskBlocks"])
+        
+        # Get queue request if requested
+        self.queue = ''
+        if job_config.get("queue", None):
+            self.queue = "-q {0}".format(job_config["queue"])
+
 
         logger.debug("Writing submit script")
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(channel_script_path), 3)
+        logger.debug("Executing : qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
+                                                                         self.queue,
+                                                                         self.max_walltime,
+                                                                         account_opt,
+                                                                         channel_script_path))
+        
+        retcode, stdout, stderr = self.channel.execute_wait(
+            "qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
+                                                    self.queue,
+                                                    self.max_walltime,
+                                                    account_opt,
+                                                    channel_script_path), 5)
+
+        # TODO : FIX this block
+        if retcode != 0 :
+            logger.error("Launch failed stdout:\n{0}  \nstderr:{1}\n".format(stdout, stderr))
+        logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
+                      stdout.strip(), stderr.strip())
 
         job_id = None
-        if retcode == 0 :
-            for line in stdout.split('\n'):
-                if line.startswith("Submitted batch job"):
-                    job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources[job_id] = {'job_id' : job_id,
-                                              'status' : 'PENDING',
-                                              'blocksize'   : blocksize }
-        else:
-            print("Submission of command to scale_out failed")
-            logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
+        if retcode == 0 :
+            # We should be getting only one line back
+            job_id = stdout.strip()
+            self.resources[job_id] = {'job_id' : job_id,
+                                      'status' : 'PENDING',
+                                      'blocksize'   : blocksize }
+        else:
+            logger.error("Submission of command to scale_out failed: {0}".format(stderr))
+            raise(ep_error.ScaleOutFailed(self.__class__,
+                                          "Request to submit job to local scheduler failed"))
+
+        logger.debug("Returning job id : {0}".format(job_id))
         return job_id
 
     ###########################################################################################################
@@ -243,7 +318,7 @@ class Slurm(ExecutionProvider):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.channel.execute_wait("scancel {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("qdel {0}".format(job_id_list), 3)
         rets = None
         if retcode == 0 :
             for jid in job_ids:
@@ -260,11 +335,7 @@ class Slurm(ExecutionProvider):
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
-        This may need to return more information in the futures :
-        { minsize, maxsize, current_requested }
-        '''
-        return self.current_blocksize
+        return self
 
     def _test_add_resource (self, job_id):
         self.resources.extend([{'job_id' : job_id,
@@ -274,4 +345,26 @@ class Slurm(ExecutionProvider):
 
 if __name__ == "__main__" :
 
-    print("None")
+
+    config = {  "site" : "cooley",
+                "execution" :
+                    {"executor" : "ipp",
+                     "provider" : "cobalt",
+                     "block"  : {
+                         "initParallelism" : 2,
+                         "maxParallelism" : 2,
+                         "minParallelism" : 0,
+                         "walltime" : "00:25:00",
+                         "options" : {
+                             "account" : "ExM",
+                             "submit_script_dir" : ".scripts",
+                             "overrides" : "",
+                             }
+                         }
+                     }
+                }
+
+    p = Cobalt(config)
+    p._status()
+    p.submit("echo 'Hello World'", 1)
+    p._status()

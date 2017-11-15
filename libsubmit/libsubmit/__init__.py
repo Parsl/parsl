@@ -10,14 +10,14 @@ logger = logging.getLogger(__name__)
 
 from libsubmit.version import VERSION
 from libsubmit.error import *
-from libsubmit.slurm.slurm import Slurm
-from libsubmit.aws.aws import EC2Provider
-from libsubmit.azure.azureProvider import AzureProvider
-from libsubmit.jetstream.jetstream import Jetstream
-from libsubmit.midway.midway import Midway
-from libsubmit.condor.condor import Condor
-from libsubmit.local.local import Local
-from libsubmit.cobalt.cobalt import Cobalt
+from libsubmit.providers.slurm.slurm import Slurm
+from libsubmit.providers.aws.aws import EC2Provider
+from libsubmit.providers.azure.azureProvider import AzureProvider
+from libsubmit.providers.jetstream.jetstream import Jetstream
+from libsubmit.providers.midway.midway import Midway
+from libsubmit.providers.condor.condor import Condor
+from libsubmit.providers.local.local import Local
+from libsubmit.providers.cobalt.cobalt import Cobalt
 from libsubmit.channels.ssh.ssh import SshChannel
 from libsubmit.channels.ssh_il.ssh_il import SshILChannel
 from libsubmit.channels.local.local import LocalChannel
