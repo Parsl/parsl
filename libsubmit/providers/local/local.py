@@ -5,7 +5,7 @@ import math
 import time
 import signal
 from string import Template
-from libsubmit.execution_provider_base import ExecutionProvider
+from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.exec_utils import execute_no_wait
 import libsubmit.error as ep_error
 logger = logging.getLogger(__name__)

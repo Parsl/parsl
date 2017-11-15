@@ -2,7 +2,7 @@ import os
 import logging
 import subprocess
 from string import Template
-from libsubmit.execution_provider_base import ExecutionProvider
+from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.exec_utils import execute_wait
 logger = logging.getLogger(__name__)
 

@@ -5,8 +5,8 @@ import math
 import time
 import re
 from string import Template
-from libsubmit.execution_provider_base import ExecutionProvider
-from libsubmit.condor.template import template_string
+from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.providers.condor.template import template_string
 from libsubmit.exec_utils import execute_wait, wtime_to_minutes
 from libsubmit.launchers import Launchers
 import libsubmit.error as ep_error
@@ -168,6 +168,9 @@ class Condor(ExecutionProvider):
         5 job(s) submitted to cluster 118907.
         1 job(s) submitted to cluster 118908.
         '''
+        print("THIS CONDOR0------------------------------------------------------------")
+        logger.debug("*"*40)
+        logger.debug("Attempting to launch at blocksize : %s" % blocksize)
         if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
             return None

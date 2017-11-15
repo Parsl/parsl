@@ -7,7 +7,7 @@ import time
 import logging
 import atexit
 
-from libsubmit.execution_provider_base import ExecutionProvider
+from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.error import *
 
 try :
