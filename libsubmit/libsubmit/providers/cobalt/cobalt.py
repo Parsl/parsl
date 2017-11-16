@@ -322,7 +322,7 @@ class Cobalt(ExecutionProvider):
         rets = None
         if retcode == 0 :
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['CA'] # Setting state to cancelled
+                self.resources[jid]['status'] = translate_table['killing'] # Setting state to cancelled
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
