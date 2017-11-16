@@ -141,7 +141,7 @@ class Condor(ExecutionProvider):
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            #raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
@@ -168,8 +168,7 @@ class Condor(ExecutionProvider):
         5 job(s) submitted to cluster 118907.
         1 job(s) submitted to cluster 118908.
         '''
-        print("THIS CONDOR0------------------------------------------------------------")
-        logger.debug("*"*40)
+
         logger.debug("Attempting to launch at blocksize : %s" % blocksize)
         if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
@@ -187,21 +186,38 @@ class Condor(ExecutionProvider):
         script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
                                               job_name)
         script_path = os.path.abspath(script_path)
+        # Set executable script
+        userscript_path = "{0}/{1}.script".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
+                                                  job_name)
+        userscript_path = os.path.abspath(userscript_path)
+
 
         # Calculate nodes
         nodes = self.config["execution"]["block"].get("nodes", 1)
 
         job_config = {}
+        job_config["job_name"] = job_name
         job_config["submit_script_dir"] = self.channel.script_dir
-        job_config["partition"] = self.config["execution"]["block"]["options"].get("partition", "default")
+        job_config["project"] = self.config["execution"]["block"]["options"].get("project", "")
         job_config["nodes"] = nodes
         job_config["condor_overrides"] = self.config["execution"]["block"]["options"].get("condor_overrides", '')
         job_config["user_script"] = cmd_string
         job_config["tasks_per_node"] =  1
+        job_config["requirements"] = self.config["execution"]["block"]["options"].get("requirements", "")
 
+        # Move the user script
+        # This is where the cmd_string should be wrapped by the launchers.
+        with open(userscript_path, 'w') as f:
+            f.write(cmd_string)
+        user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
+        job_config["input_files"] = user_script_path
+        job_config["job_script"] = os.path.basename(user_script_path)
+
+        # Construct and move the submit script
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
+        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        retcode, stdout, stderr = execute_wait("condor_submit {0}".format(script_path), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("condor_submit {0}".format(channel_script_path), 3)
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
@@ -235,7 +251,7 @@ class Condor(ExecutionProvider):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = execute_wait("condor_rm {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("condor_rm {0}".format(job_id_list), 3)
         rets = None
         if retcode == 0 :
             for jid in job_ids:
