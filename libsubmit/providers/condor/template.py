@@ -16,6 +16,28 @@ $condor_overrides
 queue $nodes
 '''
 
+
+template_string = '''
+universe                = vanilla
+should_transfer_files   = YES
+when_to_transfer_output = ON_EXIT_OR_EVICT
+Transfer_Executable     = false
+transfer_input_files    = ${input_files}
+machine_count           = ${nodes}
+output                  = ${submit_script_dir}/${job_name}.stdout
+error                   = ${submit_script_dir}/${job_name}.stderr
+executable              = /bin/bash
+arguments               = ${job_script}
+requirements            = ${requirements}
+projectname             = ${project}
+leave_in_queue          = TRUE
+
+${condor_overrides}
+
+queue
+
+'''
+
 # for later, 
 # if we want to remove on preemption, this might work:
 #    PERIODIC_REMOVE = (NumJobstarts > 1)
