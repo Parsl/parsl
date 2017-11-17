@@ -1,16 +1,32 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 class Channel (metaclass=ABCMeta):
-    """ Define the interface to all channels
+    """ Define the interface to all channels. Channels are usually called via the execute_wait function.
+    For channels that execute remotely, a push_file function allows you to copy over files.
 
     .. code:: python
 
-         execute_wait...
+                                +------------------
+                                |
+          cmd, wtime    ------->|  execute_wait
+          (ec, stdout, stderr)<-|---+
+                                |
+          cmd, wtime    ------->|  execute_no_wait
+          (ec, stdout, stderr)<-|---+
+                                |
+          src, dst_dir  ------->|  push_file
+             dst_path  <--------|----+
+                                |
+          dst_script_dir <------|  script_dir
+                                |
+                                +-------------------
 
     """
+
     @abstractmethod
     def execute_wait(self, cmd, walltime, *args, **kwargs):
-        '''
+        ''' Executes the cmd, with a defined walltime.
+
         Args:
             - cmd (string): Command string to execute over the channel
             - walltime (int) : Timeout in seconds
@@ -22,7 +38,10 @@ class Channel (metaclass=ABCMeta):
 
     @abstractproperty
     def script_dir(self):
-        '''
+        ''' This is a property. Returns the directory assigned for storing all internal scripts such as
+        scheduler submit scripts. This is usually where error logs from the scheduler would reside on the
+        channel destination side.
+
         Args:
             - None
 
@@ -61,6 +80,13 @@ class Channel (metaclass=ABCMeta):
 
     @abstractmethod
     def close(self):
-        '''
+        ''' Closes the channel. Clean out any auth credentials.
+
+        Args:
+            None
+
+        Returns:
+            Bool
+
         '''
         pass

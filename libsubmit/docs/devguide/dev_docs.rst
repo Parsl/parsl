@@ -21,19 +21,19 @@ away the interfaces provided by various systems to request, monitor, and cancel 
 Slurm
 ^^^^^
 
-.. autoclass:: libsubmit.slurm.slurm.Slurm
+.. autoclass:: libsubmit.providers.slurm.slurm.Slurm
    :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
 Cobalt
 ^^^^^^
 
-.. autoclass:: libsubmit.cobalt.cobalt.Cobalt
+.. autoclass:: libsubmit.providers.cobalt.cobalt.Cobalt
    :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
 Local
 ^^^^^
 
-.. autoclass:: libsubmit.cobalt.cobalt.Cobalt
+.. autoclass:: libsubmit.providers.local.local.Local
    :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
 
 

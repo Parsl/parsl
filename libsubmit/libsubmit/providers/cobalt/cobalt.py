@@ -29,22 +29,27 @@ class Cobalt(ExecutionProvider):
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
-    { "execution" : {
-         "executor" : "ipp",
-         "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
-         "scriptDir" : ".scripts",
-         "block" : { # Definition of a block
-             "nodes" : 1,            # of nodes in that block
-             "taskBlocks" : 1,        # total tasks in a block
-             "walltime" : "00:05:00",
-             "launcher" : "singleNode"
-             "options" : {
-                  "partition" : "debug",
-                  "account" : "pi-wilde",
-                  "overrides" : "#SBATCH--constraint=haswell"
-             }
+    .. code-block:: python
+
+         { "execution" : {
+              "executor" : "ipp",
+              "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
+              "script_dir" : ".scripts",
+              "block" : { # Definition of a block
+                  "nodes" : 1,            # of nodes in that block
+                  "taskBlocks" : 1,       # total tasks in a block
+                  "walltime" : "00:05:00",
+                  "initBlocks" : 2,
+                  "minBlocks" : 0,
+                  "maxBlocks" : 2,
+                  "scriptDir" : ".",
+                  "options" : {
+                      "partition" : "debug",
+                      "overrides" : "source /home/yadunand/setup_cooley_env.sh"
+                  }
+              }
+          }
          }
-    }
     '''
 
     def __repr__ (self):
