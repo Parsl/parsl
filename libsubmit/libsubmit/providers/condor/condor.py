@@ -24,6 +24,32 @@ translate_table = { '1'  : 'PENDING',
 
 class Condor(ExecutionProvider):
     ''' Condor Execution Provider
+
+    .. code-block:: python
+
+         { "execution" : {
+              "executor" : "ipp",
+              "provider" : "condor",  # LIKELY SHOULD BE BOUND TO SITE
+              "scriptDir" : ".scripts",
+              "block" : { # Definition of a block
+                  "nodes" : 1,            # of nodes in that block
+                  "taskBlocks" : 1,       # total tasks in a block
+                  "walltime" : "00:05:00",
+                  "initBlocks" : 1,
+                  "minBlocks" : 0,
+                  "maxBlocks" : 1,
+                  "scriptDir" : ".",
+                  "options" : {
+                      "partition" : "debug",
+                      "overrides" : "",
+                      "workerSetup" : """module load python/3.5.2;
+python3 -m venv parsl_env;
+source parsl_env/bin/activate;
+pip3 install ipyparallel """
+                  }
+              }
+           }
+        }
     '''
 
     def __repr__ (self):
@@ -135,7 +161,6 @@ class Condor(ExecutionProvider):
         try:
             submit_script = Template(template_string).substitute(**configs,
                                                                  jobname=job_name)
-            print("Script_filename : ", script_filename)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
@@ -200,7 +225,8 @@ class Condor(ExecutionProvider):
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["project"] = self.config["execution"]["block"]["options"].get("project", "")
         job_config["nodes"] = nodes
-        job_config["condor_overrides"] = self.config["execution"]["block"]["options"].get("condor_overrides", '')
+        job_config["condor_overrides"] = self.config["execution"]["block"]["options"].get("overrides", '')
+        job_config["worker_setup"] = self.config["execution"]["block"]["options"].get("workerSetup", '')
         job_config["user_script"] = cmd_string
         job_config["tasks_per_node"] =  1
         job_config["requirements"] = self.config["execution"]["block"]["options"].get("requirements", "")
@@ -208,7 +234,8 @@ class Condor(ExecutionProvider):
         # Move the user script
         # This is where the cmd_string should be wrapped by the launchers.
         with open(userscript_path, 'w') as f:
-            f.write(cmd_string)
+            f.write(job_config["worker_setup"] + '\n' + cmd_string)
+
         user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
         job_config["input_files"] = user_script_path
         job_config["job_script"] = os.path.basename(user_script_path)
