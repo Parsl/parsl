@@ -36,9 +36,11 @@ class Local(ExecutionProvider):
 
     def __init__ (self, config, channel_script_dir=None, channel=None):
         ''' Initialize the Slurm class
+
         Args:
              - Config (dict): Dictionary with all the config options.
         '''
+
         self.channel = channel
         self.config = config
         self.sitename = config['site']
@@ -67,6 +69,7 @@ class Local(ExecutionProvider):
     ###########################################################################################################
     def status (self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
+
         Args:
             - job_ids (List of ids) : List of identifiers for the jobs
 
@@ -74,6 +77,7 @@ class Local(ExecutionProvider):
             - List of status codes.
 
         '''
+
         for job_id in self.resources:
             poll_code = self.resources[job_id]['proc'].poll()
             if poll_code == None :
