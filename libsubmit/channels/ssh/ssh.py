@@ -74,13 +74,18 @@ class SshChannel ():
     def script_dir(self):
         return self.channel_script_dir
 
+    def prepend_env(self, cmd, env={}):
+        if len(env.keys()) > 0:
+            env_vars = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
+            return 'env {0} {1}'.format(env_vars, cmd)
+        return cmd
+
     def execute_wait(self, cmd, walltime=2, envs={}):
 
         # Execute the command
-        stdin, stdout, stderr = self.ssh_client.exec_command(cmd,
+        stdin, stdout, stderr = self.ssh_client.exec_command(self.prepend_env(cmd, envs),
                                                              bufsize=-1,
-                                                             timeout=walltime,
-                                                             environment=envs)
+                                                             timeout=walltime)
         # Block on exit status from the command
         exit_status = stdout.channel.recv_exit_status()
         return  exit_status, stdout.read().decode("utf-8"), stderr.read().decode("utf-8")
@@ -104,10 +109,9 @@ class SshChannel ():
         '''
 
         # Execute the command
-        stdin, stdout, stderr = self.ssh_client.exec_command(cmd,
+        stdin, stdout, stderr = self.ssh_client.exec_command(self.prepend_env(cmd, envs),
                                                              bufsize=-1,
-                                                             timeout=walltime,
-                                                             environment=envs)
+                                                             timeout=walltime)
         # Block on exit status from the command
         return  None, stdout, stderr
 
