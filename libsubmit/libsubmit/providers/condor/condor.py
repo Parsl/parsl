@@ -31,6 +31,7 @@ class Condor(ExecutionProvider):
               "executor" : "ipp",
               "provider" : "condor",  # LIKELY SHOULD BE BOUND TO SITE
               "scriptDir" : ".scripts",
+              "environment": {},  # Env vars to be set on channel execution
               "block" : { # Definition of a block
                   "nodes" : 1,            # of nodes in that block
                   "taskBlocks" : 1,       # total tasks in a block
@@ -80,6 +81,9 @@ pip3 install ipyparallel """
         if not os.path.exists(self.config["execution"].get("scriptDir", '.scripts')):
             os.makedirs([self.config["execution"].get("scriptDir", ".scripts")])
 
+        self.config['execution']['environment'] = self.config['execution'].get('environment', {})
+        self.config['execution']['block']['environment'] = self.config['execution']['block'].get('environment', {})
+
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
@@ -103,8 +107,8 @@ pip3 install ipyparallel """
         '''
 
         job_id_list  = ' '.join(self.resources.keys())
-
-        retcode, stdout, stderr = self.channel.execute_wait("condor_q {0} -af:jr JobStatus".format(job_id_list), 3)
+        cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
 
         '''
         Example output: 
@@ -244,7 +248,8 @@ pip3 install ipyparallel """
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        retcode, stdout, stderr = self.channel.execute_wait("condor_submit {0}".format(channel_script_path), 3)
+        cmd = "condor_submit {0}".format(channel_script_path)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
@@ -279,7 +284,8 @@ pip3 install ipyparallel """
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.channel.execute_wait("condor_rm {0}".format(job_id_list), 3)
+        cmd = "condor_rm {0}".format(job_id_list)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
         rets = None
         if retcode == 0 :
             for jid in job_ids:
