@@ -133,17 +133,17 @@ class SshChannel ():
         try:
             self.sftp_client.mkdir(remote_dir)
         except IOError as e:
-            logger.error("Pushing {0} to {1} failed".format(local_source, remote_dir))
-            if e.errno == 2:
-                raise BadScriptPath(e, self.hostname)
-            elif e.errno == 13:
-                raise BadPermsScriptPath(e, self.hostname)
-            elif e.errno == None:
-                # Directory already exists. Nothing to do
-                pass
-            else :
-                logger.error("File push failed due to SFTP client failure")
-                raise FileCopyException(e, self.hostname)
+            if e.errno is None:
+                logger.info("Copying {0} into existing directory {1}".format(local_source, remote_dir))
+            else:
+                logger.error("Pushing {0} to {1} failed".format(local_source, remote_dir))
+                if e.errno == 2:
+                    raise BadScriptPath(e, self.hostname)
+                elif e.errno == 13:
+                    raise BadPermsScriptPath(e, self.hostname)
+                else :
+                    logger.error("File push failed due to SFTP client failure")
+                    raise FileCopyException(e, self.hostname)
 
 
         try:
