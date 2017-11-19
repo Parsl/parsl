@@ -115,7 +115,7 @@ pip3 install ipyparallel """
         '''
 
 
-        for line in stdout.split('\n'):
+        for line in stdout.strip().split('\n'):
             parts = line.split()
             job_id = parts[0]
             status = translate_table.get(parts[1], 'UNKNOWN')
