@@ -78,7 +78,7 @@ pip3 install ipyparallel """
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
         if not os.path.exists(self.config["execution"].get("scriptDir", '.scripts')):
-            os.makedirs(self.config["execution"]["scriptDir"])
+            os.makedirs([self.config["execution"].get("scriptDir", ".scripts")])
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
