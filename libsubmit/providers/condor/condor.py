@@ -282,7 +282,7 @@ pip3 install ipyparallel """
         rets = None
         if retcode == 0 :
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['CA'] # Setting state to cancelled
+                self.resources[jid]['status'] = 'CANCELLED'
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
