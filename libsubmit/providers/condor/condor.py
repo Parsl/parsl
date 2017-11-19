@@ -262,6 +262,7 @@ pip3 install ipyparallel """
                     processes = [str(x) for x in range(0,int(line[0]))]
                     job_id += [cluster + process for process in processes]
 
+            self._add_resource(job_id)
         return job_id
 
     ###########################################################################################################
@@ -297,10 +298,12 @@ pip3 install ipyparallel """
     def current_capacity(self):
         return self
 
-    def _test_add_resource (self, job_id):
-        self.resources.extend([{'job_id' : job_id,
-                                'status' : 'PENDING',
-                                'size'   : 1 }])
+    def _add_resource(self, job_id):
+        for jid in job_id:
+            self.resources[jid] = {
+                'status': 'PENDING',
+                'size': 1
+            }
         return True
 
 if __name__ == "__main__" :
