@@ -31,6 +31,7 @@ arguments               = ${job_script}
 requirements            = ${requirements}
 +projectname            = ${project}
 leave_in_queue          = TRUE
+environment             = "${environment}"
 
 ${condor_overrides}
 

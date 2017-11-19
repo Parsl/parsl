@@ -33,6 +33,7 @@ class Condor(ExecutionProvider):
               "scriptDir" : ".scripts",
               "environment": {},  # Env vars to be set on channel execution
               "block" : { # Definition of a block
+                  "environment": {},  # Env vars to be set for submitted tasks
                   "nodes" : 1,            # of nodes in that block
                   "taskBlocks" : 1,       # total tasks in a block
                   "walltime" : "00:05:00",
@@ -224,6 +225,15 @@ pip3 install ipyparallel """
         # Calculate nodes
         nodes = self.config["execution"]["block"].get("nodes", 1)
 
+        env = self.config["execution"]["block"].get('environment', {})
+        for key, value in env.items():
+            # To escape literal quote marks, double them
+            # See: http://research.cs.wisc.edu/htcondor/manual/v8.6/condor_submit.html
+            try:
+                env[key] = "'{}'".format(value.replace("'", '"').replace('"', '""'))
+            except AttributeError:
+                pass
+
         job_config = {}
         job_config["job_name"] = job_name
         job_config["submit_script_dir"] = self.channel.script_dir
@@ -234,6 +244,7 @@ pip3 install ipyparallel """
         job_config["user_script"] = cmd_string
         job_config["tasks_per_node"] =  1
         job_config["requirements"] = self.config["execution"]["block"]["options"].get("requirements", "")
+        job_config["environment"] = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
 
         # Move the user script
         # This is where the cmd_string should be wrapped by the launchers.
