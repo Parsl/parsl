@@ -31,6 +31,29 @@ class Slurm(ExecutionProvider):
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
+    Here's a sample config for the Slurm provider:
+
+    .. code-block:: python
+
+         { "execution" : {
+              "executor" : "ipp",
+              "provider" : "slurm",  # LIKELY SHOULD BE BOUND TO SITE
+              "script_dir" : ".scripts",
+              "block" : { # Definition of a block
+                  "nodes" : 1,            # of nodes in that block
+                  "taskBlocks" : 1,       # total tasks in a block
+                  "walltime" : "00:05:00",
+                  "initBlocks" : 1,
+                  "minBlocks" : 0,
+                  "maxBlocks" : 1,
+                  "scriptDir" : ".",
+                  "options" : {
+                      "partition" : "westmere",
+                      "overrides" : """module load python/3.5.2+gcc-4.8; source /scratch/midway/yadunand/parsl_env_3.5.2_gcc/bin/activate"""
+                  }
+              }
+            }
+         }
     '''
 
     def __repr__ (self):
@@ -137,7 +160,6 @@ class Slurm(ExecutionProvider):
 
         try:
             submit_script = Template(template_string).substitute( jobname=job_name, **configs)
-            print("Script_filename : ", script_filename)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
