@@ -74,13 +74,18 @@ class SshChannel ():
     def script_dir(self):
         return self.channel_script_dir
 
+    def prepend_envs(self, cmd, env={}):
+        if len(env.keys()) > 0:
+            env_vars = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
+            return 'env {0} {1}'.format(env_vars, cmd)
+        return cmd
+
     def execute_wait(self, cmd, walltime=2, envs={}):
 
         # Execute the command
-        stdin, stdout, stderr = self.ssh_client.exec_command(cmd,
+        stdin, stdout, stderr = self.ssh_client.exec_command(self.prepend_envs(cmd, envs),
                                                              bufsize=-1,
-                                                             timeout=walltime,
-                                                             environment=envs)
+                                                             timeout=walltime)
         # Block on exit status from the command
         exit_status = stdout.channel.recv_exit_status()
         return  exit_status, stdout.read().decode("utf-8"), stderr.read().decode("utf-8")
@@ -104,10 +109,9 @@ class SshChannel ():
         '''
 
         # Execute the command
-        stdin, stdout, stderr = self.ssh_client.exec_command(cmd,
+        stdin, stdout, stderr = self.ssh_client.exec_command(self.prepend_envs(cmd, envs),
                                                              bufsize=-1,
-                                                             timeout=walltime,
-                                                             environment=envs)
+                                                             timeout=walltime)
         # Block on exit status from the command
         return  None, stdout, stderr
 
@@ -136,16 +140,17 @@ class SshChannel ():
         try:
             self.sftp_client.mkdir(remote_dir)
         except IOError as e:
-            if e.errno == 2:
-                raise BadScriptPath(e, self.hostname)
-            elif e.errno == 13:
-                raise BadPermsScriptPath(e, self.hostname)
-            elif e.errno == None:
-                # Directory already exists. Nothing to do
-                pass
-            else :
-                logger.error("File push failed due to SFTP client failure")
-                raise FileCopyException(e, self.hostname)
+            if e.errno is None:
+                logger.info("Copying {0} into existing directory {1}".format(local_source, remote_dir))
+            else:
+                logger.error("Pushing {0} to {1} failed".format(local_source, remote_dir))
+                if e.errno == 2:
+                    raise BadScriptPath(e, self.hostname)
+                elif e.errno == 13:
+                    raise BadPermsScriptPath(e, self.hostname)
+                else :
+                    logger.error("File push failed due to SFTP client failure")
+                    raise FileCopyException(e, self.hostname)
 
         try:
             s = self.sftp_client.put(local_source, remote_dest, confirm=True)
