@@ -125,7 +125,10 @@ class SshChannel ():
             - None, stdout (readable stream), stderr (readable stream)
 
         Raises:
-            - ChannelExecFailed (reason)
+            - BadScriptPath : if script path on the remote side is bad
+            - BadPermsScriptPath : You do not have perms to make the channel script dir
+            - FileCopyException : FileCopy failed.
+
         '''
         status = False
         remote_dest = remote_dir + '/' + os.path.basename(local_source)
@@ -133,7 +136,6 @@ class SshChannel ():
         try:
             self.sftp_client.mkdir(remote_dir)
         except IOError as e:
-            logger.error("Pushing {0} to {1} failed".format(local_source, remote_dir))
             if e.errno == 2:
                 raise BadScriptPath(e, self.hostname)
             elif e.errno == 13:
@@ -144,7 +146,6 @@ class SshChannel ():
             else :
                 logger.error("File push failed due to SFTP client failure")
                 raise FileCopyException(e, self.hostname)
-
 
         try:
             s = self.sftp_client.put(local_source, remote_dest, confirm=True)
