@@ -31,7 +31,9 @@ class Condor(ExecutionProvider):
               "executor" : "ipp",
               "provider" : "condor",  # LIKELY SHOULD BE BOUND TO SITE
               "scriptDir" : ".scripts",
+              "environment": {},  # Env vars to be set on channel execution
               "block" : { # Definition of a block
+                  "environment": {},  # Env vars to be set for submitted tasks
                   "nodes" : 1,            # of nodes in that block
                   "taskBlocks" : 1,       # total tasks in a block
                   "walltime" : "00:05:00",
@@ -78,7 +80,10 @@ pip3 install ipyparallel """
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
         if not os.path.exists(self.config["execution"].get("scriptDir", '.scripts')):
-            os.makedirs(self.config["execution"]["scriptDir"])
+            os.makedirs([self.config["execution"].get("scriptDir", ".scripts")])
+
+        self.config['execution']['environment'] = self.config['execution'].get('environment', {})
+        self.config['execution']['block']['environment'] = self.config['execution']['block'].get('environment', {})
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -103,8 +108,8 @@ pip3 install ipyparallel """
         '''
 
         job_id_list  = ' '.join(self.resources.keys())
-
-        retcode, stdout, stderr = self.channel.execute_wait("condor_q {0} -af:jr JobStatus".format(job_id_list), 3)
+        cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
 
         '''
         Example output: 
@@ -115,7 +120,7 @@ pip3 install ipyparallel """
         '''
 
 
-        for line in stdout.split('\n'):
+        for line in stdout.strip().split('\n'):
             parts = line.split()
             job_id = parts[0]
             status = translate_table.get(parts[1], 'UNKNOWN')
@@ -220,6 +225,15 @@ pip3 install ipyparallel """
         # Calculate nodes
         nodes = self.config["execution"]["block"].get("nodes", 1)
 
+        env = self.config["execution"]["block"].get('environment', {})
+        for key, value in env.items():
+            # To escape literal quote marks, double them
+            # See: http://research.cs.wisc.edu/htcondor/manual/v8.6/condor_submit.html
+            try:
+                env[key] = "'{}'".format(value.replace("'", '"').replace('"', '""'))
+            except AttributeError:
+                pass
+
         job_config = {}
         job_config["job_name"] = job_name
         job_config["submit_script_dir"] = self.channel.script_dir
@@ -230,6 +244,7 @@ pip3 install ipyparallel """
         job_config["user_script"] = cmd_string
         job_config["tasks_per_node"] =  1
         job_config["requirements"] = self.config["execution"]["block"]["options"].get("requirements", "")
+        job_config["environment"] = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
 
         # Move the user script
         # This is where the cmd_string should be wrapped by the launchers.
@@ -244,7 +259,8 @@ pip3 install ipyparallel """
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        retcode, stdout, stderr = self.channel.execute_wait("condor_submit {0}".format(channel_script_path), 3)
+        cmd = "condor_submit {0}".format(channel_script_path)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
         logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
                       stdout.strip(), stderr.strip())
 
@@ -262,6 +278,7 @@ pip3 install ipyparallel """
                     processes = [str(x) for x in range(0,int(line[0]))]
                     job_id += [cluster + process for process in processes]
 
+            self._add_resource(job_id)
         return job_id
 
     ###########################################################################################################
@@ -278,11 +295,12 @@ pip3 install ipyparallel """
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.channel.execute_wait("condor_rm {0}".format(job_id_list), 3)
+        cmd = "condor_rm {0}".format(job_id_list)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
         rets = None
         if retcode == 0 :
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['CA'] # Setting state to cancelled
+                self.resources[jid]['status'] = 'CANCELLED'
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
@@ -297,10 +315,12 @@ pip3 install ipyparallel """
     def current_capacity(self):
         return self
 
-    def _test_add_resource (self, job_id):
-        self.resources.extend([{'job_id' : job_id,
-                                'status' : 'PENDING',
-                                'size'   : 1 }])
+    def _add_resource(self, job_id):
+        for jid in job_id:
+            self.resources[jid] = {
+                'status': 'PENDING',
+                'size': 1
+            }
         return True
 
 if __name__ == "__main__" :
