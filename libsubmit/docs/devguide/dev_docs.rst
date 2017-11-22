@@ -30,6 +30,18 @@ Cobalt
 .. autoclass:: libsubmit.providers.cobalt.cobalt.Cobalt
    :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
+Condor
+^^^^^^
+
+.. autoclass:: libsubmit.providers.condor.condor.Condor
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+
+Torque
+^^^^^^
+
+.. autoclass:: libsubmit.providers.torque.torque.Torque
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+
 Local
 ^^^^^
 
@@ -59,12 +71,20 @@ LocalChannel
 SshChannel
 ^^^^^^^^^^^^
 .. autoclass:: libsubmit.channels.ssh.ssh.SshChannel
-   :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
+   :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
 
 SshILChannel
 ^^^^^^^^^^^^
 .. autoclass:: libsubmit.channels.ssh_il.ssh_il.SshILChannel
-   :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
+   :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
 
 
+
+Launchers
+---------
+
+Launchers are basically wrappers for user submitted scripts as they are submitted to
+a specific execution resource.
+
+.. autofunction:: libsubmit.launchers.singleNodeLauncher
 
