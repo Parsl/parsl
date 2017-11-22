@@ -255,14 +255,14 @@ class Cobalt(ExecutionProvider):
 
         job_config = self.config["execution"]["block"]["options"]
         job_config["nodes"] = nodes
-        job_config["overrides"] = job_config.get("overrides", '')        
-
+        job_config["overrides"] = job_config.get("overrides", '')
+        job_config["jobname"] = job_name
         # Wrap the cmd_string
         lname = self.config["execution"]["block"].get("launcher", "singleNode")
-        launcher = Launchers.get(lname, None)        
-        job_config["user_script"] = launcher(cmd_string, 
+        launcher = Launchers.get(lname, None)
+        job_config["user_script"] = launcher(cmd_string,
                                              self.config["execution"]["block"]["taskBlocks"])
-        
+
         # Get queue request if requested
         self.queue = ''
         if job_config.get("queue", None):
