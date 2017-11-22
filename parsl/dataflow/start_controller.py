@@ -88,7 +88,14 @@ class Controller(object):
         try:
             pgid = os.getpgpid(self.proc.pid)
             os.killpg(pgid, signal.SIGTERM)
-            time.sleep(0.1)
+            time.sleep(0.2)
             os.killpg(pgid, signal.SIGKILL)
+            try:
+                self.proc.wait(timeout=1)
+                x = self.proc.returncode
+                logger.debug("Controller exited with {0}".format(x))
+            except subprocess.TimeoutExpired :
+                logger.warn("Ipcontroller cleanup failed. May require manual cleanup")
+
         except:
             logger.error("Failed to kill the ipcontroller process[{0}]".format(self.proc.pid))
