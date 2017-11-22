@@ -226,6 +226,7 @@ pip3 install ipyparallel """
         nodes = self.config["execution"]["block"].get("nodes", 1)
 
         env = self.config["execution"]["block"].get('environment', {})
+        env["JOBNAME"] = job_name
         for key, value in env.items():
             # To escape literal quote marks, double them
             # See: http://research.cs.wisc.edu/htcondor/manual/v8.6/condor_submit.html
