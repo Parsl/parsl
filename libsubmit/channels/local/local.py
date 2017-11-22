@@ -14,6 +14,9 @@ class LocalChannel (Channel):
     and done so infrequently that they do not need a persistent channel
     '''
 
+    def __repr__ (self):
+        return "Local:{0}".format(self.hostname)
+
     def __init__ (self, userhome=".", envs={}, scriptDir="./.scripts", **kwargs):
         ''' Initialize the local channel. scriptDir is required by set to a default.
 
