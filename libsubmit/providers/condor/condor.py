@@ -45,9 +45,9 @@ class Condor(ExecutionProvider):
                       "partition" : "debug",
                       "overrides" : "",
                       "workerSetup" : """module load python/3.5.2;
-python3 -m venv parsl_env;
-source parsl_env/bin/activate;
-pip3 install ipyparallel """
+                       python3 -m venv parsl_env;
+                       source parsl_env/bin/activate;
+                       pip3 install ipyparallel """
                   }
               }
            }
@@ -149,8 +149,7 @@ pip3 install ipyparallel """
         a submit script file.
 
         Args:
-              - template_string (string) : The template string to be used for the writing submit script
-               script_filename (string) : Name of the submit script
+              - template_string (string) : The template string to be used for the writing submit script script_filename (string) : Name of the submit script
               - job_name (string) : job name
               - configs (dict) : configs that get pushed into the template
 
@@ -158,8 +157,8 @@ pip3 install ipyparallel """
               - True: on success
 
         Raises:
-              SchedulerMissingArgs : If template is missing args
-              ScriptPathError : Unable to write submit script out
+              - SchedulerMissingArgs : If template is missing args
+              - ScriptPathError : Unable to write submit script out
         '''
 
         # This section needs to be brought upto par with the cobalt provider.
