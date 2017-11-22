@@ -45,7 +45,7 @@ cat <<EOF > ipengine.json
 EOF
 
 mkdir -p '.ipengine_logs'
-ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
+ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 '''.format(engine_dir, engine_json)
 
 
@@ -150,6 +150,23 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$jobname.log
 
         return r
 
+    def shutdown (self, hub=True, targets='all', block=False):
+        ''' Shutdown the executor, including all workers and controllers.
+        The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
+
+        Kwargs:
+            - hub (Bool): Whether the hub should be shutdown, Default:True,
+            - targets (list of ints| 'all'): List of engine id's to kill, Default:'all'
+            - block (Bool): To block for confirmations or not
+
+        Raises:
+             NotImplemented exception
+        '''
+        x = self.executor.shutdown(targets=targets,
+                                   hub=hub,
+                                   block=block)
+        logger.debug("Done with executor shutdown")
+        return x
 
 if __name__ == "__main__" :
 

@@ -6,7 +6,7 @@ class ParslExecutor(metaclass=ABCMeta):
     functionality by the child classes.
 
     .. note:: Shutdown is currently missing, as it is not yet supported by some of the executors (threads for eg).
-    
+
     """
 
     @abstractmethod
@@ -35,9 +35,17 @@ class ParslExecutor(metaclass=ABCMeta):
 
         pass
 
+    @abstractmethod
+    def shutdown(self, *args, **kwargs):
+        ''' Shutdown the executor which includes all attached resources such as workers and
+        controllers '''
+
+        pass
+
     @abstractproperty
     def scaling_enabled(self):
         ''' The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
         '''
         pass
+
