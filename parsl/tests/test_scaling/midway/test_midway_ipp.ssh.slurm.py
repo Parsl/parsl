@@ -2,11 +2,9 @@ from parsl import *
 import parsl
 import libsubmit
 
-parsl.set_stream_logger()
+#parsl.set_stream_logger()
 print(parsl.__version__)
 print(libsubmit.__version__)
-
-from libsubmit import Cobalt
 
 config = {
     "sites" : [
@@ -31,16 +29,14 @@ config = {
                   "scriptDir" : ".",
                   "options" : {
                       "partition" : "westmere",
-                      "overrides" : ""
+                      "overrides" : '''module load python/3.5.2+gcc-4.8; source /scratch/midway/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
                   }
               }
           }
         }
         ],
-        "globals" : {
-            "lazyErrors" : True
-        }
-
+    "globals" : {   "lazyErrors" : True },
+    "controller" : { "publicIp" : '128.135.250.229' }
 }
 
 dfk = DataFlowKernel(config=config)
@@ -54,7 +50,7 @@ def python_app():
 
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
-    cmd_line = 'echo "Hello from $(uname -a)" ; sleep 2'
+    return 'echo "Hello from $(uname -a)" ; sleep 2'
 
 
 def test_python():
