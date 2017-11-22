@@ -16,6 +16,7 @@ from libsubmit.providers.azure.azureProvider import AzureProvider
 from libsubmit.providers.jetstream.jetstream import Jetstream
 from libsubmit.providers.midway.midway import Midway
 from libsubmit.providers.condor.condor import Condor
+from libsubmit.providers.torque.torque import Torque
 from libsubmit.providers.local.local import Local
 from libsubmit.providers.cobalt.cobalt import Cobalt
 from libsubmit.channels.ssh.ssh import SshChannel
@@ -25,7 +26,8 @@ from libsubmit.channels.local.local import LocalChannel
 __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
-__all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'Jetstream', 'Midway', 'Local', 'Cobalt', 'Condor',
+__all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'Jetstream', 'Midway',
+           'Local', 'Cobalt', 'Condor', 'Torque',
            'LocalChannel', 'SshChannel', 'SshILChannel']
 
 def set_stream_logger(name='libsubmit', level=logging.DEBUG, format_string=None):
