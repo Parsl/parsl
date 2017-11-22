@@ -29,8 +29,9 @@ error                   = ${submit_script_dir}/${job_name}.stderr
 executable              = /bin/bash
 arguments               = ${job_script}
 requirements            = ${requirements}
-projectname             = ${project}
++projectname            = ${project}
 leave_in_queue          = TRUE
+environment             = "${environment}"
 
 ${condor_overrides}
 
