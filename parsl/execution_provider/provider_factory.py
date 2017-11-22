@@ -21,14 +21,10 @@ from libsubmit import *
 class ExecProviderFactory (object):
 
     def __init__ (self):
-        ''' Constructor
+        ''' Constructor for the execution provider factory.
 
         Args:
-             name (string) : Name of the execution resource
-
-        Returns:
-             object (ExecutionProvider)
-
+             None
         '''
 
         self.executors = { 'ipp' : IPyParallelExecutor,
@@ -36,11 +32,13 @@ class ExecProviderFactory (object):
                            'threads' : ThreadPoolExecutor,
                            None : lambda *args, **kwargs : None }
 
-        self.execution_providers = { 'slurm' : Slurm,
-                                     'local' : Local,
-                                     'aws' : EC2Provider,
+        self.execution_providers = { 'slurm'  : Slurm,
+                                     'local'  : Local,
+                                     'aws'    : EC2Provider,
                                      'cobalt' : Cobalt,
-                                     None : lambda *args, **kwargs : None }
+                                     'condor' : Condor,
+                                     'torque' : Torque,
+                                     None     : lambda *args, **kwargs : None }
 
         self.channels = { 'ssh' : SshChannel,
                           'ssh-il' : SshILChannel,
