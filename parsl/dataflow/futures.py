@@ -55,13 +55,37 @@ class AppFuture(Future):
                 super().set_exception(e)
 
 
-    def __init__ (self, parent, tid=None):
+    def __init__ (self, parent, tid=None, stdout=None, stderr=None):
+        ''' Initialize the AppFuture.
+
+        Args:
+             - parent (Future) : The parent future if one exists
+               A default value of None should be passed in if app is not launched
+
+        KWargs:
+             - tid (Int) : Task id should be any unique identifier. Now Int.
+             - stdout (str) : Stdout file of the app.
+                   Default: None
+             - stderr (str) : Stderr file of the app.
+                   Default: None
+        '''
         self._tid = tid
         super().__init__()
         self.parent   = parent
         #if self.parent:
         #    parent.add_done_callback(self.parent_callback)
         self._outputs = []
+        self._stdout  = stdout
+        self._stderr  = stderr
+
+
+    @property
+    def stdout(self):
+        return self._stdout
+
+    @property
+    def stderr(self):
+        return self._stderr
 
     @property
     def tid(self):
