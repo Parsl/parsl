@@ -23,6 +23,7 @@ Parsl is a Python-based parallel scripting library that supports development and
    userguide/overview
    userguide/apps
    userguide/futures
+   userguide/exceptions
    userguide/configuring
 
 .. _dev_docs:
