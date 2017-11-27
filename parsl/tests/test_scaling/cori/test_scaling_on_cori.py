@@ -5,9 +5,8 @@ import os
 import time
 import shutil
 import argparse
-from parsl.execution_provider.slurm.slurm import Slurm
-from parsl.execution_provider.provider_factory import ExecProviderFactory
-#parsl.set_stream_logger()
+
+parsl.set_stream_logger()
 
 '''
 ================== Block
@@ -18,72 +17,74 @@ from parsl.execution_provider.provider_factory import ExecProviderFactory
 | ++++++++++++++ |
 ==================
 '''
-config = {  "site" : "midway_westmere",
-            "execution" :
-            {  "executor" : "ipp",
-               "provider" : "slurm",
-               "channel"  : "local",
-               "options" :
-               {"init_parallelism" : 2,
-                "max_parallelism" : 2,
-                "min_parallelism" : 0,
-                "tasks_per_node"  : 1,
-                "nodes_granularity" : 1,
-                "partition" : "debug",
-                "walltime" : "00:05:00",
-                "account" : "pi-wilde",
-                "slurm_overrides" : "#SBATCH --constraint=haswell",
-                "submit_script_dir" : ".scripts"
-                }
-            }}
+config = {
+    "sites" : [
+        { "site" : "Local_IPP",
+          "auth" : {
+              "channel" : "ssh",
+              "hostname" : "cori.nersc.gov",
+              "username" : "yadunand",
+              "scriptDir" : "/global/homes/y/yadunand/parsl_scripts"
+          },
+          "execution" : {
+              "executor" : "ipp",
+              "provider" : "slurm",  # LIKELY SHOULD BE BOUND TO SITE
+              "script_dir" : ".scripts",
+              "block" : { # Definition of a block
+                  "nodes" : 1,            # of nodes in that block
+                  "taskBlocks" : 1,       # total tasks in a block
+                  "walltime" : "00:10:00",
+                  "initBlocks" : 1,
+                  "minBlocks" : 0,
+                  "maxBlocks" : 1,
+                  "scriptDir" : ".",
+                  "options" : {
+                      "partition" : "debug",
+                      "overrides" : '''#SBATCH --constraint=haswell
+module load python/3.5-anaconda ; source activate parsl_env_3.5'''
+                  }
+              }
+          }
+        }
+        ],
+    "globals" : {   "lazyErrors" : True },
+    "controller" : { "publicIp" : '*' }
+}
 
-epf = ExecProviderFactory()
-resource = epf.make(config)
-dfk = DataFlowKernel(resource)
+dfk = DataFlowKernel(config=config)
+
+@App("python", dfk)
+def python_app_slow(duration):
+    import platform
+    import time
+    time.sleep(duration)
+    return "Hello from {0}".format(platform.uname())
 
 
-@App('bash', dfk)
-def echo_stuff(stdout='std.out', stderr='std.err'):
-    cmd_line = '''echo "hostame :$HOSTNAME"
-    echo "date:", $(date)
+def test_python_remote(count=10):
+    ''' Run with no delay
     '''
+    fus = []
+    for i in range(0, count):
+        fu = python_app_slow(0)
+        fus.extend([fu])
 
-@App('python', dfk)
-def pi(total):
-    import random      # App functions have to import modules they will use.     
-    width = 10000      # Set the size of the box in which we drop random points
-    center = width/2
-    c2  = center**2
-    count = 0
-    for i in range(total):
-        # Drop a random point in the box.
-        x,y = random.randint(1, width),random.randint(1, width)
-        # Count points within the circle
-        if (x-center)**2 + (y-center)**2 < c2:
-            count += 1
-    return (count*4/total)
+    for fu in fus:
+        print(fu.result())
 
-@App('python', dfk)
-def avg_three(a,b,c):
-    return (a+b+c)/3
+def test_python_remote_slow(count=10):
+
+    fus = []
+    for i in range(0, count):
+        fu = python_app_slow(count/10)
+        fus.extend([fu])
+
+    for fu in fus:
+        print(fu.result())
+    
 
 if __name__ == "__main__" :
 
-    if os.path.exists("./outputs"):
-        shutil.rmtree("./outputs")
-        os.makedirs("./outputs")
 
-    # Run some comptutations
-    fus = []
-    for i in range(1,10):
-        f = echo_stuff(stdout="outputs/{0}.bash.out".format(i),
-                       stderr="outputs/{0}.bash.err".format(i))
-
-    print([fu.result() for fu in fus])
-
-    # Do the pi ()
-    a, b, c = pi(10**6), pi(10**6), pi(10**6)
-    
-    x = avg_three(a,b,c)
-    
-    print("Got pi : ", x.result())
+    test_python_remote()
+    test_python_remote_slow()

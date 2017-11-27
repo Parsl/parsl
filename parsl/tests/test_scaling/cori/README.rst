@@ -7,19 +7,24 @@ Requirements
 ============
 
 Cori makes Python3.6 available via Conda. We'll use these packages to install Parsl and it's dependencies.
+Load the conda module. Make sure to match your python version with that env you setup on Cori.
 
 >>> module load python/3.6-anaconda-4.4
 
+
 Now let's create a Conda virtual environment to isolate the following package installations and activate it.
- 
->>> conda create --name parsl-env
->>> source activate parsl-env
 
-If the last step worked your prompt is now prefixed by (parsl-env). Let's install the packages:
+>>> conda create --name parsl_env_3.6
+>>> source activate parsl_env_3.6
 
->>> conda install -c yadudoc1729 parsl
->>> conda install boto3
+Install pip to your conda env:
 
+>>> conda install -n parsl_env_3.6 pip
+
+Ensure that the pip package is coming from your local conda env dirs.
+
+>>> which pip
+>>> pip install parsl
 
 I'd recommend downloading the latest source and adding the source path to your PYTHONPATH.
 
@@ -48,25 +53,39 @@ Here's a config for Cori that starts with a request for 2 nodes.
 
 .. code:: python3
 
-     config = {"site" : "cori-debug",
-               "execution" :
-                  {"executor" : "ipp",
-                   "provider" : "slurm",
-                   "channel"  : "local",
-                   "options" :
-                       {"init_parallelism" : 2,      # Starts with 2 nodes
-                        "max_parallelism" : 2,       # Limits this run to 2 nodes
-                        "min_parallelism" : 0,  
-                        "tasks_per_node"  : 1,       # One engine per node
-                        "nodes_granularity" : 1,     # Request one node per slurm request
-                        "partition" : "debug",       # Send request to the debug partition
-                        "walltime" : "00:05:00",     # Walltime 
-                        "slurm_overrides" : "#SBATCH --constraint=haswell", # All additional slurm constraints
-                        "submit_script_dir" : ".scripts"
-                       }
-                   }
-              } 
-              
+    config = {
+    "sites" : [
+        { "site" : "Local_IPP",
+          "auth" : {
+              "channel"   : "ssh",
+              "hostname"  : "cori.nersc.gov",
+              "username"  : "yadunand",
+              "scriptDir" : "/global/homes/y/yadunand/parsl_scripts"
+          },
+          "execution" : {
+              "executor"   : "ipp",
+              "provider"   : "slurm",
+              "script_dir" : ".scripts",
+              "block" : {                 # Definition of a block
+                  "nodes"      : 1,       # of nodes in that block
+                  "taskBlocks" : 1,       # total tasks in a block
+                  "walltime"   : "00:10:00",
+                  "initBlocks" : 1,
+                  "minBlocks"  : 0,
+                  "maxBlocks"  : 1,
+                  "scriptDir"  : ".",
+                  "options"    : {
+                      "partition" : "debug",
+                      "overrides" : '''#SBATCH --constraint=haswell
+       module load python/3.5-anaconda ; source activate parsl_env_3.5'''
+                  }
+              }
+            }
+        }],
+        "globals" : { "lazyErrors" : True },
+        "controller" : { "publicIp" : '*' }
+    }
+
 
 
 
