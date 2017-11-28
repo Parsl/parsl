@@ -1,3 +1,5 @@
 from libsubmit.launchers.launchers import singleNodeLauncher
+from libsubmit.launchers.launchers import srunLauncher
 
-Launchers = { "singleNode" : singleNodeLauncher }
+Launchers = { "singleNode" : singleNodeLauncher,
+              "srun" : srunLauncher }
