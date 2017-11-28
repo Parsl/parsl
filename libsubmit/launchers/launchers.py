@@ -32,3 +32,32 @@ echo "All workers done"
 '''.format(cmd_string, taskBlocks)
     return x
 
+
+def srunLauncher (cmd_string, taskBlocks, walltime=None):
+    ''' Worker launcher that wraps the user's cmd_string with the SRUN launch framework
+    to launch multiple cmd invocations in parallel on a single job allocation.
+
+    Args:
+        - cmd_string (string): The command string to be launched
+        - taskBlock (string) : bash evaluated string.
+
+    KWargs:
+        - walltime (int) : This is not used by this launcher.
+    '''
+
+    x = '''export CORES=$SLURM_CPUS_ON_NODE
+export NODES=$SLURM_JOB_NUM_NODES
+
+echo "Found cores : $CORES"
+echo "Found nodes : $NODES"
+WORKERCOUNT={1}
+
+cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
+{0}
+SLURM_EOF
+chmod a+x cmd_$SLURM_JOB_NAME.sh
+
+srun -n{1} -l bash cmd_$SLURM_JOB_NAME.sh
+echo "Done"
+'''.format(cmd_string, taskBlocks)
+    return x
