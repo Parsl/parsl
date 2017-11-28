@@ -22,39 +22,45 @@ config = {
                   "nodes" : 1,            # of nodes in that block
                   "taskBlocks" : 1,       # total tasks in a block
                   "walltime" : "00:05:00",
-                  "initBlocks" : 1,
+                  "initBlocks" : 4,
                   "minBlocks" : 0,
                   "maxBlocks" : 1,
                   "scriptDir" : ".",
                   "options" : {
                       "partition" : "debug",
-                      "overrides" : "",
+                      "overrides" : "requirements = (HAS_CVMFS_oasis_opensciencegrid_org =?= TRUE)",
                       "workerSetup" : """module load python/3.5.2;
 python3 -m venv parsl_env;
 source parsl_env/bin/activate;
-pip3 install ipyparallel """
+pip3 install ipyparallel"""
                   }
               }
           }
         }
     ],
     "globals" : {"lazyErrors" : True },
-    "controller" : { "publicIp" : "128.135.250.229" }
+    "controller" : { "publicIp" : "*" }
 }
 
 dfk = DataFlowKernel(config=config)
 
 @App("python", dfk)
-def test():
+def test(duration=0):
     import platform
+    import time
+    time.sleep(duration)
     return "Hello from {0}".format(platform.uname())
 
 
 if __name__ == "__main__" :
 
     results = {}
-    for i in range(0,5):
-        results[i] = test()
+    print("Launching tasks...")
+    for i in range(0,10):
+        results[i] = test(20)
 
     print("Waiting ....")
-    print(results[0].result())
+
+    for key in results:
+        print(results[key].result())
+
