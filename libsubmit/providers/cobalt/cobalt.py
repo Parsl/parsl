@@ -182,8 +182,7 @@ class Cobalt(ExecutionProvider):
                 raise(ep_error.ScriptPathError(script_filename, e ))
 
         try:
-            submit_script = Template(template_string).substitute(**configs,
-                                                                 jobname=job_name)
+            submit_script = Template(template_string).substitute(**configs)
 
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
