@@ -78,6 +78,7 @@ class LocalChannel (Channel):
             # Set retcode to non-zero so that this can be handled in the provider.
             if retcode == 0:
                 retcode = -1
+                return (recode, None, None)
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
