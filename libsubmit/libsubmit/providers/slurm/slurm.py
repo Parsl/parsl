@@ -244,7 +244,7 @@ class Slurm(ExecutionProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
 
-        retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(channel_script_path), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(channel_script_path), 10)
 
         job_id = None
         if retcode == 0 :
