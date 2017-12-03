@@ -59,6 +59,8 @@ class DataFlowKernel(object):
 
         self.config          = config
         if self.config :
+            # TODO : When we support multiple sites, we'll need to start a controller for each
+            # site, and that would require the start_controller calls to move into epf.make()
             # Start IPP controllers if the user requests it
             if self.config.get("controller", None):
                 self.controller_proc = Controller(**self.config["controller"])
@@ -117,10 +119,14 @@ class DataFlowKernel(object):
             # Untested
             if not self.lazy_fail:
                 # Fail early
-                if future._exception:
+                try:
                     future.result()
+                except Exception as e:
+                    logger.warn("Exception : %s", future._exception)
+                    logger.error("Task_id:%s FAILED with %s", task_id, future)
+                    raise e
 
-            logger.debug("Completed : %s with %s", task_id, future)
+            logger.debug("Task_id:%s COMPLETED with %s", task_id, future)
             self.tasks[task_id]['status'] = States.done
 
         # Identify tasks that have resolved dependencies and launch
