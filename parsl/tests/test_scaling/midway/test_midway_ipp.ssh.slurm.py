@@ -36,7 +36,8 @@ config = {
         }
         ],
     "globals" : {   "lazyErrors" : True },
-    "controller" : { "publicIp" : '128.135.250.229' }
+    #"controller" : { "publicIp" : '128.135.250.229' }
+    "controller" : { "publicIp" : '*' }
 }
 
 dfk = DataFlowKernel(config=config)

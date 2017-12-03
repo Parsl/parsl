@@ -1,4 +1,5 @@
-'''Parsl Apps
+'''
+Parsl Apps
 ==========
 
 Here lies the definitions for the @App decorator and the APP classes.
