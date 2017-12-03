@@ -1,6 +1,27 @@
 Changelog
 =========
 
+Parsl 0.3.1
+-----------
+
+This is a point release with mostly minor features and several bug fixes
+
+* Fixes for remote side handling
+* Support for specifying IPythonDir for IPP controllers
+* Several tests added that test provider launcher functionality from libsubmit
+* This upgrade will also push the libsubmit requirement from 0.2.4 -> 0.2.5.
+
+
+Several critical fixes from libsubmit are brought in :
+
+* Several fixes and improvements to Condor from @annawoodard.
+* Support for Torque scheduler
+* Provider script output paths are fixed
+* Increased walltimes to deal with slow scheduler system
+* Srun launcher for slurm systems
+* SSH channels now support file_pull() method
+   While files are not automatically staged, the channels provide support for bi-directional file transport.
+
 Parsl 0.3.0
 -----------
 
