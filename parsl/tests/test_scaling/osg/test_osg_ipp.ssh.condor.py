@@ -28,7 +28,8 @@ config = {
                   "scriptDir" : ".",
                   "options" : {
                       "partition" : "debug",
-                      "overrides" : "requirements = (HAS_CVMFS_oasis_opensciencegrid_org =?= TRUE)",
+                      #"overrides" : "requirements = (HAS_CVMFS_oasis_opensciencegrid_org =?= TRUE)",
+                      "overrides" : 'Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
                       "workerSetup" : """module load python/3.5.2;
 python3 -m venv parsl_env;
 source parsl_env/bin/activate;
