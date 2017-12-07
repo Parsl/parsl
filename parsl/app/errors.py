@@ -76,6 +76,21 @@ class AppTimeout(AppException):
         self.exitcode = -55
         self.retries = retries
 
+class BashAppNoReturn(AppException):
+    ''' Bash app returned no string.
+
+    Contains:
+    reason(string)
+    exitcode(int)
+    retries(int/None)
+    '''
+
+    def __init__(self, reason, exitcode, retries=None):
+        super().__init__()
+        self.reason = reason
+        self.exitcode = -21
+        self.retries = retries
+
 
 class MissingOutputs(ParslError):
     ''' Error raised at the end of app execution due to missing
