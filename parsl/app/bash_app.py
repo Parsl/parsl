@@ -20,7 +20,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     import time
     import subprocess
     import logging
-    import parsl.app.errors as e
+    import parsl.app.errors as pe
 
     logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
 
@@ -37,13 +37,13 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     except AttributeError as e:
         if partial_cmdline :
-            raise e.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
+            raise pe.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
                                                                                                      e), None)
         else:
-            raise e.BashAppNoReturn("[{}] Bash App returned NoneType, must return str object".format(func_name), None)
+            raise pe.BashAppNoReturn("[{}] Bash App returned NoneType, must return str object".format(func_name), None)
 
     except IndexError as e:
-        raise e.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
+        raise pe.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
                                                                                                 e), None)
     except Exception as e:
         logging.error("[{}] Caught exception during cmd_line resolution : {}".format(func_name,
@@ -71,16 +71,16 @@ def remote_side_bash_executor(func, *args, **kwargs):
     except subprocess.TimeoutExpired as e:
         print("Timeout")
         status = 'failed'
-        raise e.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout), e)
+        raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout), e)
 
     except Exception as e:
         print ("Caught exception : ", e)
         error = e
         status = 'failed'
-        raise e.AppException("[{}] App caught exception : {}".format(func_name, proc.returncode), e)
+        raise pe.AppException("[{}] App caught exception : {}".format(func_name, proc.returncode), e)
 
     if returncode != 0:
-        raise e.AppFailure("[{}] App Failed exit code: {}".format(func_name, proc.returncode), proc.returncode)
+        raise pe.AppFailure("[{}] App Failed exit code: {}".format(func_name, proc.returncode), proc.returncode)
 
     # TODO : Add support for globs here
 
@@ -94,7 +94,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
             missing.extend([outputfile])
 
     if missing:
-        raise e.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
+        raise pe.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
 
     exec_duration = time.time() - start_t
     return returncode
