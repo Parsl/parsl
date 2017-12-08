@@ -54,7 +54,7 @@ class Slurm(ExecutionProvider):
               "script_dir" : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
-                             # Default : "./scripts"},
+                             # Default : "./.scripts"},
 
               "block" : { # Definition of a block
 
@@ -259,7 +259,7 @@ class Slurm(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
+        script_path = "{0}/{1}.submit".format(self.config["execution"].get("script_dir",'./.scripts'),
                                               job_name)
         script_path = os.path.abspath(script_path)
 
