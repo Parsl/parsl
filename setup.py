@@ -22,7 +22,7 @@ setup(
     author='Yadu Nand Babuji',
     author_email='yadu@uchicago.edu',
     license='Apache 2.0',
-    download_url = 'https://github.com/Parsl/parsl/archive/0.2.1.tar.gz',
+    download_url = 'https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
     package_data={'': ['LICENSE']},
     packages=['parsl', 'parsl.app', 'parsl.dataflow', 'parsl.executors',
               'parsl.execution_provider', 'parsl.data_provider'],
