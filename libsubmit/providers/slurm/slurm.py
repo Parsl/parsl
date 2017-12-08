@@ -31,25 +31,73 @@ class Slurm(ExecutionProvider):
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
+    .. warning::
+        Please note that in the config documented below, description and values
+        are placed inside a schema that is delimited by <{ schema.. }>
+
     Here's a sample config for the Slurm provider:
 
     .. code-block:: python
 
-         { "execution" : {
-              "executor" : "ipp",
-              "provider" : "slurm",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
+         { "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case slurm
+                             # Type : String,
+                             # Expected : "slurm",
+                             # Required :  True },
+
+              "script_dir" : #{Description : Relative or absolute path to a
+                             # directory in which intermediate scripts are placed
+                             # Type : String,
+                             # Default : "./scripts"},
+
               "block" : { # Definition of a block
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 1,
-                  "minBlocks" : 0,
-                  "maxBlocks" : 1,
-                  "scriptDir" : ".",
-                  "options" : {
-                      "partition" : "westmere",
-                      "overrides" : """module load python/3.5.2+gcc-4.8; source /scratch/midway/yadunand/parsl_env_3.5.2_gcc/bin/activate"""
+
+                  "nodes"      : #{Description : # of nodes to provision per block
+                                 # Type : Integer,
+                                 # Default: 1},
+
+                  "taskBlocks" : #{Description : # of workers to launch per block
+                                 # as either an number or as a bash expression.
+                                 # for eg, "1" , "$(($CORES / 2))"
+                                 # Type : String,
+                                 #  Default: "1" },
+
+                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
+                                 # Type : String,
+                                 # Default : "00:20:00" },
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+
+                  "options"   : {  # Scheduler specific options
+
+                      "partition" : #{Description : Slurm partition to request blocks from
+                                    # Type : String,
+                                    # Required : True },
+
+                      "overrides" : #{"Description : String to append to the #SBATCH blocks
+                                    # in the submit script to the scheduler
+                                    # Type : String,
+                                    # Required : False },
                   }
               }
             }
@@ -159,7 +207,7 @@ class Slurm(ExecutionProvider):
         '''
 
         try:
-            submit_script = Template(template_string).substitute( jobname=job_name, **configs)
+            submit_script = Template(template_string).substitute(jobname=job_name, **configs)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
