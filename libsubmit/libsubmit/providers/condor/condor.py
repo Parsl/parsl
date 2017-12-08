@@ -40,7 +40,7 @@ class Condor(ExecutionProvider):
                              # Expected : "ipp",
                              # Required : True},
 
-              "provider"   : #{Description : The provider name, in this case cobalt
+              "provider"   : #{Description : The provider name, in this case condor
                              # Type : String,
                              # Expected : "condor",
                              # Required :  True },
@@ -221,7 +221,7 @@ class Condor(ExecutionProvider):
               - ScriptPathError : Unable to write submit script out
         '''
 
-        # This section needs to be brought upto par with the cobalt provider.
+        # This section needs to be brought upto par with the condor provider.
         try:
             submit_script = Template(template_string).substitute(**configs,
                                                                  jobname=job_name)
