@@ -103,7 +103,6 @@ class Torque(ExecutionProvider):
             }
          }
 
-
     '''
 
     def __repr__ (self):

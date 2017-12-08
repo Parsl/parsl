@@ -25,8 +25,8 @@ translate_table = { 'queued'  :  'PENDING',
 class Cobalt(ExecutionProvider):
     ''' Cobalt Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel
-    jobs. The sbatch script to be used is created from a template file in this
+    This provider uses cobalt to (qsub) submit, (qstat) squeue for status and qdel to cancel
+    jobs. Theo script to be used is created from a template file in this
     same module.
 
     .. warning::
@@ -339,7 +339,7 @@ class Cobalt(ExecutionProvider):
                                                                          self.max_walltime,
                                                                          account_opt,
                                                                          channel_script_path))
-        
+
         retcode, stdout, stderr = self.channel.execute_wait(
             "qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
                                                     self.queue,
