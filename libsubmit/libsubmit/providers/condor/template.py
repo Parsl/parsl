@@ -1,22 +1,3 @@
-template_string = '''#!/bin/bash
-Universe = vanilla
-
-Executable = $user_script
-
-Output = $submit_script_dir/${jobname}.out.$$(Cluster).$$(Process)
-Error = $submit_script_dir/${jobname}.err.$$(Cluster).$$(Process)
-Log = $submit_script_dir/${jobname}.$$(Cluster)
-
-leave_in_queue = true
-
-request_cpus = $tasks_per_node
-
-$condor_overrides
-
-queue $nodes
-'''
-
-
 template_string = '''
 universe                = vanilla
 should_transfer_files   = YES
