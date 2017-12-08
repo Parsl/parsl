@@ -26,9 +26,55 @@ translate_table = { 'PD' :  'PENDING',
 
 
 class Local(ExecutionProvider):
-    ''' Slurm Execution Provider
+    ''' Local Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel jobs.
+    This provider is used to launch IPP engines on the localhost.
+    .. warning::
+        Please note that in the config documented below, description and values
+        are placed inside a schema that is delimited by #{ schema.. }
+
+    Here's the scheme for the Cobalt provider:
+
+    .. code-block:: python
+
+         { "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case cobalt
+                             # Type : String,
+                             # Expected : "local",
+                             # Required :  True },
+
+              "script_dir" : #{Description : Relative or absolute path to a
+                             # directory in which intermediate scripts are placed
+                             # Type : String,
+                             # Default : "./.scripts"},
+
+              "block" : { # Definition of a block
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+              }
+            }
+         }
+
     '''
 
     def __repr__ (self):
@@ -49,7 +95,7 @@ class Local(ExecutionProvider):
         if channel_script_dir:
             self.channel_script_dir = channel_script_dir
         else:
-            self.channel_script_dir = os.path.abspath("./.scripts")
+            self.channel_script_dir = config["execution"].get('script_dir', "./.scripts")
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
