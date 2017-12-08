@@ -29,27 +29,88 @@ class Cobalt(ExecutionProvider):
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
+    .. warning::
+        Please note that in the config documented below, description and values
+        are placed inside a schema that is delimited by #{ schema.. }
+
+    Here's the scheme for the Cobalt provider:
+
     .. code-block:: python
 
-         { "execution" : {
-              "executor" : "ipp",
-              "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
+         { "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case cobalt
+                             # Type : String,
+                             # Expected : "cobalt",
+                             # Required :  True },
+
+              "launcher"   : #{Description : Launcher to use for launching workers
+                             # it is often necessary to use a launcher that the scheduler supports to
+                             # launch workers on multi-node jobs, or to partition MPI jobs
+                             # Type : String,
+                             # Default : "singleNode" },
+
+              "script_dir" : #{Description : Relative or absolute path to a
+                             # directory in which intermediate scripts are placed
+                             # Type : String,
+                             # Default : "./.scripts"},
+
               "block" : { # Definition of a block
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 2,
-                  "minBlocks" : 0,
-                  "maxBlocks" : 2,
-                  "scriptDir" : ".",
-                  "options" : {
-                      "partition" : "debug",
-                      "overrides" : "source /home/yadunand/setup_cooley_env.sh"
+
+                  "nodes"      : #{Description : # of nodes to provision per block
+                                 # Type : Integer,
+                                 # Default: 1},
+
+                  "taskBlocks" : #{Description : # of workers to launch per block
+                                 # as either an number or as a bash expression.
+                                 # for eg, "1" , "$(($CORES / 2))"
+                                 # Type : String,
+                                 #  Default: "1" },
+
+                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
+                                 # Type : String,
+                                 # Default : "01:00:00" },
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+
+                  "options"   : {  # Scheduler specific options
+
+                      "account"   : #{Description : Account to which the job will be charged against
+                                    # Type : String,
+                                    # Required : True },
+
+                      "queue"     : #{Description : Torque queue to request blocks from
+                                    # Type : String,
+                                    # Required : False },
+
+                      "overrides" : #{"Description : String to append to the Torque submit script
+                                    # in the submit script to the scheduler
+                                    # Type : String,
+                                    # Required : False },
                   }
               }
-          }
+            }
          }
+
     '''
 
     def __repr__ (self):
@@ -242,7 +303,7 @@ class Cobalt(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
+        script_path = "{0}/{1}.submit".format(self.config["execution"].get("script_dir",'./.scripts'),
                                               job_name)
         script_path = os.path.abspath(script_path)
 
