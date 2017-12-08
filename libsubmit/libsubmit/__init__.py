@@ -14,7 +14,6 @@ from libsubmit.providers.slurm.slurm import Slurm
 from libsubmit.providers.aws.aws import EC2Provider
 from libsubmit.providers.azure.azureProvider import AzureProvider
 from libsubmit.providers.jetstream.jetstream import Jetstream
-from libsubmit.providers.midway.midway import Midway
 from libsubmit.providers.condor.condor import Condor
 from libsubmit.providers.torque.torque import Torque
 from libsubmit.providers.local.local import Local
@@ -26,7 +25,7 @@ from libsubmit.channels.local.local import LocalChannel
 __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
-__all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'Jetstream', 'Midway',
+__all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'Jetstream',
            'Local', 'Cobalt', 'Condor', 'Torque',
            'LocalChannel', 'SshChannel', 'SshILChannel']
 
