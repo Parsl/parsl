@@ -11,11 +11,13 @@ class IPyParallelExecutor(ParslExecutor):
     This executor allows us to take advantage of multiple processes running locally
     or remotely via  IPythonParallel's pilot execution system.
 
-    .. note:: Some deficiencies with this executor are:
-             1. Ipengine's execute one task at a time. This means one engine per core
-    is necessary to exploit the full parallelism of a node.
-             2. No notion of remaining walltime.
-             3. Lack of throttling means tasks could be queued up on a worker.
+    .. note::
+           Some deficiencies with this executor are:
+
+               1. Ipengine's execute one task at a time. This means one engine per core
+                  is necessary to exploit the full parallelism of a node.
+               2. No notion of remaining walltime.
+               3. Lack of throttling means tasks could be queued up on a worker.
 
     '''
 
@@ -26,6 +28,7 @@ class IPyParallelExecutor(ParslExecutor):
         Args:
             filepath: Path to the engine file
             engine_dir : CWD for the engines .
+
         '''
 
         self.engine_file = os.path.expanduser(filepath)
@@ -54,7 +57,12 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
                   engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                   engine_dir='.',
                   config = None):
-        ''' Initialize the IPyParallel pool
+        ''' Initialize the IPyParallel pool. The initialization takes all relevant parameters via KWargs.
+
+        .. note::
+
+              If initBlocks > 0, and a scalable execution_provider is attached, then the provider
+              will be initialized here.
 
         Args:
              - self
@@ -62,7 +70,11 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         KWargs:
              - execution_provider (ExecutionProvider object)
              - reuse_controller (Bool) : If True ipp executor will attempt to connect to an available
-               controller.
+               controller. Default: True
+             - engine_json_file (str): Path to json engine file that will be used to compose ipp launch
+               commands at scaling events. Default : '~/.ipython/profile_default/security/ipcontroller-engine.json'
+             - engine_dir (str) : Alternative to above, specify the engine_dir
+             - config (dict). Default: '.'
         '''
 
         self.executor = Client()
