@@ -100,8 +100,8 @@ can dynamically scale with the resources requirements of the workflow.
 We currently have thread pools for local execution, remote workers from `ipyparallel <https://ipyparallel.readthedocs.io/en/latest/>`_ for executing on high throughput
 systems such as campus clusters, and a Swift/T executor for HPC systems.
 
-ParslExecutor
--------------
+ParslExecutor (Abstract Base Class)
+-----------------------------------
 
 .. autoclass:: parsl.executors.base.ParslExecutor
    :members:  __init__, submit, scale_out, scale_in, scaling_enabled
@@ -116,7 +116,7 @@ ThreadPoolExecutor
 IPyParallelExecutor
 -------------------
 
-.. autoclass:: parsl.executors.threads.ThreadPoolExecutor
+.. autoclass:: parsl.executors.ipp.IPyParallelExecutor
    :members:  __init__, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd
 
 
@@ -124,7 +124,7 @@ Swift/Turbine Executor
 ----------------------
 
 .. autoclass:: parsl.executors.swift_t.TurbineExecutor
-   :members: _queue_management_worker, weakred_cb, _start_queue_management_thread, shutdown, __init__, submit, scale_out, scale_in
+   :members: _queue_management_worker, _start_queue_management_thread, shutdown, __init__, submit, scale_out, scale_in
 
 .. autofunction:: parsl.executors.swift_t.runner
 
@@ -139,34 +139,109 @@ that allow much more fine grain composition of an execution environment. An exec
 provider abstracts these resources and provides a single uniform interface to them.
 
 
-ExecutionProvider
------------------
+ExecutionProvider (Base)
+------------------------
 
-.. autoclass:: parsl.execution_provider.execution_provider_base.ExecutionProvider
-   :members:  __init__, submit, status, cancel, scaling_enabled
-
+.. autoclass:: libsubmit.execution_provider_base.ExecutionProvider
+   :members:  __init__, submit, status, cancel, scaling_enabled, channels_required
 
 Slurm
 -----
 
-.. autoclass:: parsl.execution_provider.slurm.slurm.Slurm
-   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submite_script, current_capacity
+.. autoclass:: libsubmit.providers.slurm.slurm.Slurm
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
-.. autofunction:: parsl.execution_provider.slurm.slurm.execute_wait
+Cobalt
+------
+
+.. autoclass:: libsubmit.providers.cobalt.cobalt.Cobalt
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+
+Condor
+------
+
+.. autoclass:: libsubmit.providers.condor.condor.Condor
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+
+Torque
+------
+
+.. autoclass:: libsubmit.providers.torque.torque.Torque
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+
+Local
+-----
+
+.. autoclass:: libsubmit.providers.local.local.Local
+   :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
+
+AWS
 
 
 Amazon Web Services
 -------------------
 
-.. autoclass:: parsl.execution_provider.aws.aws.EC2Provider
+.. autoclass:: libsubmit.providers.aws.aws.EC2Provider
     :members:  __init__, submit, status, cancel, read_state_file, show_summary, create_session, create_vpc, spin_up_instance, shut_down_instance, get_instance_state, teardown, scale_in, scale_out
 
 Azure
 -----
 
-.. autoclass:: parsl.execution_provider.azure.azureProvider.AzureProvider
+.. autoclass:: libsubmit.providers.azure.azureProvider.AzureProvider
    :members:  __init__, submit, status, cancel
 
-.. autoclass:: parsl.execution_provider.azure.azureDeployer.Deployer
+.. autoclass:: libsubmit.providers.azure.azureDeployer.Deployer
    :members: __init__, deploy, destroy
+
+Channels
+========
+
+For certain resources such as campus clusters or supercomputers at research laboratories, resource requirements
+may require authentication. For instance some resources may allow access to their job schedulers from only
+their login-nodes which require you to authenticate on through SSH, GSI-SSH and sometimes even require
+two factor authentication. Channels are simple abstractions that enable the ExecutionProvider component to talk
+to the resource managers of compute facilities. The simplest Channel, *LocalChannel* simply executes commands
+locally on a shell, while the *SshChannel* authenticates you to remote systems.
+
+.. autoclass:: libsubmit.channels.channel_base.Channel
+   :members:  execute_wait, script_dir, execute_no_wait, push_file, close
+
+LocalChannel
+------------
+.. autoclass:: libsubmit.channels.local.local.LocalChannel
+   :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
+
+SshChannel
+----------
+.. autoclass:: libsubmit.channels.ssh.ssh.SshChannel
+   :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
+
+SshILChannel
+------------
+.. autoclass:: libsubmit.channels.ssh_il.ssh_il.SshILChannel
+   :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
+
+
+
+Launchers
+=========
+
+Launchers are basically wrappers for user submitted scripts as they are submitted to
+a specific execution resource.
+
+singleNodeLauncher
+------------------
+
+.. autofunction:: libsubmit.launchers.singleNodeLauncher
+
+srunLauncher
+------------
+
+.. autofunction:: libsubmit.launchers.srunLauncher
+
+srunMpiLauncher
+---------------
+
+.. autofunction:: libsubmit.launchers.srunMpiLauncher
+
 
