@@ -29,7 +29,7 @@ class Condor(ExecutionProvider):
         Please note that in the config documented below, description and values
         are placed inside a schema that is delimited by #{ schema.. }
 
-    Here's the scheme for the Condor provider:
+    Here's the schema for the Condor provider:
 
     .. code-block:: python
 
