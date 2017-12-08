@@ -25,33 +25,93 @@ translate_table = { '1'  : 'PENDING',
 class Condor(ExecutionProvider):
     ''' Condor Execution Provider
 
+    .. warning::
+        Please note that in the config documented below, description and values
+        are placed inside a schema that is delimited by #{ schema.. }
+
+    Here's the scheme for the Condor provider:
+
     .. code-block:: python
 
-         { "execution" : {
-              "executor" : "ipp",
-              "provider" : "condor",  # LIKELY SHOULD BE BOUND TO SITE
-              "scriptDir" : ".scripts",
-              "environment": {},  # Env vars to be set on channel execution
+         { "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case cobalt
+                             # Type : String,
+                             # Expected : "condor",
+                             # Required :  True },
+
+              "launcher"   : #{Description : Launcher to use for launching workers
+                             # Since condor doesn't generally do multi-node, "singleNode" is the
+                             # only meaningful launcher.
+                             # Type : String,
+                             # Default : "singleNode" },
+
+              "script_dir" : #{Description : Relative or absolute path to a
+                             # directory in which intermediate scripts are placed
+                             # Type : String,
+                             # Default : "./.scripts"},
+
               "block" : { # Definition of a block
-                  "environment": {},  # Env vars to be set for submitted tasks
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 1,
-                  "minBlocks" : 0,
-                  "maxBlocks" : 1,
-                  "scriptDir" : ".",
-                  "options" : {
-                      "partition" : "debug",
-                      "overrides" : "",
-                      "workerSetup" : """module load python/3.5.2;
-                       python3 -m venv parsl_env;
-                       source parsl_env/bin/activate;
-                       pip3 install ipyparallel """
+
+                  "nodes"      : #{Description : # of nodes to provision per block
+                                 # Type : Integer,
+                                 # Default: 1},
+
+                  "taskBlocks" : #{Description : # of workers to launch per block
+                                 # as either an number or as a bash expression.
+                                 # for eg, "1" , "$(($CORES / 2))"
+                                 # Type : String,
+                                 #  Default: "1" },
+
+                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
+                                 # Type : String,
+                                 # Default : "01:00:00" },
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+
+                  "options"   : {  # Scheduler specific options
+
+                      "project"    : #{Description : Project to which the job will be charged against
+                                     # Type : String,
+                                     # Required : True },
+
+                      "overrides"  : #{"Description : String to add specific condor attributes to the
+                                     # Condor submit script
+                                     # Type : String,
+                                     # Required : False },
+
+                      "workerSetup": #{"Description : String that sets up the env for the workers as well
+                                     # apps to run
+                                     # Type : String,
+                                     # Required : False },
+
+                      "requirements": #{"Description : Condor requirements
+                                      # Type : String,
+                                      # Required : True },
                   }
               }
-           }
-        }
+            }
+         }
+
     '''
 
     def __repr__ (self):
@@ -212,11 +272,11 @@ class Condor(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
+        script_path = "{0}/{1}.submit".format(self.config["execution"].get("script_dir",'./.scripts'),
                                               job_name)
         script_path = os.path.abspath(script_path)
         # Set executable script
-        userscript_path = "{0}/{1}.script".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
+        userscript_path = "{0}/{1}.script".format(self.config["execution"].get("script_dir",'./.scripts'),
                                                   job_name)
         userscript_path = os.path.abspath(userscript_path)
 
