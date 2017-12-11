@@ -5,6 +5,7 @@ import time
 import parsl
 from parsl import *
 
+#parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=10)
 dfk = DataFlowKernel(executors=[workers], lazy_fail=True)
 
@@ -24,8 +25,6 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
         pass
         #print("Succeed")
 
-
-
 def test_no_deps (numtasks=10) :
     ''' Test basic error handling, with no dependent failures
     '''
@@ -41,7 +40,9 @@ def test_no_deps (numtasks=10) :
         try:
             x = fu.result()
         except Exception as e:
-            print("Caught exception :", e)
+            print("Caught exception : ", "*"*20)
+            print(e)
+            print("*"*20)
             count += 1
 
     print("Caught failures of  {0}/{1}".format(count, len(fus)))
@@ -109,6 +110,7 @@ def test_deps (numtasks=10) :
         print("Final status : ", fu_final.result())
     except parsl.dataflow.error.DependencyError as e:
         print("Caught the right exception")
+        print("Exception : ", e)
     except Exception as e:
         assert 5 == 1, "Expected DependencyError got : %s" % e
     else:
