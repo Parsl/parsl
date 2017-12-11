@@ -16,7 +16,7 @@ class PythonApp(AppBase):
     def __init__ (self, func, executor, walltime=60, sites='all'):
         ''' Initialize the super. This bit is the same for both bash & python apps.
         '''
-        super().__init__ (func, executor, walltime=walltime, exec_type="python")
+        super().__init__ (func, executor, walltime=walltime, sites=sites, exec_type="python")
 
 
     def __call__(self, *args, **kwargs):
@@ -34,11 +34,14 @@ class PythonApp(AppBase):
                    App_fut
 
         '''
-        #logger.debug("Submitting to : %s", self.executor )
-        #app_fut = self.executor.submit(app_wrapper(self.func), *args, **kwargs)
-        app_fut = self.executor.submit(self.func, *args, **kwargs)
+        app_fut = self.executor.submit(self.func, *args,
+                                       parsl_sites=self.sites,
+                                       **kwargs)
 
-        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid) for o in kwargs.get('outputs', []) ]
+        logger.debug("App[%s] assigned Task_id:[%s]" % (self.func.__name__,
+                                                        app_fut.tid) )
+        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
+                    for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
 
         return app_fut

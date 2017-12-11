@@ -103,7 +103,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
 class BashApp(AppBase):
 
     def __init__ (self, func, executor, walltime=60, sites='all'):
-        super().__init__ (func, executor, walltime=60, exec_type="bash")
+        super().__init__ (func, executor, walltime=60, sites=sites, exec_type="bash")
 
 
     def __call__(self, *args, **kwargs):
@@ -127,9 +127,12 @@ class BashApp(AppBase):
         # Update kwargs in the app definition with one's passed in at calltime
         self.kwargs.update(kwargs)
 
-        app_fut = self.executor.submit(remote_side_bash_executor, self.func, *args, **self.kwargs)
+        app_fut = self.executor.submit(remote_side_bash_executor, self.func, *args,
+                                       parsl_sites=self.sites,
+                                       **self.kwargs)
 
-        logger.debug("Tid : %s" % app_fut.tid)
+        logger.debug("App[%s] assigned Task_id:[%s]" % (self.func.__name__,
+                                                        app_fut.tid) )
         out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
                     for o in kwargs.get('outputs', []) ]
         app_fut._outputs = out_futs
