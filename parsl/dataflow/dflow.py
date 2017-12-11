@@ -23,6 +23,7 @@ import uuid
 import logging
 import atexit
 import signal
+import random
 from inspect import signature
 from concurrent.futures import Future
 from functools import partial
@@ -75,21 +76,20 @@ class DataFlowKernel(object):
             # set global vars from config
             self.lazy_fail = self.config["globals"].get("lazyFail", lazy_fail)
             self.fail_retires = self.config["globals"].get("fail_retries", fail_retries)
-            first = self.config["sites"][0]["site"]
-            self.executor = self.executors[first]
 
         else:
             self._executors_managed = False
             self.fail_retries = fail_retries
             self.lazy_fail    = lazy_fail
-            self.executors    = executors
-            self.executor     = executors[0]
+            self.executors    = {i:x for i,x in enumerate(executors)}
+            print("Executors : ", self.executors)
 
         self.task_count      = 0
         self.fut_task_lookup = {}
         self.tasks           = {}
 
-        logger.debug("Using executor: {0}".format(self.executor))
+        #logger.debug("Using executor: {0}".format(self.executor))
+        logger.debug("Using executors: {0}".format(self.executors))
         atexit.register(self.cleanup)
 
     @staticmethod
@@ -162,7 +162,7 @@ class DataFlowKernel(object):
                         self.tasks[tid]['exec_fu'] = fu
                         self.tasks[tid]['app_fu'].update_parent(fu)
                         fu.set_exception(DependencyError(exceptions,
-                                                         "Input dependencies failure",
+                                                         tid,
                                                          None))
                         print(self.tasks[tid]['app_fu'])
 
@@ -227,7 +227,13 @@ class DataFlowKernel(object):
     def launch_task(self, task_id, executable, *args, **kwargs):
         ''' Handle the actual submission of the task to the executor layer
 
-        We should most likely add a callback at this point
+        If the app task has the sites attributes not set (default=='all')
+        the task is launched on a randomly selected executor from the
+        list of executors. This behavior could later be updates to support
+        binding to sites based on user specified criteria.
+
+        If the app task specifies a particular set of sites, it will be
+        targetted at those specific sites.
 
         Args:
             task_id (uuid string) : A uuid string that uniquely identifies the task
@@ -240,8 +246,26 @@ class DataFlowKernel(object):
             Future that tracks the execution of the submitted executable
         '''
 
-        #logger.debug("Submitting to executor : %s", task_id)
-        exec_fu = self.executor.submit(executable, *args, **kwargs)
+        task_name    = executable.__name__
+        target_sites = self.tasks[task_id]["sites"]
+        executor     = None
+        if isinstance(target_sites, str) and target_sites.lower() == 'all' :
+            # Pick a random site from the list
+            site, executor = random.choice(list(self.executors.items()))
+
+        elif isinstance(target_sites, list) :
+            # Pick a random site from user specified list
+            try :
+                site = random.choice(target_sites)
+                executor = self.executors[site]
+
+            except Exception as e:
+                logger.error("App[%s] requests invalid site [%s]" % task_id, target_sites)
+        else:
+            logger.error("sites defined for {0} is neither str|list".format(self.tasks[task_id]['func'].__name__))
+
+        logger.debug("Task[%s] launched on executor:[%s]", task_id, executor)
+        exec_fu = executor.submit(executable, *args, **kwargs)
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
         return exec_fu
 
@@ -341,8 +365,17 @@ class DataFlowKernel(object):
         return new_args, kwargs, dep_failures
 
 
-    def submit (self, func, *args, **kwargs):
+    def submit (self, func, *args, parsl_sites='all', **kwargs):
         ''' Add task to the dataflow system.
+
+        Args:
+             func : A function object
+             *args : Args to the function
+
+        KWargs :
+             Standard kwargs to the func as provided by the user
+             parsl_sites : List of sites as defined in the config, Default :'all'
+             This is the only kwarg that is passed in by the app definition.
 
         If all deps are met :
               send to the runnable queue
@@ -357,11 +390,13 @@ class DataFlowKernel(object):
         task_id = self.task_count
         self.task_count += 1
 
+        # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
-        #dep_cnt  = self._count_deps(depends, task_id)
         task_def = { 'depends'    : depends,
+                     'sites'      : parsl_sites,
                      'func'       : func,
+                     'func_name'  : func.__name__,
                      'args'       : args,
                      'kwargs'     : kwargs,
                      'callback'   : None,
@@ -395,7 +430,9 @@ class DataFlowKernel(object):
                                    tid=task_id,
                                    stdout=task_stdout,
                                    stderr=task_stderr)
-                app_fu.set_exception(DependencyError(exceptions, "Failures in input dependencies", None))
+                app_fu.set_exception(DependencyError(exceptions,
+                                                     "Failures in input dependencies",
+                                                     None))
                 self.tasks[task_id]['app_fu']  = app_fu
                 self.tasks[task_id]['status']  = States.dep_fail
         else:
