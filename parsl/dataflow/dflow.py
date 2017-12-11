@@ -99,7 +99,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in depends:
             if isinstance(dep, Future) or issubclass(type(dep), Future):
-                logger.debug("Task:%s dep:%s done:%s", task_id, dep, dep.done())
+                logger.debug("Task[%s]: dep:%s done:%s", task_id, dep, dep.done())
                 if not dep.done():
                     count += 1
 
@@ -123,10 +123,10 @@ class DataFlowKernel(object):
                     future.result()
                 except Exception as e:
                     logger.warn("Exception : %s", future._exception)
-                    logger.error("Task_id:%s FAILED with %s", task_id, future)
+                    logger.error("Task[%s]: FAILED with %s", task_id, future)
                     raise e
 
-            logger.debug("Task_id:%s COMPLETED with %s", task_id, future)
+            logger.debug("Task[%s]: COMPLETED with %s", task_id, future)
             self.tasks[task_id]['status'] = States.done
 
         # Identify tasks that have resolved dependencies and launch
@@ -142,7 +142,7 @@ class DataFlowKernel(object):
                                                                       self.tasks[tid]['kwargs'])
 
                 if not exceptions :
-                    logger.debug("[{0}] Launching Task".format(tid))
+                    logger.debug("Task[%s] Launching Task".format(tid))
                     # There are no dependency errors
                     self.tasks[tid]['status'] = States.running
                     exec_fu = self.launch_task(tid, self.tasks[tid]['func'], *new_args, **kwargs)
@@ -151,10 +151,10 @@ class DataFlowKernel(object):
                         self.tasks[tid]['app_fu'].update_parent(exec_fu)
                         self.tasks[tid]['exec_fu'] = exec_fu
                     except AttributeError as e:
-                        logger.error("Caught AttributeError at update_parent for task:%s", tid)
+                        logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
                         raise e
                 else:
-                    logger.debug("[{0}] Deferring Task due to dependency failure".format(tid))
+                    logger.debug("Task[%s]: Deferring Task due to dependency failure", tid)
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
                     try:
@@ -167,7 +167,7 @@ class DataFlowKernel(object):
                         print(self.tasks[tid]['app_fu'])
 
                     except AttributeError as e:
-                        logger.error("Caught AttributeError at update_parent for task:%s", tid)
+                        logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
                         raise e
 
         return
@@ -260,13 +260,13 @@ class DataFlowKernel(object):
                 executor = self.executors[site]
 
             except Exception as e:
-                logger.error("App[%s] requests invalid site [%s]" % task_id, target_sites)
+                logger.error("Task[%s]: requests invalid site [%s]" % task_id, target_sites)
         else:
-            logger.error("sites defined for {0} is neither str|list".format(self.tasks[task_id]['func'].__name__))
+            logger.error("App[%s]: sites defined is invalid, neither str|list" % self.tasks[task_id]['func'].__name__)
 
-        logger.debug("Task[%s] launched on executor:[%s]", task_id, executor)
         exec_fu = executor.submit(executable, *args, **kwargs)
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
+        logger.debug("Task[%s] launched on executor:%s" %(task_id, executor))
         return exec_fu
 
     @staticmethod
