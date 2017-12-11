@@ -50,6 +50,7 @@ class AppBase (object):
         self.executor   = executor
         self.exec_type  = exec_type
         self.status     = 'created'
+        self.sites      = sites
 
         sig = signature(func)
         self.kwargs     = {}
@@ -98,6 +99,6 @@ def App(apptype, executor, walltime=60, sites='all'):
     from parsl import APP_FACTORY_FACTORY
 
     def Exec(f):
-        return APP_FACTORY_FACTORY.make(apptype, executor, f, walltime=walltime)
+        return APP_FACTORY_FACTORY.make(apptype, executor, f, sites=sites, walltime=walltime)
 
     return Exec

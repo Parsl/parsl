@@ -15,7 +15,7 @@ class AppFactory(object):
     ''' AppFactory streamlines creation of apps
     '''
 
-    def __init__(self, app_class, executor, func, walltime=60, sites='all'):
+    def __init__(self, app_class, executor, func, sites='all', walltime=60):
         ''' Construct an AppFactory for a particular app_class
 
         Args:
@@ -57,6 +57,7 @@ class AppFactory(object):
         # Create and call the new App object
         app_obj = self.app_class(self.func,
                                  self.executor,
+                                 sites=self.sites,
                                  walltime=self.walltime)
         return app_obj(*args, **kwargs)
 
