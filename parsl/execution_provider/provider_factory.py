@@ -64,6 +64,7 @@ class ExecProviderFactory (object):
 
         sites = {}
         for site in config.get("sites"):
+            logger.debug("Constructing site : %s ", site.get('site', 'Unnamed_site'))
             channel_name = site["auth"]["channel"]
 
             if channel_name in self.channels:
@@ -95,6 +96,7 @@ class ExecProviderFactory (object):
 
             executor_name = site["execution"]["executor"]
             if executor_name in self.executors:
+
                 executor = self.executors[executor_name](execution_provider=provider, config=site)
 
             else:
