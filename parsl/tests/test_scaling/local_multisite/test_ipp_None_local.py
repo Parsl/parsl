@@ -1,3 +1,5 @@
+import argparse
+
 from parsl import *
 import parsl
 import libsubmit
@@ -5,25 +7,21 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
+parsl.set_stream_logger()
+
 config = {
     "sites" : [
-        { "site" : "Local_IPP_1",
+        { "site" : "Local_threads",
           "auth" : {
               "channel" : None,
           },
           "execution" : {
-              "executor" : "ipp",
-              "provider" : "local",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
-              "block" : { # Definition of a block
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 1,
-              }
+              "executor" : "threads",
+              "provider" : None,
+              "max_workers" : 4
           }
         },
-        { "site" : "Local_IPP_2",
+        { "site" : "Local_IPP",
           "auth" : {
               "channel" : None,
           },
@@ -35,7 +33,7 @@ config = {
                   "nodes" : 1,            # of nodes in that block
                   "taskBlocks" : 1,       # total tasks in a block
                   "walltime" : "00:05:00",
-                  "initBlocks" : 1,
+                  "initBlocks" : 4,
               }
           }
         }],
@@ -43,33 +41,50 @@ config = {
     "globals" : {
         "lazyErrors" : True
     },
-    "controller" : {"ip" : "*"}
+    "controller" : {"publicIp" : "*"}
 
 }
 
 dfk = DataFlowKernel(config=config)
 
-@App("python", dfk)
-def python_app():
-    import platform
-    return "Hello from {0}".format(platform.uname())
+@App("python", dfk, sites=['Local_threads'])
+def python_app_2():
+    import os
+    import threading
+    import time
+    time.sleep(1)
+    return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
+
+@App("python", dfk, sites=['Local_IPP'])
+def python_app_1():
+    import os
+    import threading
+    import time
+    time.sleep(1)
+    return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 
 
-def test_python():
+def test_python(N=5):
     ''' Testing basic python functionality '''
 
     import os
-    results = {}
-    for i in range(0,2):
-        results[i] = python_app()
-
+    r1 = {}
+    r2 = {}
+    for i in range(0,N):
+        r1[i] = python_app_1()
+        r2[i] = python_app_2()
     print("Waiting ....")
-    print(results[0].result())
 
+    for x in r1:
+        print ("python_app_1 : ", r1[x].result())
+    for x in r2:
+        print ("python_app_2 : ", r2[x].result())
+
+    return
 
 def test_bash():
     ''' Testing basic bash functionality '''
@@ -84,5 +99,13 @@ def test_bash():
 
 if __name__ == "__main__" :
 
+    parser   = argparse.ArgumentParser()
+    parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    args   = parser.parse_args()
+
+    if args.debug:
+        parsl.set_stream_logger()
+
     test_python()
-    test_bash()
+    #test_bash()
