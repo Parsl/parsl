@@ -38,7 +38,7 @@ sudo pip3 install ipyparallel parsl
 
 class AzureProvider(ExecutionProvider):
     def __init__(self, config):
-        """Initialize Azure provider. Uses Azure python sdk to provide execution resources"""
+        """Initialize Azure provider. Uses Azure python SDK to provide execution resources"""
         self.config = self.read_configs(config)
         self.config_logger()
 
@@ -96,7 +96,7 @@ class AzureProvider(ExecutionProvider):
         except Exception as e:
             self.logger.error(e)
             self.logger.info(
-                "Couldn't find user ipyparallel config file. Trying default location.")
+                "Couldn't find user iPyParallel config file. Trying default location.")
             with open(os.path.expanduser("~/.ipython/profile_parallel/security/ipcontroller-engine.json")) as f:
                 config = f.read().strip()
         else:
@@ -114,7 +114,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return ipptemplate
 
     def submit(self):
-        """Uses AzureDeployer to spin up an instance and connect it to the ipyparallel controller"""
+        """Uses AzureDeployer to spin up an instance and connect it to the iPyParallel controller"""
         self.deployer.deploy()
 
     def status(self):
