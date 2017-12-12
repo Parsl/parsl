@@ -2,12 +2,12 @@ Configuring
 ===========
 
 Parsl allows the user to compose a workflow that is completely separate from
-the details of it's execution. So far we've seen how apps can be constructed
+the details of its execution. So far, we've seen how apps can be constructed
 from pure python as well calls to external applications. Once a workflow is
 created, the execution substrate on which it is to be executed over needs to
 described to parsl. There are two ways to do this:
 
-1. **Executors** which use threads, ipyparallel workers etc could be constructed manually
+1. **Executors** which use threads, iPyParallel workers, etc. can be constructed manually
 
    .. code-block:: python
 
@@ -15,7 +15,7 @@ described to parsl. There are two ways to do this:
        workers = ThreadPoolExecutor(max_workers=4)
        dfk = DataFlowKernel(executors=[workers])
 
-2. A **config** could be passed to the data flow kernel which will initialize the required resources.
+2. A **config** can be passed to the data flow kernel, which will initialize the required resources.
 
    .. code-block:: python
 
@@ -35,7 +35,7 @@ described to parsl. There are two ways to do this:
       dfk = DataFlowKernel(config=config)
 
 
-The config data structure is a python dictionary organized as follows :
+The config data structure is a python dictionary that is organized as follows:
 
 .. code-block :: python
 
@@ -59,7 +59,7 @@ defined by a dictionary of the following structure :
           "channel" : <str (local, ssh, ssh-il)>,
        }
 
-       # The execution block defines how resources can be requested and the resources should be
+       # The execution block defines how resources can be requested and how the resources should be
        # shaped to best match the workflow needs.
        "execution" : {
            # The executor is the mechanism that executes tasks on the compute
