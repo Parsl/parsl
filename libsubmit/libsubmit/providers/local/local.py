@@ -33,7 +33,7 @@ class Local(ExecutionProvider):
         Please note that in the config documented below, description and values
         are placed inside a schema that is delimited by #{ schema.. }
 
-    Here's the scheme for the Cobalt provider:
+    Here's the scheme for the Local provider:
 
     .. code-block:: python
 
@@ -44,7 +44,7 @@ class Local(ExecutionProvider):
                              # Expected : "ipp",
                              # Required : True},
 
-              "provider"   : #{Description : The provider name, in this case cobalt
+              "provider"   : #{Description : The provider name, in this case local
                              # Type : String,
                              # Expected : "local",
                              # Required :  True },
