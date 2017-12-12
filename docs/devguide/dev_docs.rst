@@ -132,11 +132,11 @@ Swift/Turbine Executor
 Execution Providers
 ===================
 
-Execution providers are responsible for managing execution resources with a Local
+Execution providers are responsible for managing execution resources that have a Local
 Resource Manager (LRM). For instance, campus clusters and supercomputers generally have
-schedulers such as Slurm, PBS, Condor and. Clouds on the other hand have API interfaces
-that allow much more fine grain composition of an execution environment. An execution
-provider abstracts these resources and provides a single uniform interface to them.
+LRMs (schedulers) such as Slurm, Torque/PBS, Condor and Cobalt. Clouds, on the other hand, have API interfaces
+that allow much more fine-graind composition of an execution environment. An execution
+provider abstracts these types of resources and provides a single uniform interface to them.
 
 
 ExecutionProvider (Base)
@@ -197,10 +197,10 @@ Channels
 ========
 
 For certain resources such as campus clusters or supercomputers at research laboratories, resource requirements
-may require authentication. For instance some resources may allow access to their job schedulers from only
-their login-nodes which require you to authenticate on through SSH, GSI-SSH and sometimes even require
-two factor authentication. Channels are simple abstractions that enable the ExecutionProvider component to talk
-to the resource managers of compute facilities. The simplest Channel, *LocalChannel* simply executes commands
+may require authentication. For instance, some resources may allow access to their job schedulers from only
+their login-nodes, which require you to authenticate on through SSH, GSI-SSH and sometimes even require
+two-factor authentication. Channels are simple abstractions that enable the ExecutionProvider component to talk
+to the resource managers of compute facilities. The simplest Channel, *LocalChannel*, simply executes commands
 locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
 .. autoclass:: libsubmit.channels.channel_base.Channel
