@@ -579,12 +579,3 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
     # @atexit.register
     # def goodbye():
     #     self.teardown()
-
-
-if __name__ == '__main__':
-    conf = "providerconf.json"
-    provider = EC2Provider(conf)
-    provider.submit("sleep 5")
-    print(provider.show_summary())
-    # provider.scale_in(1)
-    print(provider.show_summary())
