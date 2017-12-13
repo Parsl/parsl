@@ -1,14 +1,17 @@
-#!/usr/bin/env python
-
 import os
 import pprint
+import math
 import json
 import time
 import logging
 import atexit
-
+from string import Template
 from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.launchers import Launchers
 from libsubmit.error import *
+from libsubmit.providers.aws.template import template_string
+
+logger = logging.getLogger(__name__)
 
 try :
     import boto3
@@ -36,49 +39,139 @@ translate_table = {'PD': 'PENDING',
                    'RV': 'FAILED',  # (revoked) and
                    'SE': 'FAILED'}  # (special exit state
 
-template_string = """
-cd ~
-sudo apt-get update -y
-sudo apt-get update -y
-sudo apt-get install -y python3
-sudo apt-get install -y python3-pip
-sudo apt-get install -y ipython
-sudo pip3 install ipyparallel
-sudo pip3 install parsl
-pip3 install numpy
-pip3 install scipy
-"""
 
 
 class EC2Provider(ExecutionProvider):
+    '''
+    Here's a sample config for the EC2 provider:
 
-    def __init__(self, config):
+    .. code-block:: python
 
+         { "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case ec2
+                             # Type : String,
+                             # Expected : "slurm",
+                             # Required :  True },
+
+              "script_dir" : #{Description : Relative or absolute path to a
+                             # directory in which intermediate scripts are placed
+                             # Type : String,
+                             # Default : "./.scripts"},
+
+              "block" : { # Definition of a block
+
+                  "nodes"      : #{Description : # of nodes to provision per block
+                                 # Type : Integer,
+                                 # Default: 1},
+
+                  "taskBlocks" : #{Description : # of workers to launch per block
+                                 # as either an number or as a bash expression.
+                                 # for eg, "1" , "$(($CORES / 2))"
+                                 # Type : String,
+                                 #  Default: "1" },
+
+                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
+                                 # Type : String,
+                                 # Default : "00:20:00" },
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+
+                  "options"   : {  # Scheduler specific options
+
+
+                      "instanceType" : #{Description : Instance type t2.small|t2...
+                                    # Type : String,
+                                    # Required : False
+                                    # Default : t2.small },
+
+                      "imageId" : #{"Description : String to append to the #SBATCH blocks
+                                    # in the submit script to the scheduler
+                                    # Type : String,
+                                    # Required : False },
+                  }
+              }
+            }
+         }
+    '''
+
+
+    def __repr__ (self):
+        return "<EC2 Execution Provider for site:{0}>".format(self.sitename)
+
+    def __init__(self, config, channel=None):
+        ''' Initialize the EC2Provider class
+
+        Args:
+             - Config (dict): Dictionary with all the config options.
+
+        KWargs:
+             - Channel (None): A channel is not required for EC2.
+
+        '''
+
+        self.channel = channel
         if not _boto_enabled :
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires boto3 module.")
 
-        """Initialize provider"""
-        self.config = self.read_configs(config)
-        self.set_instance_vars()
-        self.config_logger()
+        self.config = config
+        self.sitename = config['site']
+        self.current_blocksize = 0
+        self.resources = {}
+
+        self.config = config
+        options = self.config["execution"]["block"]["options"]
+        logger.warn("Options %s", options)
+        self.instance_type = options.get("instanceType", "t2.small")
+        self.image_id      = options["imageId"]
+        self.key_name      = options["keyName"]
+        self.max_nodes     = (self.config["execution"]["block"].get("maxBlocks",1)*
+        self.config["execution"]["block"].get("nodes", 1))
+        try:
+            self.initialize_boto_client()
+        except Exception as e:
+            logger.error("Site:[{0}] Failed to initialize".format(self))
+            raise e
 
         try:
-            self.read_state_file()
+            self.statefile = self.config["execution"]["block"]["options"].get("stateFile",
+                                                                              '.ec2site_{0}.json'.format(self.sitename))
+            self.read_state_file(self.statefile)
+
         except Exception as e:
             self.create_vpc().id
-            self.logger.info(
-                "No State File. Cannot load previous options. Creating new infrastructure\n")
+            logger.info("No State File. Cannot load previous options. Creating new infrastructure")
             self.write_state_file()
 
     @property
     def channels_required(self):
         return False
 
-    def set_instance_vars(self):
-        """Initialize instance variables"""
-        self.current_blocksize = 0
+    def initialize_boto_client(self):
+        ''' Use auth configs to initialize the boto client
+        '''
+
         self.sitename = self.config['site']
-        self.session = self.create_session(self.config)
+        self.session  = self.create_session()
         self.client = self.session.client('ec2')
         self.ec2 = self.session.resource('ec2')
         self.instances = []
@@ -87,41 +180,21 @@ class EC2Provider(ExecutionProvider):
         self.sg_id = 0
         self.sn_ids = []
 
-    def config_logger(self):
-        """Configure Logger"""
-        logger = logging.getLogger("EC2Provider")
-        logger.setLevel(logging.INFO)
-        if not os.path.isfile('awsprovider.log'):
-            with open('awsprovider.log', 'w') as temp_log:
-                temp_log.write("Creating new log file.\n")
-        fh = logging.FileHandler('awsprovider.log')
-        fh.setLevel(logging.INFO)
-        # create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.CRITICAL)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        fh.setFormatter(formatter)
-        # add the handlers to logger
-        logger.addHandler(ch)
-        logger.addHandler(fh)
-        self.logger = logger
-
-    def read_state_file(self):
+    def read_state_file(self, statefile):
         """If this script has been run previously, it will be persisitent
         by writing resource ids to state file. On run, the script looks for a state file
         before creating new infrastructure"""
         try:
-            fh = open('awsproviderstate.json', 'r')
+            fh = open(statefile, 'r')
             state = json.load(fh)
             self.vpc_id = state['vpcID']
             self.sg_id = state['sgID']
             self.sn_ids = state['snIDs']
             self.instances = state['instances']
         except Exception as e:
+            logger.debug("Caught exception while reading state file: {0}".format(e))
             raise e
+        logger.debug("Done reading state from the local state file")
 
     def write_state_file(self):
         fh = open('awsproviderstate.json', 'w')
@@ -148,49 +221,68 @@ class EC2Provider(ExecutionProvider):
         config = self._read_conf(config_file)
         return config
 
-    def create_session(self, config={}):
-        """Create boto3 session.
-        If config contains ec2credentialsfile, it will use that file, if not,
-        it will check for a ~/.aws/credentials file and use that.
-        If not found, it will look for environment variables containing aws auth
-        information. If none of those options work, it will let boto attempt to
-        figure out who you are. if that fails, we cannot proceed"""
-        if 'ec2credentialsfile' in config:
-            config['ec2credentialsfile'] = os.path.expanduser(
-                config['ec2credentialsfile'])
-            config['ec2credentialsfile'] = os.path.expandvars(
-                config['ec2credentialsfile'])
+    def create_session(self):
+        ''' Here we will first look in the ~/.aws/config file.
 
-            cred_lines = open(config['ec2credentialsfile']).readlines()
-            cred_details = cred_lines[1].split(',')
-            credentials = {'AWS_Username': cred_lines[0],
-                           'AWSAccessKeyId': cred_lines[1].split(' = ')[1],
-                           'AWSSecretKey': cred_lines[2].split(' = ')[1]}
-            config.update(credentials)
-            session = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
-                                            aws_secret_access_key=credentials['AWSSecretKey'],)
-            return session
-        elif os.path.isfile(os.path.expanduser('~/.aws/credentials')):
-            cred_lines = open(os.path.expanduser(
-                '~/.aws/credentials')).readlines()
-            credentials = {'AWS_Username': cred_lines[0],
-                           'AWSAccessKeyId': cred_lines[1].split(' = ')[1],
-                           'AWSSecretKey': cred_lines[2].split(' = ')[1]}
-            config.update(credentials)
-            session = boto3.session.Session()
-            return session
+        First we look in config["auth"]["keyfile"] for a path to a json file
+        with the credentials.
+        the keyfile should have 'AWSAccessKeyId' and 'AWSSecretKey'
+
+        Next we look for config["auth"]["profile"] for a profile name and try
+        to use the Session call to auto pick up the keys for the profile from
+        the user default keys file ~/.aws/config.
+
+        Lastly boto3 will look for the keys in env variables:
+        AWS_ACCESS_KEY_ID : The access key for your AWS account.
+        AWS_SECRET_ACCESS_KEY : The secret key for your AWS account.
+        AWS_SESSION_TOKEN : The session key for your AWS account.
+        This is only needed when you are using temporary credentials.
+        The AWS_SECURITY_TOKEN environment variable can also be used,
+        but is only supported for backwards compatibility purposes.
+        AWS_SESSION_TOKEN is supported by multiple AWS SDKs besides python.
+        '''
+
+        session = None
+
+        region = self.config["execution"]["block"]["options"].get("region", DEFAULT_REGION)
+
+        if "keyfile" in self.config["auth"]:
+            c = self.config["auth"]["keyfile"]
+            credfile = os.path.expandvars(os.path.expanduser(c))
+
+            try:
+                with open(credfile, 'r') as f:
+                    creds = json.load(credfile)
+            except json.JSONDecodeError as e:
+                logger.error("Site[{0}]: Json decode error in credential file {1}".format(
+                    self, credfile))
+                raise e
+
+            except Exception as e:
+                logger.debug("Caught exception: {0} while reading credential file: {1}".format(self, credfile))
+                raise e
+
+            logger.debug("Site[{0}]: Using credential file to create session".format(self))
+            session = boto3.session.Session(**creds, region_name=region)
+
+        elif "profile" in self.config["auth"]:
+
+            logger.debug("Site[{0}]: Using profile name to create session".format(self))
+            session = boto3.session.Session(profile_name=self.config["auth"]["profile"],
+                                            region_name=region)
+
         elif (os.getenv("AWS_ACCESS_KEY_ID") is not None
               and os.getenv("AWS_SECRET_ACCESS_KEY") is not None):
-            session = boto3.session.Session(aws_access_key_id=credentials['AWSAccessKeyId'],
-                                            aws_secret_access_key=credentials['AWSSecretKey'],)
-            return session
+
+            logger.debug("Site[{0}]: Using env variables to create session".format(self))
+            session = boto3.session.Session(region_name=region)
+
         else:
-            try:
-                session = boto3.session.Session()
-                return session
-            except Exception as e:
-                self.logger.error("Credentials not found. Cannot Continue")
-                exit(-1)
+            logger.error("Site[{0}]: Credentials not available to create session".format(self))
+            session = boto3.session.Session(region_name=region)
+            print(session)
+
+        return session
 
     def create_vpc(self):
         """Create and configure VPC"""
@@ -200,7 +292,8 @@ class EC2Provider(ExecutionProvider):
                 AmazonProvidedIpv6CidrBlock=False,
             )
         except Exception as e:
-            self.logger.error("{}\n".format(e))
+            logger.error("{}\n".format(e))
+            raise e
         internet_gateway = self.ec2.create_internet_gateway()
         internet_gateway.attach_to_vpc(VpcId=vpc.vpc_id)  # Returns None
         self.internet_gateway = internet_gateway.id
@@ -286,72 +379,77 @@ class EC2Provider(ExecutionProvider):
 
     def scale_out(self, size, cmd_string=None):
         """Scale cluster out (larger)"""
+        job_name = "parsl.auto.{0}".format(time.time())
         instances = []
-        for i in range(size * self.config['nodeGranularity']):
-            instances.append(self.spin_up_instance(cmd_string=cmd_string))
-        self.current_blocksize += size * self.config['nodeGranularity']
-        self.logger.info(
-            "started {} instances".format(
-                size * self.config['nodeGranularity']))
+        for i in range(size):
+            instances.append(self.spin_up_instance(cmd_string=cmd_string,
+                                                   job_name=job_name))
+        self.current_blocksize += size
+        logger.info("started {} instances".format(size))
         return instances
 
     def scale_in(self, size):
         """Scale cluster in (smaller)"""
-        for i in range(size * self.config['nodeGranularity']):
+        for i in range(size):
             self.shut_down_instance()
-        self.current_blocksize -= size * self.config['nodeGranularity']
+        self.current_blocksize -= size
 
     def xstr(self, s):
         return '' if s is None else s
 
-    def spin_up_instance(self, cmd_string):
-        """Starts an instance in the vpc in first available
-        subnet. Starts up n instances at a time where n is
-        node granularity from config"""
+    def spin_up_instance(self, cmd_string, job_name):
+        ''' Starts an instance in the vpc in first available
+        subnet. Starts up n instances if nodes per block > 1
+        Not supported. We only do 1 node per block
+        
+        Args:
+            - cmd_string (str) : Command string to execute on the node
+            - job_name (str) : Name associated with the instances
+        '''
+
         escaped_command = self.xstr(cmd_string)
-        command = "#!/bin/bash\nsed -i 's/us-east-2\.ec2\.//g' /etc/apt/sources.list\n" + \
-            template_string + \
-            "\n{}\n{}".format(
-                self.ipyparallel_configuration(),
-                escaped_command)
-        instance_type = self.config['instancetype']
+        command = Template(template_string).substitute(jobname=job_name,
+                                                       user_script=cmd_string)
+        instance_type = self.instance_type
         subnet = self.sn_ids[0]
-        ami_id = self.config['AMIID']
-        total_instances = len(self.instances) + self.config['nodeGranularity']
-        if total_instances > self.config['maxNodes']:
-            warning = "You have requested more instances ({}) than your maxNodes ({}). Cannot Continue\n".format(
-                total_instances,
-                self.config['maxNodes'])
-            self.logger.warn(warning)
+        ami_id = self.image_id
+        total_instances = len(self.instances)
+
+        if total_instances > self.max_nodes:
+            logger.warn("You have requested more instances ({}) than your max_nodes ({}). Cannot Continue\n".format(total_instances, self.max_nodes))
             return -1
         instance = self.ec2.create_instances(
             InstanceType=instance_type,
             ImageId=ami_id,
             MinCount=1,
-            MaxCount=self.config['nodeGranularity'],
-            KeyName=self.config['AWSKeyName'],
+            MaxCount=1,
+            KeyName=self.key_name,
             SubnetId=subnet,
             SecurityGroupIds=[self.sg_id],
+            TagSpecifications = [{"ResourceType" : "instance",
+                                  "Tags" : [{'Key' : 'Name',
+                                             'Value' : job_name }]}
+                ],
             UserData=command)
         self.instances.append(instance[0].id)
-        self.logger.info(
+        logger.info(
             "Started up 1 instance. Instance type:{}".format(instance_type))
         return instance
 
     def shut_down_instance(self, instances=None):
         """Shuts down a list of instances if provided or the last
         instance started up if none provided"""
-        if instances and len(self.instances > 0):
+        if instances and len(self.instances) > 0:
             term = self.client.terminate_instances(InstanceIds=instances)
-            self.logger.info(
+            logger.info(
                 "Shut down {} instances (ids:{}".format(
                     len(instances), str(instances)))
         elif len(self.instances) > 0:
             instance = self.instances.pop()
             term = self.client.terminate_instances(InstanceIds=[instance])
-            self.logger.info("Shut down 1 instance (id:{})".format(instance))
+            logger.info("Shut down 1 instance (id:{})".format(instance))
         else:
-            self.logger.warn("No Instances to shut down.\n")
+            logger.warn("No Instances to shut down.\n")
             return -1
         self.get_instance_state()
         return term
@@ -376,13 +474,13 @@ class EC2Provider(ExecutionProvider):
             with open(os.path.expanduser(self.config['iPyParallelConfigFile'])) as f:
                 config = f.read().strip()
         except Exception as e:
-            self.logger.error(e)
-            self.logger.info(
+            logger.error(e)
+            logger.info(
                 "Couldn't find user ipyparallel config file. Trying default location.")
             with open(os.path.expanduser("~/.ipython/profile_default/security/ipcontroller-engine.json")) as f:
                 config = f.read().strip()
         else:
-            self.logger.error(
+            logger.error(
                 "Cannot find iPyParallel config file. Cannot proceed.")
             return -1
         ipptemplate = """
@@ -444,7 +542,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
             status_string += "Instance ID: {}  State: {}\n\t\t".format(
                 state, self.instance_states[state])
         status_string += "\n"
-        self.logger.info(status_string)
+        logger.info(status_string)
         return status_string
 
     def teardown(self):
@@ -471,8 +569,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
             self.client.delete_vpc(VpcId=self.vpc_id)
             self.vpc_id = None
         except Exception as e:
-            self.logger.error(
-                "{}".format(e))
+            logger.error("{}".format(e))
             raise e
         self.show_summary()
         os.remove(self.config['stateFilePath'])
