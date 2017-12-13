@@ -142,7 +142,7 @@ provider abstracts these types of resources and provides a single uniform interf
 ExecutionProvider (Base)
 ------------------------
 
-.. autoclass:: libsubmit.execution_provider_base.ExecutionProvider
+.. autoclass:: libsubmit.providers.provider_base.ExecutionProvider
    :members:  __init__, submit, status, cancel, scaling_enabled, channels_required
 
 Slurm
