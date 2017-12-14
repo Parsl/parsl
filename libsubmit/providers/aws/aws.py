@@ -22,19 +22,13 @@ except ImportError:
 else:
     _boto_enabled = True
 
-translate_table = {'PD': 'PENDING',
-                   'R': 'RUNNING',
-                   'CA': 'CANCELLED',
-                   'CF': 'PENDING',  # (configuring),
-                   'CG': 'RUNNING',  # (completing),
-                   'CD': 'COMPLETED',
-                   'F': 'FAILED',  # (failed),
-                   'TO': 'TIMEOUT',  # (timeout),
-                   'NF': 'FAILED',  # (node failure),
-                   'RV': 'FAILED',  # (revoked) and
-                   'SE': 'FAILED'}  # (special exit state
-
-
+translate_table = {'pending': 'PENDING',
+                   'running': 'RUNNING',
+                   'terminated': 'COMPLETED',
+                   'shutting-down': 'COMPLETED',  # (configuring),
+                   'stopping': 'COMPLETED',  # We shouldn't really see this state
+                   'stopped': 'COMPLETED',  # We shouldn't really see this state
+}
 
 class EC2Provider(ExecutionProvider):
     '''
@@ -549,9 +543,14 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         job_name  = "parsl.auto.{0}".format(time.time())
         [instance, *rest] = self.spin_up_instance(cmd_string=cmd_string,
                                           job_name=job_name)
-        logger.debug("Started instance: {0}".format(instance))
 
         logger.debug("Started instance_id : {0}".format(instance.instance_id))
+
+        state = translate_table.get(instance.state['Name'], "PENDING")
+
+        self.resources[instance.instance_id] = {"job_id"   : instance.instance_id,
+                                                "instance" : instance,
+                                                "status"   : state}
 
         return instance.instance_id
 
@@ -569,12 +568,15 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         '''
 
         try :
-            status = self.client.terminate_instances(InstanceIds = job_ids)
+            status = self.client.terminate_instances(InstanceIds = list(job_ids))
         except Exception as e:
             logger.error("Caught error while attempting to remove instances: {0}".format(job_ids))
             raise e
         else:
             logger.debug("Removed the instances : {0}".format(job_ids))
+
+        for job_id in job_ids:
+            self.resources[job_id]["status"] = "COMPLETED"
 
         for job_id in job_ids:
             self.instances.remove(job_id)
