@@ -22,11 +22,6 @@ except ImportError:
 else:
     _boto_enabled = True
 
-
-AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2']
-
-DEFAULT_REGION = 'us-east-2'
-
 translate_table = {'PD': 'PENDING',
                    'R': 'RUNNING',
                    'CA': 'CANCELLED',
@@ -144,6 +139,7 @@ class EC2Provider(ExecutionProvider):
         self.instance_type = options.get("instanceType", "t2.small")
         self.image_id      = options["imageId"]
         self.key_name      = options["keyName"]
+        self.region        = options.get("region", 'us-east-2')
         self.max_nodes     = (self.config["execution"]["block"].get("maxBlocks",1)*
         self.config["execution"]["block"].get("nodes", 1))
         try:
@@ -244,8 +240,6 @@ class EC2Provider(ExecutionProvider):
 
         session = None
 
-        region = self.config["execution"]["block"]["options"].get("region", DEFAULT_REGION)
-
         if "keyfile" in self.config["auth"]:
             c = self.config["auth"]["keyfile"]
             credfile = os.path.expandvars(os.path.expanduser(c))
@@ -263,23 +257,23 @@ class EC2Provider(ExecutionProvider):
                 raise e
 
             logger.debug("Site[{0}]: Using credential file to create session".format(self))
-            session = boto3.session.Session(**creds, region_name=region)
+            session = boto3.session.Session(**creds, region_name=self.region)
 
         elif "profile" in self.config["auth"]:
 
             logger.debug("Site[{0}]: Using profile name to create session".format(self))
             session = boto3.session.Session(profile_name=self.config["auth"]["profile"],
-                                            region_name=region)
+                                            region_name=self.region)
 
         elif (os.getenv("AWS_ACCESS_KEY_ID") is not None
               and os.getenv("AWS_SECRET_ACCESS_KEY") is not None):
 
             logger.debug("Site[{0}]: Using env variables to create session".format(self))
-            session = boto3.session.Session(region_name=region)
+            session = boto3.session.Session(region_name=self.region)
 
         else:
             logger.error("Site[{0}]: Credentials not available to create session".format(self))
-            session = boto3.session.Session(region_name=region)
+            session = boto3.session.Session(region_name=self.region)
             print(session)
 
         return session
@@ -437,12 +431,18 @@ class EC2Provider(ExecutionProvider):
         return instance
 
     def shut_down_instance(self, instances=None):
-        """Shuts down a list of instances if provided or the last
-        instance started up if none provided"""
+        ''' Shuts down a list of instances if provided or the last
+        instance started up if none provided
+        '''
+
         if instances and len(self.instances) > 0:
+            print(instances)
+            try:
+                print([i.id for i in instances])
+            except Exception as e:
+                print(e)
             term = self.client.terminate_instances(InstanceIds=instances)
-            logger.info(
-                "Shut down {} instances (ids:{}".format(
+            logger.info("Shut down {} instances (ids:{}".format(
                     len(instances), str(instances)))
         elif len(self.instances) > 0:
             instance = self.instances.pop()
@@ -519,11 +519,14 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
     ########################################################
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
+
         Args:
-        job_ids : [<job_id> ...]
+             job_ids (list) : List of of job identifiers
+
         Returns :
         [True/False...] : If the cancel operation fails the entire list will be False.
         '''
+
         return self.shut_down_instance(instances=job_ids)
 
     def show_summary(self):
@@ -550,6 +553,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         delete security group, delete vpc
         and reset all instance variables
         """
+
         self.shut_down_instance(self.instances)
         self.instances = []
         try:
