@@ -24,14 +24,16 @@ ITEM_THRESHOLD = 1024
 
 
 def runner(incoming_q, outgoing_q):
-    ''' This is a function that mocks the Swift-T side. It listens on the the incoming_q for tasks
-    and posts returns on the outgoing_q
+    ''' This is a function that mocks the Swift-T side. It listens on the the
+    incoming_q for tasks and posts returns on the outgoing_q
 
     Args:
          - incoming_q (Queue object) : The queue to listen on
          - outgoing_q (Queue object) : Queue to post results on
 
     The messages posted on the incoming_q will be of the form :
+
+    .. code:: python
 
        {
           "task_id" : <uuid.uuid4 string>,
@@ -41,6 +43,8 @@ def runner(incoming_q, outgoing_q):
     If ``None`` is received, the runner will exit.
 
     Response messages should be of the form:
+
+    .. code:: python
 
        {
           "task_id" : <uuid.uuid4 string>,
@@ -174,6 +178,8 @@ class TurbineExecutor(ParslExecutor):
 
         It expects the following messages:
 
+        .. code:: python
+
             {
                "task_id" : <task_id>
                "result"  : serialized result object, if task succeeded
@@ -187,6 +193,8 @@ class TurbineExecutor(ParslExecutor):
 
         We don't support these yet, but they could be added easily as heartbeat.
 
+        .. code:: python
+
             {
                "task_id" : <task_id>
                "cpu_stat" : <>
@@ -199,6 +207,7 @@ class TurbineExecutor(ParslExecutor):
         None
 
         '''
+
         while True:
             logger.debug("[MTHREAD] Management thread active")
             try:
@@ -297,9 +306,9 @@ class TurbineExecutor(ParslExecutor):
         self.tasks   = {}
 
     def submit (self, func, *args, **kwargs):
-        ''' Submits work to the the outgoing_q, an external process listens on this queue for new
-        work. This method is simply pass through and behaves like a submit call as described
-        here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
+        ''' Submits work to the the outgoing_q, an external process listens on this
+        queue for new work. This method is simply pass through and behaves like a
+        submit call as described here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         Args:
             - func (callable) : Callable function
