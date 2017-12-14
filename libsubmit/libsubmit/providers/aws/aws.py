@@ -513,12 +513,27 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
     #######################################################
     def status(self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
+
         Args:
             - job_ids (List of ids) : List of identifiers for the jobs
+
         Returns:
             - List of status codes.
         '''
-        return self.get_instance_state()
+
+        all_states = []
+        for job_id in job_ids:
+            try :
+                if job_id in self.resources:
+                    s = self.resources[job_id]["instance"].state
+                    state_string = translate_table.get(s, 'UNKNOWN')
+                    all_states.extend([state_string])
+
+            except Exception as e:
+                logger.warn("Could not get state of instance:{0}".format(job_id))
+                all_states.extend(['UNKNOWN'])
+
+        return all_states
 
     ########################################################
     # Submit
