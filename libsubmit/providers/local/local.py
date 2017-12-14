@@ -29,6 +29,7 @@ class Local(ExecutionProvider):
     ''' Local Execution Provider
 
     This provider is used to launch IPP engines on the localhost.
+
     .. warning::
         Please note that in the config documented below, description and values
         are placed inside a schema that is delimited by #{ schema.. }
