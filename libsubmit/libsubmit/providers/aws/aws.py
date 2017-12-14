@@ -42,7 +42,26 @@ class EC2Provider(ExecutionProvider):
 
     .. code-block:: python
 
-         { "execution" : { # Definition of all execution aspects of a site
+         { "auth" : { # Definition of authentication method for AWS. One of 3 methods are required to authenticate
+                      # with AWS : keyfile, profile or env_variables. If keyfile or profile is not set Boto3 will
+                      # look for the following env variables :
+                      # AWS_ACCESS_KEY_ID : The access key for your AWS account.
+                      # AWS_SECRET_ACCESS_KEY : The secret key for your AWS account.
+                      # AWS_SESSION_TOKEN : The session key for your AWS account.
+
+              "keyfile"    : #{Description: Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'
+                             # Type : String,
+                             # Required : False},
+
+              "profile"    : #{Description: Specify the profile to be used from the standard aws config file
+                             # ~/.aws/config.
+                             # Type : String,
+                             # Expected : "default", # Use the 'default' aws profile
+                             # Required : False},
+
+            },
+
+           "execution" : { # Definition of all execution aspects of a site
 
               "executor"   : #{Description: Define the executor used as task executor,
                              # Type : String,
@@ -95,14 +114,27 @@ class EC2Provider(ExecutionProvider):
 
 
                       "instanceType" : #{Description : Instance type t2.small|t2...
-                                    # Type : String,
-                                    # Required : False
-                                    # Default : t2.small },
+                                       # Type : String,
+                                       # Required : False
+                                       # Default : t2.small },
 
-                      "imageId" : #{"Description : String to append to the #SBATCH blocks
-                                    # in the submit script to the scheduler
-                                    # Type : String,
-                                    # Required : False },
+                      "imageId"      : #{"Description : String to append to the #SBATCH blocks
+                                       # in the submit script to the scheduler
+                                       # Type : String,
+                                       # Required : False },
+
+                      "region"       : #{"Description : AWS region to launch machines in
+                                       # in the submit script to the scheduler
+                                       # Type : String,
+                                       # Default : 'us-east-2',
+                                       # Required : False },
+
+                      "keyName"      : #{"Description : Name of the AWS private key (.pem file)
+                                       # that is usually generated on the console to allow ssh access
+                                       # to the EC2 instances, mostly for debugging.
+                                       # in the submit script to the scheduler
+                                       # Type : String,
+                                       # Required : True },
                   }
               }
             }
