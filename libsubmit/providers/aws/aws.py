@@ -371,17 +371,6 @@ class EC2Provider(ExecutionProvider):
             GatewayId=internet_gateway.internet_gateway_id)
         return route_table
 
-    def scale_out(self, size, cmd_string=None):
-        """Scale cluster out (larger)"""
-        job_name = "parsl.auto.{0}".format(time.time())
-        instances = []
-        for i in range(size):
-            instances.append(self.spin_up_instance(cmd_string=cmd_string,
-                                                   job_name=job_name))
-        self.current_blocksize += size
-        logger.info("started {} instances".format(size))
-        return instances
-
     def scale_in(self, size):
         """Scale cluster in (smaller)"""
         for i in range(size):
@@ -395,7 +384,7 @@ class EC2Provider(ExecutionProvider):
         ''' Starts an instance in the vpc in first available
         subnet. Starts up n instances if nodes per block > 1
         Not supported. We only do 1 node per block
-        
+
         Args:
             - cmd_string (str) : Command string to execute on the node
             - job_name (str) : Name associated with the instances
@@ -426,8 +415,7 @@ class EC2Provider(ExecutionProvider):
                 ],
             UserData=command)
         self.instances.append(instance[0].id)
-        logger.info(
-            "Started up 1 instance. Instance type:{}".format(instance_type))
+        logger.info("Started up 1 instance {} . Instance type:{}".format(instance[0].id, instance_type))
         return instance
 
     def shut_down_instance(self, instances=None):
@@ -510,9 +498,30 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
     # Submit
     ########################################################
     def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
-        """Submit an ipyparalel pilot job which will connect to an ipp controller specified
-        by your ipp config file and run cmd_string on the instance being started up."""
-        return self.scale_out(cmd_string=cmd_string, size=blocksize)
+        '''Submits the cmd_string onto a freshly instantiates AWS EC2 instance.
+        Submit returns an ID that corresponds to the task that was just submitted.
+
+        Args:
+             - cmd_string (str): Commandline invocation to be made on the remote side.
+             - blocksize (int) : Number of blocks requested
+
+        Kwargs:
+             - job_name (String): Prefix for job name
+
+        Returns:
+             - None: At capacity, cannot provision more
+             - job_id: (string) Identifier for the job
+
+        '''
+
+        job_name  = "parsl.auto.{0}".format(time.time())
+        [instance, *rest] = self.spin_up_instance(cmd_string=cmd_string,
+                                          job_name=job_name)
+        logger.debug("Started instance: {0}".format(instance))
+
+        logger.debug("Started instance_id : {0}".format(instance.instance_id))
+
+        return instance.instance_id
 
     ########################################################
     # Cancel
@@ -524,10 +533,21 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
              job_ids (list) : List of of job identifiers
 
         Returns :
-        [True/False...] : If the cancel operation fails the entire list will be False.
+             [True/False...] : If the cancel operation fails the entire list will be False.
         '''
 
-        return self.shut_down_instance(instances=job_ids)
+        try :
+            status = self.client.terminate_instances(InstanceIds = job_ids)
+        except Exception as e:
+            logger.error("Caught error while attempting to remove instances: {0}".format(job_ids))
+            raise e
+        else:
+            logger.debug("Removed the instances : {0}".format(job_ids))
+
+        for job_id in job_ids:
+            self.instances.remove(job_id)
+
+        return [True for x in job_ids]
 
     def show_summary(self):
         """Print human readable summary of current
@@ -578,8 +598,19 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         self.show_summary()
         os.remove(self.config['stateFilePath'])
 
+    @property
     def scaling_enabled():
         return True
+
+
+    @property
+    def current_capacity(self):
+        ''' Returns the current blocksize.
+        This may need to return more information in the futures :
+        { minsize, maxsize, current_requested }
+        '''
+        return len(self.instances)
+
     # @atexit.register
     # def goodbye():
     #     self.teardown()
