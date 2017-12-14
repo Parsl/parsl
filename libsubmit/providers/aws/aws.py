@@ -130,6 +130,7 @@ class EC2Provider(ExecutionProvider):
                                        # in the submit script to the scheduler
                                        # Type : String,
                                        # Required : True },
+
                       "spotMaxBid"   : #{"Description : If requesting spot market machines, specify
                                        # the max Bid price.
                                        # Type : Float,
@@ -422,6 +423,7 @@ class EC2Provider(ExecutionProvider):
         Args:
             - cmd_string (str) : Command string to execute on the node
             - job_name (str) : Name associated with the instances
+
         '''
 
         escaped_command = self.xstr(cmd_string)
@@ -445,22 +447,31 @@ class EC2Provider(ExecutionProvider):
 
         if total_instances > self.max_nodes:
             logger.warn("Exceeded instance limit ({}). Cannot Continue\n".format(self.max_nodes))
-            return -1
+            return [None]
+        try:
+            tag_spec = [{"ResourceType" : "instance",
+                         "Tags" : [{'Key' : 'Name',
+                                    'Value' : job_name }]} ]
 
-        instance = self.ec2.create_instances( MinCount=1,
-                                              MaxCount=1,
-                                              InstanceType=instance_type,
-                                              ImageId=ami_id,
-                                              KeyName=self.key_name,
-                                              SubnetId=subnet,
-                                              SecurityGroupIds=[self.sg_id],
-                                              TagSpecifications = [{"ResourceType" : "instance",
-                                                                    "Tags" : [{'Key' : 'Name',
-                                                                               'Value' : job_name }]}
-                                              ],
-                                              InstanceMarketOptions=spot_options,
-                                              UserData=command)
+            instance = self.ec2.create_instances( MinCount = 1,
+                                                  MaxCount = 1,
+                                                  InstanceType = instance_type,
+                                                  ImageId = ami_id,
+                                                  KeyName = self.key_name,
+                                                  SubnetId = subnet,
+                                                  SecurityGroupIds = [self.sg_id],
+                                                  TagSpecifications = tag_spec,
+                                                  InstanceMarketOptions = spot_options,
+                                                  UserData = command)
+        except ClientError as e:
+            print(e)
+            logger.error(e.response)
+            return [None]
 
+        except Exception as e:
+            logger.error("Request for EC2 resources failed : {0}".format(e))
+            return [None]
+        
         self.instances.append(instance[0].id)
         logger.info("Started up 1 instance {} . Instance type:{}".format(instance[0].id, instance_type))
         return instance
@@ -579,6 +590,10 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         job_name  = "parsl.auto.{0}".format(time.time())
         [instance, *rest] = self.spin_up_instance(cmd_string=cmd_string,
                                           job_name=job_name)
+
+        if not instance:
+            logger.error("Failed to submit request to EC2")
+            return None
 
         logger.debug("Started instance_id : {0}".format(instance.instance_id))
 
