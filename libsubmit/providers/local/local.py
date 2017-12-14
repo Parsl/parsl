@@ -81,7 +81,7 @@ class Local(ExecutionProvider):
         return "<Local Execution Provider for site:{0}>".format(self.sitename)
 
     def __init__ (self, config, channel_script_dir=None, channel=None):
-        ''' Initialize the Slurm class
+        ''' Initialize the local provider class
 
         Args:
              - Config (dict): Dictionary with all the config options.
