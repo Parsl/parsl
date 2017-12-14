@@ -5,6 +5,7 @@ import json
 import time
 import logging
 import atexit
+from datetime import datetime, timedelta
 from string import Template
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.launchers import Launchers
@@ -129,6 +130,10 @@ class EC2Provider(ExecutionProvider):
                                        # in the submit script to the scheduler
                                        # Type : String,
                                        # Required : True },
+                      "spotMaxBid"   : #{"Description : If requesting spot market machines, specify
+                                       # the max Bid price.
+                                       # Type : Float,
+                                       # Required : False },
                   }
               }
             }
@@ -168,6 +173,9 @@ class EC2Provider(ExecutionProvider):
         self.region        = options.get("region", 'us-east-2')
         self.max_nodes     = (self.config["execution"]["block"].get("maxBlocks",1)*
         self.config["execution"]["block"].get("nodes", 1))
+
+        self.spot_max_bid  = options.get("spotMaxBid", 0)
+
         try:
             self.initialize_boto_client()
         except Exception as e:
@@ -424,22 +432,35 @@ class EC2Provider(ExecutionProvider):
         ami_id = self.image_id
         total_instances = len(self.instances)
 
+        if float(self.spot_max_bid) > 0 :
+            spot_options = { 'MarketType': 'spot',
+                             'SpotOptions': {
+                                 'MaxPrice': str(self.spot_max_bid),
+                                 'SpotInstanceType': 'one-time',
+                                 'InstanceInterruptionBehavior': 'terminate'
+                             }
+            }
+        else:
+            spot_options = {}
+
         if total_instances > self.max_nodes:
-            logger.warn("You have requested more instances ({}) than your max_nodes ({}). Cannot Continue\n".format(total_instances, self.max_nodes))
+            logger.warn("Exceeded instance limit ({}). Cannot Continue\n".format(self.max_nodes))
             return -1
-        instance = self.ec2.create_instances(
-            InstanceType=instance_type,
-            ImageId=ami_id,
-            MinCount=1,
-            MaxCount=1,
-            KeyName=self.key_name,
-            SubnetId=subnet,
-            SecurityGroupIds=[self.sg_id],
-            TagSpecifications = [{"ResourceType" : "instance",
-                                  "Tags" : [{'Key' : 'Name',
-                                             'Value' : job_name }]}
-                ],
-            UserData=command)
+
+        instance = self.ec2.create_instances( MinCount=1,
+                                              MaxCount=1,
+                                              InstanceType=instance_type,
+                                              ImageId=ami_id,
+                                              KeyName=self.key_name,
+                                              SubnetId=subnet,
+                                              SecurityGroupIds=[self.sg_id],
+                                              TagSpecifications = [{"ResourceType" : "instance",
+                                                                    "Tags" : [{'Key' : 'Name',
+                                                                               'Value' : job_name }]}
+                                              ],
+                                              InstanceMarketOptions=spot_options,
+                                              UserData=command)
+
         self.instances.append(instance[0].id)
         logger.info("Started up 1 instance {} . Instance type:{}".format(instance[0].id, instance_type))
         return instance
