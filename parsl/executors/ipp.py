@@ -97,7 +97,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
                     eng = self.execution_provider.submit(self.launch_cmd, 1)
                     logger.debug("Launched block : {0}:{1}".format(i, eng))
                     if not eng:
-                        raise(ScalingFailed(self.execution_provider.sitename, 
+                        raise(ScalingFailed(self.execution_provider.sitename,
                                             "Ipp executor failed to scale via execution_provider"))
                     self.engines.extend([eng])
                 logger.debug("scale out done-----------------")
