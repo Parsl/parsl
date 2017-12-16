@@ -3,7 +3,7 @@
 Composing a workflow
 =======
 
-Workflows in Parsl are created implicitly based on the passing of control or data between apps. The flexibility of this model allows for the creation of a wide range of workflows from sequential through to complex nested, parallel workflows. As we will see below a range of workflows can be created by passing AppFutures and DataFutures between apps. 
+Workflows in Parsl are created implicitly based on the passing of control or data between ``Apps``. The flexibility of this model allows for the creation of a wide range of workflows from sequential through to complex nested, parallel workflows. As we will see below a range of workflows can be created by passing AppFutures and DataFutures between ``Apps``. 
 
 Parsl is also designed to address the requirements of a range of workflows from those that run a large number of very small tasks through to those that run few long running tasks. In each case, Parsl can be configured to optimize deployment towards performance or fault tolerance. 
 
@@ -12,7 +12,7 @@ Below we illustrate a range of workflow patterns, however it is important to not
 
 Procedural workflows
 ---------
-Simple sequential or procedural workflows can be created by passing an AppFuture from one task to another. The following example shows one such workflow which first generates a random number and then writes it to a file. Note: in this case we combine a Pyhton and a Bash app seamlessly. 
+Simple sequential or procedural workflows can be created by passing an AppFuture from one task to another. The following example shows one such workflow which first generates a random number and then writes it to a file. Note: in this case we combine a Pyhton and a Bash ``App`` seamlessly. 
 
 .. code-block:: python
 
@@ -39,7 +39,7 @@ Simple sequential or procedural workflows can be created by passing an AppFuture
 Parallel workflows
 ---------
 
-Parallel execution occurs automatically in Parsl, assuming their are no dependencies between app execution. The following example shows how a single app can be used with and without dependencies to demonstrate parallel execution. 
+Parallel execution occurs automatically in Parsl, assuming their are no dependencies between ``App`` execution. The following example shows how a single ``App`` can be used with and without dependencies to demonstrate parallel execution. 
 
 .. code-block:: python
 
@@ -66,7 +66,7 @@ Parallel execution occurs automatically in Parsl, assuming their are no dependen
 Parallel workflows with loops
 ---------
 
-The most common way that Parsl apps are executed in parallel is via looping. The following example shows how a simple loop can be used to create many random numbers in parallel.
+The most common way that Parsl ``Apps`` are executed in parallel is via looping. The following example shows how a simple loop can be used to create many random numbers in parallel.
 
 .. code-block:: python
 
@@ -88,7 +88,7 @@ The most common way that Parsl apps are executed in parallel is via looping. The
 Parallel dataflows
 ---------
 
-Parallel dataflows can be developed by passing data between apps. In this example we create a set of files, each with a random number, and then merge and sort the values.
+Parallel dataflows can be developed by passing data between ``Apps``. In this example we create a set of files, each with a random number, and then merge and sort the values.
 
 .. code-block:: python
 
