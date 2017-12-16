@@ -15,7 +15,7 @@ class Controller(object):
     ''' Start and maintain a ipyparallel controller
     '''
 
-    def __init__ (self, publicIp="*", port=None, portRange="", reuse=False,
+    def __init__ (self, publicIp=None, port=None, portRange="", reuse=False,
                   log=True, baseDir="~/.ipython"):
 
         ''' Initialize ipython controllers to the user specified configs
@@ -25,7 +25,6 @@ class Controller(object):
 
         KWargs:
               - publicIp (string): internal_ip, specify if this would be difficult to autofind.
-                     Default: "*",
               - interfaces (string): interfaces for zero_mq to listen on
                      Default: "*"
               - port (int): port
@@ -55,8 +54,6 @@ class Controller(object):
             self.baseDir = os.path.abspath(os.path.expanduser(baseDir))
             ipp_basedir = '--ipython-dir={0}'.format(self.baseDir)
 
-        self.public_ip = publicIp
-
         # If portRange is specified pick a random port from that range
         try:
             if portRange :
@@ -71,8 +68,11 @@ class Controller(object):
         if port :
             self.port = '--port={0}'.format(port)
 
-        # We have a publicIp default always, ie "*"
-        self.publicIp = '--ip={0}'.format(publicIp)
+        # We have a publicIp default always = None
+        if publicIp :
+            self.publicIp = '--location={0}'.format(publicIp)
+        else:
+            self.publicIp = ''
 
         if log :
             stdout = open(".controller.out", 'w')
@@ -81,8 +81,10 @@ class Controller(object):
             stdout = open(os.devnull, 'w')
             stderr = open(os.devnull, 'w')
 
+        interfaces = '--ip=*'
+
         try:
-            opts = ['ipcontroller', ipp_basedir, reuse_string, self.port, self.publicIp]
+            opts = ['ipcontroller', ipp_basedir, interfaces, reuse_string, self.port, self.publicIp]
             logger.debug("Start opts: %s" % opts)
             self.proc = subprocess.Popen(opts, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
         except Exception as e:
