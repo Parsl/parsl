@@ -80,17 +80,17 @@ them in files that are managed by Parsl.
 Limitations
 ^^^^^^^^^^^
 
-There are some limitations when using Bash apps:
+The following limitations apply to Bash apps:
 
 1. Environment variables are not yet supported.
 
 Special Keywords
 ^^^^^^^^^^^^^^^^
 
-1. inputs : (list) A list of input :ref:`label-futures` on which to wait before execution. 
-2. outputs : (list) A list of output :ref:`label-futures` that will be created by the app. 
-3. stdout : (string) The path to a file to which STDOUT should be redirected.
-4. stderr : (string) The path to a file to which STDERR should be redirected.
+1. inputs: (list) A list of input :ref:`label-futures` on which to wait before execution. 
+2. outputs: (list) A list of output :ref:`label-futures` that will be created by the app. 
+3. stdout: (string) The path to a file to which STDOUT should be redirected.
+4. stderr: (string) The path to a file to which STDERR should be redirected.
 
 The Bash app allows a user to compose the string to execute on the command-line from the various arguments passed
 to the decorated function. The string that is returned is formatted by the Python string `format <https://docs.python.org/3.4/library/functions.html#format>`_  (`PEP 3101 <https://www.python.org/dev/peps/pep-3101/>`_).
