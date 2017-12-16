@@ -1,15 +1,15 @@
 Quickstart
 ==========
 
-| To try the parsl tutorial online go `here <http://try.parsl-project.org>`_
+| To try Parsl now go to our `online tutorial notebook <http://try.parsl-project.org>`_
 
-| Getting the latest Parsl is easy, and requires just a few steps:
+| Installing the latest version of Parsl is easy, and requires just a few steps:
 
 
 Installing
 ----------
 
-Parsl is now available on PyPI, but first make sure you have Python3.5+
+Parsl is available on PyPI, but first make sure you have Python3.5+
 
 >>> python3 --version
 
