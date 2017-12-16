@@ -1,11 +1,10 @@
-Configuring
+Configuration
 ===========
 
-Parsl allows the user to compose a workflow that is completely separate from
-the details of its execution. So far, we've seen how apps can be constructed
-from pure python as well calls to external applications. Once a workflow is
-created, the execution substrate on which it is to be executed over needs to
-described to parsl. There are two ways to do this:
+Parsl workflows are developed completely independently from their execution environment. Parsl offers an extensible configuration model through which the execution environment and communication with that environment is configured.
+
+Parsl can be configured using a Python configuration object. For simple cases, such as threads these configurations can be easily specified inline. For more complex environments using different block configurations and communication channels it is easiest to define a full configuration object. The following shows how the configuration can be passed to the Dataflow Kernel.
+
 
 1. **Executors** which use threads, iPyParallel workers, etc. can be constructed manually
 
@@ -35,7 +34,10 @@ described to parsl. There are two ways to do this:
       dfk = DataFlowKernel(config=config)
 
 
-The config data structure is a python dictionary that is organized as follows:
+Configuration Structure
+----------------------
+
+The configuration data structure is a python dictionary that describes execution sites as well as other information such as global attributes, controller information, and in the future data staging information. 
 
 .. code-block :: python
 
@@ -45,8 +47,7 @@ The config data structure is a python dictionary that is organized as follows:
        "controller" : { dict of attributes specific to the local IPP controller(s) }
      }
 
-The `sites` field in the top level config definition is a list of execution sites that are
-defined by a dictionary of the following structure :
+The most important part of this configuration is the `sites` key. Parsl allows multiple sites to be specified in a list. The configuration for an individual site is as follows:
 
 .. code-block :: python
 
@@ -82,4 +83,44 @@ defined by a dictionary of the following structure :
                 "options" : { dict of provider specific attributes },
            }
        }
+    }
+
+
+The following shows an example configuration for accessing NERSC's Cori supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the scripts submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
+
+.. code-block :: python
+
+    config = {
+        "sites" : [
+            { "site" : "Cori.Remote.IPP",
+              "auth" : {
+                  "channel" : "ssh",
+                  "hostname" : "cori.nersc.gov",
+                  "username" : "username",
+                  "scriptDir" : "/global/homes/y/username/parsl_scripts"
+              },
+              "execution" : {
+                  "executor" : "ipp",
+                  "provider" : "slurm", 
+                  "script_dir" : ".scripts",
+                  "block" : { 
+                      "nodes" : 2,            
+                      "taskBlocks" : 1,       
+                      "walltime" : "00:10:00",
+                      "initBlocks" : 1,
+                      "minBlocks" : 0,
+                      "maxBlocks" : 1,
+                      "scriptDir" : ".",
+                      "options" : {
+                          "partition" : "debug",
+                          "overrides" : '''#SBATCH --constraint=haswell
+    module load python/3.5-anaconda ;
+    source activate /global/homes/y/yadunand/.conda/envs/parsl_env_3.5'''
+                      }
+                  }
+              }
+            }
+            ],
+        "globals" : {   "lazyErrors" : True },
+        "controller" : { "publicIp" : '*' }
     }
