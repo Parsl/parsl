@@ -25,7 +25,7 @@ of a failed task. For example:
 
 .. code-block:: python
 
-      @App('python', data_flow_kernel)
+      @App('python', dfk)
       def bad_divide(x):
           return 6/x
 
