@@ -70,7 +70,7 @@ The most common way that Parsl ``Apps`` are executed in parallel is via looping.
 
 .. code-block:: python
 
-     @App('python', dfk)
+    @App('python', dfk)
     def generate(limit):
         from random import randint
         """Generate a random integer and return it"""
@@ -78,7 +78,7 @@ The most common way that Parsl ``Apps`` are executed in parallel is via looping.
 
     rand_nums = []
     for i in range(1,5):
-        rand_nums.append(generate(i*5))
+        rand_nums.append(generate(i))
 
     # wait for all apps to finish and collect the results
     outputs = [i.result() for i in rand_nums]
@@ -88,11 +88,38 @@ The most common way that Parsl ``Apps`` are executed in parallel is via looping.
 Parallel dataflows
 ---------
 
-Parallel dataflows can be developed by passing data between ``Apps``. In this example we create a set of files, each with a random number, and then merge and sort the values.
+Parallel dataflows can be developed by passing data between ``Apps``. In this example we create a set of files, each with a random number, we then concatenate these files into a single file and compute the sum of all numbers in that file. In the first two ``Apps`` files are exchanged. The final ``App`` returns the sum as a Python integer. 
 
 .. code-block:: python
 
-      
+      @App('bash', dfk)
+      def generate(outputs=[]):
+          return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}"
+
+      @App('bash', dfk)
+      def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+          return "cat {0} >> {1}".format(" ".join(inputs), outputs[0])
+
+      @App('python', dfk)
+      def total(inputs=[]):
+          total = 0
+          with open(inputs[0], 'r') as f:
+              for l in f:
+                  total += int(l)
+          return total
+
+      # create 5 files with random numbers
+      output_files = []
+      for i in range (5):
+           output_files.append(generate(outputs=['random-%s.txt' % i]))
+
+      # concatenate the files into a single file
+      cc = concat(inputs=[i.outputs[0] for i in output_files], outputs=["all.txt"])
+
+      # calculate the average of the random numbers
+      total = total(inputs=[cc.outputs[0]])
+
+      print (total.result())
 
 
 
