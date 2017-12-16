@@ -12,7 +12,7 @@ Python Apps
 The following code snippet shows a simple Python function used to double the input value (``double(Int)``). This function is defined as a Parsl app using the ``@App`` decorator.
 The first argument to ``@App`` specifies the App type as "python". The second argument ``dfk`` is the Dataflow Kernel which must be configured with appropriate execution resources (e.g., local thread execution).  
 
-Python apps are _pure_ Python functions. As these functions are executed asynchronously, and potentially remotely, it is important to note that they must explicitly import any required modules and act only on defined input arguments (i.e., it cannot include variables used elsewhere in the script).
+Python apps are *pure* Python functions. As these functions are executed asynchronously, and potentially remotely, it is important to note that they must explicitly import any required modules and act only on defined input arguments (i.e., it cannot include variables used elsewhere in the script).
 
 .. code-block:: python
 
@@ -41,9 +41,7 @@ There are limitations on what Python functions can be converted to apps:
 1. Functions should act only on defined input arguments.
 2. Functions must explicitly import any required modules.
 2. Functions should not use script-level or global variables.
-3. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python constructs,
-   such as inputs and outputs to functions. Therefore, Python apps can only use inputs and outputs that can be
-   serialized by cloudpickle or pickle.
+3. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python constructs, such as inputs and outputs to functions. Therefore, Python apps can only use inputs and outputs that can be serialized by cloudpickle or pickle.
 
 Special Keywords
 ^^^^^^^^^^^^^^^^
