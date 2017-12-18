@@ -40,8 +40,8 @@ There are limitations on what Python functions can be converted to apps:
 
 1. Functions should act only on defined input arguments.
 2. Functions must explicitly import any required modules.
-2. Functions should not use script-level or global variables.
-3. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python constructs, such as inputs and outputs to functions. Therefore, Python apps can only use inputs and outputs that can be serialized by cloudpickle or pickle.
+3. Functions should not use script-level or global variables.
+4. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python constructs, such as inputs and outputs to functions. Therefore, Python apps can only use inputs and outputs that can be serialized by cloudpickle or pickle.
 
 Special Keywords
 ^^^^^^^^^^^^^^^^
