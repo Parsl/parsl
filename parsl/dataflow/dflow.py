@@ -31,9 +31,11 @@ from functools import partial
 from parsl.dataflow.error import *
 from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
+from parsl.dataflow.rundirs import make_rundir
 from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
-from parsl.dataflow.start_controller import Controller
+
+#from parsl.dataflow.start_controller import Controller
 # Exceptions
 
 logger = logging.getLogger(__name__)
@@ -42,7 +44,8 @@ class DataFlowKernel(object):
     """ DataFlowKernel
     """
 
-    def __init__(self, config=None, executors=None, lazy_fail=True, fail_retries=2):
+    def __init__(self, config=None, executors=None, lazy_fail=True,
+                 rundir=None, fail_retries=2):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
@@ -52,26 +55,35 @@ class DataFlowKernel(object):
             config (Dict) : A single data object encapsulating all config attributes
             executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
             lazy_fail(Bool) : Default=True, determine failure behavior
+            rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             fail_retries(int): Default=2, Set the number of retry attempts in case of failure
 
         Returns:
             DataFlowKernel object
         """
+        self.config = {"sites"      : [],
+                       "globals"    : {},
+                       "controller" : {}}
+        self.config.update(config)
 
-        self.config          = config
+        # Create run dirs for this run
+        self.rundir = make_rundir(config=self.config, path=rundir)
+
         if self.config :
-            # TODO : When we support multiple sites, we'll need to start a controller for each
-            # site, and that would require the start_controller calls to move into epf.make()
+            # TODO : When we support multiple sites, we'll need to start a
+            # controller for each site, and that would require the start_controller
+            # calls to move into epf.make()
             # Start IPP controllers if the user requests it
+            '''
             if self.config.get("controller", None):
                 self.controller_proc = Controller(**self.config["controller"])
             else:
                 self.controller_proc = None
-
+            '''
             self._executors_managed = True
             # Create the executors
             epf = EPF()
-            self.executors = epf.make(self.config)
+            self.executors = epf.make(self.rundir, self.config)
 
             # set global vars from config
             self.lazy_fail = self.config["globals"].get("lazyFail", lazy_fail)
