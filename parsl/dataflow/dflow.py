@@ -494,10 +494,8 @@ class DataFlowKernel(object):
             if executor.scaling_enabled :
                 job_ids = executor.execution_provider.resources.keys()
                 executor.scale_in(job_ids)
-            # We are not doing shutdown here because even with block=False this blocks.
-            #executor.shutdown()
 
-        if self.controller_proc:
-            self.controller_proc.close()
+            # We are not doing shutdown here because even with block=False this blocks.
+            executor.shutdown()
 
         logger.debug("DFK cleanup complete")

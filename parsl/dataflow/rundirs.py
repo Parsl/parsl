@@ -35,8 +35,6 @@ def make_rundir(config=None, path=None):
 
         current_rundir = os.path.join(path, '000')
 
-        print(prev_rundirs)
-
         if prev_rundirs :
             # Since we globbed on files named as 0-9
             x = sorted([int(os.path.basename(x)) for x in prev_rundirs])[-1]
