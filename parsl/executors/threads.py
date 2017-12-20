@@ -85,8 +85,6 @@ class ThreadPoolExecutor(ParslExecutor):
         Kwargs:
             - block (Bool): To block for confirmations or not
 
-        Raises:
-             NotImplemented exception
         '''
         x = self.executor.shutdown(wait=block)
         logger.debug("Done with executor shutdown")
