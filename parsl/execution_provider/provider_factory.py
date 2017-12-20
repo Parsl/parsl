@@ -4,6 +4,8 @@ Centralize creation of execution providers and executors.
 
 '''
 
+import os
+import copy
 import logging
 import libsubmit
 
@@ -14,6 +16,9 @@ from parsl.executors.ipp import IPyParallelExecutor
 from parsl.executors.swift_t import TurbineExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.execution_provider.errors import *
+
+# Controller
+from parsl.executors.ipp_controller import Controller
 
 # Execution Providers and channels
 from libsubmit import *
@@ -58,12 +63,15 @@ class ExecProviderFactory (object):
         '''
         return True
 
-    def make (self, config):
+    def make (self, rundir, config):
         ''' Construct the appropriate provider, executors and channels and link them together.
         '''
 
+        self.rundir = rundir
         sites = {}
+
         for site in config.get("sites"):
+
             logger.debug("Constructing site : %s ", site.get('site', 'Unnamed_site'))
             channel_name = site["auth"]["channel"]
 
@@ -88,16 +96,34 @@ class ExecProviderFactory (object):
 
             else:
                 logger.error("Site:{0} requests an invalid provider:{0}".format(site["site"],
-                                                                               provider_name))
+                                                                                provider_name))
                 raise BadConfig(site["site"],
                                 "invalid provider:{0} requested".format(provider_name))
 
             logger.debug("Created execution_provider : {0}".format(provider))
 
             executor_name = site["execution"]["executor"]
-            if executor_name in self.executors:
 
-                executor = self.executors[executor_name](execution_provider=provider, config=site)
+            if executor_name in self.executors :
+
+                controller = None
+
+                if executor_name == 'ipp' and config.get("controller", None):
+
+                    logger.debug("Starting controller")
+                    # A controller needs to be started per run
+                    site["controller"] = copy.copy(config["controller"])
+
+                    site["controller"]['ipythonDir'] = self.rundir
+                    site["controller"]['profile']    = config["controller"].get('profile', site["site"])
+
+                    controller = Controller(**site["controller"])
+                    logger.debug("Controller engine file : %s", controller.engine_file)
+                    logger.debug("Controller client file : %s", controller.client_file)
+
+                executor = self.executors[executor_name](execution_provider=provider,
+                                                         controller=controller,
+                                                         config=site)
 
             else:
                 logger.error("Site:{0} requests an invalid executor:{0}".format(site["site"],
