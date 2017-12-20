@@ -15,7 +15,7 @@ class Controller(object):
     ''' Start and maintain a ipyparallel controller
     '''
 
-    def __init__ (self, publicIp=None, port=None, portRange="50000,55000", reuse=False,
+    def __init__ (self, publicIp=None, port=None, portRange="", reuse=False,
                   log=True, ipythonDir="~/.ipython", profile=None):
 
         ''' Initialize ipython controllers to the user specified configs
@@ -39,7 +39,7 @@ class Controller(object):
                      Default : None
         '''
 
-        logger.debug("Starting ipcontroller, baseDir:%s" % baseDir)
+        logger.debug("Starting ipcontroller, baseDir:%s" % ipythonDir)
 
         self.range_min  = 50000
         self.range_max  = 60000
@@ -66,10 +66,11 @@ class Controller(object):
         # If portRange is specified pick a random port from that range
         try:
             if portRange :
-                self.range_min, self.range_max = portRange.split(',')
+                self.range_min, self.range_max = map(int, portRange.split(','))
                 self.port = '--port={0}'.format(random.randint(self.range_min, self.range_max))
         except Exception as e:
-            msg = "Bad portRange. IPPController needs portA,portB. Got {0}".format(portRange)
+            msg = "Bad portRange. IPPController needs portA,portB. Got {0}. Error {1}".format(portRange,
+                                                                                              e)
             logger.error(msg)
             raise ControllerErr(msg)
 
@@ -84,8 +85,8 @@ class Controller(object):
             self.publicIp = ''
 
         if log :
-            stdout = open(".controller.out", 'w')
-            stderr = open(".controller.err", 'w')
+            stdout = open(os.path.join(self.ipythonDir, "{0}.controller.out".format(self.profile) ), 'w')
+            stderr = open(os.path.join(self.ipythonDir, "{0}.controller.err".format(self.profile) ), 'w')
         else:
             stdout = open(os.devnull, 'w')
             stderr = open(os.devnull, 'w')
