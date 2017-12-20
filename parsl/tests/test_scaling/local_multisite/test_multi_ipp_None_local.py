@@ -7,7 +7,7 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-parsl.set_stream_logger()
+#parsl.set_stream_logger()
 
 config = {
     "sites" : [
@@ -33,20 +33,20 @@ config = {
                   "nodes" : 1,            # of nodes in that block
                   "taskBlocks" : 1,       # total tasks in a block
                   "walltime" : "00:15:00",
-                  "initBlocks" : 4,
+                  "initBlocks" : 2,
               }
           }
         }],
     "globals" : {
         "lazyErrors" : True
     },
-    "controller" : {"publicIp" : "*"}
+    "controller" : {"publicIp" : ''}
 
 }
 
 dfk = DataFlowKernel(config=config)
 
-@App("python", dfk, sites=['Local_IPP_1'])
+@App("python", dfk, sites=['Local_IPP_2'])
 def python_app_2():
     import os
     import threading
@@ -54,7 +54,7 @@ def python_app_2():
     time.sleep(1)
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
-@App("python", dfk, sites=['Local_IPP_2'])
+@App("python", dfk, sites=['Local_IPP_1'])
 def python_app_1():
     import os
     import threading
@@ -67,7 +67,7 @@ def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 
 
-def test_python(N=5):
+def test_python(N=10):
     ''' Testing basic python functionality '''
 
     import os
@@ -106,5 +106,5 @@ if __name__ == "__main__" :
     if args.debug:
         parsl.set_stream_logger()
 
-    test_python()
+    test_python(int(args.count))
     #test_bash()
