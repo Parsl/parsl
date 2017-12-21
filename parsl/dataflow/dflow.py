@@ -61,10 +61,13 @@ class DataFlowKernel(object):
         Returns:
             DataFlowKernel object
         """
-        self.config = {"sites"      : [],
-                       "globals"    : {},
-                       "controller" : {}}
-        self.config.update(config)
+        if config:
+            self.config = {"sites"      : [],
+                           "globals"    : {},
+                           "controller" : {}}
+            self.config.update(config)
+        else:
+            self.config = config
 
         # Create run dirs for this run
         self.rundir = make_rundir(config=self.config, path=rundir)
