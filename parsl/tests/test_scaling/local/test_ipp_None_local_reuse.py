@@ -2,6 +2,8 @@ from parsl import *
 import parsl
 import libsubmit
 
+parsl.set_stream_logger()
+
 print(parsl.__version__)
 print(libsubmit.__version__)
 
@@ -22,11 +24,6 @@ config = {
                   "initBlocks" : 1,
                   "minBlocks" : 0,
                   "maxBlocks" : 1,
-                  "scriptDir" : ".",
-                  "options" : {
-                      "partition" : "debug",
-                      "overrides" : "source /home/yadunand/setup_cooley_env.sh"
-                  }
               }
           }
         }
@@ -35,7 +32,6 @@ config = {
         "lazyErrors" : True
     },
     "controller" : {"reuse" : True}
-
 }
 
 dfk = DataFlowKernel(config=config)

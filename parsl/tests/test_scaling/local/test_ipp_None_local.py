@@ -5,6 +5,8 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
+parsl.set_stream_logger()
+
 config = {
     "sites" : [
         { "site" : "Local_IPP",
@@ -16,26 +18,14 @@ config = {
               "provider" : "local",  # LIKELY SHOULD BE BOUND TO SITE
               "script_dir" : ".scripts",
               "block" : { # Definition of a block
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 1,
-                  "minBlocks" : 0,
-                  "maxBlocks" : 1,
-                  "scriptDir" : ".",
-                  "options" : {
-                      "partition" : "debug",
-                      "overrides" : "source /home/yadunand/setup_cooley_env.sh"
-                  }
-              }
-          }
-        }
+                  "taskBlocks" : 4,       # total tasks in a block
+                  "walltime" : "01:00:00",
+                  "initBlocks" : 4,
+          }}}
         ],
     "globals" : {
         "lazyErrors" : True
     },
-    "controller" : {"ip" : "*"}
-
 }
 
 dfk = DataFlowKernel(config=config)

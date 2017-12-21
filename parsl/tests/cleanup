@@ -1,10 +1,10 @@
-rm -rf *~ *txt *out *err outputs data
+rm -rf *~ *txt *out *err outputs data runinfo
 
 for dir in */
     do
         echo "Cleaning dir: $dir"
         cd $dir
-        rm -rf *txt *out *err outputs *~
+        rm -rf *txt *out *err outputs *~ runinfo
         cd ..
     done
 
