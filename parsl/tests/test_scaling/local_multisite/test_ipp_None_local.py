@@ -9,42 +9,7 @@ print(libsubmit.__version__)
 
 parsl.set_stream_logger()
 
-config = {
-    "sites" : [
-        { "site" : "Local_threads",
-          "auth" : {
-              "channel" : None,
-          },
-          "execution" : {
-              "executor" : "threads",
-              "provider" : None,
-              "max_workers" : 4
-          }
-        },
-        { "site" : "Local_IPP",
-          "auth" : {
-              "channel" : None,
-          },
-          "execution" : {
-              "executor" : "ipp",
-              "provider" : "local",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
-              "block" : { # Definition of a block
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 4,
-              }
-          }
-        }],
-
-    "globals" : {
-        "lazyErrors" : True
-    },
-    "controller" : {"publicIp" : "*"}
-
-}
-
+from local_multi import threads_ipp as config
 dfk = DataFlowKernel(config=config)
 
 @App("python", dfk, sites=['Local_threads'])

@@ -7,42 +7,7 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-#parsl.set_stream_logger()
-
-config = {
-    "sites" : [
-        { "site" : "Local_IPP_1",
-          "auth" : { "channel" : None },
-          "execution" : {
-              "executor" : "ipp",
-              "provider" : "local",
-              "block"    : {
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:15:00",
-                  "initBlocks" : 4,
-              }
-          }
-        },
-        { "site" : "Local_IPP_2",
-          "auth" : { "channel" : None },
-          "execution" : {
-              "executor" : "ipp",
-              "provider" : "local",
-              "block" : {
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:15:00",
-                  "initBlocks" : 2,
-              }
-          }
-        }],
-    "globals" : {
-        "lazyErrors" : True
-    },
-    "controller" : {"publicIp" : ''}
-
-}
+from local_multi import multi_ipp as config
 
 dfk = DataFlowKernel(config=config)
 
