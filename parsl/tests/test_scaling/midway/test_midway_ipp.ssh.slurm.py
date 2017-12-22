@@ -1,45 +1,11 @@
 from parsl import *
 import parsl
 import libsubmit
+import os
 
+os.environ['MIDWAY_USERNAME'] = 'yadunand'
+from midway import singleNode as config
 parsl.set_stream_logger()
-print(parsl.__version__)
-print(libsubmit.__version__)
-
-MIDWAY_USERNAME = "yadunand"
-config = {
-    "sites" : [
-        { "site" : "Local_IPP",
-          "auth" : {
-              "channel" : "ssh",
-              "hostname" : "swift.rcc.uchicago.edu",
-              "username" : MIDWAY_USERNAME,
-              "scriptDir" : "/scratch/midway2/{0}/parsl_scripts".format(MIDWAY_USERNAME)
-          },
-          "execution" : {
-              "executor" : "ipp",
-              "provider" : "slurm",
-              "script_dir" : ".scripts",
-              "block" : { # Definition of a block
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 1,
-                  "minBlocks" : 0,
-                  "maxBlocks" : 1,
-                  "scriptDir" : ".",
-                  "options" : {
-                      "partition" : "westmere",
-                      "overrides" : '''module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
-                  }
-              }
-          }
-        }
-        ],
-    "globals" : {   "lazyErrors" : True },
-    #"controller" : { "publicIp" : '*' }
-}
-
 dfk = DataFlowKernel(config=config)
 
 
