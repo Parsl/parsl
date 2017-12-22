@@ -6,7 +6,7 @@ import random
 import logging
 import signal
 
-from parsl.executors.error import *
+from parsl.executors.errors import *
 
 logger = logging.getLogger(__name__)
 

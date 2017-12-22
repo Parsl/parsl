@@ -20,7 +20,7 @@ class ScalingFailed(ExecutorError):
         self.site = sitename
         self.reason = reason
 
-class ControllerErr(DataFlowExceptions):
+class ControllerErr(ExecutorError):
     ''' Error raise by IPP controller
     '''
     def __init__(self, reason):
