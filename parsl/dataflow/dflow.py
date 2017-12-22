@@ -3,8 +3,8 @@ DataFlowKernel
 ==============
 
 The DataFlowKernel adds dependency awareness to an existing executor.
-It is responsible for managing futures, such that when dependencies are resolved, pending tasks
-move to the runnable state.
+It is responsible for managing futures, such that when dependencies are resolved,
+pending tasks move to the runnable state.
 
 Here's a simplified diagram of what happens internally::
 
@@ -32,6 +32,7 @@ from parsl.dataflow.error import *
 from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.rundirs import make_rundir
+from parsl.dataflow.config_defaults import update_config
 from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 
@@ -61,28 +62,12 @@ class DataFlowKernel(object):
         Returns:
             DataFlowKernel object
         """
-        if config:
-            self.config = {"sites"      : [],
-                           "globals"    : {},
-                           "controller" : {}}
-            self.config.update(config)
-        else:
-            self.config = config
-
         # Create run dirs for this run
-        self.rundir = make_rundir(config=self.config, path=rundir)
+        self.rundir = make_rundir(config=config, path=rundir)
+
+        self.config = update_config(config, self.rundir)
 
         if self.config :
-            # TODO : When we support multiple sites, we'll need to start a
-            # controller for each site, and that would require the start_controller
-            # calls to move into epf.make()
-            # Start IPP controllers if the user requests it
-            '''
-            if self.config.get("controller", None):
-                self.controller_proc = Controller(**self.config["controller"])
-            else:
-                self.controller_proc = None
-            '''
             self._executors_managed = True
             # Create the executors
             epf = EPF()
