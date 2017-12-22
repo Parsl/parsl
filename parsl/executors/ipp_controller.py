@@ -6,7 +6,7 @@ import random
 import logging
 import signal
 
-from parsl.dataflow.error import *
+from parsl.executors.error import *
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class Controller(object):
     '''
 
     def __init__ (self, publicIp=None, port=None, portRange="", reuse=False,
-                  log=True, ipythonDir="~/.ipython", profile=None):
+                  log=True, ipythonDir="~/.ipython", mode="auto", profile=None):
 
         ''' Initialize ipython controllers to the user specified configs
 
@@ -37,10 +37,13 @@ class Controller(object):
                      Default: "~/.ipython"
               - profile (str)  : Name of the profile/site from the sites in the config.
                      Default : None
+              - mode (str) : If "auto" the default automatic behavior is maintained.
+                             If "manual" the controller is assumed to be created by the user.
         '''
 
         logger.debug("Starting ipcontroller, baseDir:%s" % ipythonDir)
 
+        self.mode       = mode
         self.range_min  = 50000
         self.range_max  = 60000
         self.reuse      = reuse
@@ -51,6 +54,8 @@ class Controller(object):
         reuse_string    = ''
         profile_string  = ''
 
+        if mode == "manual" :
+            return
         if self.reuse:
             reuse_string = '--reuse'
 
@@ -98,6 +103,12 @@ class Controller(object):
                     reuse_string, self.port, self.publicIp]
             logger.debug("Start opts: %s" % opts)
             self.proc = subprocess.Popen(opts, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
+
+        except FileNotFoundError as e:
+            msg = "Could not find ipcontroller. Please make sure that ipyparallel is installed and available in your env"
+            logger.error(msg)
+            raise ControllerErr(msg)
+
         except Exception as e:
             msg = "IPPController failed to start: {0}".format(e)
             logger.error(msg)
@@ -113,7 +124,6 @@ class Controller(object):
         Returns :
               - str, File path to engine file
         '''
-
         return os.path.join(self.ipythonDir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-engine.json')
@@ -138,6 +148,10 @@ class Controller(object):
         '''
         if self.reuse :
             logger.debug("Ipcontroller not shutting down: reuse enabled")
+            return
+
+        if self.mode == "manual" :
+            logger.debug("Ipcontroller not shutting down: Manual mode")
             return
 
         try:
