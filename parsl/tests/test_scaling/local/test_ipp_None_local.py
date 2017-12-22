@@ -7,28 +7,8 @@ print(libsubmit.__version__)
 
 parsl.set_stream_logger()
 
-config = {
-    "sites" : [
-        { "site" : "Local_IPP",
-          "auth" : {
-              "channel" : None,
-          },
-          "execution" : {
-              "executor" : "ipp",
-              "provider" : "local",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
-              "block" : { # Definition of a block
-                  "taskBlocks" : 4,       # total tasks in a block
-                  "walltime" : "01:00:00",
-                  "initBlocks" : 4,
-          }}}
-        ],
-    "globals" : {
-        "lazyErrors" : True
-    },
-}
-
-dfk = DataFlowKernel(config=config)
+from local import localIPP
+dfk = DataFlowKernel(config=localIPP)
 
 @App("python", dfk)
 def python_app():
