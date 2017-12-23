@@ -1,45 +1,11 @@
 from parsl import *
 import parsl
 import libsubmit
+import os
 
-#parsl.set_stream_logger()
-print(parsl.__version__)
-print(libsubmit.__version__)
-
-config = {
-    "sites" : [
-        { "site" : "Local_IPP",
-          "auth" : {
-              "channel" : "ssh",
-              "hostname" : "swift.rcc.uchicago.edu",
-              "username" : "yadunand",
-              "scriptDir" : "/scratch/midway/yadunand/parsl_scripts"
-          },
-          "execution" : {
-              "executor" : "ipp",
-              "provider" : "slurm",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
-              "block" : { # Definition of a block
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 1,
-                  "minBlocks" : 0,
-                  "maxBlocks" : 1,
-                  "scriptDir" : ".",
-                  "options" : {
-                      "partition" : "westmere",
-                      "overrides" : '''module load python/3.5.2+gcc-4.8; source /scratch/midway/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
-                  }
-              }
-          }
-        }
-        ],
-    "globals" : {   "lazyErrors" : True },
-    #"controller" : { "publicIp" : '128.135.250.229' }
-    "controller" : { "publicIp" : '*' }
-}
-
+os.environ['MIDWAY_USERNAME'] = 'yadunand'
+from midway import singleNode as config
+parsl.set_stream_logger()
 dfk = DataFlowKernel(config=config)
 
 
@@ -76,4 +42,4 @@ def test_bash():
 if __name__ == "__main__" :
 
     test_python()
-    test_bash()
+    #test_bash()

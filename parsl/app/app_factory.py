@@ -5,8 +5,8 @@ Centralize app object creation.
 '''
 import logging
 from inspect import signature
-from parsl.app.app import BashApp
-from parsl.app.app import PythonApp
+from parsl.app.bash_app import BashApp
+from parsl.app.python_app import PythonApp
 from parsl.app.errors import InvalidAppTypeError
 
 logger = logging.getLogger(__name__)
@@ -15,16 +15,17 @@ class AppFactory(object):
     ''' AppFactory streamlines creation of apps
     '''
 
-    def __init__(self, app_class, executor, func, **kwargs):
+    def __init__(self, app_class, executor, func, sites='all', walltime=60):
         ''' Construct an AppFactory for a particular app_class
 
         Args:
-            app_class(Class) : An app class
-            executor(Executor) : An executor object which will handle app execution
-            func(Function) : The function to execute
+            - app_class(Class) : An app class
+            - executor(Executor) : An executor object which will handle app execution
+            - func(Function) : The function to execute
 
         Kwargs:
-            walltime(int) : Walltime in seconds, default=60
+            - walltime(int) : Walltime in seconds, default=60
+            - sites (str|list) : List of site names that this app could execute over. default is 'all'
 
         Returns:
             An AppFactory Object
@@ -34,7 +35,8 @@ class AppFactory(object):
         self.executor = executor
         self.func = func
         self.status = 'created'
-        self.walltime = kwargs.get('walltime', 60)
+        self.walltime = walltime
+        self.sites = sites
         self.sig = signature(func)
 
     def __call__(self, *args, **kwargs):
@@ -55,6 +57,7 @@ class AppFactory(object):
         # Create and call the new App object
         app_obj = self.app_class(self.func,
                                  self.executor,
+                                 sites=self.sites,
                                  walltime=self.walltime)
         return app_obj(*args, **kwargs)
 

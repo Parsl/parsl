@@ -10,7 +10,7 @@ class ThreadPoolExecutor(ParslExecutor):
     '''
 
     def __init__ (self, max_workers=2, thread_name_prefix='',
-                  execution_provider=None, config=None):
+                  execution_provider=None, config=None, **kwargs):
         ''' Initialize the thread pool
         Config options that are really used are :
 
@@ -85,8 +85,6 @@ class ThreadPoolExecutor(ParslExecutor):
         Kwargs:
             - block (Bool): To block for confirmations or not
 
-        Raises:
-             NotImplemented exception
         '''
         x = self.executor.shutdown(wait=block)
         logger.debug("Done with executor shutdown")

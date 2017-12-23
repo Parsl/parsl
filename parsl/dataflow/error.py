@@ -21,33 +21,24 @@ class DependencyError(DataFlowExceptions):
     ''' Error raised at the end of app execution due to missing
     output files
 
+    Args:
+         - dependent_exceptions: List of exceptions
+         - task_id: Identity of the task failed task
+         - outputs ?
+
     Contains:
     reason (string)
-    outputs (List of strings/files..)
+    dependent_exceptions
     '''
 
-    def __init__(self, dependent_exceptions, reason, outputs):
+    def __init__(self, dependent_exceptions, task_id, outputs):
         self.dependent_exceptions = dependent_exceptions
-        self.reason = reason
+        self.task_id = task_id
         self.outputs = outputs
 
     def __repr__ (self):
-        return "Missing Outputs: {0}, Reason:{1}".format(self.outputs, self.reason)
-
-    def __str__ (self):
-        return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
-
-
-class ControllerErr(DataFlowExceptions):
-    ''' Error raise by IPP controller
-    '''
-    def __init__(self, reason):
-        self.reason = reason
-
-    def __repr__ (self):
-        return "Controller init failed:Reason:{0}".format(self.reason)
+        return "[{}] Dependency Failure from :{}".format(self.task_id,
+                                                         self.dependent_exceptions)
 
     def __str__ (self):
         return self.__repr__()
-
-

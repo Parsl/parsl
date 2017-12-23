@@ -6,7 +6,6 @@ parsl.set_stream_logger()
 from parsl.execution_provider.provider_factory import ExecProviderFactory
 
 
-
 def test_factory_1() :
 
     config = {

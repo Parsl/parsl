@@ -281,7 +281,7 @@ class TurbineExecutor(ParslExecutor):
         self.worker.join()
         return True
 
-    def __init__ (self, swift_attribs=None):
+    def __init__ (self, swift_attribs=None, config=None, **kwargs):
         ''' Initialize the thread pool
         Trying to implement the emews model.
 
@@ -289,7 +289,7 @@ class TurbineExecutor(ParslExecutor):
             - swift_attribs : Takes a dict of swift attribs. Fot future.
 
         '''
-
+        self.config = config
         logger.debug("In __init__")
         self.mp_manager = mp.Manager()
         self.outgoing_q = self.mp_manager.Queue()

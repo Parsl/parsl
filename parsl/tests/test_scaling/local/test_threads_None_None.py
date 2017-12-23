@@ -5,19 +5,7 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-config = {
-    "sites" : [
-        { "site" : "Local_Threads",
-          "auth" : { "channel" : None },
-          "execution" : {
-              "executor" : "threads",
-              "provider" : None,
-              "max_workers" : 4
-          }
-        }],
-    "globals" : {"lazyErrors" : True}
-}
-
+from local import localThreads as config
 dfk = DataFlowKernel(config=config)
 
 @App("python", dfk)

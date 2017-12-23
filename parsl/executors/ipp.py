@@ -1,10 +1,14 @@
 import os
+import time
+
 import logging
+logger = logging.getLogger(__name__)
+
+from shutil import copyfile
 from ipyparallel import Client
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import *
 
-logger = logging.getLogger(__name__)
 
 class IPyParallelExecutor(ParslExecutor):
     ''' The Ipython parallel executor.
@@ -56,6 +60,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
                   reuse_controller=True,
                   engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                   engine_dir='.',
+                  controller=None,
                   config = None):
         ''' Initialize the IPyParallel pool. The initialization takes all relevant parameters via KWargs.
 
@@ -76,11 +81,37 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
              - engine_dir (str) : Alternative to above, specify the engine_dir
              - config (dict). Default: '.'
         '''
+        self.controller = controller
+        self.engine_file = engine_json_file
+        self.client_file = None
 
-        self.executor = Client()
-        self.launch_cmd = self.compose_launch_cmd(engine_json_file, engine_dir)
-        self.config = config
+        if self.controller :
+            # Find the Client json
+            self.client_file = self.controller.client_file
+            self.engine_file = self.controller.engine_file
 
+            if not os.path.exists(self.client_file):
+                logger.debug("Waiting for {0}".format(self.client_file))
+                time.sleep(1)
+            if not os.path.exists(self.client_file):
+                time.sleep(1)
+            if not os.path.exists(self.client_file):
+                raise Exception("Controller client file is missing at {0}".format(self.client_file))
+
+
+        self.executor = Client(url_file=self.client_file)
+        self.config   = config
+        self.sitename = config["site"]
+        # NOTE: Copying the config here only partially fixes the issue. There needs to be
+        # multiple controllers launched by the factory, and each must have different jsons.
+        # There could be timing issues here,
+        #local_engine_json = "{0}.{1}.engine.json".format(self.config["site"], int(time.time()))
+        #copyfile(engine_json_file, local_engine_json)
+        #if not os.path.exists(self.config["execution"]["script_dir"]):
+        #    os.makedirs(self.config["execution"]["script_dir"])
+
+
+        self.launch_cmd = self.compose_launch_cmd(self.engine_file, engine_dir)
         self.execution_provider = execution_provider
         self.engines = []
 
@@ -92,7 +123,6 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
             self._scaling_enabled = True
             logger.debug("Starting IpyParallelExecutor with provider:%s", execution_provider)
             try:
-                logger.debug("Attempting scale out -----------------")
                 for i in range(self.config["execution"]["block"].get("initBlocks", 1)):
                     eng = self.execution_provider.submit(self.launch_cmd, 1)
                     logger.debug("Launched block : {0}:{1}".format(i, eng))
@@ -100,7 +130,6 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
                         raise(ScalingFailed(self.execution_provider.sitename,
                                             "Ipp executor failed to scale via execution_provider"))
                     self.engines.extend([eng])
-                logger.debug("scale out done-----------------")
 
             except Exception as e:
                 logger.error("Scaling out failed : %s", e)
@@ -109,8 +138,6 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         else:
             self._scaling_enabled = False
             logger.debug("Starting IpyParallelExecutor with no provider")
-
-
 
         self.lb_view  = self.executor.load_balanced_view()
         logger.debug("Starting executor")
@@ -174,11 +201,24 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         Raises:
              NotImplemented exception
         '''
-        x = self.executor.shutdown(targets=targets,
-                                   hub=hub,
-                                   block=block)
+
+        if self.controller :
+            logger.debug("IPP:Shutdown sequence: Attempting controller kill")
+            self.controller.close()
+
+        # We do not actually do executor.shutdown because
+        # this blocks even when requested to not block, killing the
+        # controller is more effective although impolite.
+        #x = self.executor.shutdown(targets=targets,
+        #                           hub=hub,
+        #                           block=block)
+
         logger.debug("Done with executor shutdown")
-        return x
+        return True
+
+    def __repr__ (self):
+        return "<IPP Executor for site:{0}>".format(self.sitename)
+
 
 if __name__ == "__main__" :
 

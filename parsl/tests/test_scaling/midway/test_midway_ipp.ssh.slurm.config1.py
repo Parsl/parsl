@@ -3,29 +3,30 @@ import parsl
 import libsubmit
 
 parsl.set_stream_logger()
-
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-from local import localIPPReuse as config
+os.environ['MIDWAY_USERNAME'] = 'yadunand'
+from midway import multiCore as config
+parsl.set_stream_logger()
 dfk = DataFlowKernel(config=config)
+
 
 @App("python", dfk)
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())
 
+
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 
 
-def test_python():
-    ''' Testing basic python functionality '''
-
+def test_python(N=100):
     import os
     results = {}
-    for i in range(0,2):
+    for i in range(0,N):
         results[i] = python_app()
 
     print("Waiting ....")
@@ -33,8 +34,6 @@ def test_python():
 
 
 def test_bash():
-    ''' Testing basic bash functionality '''
-
     import os
     fname = os.path.basename(__file__)
 
@@ -46,4 +45,4 @@ def test_bash():
 if __name__ == "__main__" :
 
     test_python()
-    test_bash()
+    #test_bash()

@@ -5,40 +5,10 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-config = {
-    "sites" : [
-        { "site" : "Local_IPP",
-          "auth" : {
-              "channel" : None,
-          },
-          "execution" : {
-              "executor" : "ipp",
-              "provider" : "local",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
-              "block" : { # Definition of a block
-                  "nodes" : 1,            # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
-                  "walltime" : "00:05:00",
-                  "initBlocks" : 1,
-                  "minBlocks" : 0,
-                  "maxBlocks" : 1,
-                  "scriptDir" : ".",
-                  "options" : {
-                      "partition" : "debug",
-                      "overrides" : "source /home/yadunand/setup_cooley_env.sh"
-                  }
-              }
-          }
-        }
-        ],
-    "globals" : {
-        "lazyErrors" : True
-    },
-    "controller" : {"ip" : "*"}
+parsl.set_stream_logger()
 
-}
-
-dfk = DataFlowKernel(config=config)
+from local import localIPP
+dfk = DataFlowKernel(config=localIPP)
 
 @App("python", dfk)
 def python_app():

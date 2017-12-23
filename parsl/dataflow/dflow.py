@@ -3,8 +3,8 @@ DataFlowKernel
 ==============
 
 The DataFlowKernel adds dependency awareness to an existing executor.
-It is responsible for managing futures, such that when dependencies are resolved, pending tasks
-move to the runnable state.
+It is responsible for managing futures, such that when dependencies are resolved,
+pending tasks move to the runnable state.
 
 Here's a simplified diagram of what happens internally::
 
@@ -23,6 +23,7 @@ import uuid
 import logging
 import atexit
 import signal
+import random
 from inspect import signature
 from concurrent.futures import Future
 from functools import partial
@@ -30,9 +31,12 @@ from functools import partial
 from parsl.dataflow.error import *
 from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
+from parsl.dataflow.rundirs import make_rundir
+from parsl.dataflow.config_defaults import update_config
 from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
-from parsl.dataflow.start_controller import Controller
+
+#from parsl.dataflow.start_controller import Controller
 # Exceptions
 
 logger = logging.getLogger(__name__)
@@ -41,7 +45,8 @@ class DataFlowKernel(object):
     """ DataFlowKernel
     """
 
-    def __init__(self, config=None, executors=None, lazy_fail=True, fail_retries=2):
+    def __init__(self, config=None, executors=None, lazy_fail=True,
+                 rundir=None, fail_retries=2):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
@@ -51,45 +56,40 @@ class DataFlowKernel(object):
             config (Dict) : A single data object encapsulating all config attributes
             executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
             lazy_fail(Bool) : Default=True, determine failure behavior
+            rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             fail_retries(int): Default=2, Set the number of retry attempts in case of failure
 
         Returns:
             DataFlowKernel object
         """
+        # Create run dirs for this run
+        self.rundir = make_rundir(config=config, path=rundir)
 
-        self.config          = config
+        self.config = update_config(config, self.rundir)
+
         if self.config :
-            # TODO : When we support multiple sites, we'll need to start a controller for each
-            # site, and that would require the start_controller calls to move into epf.make()
-            # Start IPP controllers if the user requests it
-            if self.config.get("controller", None):
-                self.controller_proc = Controller(**self.config["controller"])
-            else:
-                self.controller_proc = None
-
             self._executors_managed = True
             # Create the executors
             epf = EPF()
-            self.executors = epf.make(self.config)
+            self.executors = epf.make(self.rundir, self.config)
 
             # set global vars from config
             self.lazy_fail = self.config["globals"].get("lazyFail", lazy_fail)
             self.fail_retires = self.config["globals"].get("fail_retries", fail_retries)
-            first = self.config["sites"][0]["site"]
-            self.executor = self.executors[first]
 
         else:
             self._executors_managed = False
             self.fail_retries = fail_retries
             self.lazy_fail    = lazy_fail
-            self.executors    = executors
-            self.executor     = executors[0]
+            self.executors    = {i:x for i,x in enumerate(executors)}
+            print("Executors : ", self.executors)
 
         self.task_count      = 0
         self.fut_task_lookup = {}
         self.tasks           = {}
 
-        logger.debug("Using executor: {0}".format(self.executor))
+        #logger.debug("Using executor: {0}".format(self.executor))
+        logger.debug("Using executors: {0}".format(self.executors))
         atexit.register(self.cleanup)
 
     @staticmethod
@@ -99,7 +99,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in depends:
             if isinstance(dep, Future) or issubclass(type(dep), Future):
-                logger.debug("Task:%s dep:%s done:%s", task_id, dep, dep.done())
+                logger.debug("Task[%s]: dep:%s done:%s", task_id, dep, dep.done())
                 if not dep.done():
                     count += 1
 
@@ -123,10 +123,10 @@ class DataFlowKernel(object):
                     future.result()
                 except Exception as e:
                     logger.warn("Exception : %s", future._exception)
-                    logger.error("Task_id:%s FAILED with %s", task_id, future)
+                    logger.error("Task[%s]: FAILED with %s", task_id, future)
                     raise e
 
-            logger.debug("Task_id:%s COMPLETED with %s", task_id, future)
+            logger.debug("Task[%s]: COMPLETED with %s", task_id, future)
             self.tasks[task_id]['status'] = States.done
 
         # Identify tasks that have resolved dependencies and launch
@@ -142,7 +142,7 @@ class DataFlowKernel(object):
                                                                       self.tasks[tid]['kwargs'])
 
                 if not exceptions :
-                    logger.debug("[{0}] Launching Task".format(tid))
+                    logger.debug("Task[%s] Launching Task".format(tid))
                     # There are no dependency errors
                     self.tasks[tid]['status'] = States.running
                     exec_fu = self.launch_task(tid, self.tasks[tid]['func'], *new_args, **kwargs)
@@ -151,10 +151,10 @@ class DataFlowKernel(object):
                         self.tasks[tid]['app_fu'].update_parent(exec_fu)
                         self.tasks[tid]['exec_fu'] = exec_fu
                     except AttributeError as e:
-                        logger.error("Caught AttributeError at update_parent for task:%s", tid)
+                        logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
                         raise e
                 else:
-                    logger.debug("[{0}] Deferring Task due to dependency failure".format(tid))
+                    logger.debug("Task[%s]: Deferring Task due to dependency failure", tid)
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
                     try:
@@ -162,12 +162,12 @@ class DataFlowKernel(object):
                         self.tasks[tid]['exec_fu'] = fu
                         self.tasks[tid]['app_fu'].update_parent(fu)
                         fu.set_exception(DependencyError(exceptions,
-                                                         "Input dependencies failure",
+                                                         tid,
                                                          None))
                         print(self.tasks[tid]['app_fu'])
 
                     except AttributeError as e:
-                        logger.error("Caught AttributeError at update_parent for task:%s", tid)
+                        logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
                         raise e
 
         return
@@ -227,7 +227,13 @@ class DataFlowKernel(object):
     def launch_task(self, task_id, executable, *args, **kwargs):
         ''' Handle the actual submission of the task to the executor layer
 
-        We should most likely add a callback at this point
+        If the app task has the sites attributes not set (default=='all')
+        the task is launched on a randomly selected executor from the
+        list of executors. This behavior could later be updates to support
+        binding to sites based on user specified criteria.
+
+        If the app task specifies a particular set of sites, it will be
+        targetted at those specific sites.
 
         Args:
             task_id (uuid string) : A uuid string that uniquely identifies the task
@@ -240,9 +246,27 @@ class DataFlowKernel(object):
             Future that tracks the execution of the submitted executable
         '''
 
-        #logger.debug("Submitting to executor : %s", task_id)
-        exec_fu = self.executor.submit(executable, *args, **kwargs)
+        task_name    = executable.__name__
+        target_sites = self.tasks[task_id]["sites"]
+        executor     = None
+        if isinstance(target_sites, str) and target_sites.lower() == 'all' :
+            # Pick a random site from the list
+            site, executor = random.choice(list(self.executors.items()))
+
+        elif isinstance(target_sites, list) :
+            # Pick a random site from user specified list
+            try :
+                site = random.choice(target_sites)
+                executor = self.executors[site]
+
+            except Exception as e:
+                logger.error("Task[%s]: requests invalid site [%s]" % task_id, target_sites)
+        else:
+            logger.error("App[%s]: sites defined is invalid, neither str|list" % self.tasks[task_id]['func'].__name__)
+
+        exec_fu = executor.submit(executable, *args, **kwargs)
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
+        logger.debug("Task[%s] launched on executor:%s" %(task_id, executor))
         return exec_fu
 
     @staticmethod
@@ -341,8 +365,17 @@ class DataFlowKernel(object):
         return new_args, kwargs, dep_failures
 
 
-    def submit (self, func, *args, **kwargs):
+    def submit (self, func, *args, parsl_sites='all', **kwargs):
         ''' Add task to the dataflow system.
+
+        Args:
+             func : A function object
+             *args : Args to the function
+
+        KWargs :
+             Standard kwargs to the func as provided by the user
+             parsl_sites : List of sites as defined in the config, Default :'all'
+             This is the only kwarg that is passed in by the app definition.
 
         If all deps are met :
               send to the runnable queue
@@ -357,11 +390,13 @@ class DataFlowKernel(object):
         task_id = self.task_count
         self.task_count += 1
 
+        # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
-        #dep_cnt  = self._count_deps(depends, task_id)
         task_def = { 'depends'    : depends,
+                     'sites'      : parsl_sites,
                      'func'       : func,
+                     'func_name'  : func.__name__,
                      'args'       : args,
                      'kwargs'     : kwargs,
                      'callback'   : None,
@@ -395,7 +430,9 @@ class DataFlowKernel(object):
                                    tid=task_id,
                                    stdout=task_stdout,
                                    stderr=task_stderr)
-                app_fu.set_exception(DependencyError(exceptions, "Failures in input dependencies", None))
+                app_fu.set_exception(DependencyError(exceptions,
+                                                     "Failures in input dependencies",
+                                                     None))
                 self.tasks[task_id]['app_fu']  = app_fu
                 self.tasks[task_id]['status']  = States.dep_fail
         else:
@@ -445,10 +482,8 @@ class DataFlowKernel(object):
             if executor.scaling_enabled :
                 job_ids = executor.execution_provider.resources.keys()
                 executor.scale_in(job_ids)
-            # We are not doing shutdown here because even with block=False this blocks.
-            #executor.shutdown()
 
-        if self.controller_proc:
-            self.controller_proc.close()
+            # We are not doing shutdown here because even with block=False this blocks.
+            executor.shutdown()
 
         logger.debug("DFK cleanup complete")

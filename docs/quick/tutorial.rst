@@ -147,7 +147,7 @@ arguments:
 
 In addition if a list of output filenames are provided via the
 outputs=[], a list of DataFutures corresponding to each filename in the
-outputs list is returned in addition to the AppFuture.
+outputs list is made available via the `outputs` attribute of the AppFuture.
 
 .. code:: ipython3
 
@@ -161,7 +161,9 @@ outputs list is returned in addition to the AppFuture.
         ls ;
         '''
     # We call sim_mol_dyn with
-    sim_fut, data_futs = sim_mol_dyn(5, 3, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
+    sim_fut = sim_mol_dyn(5, 3, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
+
+    data_futs = sim_fut.outputs
 
 .. code:: ipython3
 
