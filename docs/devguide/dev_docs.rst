@@ -31,7 +31,7 @@ PythonApp
 
 Concrete subclass of AppBase that implements the Python App functionality.
 
-.. autoclass:: parsl.app.app.PythonApp
+.. autoclass:: parsl.app.python_app.PythonApp
    :members: __init__, __call__
 
 BashApp
@@ -39,7 +39,7 @@ BashApp
 
 Concrete subclass of AppBase that implements the Bash App functionality.
 
-.. autoclass:: parsl.app.app.BashApp
+.. autoclass:: parsl.app.bash_app.BashApp
    :members: __init__, __call__
 
 
