@@ -15,8 +15,9 @@ Failures might occur to one or more of the following reasons:
 2. Formatting error while formatting the command-line string in ``Bash Apps``
 3. Task failed during execution
 4. Task completed execution but failed to produce one or more of it's specified
-outputs.
+   outputs.
 5. The App failed to launch, for example if an input dependency is not met.
+
 
 Since Parsl tasks are executed asynchronously, we are faced with the issue of
 determining where to place exception handling code in the workflow.

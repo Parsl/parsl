@@ -1,7 +1,7 @@
 .. _label-workflow:
 
 Composing a workflow
-=======
+====================
 
 Workflows in Parsl are created implicitly based on the passing of control or data between ``Apps``. The flexibility of this model allows for the creation of a wide range of workflows from sequential through to complex nested, parallel workflows. As we will see below a range of workflows can be created by passing AppFutures and DataFutures between ``Apps``. 
 
@@ -11,7 +11,8 @@ Below we illustrate a range of workflow patterns, however it is important to not
 
 
 Procedural workflows
----------
+--------------------
+
 Simple sequential or procedural workflows can be created by passing an AppFuture from one task to another. The following example shows one such workflow which first generates a random number and then writes it to a file. Note: in this case we combine a Pyhton and a Bash ``App`` seamlessly. 
 
 .. code-block:: python
@@ -37,7 +38,7 @@ Simple sequential or procedural workflows can be created by passing an AppFuture
    
 
 Parallel workflows
----------
+------------------
 
 Parallel execution occurs automatically in Parsl, assuming their are no dependencies between ``App`` execution. The following example shows how a single ``App`` can be used with and without dependencies to demonstrate parallel execution. 
 
@@ -64,7 +65,7 @@ Parallel execution occurs automatically in Parsl, assuming their are no dependen
       print(doubled_z.result())
 
 Parallel workflows with loops
----------
+-----------------------------
 
 The most common way that Parsl ``Apps`` are executed in parallel is via looping. The following example shows how a simple loop can be used to create many random numbers in parallel.
 
@@ -86,7 +87,7 @@ The most common way that Parsl ``Apps`` are executed in parallel is via looping.
 
 
 Parallel dataflows
----------
+------------------
 
 Parallel dataflows can be developed by passing data between ``Apps``. In this example we create a set of files, each with a random number, we then concatenate these files into a single file and compute the sum of all numbers in that file. In the first two ``Apps`` files are exchanged. The final ``App`` returns the sum as a Python integer. 
 

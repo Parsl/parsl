@@ -1,5 +1,5 @@
 Configuration
-===========
+=============
 
 Parsl workflows are developed completely independently from their execution environment. Parsl offers an extensible configuration model through which the execution environment and communication with that environment is configured.
 
@@ -35,7 +35,7 @@ Parsl can be configured using a Python configuration object. For simple cases, s
 
 
 Configuration Structure
-----------------------
+-----------------------
 
 The configuration data structure is a python dictionary that describes execution sites as well as other information such as global attributes, controller information, and in the future data staging information. 
 
