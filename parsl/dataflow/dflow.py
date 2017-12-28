@@ -65,6 +65,7 @@ class DataFlowKernel(object):
         # Create run dirs for this run
         self.rundir = make_rundir(config=config, path=rundir)
 
+        # Update config with defaults
         self.config = update_config(config, self.rundir)
 
         if self.config :
@@ -447,31 +448,16 @@ class DataFlowKernel(object):
         return task_def['app_fu']
 
 
-    def check_fulfilled(self):
-        ''' Iterate over the pending tasks
-        For tasks with dep_cnt == 0, copy task to runnable, and make the callback
-        '''
-
-        runnable = []
-        for task in self.pending:
-            if self.pending[task]['dep_cnt'] == 0:
-                print("All deps resolved for : ", task, self.pending[task])
-                self.runnable[task] = copy.deepcopy ( self.pending[task] )
-
-                runnable.extend([task])
-
-                print("Running callback {0}".format(task))
-                self.runnable[task]['callback']
-
-        for task in runnable:
-            del self.pending[task]
-        return
-
-
     def cleanup (self):
-        '''  DataFlowKernel cleanup. This might involve killing resources explicitly and
-        sending die messages to IPP workers
+        '''  DataFlowKernel cleanup. This involves killing resources explicitly and
+        sending die messages to IPP workers.
+
+        If the executors are managed, i.e created by the DFK
+            then : we scale_in each of the executors and call executor.shutdown
+            else : we do nothing. Executor cleanup is left to the user.
+
         '''
+
         logger.debug("DFK cleanup initiated")
         # We do not need to cleanup if the executors are managed outside
         # the DFK
