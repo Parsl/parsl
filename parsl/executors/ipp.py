@@ -101,7 +101,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
         self.executor = Client(url_file=self.client_file)
         self.config   = config
-        self.sitename = config["site"]
+        self.sitename = config['site'] if config else 'Static_IPP'
         # NOTE: Copying the config here only partially fixes the issue. There needs to be
         # multiple controllers launched by the factory, and each must have different jsons.
         # There could be timing issues here,
