@@ -23,7 +23,7 @@ translate_table = { 'R'  :  'RUNNING',
 class Torque(ExecutionProvider):
     ''' Torque Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel
+    This provider uses sbatch to submit, squeue for status, and scancel to cancel
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
@@ -86,7 +86,7 @@ class Torque(ExecutionProvider):
 
                   "options"   : {  # Scheduler specific options
 
-                      "account"   : #{Description : Account to which the job will be charged against
+                      "account"   : #{Description : Account the job will be charged against
                                     # Type : String,
                                     # Required : True },
 
