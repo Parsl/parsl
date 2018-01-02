@@ -282,7 +282,6 @@ class Slurm(ExecutionProvider):
         # Wrap the cmd_string
         lname = self.config["execution"]["block"].get("launcher", "singleNode")
         launcher = Launchers.get(lname, None)
-        logger.warn("Using launcher : {0}".format( launcher))
         job_config["user_script"] = launcher(cmd_string,
                                              taskBlocks=job_config["taskBlocks"])
 
