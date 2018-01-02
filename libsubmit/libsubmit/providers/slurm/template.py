@@ -6,7 +6,7 @@ template_string = '''#!/bin/bash
 #SBATCH --nodes=${nodes}
 #SBATCH --partition=${partition}
 #SBATCH --time=${walltime}
-#SBATCH --ntasks-per-node=${taskBlocks}
+
 $overrides
 
 export JOBNAME="${jobname}"
