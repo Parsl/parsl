@@ -25,7 +25,7 @@ translate_table = { 'queued'  :  'PENDING',
 class Cobalt(ExecutionProvider):
     ''' Cobalt Execution Provider
 
-    This provider uses cobalt to (qsub) submit, (qstat) squeue for status and qdel to cancel
+    This provider uses cobalt to submit (qsub), obtain the status of (qstat), and cancel (qdel)
     jobs. Theo script to be used is created from a template file in this
     same module.
 
@@ -94,7 +94,7 @@ class Cobalt(ExecutionProvider):
 
                   "options"   : {  # Scheduler specific options
 
-                      "account"   : #{Description : Account to which the job will be charged against
+                      "account"   : #{Description : Account that the job will be charged against
                                     # Type : String,
                                     # Required : True },
 
