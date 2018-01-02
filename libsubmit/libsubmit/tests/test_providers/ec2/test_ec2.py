@@ -24,6 +24,9 @@ def test_1 () :
                       "options" : {
                           "region" : "us-east-2",
                           "imageId" : 'ami-82f4dae7',
+                          "stateFile" : "awsproviderstate.json",
+                          "keyName" : "parsl.test"
+
                       }
                   }
                }
