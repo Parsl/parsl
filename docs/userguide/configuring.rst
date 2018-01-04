@@ -37,7 +37,7 @@ Parsl can be configured using a Python configuration object. For simple cases, s
 Configuration Structure
 -----------------------
 
-The configuration data structure is a python dictionary that describes execution sites as well as other information such as global attributes, controller information, and in the future data staging information. 
+The configuration data structure is a python dictionary that describes execution sites as well as other information such as global attributes, controller information, and in the future data staging information.
 
 .. code-block :: python
 
@@ -72,15 +72,19 @@ The most important part of this configuration is the `sites` key. Parsl allows m
 
            # A block is the unit by which resources are requested from the site
            "block" : {
-                "nodes" : <int: nodes to request per block>,
+                "nodes"      : <int: nodes to request per block>,
                 "taskBlocks" : <str: workers to start per block, or bash expression>,
                 "initBlocks" : <int: blocks to provision at the execution start>,
-                "minBlocks" : <int: min blocks to maintain during execution>,
-                "maxBlocks" : <int: max blocks that can be provisioned>,
-                "walltime" : <str: Walltime allowed for the block in HH:MM:SS format>,
+                "minBlocks"  : <int: min blocks to maintain during execution>,
+                "maxBlocks"  : <int: max blocks that can be provisioned>,
+                "walltime"   : <str: Walltime allowed for the block in HH:MM:SS format>,
+
                 # The "options" block contains attributes that are provider specific
                 # such as scheduler options
-                "options" : { dict of provider specific attributes },
+                "options" : {
+                     #dict of provider specific attributes, please refer to provider
+                     # specific documentation.
+                }
            }
        }
     }
@@ -101,11 +105,10 @@ The following shows an example configuration for accessing NERSC's Cori supercom
               },
               "execution" : {
                   "executor" : "ipp",
-                  "provider" : "slurm", 
-                  "script_dir" : ".scripts",
-                  "block" : { 
-                      "nodes" : 2,            
-                      "taskBlocks" : 1,       
+                  "provider" : "slurm",
+                  "block" : {
+                      "nodes" : 2,
+                      "taskBlocks" : 1,
                       "walltime" : "00:10:00",
                       "initBlocks" : 1,
                       "minBlocks" : 0,
