@@ -139,8 +139,8 @@ class Condor(ExecutionProvider):
 
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
-        self.scriptDir = self.config["execution"]"scriptDir"]
-        if not os.path.exists(self.scriptDir)
+        self.scriptDir = self.config["execution"]["scriptDir"]
+        if not os.path.exists(self.scriptDir):
             os.makedirs(self.scriptDir)
 
         self.config['execution']['environment'] = self.config['execution'].get('environment', {})
