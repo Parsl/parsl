@@ -51,7 +51,7 @@ class Slurm(ExecutionProvider):
                              # Expected : "slurm",
                              # Required :  True },
 
-              "script_dir" : #{Description : Relative or absolute path to a
+              "scriptDir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
                              # Default : "./.scripts"},
@@ -125,9 +125,9 @@ class Slurm(ExecutionProvider):
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
-
-        if not os.path.exists(self.config["execution"]["script_dir"]):
-            os.makedirs(self.config["execution"]["script_dir"])
+        self.scriptDir = self.config["execution"]["scriptDir"]
+        if not os.path.exists(self.scriptDir)
+            os.makedirs(self.scriptDir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -259,7 +259,7 @@ class Slurm(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.config["execution"].get("script_dir",'./.scripts'),
+        script_path = "{0}/{1}.submit".format(self.scriptDir,
                                               job_name)
         script_path = os.path.abspath(script_path)
 
