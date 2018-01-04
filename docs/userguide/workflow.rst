@@ -118,9 +118,9 @@ Parallel dataflows can be developed by passing data between ``Apps``. In this ex
       cc = concat(inputs=[i.outputs[0] for i in output_files], outputs=["all.txt"])
 
       # calculate the average of the random numbers
-      total = total(inputs=[cc.outputs[0]])
+      totals = total(inputs=[cc.outputs[0]])
 
-      print (total.result())
+      print (totals.result())
 
 
 
