@@ -50,7 +50,7 @@ class Local(ExecutionProvider):
                              # Expected : "local",
                              # Required :  True },
 
-              "script_dir" : #{Description : Relative or absolute path to a
+              "scriptDir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
                              # Default : "./.scripts"},
@@ -96,7 +96,7 @@ class Local(ExecutionProvider):
         if channel_script_dir:
             self.channel_script_dir = channel_script_dir
         else:
-            self.channel_script_dir = config["execution"].get('script_dir', "./.scripts")
+            self.channel_script_dir = config["execution"].get('scriptDir', "./.scripts")
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}

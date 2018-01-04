@@ -47,7 +47,7 @@ class Torque(ExecutionProvider):
                              # Expected : "torque",
                              # Required :  True },
 
-              "script_dir" : #{Description : Relative or absolute path to a
+              "scriptDir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
                              # Default : "./scripts"},
@@ -127,7 +127,7 @@ class Torque(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
 
-        self.scriptDir = self.config["execution"]["block"].get("scriptDir", '.scripts')
+        self.scriptDir = self.config["execution"]["block"]["scriptDir"]
         if not os.path.exists(self.scriptDir):
             os.makedirs(self.scriptDir)
 
@@ -263,7 +263,7 @@ class Torque(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
+        script_path = "{0}/{1}.submit".format(self.scriptDir,
                                               job_name)
         script_path = os.path.abspath(script_path)
 

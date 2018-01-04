@@ -51,7 +51,7 @@ class Condor(ExecutionProvider):
                              # Type : String,
                              # Default : "singleNode" },
 
-              "script_dir" : #{Description : Relative or absolute path to a
+              "scriptDir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
                              # Default : "./.scripts"},
@@ -139,8 +139,9 @@ class Condor(ExecutionProvider):
 
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
-        if not os.path.exists(self.config["execution"].get("scriptDir", '.scripts')):
-            os.makedirs([self.config["execution"].get("scriptDir", ".scripts")])
+        self.scriptDir = self.config["execution"]"scriptDir"]
+        if not os.path.exists(self.scriptDir)
+            os.makedirs(self.scriptDir)
 
         self.config['execution']['environment'] = self.config['execution'].get('environment', {})
         self.config['execution']['block']['environment'] = self.config['execution']['block'].get('environment', {})
@@ -272,11 +273,11 @@ class Condor(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.config["execution"].get("script_dir",'./.scripts'),
+        script_path = "{0}/{1}.submit".format(self.scriptDir,
                                               job_name)
         script_path = os.path.abspath(script_path)
         # Set executable script
-        userscript_path = "{0}/{1}.script".format(self.config["execution"].get("script_dir",'./.scripts'),
+        userscript_path = "{0}/{1}.script".format(self.scriptDir,
                                                   job_name)
         userscript_path = os.path.abspath(userscript_path)
 
