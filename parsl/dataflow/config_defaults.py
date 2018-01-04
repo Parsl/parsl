@@ -72,7 +72,7 @@ def update_config (config, rundir):
         site_base = {
             "auth" : {},
             "execution" : {
-                "script_dir" : rundir,
+                "scriptDir" : rundir,
                 "block" : {
                     "nodes" : 1,
                     "taskBlocks" : 1,
