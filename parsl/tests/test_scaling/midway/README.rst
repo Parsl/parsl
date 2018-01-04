@@ -24,24 +24,29 @@ Here's a config for Midway that starts with a request for 2 nodes.
 
 .. code:: python3
 
-     config = {"site" : "midway-westmere",
-               "execution" :
-                  {"executor" : "ipp",
-                   "provider" : "slurm",
-                   "channel"  : "local",
-                   "options" :
-                       {"init_parallelism" : 2,      # Starts with 2 nodes
-                        "max_parallelism" : 2,       # Limits this run to 2 nodes
-                        "min_parallelism" : 0,
-                        "tasks_per_node"  : 1,       # One engine per node
-                        "nodes_granularity" : 1,     # Request one node per slurm request
-                        "partition" : "westmere",       # Send request to the debug partition
-                        "walltime" : "00:05:00",     # Walltime
-                        "submit_script_dir" : ".scripts"
-                       }
-                   }
+        USERNAME = <SET_YOUR_USERNAME>
+
+        { "site" : "Midway_Remote_Westmere",
+          "auth" : {
+              "channel" : "ssh",
+              "hostname" : "swift.rcc.uchicago.edu",
+              "username" : USERNAME,
+              "scriptDir" : "/scratch/midway2/{0}/parsl_scripts".format(USERNAME)
+          },
+          "execution" : {
+              "executor" : "ipp",
+              "provider" : "slurm",
+              "block" : { # Definition of a block
+                  "nodes" : 1,            # of nodes in that block
+                  "taskBlocks" : 1,       # total tasks in a block
+                  "initBlocks" : 1,
+                  "maxBlocks" : 1,
+                  "options" : {
+                      "partition" : "westmere",
+                      "overrides" : '''module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
+                  }
               }
-
-
+          }
+        }
 
 

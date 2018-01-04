@@ -65,7 +65,6 @@ Here's a config for Cori that starts with a request for 2 nodes.
           "execution" : {
               "executor"   : "ipp",
               "provider"   : "slurm",
-              "script_dir" : ".scripts",
               "block" : {                 # Definition of a block
                   "nodes"      : 1,       # of nodes in that block
                   "taskBlocks" : 1,       # total tasks in a block

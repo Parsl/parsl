@@ -30,7 +30,6 @@ config = {
           "execution" : {
               "executor" : "ipp",
               "provider" : "aws",  # LIKELY SHOULD BE BOUND TO SITE
-              "script_dir" : ".scripts",
               "block" : { # Definition of a block
                   "nodes" : 1,            # of nodes in that block
                   "taskBlocks" : 2,       # total tasks in a block
