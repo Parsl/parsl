@@ -8,15 +8,15 @@ import argparse
 
 parsl.set_stream_logger()
 
-from ec2 import spotNode as config
+from ec2 import singleNode as config
 dfk = DataFlowKernel(config=config)
 
-@App("python", dfk)
-def python_app_slow(duration):
-    import platform
-    import time
-    time.sleep(duration)
-    return "Hello from {0}".format(platform.uname())
+@App("bash", dfk)
+def bash_app(seq_run_id):
+    return '''uname -a;
+echo {0}
+aws s3 cp logfile s3://mybucket/{0}
+    '''
 
 
 def test_python_remote(count=10):
@@ -45,4 +45,5 @@ if __name__ == "__main__" :
 
 
     test_python_remote()
+    dfk.cleanup()
     #test_python_remote_slow()

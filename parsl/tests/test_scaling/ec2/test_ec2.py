@@ -8,7 +8,7 @@ import argparse
 
 parsl.set_stream_logger()
 
-from ec2 import spotNode as config
+from ec2 import singleNode as config
 dfk = DataFlowKernel(config=config)
 
 @App("python", dfk)
@@ -45,4 +45,5 @@ if __name__ == "__main__" :
 
 
     test_python_remote()
+    dfk.cleanup()
     #test_python_remote_slow()
