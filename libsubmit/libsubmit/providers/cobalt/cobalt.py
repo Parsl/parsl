@@ -4,9 +4,10 @@ import subprocess
 import math
 import time
 from string import Template
-from libsubmit.execution_provider_base import ExecutionProvider
-from libsubmit.cobalt.template import template_string
+from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.providers.cobalt.template import template_string
 from libsubmit.exec_utils import execute_wait, wtime_to_minutes
+from libsubmit.launchers import Launchers
 import libsubmit.error as ep_error
 
 logger = logging.getLogger(__name__)
@@ -18,55 +19,98 @@ translate_table = { 'queued'  :  'PENDING',
                     'killing' : 'COMPLETED'
                   } # (special exit state
 
-def singleNodeLauncher (cmd_string, taskBlocks, walltime=None):
-    ''' Worker launcher that wraps the job with the framework to launch
-    multiple ipengines in parallel
-    '''
-    
-    x = '''export CORES=$(grep -c ^processor /proc/cpuinfo)
-echo "Found cores : $CORES"
-WORKERCOUNT={1}
 
-CMD ( ) {{
-{0}
-}}
-
-for COUNT in $(seq 1 1 $WORKERCOUNT)
-do
-    echo "Launching worker: $COUNT"
-    CMD &
-done
-wait
-echo "All workers done"
-'''.format(cmd_string, taskBlocks)
-    return x
-
-Launchers = {"singleNode" : singleNodeLauncher }
 
 
 class Cobalt(ExecutionProvider):
     ''' Cobalt Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel
-    jobs. The sbatch script to be used is created from a template file in this
+    This provider uses cobalt to submit (qsub), obtain the status of (qstat), and cancel (qdel)
+    jobs. Theo script to be used is created from a template file in this
     same module.
 
-    { "execution" : {
-         "executor" : "ipp",
-         "provider" : "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
-         "scriptDir" : ".scripts",
-         "block" : { # Definition of a block
-             "nodes" : 1,            # of nodes in that block
-             "taskBlocks" : 1,        # total tasks in a block
-             "walltime" : "00:05:00",
-             "launcher" : "singleNode"
-             "options" : {
-                  "partition" : "debug",
-                  "account" : "pi-wilde",
-                  "overrides" : "#SBATCH--constraint=haswell"
-             }
+    .. warning::
+        Please note that in the config documented below, description and values
+        are placed inside a schema that is delimited by #{ schema.. }
+
+    Here's the scheme for the Cobalt provider:
+
+    .. code-block:: python
+
+         { "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case cobalt
+                             # Type : String,
+                             # Expected : "cobalt",
+                             # Required :  True },
+
+              "launcher"   : #{Description : Launcher to use for launching workers
+                             # it is often necessary to use a launcher that the scheduler supports to
+                             # launch workers on multi-node jobs, or to partition MPI jobs
+                             # Type : String,
+                             # Default : "singleNode" },
+
+              "scriptDir"  : #{Description : Relative or absolute path to a
+                             # directory in which intermediate scripts are placed
+                             # Type : String,
+                             # Default : "./.scripts"},
+
+              "block" : { # Definition of a block
+
+                  "nodes"      : #{Description : # of nodes to provision per block
+                                 # Type : Integer,
+                                 # Default: 1},
+
+                  "taskBlocks" : #{Description : # of workers to launch per block
+                                 # as either an number or as a bash expression.
+                                 # for eg, "1" , "$(($CORES / 2))"
+                                 # Type : String,
+                                 #  Default: "1" },
+
+                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
+                                 # Type : String,
+                                 # Default : "01:00:00" },
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+
+                  "options"   : {  # Scheduler specific options
+
+                      "account"   : #{Description : Account that the job will be charged against
+                                    # Type : String,
+                                    # Required : True },
+
+                      "queue"     : #{Description : Torque queue to request blocks from
+                                    # Type : String,
+                                    # Required : False },
+
+                      "overrides" : #{"Description : String to append to the Torque submit script
+                                    # in the submit script to the scheduler
+                                    # Type : String,
+                                    # Required : False },
+                  }
+              }
+            }
          }
-    }
+
     '''
 
     def __repr__ (self):
@@ -94,8 +138,9 @@ class Cobalt(ExecutionProvider):
 
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
-        if not os.path.exists(self.config["execution"].get("scriptDir", '.scripts')):
-            os.makedirs(self.config["execution"]["scriptDir"])
+        self.scriptDir = self.config["execution"].get("scriptDir", '.scripts')
+        if not os.path.exists(self.scriptDir):
+            os.makedirs(self.scriptDir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -199,8 +244,7 @@ class Cobalt(ExecutionProvider):
                 raise(ep_error.ScriptPathError(script_filename, e ))
 
         try:
-            submit_script = Template(template_string).substitute(**configs,
-                                                                 jobname=job_name)
+            submit_script = Template(template_string).substitute(**configs)
 
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
@@ -260,7 +304,7 @@ class Cobalt(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name,time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.config["execution"]["block"].get("script_dir",'./.scripts'),
+        script_path = "{0}/{1}.submit".format(self.scriptDir,
                                               job_name)
         script_path = os.path.abspath(script_path)
 
@@ -272,14 +316,14 @@ class Cobalt(ExecutionProvider):
 
         job_config = self.config["execution"]["block"]["options"]
         job_config["nodes"] = nodes
-        job_config["overrides"] = job_config.get("overrides", '')        
-
+        job_config["overrides"] = job_config.get("overrides", '')
+        job_config["jobname"] = job_name
         # Wrap the cmd_string
         lname = self.config["execution"]["block"].get("launcher", "singleNode")
-        launcher = Launchers.get(lname, None)        
-        job_config["user_script"] = launcher(cmd_string, 
+        launcher = Launchers.get(lname, None)
+        job_config["user_script"] = launcher(cmd_string,
                                              self.config["execution"]["block"]["taskBlocks"])
-        
+
         # Get queue request if requested
         self.queue = ''
         if job_config.get("queue", None):
@@ -296,7 +340,7 @@ class Cobalt(ExecutionProvider):
                                                                          self.max_walltime,
                                                                          account_opt,
                                                                          channel_script_path))
-        
+
         retcode, stdout, stderr = self.channel.execute_wait(
             "qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
                                                     self.queue,

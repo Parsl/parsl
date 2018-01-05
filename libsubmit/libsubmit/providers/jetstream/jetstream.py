@@ -46,7 +46,7 @@ class Jetstream(object):
 
         if not _nova_enabled :
             raise OptionalModuleMissing(['python-novaclient'], "Jetstream Provider requires the python-novaclient module.")
-        
+
 
         self.client = client.Client(api_versions.APIVersion("2.0"),
                                     config['sites.jetstream']['OS_USERNAME'],

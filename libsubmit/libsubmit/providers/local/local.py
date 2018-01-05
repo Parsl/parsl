@@ -5,7 +5,7 @@ import math
 import time
 import signal
 from string import Template
-from libsubmit.execution_provider_base import ExecutionProvider
+from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.exec_utils import execute_no_wait
 import libsubmit.error as ep_error
 logger = logging.getLogger(__name__)
@@ -26,19 +26,68 @@ translate_table = { 'PD' :  'PENDING',
 
 
 class Local(ExecutionProvider):
-    ''' Slurm Execution Provider
+    ''' Local Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel jobs.
+    This provider is used to launch IPP engines on the localhost.
+
+    .. warning::
+        Please note that in the config documented below, description and values
+        are placed inside a schema that is delimited by #{ schema.. }
+
+    Here's the scheme for the Local provider:
+
+    .. code-block:: python
+
+         { "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case local
+                             # Type : String,
+                             # Expected : "local",
+                             # Required :  True },
+
+              "scriptDir"  : #{Description : Relative or absolute path to a
+                             # directory in which intermediate scripts are placed
+                             # Type : String,
+                             # Default : "./.scripts"},
+
+              "block" : { # Definition of a block
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+              }
+            }
+         }
+
     '''
 
     def __repr__ (self):
         return "<Local Execution Provider for site:{0}>".format(self.sitename)
 
     def __init__ (self, config, channel_script_dir=None, channel=None):
-        ''' Initialize the Slurm class
+        ''' Initialize the local provider class
+
         Args:
              - Config (dict): Dictionary with all the config options.
         '''
+
         self.channel = channel
         self.config = config
         self.sitename = config['site']
@@ -47,7 +96,7 @@ class Local(ExecutionProvider):
         if channel_script_dir:
             self.channel_script_dir = channel_script_dir
         else:
-            self.channel_script_dir = os.path.abspath("./.scripts")
+            self.channel_script_dir = config["execution"].get('scriptDir', "./.scripts")
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -67,6 +116,7 @@ class Local(ExecutionProvider):
     ###########################################################################################################
     def status (self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
+
         Args:
             - job_ids (List of ids) : List of identifiers for the jobs
 
@@ -74,6 +124,7 @@ class Local(ExecutionProvider):
             - List of status codes.
 
         '''
+
         for job_id in self.resources:
             poll_code = self.resources[job_id]['proc'].poll()
             if poll_code == None :

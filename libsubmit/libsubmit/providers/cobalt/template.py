@@ -1,12 +1,14 @@
 template_string = '''#!/bin/bash -e
 
+$overrides
+
 echo "Starting Cobalt job script"
 
 echo "----Cobalt Nodefile: -----"
 cat $$COBALT_NODEFILE
 echo "--------------------------"
 
-$overrides
+export JOBNAME="${jobname}"
 
 $user_script
 
