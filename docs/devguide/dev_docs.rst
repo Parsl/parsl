@@ -48,6 +48,12 @@ Local
 .. autoclass:: libsubmit.providers.local.local.Local
    :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
 
+AWS
+^^^
+
+.. autoclass:: libsubmit.providers.aws.aws.EC2Provider
+   :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
+
 
 
 Channels
