@@ -23,7 +23,7 @@ except ImportError:
 else:
     _boto_enabled = True
 
-translate_table = {'pending': 'PENDING',
+translate_table = {'pending' : 'PENDING',
                    'running': 'RUNNING',
                    'terminated': 'COMPLETED',
                    'shutting-down': 'COMPLETED',  # (configuring),
@@ -65,13 +65,8 @@ class EC2Provider(ExecutionProvider):
 
               "provider"   : #{Description : The provider name, in this case ec2
                              # Type : String,
-                             # Expected : "slurm",
+                             # Expected : "aws",
                              # Required :  True },
-
-              "script_dir" : #{Description : Relative or absolute path to a
-                             # directory in which intermediate scripts are placed
-                             # Type : String,
-                             # Default : "./.scripts"},
 
               "block" : { # Definition of a block
 
@@ -314,7 +309,10 @@ class EC2Provider(ExecutionProvider):
         return session
 
     def create_vpc(self):
-        """Create and configure VPC"""
+        ''' Create and configure VPC
+        [TODO] Describe this a bit more ...
+        '''
+
         try:
             vpc = self.ec2.create_vpc(
                 CidrBlock='10.0.0.0/16',
@@ -346,9 +344,12 @@ class EC2Provider(ExecutionProvider):
         return vpc
 
     def security_group(self, vpc):
-        """Create and configure security group.
+        ''' Create and configure security group.
         Allows all ICMP in, all tcp and udp in within vpc
-        """
+
+        TODO : Open up only the necessary port ranges.
+        '''
+
         sg = vpc.create_security_group(
             GroupName="private-subnet",
             Description="security group for remote executors")
@@ -399,7 +400,13 @@ class EC2Provider(ExecutionProvider):
         return sg
 
     def config_route_table(self, vpc, internet_gateway):
-        """Configure route table for vpc"""
+        ''' Configure route table for vpc
+
+        [TODO]
+        Args:
+            - vpc (type) : ?
+            - vpc (type) : ?
+        '''
         route_table = vpc.create_route_table()
         route_ig_ipv4 = route_table.create_route(
             DestinationCidrBlock='0.0.0.0/0',
@@ -471,7 +478,7 @@ class EC2Provider(ExecutionProvider):
         except Exception as e:
             logger.error("Request for EC2 resources failed : {0}".format(e))
             return [None]
-        
+
         self.instances.append(instance[0].id)
         logger.info("Started up 1 instance {} . Instance type:{}".format(instance[0].id, instance_type))
         return instance
@@ -479,6 +486,8 @@ class EC2Provider(ExecutionProvider):
     def shut_down_instance(self, instances=None):
         ''' Shuts down a list of instances if provided or the last
         instance started up if none provided
+
+        [TODO] ...
         '''
 
         if instances and len(self.instances) > 0:
