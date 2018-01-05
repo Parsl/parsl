@@ -22,10 +22,17 @@ class ExecutionProvider(metaclass=ABCMeta):
      """
 
     @abstractmethod
-    def submit(self, *args, **kwargs):
-        ''' We haven't yet decided on what the args to this can be,
-        whether it should just be func, args, kwargs or be the partially evaluated
-        fn
+    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
+        ''' The submit method takes the command string to be executed upon
+        instantiation of a resource most often to start a pilot (such as IPP engine
+        or even Swift-T engines).
+
+        Args :
+             - cmd_string (str) : The bash command string to be executed.
+             - blocksize (int) : Blocksize to be requested
+
+        KWargs:
+             - job_name (str) : Human friendly name to be assigned to the job request
 
         Returns:
              - A job identifier, this could be an integer, string etc
@@ -37,17 +44,16 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def status(self, ids, **kwargs):
-        ''' We haven't yet decided on what the args to this can be,
-        whether it should just be func, args, kwargs or be the partially evaluated
-        fn
+    def status(self, job_ids):
+        ''' Get the status of a list of jobs identified by the job identifiers
+        returned from the submit request.
 
         Args:
-             - A list of job identifiers
+             - job_ids (list) : A list of job identifiers
 
         Returns:
              - A list of status from ['PENDING', 'RUNNING', 'CANCELLED', 'COMPLETED',
-               'FAILED', 'TIMEOUT']
+               'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
              - ExecutionProviderExceptions or its subclasses
@@ -57,13 +63,11 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def cancel(self, ids, **kwargs):
-        ''' We haven't yet decided on what the args to this can be,
-        whether it should just be func, args, kwargs or be the partially evaluated
-        fn
+    def cancel(self, job_ids):
+        ''' Cancels the resources identified by the job_ids provided by the user.
 
         Args:
-             - A list of job identifiers
+             - job_ids (list): A list of job identifiers
 
         Returns:
              - A list of status from cancelling the job which can be True, False
@@ -78,11 +82,22 @@ class ExecutionProvider(metaclass=ABCMeta):
     def scaling_enabled(self):
         ''' The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
+
+        Returns:
+              - Status (Bool)
         '''
+
         pass
 
     @abstractproperty
     def channels_required(self):
-        ''' Returns Bool, depending on need for channels
+        ''' Does the execution provider require a channel to function. Generally
+        all Cloud api's require no channels while all bash script based systems
+        such as schedulers for campus clusters (slurm, torque, cobalt, condor..)
+        need channels
+
+        Returns:
+              - Status (Bool)
         '''
+
         pass

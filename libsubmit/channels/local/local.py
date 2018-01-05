@@ -14,13 +14,18 @@ class LocalChannel (Channel):
     and done so infrequently that they do not need a persistent channel
     '''
 
+    def __repr__ (self):
+        return "Local:{0}".format(self.hostname)
+
     def __init__ (self, userhome=".", envs={}, scriptDir="./.scripts", **kwargs):
-        '''
+        ''' Initialize the local channel. scriptDir is required by set to a default.
+
         KwArgs:
-             userhome (string): (default='.') This is provided as a way to override and set a specific userhome
-             envs (dict) : A dictionary of env variables to be set when launching the shell
-             channel_script_dir (string): (default="./.scripts") Directory to place scripts
+            - userhome (string): (default='.') This is provided as a way to override and set a specific userhome
+            - envs (dict) : A dictionary of env variables to be set when launching the shell
+            - channel_script_dir (string): (default="./.scripts") Directory to place scripts
         '''
+
         self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
         local_env     = os.environ.copy()
@@ -39,15 +44,15 @@ class LocalChannel (Channel):
 
     def execute_wait (self, cmd, walltime):
         ''' Synchronously execute a commandline string on the shell.
+
         Args:
-        - cmd (string) : Commandline string to execute
-        - walltime (int) : walltime in seconds, this is not really used now.
+            - cmd (string) : Commandline string to execute
+            - walltime (int) : walltime in seconds, this is not really used now.
 
         Returns:
-        A tuple of the following:
-        retcode : Return code from the execution, -1 on fail
-        stdout  : stdout string
-        stderr  : stderr string
+            - retcode : Return code from the execution, -1 on fail
+            - stdout  : stdout string
+            - stderr  : stderr string
 
         Raises:
         None.
@@ -73,20 +78,22 @@ class LocalChannel (Channel):
             # Set retcode to non-zero so that this can be handled in the provider.
             if retcode == 0:
                 retcode = -1
+                return (recode, None, None)
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
     def execute_no_wait (self, cmd, walltime):
         ''' Synchronously execute a commandline string on the shell.
+
         Args:
-        - cmd (string) : Commandline string to execute
-        - walltime (int) : walltime in seconds, this is not really used now.
+            - cmd (string) : Commandline string to execute
+            - walltime (int) : walltime in seconds, this is not really used now.
 
         Returns:
-        A tuple of the following:
-        retcode : Return code from the execution, -1 on fail
-        stdout  : stdout string
-        stderr  : stderr string
+
+           - retcode : Return code from the execution, -1 on fail
+           - stdout  : stdout string
+           - stderr  : stderr string
 
         Raises:
          None.
@@ -112,6 +119,16 @@ class LocalChannel (Channel):
     def push_file(self, source, dest_dir):
         ''' If the source files dirpath is the same as dest_dir, a copy
         is not necessary, and nothing is done. Else a copy is made.
+
+        Args:
+            - source (string) : Path to the source file
+            - dest_dir (string) : Path to the directory to which the files is to be copied
+
+        Returns:
+            - destination_path (String) : Absolute path of the destination file
+
+        Raises:
+            - FileCopyException : If file copy failed.
         '''
 
         local_dest = dest_dir + '/' + os.path.basename(source)

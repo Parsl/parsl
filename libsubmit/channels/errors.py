@@ -58,6 +58,22 @@ class BadPermsScriptPath(ChannelError):
         self.hostname = hostname
         self.e = e
 
+class FileExists(ChannelError):
+    ''' Push or pull of file over channel fails since a file of the name already
+    exists on the destination.
+
+    Contains:
+    reason(string)
+    e (paramiko exception object)
+    hostname (string)
+    '''
+
+    def __init__(self, e, hostname, filename=None):
+        super().__init__()
+        self.reason = "File name collision in channel transport phase:" + filename
+        self.hostname = hostname
+        self.e = e
+
 
 class AuthException(ChannelError):
     ''' An error raised during execution of an app.
