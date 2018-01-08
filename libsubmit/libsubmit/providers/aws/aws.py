@@ -216,8 +216,12 @@ class EC2Provider(ExecutionProvider):
            the script looks for a state file
            before creating new infrastructure
 
-           Information on VPCs, security groups, and subnets are saved, 
+           Information on VPCs, security groups, and subnets are saved,
            as well as running instances and their states.
+
+           AWS has a maximum number of VPCs per region per account so we don't
+           want to clutter users' aws accounts with security groups and vpcs that
+           will be used only once.
 
         """
         try:
@@ -316,34 +320,60 @@ class EC2Provider(ExecutionProvider):
 
     def create_vpc(self):
         ''' Create and configure VPC
-        [TODO] Describe this a bit more ...
+
+            We create a VPC with CIDR 10.0.0.0/16, which provides
+            up to 64,000 instances.
+
+            We attach a subnet for each availability zone within the
+            region specified in the config. We give each subnet an
+            ip range like 10.0.X.0/20, which is large enough for
+            approx. 4000 instances.
+
+            Security groups are configured in function security_group.
+            More information is there
         '''
 
         try:
+            # We use a large VPC so that the cluster can get large
             vpc = self.ec2.create_vpc(
                 CidrBlock='10.0.0.0/16',
                 AmazonProvidedIpv6CidrBlock=False,
             )
         except Exception as e:
+            # This failiure will cause a full abort
             logger.error("{}\n".format(e))
             raise e
+
+        # Attach internet gateway so that our cluster can
+        # talk to the outside internet
         internet_gateway = self.ec2.create_internet_gateway()
         internet_gateway.attach_to_vpc(VpcId=vpc.vpc_id)  # Returns None
         self.internet_gateway = internet_gateway.id
+
+        # Create and configure route table to allow proper traffic
         route_table = self.config_route_table(vpc, internet_gateway)
         self.route_table = route_table.id
+
+        # Get all avaliability zones
         availability_zones = self.client.describe_availability_zones()
+
+        # go through AZs and set up a subnet per
         for num, zone in enumerate(availability_zones['AvailabilityZones']):
             if zone['State'] == "available":
+
+                # Create a large subnet (4000 max nodes)
                 subnet = vpc.create_subnet(
                     CidrBlock='10.0.{}.0/20'.format(16 * num),
                     AvailabilityZone=zone['ZoneName'])
+
+                # Make subnet accessible
                 subnet.meta.client.modify_subnet_attribute(
                     SubnetId=subnet.id, MapPublicIpOnLaunch={"Value": True})
+
                 route_table.associate_with_subnet(SubnetId=subnet.id)
                 self.sn_ids.append(subnet.id)
             else:
-                print("{} unavailable".format(zone['ZoneName']))
+                logger.info("{} unavailable".format(zone['ZoneName']))
         # Security groups
         sg = self.security_group(vpc)
         self.vpc_id = vpc.id
@@ -353,7 +383,12 @@ class EC2Provider(ExecutionProvider):
         ''' Create and configure security group.
         Allows all ICMP in, all tcp and udp in within vpc
 
-        TODO : Open up only the necessary port ranges.
+        This security group is very open. It allows all
+        incoming ping requests on all ports. It also allows
+        all outgoing traffic on all ports. This can be limited
+        by changing the allowed port ranges.
+
+        :param vpc - vpc in which to set up security group
         '''
 
         sg = vpc.create_security_group(
@@ -410,8 +445,10 @@ class EC2Provider(ExecutionProvider):
 
         [TODO]
         Args:
-            - vpc (type) : ?
-            - vpc (type) : ?
+            :param vpc (dict) : dictionary representing the vpc 
+                                created by create_vpc()
+            :param internet_gateway (dict) : dictionary representing igw
+                                             created by create_vpc() 
         '''
         route_table = vpc.create_route_table()
         route_ig_ipv4 = route_table.create_route(
@@ -420,7 +457,10 @@ class EC2Provider(ExecutionProvider):
         return route_table
 
     def scale_in(self, size):
-        """Scale cluster in (smaller)"""
+        """Scale cluster in (smaller)
+           Args:
+                :size (int) number of blocks to remove
+        """
         for i in range(size):
             self.shut_down_instance()
         self.current_blocksize -= size
