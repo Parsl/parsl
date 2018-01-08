@@ -688,7 +688,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         """Print human readable summary of current
            AWS state to log and to console
         """
-            self.get_instance_state()
+        self.get_instance_state()
         status_string = "EC2 Summary:\n\tVPC IDs: {}\n\tSubnet IDs: \
 {}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n".format(
             self.vpc_id,
