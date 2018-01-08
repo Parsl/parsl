@@ -52,7 +52,7 @@ AWS
 ^^^
 
 .. autoclass:: libsubmit.providers.aws.aws.EC2Provider
-   :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
+   :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required, create_vpc, read_state_file, write_state_file, create_session, security_group
 
 
 
