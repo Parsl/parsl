@@ -7,11 +7,11 @@ import atexit
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.error import *
 
-try :
+try:
     from azure.common.credentials import UserPassCredentials
     from libsubmit.azure.azureDeployer import Deployer
 
-except ImportError :
+except ImportError:
     _azure_enabled = False
 else:
     _azure_enabled = True
@@ -37,13 +37,126 @@ sudo pip3 install ipyparallel parsl
 
 
 class AzureProvider(ExecutionProvider):
+     '''
+    Here's a sample config for the Azure provider:
+
+    .. code-block:: python
+
+         { "auth" : { # Definition of authentication method for AWS. One of 3 methods are required to authenticate
+                      # with AWS : keyfile, profile or env_variables. If keyfile or profile is not set Boto3 will
+                      # look for the following env variables :
+                      # AWS_ACCESS_KEY_ID : The access key for your AWS account.
+                      # AWS_SECRET_ACCESS_KEY : The secret key for your AWS account.
+                      # AWS_SESSION_TOKEN : The session key for your AWS account.
+
+              #{Description: Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'
+              "keyfile"    :
+                             # Type : String,
+                             # Required : False},
+
+              #{Description: Specify the profile to be used from the standard aws config file
+              "profile"    :
+                             # ~/.aws/config.
+                             # Type : String,
+                             # Expected : "default", # Use the 'default' aws profile
+                             # Required : False},
+
+            },
+
+           "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case ec2
+                             # Type : String,
+                             # Expected : "aws",
+                             # Required :  True },
+
+              "block" : { # Definition of a block
+
+                  "nodes"      : #{Description : # of nodes to provision per block
+                                 # Type : Integer,
+                                 # Default: 1},
+
+                  "taskBlocks" : #{Description : # of workers to launch per block
+                                 # as either an number or as a bash expression.
+                                 # for eg, "1" , "$(($CORES / 2))"
+                                 # Type : String,
+                                 #  Default: "1" },
+
+                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
+                                 # Type : String,
+                                 # Default : "00:20:00" },
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+
+                  "options"   : {  # Scheduler specific options
+
+
+                      #{Description : Instance type t2.small|t2...
+                      "instanceType" :
+                                       # Type : String,
+                                       # Required : False
+                                       # Default : t2.small },
+
+                      #{"Description : String to append to the #SBATCH blocks
+                      "imageId"      :
+                                       # in the submit script to the scheduler
+                                       # Type : String,
+                                       # Required : False },
+
+                      "region"       : #{"Description : AWS region to launch machines in
+                                       # in the submit script to the scheduler
+                                       # Type : String,
+                                       # Default : 'us-east-2',
+                                       # Required : False },
+
+                      #{"Description : Name of the AWS private key (.pem file)
+                      "keyName"      :
+                                       # that is usually generated on the console to allow ssh access
+                                       # to the EC2 instances, mostly for debugging.
+                                       # in the submit script to the scheduler
+                                       # Type : String,
+                                       # Required : True },
+
+                      #{"Description : If requesting spot market machines, specify
+                      "spotMaxBid"   :
+                                       # the max Bid price.
+                                       # Type : Float,
+                                       # Required : False },
+                  }
+              }
+            }
+         }
+    '''
+    def __repr__(self):
+        return "<Azure Execution Provider for site:{0}>".format(self.sitename)
+ 
     def __init__(self, config):
         """Initialize Azure provider. Uses Azure python SDK to provide execution resources"""
         self.config = self.read_configs(config)
         self.config_logger()
 
-        if not _azure_enabled :
-            raise OptionalModuleMissing(['azure', 'haikunator'], "Azure Provider requires the azure and haikunator modules.")
+        if not _azure_enabled:
+            raise OptionalModuleMissing(
+                ['azure', 'haikunator'], "Azure Provider requires the azure and haikunator modules.")
 
         credentials = UserPassCredentials(
             self.config['username'], self.config['pass'])
@@ -57,6 +170,52 @@ class AzureProvider(ExecutionProvider):
             subscription_id,
             self.resource_group_name,
             self.read_configs(config))
+
+        
+        self.channel = channel
+        if not _boto_enabled:
+            raise OptionalModuleMissing(
+                ['boto3'], "AWS Provider requires boto3 module.")
+
+        self.config = config
+        self.sitename = config['site']
+        self.current_blocksize = 0
+        self.resources = {}
+
+        self.config = config
+        options = self.config["execution"]["block"]["options"]
+        logger.warn("Options %s", options)
+        self.instance_type = options.get("instanceType", "t2.small")
+        self.image_id = options["imageId"]
+        self.key_name = options["keyName"]
+        self.region = options.get("region", 'us-east-2')
+        self.max_nodes = (self.config["execution"]["block"].get("maxBlocks", 1) *
+                          self.config["execution"]["block"].get("nodes", 1))
+
+        self.spot_max_bid = options.get("spotMaxBid", 0)
+
+        try:
+            self.initialize_boto_client()
+        except Exception as e:
+            logger.error("Site:[{0}] Failed to initialize".format(self))
+            raise e
+
+        try:
+            self.statefile = self.config["execution"]["block"]["options"].get("stateFile",
+                                                                              '.ec2site_{0}.json'.format(self.sitename))
+            self.read_state_file(self.statefile)
+
+        except Exception as e:
+            self.create_vpc().id
+            logger.info(
+                "No State File. Cannot load previous options. Creating new infrastructure")
+            self.write_state_file()
+
+    @property
+    def channels_required(self):
+        ''' No channel required for EC2
+        '''
+        return False
 
     def config_logger(self):
         """Configure Logger"""
@@ -125,14 +284,6 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         """Destroy an azure VM"""
         self.deployer.destroy()
 
-    def scale_in(self):
-        raise NotImplemented
-
-    def scale_out(self):
-        raise NotImplemented
-
 
 if __name__ == '__main__':
     config = "azureconf.json"
-    provider = AzureProvider(config)
-    provider.submit()
