@@ -456,15 +456,6 @@ class EC2Provider(ExecutionProvider):
             GatewayId=internet_gateway.internet_gateway_id)
         return route_table
 
-    def scale_in(self, size):
-        """Scale cluster in (smaller)
-           Args:
-                :size (int) number of blocks to remove
-        """
-        for i in range(size):
-            self.shut_down_instance()
-        self.current_blocksize -= size
-
     def xstr(self, s):
         return '' if s is None else s
 
