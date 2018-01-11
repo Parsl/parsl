@@ -40,7 +40,7 @@ Simple sequential or procedural workflows can be created by passing an AppFuture
 Parallel workflows
 ------------------
 
-Parallel execution occurs automatically in Parsl, assuming their are no dependencies between ``App`` execution. The following example shows how a single ``App`` can be used with and without dependencies to demonstrate parallel execution. 
+Parallel execution occurs automatically in Parsl, respecting dependencies among ``App`` executions. The following example shows how a single ``App`` can be used with and without dependencies to demonstrate parallel execution.
 
 .. code-block:: python
 
