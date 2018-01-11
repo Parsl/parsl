@@ -112,6 +112,26 @@ class MissingOutputs(ParslError):
     def __str__(self):
         return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
 
+class BadStdStreamFile(ParslError):
+    ''' Error raised due to bad filepaths specified for STDOUT/ STDERR
+
+    Contains:
+       reason(string)
+       outputs(List of strings/files..)
+       exception object
+    '''
+
+    def __init__(self, outputs):
+        super().__init__()
+        self.outputs = outputs
+        self.e = e
+
+    def __repr__(self):
+        return "Paths:[{}], Reason:{}".format(self.outputs, self.e)
+
+    def __str__(self):
+        return self.__repr__()
+
 class DependencyError(ParslError):
     ''' Error raised at the end of app execution due to missing
     output files
