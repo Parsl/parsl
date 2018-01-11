@@ -126,7 +126,7 @@ class Local(ExecutionProvider):
 
         '''
 
-        logging.debug("Checking status of : {0}", job_ids)
+        logging.debug("Checking status of : {0}".format(job_ids))
         for job_id in self.resources:
             poll_code = self.resources[job_id]['proc'].poll()
             if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
@@ -220,7 +220,6 @@ class Local(ExecutionProvider):
 
         job_id, proc = execute_no_wait('bash {0}'.format(script_path),
                                        3)
-        logger.debug("Started pid:%s proc:%s ", job_id, proc)
         self.resources[job_id] = {'job_id' : job_id,
                                   'status' : 'RUNNING',
                                   'blocksize' : blocksize,
