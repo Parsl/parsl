@@ -245,3 +245,18 @@ srunMpiLauncher
 .. autofunction:: libsubmit.launchers.srunMpiLauncher
 
 
+Strategy
+========
+
+Strategies are responsible for tracking the compute requirements of a workflow as it
+is executed and scaling the resources to match it.
+
+.. autoclass:: parsl.dataflow.strategy.Strategy
+   :members:  __init__, strategize
+
+
+
+
+
+
+

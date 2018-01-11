@@ -7,7 +7,9 @@ import math
 logger = logging.getLogger(__name__)
 
 class Strategy (object) :
-    ''' Scaling Strategy
+    '''
+    Scaling Strategy
+    ----------------
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
     asynchronously. Parsl interfaces executors with execution providers to construct
@@ -21,40 +23,57 @@ class Strategy (object) :
     condor, torque, or even AWS API. The blocks could contain several task blocks
     which are separate instances on workers.
 
+
+    .. code:: python
+
+                |<--minBlocks     |<-initBlocks              maxBlocks-->|
+                +--------------------------------------------------------+
+                |  +--------Block--------+       +--------Block--------+ |
+         Site = |  | TaskBlock TaskBlock | ...   | TaskBlock TaskBlock | |
+                |  +---------------------+       +---------------------+ |
+                +--------------------------------------------------------+
+
     The general shape and bounds of a site are user specified through:
-    1. minBlocks: Minimum # of blocks to maintain per site
-    2. initBlocks: # of blocks to provision at initialization of workflow
-    3. maxBlocks: Maximum # of blocks that can be active at a site from one workflow.
 
-           |<--minBlocks     |<-initBlocks              maxBlocks-->|
-           +--------------------------------------------------------+
-           |  +--------Block--------+       +--------Block--------+ |
-    Site = |  | TaskBlock TaskBlock | ...   | TaskBlock TaskBlock | |
-           |  +---------------------+       +---------------------+ |
-           +--------------------------------------------------------+
+       1. minBlocks: Minimum # of blocks to maintain per site
+       2. initBlocks: # of blocks to provision at initialization of workflow
+       3. maxBlocks: Maximum # of blocks that can be active at a site from one workflow.
 
-    slots = current_capacity * taskBlocks
 
-    active_tasks = pending_tasks + running_tasks
+    .. code:: python
 
-    Parallelism p = [0, 1] (i.e,  0 <= p <= 1)
-                  = slots / tasks i.e #
+          slots = current_capacity * taskBlocks
 
-    For eg.
-    When p = 0, => compute with the least resources possible.
-                   infinite tasks are stacked per slot.
+          active_tasks = pending_tasks + running_tasks
 
-         blocks =  minBlocks           { if active_tasks = 0
-                   max(minBlocks, 1)   {  else
+          Parallelism = slots / tasks
+                      = [0, 1] (i.e,  0 <= p <= 1)
 
-    When p = 1  => compute with the most resources.
-                   one task is stacked per slot.
+    For eg:
 
-         blocks = min ( maxBlocks,
+    When p = 0,
+         => compute with the least resources possible.
+         infinite tasks are stacked per slot.
+
+         .. code:: python
+
+               blocks =  minBlocks           { if active_tasks = 0
+                         max(minBlocks, 1)   {  else
+
+    When p = 1,
+         => compute with the most resources.
+         one task is stacked per slot.
+
+         .. code:: python
+
+               blocks = min ( maxBlocks,
                         ceil( active_tasks / slots ) )
 
-    When p = 1/2 => We stack upto 2 tasks per slot before we overflow
-                    and request a new block
+
+    When p = 1/2,
+         => We stack upto 2 tasks per slot before we overflow
+         and request a new block
+
 
     let's say min:init:max = 0:0:4 and taskBlocks=2
 
@@ -62,19 +81,23 @@ class Strategy (object) :
 
     at 2 tasks :
 
-    +---Block---|
-    |           |
-    | X      X  |
-    |slot   slot|
-    +-----------+
+    .. code:: python
+
+        +---Block---|
+        |           |
+        | X      X  |
+        |slot   slot|
+        +-----------+
 
     at 5 tasks, we overflow as the capacity of a single block is fully used.
 
-    +---Block---|       +---Block---|
-    | X      X  | ----> |           |
-    | X      X  |       | X         |
-    |slot   slot|       |slot   slot|
-    +-----------+       +-----------+
+    .. code:: python
+
+        +---Block---|       +---Block---|
+        | X      X  | ----> |           |
+        | X      X  |       | X         |
+        |slot   slot|       |slot   slot|
+        +-----------+       +-----------+
 
     '''
 
