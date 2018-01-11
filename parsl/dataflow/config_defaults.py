@@ -72,12 +72,15 @@ def update_config (config, rundir):
         site_base = {
             "auth" : {},
             "execution" : {
-                "script_dir" : rundir,
+                "scriptDir" : rundir,
                 "block" : {
                     "nodes" : 1,
                     "taskBlocks" : 1,
-                    "minBlocks" : 0,
-                    "walltime" : "00:20:00",
+                    "minBlocks"  : 0,
+                    "initBlocks" : 0,
+                    "maxBlocks"  : 10,
+                    "parallelism" : 0.75,
+                    "walltime"   : "00:20:00",
                     "options" : {
                     }
                 }
