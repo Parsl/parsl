@@ -32,6 +32,7 @@ from parsl.dataflow.error import *
 from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.rundirs import make_rundir
+from parsl.dataflow.flow_control import FlowControl, FlowNoControl
 from parsl.dataflow.config_defaults import update_config
 from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
@@ -77,19 +78,20 @@ class DataFlowKernel(object):
             # set global vars from config
             self.lazy_fail = self.config["globals"].get("lazyFail", lazy_fail)
             self.fail_retires = self.config["globals"].get("fail_retries", fail_retries)
-
+            self.flowcontrol     = FlowControl(self)
         else:
             self._executors_managed = False
             self.fail_retries = fail_retries
             self.lazy_fail    = lazy_fail
             self.executors    = {i:x for i,x in enumerate(executors)}
             print("Executors : ", self.executors)
+            self.flowcontrol  = FlowNoControl(self)
 
         self.task_count      = 0
         self.fut_task_lookup = {}
         self.tasks           = {}
 
-        #logger.debug("Using executor: {0}".format(self.executor))
+
         logger.debug("Using executors: {0}".format(self.executors))
         atexit.register(self.cleanup)
 
@@ -307,7 +309,7 @@ class DataFlowKernel(object):
                     count += 1
                 depends.extend([dep])
 
-        logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
+        #logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count, depends
 
     @staticmethod
@@ -467,7 +469,7 @@ class DataFlowKernel(object):
         for executor in self.executors.values() :
             if executor.scaling_enabled :
                 job_ids = executor.execution_provider.resources.keys()
-                executor.scale_in(job_ids)
+                executor.scale_in(len(job_ids))
 
             # We are not doing shutdown here because even with block=False this blocks.
             executor.shutdown()
