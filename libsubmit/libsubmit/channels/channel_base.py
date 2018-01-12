@@ -24,12 +24,15 @@ class Channel (metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def execute_wait(self, cmd, walltime, *args, **kwargs):
+    def execute_wait(self, cmd, walltime, envs={}, *args, **kwargs):
         ''' Executes the cmd, with a defined walltime.
 
         Args:
             - cmd (string): Command string to execute over the channel
             - walltime (int) : Timeout in seconds
+
+        KWargs:
+            - envs (dict) : Environment variables to push to the remote side
 
         Returns:
             - (exit_code, stdout, stderr) (int, string, string)
@@ -51,12 +54,15 @@ class Channel (metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def execute_no_wait(self, cmd, walltime, *args, **kwargs):
+    def execute_no_wait(self, cmd, walltime, envs={}, *args, **kwargs):
         ''' Optional. THis is infrequently used.
 
         Args:
             - cmd (string): Command string to execute over the channel
             - walltime (int) : Timeout in seconds
+
+        KWargs:
+            - envs (dict) : Environment variables to push to the remote side
 
         Returns:
             - (exit_code(None), stdout, stderr) (int, io_thing, io_thing)
