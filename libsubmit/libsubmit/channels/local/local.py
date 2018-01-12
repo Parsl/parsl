@@ -4,6 +4,7 @@ import os
 import errno
 import shutil
 import logging
+import copy
 from libsubmit.channels.errors import *
 
 logger = logging.getLogger(__name__)
@@ -42,12 +43,16 @@ class LocalChannel (Channel):
     def script_dir(self):
         return self.channel_script_dir
 
-    def execute_wait (self, cmd, walltime):
+    def execute_wait (self, cmd, walltime, envs={}):
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
             - cmd (string) : Commandline string to execute
             - walltime (int) : walltime in seconds, this is not really used now.
+
+        Kwargs:
+            - envs (dict) : Dictionary of env variables. This will be used
+              to override the envs set at channel initialization.
 
         Returns:
             - retcode : Return code from the execution, -1 on fail
@@ -60,12 +65,16 @@ class LocalChannel (Channel):
         retcode = -1
         stdout = None
         stderr = None
+
+        current_env = copy.copy(self.envs)
+        current_env.update(envs)
+
         try :
             proc = subprocess.Popen(cmd,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE,
                                     cwd=self.userhome,
-                                    env=self.envs,
+                                    env=current_env,
                                     shell=True)
             proc.wait(timeout=walltime)
             stdout = proc.stdout.read()
@@ -82,7 +91,7 @@ class LocalChannel (Channel):
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
-    def execute_no_wait (self, cmd, walltime):
+    def execute_no_wait (self, cmd, walltime, envs={}):
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
@@ -101,12 +110,16 @@ class LocalChannel (Channel):
         retcode = -1
         stdout = None
         stderr = None
+
+        current_env = copy.copy(self.envs)
+        current_env.update(envs)
+
         try :
             proc = subprocess.Popen(cmd,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE,
                                     cwd=self.userhome,
-                                    env=self.envs,
+                                    env=current_env,
                                     shell=True)
             pid = proc.pid
 
