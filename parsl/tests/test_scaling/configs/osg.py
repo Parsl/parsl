@@ -69,6 +69,7 @@ pip3 install ipyparallel"""
           }
         }
     ],
+    "controller" : {"publicIp" : '192.170.227.195'},
     "globals" : {"lazyErrors" : True }
 }
 
