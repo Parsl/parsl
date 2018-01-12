@@ -1,1 +1,1 @@
-../local/local.py
+../test_local/local.py

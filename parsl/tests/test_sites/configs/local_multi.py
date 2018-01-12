@@ -1,1 +1,1 @@
-../local_multisite/local_multi.py
+../test_local_multisite/local_multi.py

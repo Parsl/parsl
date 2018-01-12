@@ -1,1 +1,1 @@
-../cori/cori.py
+../test_cori/cori.py

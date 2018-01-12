@@ -1,1 +1,1 @@
-../midway/midway.py
+../test_midway/midway.py

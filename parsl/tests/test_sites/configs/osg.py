@@ -1,1 +1,1 @@
-../osg/osg.py
+../test_osg/osg.py
