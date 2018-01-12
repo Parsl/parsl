@@ -1,4 +1,3 @@
-
 Parsl Tutorial
 --------------
 
@@ -41,7 +40,7 @@ DataFlowKernel object as arguments.
     @App('python', dfk)
     def hello ():
         return 'Hello World!'
-    
+
     app_future = hello()
 
 Futures
@@ -59,11 +58,11 @@ complete and the result is available.
 
 .. code:: ipython3
 
-    # Check status 
-    print("Status: ", app_future.done())
-    
+    # Check status
+    print('Status: ', app_future.done())
+
     # Get result
-    print("Result: ", app_future.result())
+    print('Result: ', app_future.result())
 
 Data Dependencies
 ~~~~~~~~~~~~~~~~~
@@ -91,7 +90,7 @@ average. The dependency chain looks like this :
 
     @App('python', dfk)
     def pi(total):
-        import random      # App functions have to import modules they will use.     
+        import random      # App functions have to import modules they will use.
         width = 10000      # Set the size of the box in which we drop random points
         center = width/2
         c2  = center**2
@@ -103,7 +102,7 @@ average. The dependency chain looks like this :
             if (x-center)**2 + (y-center)**2 < c2:
                 count += 1
         return (count*4/total)
-    
+
     @App('python', dfk)
     def mysum(a,b,c):
         return (a+b+c)/3
@@ -126,8 +125,8 @@ inputs have resolved.
 .. code:: ipython3
 
     # Print the results
-    print("A: {0:5} B: {1:5} B: {2:5}".format(a.result(), b.result(), c.result()))
-    print("Average: {0:5}".format(avg_pi.result()))
+    print('A: {0:5} B: {1:5} B: {2:5}'.format(a.result(), b.result(), c.result()))
+    print('Average: {0:5}'.format(avg_pi.result()))
 
 Bash Apps
 ~~~~~~~~~
@@ -156,11 +155,11 @@ outputs list is returned in addition to the AppFuture.
     def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
         # The bash app function, requires that the bash script is assigned to the special variable
         # cmd_line. Positional and Keyword args to the fn() are formatted into the cmd_line string
-        cmd_line = '''echo "{0}" > {outputs[0]} 
-        sleep {1}; 
-        ls ;    
+        cmd_line = '''echo "{0}" > {outputs[0]}
+        sleep {1};
+        ls ;
         '''
-    # We call sim_mol_dyn with 
+    # We call sim_mol_dyn with
     sim_fut, data_futs = sim_mol_dyn(5, 3, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
 
 .. code:: ipython3

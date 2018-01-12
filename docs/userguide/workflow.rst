@@ -3,17 +3,17 @@
 Composing a workflow
 ====================
 
-Workflows in Parsl are created implicitly based on the passing of control or data between ``Apps``. The flexibility of this model allows for the creation of a wide range of workflows from sequential through to complex nested, parallel workflows. As we will see below a range of workflows can be created by passing AppFutures and DataFutures between ``Apps``. 
+Workflows in Parsl are created implicitly based on the passing of control or data between ``Apps``. The flexibility of this model allows for the creation of a wide range of workflows from sequential through to complex nested, parallel workflows. As we will see below a range of workflows can be created by passing AppFutures and DataFutures between ``Apps``.
 
-Parsl is also designed to address the requirements of a range of workflows from those that run a large number of very small tasks through to those that run few long running tasks. In each case, Parsl can be configured to optimize deployment towards performance or fault tolerance. 
+Parsl is also designed to address the requirements of a range of workflows from those that run a large number of very small tasks through to those that run few long running tasks. In each case, Parsl can be configured to optimize deployment towards performance or fault tolerance.
 
-Below we illustrate a range of workflow patterns, however it is important to note that this set of examples is by no means comprehensive. 
+Below we illustrate a range of workflow patterns, however it is important to note that this set of examples is by no means comprehensive.
 
 
 Procedural workflows
 --------------------
 
-Simple sequential or procedural workflows can be created by passing an AppFuture from one task to another. The following example shows one such workflow which first generates a random number and then writes it to a file. Note: in this case we combine a Pyhton and a Bash ``App`` seamlessly. 
+Simple sequential or procedural workflows can be created by passing an AppFuture from one task to another. The following example shows one such workflow which first generates a random number and then writes it to a file. Note: in this case we combine a Pyhton and a Bash ``App`` seamlessly.
 
 .. code-block:: python
 
@@ -28,19 +28,19 @@ Simple sequential or procedural workflows can be created by passing an AppFuture
       @App('bash', dfk)
       def save(message, outputs=[]):
             return 'echo %s &> {outputs[0]}' % (message)
-                
+
       message = generate(10)
-              
+
       saved = save(message, outputs=['output.txt'])
 
       with open(saved.outputs[0].result(), 'r') as f:
             print(f.read())
-   
+
 
 Parallel workflows
 ------------------
 
-Parallel execution occurs automatically in Parsl, assuming their are no dependencies between ``App`` execution. The following example shows how a single ``App`` can be used with and without dependencies to demonstrate parallel execution. 
+Parallel execution occurs automatically in Parsl, assuming their are no dependencies between ``App`` execution. The following example shows how a single ``App`` can be used with and without dependencies to demonstrate parallel execution.
 
 .. code-block:: python
 
@@ -89,17 +89,17 @@ The most common way that Parsl ``Apps`` are executed in parallel is via looping.
 Parallel dataflows
 ------------------
 
-Parallel dataflows can be developed by passing data between ``Apps``. In this example we create a set of files, each with a random number, we then concatenate these files into a single file and compute the sum of all numbers in that file. In the first two ``Apps`` files are exchanged. The final ``App`` returns the sum as a Python integer. 
+Parallel dataflows can be developed by passing data between ``Apps``. In this example we create a set of files, each with a random number, we then concatenate these files into a single file and compute the sum of all numbers in that file. In the first two ``Apps`` files are exchanged. The final ``App`` returns the sum as a Python integer.
 
 .. code-block:: python
 
       @App('bash', dfk)
       def generate(outputs=[]):
-          return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}"
+          return 'echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}'
 
       @App('bash', dfk)
-      def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
-          return "cat {0} >> {1}".format(" ".join(inputs), outputs[0])
+      def concat(inputs=[], outputs=[], stdout='stdout.txt', stderr='stderr.txt'):
+          return 'cat {0} >> {1}'.format(' '.join(inputs), outputs[0])
 
       @App('python', dfk)
       def total(inputs=[]):
@@ -115,17 +115,9 @@ Parallel dataflows can be developed by passing data between ``Apps``. In this ex
            output_files.append(generate(outputs=['random-%s.txt' % i]))
 
       # concatenate the files into a single file
-      cc = concat(inputs=[i.outputs[0] for i in output_files], outputs=["all.txt"])
+      cc = concat(inputs=[i.outputs[0] for i in output_files], outputs=['all.txt'])
 
       # calculate the average of the random numbers
       totals = total(inputs=[cc.outputs[0]])
 
       print (totals.result())
-
-
-
-
-
-
-
-

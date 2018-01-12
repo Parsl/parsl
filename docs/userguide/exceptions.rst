@@ -37,9 +37,9 @@ of a failed task. For example:
       try:
            doubled_x.result()
       except ZeroDivisionError as e:
-           print("Oops! You tried to divide by 0 ")
+           print('Oops! You tried to divide by 0 ')
       except Exception ase:
-           print("Oops! Something really bad happened")
+           print('Oops! Something really bad happened')
 
 
 

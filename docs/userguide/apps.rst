@@ -109,7 +109,7 @@ to the decorated function. The string that is returned is formatted by the Pytho
            return 'echo %s %s %s' % (arg1, inputs[0], inputs[1])
 
        # This call echoes "Hello World !" to the file *std.out*
-       echo("Hello", inputs=["World", "!"])
+       echo('Hello', inputs=['World', '!'])
 
 Returns
 ^^^^^^^

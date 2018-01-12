@@ -62,9 +62,9 @@ There are several key functionalities provided by AppFutures:
       try:
            doubled_x.result()
       except ZeroDivisionError as ze:
-           print("Oops! You tried to divide by 0 ")
+           print('Oops! You tried to divide by 0 ')
       except Exception as e:
-           print("Oops! Something really bad happened")
+           print('Oops! Something really bad happened')
 
 
 In addition to being able to capture exceptions raised in a specific app executions, Parsl also raises ``DependencyErrors`` when apps are unable to execute due to failures in prior dependent apps. That is, an app that is dependent on the successful completion of another app will fail with a dependency error if any of the apps on which it depends fails.
@@ -87,7 +87,7 @@ The following example shows how DataFutures are used:
           return 'echo %s &> {outputs[0]}' % (message)
 
       # Call echo specifying the output file
-      hello = echo("Hello World!", outputs=['hello1.txt'])
+      hello = echo('Hello World!', outputs=['hello1.txt'])
 
       # The AppFuture's outputs attribute is a list of DataFutures
       print(hello.outputs)
