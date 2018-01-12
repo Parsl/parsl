@@ -127,7 +127,7 @@ class Torque(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
 
-        self.scriptDir = self.config["execution"]["block"]["scriptDir"]
+        self.scriptDir = self.config["execution"]["scriptDir"]
         if not os.path.exists(self.scriptDir):
             os.makedirs(self.scriptDir)
 
