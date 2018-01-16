@@ -37,8 +37,16 @@ sudo pip3 install ipyparallel parsl
 
 
 class AzureProvider(ExecutionProvider):
-    def __init__(self, config):
-        """Initialize Azure provider. Uses Azure python SDK to provide execution resources"""
+    def __init__(self, config: dict, channel=None):
+        """Initialize Azure provider. Uses Azure python SDK to provide execution resources
+            Args:
+             - :param Config (dict): Dictionary with all the config options.
+
+            KWargs:
+             - :param channel (None): A channel is not required for Azure.
+
+
+        """
         self.config = self.read_configs(config)
         self.config_logger()
 
@@ -98,17 +106,18 @@ class AzureProvider(ExecutionProvider):
                 "No State File. Cannot load previous options. Creating new infrastructure")
             self.write_state_file()
 
-    def __repr__(self):
+    def __repr__(self)->str:
         return "<Azure Execution Provider for site:{0}>".format(self.sitename)
 
     @property
     def channels_required(self):
-        ''' No channel required for EC2
+        ''' No channel required for Azure
         '''
         return False
 
     def config_logger(self):
-        """Configure Logger"""
+        """Configure Logger
+        """
         logger = logging.getLogger("AzureProvider")
         logger.setLevel(logging.INFO)
         if not os.path.isfile(self.config['logFile']):
@@ -122,20 +131,10 @@ class AzureProvider(ExecutionProvider):
         logger.addHandler(fh)
         self.logger = logger
 
-    def _read_conf(self, config_file):
-        """read config file"""
-        config = json.load(open(config_file, 'r'))
-        return config
-
     def pretty_configs(self, configs):
         """prettyprint config"""
         printer = pprint.PrettyPrinter(indent=4)
         printer.pprint(configs)
-
-    def read_configs(self, config_file):
-        """Read config file"""
-        config = self._read_conf(config_file)
-        return config
 
     def ipyparallel_configuration(self):
         config = ''
