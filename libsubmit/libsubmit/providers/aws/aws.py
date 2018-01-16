@@ -442,8 +442,6 @@ class EC2Provider(ExecutionProvider):
 
     def config_route_table(self, vpc, internet_gateway):
         ''' Configure route table for vpc
-
-        [TODO]
         Args:
             :param vpc (dict) : dictionary representing the vpc 
                                 created by create_vpc()
