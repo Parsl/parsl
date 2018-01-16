@@ -507,6 +507,7 @@ class EC2Provider(ExecutionProvider):
                                                  SecurityGroupIds=[self.sg_id],
                                                  TagSpecifications=tag_spec,
                                                  InstanceMarketOptions=spot_options,
+                                                 InstanceInitiatedShutdownBehavior='terminate',
                                                  UserData=command)
         except ClientError as e:
             print(e)
@@ -605,13 +606,18 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         for job_id in job_ids:
             try:
                 if job_id in self.resources:
-                    s = self.resources[job_id]["instance"].state
+                    self.ec2.Instance(job_id)
+                    print("State : ", self.resources[job_id]["instance"].state)
+                    print("Reason : ", self.resources[job_id]["instance"].state_reason)
+                    #self.resources[job_id]["instance"].update()
+                    s = self.resources[job_id]["instance"].state['Name']
                     state_string = translate_table.get(s, 'UNKNOWN')
                     all_states.extend([state_string])
 
             except Exception as e:
+                logger.warn('Caught exception : {0}'.format(e))
                 logger.warn(
-                    "Could not get state of instance:{0}".format(job_id))
+                    'Could not get state of instance:{0}'.format(job_id))
                 all_states.extend(['UNKNOWN'])
 
         return all_states

@@ -6,11 +6,11 @@ import time
 import signal
 from string import Template
 from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.launchers import Launchers
 from libsubmit.exec_utils import execute_no_wait
 import libsubmit.error as ep_error
+
 logger = logging.getLogger(__name__)
-
-
 
 translate_table = { 'PD' :  'PENDING',
                     'R'  :  'RUNNING',
@@ -72,6 +72,10 @@ class Local(ExecutionProvider):
                                  # WARNING :: Not Implemented
                                  # Type : Integer
                                  # Default : ? },
+
+                  "taskBlocks": #{Description : workers to launch per request
+                                # Type : Integer
+                                # Default : 1 },
               }
             }
          }
@@ -92,18 +96,15 @@ class Local(ExecutionProvider):
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
-
-        if channel_script_dir:
-            self.channel_script_dir = channel_script_dir
-        else:
-            self.channel_script_dir = config["execution"].get('scriptDir', "./.scripts")
+        self.scriptDir  = self.config["execution"]["scriptDir"]
+        self.taskBlocks = self.config["execution"]["block"].get("taskBlocks", 1)
+        launcher_name   = self.config["execution"]["block"].get("launcher",
+                                                                "singleNode")
+        self.launcher   = Launchers.get(launcher_name, None)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    @property
-    def script_dir(self):
-        return self.channel_script_dir
 
     @property
     def channels_required(self):
@@ -125,8 +126,12 @@ class Local(ExecutionProvider):
 
         '''
 
+        logging.debug("Checking status of : {0}".format(job_ids))
         for job_id in self.resources:
             poll_code = self.resources[job_id]['proc'].poll()
+            if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
+                continue
+
             if poll_code == None :
                 self.resources[job_id]['status'] = 'RUNNING'
             elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
@@ -134,8 +139,41 @@ class Local(ExecutionProvider):
             elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING' :
                 self.resources[job_id]['status'] = 'FAILED'
 
-        return [self.resources[jid]['proc'].poll() for jid in job_ids]
+        return [self.resources[jid]['status'] for jid in job_ids]
 
+    ###########################################################################################################
+    # Write the submit script
+    ###########################################################################################################
+    def _write_submit_script(self, script_string, script_filename):
+        '''
+        Load the template string with config values and write the generated submit script to
+        a submit script file.
+
+        Args:
+              - template_string (string) : The template string to be used for the writing submit script
+              - script_filename (string) : Name of the submit script
+
+        Returns:
+              - True: on success
+
+        Raises:
+              SchedulerMissingArgs : If template is missing args
+              ScriptPathError : Unable to write submit script out
+        '''
+
+        try:
+            with open(script_filename, 'w') as f:
+                f.write(script_string)
+
+        except KeyError as e:
+            logger.error("Missing keys for submit script : %s", e)
+            raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
+
+        except IOError as e:
+            logger.error("Failed writing to submit script: %s", script_filename)
+            raise(ep_error.ScriptPathError(script_filename, e))
+
+        return True
 
     ###########################################################################################################
     # Submit
@@ -166,8 +204,22 @@ class Local(ExecutionProvider):
 
         '''
 
-        job_id, proc = execute_no_wait(cmd_string, 3)
-        logger.debug("Started pid:%s proc:%s ", job_id, proc)
+        job_name = "{0}.{1}".format(job_name, time.time())
+
+        # Set script path
+        script_path = "{0}/{1}.sh".format(self.scriptDir,
+                                              job_name)
+        script_path = os.path.abspath(script_path)
+
+        lname = self.config["execution"]["block"].get("launcher", "singleNode")
+        launcher = Launchers.get(lname, None)
+        wrap_cmd_string = self.launcher(cmd_string,
+                                        taskBlocks=self.taskBlocks)
+
+        ret = self._write_submit_script(wrap_cmd_string, script_path)
+
+        job_id, proc = execute_no_wait('bash {0}'.format(script_path),
+                                       3)
         self.resources[job_id] = {'job_id' : job_id,
                                   'status' : 'RUNNING',
                                   'blocksize' : blocksize,
@@ -191,7 +243,8 @@ class Local(ExecutionProvider):
         for job in job_ids:
             logger.debug("Terminating job/proc_id : {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
-            os.killpg(os.getpgid(job), signal.SIGTERM)
+            proc = self.resources[job]['proc']
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
             self.resources[job]['status'] = 'CANCELLED'
         rets = [True for i in job_ids]
 
@@ -212,4 +265,4 @@ class Local(ExecutionProvider):
 
 if __name__ == "__main__" :
 
-    print("None")
+    print("Nothing here")
