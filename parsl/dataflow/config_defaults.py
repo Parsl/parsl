@@ -56,7 +56,8 @@ def update_config (config, rundir):
 
     config_base = { "sites" : [],
                     "globals" : {
-                        "lazyErrors" : False
+                        "lazyErrors" : False,
+                        "usageTracking" : True
                     },
                     "controller" : {
                         "mode" : "auto"
