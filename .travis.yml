@@ -9,6 +9,7 @@ install:
     - python setup.py install
 
 # Os tests
+os:
     - linux
     - osx
 
