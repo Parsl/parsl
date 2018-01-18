@@ -133,9 +133,13 @@ class UsageTracker (object) :
         """ Send UDP message
         """
         if self.tracking_enabled :
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-            x = sock.sendto(bytes(message, "utf-8"), (self.UDP_IP, self.UDP_PORT))
-            sock.close()
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+                x = sock.sendto(bytes(message, "utf-8"), (self.UDP_IP, self.UDP_PORT))
+                sock.close()
+            except OSError as e:
+                logger.debug("Unable to reach the network to send usage data")
+                x = 0
         else:
             x = -1
 
