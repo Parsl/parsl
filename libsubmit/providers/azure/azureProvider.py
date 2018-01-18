@@ -161,18 +161,73 @@ sleep 5
 ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return ipptemplate
 
-    def submit(self):
-        """Uses AzureDeployer to spin up an instance and connect it to the iPyParallel controller"""
-        self.deployer.deploy()
+     ########################################################
+    # Submit
+    ########################################################
+    def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
+        '''Submits the cmd_string onto a freshly instantiated AWS EC2 instance.
+        Submit returns an ID that corresponds to the task that was just submitted.
+
+        Args:
+             - cmd_string (str): Commandline invocation to be made on the remote side.
+             - blocksize (int) : Number of blocks requested
+
+        Kwargs:
+             - job_name (String): Prefix for job name
+
+        Returns:
+             - None: At capacity, cannot provision more
+             - job_id: (string) Identifier for the job
+
+        '''
+
+        job_name = "parsl.auto.{0}".format(time.time())
+        [instance, *rest] = self.deployer.deploy(cmd_string=cmd_string,
+                                                 job_name=job_name)
+
+        if not instance:
+            logger.error("Failed to submit request to EC2")
+            return None
+
+        logger.debug("Started instance_id : {0}".format(instance.instance_id))
+
+        state = translate_table.get(instance.state['Name'], "PENDING")
+
+        self.resources[instance.instance_id] = {"job_id": instance.instance_id,
+                                                "instance": instance,
+                                                "status": state}
+
+        return instance.instance_id
 
     def status(self):
         """Get status of azure VM. Not implemented yet."""
         raise NotImplemented
 
     def cancel(self):
-        """Destroy an azure VM"""
+        ''' Cancels the jobs specified by a list of job ids
+
+        Args:
+             job_ids (list) : List of of job identifiers
+
+        Returns :
+             [True/False...] : If the cancel operation fails the entire list will be False.
+        TODO: Make this change statuses
+        '''
+
         self.deployer.destroy()
+
+    @property
+    def scaling_enabled():
+        return True
+
+    @property
+    def current_capacity(self):
+        ''' Returns the current blocksize.
+        This may need to return more information in the futures :
+        { minsize, maxsize, current_requested }
+        '''
+        return len(self.instances)
 
 
 if __name__ == '__main__':
-    config = "azureconf.json"
+    config = open("azureconf.json")

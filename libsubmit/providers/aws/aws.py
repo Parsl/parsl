@@ -606,8 +606,9 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
                 if job_id in self.resources:
                     self.ec2.Instance(job_id)
                     print("State : ", self.resources[job_id]["instance"].state)
-                    print("Reason : ", self.resources[job_id]["instance"].state_reason)
-                    #self.resources[job_id]["instance"].update()
+                    print("Reason : ",
+                          self.resources[job_id]["instance"].state_reason)
+                    # self.resources[job_id]["instance"].update()
                     s = self.resources[job_id]["instance"].state['Name']
                     state_string = translate_table.get(s, 'UNKNOWN')
                     all_states.extend([state_string])
@@ -624,7 +625,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
     # Submit
     ########################################################
     def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
-        '''Submits the cmd_string onto a freshly instantiates AWS EC2 instance.
+        '''Submits the cmd_string onto a freshly instantiated AWS EC2 instance.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         Args:
