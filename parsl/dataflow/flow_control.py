@@ -9,23 +9,42 @@ from parsl.dataflow.strategy import Strategy
 logger = logging.getLogger(__name__)
 
 class FlowNoControl(object):
+    ''' FlowNoControl implements similar interfaces as FlowControl but
+    with null handlers so as to mimic the FlowControl class.
+    '''
 
-    def __init__ (self, dfk, *args, threshold=2, interval=2):
-        ''' Initialize the flowcontrol object
-        We start the asyncio loop here.
+    def __init__ (self, dfk, config, *args, threshold=2, interval=2):
+        ''' Initialize the flowcontrol object. This does nothing.
+
+        Args:
+             - dfk (DFK object) : DFK object to track parsl progress
+             - config (Dict) : Config dict structure
+
+        KWargs:
+             - threshold (int) : Tasks after which the callback is triggered
+             - interval (int) : seconds after which timer expires
         '''
-        return
+
+        pass
 
     def notify(self, event_id):
-        return
+        ''' This notifiy fn does nothing
+        '''
+        pass
 
     def close(self):
-        return
+        ''' This close fn does nothing
+        '''
+        pass
 
 class FlowControl(object):
     '''
     FlowControl timer is designed to implement threshold-interval based
-    flow control. This is based on the following logic :
+    flow control. The overall goal is to trap the flow of apps from the
+    workflow, measure it and redirect it the appropriate executors for
+    processing.
+
+    This is based on the following logic :
 
     BEGIN (INTERVAL, THRESHOLD, callback) :
          start = current_time()
@@ -52,9 +71,17 @@ class FlowControl(object):
 
     '''
 
-    def __init__ (self, dfk, *args, threshold=2, interval=2):
+    def __init__ (self, dfk, config, *args, threshold=20, interval=5):
         ''' Initialize the flowcontrol object
-        We start the asyncio loop here.
+        We start the timer thread here
+
+        Args:
+             - dfk (DFK object) : DFK object to track parsl progress
+             - config (Dict) : Config dict structure
+
+        KWargs:
+             - threshold (int) : Tasks after which the callback is triggered
+             - interval (int) : seconds after which timer expires
         '''
 
         self.dfk       = dfk
