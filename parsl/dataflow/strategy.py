@@ -7,9 +7,7 @@ import math
 logger = logging.getLogger(__name__)
 
 class Strategy (object) :
-    '''
-    Scaling Strategy
-    ----------------
+    '''FlowControl Strategy
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
     asynchronously. Parsl interfaces executors with execution providers to construct
@@ -105,6 +103,7 @@ class Strategy (object) :
         ''' Initialize strategy
         '''
         self.dfk = dfk
+        self.config = dfk.config
         self.sites = {}
         self.max_idletime = 60*2 # 2 minutes
 
@@ -112,8 +111,27 @@ class Strategy (object) :
             self.sites[site['site']] = {'idle_since' : None,
                                         'config'     : site }
 
+        self.strategies = { None      : self._strategy_noop,
+                            'simple'  : self._strategy_simple }
 
-    def strategize (self, tasks, *args, kind=None, **kwargs):
+        strtgy_name = self.config['globals'].get('strategy', None)
+        self.strategize = self.strategies.get(strtgy_name,
+                                              self._strategy_noop)
+
+        logger.debug("Scaling strategy: {0}".format(strtgy_name))
+
+
+    def _strategy_noop (self, tasks, *args, kind=None, **kwargs):
+        ''' Peek at the DFK and the sites specified,
+
+        We assume here that tasks are not held in a runnable
+        state, and that all tasks from an app would be sent to
+        a single specific site, i.e tasks cannot be specified
+        to go to one of more sites.
+        '''
+        pass
+
+    def _strategy_simple (self, tasks, *args, kind=None, **kwargs):
         ''' Peek at the DFK and the sites specified,
 
         We assume here that tasks are not held in a runnable
@@ -143,17 +161,23 @@ class Strategy (object) :
             status = exc.status()
 
             # Get the shape and bounds for the site
-            minBlocks = site_config["execution"]["block"]["minBlocks"]
-            maxBlocks = site_config["execution"]["block"]["maxBlocks"]
-            taskBlocks = site_config["execution"]["block"]["taskBlocks"]
+            minBlocks   = site_config["execution"]["block"]["minBlocks"]
+            maxBlocks   = site_config["execution"]["block"]["maxBlocks"]
+            initBlocks  = site_config["execution"]["block"]["initBlocks"]
+            taskBlocks  = site_config["execution"]["block"]["taskBlocks"]
             parallelism = site_config["execution"]["block"]["parallelism"]
 
-            active_blocks = sum([1 for x in status if x in ('RUNNING')])
+            active_blocks = sum([1 for x in status if x in ('RUNNING',
+                                                            'SUBMITTING',
+                                                            'PENDING')])
             active_slots = active_blocks * taskBlocks
 
-            #logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
-            #                                                       active_slots,
-            #                                                       parallelism))
+            logger.debug("Min:{} initBlocks:{} Max:{}".format(minBlocks,
+                                                              initBlocks,
+                                                              maxBlocks))
+            logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
+                                                                   active_slots,
+                                                                   parallelism))
 
             # Case 1
             # No tasks.
@@ -171,14 +195,14 @@ class Strategy (object) :
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
                     if not self.sites[sitename]['idle_since']:
-                        logger.debug("Strategy: Case 1b... starting timer")
+                        logger.debug("Strategy: Scale_in, tasks=0 starting kill timer")
                         self.sites[sitename]['idle_since'] = time.time()
 
                     idle_since = self.sites[sitename]['idle_since']
                     if (time.time() - idle_since) > self.max_idletime:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
-                        logger.debug("Strategy: Case.1b scale_in")
+                        logger.debug("Strategy: Scale_in, tasks=0")
                         exc.scale_in(active_blocks - minBlocks)
 
                     else:
@@ -206,5 +230,10 @@ class Strategy (object) :
             # Case 3
             # tasks ~ slots
             else:
-                logger.debug("Strategy: Case 3")
+                #logger.debug("Strategy: Case 3")
                 pass
+
+
+if __name__ == '__main__' :
+
+    pass
