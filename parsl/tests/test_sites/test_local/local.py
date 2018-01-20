@@ -5,7 +5,7 @@ localThreads = {
           "execution" : {
               "executor" : "threads",
               "provider" : None,
-              "max_workers" : 4
+              "maxThreads" : 4
           }
         }],
     "globals" : {"lazyErrors" : True}
