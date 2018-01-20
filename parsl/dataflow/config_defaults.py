@@ -67,7 +67,7 @@ def update_config (config, rundir):
 
     sites = config["sites"] ; del config["sites"]
 
-    config_base.update(config)
+    recursive_update(config_base, config)
 
     config_sites = []
     for site in sites:
