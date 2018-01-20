@@ -26,7 +26,7 @@ Parsl can be configured using a Python configuration object. For simple cases, s
                 "execution" : {
                     "executor" : "threads",
                     "provider" : None,
-                    "max_workers" : 4
+                    "maxThreads" : 4
                 }
               }],
           "globals" : {"lazyErrors" : True}
