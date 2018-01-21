@@ -6,6 +6,7 @@ from azure.common.credentials import ServicePrincipalCredentials, UserPassCreden
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
 
+
 class Deployer(object):
     """ Initialize the deployer class with subscription, resource group and public key.
 
@@ -33,18 +34,21 @@ class Deployer(object):
             secret=self.config['AZURE_CLIENT_SECRET'],
             tenant=self.config['AZURE_TENANT_ID']
         )
-        self.client = ResourceManagementClient(self.credentials, self.subscription_id)
+        self.client = ResourceManagementClient(
+            self.credentials, self.subscription_id)
 
-    def deploy(self):
+    def deploy(self, script):
         """Deploy the template to a resource group."""
         self.client.resource_groups.create_or_update(
             self.resource_group,
             {
-                'location':self.location
+                'location': self.location,
+
             }
         )
 
-        template_path = os.path.join(os.path.dirname(__file__), 'templates', 'template.json')
+        template_path = os.path.join(os.path.dirname(
+            __file__), 'templates', 'template.json')
         with open(template_path, 'r') as template_file_fd:
             template = json.load(template_file_fd)
 
