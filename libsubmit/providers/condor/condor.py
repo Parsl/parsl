@@ -54,7 +54,7 @@ class Condor(ExecutionProvider):
               "scriptDir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
-                             # Default : "./.scripts"},
+                             # Required : True},
 
               "block" : { # Definition of a block
 
