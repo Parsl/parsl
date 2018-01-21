@@ -161,7 +161,7 @@ sleep 5
 ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return ipptemplate
 
-     ########################################################
+    ########################################################
     # Submit
     ########################################################
     def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
@@ -186,7 +186,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
                                                  job_name=job_name)
 
         if not instance:
-            logger.error("Failed to submit request to EC2")
+            logger.error("Failed to submit request to Azure")
             return None
 
         logger.debug("Started instance_id : {0}".format(instance.instance_id))
@@ -200,10 +200,17 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return instance.instance_id
 
     def status(self):
-        """Get status of azure VM. Not implemented yet."""
+         '''  Get the status of a list of jobs identified by their ids.
+
+        Args:
+            - job_ids (List of ids) : List of identifiers for the jobs
+
+        Returns:
+            - List of status codes.
+        '''
         raise NotImplemented
 
-    def cancel(self):
+    def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
 
         Args:
@@ -213,8 +220,14 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
              [True/False...] : If the cancel operation fails the entire list will be False.
         TODO: Make this change statuses
         '''
-
-        self.deployer.destroy()
+        for job_id in job_ids:
+            try:
+                self.deployer.destroy(job_id)
+                return True
+            except Exception e:
+                logger.error("Failed to cancel {}".format(repr(job_id)))
+                logger.error(e)
+                return False
 
     @property
     def scaling_enabled():
@@ -227,7 +240,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         { minsize, maxsize, current_requested }
         '''
         return len(self.instances)
-
+ i
 
 if __name__ == '__main__':
     config = open("azureconf.json")
