@@ -32,6 +32,8 @@ from parsl.dataflow.error import *
 from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.rundirs import make_rundir
+from parsl.dataflow.flow_control import FlowControl, FlowNoControl
+from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.dataflow.config_defaults import update_config
 from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
@@ -66,30 +68,35 @@ class DataFlowKernel(object):
         self.rundir = make_rundir(config=config, path=rundir)
 
         # Update config with defaults
-        self.config = update_config(config, self.rundir)
+        self._config = update_config(config, self.rundir)
 
-        if self.config :
+        # Start the anonymized usage tracker and send init msg
+        self.usage_tracker = UsageTracker(self)
+        self.usage_tracker.send_message()
+
+        if self._config :
             self._executors_managed = True
             # Create the executors
             epf = EPF()
-            self.executors = epf.make(self.rundir, self.config)
+            self.executors = epf.make(self.rundir, self._config)
 
             # set global vars from config
-            self.lazy_fail = self.config["globals"].get("lazyFail", lazy_fail)
-            self.fail_retires = self.config["globals"].get("fail_retries", fail_retries)
-
+            self.lazy_fail = self._config["globals"].get("lazyFail", lazy_fail)
+            self.fail_retries = self._config["globals"].get("fail_retries", fail_retries)
+            self.flowcontrol     = FlowControl(self, self._config)
         else:
             self._executors_managed = False
             self.fail_retries = fail_retries
             self.lazy_fail    = lazy_fail
             self.executors    = {i:x for i,x in enumerate(executors)}
             print("Executors : ", self.executors)
+            self.flowcontrol  = FlowNoControl(self, None)
 
         self.task_count      = 0
         self.fut_task_lookup = {}
         self.tasks           = {}
 
-        #logger.debug("Using executor: {0}".format(self.executor))
+
         logger.debug("Using executors: {0}".format(self.executors))
         atexit.register(self.cleanup)
 
@@ -105,6 +112,16 @@ class DataFlowKernel(object):
                     count += 1
 
         return count
+
+    @property
+    def config(self):
+        ''' Returns the fully initialized config that the DFK is
+        actively using. DO *NOT* update.
+        Returns:
+             - config (dict)
+        '''
+
+        return self._config
 
     def handle_update(self, task_id, future):
         ''' This function is called only as a callback from a task being done
@@ -125,6 +142,7 @@ class DataFlowKernel(object):
                 except Exception as e:
                     logger.warn("Exception : %s", future._exception)
                     logger.error("Task[%s]: FAILED with %s", task_id, future)
+                    self.tasks[task_id]['status'] = States.failed
                     raise e
 
             logger.debug("Task[%s]: COMPLETED with %s", task_id, future)
@@ -307,7 +325,7 @@ class DataFlowKernel(object):
                     count += 1
                 depends.extend([dep])
 
-        logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
+        #logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count, depends
 
     @staticmethod
@@ -459,6 +477,9 @@ class DataFlowKernel(object):
         '''
 
         logger.debug("DFK cleanup initiated")
+
+        # Send final stats
+        self.usage_tracker.send_message()
         # We do not need to cleanup if the executors are managed outside
         # the DFK
         if not self._executors_managed :
@@ -467,7 +488,7 @@ class DataFlowKernel(object):
         for executor in self.executors.values() :
             if executor.scaling_enabled :
                 job_ids = executor.execution_provider.resources.keys()
-                executor.scale_in(job_ids)
+                executor.scale_in(len(job_ids))
 
             # We are not doing shutdown here because even with block=False this blocks.
             executor.shutdown()

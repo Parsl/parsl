@@ -8,7 +8,12 @@ install:
     - pip install -r requirements.txt
     - python setup.py install
 
+# Os tests
+os:
+    - linux
+
 # command to run tests
 script:
+    - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - nosetests -v parsl/tests/test_threads parsl/tests/test_data

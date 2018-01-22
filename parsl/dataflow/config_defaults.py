@@ -56,7 +56,9 @@ def update_config (config, rundir):
 
     config_base = { "sites" : [],
                     "globals" : {
-                        "lazyErrors" : False
+                        "lazyErrors" : False,
+                        "usageTracking" : True,
+                        "strategy" : "simple"
                     },
                     "controller" : {
                         "mode" : "auto"
@@ -65,7 +67,7 @@ def update_config (config, rundir):
 
     sites = config["sites"] ; del config["sites"]
 
-    config_base.update(config)
+    recursive_update(config_base, config)
 
     config_sites = []
     for site in sites:
@@ -76,8 +78,11 @@ def update_config (config, rundir):
                 "block" : {
                     "nodes" : 1,
                     "taskBlocks" : 1,
-                    "minBlocks" : 0,
-                    "walltime" : "00:20:00",
+                    "minBlocks"  : 0,
+                    "initBlocks" : 0,
+                    "maxBlocks"  : 10,
+                    "parallelism" : 0.75,
+                    "walltime"   : "00:20:00",
                     "options" : {
                     }
                 }

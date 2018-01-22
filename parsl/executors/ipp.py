@@ -92,9 +92,13 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
             if not os.path.exists(self.client_file):
                 logger.debug("Waiting for {0}".format(self.client_file))
-                time.sleep(1)
-            if not os.path.exists(self.client_file):
-                time.sleep(1)
+
+            sleep_dur = 20 # 20 seconds
+            for i in range(0, int(sleep_dur/0.2)):
+                time.sleep(0.2)
+                if os.path.exists(self.client_file):
+                    break
+
             if not os.path.exists(self.client_file):
                 raise Exception("Controller client file is missing at {0}".format(self.client_file))
 
@@ -163,31 +167,48 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         ''' Scales out the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
-        Raises:
-             NotImplemented exception
         '''
         if self.execution_provider :
             r = self.execution_provider.submit(self.launch_cmd, *args, **kwargs)
+            self.engines.extend([r])
         else:
             logger.error("No execution provider available")
             r = None
 
         return r
 
-    def scale_in (self, *args, **kwargs):
+    def scale_in (self, blocks, *args, **kwargs):
         ''' Scale in the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:
              NotImplemented exception
         '''
+        status = dict(zip(self.engines, self.execution_provider.status(self.engines)))
+
+        # This works for blocks=0
+        to_kill = [engine for engine in status if status[engine] == "RUNNING" ][:blocks]
+
         if self.execution_provider :
-            r = self.execution_provider.cancel(*args, **kwargs)
+            r = self.execution_provider.cancel(to_kill, *args, **kwargs)
         else:
             logger.error("No execution provider available")
             r = None
 
         return r
+
+    def status (self):
+        ''' Returns the status of the executor via probing the execution providers.
+
+        '''
+        if self.execution_provider :
+            status = self.execution_provider.status(self.engines)
+
+        else:
+            status = []
+
+        return status
+
 
     def shutdown (self, hub=True, targets='all', block=False):
         ''' Shutdown the executor, including all workers and controllers.

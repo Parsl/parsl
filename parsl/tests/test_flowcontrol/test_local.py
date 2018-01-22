@@ -5,9 +5,9 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-parsl.set_stream_logger()
+#parsl.set_stream_logger()
 
-from local import localIPP
+from .local import localIPP
 dfk = DataFlowKernel(config=localIPP)
 
 @App("python", dfk)
@@ -42,8 +42,3 @@ def test_bash():
     print("Waiting ....")
     print(x.result())
 
-
-if __name__ == "__main__" :
-
-    test_python()
-    test_bash()
