@@ -38,21 +38,34 @@ Execution core and parallelism (DFK)
 * **Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution ordered by data dependencies and throttled by resource limits**
 * Well defined state transition model for task lifecycle
 * More efficient algorithms for managing dependency resolution.
-* Scheduling and allocation algorithms that determine job placement based on job and data requirements (including deadlines) as well as site capabilities
-* Logic to manage (provision, resize) execution resource block based on job requirements, and fitting tasks into the resource blocks
+* Scheduling and allocation algorithms that determine job placement based on **job** and data requirements (including deadlines) as well as **site capabilities**
+* **Logic to manage (provision, resize) execution resource block based on job requirements, and fitting tasks into the resource blocks (0.4.0)**
 * Retry logic to support recovery and fault tolerance
+* Workflow level checkpointing and restart
 
 Resource provisioning and execution
 -----------------------------------
 
 * **Uniform abstraction for execution resources (to support resource provisioning, job submission, allocation management) on cluster, cloud, and supercomputing resources**
 * **Support for different execution models on any execution provider (e.g., pilot jobs using Ipython parallel on clusters and extreme-scale execution using Swift/T on supercomputers)**
+    * **Slurm**
+    * **Condor**
+    * **Cobalt**
+    * **PBS/Torque**
+    * **AWS**
+    * **Azure**
+    * **Nova/OpenStack/Jetstream (partial support)**
+* **Support for launcher mechanisms**
+    * **srun**
+    * aprun
+    * Various MPI launch mechanisms (Mpiexec, mpirun..)
+* Support for remote execution using **SSH** and OAuth-based authentication (0.3.0)
+* **Utilizing multiple sites for a single script’s execution(0.4.0)**
 * Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
 * API/method for {adding entries to, viewing entries} in repository
-* Support for remote execution using **SSH** and OAuth-based authentication
-* Utilizing multiple sites for a single script’s execution
 * IPP workers to support multiple threads of execution per node.
 * Support for user-defined containers as Parsl apps and orchestration of workflows comprised of containers
+
 
 Visualization, debugging, fault tolerance
 -----------------------------------------
@@ -79,6 +92,7 @@ Ecosystem
 * Creation of library of Parsl apps and workflows
 * Provenance capture/export in standard formats
 * Automatic metrics capture and reporting to understand Parsl usage
+* **Anonymous Usage Tracking (0.4.0)**
 
 Documentation / Tutorials:
 --------------------------
