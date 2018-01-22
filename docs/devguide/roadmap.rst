@@ -4,6 +4,8 @@ Roadmap
 
 Sufficient capabilities to use Parsl in many common situations already exist.  This document indicates where Parsl is going; it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold. Help in providing any of the yet-to-be-developed capabilities is welcome.
 
+The upcoming release is Parsl-0.4.0 and features in preparation are documented via Github `issues <https://github.com/Parsl/parsl/issues>`_ and `milestones <https://github.com/Parsl/parsl/milestone/2>`_.
+
 Core Functionality
 ---------------------
 
