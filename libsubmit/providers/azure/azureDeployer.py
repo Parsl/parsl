@@ -6,6 +6,7 @@ from azure.common.credentials import ServicePrincipalCredentials, UserPassCreden
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
 
+
 class Deployer(object):
     """ Initialize the deployer class with subscription, resource group and public key.
 
@@ -16,7 +17,8 @@ class Deployer(object):
     name_generator = Haikunator()
     config = ""
 
-    def __init__(self, subscription_id, resource_group, config, pub_ssh_key_path='~/.ssh/id_rsa.pub'):
+    def __init__(self, subscription_id, resource_group, config,
+                 pub_ssh_key_path='~/.ssh/id_rsa.pub'):
         self.config = config
         self.subscription_id = subscription_id
         self.resource_group = resource_group
@@ -27,24 +29,27 @@ class Deployer(object):
         # Will raise if file not exists or not enough permission
         with open(pub_ssh_key_path, 'r') as pub_ssh_file_fd:
             self.pub_ssh_key = pub_ssh_file_fd.read()
-        # self.credentials = UserPassCredentials(self.config['username'], self.config['pass'])
         self.credentials = ServicePrincipalCredentials(
             client_id=self.config['AZURE_CLIENT_ID'],
             secret=self.config['AZURE_CLIENT_SECRET'],
             tenant=self.config['AZURE_TENANT_ID']
         )
-        self.client = ResourceManagementClient(self.credentials, self.subscription_id)
+        self.client = ResourceManagementClient(
+            self.credentials, self.subscription_id)
 
-    def deploy(self):
+    def deploy(self, job_name, cmd_string='', blocksize=1):
         """Deploy the template to a resource group."""
-        self.client.resource_groups.create_or_update(
-            self.resource_group,
-            {
-                'location':self.location
-            }
-        )
+        for i in range(blocksize):
+            self.client.resource_groups.create_or_update(
+                self.resource_group,
+                {
+                    'location': self.location,
 
-        template_path = os.path.join(os.path.dirname(__file__), 'templates', 'template.json')
+                }
+            )
+
+        template_path = os.path.join(os.path.dirname(
+            __file__), 'templates', 'template.json')
         with open(template_path, 'r') as template_file_fd:
             template = json.load(template_file_fd)
 
@@ -68,6 +73,7 @@ class Deployer(object):
         )
         deployment_async_operation.wait()
 
-    def destroy(self):
+    def destroy(self, job_ids):
         """Destroy the given resource group"""
-        self.client.resource_groups.delete(self.resource_group)
+        for job_id in job_ids:
+            self.client.resource_groups.delete(self.resource_group)
