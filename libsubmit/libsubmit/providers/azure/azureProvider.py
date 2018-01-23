@@ -38,9 +38,9 @@ sudo pip3 install ipyparallel parsl
 
 class AzureProvider(ExecutionProvider):
     def __init__(self, config: dict, channel=None):
-        """Initialize Azure provider. Uses Azure python SDK to provide execution resources
-            Args:
-             - :param Config (dict): Dictionary with all the config options.
+        """INITIALIZE AZURE PROVIDER. USES AZURE PYTHON SDK TO PROVIDE EXECUTION RESOURCES
+            ARGS:
+             - :parm config (dict): Dictionary with all the config options.
 
             KWargs:
              - :param channel (None): A channel is not required for Azure.
@@ -58,8 +58,10 @@ class AzureProvider(ExecutionProvider):
             self.config['username'], self.config['pass'])
         subscription_id = self.config['subscriptionId']
 
-        # self.resource_client = ResourceManagementClient(credentials, subscription_id)
-        # self.storage_client = StorageManagementClient(credentials, subscription_id)
+        self.resource_client = ResourceManagementClient(
+            credentials, subscription_id)
+        self.storage_client = StorageManagementClient(credentials,
+                                                      subscription_id)
 
         self.resource_group_name = 'my_resource_group'
         self.deployer = Deployer(
@@ -68,14 +70,11 @@ class AzureProvider(ExecutionProvider):
             self.read_configs(config))
 
         self.channel = channel
-        if not _boto_enabled:
-            raise OptionalModuleMissing(
-                ['boto3'], "AWS Provider requires boto3 module.")
-
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
         self.resources = {}
+        self.instances = []
 
         self.config = config
         options = self.config["execution"]["block"]["options"]
@@ -86,8 +85,6 @@ class AzureProvider(ExecutionProvider):
         self.region = options.get("region", 'us-east-2')
         self.max_nodes = (self.config["execution"]["block"].get("maxBlocks", 1) *
                           self.config["execution"]["block"].get("nodes", 1))
-
-        self.spot_max_bid = options.get("spotMaxBid", 0)
 
         try:
             self.initialize_boto_client()
@@ -183,7 +180,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
 
         job_name = "parsl.auto.{0}".format(time.time())
         [instance, *rest] = self.deployer.deploy(cmd_string=cmd_string,
-                                                 job_name=job_name)
+                                                 job_name=job_name, blocksize=1)
 
         if not instance:
             logger.error("Failed to submit request to Azure")
@@ -199,8 +196,11 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
 
         return instance.instance_id
 
+    ########################################################
+    # Status
+    ########################################################
     def status(self):
-         '''  Get the status of a list of jobs identified by their ids.
+        '''  Get the status of a list of jobs identified by their ids.
 
         Args:
             - job_ids (List of ids) : List of identifiers for the jobs
@@ -208,8 +208,11 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         Returns:
             - List of status codes.
         '''
-        raise NotImplemented
+        raise NotImplementedError
 
+    ########################################################
+    # Cancel
+    ########################################################
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
 
@@ -224,7 +227,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
             try:
                 self.deployer.destroy(job_id)
                 return True
-            except Exception e:
+            except e:
                 logger.error("Failed to cancel {}".format(repr(job_id)))
                 logger.error(e)
                 return False
@@ -240,7 +243,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         { minsize, maxsize, current_requested }
         '''
         return len(self.instances)
- i
+
 
 if __name__ == '__main__':
     config = open("azureconf.json")
