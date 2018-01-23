@@ -37,7 +37,7 @@ def test_procedural (N=10):
 
     with open(saved.outputs[0].result(), 'r') as f:
         item = int(f.read().strip())
-        assert item < N, "Expected file to contain int < N"
+        assert item <= N, "Expected file to contain int <= N"
         assert item >= 1, "Expected file to contain int >= 1"
 
 
