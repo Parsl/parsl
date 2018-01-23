@@ -20,6 +20,8 @@ Installing on Linux
 1. Install Parsl::
 
      $ python3 -m pip install parsl
+     
+     (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
 
 
 2. Install Jupyter for Tutorial notebooks::
@@ -41,6 +43,8 @@ Installing on Mac OS
 2. Install Parsl::
 
      $ python3 -m pip install parsl
+     
+     (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
 
 
 
