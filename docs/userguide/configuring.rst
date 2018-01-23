@@ -6,7 +6,7 @@ Parsl workflows are developed completely independently from their execution envi
 Parsl can be configured using a Python configuration object. For simple cases, such as threads these configurations can be easily specified inline. For more complex environments using different block configurations and communication channels it is easiest to define a full configuration object. The following shows how the configuration can be passed to the Dataflow Kernel.
 
 
-1. **Executors** which use threads, iPyParallel workers, etc. can be constructed manually
+1. **Executors**, which use threads, iPyParallel workers, etc. can be constructed manually
 
    .. code-block:: python
 
