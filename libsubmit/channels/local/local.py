@@ -26,11 +26,15 @@ class LocalChannel (Channel):
             - envs (dict) : A dictionary of env variables to be set when launching the shell
             - channel_script_dir (string): (default="./.scripts") Directory to place scripts
         '''
+        import pprint 
+        pp = pprint.PrettyPrinter(indent=4)
+
 
         self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
         local_env     = os.environ.copy()
-        self.envs     = local_env.update(envs)
+        self.envs     = copy.deepcopy(local_env)
+        self.envs.update(envs)
         self.channel_script_dir = os.path.abspath(scriptDir)
         try:
             os.makedirs(self.channel_script_dir)
