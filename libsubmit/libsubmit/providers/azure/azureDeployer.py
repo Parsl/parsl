@@ -79,16 +79,16 @@ class Deployer(object):
         for job_id in job_ids:
             self.client.resource_groups.delete(self.resource_group)
 
-    def get_vm(resource_group_name, vm_name):
-    '''
-    you need to retry this just in case the credentials token expires,
-    that's where the decorator comes in
-    this will return all the data about the virtual machine
-    '''
-    return compute_client.virtual_machines.get(
-        resource_group_name, vm_name, expand='instanceView')
+    def get_vm(self, resource_group_name, vm_name):
+        '''
+        you need to retry this just in case the credentials token expires,
+        that's where the decorator comes in
+        this will return all the data about the virtual machine
+        '''
+        return compute_client.virtual_machines.get(
+            resource_group_name, vm_name, expand='instanceView')
 
-    def get_vm_status(self, vm_name, resource_group_name=self.resource_group):
+    def get_vm_status(self, vm_name, rgn):
         '''
         this will just return the status of the virtual machine
         sometime the status may be unknown as shown by the azure portal;
@@ -96,4 +96,7 @@ class Deployer(object):
         also, it may take on the order of minutes for the status to become
         available so the decorator will bang on it forever
         '''
-        return self.client.virtual_machines.get(resource_group_name, vm_name).instance_view.statuses[1].display_status
+        rgn = rgn if rgn else self.resource_group
+        return self.client.virtual_machines.get(
+            resource_group_name,
+            vm_name).instance_view.statuses[1].display_status
