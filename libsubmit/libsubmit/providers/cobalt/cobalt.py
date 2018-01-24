@@ -310,19 +310,21 @@ class Cobalt(ExecutionProvider):
 
         # Calculate nodes
         nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
-                     nodes,
-                     self.config["execution"]["block"].get("taskBlocks", 1))
-
         job_config = self.config["execution"]["block"]["options"]
         job_config["nodes"] = nodes
         job_config["overrides"] = job_config.get("overrides", '')
         job_config["jobname"] = job_name
+        job_config["taskBlocks"] =  self.config["execution"]["block"].get("taskBlocks", 1)
+
+        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
+                     job_config["nodes"],
+                     job_config["taskBlocks"])
+
         # Wrap the cmd_string
         lname = self.config["execution"]["block"].get("launcher", "singleNode")
         launcher = Launchers.get(lname, None)
         job_config["user_script"] = launcher(cmd_string,
-                                             self.config["execution"]["block"]["taskBlocks"])
+                                             job_config["taskBlocks"])
 
         # Get queue request if requested
         self.queue = ''
