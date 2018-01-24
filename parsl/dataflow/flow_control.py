@@ -103,7 +103,7 @@ class FlowControl(object):
         # Sleep till time to wake up
         while True:
             prev = self._wake_up_time
-            time.sleep(time.time() - prev)
+            time.sleep(max(prev - time.time(), 0))
             if prev == self._wake_up_time:
                 self.make_callback(kind='timer')
             else:
