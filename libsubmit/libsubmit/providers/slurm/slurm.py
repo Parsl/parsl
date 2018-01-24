@@ -125,6 +125,9 @@ class Slurm(ExecutionProvider):
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
+        launcher_name   = self.config["execution"]["block"].get("launcher",
+                                                                "singleNode")
+        self.launcher   = Launchers.get(launcher_name, None)
         self.scriptDir = self.config["execution"]["scriptDir"]
         if not os.path.exists(self.scriptDir):
             os.makedirs(self.scriptDir)
@@ -280,10 +283,8 @@ class Slurm(ExecutionProvider):
 
 
         # Wrap the cmd_string
-        lname = self.config["execution"]["block"].get("launcher", "singleNode")
-        launcher = Launchers.get(lname, None)
-        job_config["user_script"] = launcher(cmd_string,
-                                             taskBlocks=job_config["taskBlocks"])
+        job_config["user_script"] = self.launcher(cmd_string,
+                                                  taskBlocks=job_config["taskBlocks"])
 
         logger.debug("Writing submit script")
         ret = self._write_submit_script(template_string, script_path, job_name, job_config)

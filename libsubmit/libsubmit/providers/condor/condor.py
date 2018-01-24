@@ -7,7 +7,7 @@ import re
 from string import Template
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.providers.condor.template import template_string
-from libsubmit.exec_utils import execute_wait, wtime_to_minutes
+from libsubmit.exec_utils import wtime_to_minutes
 from libsubmit.launchers import Launchers
 import libsubmit.error as ep_error
 
@@ -54,7 +54,7 @@ class Condor(ExecutionProvider):
               "scriptDir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
-                             # Default : "./.scripts"},
+                             # Required : True},
 
               "block" : { # Definition of a block
 

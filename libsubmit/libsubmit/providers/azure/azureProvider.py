@@ -7,11 +7,11 @@ import atexit
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.error import *
 
-try :
+try:
     from azure.common.credentials import UserPassCredentials
     from libsubmit.azure.azureDeployer import Deployer
 
-except ImportError :
+except ImportError:
     _azure_enabled = False
 else:
     _azure_enabled = True
@@ -37,20 +37,31 @@ sudo pip3 install ipyparallel parsl
 
 
 class AzureProvider(ExecutionProvider):
-    def __init__(self, config):
-        """Initialize Azure provider. Uses Azure python SDK to provide execution resources"""
+    def __init__(self, config: dict, channel=None):
+        """INITIALIZE AZURE PROVIDER. USES AZURE PYTHON SDK TO PROVIDE EXECUTION RESOURCES
+            ARGS:
+             - :parm config (dict): Dictionary with all the config options.
+
+            KWargs:
+             - :param channel (None): A channel is not required for Azure.
+
+
+        """
         self.config = self.read_configs(config)
         self.config_logger()
 
-        if not _azure_enabled :
-            raise OptionalModuleMissing(['azure', 'haikunator'], "Azure Provider requires the azure and haikunator modules.")
+        if not _azure_enabled:
+            raise OptionalModuleMissing(
+                ['azure', 'haikunator'], "Azure Provider requires the azure and haikunator modules.")
 
         credentials = UserPassCredentials(
             self.config['username'], self.config['pass'])
         subscription_id = self.config['subscriptionId']
 
-        # self.resource_client = ResourceManagementClient(credentials, subscription_id)
-        # self.storage_client = StorageManagementClient(credentials, subscription_id)
+        self.resource_client = ResourceManagementClient(
+            credentials, subscription_id)
+        self.storage_client = StorageManagementClient(credentials,
+                                                      subscription_id)
 
         self.resource_group_name = 'my_resource_group'
         self.deployer = Deployer(
@@ -58,8 +69,52 @@ class AzureProvider(ExecutionProvider):
             self.resource_group_name,
             self.read_configs(config))
 
+        self.channel = channel
+        self.config = config
+        self.sitename = config['site']
+        self.current_blocksize = 0
+        self.resources = {}
+        self.instances = []
+
+        self.config = config
+        options = self.config["execution"]["block"]["options"]
+        logger.warn("Options %s", options)
+        self.instance_type = options.get("instanceType", "t2.small")
+        self.image_id = options["imageId"]
+        self.key_name = options["keyName"]
+        self.region = options.get("region", 'us-east-2')
+        self.max_nodes = (self.config["execution"]["block"].get("maxBlocks", 1) *
+                          self.config["execution"]["block"].get("nodes", 1))
+
+        try:
+            self.initialize_boto_client()
+        except Exception as e:
+            logger.error("Site:[{0}] Failed to initialize".format(self))
+            raise e
+
+        try:
+            self.statefile = self.config["execution"]["block"]["options"].get("stateFile",
+                                                                              '.ec2site_{0}.json'.format(self.sitename))
+            self.read_state_file(self.statefile)
+
+        except Exception as e:
+            self.create_vpc().id
+            logger.info(
+                "No State File. Cannot load previous options. Creating new infrastructure")
+            self.write_state_file()
+
+    def __repr__(self)->str:
+        return "<Azure Execution Provider for site:{0}>".format(self.sitename)
+
+    @property
+    def channels_required(self):
+        ''' No channel required for Azure
+        '''
+        return False
+
     def config_logger(self):
-        """Configure Logger"""
+        """Configure Logger
+        """
         logger = logging.getLogger("AzureProvider")
         logger.setLevel(logging.INFO)
         if not os.path.isfile(self.config['logFile']):
@@ -73,20 +128,10 @@ class AzureProvider(ExecutionProvider):
         logger.addHandler(fh)
         self.logger = logger
 
-    def _read_conf(self, config_file):
-        """read config file"""
-        config = json.load(open(config_file, 'r'))
-        return config
-
     def pretty_configs(self, configs):
         """prettyprint config"""
         printer = pprint.PrettyPrinter(indent=4)
         printer.pprint(configs)
-
-    def read_configs(self, config_file):
-        """Read config file"""
-        config = self._read_conf(config_file)
-        return config
 
     def ipyparallel_configuration(self):
         config = ''
@@ -113,26 +158,92 @@ sleep 5
 ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return ipptemplate
 
-    def submit(self):
-        """Uses AzureDeployer to spin up an instance and connect it to the iPyParallel controller"""
-        self.deployer.deploy()
+    ########################################################
+    # Submit
+    ########################################################
+    def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
+        '''Submits the cmd_string onto a freshly instantiated AWS EC2 instance.
+        Submit returns an ID that corresponds to the task that was just submitted.
 
+        Args:
+             - cmd_string (str): Commandline invocation to be made on the remote side.
+             - blocksize (int) : Number of blocks requested
+
+        Kwargs:
+             - job_name (String): Prefix for job name
+
+        Returns:
+             - None: At capacity, cannot provision more
+             - job_id: (string) Identifier for the job
+
+        '''
+
+        job_name = "parsl.auto.{0}".format(time.time())
+        [instance, *rest] = self.deployer.deploy(cmd_string=cmd_string,
+                                                 job_name=job_name, blocksize=1)
+
+        if not instance:
+            logger.error("Failed to submit request to Azure")
+            return None
+
+        logger.debug("Started instance_id : {0}".format(instance.instance_id))
+
+        state = translate_table.get(instance.state['Name'], "PENDING")
+
+        self.resources[instance.instance_id] = {"job_id": instance.instance_id,
+                                                "instance": instance,
+                                                "status": state}
+
+        return instance.instance_id
+
+    ########################################################
+    # Status
+    ########################################################
     def status(self):
-        """Get status of azure VM. Not implemented yet."""
-        raise NotImplemented
+        '''  Get the status of a list of jobs identified by their ids.
 
-    def cancel(self):
-        """Destroy an azure VM"""
-        self.deployer.destroy()
+        Args:
+            - job_ids (List of ids) : List of identifiers for the jobs
 
-    def scale_in(self):
-        raise NotImplemented
+        Returns:
+            - List of status codes.
+        '''
+        raise NotImplementedError
 
-    def scale_out(self):
-        raise NotImplemented
+    ########################################################
+    # Cancel
+    ########################################################
+    def cancel(self, job_ids):
+        ''' Cancels the jobs specified by a list of job ids
+
+        Args:
+             job_ids (list) : List of of job identifiers
+
+        Returns :
+             [True/False...] : If the cancel operation fails the entire list will be False.
+        TODO: Make this change statuses
+        '''
+        for job_id in job_ids:
+            try:
+                self.deployer.destroy(job_id)
+                return True
+            except e:
+                logger.error("Failed to cancel {}".format(repr(job_id)))
+                logger.error(e)
+                return False
+
+    @property
+    def scaling_enabled():
+        return True
+
+    @property
+    def current_capacity(self):
+        ''' Returns the current blocksize.
+        This may need to return more information in the futures :
+        { minsize, maxsize, current_requested }
+        '''
+        return len(self.instances)
 
 
 if __name__ == '__main__':
-    config = "azureconf.json"
-    provider = AzureProvider(config)
-    provider.submit()
+    config = open("azureconf.json")
