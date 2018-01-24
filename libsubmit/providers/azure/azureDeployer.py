@@ -38,15 +38,15 @@ class Deployer(object):
             self.credentials, self.subscription_id)
 
     def deploy(self, job_name, cmd_string='', blocksize=1):
+        instances = []
         """Deploy the template to a resource group."""
-        for i in range(blocksize):
-            self.client.resource_groups.create_or_update(
-                self.resource_group,
-                {
-                    'location': self.location,
+        self.client.resource_groups.create_or_update(
+            self.resource_group,
+            {
+                'location': self.location,
 
-                }
-            )
+            }
+        )
 
         template_path = os.path.join(os.path.dirname(
             __file__), 'templates', 'template.json')
@@ -65,15 +65,35 @@ class Deployer(object):
             'template': template,
             'parameters': parameters
         }
-
-        deployment_async_operation = self.client.deployments.create_or_update(
-            self.resource_group,
-            'azure-sample',
-            deployment_properties
-        )
-        deployment_async_operation.wait()
+        for i in range(blocksize):
+            deployment_async_operation = self.client.deployments.create_or_update(
+                self.resource_group,
+                'azure-sample',
+                deployment_properties
+            )
+            instances.append(deployment_async_operation.wait())
+        return instances
 
     def destroy(self, job_ids):
         """Destroy the given resource group"""
         for job_id in job_ids:
             self.client.resource_groups.delete(self.resource_group)
+
+    def get_vm(resource_group_name, vm_name):
+    '''
+    you need to retry this just in case the credentials token expires,
+    that's where the decorator comes in
+    this will return all the data about the virtual machine
+    '''
+    return compute_client.virtual_machines.get(
+        resource_group_name, vm_name, expand='instanceView')
+
+    def get_vm_status(self, vm_name, resource_group_name=self.resource_group):
+        '''
+        this will just return the status of the virtual machine
+        sometime the status may be unknown as shown by the azure portal;
+        in that case statuses[1] doesn't exist, hence retrying on IndexError
+        also, it may take on the order of minutes for the status to become
+        available so the decorator will bang on it forever
+        '''
+        return self.client.virtual_machines.get(resource_group_name, vm_name).instance_view.statuses[1].display_status
