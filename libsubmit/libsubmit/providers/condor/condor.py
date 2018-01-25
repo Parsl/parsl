@@ -257,6 +257,18 @@ class Condor(ExecutionProvider):
         Submitting job(s)......
         5 job(s) submitted to cluster 118907.
         1 job(s) submitted to cluster 118908.
+
+        Args:
+             - cmd_string (str) : Command string to execute
+             - blocksize (int) : Number of blocks to get
+
+        KWargs:
+             - job_name (str) : Job name prefix
+
+        Returns:
+             - None: At capacity, cannot provision more
+             - job_id: (string) Identifier for the job
+
         '''
 
         logger.debug("Attempting to launch at blocksize : %s" % blocksize)
@@ -340,7 +352,7 @@ class Condor(ExecutionProvider):
                     job_id += [cluster + process for process in processes]
 
             self._add_resource(job_id)
-        return job_id
+        return job_id[0]
 
     ###########################################################################################################
     # Cancel
@@ -356,7 +368,8 @@ class Condor(ExecutionProvider):
         '''
 
         job_id_list = ' '.join(job_ids)
-        cmd = "condor_rm {0}".format(job_id_list)
+        cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
+        logger.debug("Attempting removal of jobs : {0}".format(cmd))
         retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
         rets = None
         if retcode == 0 :
