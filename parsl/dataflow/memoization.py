@@ -1,0 +1,134 @@
+import hashlib
+import logging
+import pprint
+from parsl.executors.serialize.serialize import serialize_object
+pp = pprint.PrettyPrinter(indent=4)
+
+logger = logging.getLogger(__name__)
+
+
+class Memoizer(object):
+    ''' Memoizer is responsible for ensuring that when a task is repeated
+    ie. the same function is called with the same exact arguments, the
+    result from a previous execution is reused. `wiki <https://en.wikipedia.org/wiki/Memoization>`_
+
+    The memoizer implementation here does not collapse duplicate calls
+    at call time, but works **only** when the result of a previous
+    call is available at the time the duplicate call is made.
+
+    For instance:
+
+    No advantage from                 Memoization helps
+    memoization here:                 here:
+
+    ..code :: python
+
+        TaskA                         TaskB
+          |   TaskA                     |
+          |     |   TaskA              done  (TaskB)
+          |     |     |                              (TaskB)
+        done    |     |
+              done    |
+                    done
+
+    The memoizer creates a lookup table by hashing the function name
+    and it's inputs, and storing the results of the function.
+
+    When a task is ready for launch, ie. all of it's arguments
+    have resolved, we add it's hash to the task datastructure.
+    '''
+
+    def __init__(self, dfk, memoize=True, checkpoint={}):
+        ''' Initialize the memoizer.
+        '''
+        self.memoize = memoize
+        self.dfk = dfk
+
+        if self.memoize:
+            self.memo_lookup_table = checkpoint
+        else:
+            self.memo_lookup_table = {}
+
+    def make_hash(self, task):
+        ''' Create a hash of the task inputs. This uses a serialization library borrowed from
+        ipyparallel. If this fails here, then all ipp calls are also likely to fail due to failure
+        at serialization.
+
+        Args:
+            - task (dict) : Task dictionary from dfk.tasks
+
+        Returns:
+            - hash (str?) : A unique hash string
+        '''
+
+        # Function name TODO: Add fn body later
+        t = [serialize_object(task['func_name'])[0],
+             # serialize_object(task['func'].__code__)[0],
+             serialize_object(task['args'])[0],
+             serialize_object(task['kwargs'])[0],
+             serialize_object(task['env'])[0]]
+        x = b''.join(t)
+        hashedsum = hashlib.md5(x).hexdigest()
+        return hashedsum
+
+    def check_memo(self, task_id, task):
+        ''' Check memo table first creates a hash of the task and it's relevant
+        inputs and checks the lookup table for this hash. If present the
+        results are returned.
+
+        Args:
+            - task(task) : task from the dfk.tasks table
+
+        Returns:
+            Tuple of the following:
+            - present (Bool): Is this present in the memo_lookup_table
+            - Result (Py Obj): Result of the function if present in table
+
+        This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
+        '''
+        if not self.memoize or not task['memoize']:
+            return None, None
+
+        hashsum = self.make_hash(task)
+        present = False
+        result = None
+        if hashsum in self.memo_lookup_table:
+            present = True
+            result = self.memo_lookup_table[hashsum]
+
+        task['hashsum'] = hashsum
+        logger.debug("Task[%s]: hit:%s", task_id, present)
+        return present, result
+
+    def hash_lookup(self, hashsum):
+        ''' Lookup a hash in the memoization table.
+
+        Args:
+            - hashsum (str?): The same hashes used to uniquely identify apps+inputs
+
+        Returns:
+            - Lookup result, this is unlikely to be None, since the hashes are set by this
+              library and could not miss entried in it's dict.
+        '''
+        return self.memo_lookup_table[hashsum]
+
+    def update_memo(self, task_id, task, r):
+        ''' Updates the memoization lookup table with the result from a task.
+
+        Args:
+             - task_id (int): Integer task id
+             - task (dict) : A task dict from dfk.tasks
+             - r (Result future): Result future
+
+        A warning is issued when a hash collission occures during the update.
+        This is not likely.
+        '''
+
+        if not self.memoize or not task['memoize']:
+            return
+
+        if task['hashsum'] in self.memo_lookup_table:
+            logger.warn("Collision in memoization table : %s" % task_id)
+            self.memo_lookup_table[task['hashsum']] = r
+        else:
+            self.memo_lookup_table[task['hashsum']] = r
