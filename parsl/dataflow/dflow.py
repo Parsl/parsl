@@ -537,9 +537,11 @@ class DataFlowKernel(object):
         checkpointed is checkpointed to a file
 
         Returns:
-            Checkpoint dir if checkpoints were written successfully
-
+            Checkpoint dir if checkpoints were written successfully.
+            By default the checkpoints are written to the RUNDIR of the current
+            run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
         '''
+
         logger.debug("Checkpointing.. ")
         start = time.time()
 
@@ -599,7 +601,8 @@ class DataFlowKernel(object):
         for the memoized lookup table.
 
         Args:
-            - checkpoint_file (list) : List of filepaths to checkpoints
+            - checkpointDirs (list) : List of filepaths to checkpoints
+              Eg. ['runinfo/001', 'runinfo/002']
 
         Returns:
             - memoized_lookup_table (dict)
@@ -628,10 +631,15 @@ class DataFlowKernel(object):
         return memo_lookup_table
 
     def load_checkpoints(self, checkpointDirs):
-        ''' Load checkpoints for the checkpoint files
+        ''' Load checkpoints from the checkpoint files into a dictionary.
+        The results are used to pre-populate the memoizer's lookup_table
 
         Kwargs:
-             - checkpointDirs (list) : List of filenames
+             - checkpointDirs (list) : List of run folder to use as checkpoints
+               Eg. ['runinfo/001', 'runinfo/002']
+
+        Returns:
+             - dict containing, hashed -> future mappings
         '''
         self.memo_lookup_table = None
 
