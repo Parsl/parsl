@@ -37,6 +37,7 @@ Parsl can be used to realize a variety of workflows:
    userguide/execution
    userguide/configuring
    userguide/faq
+   userguide/usage_tracking
 
 .. _dev_docs:
 .. toctree::
