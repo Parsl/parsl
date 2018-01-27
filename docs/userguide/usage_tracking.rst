@@ -40,11 +40,11 @@ What is sent?
 -------------
 
 * Anonymized user ID
+* Anonymized hostname
 * Anonymized Parsl script ID
-* Parsl script length
+* Start and end times
 * Parsl exit code
-* IP address
-* Hostname
+* Count of sites used
 
 How is the data sent?
 ---------------------
