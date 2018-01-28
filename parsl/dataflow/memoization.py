@@ -39,10 +39,24 @@ class Memoizer(object):
     '''
 
     def __init__(self, dfk, memoize=True, checkpoint={}):
-        ''' Initialize the memoizer.
+        ''' Initialize the memoizer. If either the global config or the kwarg memoize is set to false
+        memoization is disabled.
+
+        Args:
+            - dfk (DFK obj): The DFK object
+
+        KWargs:
+            - memoize (Bool): enable memoization or not.
+            - checkpoint (Dict): A checkpoint loaded as a dict.
         '''
-        self.memoize = memoize
+
+        self.memoize = True
         self.dfk = dfk
+
+        if self.dfk.config and not self.dfk.config["globals"]["memoize"]:
+            self.memoize = False
+        if not memoize:
+            self.memoize = False
 
         if self.memoize:
             self.memo_lookup_table = checkpoint
@@ -58,7 +72,7 @@ class Memoizer(object):
             - task (dict) : Task dictionary from dfk.tasks
 
         Returns:
-            - hash (str?) : A unique hash string
+            - hash (str) : A unique hash string
         '''
 
         # Function name TODO: Add fn body later
@@ -74,7 +88,9 @@ class Memoizer(object):
     def check_memo(self, task_id, task):
         ''' Check memo table first creates a hash of the task and it's relevant
         inputs and checks the lookup table for this hash. If present the
-        results are returned.
+        results are returned. The result is a tuple indicating whether a memo
+        exists and the result, since a Null result is possible and could be confusing.
+        This seems like a reasonable option without relying on an cache_miss exception.
 
         Args:
             - task(task) : task from the dfk.tasks table
@@ -101,7 +117,8 @@ class Memoizer(object):
         return present, result
 
     def hash_lookup(self, hashsum):
-        ''' Lookup a hash in the memoization table.
+        ''' Lookup a hash in the memoization table. Will raise a KeyError if hash is not
+        in the memoization lookup table.
 
         Args:
             - hashsum (str?): The same hashes used to uniquely identify apps+inputs
@@ -109,6 +126,9 @@ class Memoizer(object):
         Returns:
             - Lookup result, this is unlikely to be None, since the hashes are set by this
               library and could not miss entried in it's dict.
+
+        Raises:
+            - KeyError: if hash not in table
         '''
         return self.memo_lookup_table[hashsum]
 
