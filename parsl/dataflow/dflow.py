@@ -94,7 +94,6 @@ class DataFlowKernel(object):
             self.fail_retries = fail_retries
             self.lazy_fail    = lazy_fail
             self.executors    = {i:x for i,x in enumerate(executors)}
-            print("Executors : ", self.executors)
             self.flowcontrol  = FlowNoControl(self, None)
 
         self.task_count      = 0
