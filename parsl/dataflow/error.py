@@ -17,6 +17,27 @@ class MissingFutError(DataFlowExceptions):
     """
     pass
 
+class BadCheckpoint(DataFlowExceptions):
+    ''' Error raised at the end of app execution due to missing
+    output files
+
+    Args:
+         - reason
+
+    Contains:
+    reason (string)
+    dependent_exceptions
+    '''
+
+    def __init__(self, reason):
+        self.reason = reason
+
+    def __repr__ (self):
+        return self.reason
+
+    def __str__ (self):
+        return self.__repr__()
+
 class DependencyError(DataFlowExceptions):
     ''' Error raised at the end of app execution due to missing
     output files

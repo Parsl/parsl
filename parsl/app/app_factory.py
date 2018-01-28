@@ -4,6 +4,8 @@ Centralize app object creation.
 
 '''
 import logging
+from dill.source import getsource
+from hashlib import md5
 from inspect import signature
 from parsl.app.bash_app import BashApp
 from parsl.app.python_app import PythonApp
@@ -39,6 +41,12 @@ class AppFactory(object):
         self.sites = sites
         self.sig = signature(func)
 
+        # Function source hashing is done here to avoid redoing this every time
+        # the app is called.
+        fn_source = getsource(func)
+        self.func_hash = md5(fn_source.encode('utf-8')).hexdigest()
+
+
     def __call__(self, *args, **kwargs):
         ''' Create a new object of app_class with the args,
         execute the app_object and return the futures
@@ -58,7 +66,8 @@ class AppFactory(object):
         app_obj = self.app_class(self.func,
                                  self.executor,
                                  sites=self.sites,
-                                 walltime=self.walltime)
+                                 walltime=self.walltime,
+                                 fn_hash=self.func_hash)
         return app_obj(*args, **kwargs)
 
     def __repr__(self):

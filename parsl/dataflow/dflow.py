@@ -1,29 +1,12 @@
-'''
-DataFlowKernel
-==============
-
-The DataFlowKernel adds dependency awareness to an existing executor.
-It is responsible for managing futures, such that when dependencies are resolved,
-pending tasks move to the runnable state.
-
-Here's a simplified diagram of what happens internally::
-
-    User             |        DFK         |    Executor
-    ----------------------------------------------------------
-                     |                    |
-          Task-------+> +Submit           |
-        App_Fu<------+--|                 |
-                     |  Dependencies met  |
-                     |         task-------+--> +Submit
-                     |        Ex_Fu<------+----|
-'''
-
+import os
+import time
 import copy
 import uuid
 import logging
 import atexit
 import signal
 import random
+import pickle
 from inspect import signature
 from concurrent.futures import Future
 from functools import partial
@@ -34,6 +17,7 @@ from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.flow_control import FlowControl, FlowNoControl
 from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.config_defaults import update_config
 from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
@@ -44,22 +28,38 @@ from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 logger = logging.getLogger(__name__)
 
 class DataFlowKernel(object):
-    """ DataFlowKernel
+    """The DataFlowKernel adds dependency awareness to an existing executor.
+    It is responsible for managing futures, such that when dependencies are resolved,
+    pending tasks move to the runnable state.
+
+    Here's a simplified diagram of what happens internally::
+
+         User             |        DFK         |    Executor
+        ----------------------------------------------------------
+                          |                    |
+               Task-------+> +Submit           |
+             App_Fu<------+--|                 |
+                          |  Dependencies met  |
+                          |         task-------+--> +Submit
+                          |        Ex_Fu<------+----|
+
     """
 
-    def __init__(self, config=None, executors=None, lazy_fail=True,
-                 rundir=None, fail_retries=2):
+    def __init__(self, config=None, executors=None, lazy_fail=True, memoize=True,
+                 rundir=None, fail_retries=2, checkpointFiles=None):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
         options passed in via the config.
 
         KWargs:
-            config (Dict) : A single data object encapsulating all config attributes
-            executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
-            lazy_fail(Bool) : Default=True, determine failure behavior
-            rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
-            fail_retries(int): Default=2, Set the number of retry attempts in case of failure
+            - config (Dict) : A single data object encapsulating all config attributes
+            - executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
+            - lazy_fail(Bool) : Default=True, determine failure behavior
+            - memoize (Bool) :Enable memoization of apps
+            - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
+            - fail_retries(int): Default=2, Set the number of retry attempts in case of failure
+            - checkpointFiles (list of str): List of filepaths to checkpoint files
 
         Returns:
             DataFlowKernel object
@@ -73,6 +73,11 @@ class DataFlowKernel(object):
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
+
+        # Load checkpoints if any
+        cpts = self.load_checkpoints(checkpointFiles)
+        # Initialize the memoizer
+        self.memoizer = Memoizer(self, memoize=memoize, checkpoint=cpts)
 
         if self._config :
             self._executors_managed = True
@@ -89,13 +94,11 @@ class DataFlowKernel(object):
             self.fail_retries = fail_retries
             self.lazy_fail    = lazy_fail
             self.executors    = {i:x for i,x in enumerate(executors)}
-            print("Executors : ", self.executors)
             self.flowcontrol  = FlowNoControl(self, None)
 
         self.task_count      = 0
         self.fut_task_lookup = {}
         self.tasks           = {}
-
 
         logger.debug("Using executors: {0}".format(self.executors))
         atexit.register(self.cleanup)
@@ -123,7 +126,7 @@ class DataFlowKernel(object):
 
         return self._config
 
-    def handle_update(self, task_id, future):
+    def handle_update(self, task_id, future, memo_cbk=False):
         ''' This function is called only as a callback from a task being done
         Move done task from runnable -> done
         Move newly doable tasks from pending -> runnable , and launch
@@ -131,9 +134,16 @@ class DataFlowKernel(object):
         Args:
              task_id (string) : Task id which is a uuid string
              future (Future) : The future object corresponding to the task which makes this callback
+
+        KWargs:
+             memo_cbk(Bool) : Indicates that the call is coming from a memo update, that does not require
+                              additional memo updates.
         '''
         if future.done():
 
+            if not memo_cbk:
+                # Update the memoizer with the new result if this is not a result from a memo lookup
+                self.memoizer.update_memo(task_id, self.tasks[task_id], future)
             # Untested
             if not self.lazy_fail:
                 # Fail early
@@ -159,7 +169,8 @@ class DataFlowKernel(object):
                 new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
                                                                       self.tasks[tid]['args'],
                                                                       self.tasks[tid]['kwargs'])
-
+                self.tasks[tid]['args'] = new_args
+                self.tasks[tid]['kwargs'] = kwargs
                 if not exceptions :
                     logger.debug("Task[%s] Launching Task".format(tid))
                     # There are no dependency errors
@@ -191,58 +202,6 @@ class DataFlowKernel(object):
 
         return
 
-
-    def write_status_log(self):
-        ''' Write status log.
-
-        Args:
-           None
-
-        Kwargs:
-           None
-        '''
-
-        state_lens = {States.unsched : 0,
-                      States.pending : 0,
-                      States.runnable: 0,
-                      States.running : 0,
-                      States.done    : 0,
-                      States.failed  : 0,
-                      States.dep_fail: 0}
-
-        for tid in self.tasks:
-            state_lens[self.tasks[tid]['status']] += 1
-
-        logger.debug("Pending:%d   Runnable:%d   Done:%d", state_lens[States.pending],
-                     state_lens[States.runnable],
-                     state_lens[States.done])
-
-
-    def print_status_log(self):
-        ''' Print status log in terms of pending, runnable and done tasks
-
-        Args:
-           None
-
-        Kwargs:
-           None
-        '''
-
-        state_lens = {States.unsched : 0,
-                      States.pending : 0,
-                      States.runnable: 0,
-                      States.running : 0,
-                      States.done    : 0,
-                      States.failed  : 0,
-                      States.dep_fail: 0}
-
-        for tid in self.tasks:
-            state_lens[self.tasks[tid]['status']] += 1
-
-        print("Pending:{0}   Runnable:{1}   Done:{2}".format( state_lens[States.pending],
-                                                              state_lens[States.runnable],
-                                                              state_lens[States.done] ))
-
     def launch_task(self, task_id, executable, *args, **kwargs):
         ''' Handle the actual submission of the task to the executor layer
 
@@ -264,6 +223,11 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         '''
+
+        hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
+        if hit:
+            self.handle_update(task_id, memo_fu, memo_cbk=True)
+            return memo_fu
 
         task_name    = executable.__name__
         target_sites = self.tasks[task_id]["sites"]
@@ -384,7 +348,7 @@ class DataFlowKernel(object):
         return new_args, kwargs, dep_failures
 
 
-    def submit (self, func, *args, parsl_sites='all', **kwargs):
+    def submit (self, func, *args, parsl_sites='all', fn_hash=None, memoize=True, **kwargs):
         ''' Add task to the dataflow system.
 
         Args:
@@ -418,9 +382,14 @@ class DataFlowKernel(object):
                      'func_name'  : func.__name__,
                      'args'       : args,
                      'kwargs'     : kwargs,
+                     'fn_hash'    : fn_hash,
+                     'memoize'    : memoize,
                      'callback'   : None,
                      'dep_cnt'    : dep_cnt,
                      'exec_fu'    : None,
+                     'checkpoint' : None,
+                     'fail_count' : 0,
+                     'env'        : None,
                      'status'     : States.unsched,
                      'app_fu'     : None  }
 
@@ -436,6 +405,8 @@ class DataFlowKernel(object):
         if dep_cnt == 0 :
             # Set to running
             new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id, args, kwargs)
+            self.tasks[task_id]['args'] = new_args
+            self.tasks[task_id]['kwargs'] = kwargs
             if not exceptions:
                 self.tasks[task_id]['exec_fu'] = self.launch_task(task_id, func, *new_args, **kwargs)
                 self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'],
@@ -465,7 +436,6 @@ class DataFlowKernel(object):
         logger.debug("Task:%s Launched with AppFut:%s", task_id, task_def['app_fu'])
         return task_def['app_fu']
 
-
     def cleanup (self):
         '''  DataFlowKernel cleanup. This involves killing resources explicitly and
         sending die messages to IPP workers.
@@ -494,3 +464,125 @@ class DataFlowKernel(object):
             executor.shutdown()
 
         logger.debug("DFK cleanup complete")
+
+    def checkpoint(self):
+        ''' Checkpoint the dfk incrementally to a checkpoint file.
+        When called, every task that has been completed yet not
+        checkpointed is checkpointed to a file
+
+        Returns:
+            Checkpoint dir if checkpoints were written successfully.
+            By default the checkpoints are written to the RUNDIR of the current
+            run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
+        '''
+
+        logger.debug("Checkpointing.. ")
+        start = time.time()
+
+        checkpoint_dir = '{0}/checkpoint'.format(self.rundir)
+        checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
+        checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
+
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+
+        with open(checkpoint_dfk, 'wb') as f:
+            state = {'config' : self.config,
+                     'rundir' : self.rundir,
+                     'task_count' : self.task_count
+                     }
+            pickle.dump(state, f)
+
+        print("Dumped DFK")
+        count = 0
+
+        with open(checkpoint_tasks, 'wb+') as f:
+            for task_id in self.tasks :
+                if self.tasks[task_id]['app_fu'].done() and \
+                   not self.tasks[task_id]['checkpoint']:
+                    hashsum = self.tasks[task_id]['hashsum']
+                    if not hashsum :
+                        continue
+                    t = { 'hash' : hashsum,
+                          'exception' : None,
+                          'result' : None }
+                    try:
+                        # Asking for the result will raise an exception if
+                        # the app had failed. Should we even checkpoint these?
+                        # TODO : Resolve this question ?
+                        r = self.memoizer.hash_lookup(hashsum).result()
+                    except Exception as e:
+                        t['exception'] = e
+                    else:
+                        t['result'] = r
+
+                    # We are using pickle here since pickle dumps to a file in 'w+'
+                    # mode behave like a incremental log.
+                    pickle.dump(t, f)
+                    count += 1
+                    self.tasks[task_id]['checkpoint'] = True
+                    logger.debug("Task[%s]: checkpointed", task_id)
+
+        end = time.time()
+        print("Done dumping {} tasks in {}s".format(count, end-start))
+        return checkpoint_dir
+
+    def _load_checkpoints (self, checkpointDirs):
+        ''' Load a checkpoint file into a lookup table.
+
+        The data being loaded from the pickle file mostly contains input
+        attributes of the task: func, args, kwargs, env...
+        To simplify the check of whether the exact task has been completed
+        in the checkpoint, we hash these input params and use it as the key
+        for the memoized lookup table.
+
+        Args:
+            - checkpointDirs (list) : List of filepaths to checkpoints
+              Eg. ['runinfo/001', 'runinfo/002']
+
+        Returns:
+            - memoized_lookup_table (dict)
+        '''
+        memo_lookup_table = {}
+
+        for checkpoint_dir in checkpointDirs:
+            checkpoint_file = os.path.join(checkpoint_dir, 'checkpoint', 'tasks.pkl')
+            with open(checkpoint_file, 'rb') as f:
+                while True:
+                    try:
+                        data = pickle.load(f)
+                        #Copy and hash only the input attributes
+                        memo_fu = Future()
+                        if data['exception'] :
+                            memo_fu.set_exception(data['exception'])
+                        else:
+                            memo_fu.set_result(data['result'])
+                        memo_lookup_table[data['hash']] = memo_fu
+
+                    except EOFError:
+                        # Done with the checkpoint file
+                        break
+            logger.debug("Completed loading checkpoint:{0} with {1} tasks".format(checkpoint_file,
+                                                                              len(memo_lookup_table.keys())))
+        return memo_lookup_table
+
+    def load_checkpoints(self, checkpointDirs):
+        ''' Load checkpoints from the checkpoint files into a dictionary.
+        The results are used to pre-populate the memoizer's lookup_table
+
+        Kwargs:
+             - checkpointDirs (list) : List of run folder to use as checkpoints
+               Eg. ['runinfo/001', 'runinfo/002']
+
+        Returns:
+             - dict containing, hashed -> future mappings
+        '''
+        self.memo_lookup_table = None
+
+        if not checkpointDirs :
+            return {}
+
+        if type(checkpointDirs) is not list :
+            raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
+
+        return self._load_checkpoints(checkpointDirs)

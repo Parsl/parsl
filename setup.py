@@ -1,17 +1,11 @@
-from setuptools import setup
+import os
+from setuptools import setup, find_packages
 from parsl.version import VERSION
 
-install_requires = [
-    'ipyparallel',
-    'libsubmit>=0.2.5'
-    ]
+with open('requirements.txt') as f:
+    install_requires = f.readlines()
 
-tests_require = [
-    'ipyparallel',
-    'mock>=1.0.0',
-    'nose',
-    'pytest'
-    ]
+#tests_require = parse_requirements('test-requirements.txt')
 
 setup(
     name='parsl',
@@ -24,8 +18,7 @@ setup(
     license='Apache 2.0',
     download_url = 'https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
     package_data={'': ['LICENSE']},
-    packages=['parsl', 'parsl.app', 'parsl.dataflow', 'parsl.executors',
-              'parsl.execution_provider', 'parsl.data_provider'],
+    packages=find_packages(),
     install_requires=install_requires,
     classifiers = [
         # Maturity
@@ -39,5 +32,4 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     keywords = ['Workflows', 'Scientific computing'],
-    #tests_require=tests_require
 )
