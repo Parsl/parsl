@@ -31,7 +31,7 @@ def test_factory_1():
                      }
                  }
              }
-            }
+             }
         ],
         "globals": {
             "lazyErrors": True
@@ -53,8 +53,8 @@ def test_factory_2():
                    "maxParallelism": 2,
                    "minParallelism": 0,
                    "walltime": "00:25:00",
-                  }
-                }}
+                   }
+                 }}
 
     epf = ExecProviderFactory()
     executor = epf.make(config)
@@ -72,7 +72,7 @@ def test_factory_3():
                  "provider": None,  # LIKELY SHOULD BE BOUND TO SITE
                  "maxThreads": 4
              }
-            }
+             }
         ],
         "globals": {
             "lazyErrors": True

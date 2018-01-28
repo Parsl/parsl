@@ -66,7 +66,7 @@ def update_config(config, rundir):
                     "controller": {
                         "mode": "auto"
                     }
-    }
+                   }
 
     sites = config["sites"]
     del config["sites"]

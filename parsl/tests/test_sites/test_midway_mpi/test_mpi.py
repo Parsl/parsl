@@ -29,7 +29,7 @@ config = {"site": "midway_westmere",
                 "account": "pi-chard",
                 "submit_script_dir": ".scripts"
                 }
-            }}
+             }}
 
 
 import subprocess

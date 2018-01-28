@@ -31,7 +31,7 @@ pip3 install ipyparallel"""
                   }
               }
           }
-        }
+         }
     ],
     "globals": {"lazyErrors": True}
 }

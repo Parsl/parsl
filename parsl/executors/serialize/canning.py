@@ -50,7 +50,7 @@ def interactive(f):
         mainmod = __import__('__main__')
         f = FunctionType(f.__code__, mainmod.__dict__,
             f.__name__, f.__defaults__,
-        )
+                         )
     # associate with __main__ for uncanning
     f.__module__ = '__main__'
     return f

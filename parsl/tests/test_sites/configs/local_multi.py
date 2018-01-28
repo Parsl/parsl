@@ -15,7 +15,7 @@ threads_ipp = {
               "provider": None,
               "maxThreads": 4
           }
-        },
+         },
         {"site": "Local_IPP",
           "auth": {
               "channel": None,
@@ -30,7 +30,7 @@ threads_ipp = {
                   "initBlocks": 4,
               }
           }
-        }],
+         }],
 
     "globals": {
         "lazyErrors": True
@@ -57,7 +57,7 @@ multi_ipp = {
                   "initBlocks": 4,
               }
           }
-        },
+         },
         {"site": "Local_IPP_2",
           "auth": {"channel": None},
           "execution": {
@@ -70,7 +70,7 @@ multi_ipp = {
                   "initBlocks": 2,
               }
           }
-        }],
+         }],
     "globals": {
         "lazyErrors": True
     }

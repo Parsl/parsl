@@ -24,7 +24,7 @@ singleNode = {
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True}
 }
@@ -50,7 +50,7 @@ singleNodeLocal = {
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True}
 }
@@ -80,7 +80,7 @@ multiCore = {
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True}
 }
@@ -109,7 +109,7 @@ multiNode = {
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True}
 }

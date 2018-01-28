@@ -13,7 +13,7 @@ import argparse
 pool1_config = {"poolname": "pool1",
                 "queue": "bigmem",
                 "walltime": "00:20:00"
-               }
+                }
 
 pool1 = IPyParallelExecutor(pool1_config)
 dfk = DataFlowKernel([pool1])

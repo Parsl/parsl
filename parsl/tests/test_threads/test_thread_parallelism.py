@@ -18,7 +18,7 @@ localThreads = {
               "provider": None,
               "maxThreads": 10
           }
-        }],
+         }],
 }
 
 dfk = DataFlowKernel(config=localThreads)

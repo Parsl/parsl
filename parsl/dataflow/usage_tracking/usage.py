@@ -123,7 +123,7 @@ class UsageTracker (object):
                     'sites': site_count,
                     'c_time': None,
                     'test': self.test_mode,
-        }
+                   }
 
         return json.dumps(message)
 

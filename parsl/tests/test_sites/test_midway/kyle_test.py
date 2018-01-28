@@ -40,7 +40,7 @@ config = {
 
           }
 
-        }
+         }
 
         ],
     "globals": {"lazyErrors": True},

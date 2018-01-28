@@ -29,10 +29,10 @@ config = {
               "provider": None,
               "maxThreads": 2,
           }
-        }],
+         }],
     "globals": {"lazyErrors": True,
                  "checkpoint": True,
-    }
+                }
 }
 dfk = DataFlowKernel(config=config, checkpointFiles=[last_checkpoint])
 

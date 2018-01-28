@@ -19,7 +19,7 @@ config = {
               "provider": None,
               "maxThreads": 4,
           }
-        }],
+         }],
     "globals": {"memoize": False}
 }
 dfk = DataFlowKernel(config=config)

@@ -36,7 +36,7 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
                   }
               }
           }
-        }
+         }
     ],
     "globals": {"lazyErrors": True}
 }
@@ -80,7 +80,7 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True}
 }
@@ -124,7 +124,7 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True}
 }

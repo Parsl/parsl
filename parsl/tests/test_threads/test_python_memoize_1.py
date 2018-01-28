@@ -19,10 +19,10 @@ config = {
               "provider": None,
               "maxThreads": 4,
           }
-        }],
+         }],
     "globals": {"lazyErrors": True,
                  "checkpoint": True,
-    }
+                }
 }
 
 dfk = DataFlowKernel(config=config)

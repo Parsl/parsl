@@ -33,7 +33,7 @@ singleNode = {
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True},
     "controller": {"publicIp": '*'}
@@ -76,7 +76,7 @@ spotNode = {
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True},
     "controller": {"publicIp": '*'}
@@ -120,7 +120,7 @@ badSpotConfig = {
                   }
               }
           }
-        }
+         }
         ],
     "globals": {"lazyErrors": True},
     "controller": {"publicIp": '*'}

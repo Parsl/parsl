@@ -46,7 +46,7 @@ test_matrix = {div_0: {'exit_code': 1},
                 command_not_found: {'exit_code': 127},
                 invalid_exit: {'exit_code': 128},
                 not_executable: {'exit_code': 126}
-              }
+               }
 
 
 

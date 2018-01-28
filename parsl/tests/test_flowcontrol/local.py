@@ -7,7 +7,7 @@ localThreads = {
               "provider": None,
               "maxThreads": 4
           }
-        }],
+         }],
     "globals": {"lazyErrors": True}
 }
 
@@ -25,7 +25,7 @@ localIPP = {
                   "initBlocks": 0,
               }
           }
-        }]
+         }]
 }
 
 ''' Use the following config with caution.
@@ -48,7 +48,7 @@ localIPPReuse = {
                   "maxBlocks": 1,
               }
           }
-        }
+         }
         ],
     "globals": {
         "lazyErrors": True
