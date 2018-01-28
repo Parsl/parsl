@@ -76,7 +76,6 @@ class DataFlowKernel(object):
 
         # Load checkpoints if any
         cpts = self.load_checkpoints(checkpointFiles)
-        print("Checkpoints : ", cpts)
         # Initialize the memoizer
         self.memoizer = Memoizer(self, memoize=memoize, checkpoint=cpts)
 
@@ -350,7 +349,7 @@ class DataFlowKernel(object):
         return new_args, kwargs, dep_failures
 
 
-    def submit (self, func, *args, parsl_sites='all', memoize=True, **kwargs):
+    def submit (self, func, *args, parsl_sites='all', fn_hash=None, memoize=True, **kwargs):
         ''' Add task to the dataflow system.
 
         Args:
@@ -384,6 +383,7 @@ class DataFlowKernel(object):
                      'func_name'  : func.__name__,
                      'args'       : args,
                      'kwargs'     : kwargs,
+                     'fn_hash'    : fn_hash,
                      'memoize'    : memoize,
                      'callback'   : None,
                      'dep_cnt'    : dep_cnt,

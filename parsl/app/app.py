@@ -6,7 +6,6 @@ Here lies the definitions for the @App decorator and the APP classes.
 The APP class encapsulates a generic leaf task that can be executed asynchronously.
 
 '''
-
 import sys
 import logging
 import subprocess

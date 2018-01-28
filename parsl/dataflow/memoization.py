@@ -75,7 +75,7 @@ class Memoizer(object):
 
         # Function name TODO: Add fn body later
         t = [serialize_object(task['func_name'])[0],
-             # serialize_object(task['func'].__code__)[0],
+             serialize_object(task['fn_hash'])[0],
              serialize_object(task['args'])[0],
              serialize_object(task['kwargs'])[0],
              serialize_object(task['env'])[0]]
