@@ -46,7 +46,6 @@ class UsageTracker (object) :
         self.dfk     = dfk
         self.config  = self.dfk.config
         self.uuid    = str(uuid.uuid4())
-        print("Target : {}:{}".format(self.UDP_IP, self.UDP_PORT))
         self.test_mode, self.tracking_enabled = self.check_tracking_enabled()
         logger.debug("Tracking status: {}".format(self.tracking_enabled))
         logger.debug("Testing mode   : {}".format(self.test_mode))
