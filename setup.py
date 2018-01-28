@@ -1,17 +1,10 @@
+from pip.req import parse_requirements
 from setuptools import setup
 from parsl.version import VERSION
 
-install_requires = [
-    'ipyparallel',
-    'libsubmit>=0.2.5'
-    ]
+install_requires = parse_requirements('requirements.txt')
 
-tests_require = [
-    'ipyparallel',
-    'mock>=1.0.0',
-    'nose',
-    'pytest'
-    ]
+tests_require = parse_requirements('test-requirements.txt')
 
 setup(
     name='parsl',
