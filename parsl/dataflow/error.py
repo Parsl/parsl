@@ -32,10 +32,10 @@ class BadCheckpoint(DataFlowExceptions):
     def __init__(self, reason):
         self.reason = reason
 
-    def __repr__ (self):
+    def __repr__(self):
         return self.reason
 
-    def __str__ (self):
+    def __str__(self):
         return self.__repr__()
 
 class DependencyError(DataFlowExceptions):
@@ -57,9 +57,9 @@ class DependencyError(DataFlowExceptions):
         self.task_id = task_id
         self.outputs = outputs
 
-    def __repr__ (self):
+    def __repr__(self):
         return "[{}] Dependency Failure from :{}".format(self.task_id,
                                                          self.dependent_exceptions)
 
-    def __str__ (self):
+    def __str__(self):
         return self.__repr__()

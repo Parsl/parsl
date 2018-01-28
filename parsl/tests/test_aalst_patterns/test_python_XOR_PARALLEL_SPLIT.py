@@ -34,7 +34,7 @@ def test_xor_split():
     '''
     x = random()
 
-    if x.result() > 5 :
+    if x.result() > 5:
         print("Result > 5")
         return 0
     else:
@@ -43,7 +43,7 @@ def test_xor_split():
 
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="10", help="width of the pipeline")

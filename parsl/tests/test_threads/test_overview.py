@@ -21,7 +21,7 @@ def app_sum(inputs=[]):
     return sum(inputs)
 
 
-def test_1 (N = 10) :
+def test_1(N = 10):
     ''' Testing code snippet from the documentation
     '''
 
@@ -45,7 +45,7 @@ def slow_app_double(x, sleep_dur=0.05):
     return x*2
 
 
-def test_2 (N = 10) :
+def test_2(N = 10):
     ''' Testing code snippet from the documentation
     '''
 
@@ -62,7 +62,7 @@ def test_2 (N = 10) :
 
     assert total.result() != sum(items), "Sum is wrong {0} != {1}".format(total.result(), sum(items))
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     parser   = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true', help="Debug enable flag")
     parser.add_argument("-c", "--count", default='100', help="Count of apps to launch")

@@ -12,7 +12,7 @@ dfk = DataFlowKernel(workers)
 @App('bash', dfk)
 def multi_line(inputs=[], outputs=[],
                stderr=os.path.abspath('std.err'),
-               stdout=os.path.abspath('std.out') ):
+               stdout=os.path.abspath('std.out')):
     cmd_line = '''echo {inputs[0]} &> {outputs[0]}
     echo {inputs[1]} &> {outputs[1]}
     echo {inputs[2]} &> {outputs[2]}
@@ -53,7 +53,7 @@ def run_test():
     os.remove('std.out')
     return True
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")

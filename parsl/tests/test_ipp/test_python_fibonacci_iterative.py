@@ -14,7 +14,7 @@ def test_fibonacci(num = 5):
     x1 = 0
     x2 = 1
     counter = 0
-    results = [ ]
+    results = []
     results.append(0)
     results.append(1)
     while counter < num - 2:

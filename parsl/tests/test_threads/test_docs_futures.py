@@ -20,7 +20,7 @@ def double(x):
     return x*2
 
 
-def test_1 ():
+def test_1():
 
     x = double(5)
     print(x.done())
@@ -31,7 +31,7 @@ def sleep_double(x):
     time.sleep(0.2)
     return x*2
 
-def test_2 () :
+def test_2():
 
     # doubled_x is an AppFuture
     doubled_x = sleep_double(10)
@@ -48,7 +48,7 @@ def wait_sleep_double(x, fu_1, fu_2):
     return x*2
 
 
-def test_3 () :
+def test_3():
 
     start = time.time()
 
@@ -69,14 +69,14 @@ def test_3 () :
 
     delta =  (end-start)*10
     print("delta : ", delta)
-    assert delta > 4 , "Took too little time"
-    assert delta < 5 , "Took too much time"
+    assert delta > 4, "Took too little time"
+    assert delta < 5, "Took too much time"
 
 @App('python', dfk)
 def bad_divide(x):
     return 6/x
 
-def test_4 () :
+def test_4():
 
     doubled_x = bad_divide(0)
 
@@ -101,7 +101,7 @@ def echo(message, outputs=[]):
 def cat(inputs=[], outputs=[], stdout='cat.out', stderr='cat.err'):
     return 'cat {inputs[0]} > {outputs[0]}'
 
-def test_5 ():
+def test_5():
     ''' Testing behavior of outputs '''
     #Call echo specifying the outputfile
     hello = echo("Hello World!", outputs=['hello1.txt'])
@@ -116,7 +116,7 @@ def test_5 ():
     with open(hello2.outputs[0].result(), 'r') as f:
         print(f.read())
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     test_1()
     test_2()
     test_3()

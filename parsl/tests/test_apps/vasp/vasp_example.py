@@ -35,7 +35,7 @@ dfk = DataFlowKernel(workers)
 
 def create_dirs(cwd):
 
-    for dir in ['relax.01', 'relax.02', 'relax.03'] :
+    for dir in ['relax.01', 'relax.02', 'relax.03']:
         rel_dir = '{0}/{1}'.format(cwd, dir)
         if os.path.exists(rel_dir):
             shutil.rmtree(rel_dir)
@@ -46,7 +46,7 @@ def create_dirs(cwd):
             with open('{0}/results'.format(rdir, i), 'w') as f:
                 f.write("{0} {1} - test data\n".format(i, dir))
 
-    for dir in ['neb01', 'neb02', 'neb03', 'neb04'] :
+    for dir in ['neb01', 'neb02', 'neb03', 'neb04']:
         rel_dir = '{0}/{1}'.format(cwd, dir)
         if os.path.exists(rel_dir):
             shutil.rmtree(rel_dir)
@@ -57,7 +57,7 @@ def create_dirs(cwd):
 
 
 @App('python', dfk)
-def ls (pwd, outputs=[]):
+def ls(pwd, outputs=[]):
     import os
     items = os.listdir(pwd)
     with open(outputs[0], 'w') as f:
@@ -67,10 +67,10 @@ def ls (pwd, outputs=[]):
     return items
 
 @App('bash', dfk)
-def catter (dir, outputs=[], stdout=None, stderr=None):
+def catter(dir, outputs=[], stdout=None, stderr=None):
     cmd_line = 'cat {0}/*/results > {outputs[0]}'
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     pwd = os.getcwd()
     create_dirs(pwd)
@@ -86,7 +86,7 @@ if __name__ == "__main__" :
                                   stderr='{0}.stderr'.format(dir))
 
     for dir in dir_fus:
-        try :
+        try:
             print(dir_fus[dir][0].result())
-        except Exception as e :
+        except Exception as e:
             print ("Caught exception{0}  on {1}".format(e, dir))

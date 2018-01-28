@@ -40,7 +40,7 @@ def test_python_remote_slow(count=10):
     for fu in fus:
         print(fu.result())
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
 
     test_python_remote()

@@ -27,7 +27,7 @@ def generate(limit):
 def save(message, outputs=[]):
     return 'echo %s &> {outputs[0]}' % (message)
 
-def test_procedural (N=10):
+def test_procedural(N=10):
     ''' Procedural workflow example from docs on
     Composing a workflow
     '''
@@ -41,7 +41,7 @@ def test_procedural (N=10):
         assert item >= 1, "Expected file to contain int >= 1"
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     test_procedural()
 

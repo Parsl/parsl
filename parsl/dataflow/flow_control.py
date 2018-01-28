@@ -13,7 +13,7 @@ class FlowNoControl(object):
     with null handlers so as to mimic the FlowControl class.
     '''
 
-    def __init__ (self, dfk, config, *args, threshold=2, interval=2):
+    def __init__(self, dfk, config, *args, threshold=2, interval=2):
         ''' Initialize the flowcontrol object. This does nothing.
 
         Args:
@@ -71,7 +71,7 @@ class FlowControl(object):
 
     '''
 
-    def __init__ (self, dfk, config, *args, threshold=20, interval=5):
+    def __init__(self, dfk, config, *args, threshold=20, interval=5):
         ''' Initialize the flowcontrol object
         We start the timer thread here
 
@@ -115,7 +115,7 @@ class FlowControl(object):
 
         self._event_buffer.extend([event_id])
         self._event_count += 1
-        if self._event_count >= self.threshold :
+        if self._event_count >= self.threshold:
             logger.debug("Eventcount >= threshold")
             self.make_callback(kind="event")
 
@@ -135,10 +135,10 @@ class FlowControl(object):
 
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     print("This is broken")
-    def cback (*args):
+    def cback(*args):
         print("*"*40)
         print("Callback at {0} with args : {1}".format(time.time(),args))
         print("*"*40)
@@ -156,5 +156,5 @@ if __name__ == "__main__" :
         elif x.lower() == 'x':
             print("Exiting ...")
             break
-        else :
+        else:
             print("Continuing.. got[%s]", x)

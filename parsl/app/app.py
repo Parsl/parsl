@@ -28,7 +28,7 @@ class AppBase (object):
 
     """
 
-    def __init__ (self, func, executor, walltime=60, sites='all', exec_type="bash"):
+    def __init__(self, func, executor, walltime=60, sites='all', exec_type="bash"):
         ''' Constructor for the APP object.
 
         Args:
@@ -62,13 +62,13 @@ class AppBase (object):
         self.inputs  = sig.parameters['inputs'].default  if 'inputs'  in sig.parameters else []
         self.outputs = sig.parameters['outputs'].default if 'outputs' in sig.parameters else []
 
-    def __call__ (self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         ''' The __call__ function must be implemented in the subclasses
         '''
         raise NotImplemented
 
 
-def app_wrapper (func):
+def app_wrapper(func):
 
     def wrapper(*args, **kwargs):
         logger.debug("App wrapper begins")

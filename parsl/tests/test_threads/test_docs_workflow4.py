@@ -37,7 +37,7 @@ def test_parallel_dataflow():
 
     # create 5 files with random numbers
     output_files = []
-    for i in range (5):
+    for i in range(5):
         output_files.append(generate(outputs=['random-%s.txt' % i]))
 
     # concatenate the files into a single file
@@ -48,7 +48,7 @@ def test_parallel_dataflow():
     print (totals.result())
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     test_parallel_dataflow()
 

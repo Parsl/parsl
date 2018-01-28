@@ -62,7 +62,7 @@ def test_bash():
     print(x.result())
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

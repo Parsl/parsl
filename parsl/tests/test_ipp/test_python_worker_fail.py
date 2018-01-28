@@ -22,7 +22,7 @@ def import_echo(x, string, sleep=0, stdout=None):
     return x*5
 
 
-def test_parallel_for (n=10):
+def test_parallel_for(n=10):
 
     d = {}
     start = time.time()
@@ -30,7 +30,7 @@ def test_parallel_for (n=10):
         d[i] = import_echo(2, "hello", sleep=20)
         #time.sleep(0.01)
 
-    assert len(d.keys())   == n , "Only {0}/{1} keys in dict".format(len(d.keys()), n)
+    assert len(d.keys())   == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
 
     [d[i].result() for i in d]
     print("Duration : {0}s".format(time.time() - start))
@@ -38,7 +38,7 @@ def test_parallel_for (n=10):
     return d
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

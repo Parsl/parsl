@@ -25,9 +25,9 @@ def slow_increment(x, dur):
 def test_increment(depth=5):
     futs = {0:0}
     for i in range(1,depth):
-        futs[i] = increment( futs[i-1] )
+        futs[i] = increment(futs[i-1])
 
-    x = sum([ futs[i].result() for i in futs if type(futs[i]) != int ])
+    x = sum([futs[i].result() for i in futs if type(futs[i]) != int])
     assert x == sum(range(1,depth)), "[TEST] increment [FAILED]"
 
 
@@ -35,14 +35,14 @@ def test_increment(depth=5):
 def test_slow_increment(depth=5):
     futs = {0:0}
     for i in range(1,depth):
-        futs[i]  = slow_increment( futs[i-1], 0.01)
+        futs[i]  = slow_increment(futs[i-1], 0.01)
 
-    x = sum([futs[i].result()    for i in futs if type(futs[i]) != int ])
+    x = sum([futs[i].result()    for i in futs if type(futs[i]) != int])
 
     assert x == sum(range(1,depth)), "[TEST] slow_increment [FAILED]"
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="5", help="width of the pipeline")
@@ -59,7 +59,7 @@ if __name__ == '__main__' :
                 test(depth=int(width))
 
             except AssertionError as e:
-                print("[TEST]  %s width:%s [FAILED]" % (test.__name__, width ))
+                print("[TEST]  %s width:%s [FAILED]" % (test.__name__, width))
                 print(e)
 
             else:

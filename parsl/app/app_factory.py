@@ -96,8 +96,8 @@ class AppFactoryFactory(object):
              object(AppFactory)
         '''
         self.name = name
-        self.apps = {'bash' : BashApp,
-                     'python' : PythonApp}
+        self.apps = {'bash': BashApp,
+                     'python': PythonApp}
 
     def make(self, kind, executor, func, **kwargs):
         ''' Creates a new App of the kind specified

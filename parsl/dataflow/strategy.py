@@ -6,7 +6,7 @@ import math
 
 logger = logging.getLogger(__name__)
 
-class Strategy (object) :
+class Strategy (object):
     '''FlowControl Strategy
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
@@ -99,7 +99,7 @@ class Strategy (object) :
 
     '''
 
-    def __init__ (self, dfk):
+    def __init__(self, dfk):
         ''' Initialize strategy
         '''
         self.dfk = dfk
@@ -108,11 +108,11 @@ class Strategy (object) :
         self.max_idletime = 60*2 # 2 minutes
 
         for site in self.dfk.config["sites"]:
-            self.sites[site['site']] = {'idle_since' : None,
-                                        'config'     : site }
+            self.sites[site['site']] = {'idle_since': None,
+                                        'config': site}
 
-        self.strategies = { None      : self._strategy_noop,
-                            'simple'  : self._strategy_simple }
+        self.strategies = {None: self._strategy_noop,
+                            'simple': self._strategy_simple}
 
         strtgy_name = self.config['globals'].get('strategy', None)
         self.strategize = self.strategies.get(strtgy_name,
@@ -121,7 +121,7 @@ class Strategy (object) :
         logger.debug("Scaling strategy: {0}".format(strtgy_name))
 
 
-    def _strategy_noop (self, tasks, *args, kind=None, **kwargs):
+    def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
         ''' Do nothing!
 
         Args:
@@ -132,7 +132,7 @@ class Strategy (object) :
         '''
         pass
 
-    def _strategy_simple (self, tasks, *args, kind=None, **kwargs):
+    def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
         ''' Peek at the DFK and the sites specified,
 
         We assume here that tasks are not held in a runnable
@@ -152,13 +152,13 @@ class Strategy (object) :
         #for task in tasks :
         #    if self.dfk.tasks[task]:
 
-        for sitename in self.dfk.executors :
+        for sitename in self.dfk.executors:
 
             exc = self.dfk.executors[sitename]
             site_config = self.sites[sitename]['config']
             site_parallelism = site_config["execution"]
 
-            if not exc.scaling_enabled :
+            if not exc.scaling_enabled:
                 logger.debug("Site:{0} Status:STATIC".format(sitename))
                 continue
 
@@ -189,10 +189,10 @@ class Strategy (object) :
 
             # Case 1
             # No tasks.
-            if len(active_tasks) == 0 :
+            if len(active_tasks) == 0:
                 # Case 1a
                 # Fewer blocks that minBlocks
-                if active_blocks <= minBlocks :
+                if active_blocks <= minBlocks:
                     # Ignore
                     #logger.debug("Strategy: Case.1a")
                     pass
@@ -219,7 +219,7 @@ class Strategy (object) :
 
             # Case 2
             # More tasks than the available slots.
-            elif (float(active_slots) / len(active_tasks)) < parallelism :
+            elif (float(active_slots) / len(active_tasks)) < parallelism:
                 # Case 2a
                 # We have the max blocks possible
                 if active_blocks >= maxBlocks:
@@ -231,7 +231,7 @@ class Strategy (object) :
                 else:
                     #logger.debug("Strategy: Case.2b")
                     excess = math.ceil((len(active_tasks) * parallelism) - active_slots)
-                    excess_blocks = math.ceil (float(excess) / taskBlocks)
+                    excess_blocks = math.ceil(float(excess) / taskBlocks)
                     logger.debug("Requesting : {}".format(excess_blocks))
                     exc.scale_out(excess_blocks)
 
@@ -242,6 +242,6 @@ class Strategy (object) :
                 pass
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     pass

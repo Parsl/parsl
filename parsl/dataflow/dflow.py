@@ -79,7 +79,7 @@ class DataFlowKernel(object):
         # Initialize the memoizer
         self.memoizer = Memoizer(self, memoize=memoize, checkpoint=cpts)
 
-        if self._config :
+        if self._config:
             self._executors_managed = True
             # Create the executors
             epf = EPF()
@@ -171,7 +171,7 @@ class DataFlowKernel(object):
                                                                       self.tasks[tid]['kwargs'])
                 self.tasks[tid]['args'] = new_args
                 self.tasks[tid]['kwargs'] = kwargs
-                if not exceptions :
+                if not exceptions:
                     logger.debug("Task[%s] Launching Task".format(tid))
                     # There are no dependency errors
                     self.tasks[tid]['status'] = States.running
@@ -232,13 +232,13 @@ class DataFlowKernel(object):
         task_name    = executable.__name__
         target_sites = self.tasks[task_id]["sites"]
         executor     = None
-        if isinstance(target_sites, str) and target_sites.lower() == 'all' :
+        if isinstance(target_sites, str) and target_sites.lower() == 'all':
             # Pick a random site from the list
             site, executor = random.choice(list(self.executors.items()))
 
-        elif isinstance(target_sites, list) :
+        elif isinstance(target_sites, list):
             # Pick a random site from user specified list
-            try :
+            try:
                 site = random.choice(target_sites)
                 executor = self.executors[site]
 
@@ -268,7 +268,7 @@ class DataFlowKernel(object):
         # Check the positional args
         depends = []
         count   = 0
-        for dep in args :
+        for dep in args:
             if isinstance(dep, Future) or issubclass(dep.__class__, Future):
                 if not dep.done():
                     count += 1
@@ -313,9 +313,9 @@ class DataFlowKernel(object):
 
         # Replace item in args
         new_args = []
-        for dep in args :
+        for dep in args:
             if isinstance(dep, Future) or issubclass(type(dep), Future):
-                try :
+                try:
                     new_args.extend([dep.result()])
                 except Exception as e:
                     dep_failures.extend([e])
@@ -326,7 +326,7 @@ class DataFlowKernel(object):
         for key in kwargs:
             dep = kwargs[key]
             if isinstance(dep, Future) or issubclass(type(dep), Future):
-                try :
+                try:
                     kwargs[key] = dep.result()
                 except Exception as e:
                     dep_failures.extend([e])
@@ -336,7 +336,7 @@ class DataFlowKernel(object):
             new_inputs = []
             for dep in kwargs['inputs']:
                 if isinstance(dep, Future) or issubclass(type(dep), Future):
-                    try :
+                    try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
                         dep_failures.extend([e])
@@ -348,7 +348,7 @@ class DataFlowKernel(object):
         return new_args, kwargs, dep_failures
 
 
-    def submit (self, func, *args, parsl_sites='all', fn_hash=None, memoize=True, **kwargs):
+    def submit(self, func, *args, parsl_sites='all', fn_hash=None, memoize=True, **kwargs):
         ''' Add task to the dataflow system.
 
         Args:
@@ -376,22 +376,22 @@ class DataFlowKernel(object):
         # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
-        task_def = { 'depends'    : depends,
-                     'sites'      : parsl_sites,
-                     'func'       : func,
-                     'func_name'  : func.__name__,
-                     'args'       : args,
-                     'kwargs'     : kwargs,
-                     'fn_hash'    : fn_hash,
-                     'memoize'    : memoize,
-                     'callback'   : None,
-                     'dep_cnt'    : dep_cnt,
-                     'exec_fu'    : None,
-                     'checkpoint' : None,
-                     'fail_count' : 0,
-                     'env'        : None,
-                     'status'     : States.unsched,
-                     'app_fu'     : None  }
+        task_def = {'depends': depends,
+                     'sites': parsl_sites,
+                     'func': func,
+                     'func_name': func.__name__,
+                     'args': args,
+                     'kwargs': kwargs,
+                     'fn_hash': fn_hash,
+                     'memoize': memoize,
+                     'callback': None,
+                     'dep_cnt': dep_cnt,
+                     'exec_fu': None,
+                     'checkpoint': None,
+                     'fail_count': 0,
+                     'env': None,
+                     'status': States.unsched,
+                     'app_fu': None}
 
         if task_id in self.tasks:
             raise DuplicateTaskError("Task {0} in pending list".format(task_id))
@@ -402,7 +402,7 @@ class DataFlowKernel(object):
         task_stdout = kwargs.get('stdout', None)
         task_stderr = kwargs.get('stderr', None)
 
-        if dep_cnt == 0 :
+        if dep_cnt == 0:
             # Set to running
             new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id, args, kwargs)
             self.tasks[task_id]['args'] = new_args
@@ -436,7 +436,7 @@ class DataFlowKernel(object):
         logger.debug("Task:%s Launched with AppFut:%s", task_id, task_def['app_fu'])
         return task_def['app_fu']
 
-    def cleanup (self):
+    def cleanup(self):
         '''  DataFlowKernel cleanup. This involves killing resources explicitly and
         sending die messages to IPP workers.
 
@@ -452,11 +452,11 @@ class DataFlowKernel(object):
         self.usage_tracker.send_message()
         # We do not need to cleanup if the executors are managed outside
         # the DFK
-        if not self._executors_managed :
+        if not self._executors_managed:
             return
 
-        for executor in self.executors.values() :
-            if executor.scaling_enabled :
+        for executor in self.executors.values():
+            if executor.scaling_enabled:
                 job_ids = executor.execution_provider.resources.keys()
                 executor.scale_in(len(job_ids))
 
@@ -487,9 +487,9 @@ class DataFlowKernel(object):
             os.makedirs(checkpoint_dir)
 
         with open(checkpoint_dfk, 'wb') as f:
-            state = {'config' : self.config,
-                     'rundir' : self.rundir,
-                     'task_count' : self.task_count
+            state = {'config': self.config,
+                     'rundir': self.rundir,
+                     'task_count': self.task_count
                      }
             pickle.dump(state, f)
 
@@ -497,15 +497,15 @@ class DataFlowKernel(object):
         count = 0
 
         with open(checkpoint_tasks, 'wb+') as f:
-            for task_id in self.tasks :
+            for task_id in self.tasks:
                 if self.tasks[task_id]['app_fu'].done() and \
                    not self.tasks[task_id]['checkpoint']:
                     hashsum = self.tasks[task_id]['hashsum']
-                    if not hashsum :
+                    if not hashsum:
                         continue
-                    t = { 'hash' : hashsum,
-                          'exception' : None,
-                          'result' : None }
+                    t = {'hash': hashsum,
+                          'exception': None,
+                          'result': None}
                     try:
                         # Asking for the result will raise an exception if
                         # the app had failed. Should we even checkpoint these?
@@ -527,7 +527,7 @@ class DataFlowKernel(object):
         print("Done dumping {} tasks in {}s".format(count, end-start))
         return checkpoint_dir
 
-    def _load_checkpoints (self, checkpointDirs):
+    def _load_checkpoints(self, checkpointDirs):
         ''' Load a checkpoint file into a lookup table.
 
         The data being loaded from the pickle file mostly contains input
@@ -553,7 +553,7 @@ class DataFlowKernel(object):
                         data = pickle.load(f)
                         #Copy and hash only the input attributes
                         memo_fu = Future()
-                        if data['exception'] :
+                        if data['exception']:
                             memo_fu.set_exception(data['exception'])
                         else:
                             memo_fu.set_result(data['result'])
@@ -579,10 +579,10 @@ class DataFlowKernel(object):
         '''
         self.memo_lookup_table = None
 
-        if not checkpointDirs :
+        if not checkpointDirs:
             return {}
 
-        if type(checkpointDirs) is not list :
+        if type(checkpointDirs) is not list:
             raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
 
         return self._load_checkpoints(checkpointDirs)

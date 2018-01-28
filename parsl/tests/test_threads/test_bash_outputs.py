@@ -23,7 +23,7 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     return cmd_line
 
 
-def test_parallel_for (n=10):
+def test_parallel_for(n=10):
     ''' Testing a bash outputs in a parallel for
     '''
     outdir='outputs'
@@ -44,19 +44,19 @@ def test_parallel_for (n=10):
                            )
         #time.sleep(0.01)
 
-    assert len(d.keys())   == n , "Only {0}/{1} keys in dict".format(len(d.keys()), n)
+    assert len(d.keys())   == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
 
     [d[i].result() for i in d]
     print([d[i].outputs for i in d])
     print("Duration : {0}s".format(time.time() - start))
     stdout_file_count = len([item for item in os.listdir(outdir) if item.endswith('.out')])
-    assert stdout_file_count == n , "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
+    assert stdout_file_count == n, "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
                                                                           n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

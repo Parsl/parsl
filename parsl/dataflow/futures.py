@@ -49,13 +49,13 @@ class AppFuture(Future):
         Updates the super() with the result() or exception()
         '''
         if executor_fu.done() is True:
-            try :
+            try:
                 super().set_result(executor_fu.result())
             except Exception as e:
                 super().set_exception(e)
 
 
-    def __init__ (self, parent, tid=None, stdout=None, stderr=None):
+    def __init__(self, parent, tid=None, stdout=None, stderr=None):
         ''' Initialize the AppFuture.
 
         Args:
@@ -101,9 +101,9 @@ class AppFuture(Future):
 
     def result(self, timeout=None):
 
-        if self.parent :
+        if self.parent:
             x = self.parent._exception
-            if x :
+            if x:
                 raise x
             return self.parent.result(timeout=timeout)
         else:
@@ -173,7 +173,7 @@ class AppFuture(Future):
                             self.__class__.__name__,
                             id(self),
                             _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.parent._result.__class__.__name__ )
+                            self.parent._result.__class__.__name__)
                 return '<%s at %#x state=%s>' % (
                     self.__class__.__name__,
                     id(self),

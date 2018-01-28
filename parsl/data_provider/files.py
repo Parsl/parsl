@@ -66,7 +66,7 @@ class File(object):
         pass
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     x = File('./files.py')
 

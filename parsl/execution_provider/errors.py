@@ -18,7 +18,7 @@ class BadConfig(ProviderFactoryError):
         - Pool name
     """
 
-    def __init__ (self, pool, reason):
+    def __init__(self, pool, reason):
         super().__init__()
         self.pool = pool
         self.reason = reason

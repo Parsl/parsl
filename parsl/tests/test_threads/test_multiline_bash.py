@@ -49,7 +49,7 @@ def run_test():
     os.remove('std.out')
     return True
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")

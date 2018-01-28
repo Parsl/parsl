@@ -36,11 +36,11 @@ def launch_apps(n, dirpath):
         all_futs[fus] = fus
 
     stdout_file_count = len([item for item in os.listdir(outdir) if item.endswith('.txt')])
-    assert stdout_file_count == n , "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
+    assert stdout_file_count == n, "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
                                                                           n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

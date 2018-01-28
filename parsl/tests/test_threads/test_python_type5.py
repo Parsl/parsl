@@ -34,7 +34,7 @@ def add_two(x, y, dur):
     return x+y
 
 
-def test_func_1 (width=10):
+def test_func_1(width=10):
 
     fu_1 = []
     for i in range(1, width+1):
@@ -50,7 +50,7 @@ def test_func_1 (width=10):
     return fu_2
 
 
-def test_func_2 (width=10):
+def test_func_2(width=10):
 
     fu_1 = []
     for i in range(1, width+1):
@@ -66,7 +66,7 @@ def test_func_2 (width=10):
     return fu_2
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="10", help="width of the pipeline")
@@ -78,7 +78,7 @@ if __name__ == '__main__' :
 
 
     tests = [test_func_1, test_func_2]
-    for test in tests :
+    for test in tests:
         print("*" * 50)
         try:
 

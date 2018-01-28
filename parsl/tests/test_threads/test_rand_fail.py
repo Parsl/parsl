@@ -18,14 +18,14 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     #print("Sleeping for : ", s)
     time.sleep(s)
     x = float(random.randint(0,100)) / 100
-    if x <= fail_prob :
+    if x <= fail_prob:
         #print("Fail")
         raise Exception("App failure")
     else:
         pass
         #print("Succeed")
 
-def test_no_deps (numtasks=10) :
+def test_no_deps(numtasks=10):
     ''' Test basic error handling, with no dependent failures
     '''
 
@@ -36,7 +36,7 @@ def test_no_deps (numtasks=10) :
         fus.extend([fu])
 
     count = 0
-    for fu in fus :
+    for fu in fus:
         try:
             x = fu.result()
         except Exception as e:
@@ -72,7 +72,7 @@ def test_fail_sequence(numtasks=10):
 
     return
 
-def test_deps (numtasks=10) :
+def test_deps(numtasks=10):
     ''' Random failures in branches of Map -> Map -> reduce
 
     App1   App2  ... AppN
@@ -106,7 +106,7 @@ def test_deps (numtasks=10) :
     '''
     fu_final = sleep_fail(1, 0, 0, inputs=fus_2)
 
-    try :
+    try:
         print("Final status : ", fu_final.result())
     except parsl.dataflow.error.DependencyError as e:
         print("Caught the right exception")
@@ -118,7 +118,7 @@ def test_deps (numtasks=10) :
 
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

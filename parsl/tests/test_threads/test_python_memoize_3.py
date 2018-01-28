@@ -13,12 +13,12 @@ workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers], memoize=False)
 
 @App('python', dfk)
-def random_uuid (x):
+def random_uuid(x):
     import uuid
     return str(uuid.uuid4())
 
 
-def test_python_memoization (n=4):
+def test_python_memoization(n=4):
     """ Testing python memoization disable via DFK call
     """
     x = random_uuid(0)
@@ -29,7 +29,7 @@ def test_python_memoization (n=4):
 
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
@@ -39,4 +39,4 @@ if __name__ == '__main__' :
     if args.debug:
         parsl.set_stream_logger()
 
-    x = test_python_memoization (n=4)
+    x = test_python_memoization(n=4)

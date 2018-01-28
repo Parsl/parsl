@@ -41,11 +41,11 @@ def bad_format(stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {0}'
     return cmd_line
 
-test_matrix = { div_0             : {'exit_code' : 1 },
-                bash_misuse       : {'exit_code' : 15 },
-                command_not_found : {'exit_code' : 127 },
-                invalid_exit      : {'exit_code' : 128 },
-                not_executable    : {'exit_code' : 126 }
+test_matrix = {div_0: {'exit_code': 1},
+                bash_misuse: {'exit_code': 15},
+                command_not_found: {'exit_code': 127},
+                invalid_exit: {'exit_code': 128},
+                not_executable: {'exit_code': 126}
               }
 
 
@@ -155,7 +155,7 @@ def run_app(test_fn, err_code):
     os.remove('std.out')
     return True
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")

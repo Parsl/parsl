@@ -30,27 +30,27 @@ def import_echo(x, string, stdout=None):
     print(string)
     return x*5
 
-def test_simple (n=10):
+def test_simple(n=10):
 
     start = time.time()
     x = double(n)
     print("Result : ", x.result())
-    assert x.result() == n*2 , "Expected double to return:{0} instead got:{1}".format(n*2, x.result())
+    assert x.result() == n*2, "Expected double to return:{0} instead got:{1}".format(n*2, x.result())
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
-def test_imports (n=10):
+def test_imports(n=10):
 
     start = time.time()
     x = import_echo(n, "hello world")
     print("Result : ", x.result())
-    assert x.result() == n*5 , "Expected double to return:{0} instead got:{1}".format(n*2, x.result())
+    assert x.result() == n*5, "Expected double to return:{0} instead got:{1}".format(n*2, x.result())
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
-def test_parallel_for (n=10):
+def test_parallel_for(n=10):
 
     d = {}
     start = time.time()
@@ -58,7 +58,7 @@ def test_parallel_for (n=10):
         d[i] = double(i)
         #time.sleep(0.01)
 
-    assert len(d.keys())   == n , "Only {0}/{1} keys in dict".format(len(d.keys()), n)
+    assert len(d.keys())   == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
 
     [d[i].result() for i in d]
     print("Duration : {0}s".format(time.time() - start))
@@ -71,7 +71,7 @@ def test_stdout():
     ''' This one does not work as we don't catch stdout and stderr for python apps.
     ''' 
     string = "Hello World!"
-    fu = echo (10, string, stdout='std.out')
+    fu = echo(10, string, stdout='std.out')
     fu.result()
 
     assert os.path.exists('std.out'), "STDOUT was not captured to 'std.out'"
@@ -80,7 +80,7 @@ def test_stdout():
         assert f.read() == string, "String did not match output file"
     print("[TEST STATUS] test_stdout [SUCCESS]")
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

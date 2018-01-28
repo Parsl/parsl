@@ -25,7 +25,7 @@ def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
     '''
     return cmd_line
 
-def test_data_future_result () :
+def test_data_future_result():
     ''' Testing the behavior of a result call on DataFutures
     '''
     # We call sim_mol_dyn with
@@ -38,7 +38,7 @@ def test_data_future_result () :
 
 
 
-def test_app_future_result () :
+def test_app_future_result():
     ''' Testing the behavior of a result call on AppFutures
     '''
     # We call sim_mol_dyn with
@@ -51,7 +51,7 @@ def test_app_future_result () :
 
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

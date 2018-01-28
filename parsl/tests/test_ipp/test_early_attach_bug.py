@@ -36,7 +36,7 @@ def sleep_double(x):
     return x*2
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     print("Starting launch")
 

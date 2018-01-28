@@ -10,8 +10,8 @@ class AppFuture(Future):
     ''' AppFuture extends the Future class to contain
     a list of output futures that are accessible at the return.
     '''
-    def __init__ (self, uid):
-        super (AppFuture, self).__init__()
+    def __init__(self, uid):
+        super(AppFuture, self).__init__()
         self.uid = uid
 
     def wait(self, timeout=None):
@@ -29,7 +29,7 @@ class DataFuture():
     ''' DataFuture contains/points at the AppFuture that generates the outputs for the future behavior.
     The data items     
     '''
-    def __init__ (self, app_future, url):
+    def __init__(self, app_future, url):
         #super (AppFuture, self).__init__()
         self.app_future = app_future
         self.url = url
@@ -59,7 +59,7 @@ class DataFuture():
     def result(self, timeout=None):
         try:
             r = self.app_future.results(timeout=timeout)
-        except concurrent.futures.TimeoutError :
+        except concurrent.futures.TimeoutError:
             logger.error("Timeout expired in waiting for {0}".format(self.url))
             raise concurrent.futures.TimeoutError
         return 

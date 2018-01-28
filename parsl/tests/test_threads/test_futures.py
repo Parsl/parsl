@@ -30,7 +30,7 @@ dfk = DataFlowKernel(executors=[workers])
 def delay_incr(x, delay=0, outputs=[]):
     import time
     import os
-    if outputs :
+    if outputs:
         bufsize=0
         with open(outputs[0], 'w') as outs:
             outs.write(str(x+1))
@@ -71,7 +71,7 @@ def test_fut_case_2():
     print ("Data_fu : ", data_fu)
 
 
-    assert os.path.basename(result) == output_f , \
+    assert os.path.basename(result) == output_f, \
         "DataFuture did not return the filename, got : {0}".format(result)
     print("Status : ", data_fu.done())
     print("Result : ", result)
@@ -120,7 +120,7 @@ def test_fut_case_4():
     print("Status : ", status)
     print("Result : ", result)
 
-    assert os.path.basename(result) == output_f2 , \
+    assert os.path.basename(result) == output_f2, \
         "DataFuture did not return the filename, got : {0}".format(result)
 
     contents = get_contents(result)
@@ -128,7 +128,7 @@ def test_fut_case_4():
     return True
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

@@ -6,7 +6,7 @@ context = zmq.Context()
 
 class ZmQueue():
 
-    def __init__ (self, incoming, outgoing):
+    def __init__(self, incoming, outgoing):
 
         self.incoming = context.socket(zmq.PULL)
         self.incoming.connect(incoming)
@@ -22,6 +22,6 @@ class ZmQueue():
 
     def put(self, msg):
         print("Posting on ", self.outgoing)
-        print("Sending message" , msg)
+        print("Sending message", msg)
         return self.outgoing.send(msg)
 

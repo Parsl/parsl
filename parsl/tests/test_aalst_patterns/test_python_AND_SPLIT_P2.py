@@ -31,10 +31,10 @@ def test_and_split(depth=5):
     for i in range(depth):
         futs[i] = increment(i)
 
-    print([ futs[i].result() for i in futs])
+    print([futs[i].result() for i in futs])
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="10", help="width of the pipeline")

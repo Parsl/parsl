@@ -22,11 +22,11 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out', wall
     return '''echo "sleeping";
     sleep 1 '''
 
-def test_walltime ( ) :
+def test_walltime():
     ''' Testing walltime exceeded exception '''
     x = echo_to_file()
 
-    try :
+    try:
         r = x.result()
         print("Got result : ", r)
     except Exception as e:
@@ -35,5 +35,5 @@ def test_walltime ( ) :
 
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
     test_walltime()

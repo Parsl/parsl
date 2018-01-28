@@ -33,7 +33,7 @@ def test_parallel_for(N=5):
 
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     test_parallel_for()
 

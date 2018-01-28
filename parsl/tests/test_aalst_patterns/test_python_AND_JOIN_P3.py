@@ -40,7 +40,7 @@ def test_and_join(depth=5):
     assert x.result() == sum([i+1 for i in range(depth)])
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="10", help="width of the pipeline")

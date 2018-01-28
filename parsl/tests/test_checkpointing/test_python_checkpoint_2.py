@@ -21,28 +21,28 @@ while True:
 
 
 config = {
-    "sites" : [
-        { "site" : "Local_Threads",
-          "auth" : { "channel" : None },
-          "execution" : {
-              "executor" : "threads",
-              "provider" : None,
-              "maxThreads" : 2,
+    "sites": [
+        {"site": "Local_Threads",
+          "auth": {"channel": None},
+          "execution": {
+              "executor": "threads",
+              "provider": None,
+              "maxThreads": 2,
           }
         }],
-    "globals" : {"lazyErrors" : True,
-                 "checkpoint" : True,
+    "globals": {"lazyErrors": True,
+                 "checkpoint": True,
     }
 }
 dfk = DataFlowKernel(config=config, checkpointFiles=[last_checkpoint])
 
 @App('python', dfk)
-def slow_double (x, sleep_dur=1):
+def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)
     return x*2
 
-def test_initial_checkpoint_write (n=4):
+def test_initial_checkpoint_write(n=4):
     """ 2. Load the memoization table from previous checkpoint
     """
 
@@ -63,7 +63,7 @@ def test_initial_checkpoint_write (n=4):
     assert delta < 1, "Took longer than a second, restore from checkpoint failed"
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
@@ -73,4 +73,4 @@ if __name__ == '__main__' :
     if args.debug:
         parsl.set_stream_logger()
 
-    x = test_initial_checkpoint_write (n=4)
+    x = test_initial_checkpoint_write(n=4)

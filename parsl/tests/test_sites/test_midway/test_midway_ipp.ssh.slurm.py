@@ -39,7 +39,7 @@ def test_bash():
     print(x.result())
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     test_python()
     #test_bash()

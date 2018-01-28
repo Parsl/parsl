@@ -11,28 +11,28 @@ import argparse
 
 #parsl.set_stream_logger()
 config = {
-    "sites" : [
-        { "site" : "Local_Threads",
-          "auth" : { "channel" : None },
-          "execution" : {
-              "executor" : "threads",
-              "provider" : None,
-              "maxThreads" : 4,
+    "sites": [
+        {"site": "Local_Threads",
+          "auth": {"channel": None},
+          "execution": {
+              "executor": "threads",
+              "provider": None,
+              "maxThreads": 4,
           }
         }],
-    "globals" : {"lazyErrors" : True,
-                 "checkpoint" : True,
+    "globals": {"lazyErrors": True,
+                 "checkpoint": True,
     }
 }
 
 dfk = DataFlowKernel(config=config)
 
 @App('python', dfk)
-def random_uuid (x):
+def random_uuid(x):
     import uuid
     return str(uuid.uuid4())
 
-def test_python_memoization (n=4):
+def test_python_memoization(n=4):
     """ Testing python memoization disable
     """
     x = random_uuid(0)
@@ -47,7 +47,7 @@ def test_python_memoization (n=4):
 def slow_echo_to_file(msg, outputs=[], stderr='std.err', stdout='std.out'):
     return 'sleep 1; echo {0} > {outputs[0]}'
 
-def test_bash_memoization (n=4):
+def test_bash_memoization(n=4):
     """ Testing bash memoization
     """
 
@@ -65,10 +65,10 @@ def test_bash_memoization (n=4):
     [d[i].result() for i in d]
     end = time.time()
     delta = end-start
-    assert delta < 0.1  , "Memoized results were not used"
+    assert delta < 0.1, "Memoized results were not used"
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
@@ -78,5 +78,5 @@ if __name__ == '__main__' :
     if args.debug:
         parsl.set_stream_logger()
 
-    x = test_python_memoization (n=4)
+    x = test_python_memoization(n=4)
     #x = test_bash_memoization (n=4)

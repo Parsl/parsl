@@ -36,7 +36,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         executable = partial_cmdline.format(*args, **kwargs)
 
     except AttributeError as e:
-        if partial_cmdline :
+        if partial_cmdline:
             raise pe.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
                                                                                                      e), None)
         else:
@@ -57,7 +57,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     logging.debug("Stdout  : %s", stdout)
     logging.debug("Stderr  : %s", stderr)
 
-    try :
+    try:
         std_out = open(stdout, 'w') if stdout else None
         std_err = open(stderr, 'w') if stderr else None
     except Exception as e:
@@ -66,7 +66,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     start_time = time.time()
 
     returncode = None
-    try :
+    try:
         proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
         proc.wait(timeout=timeout)
         returncode = proc.returncode
@@ -105,8 +105,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__ (self, func, executor, walltime=60, sites='all', fn_hash=None):
-        super().__init__ (func, executor, walltime=60, sites=sites, exec_type="bash")
+    def __init__(self, func, executor, walltime=60, sites='all', fn_hash=None):
+        super().__init__(func, executor, walltime=60, sites=sites, exec_type="bash")
         self.fn_hash = fn_hash
 
     def __call__(self, *args, **kwargs):
@@ -136,9 +136,9 @@ class BashApp(AppBase):
                                        **self.kwargs)
 
         logger.debug("App[%s] assigned Task_id:[%s]" % (self.func.__name__,
-                                                        app_fut.tid) )
+                                                        app_fut.tid))
         out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
-                    for o in kwargs.get('outputs', []) ]
+                    for o in kwargs.get('outputs', [])]
         app_fut._outputs = out_futs
 
         return app_fut

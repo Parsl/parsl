@@ -24,7 +24,7 @@ def sleep_foo(sleepdur, stdout=None):
 
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
@@ -39,7 +39,7 @@ if __name__ == '__main__' :
     start = time.time()
     for i in range(int(args.count)):
 
-        fus[i] = sleep_foo (5)
+        fus[i] = sleep_foo(5)
 
     print ([(key, fus[key].result()) for key in fus])
     end = time.time()

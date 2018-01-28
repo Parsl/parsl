@@ -28,7 +28,7 @@ def test_simple():
     x = tex.submit(foo, 5, 10)
     print("Got : ", x)
     print("X result : ", x.result())
-    assert x.result() == 50 , "X != 50"
+    assert x.result() == 50, "X != 50"
     print("done")
 
 def test_except():

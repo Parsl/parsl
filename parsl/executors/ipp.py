@@ -39,7 +39,7 @@ class IPyParallelExecutor(ParslExecutor):
 
         engine_json = None
         try:
-            with open (self.engine_file, 'r') as f:
+            with open(self.engine_file, 'r') as f:
                 engine_json = f.read()
 
         except OSError as e:
@@ -56,7 +56,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 '''.format(engine_dir, engine_json)
 
 
-    def __init__ (self, execution_provider=None,
+    def __init__(self, execution_provider=None,
                   reuse_controller=True,
                   engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                   engine_dir='.',
@@ -85,7 +85,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         self.engine_file = engine_json_file
         self.client_file = None
 
-        if self.controller :
+        if self.controller:
             # Find the Client json
             self.client_file = self.controller.client_file
             self.engine_file = self.controller.engine_file
@@ -151,7 +151,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def submit (self,  *args, **kwargs):
+    def submit(self,  *args, **kwargs):
         ''' Submits work to the thread pool
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
@@ -163,12 +163,12 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         logger.debug("Got kwargs : %s,", kwargs)
         return self.lb_view.apply_async(*args, **kwargs)
 
-    def scale_out (self, *args, **kwargs):
+    def scale_out(self, *args, **kwargs):
         ''' Scales out the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
         '''
-        if self.execution_provider :
+        if self.execution_provider:
             r = self.execution_provider.submit(self.launch_cmd, *args, **kwargs)
             self.engines.extend([r])
         else:
@@ -177,7 +177,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
         return r
 
-    def scale_in (self, blocks, *args, **kwargs):
+    def scale_in(self, blocks, *args, **kwargs):
         ''' Scale in the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
@@ -187,9 +187,9 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         status = dict(zip(self.engines, self.execution_provider.status(self.engines)))
 
         # This works for blocks=0
-        to_kill = [engine for engine in status if status[engine] == "RUNNING" ][:blocks]
+        to_kill = [engine for engine in status if status[engine] == "RUNNING"][:blocks]
 
-        if self.execution_provider :
+        if self.execution_provider:
             r = self.execution_provider.cancel(to_kill, *args, **kwargs)
         else:
             logger.error("No execution provider available")
@@ -197,11 +197,11 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
         return r
 
-    def status (self):
+    def status(self):
         ''' Returns the status of the executor via probing the execution providers.
 
         '''
-        if self.execution_provider :
+        if self.execution_provider:
             status = self.execution_provider.status(self.engines)
 
         else:
@@ -210,7 +210,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         return status
 
 
-    def shutdown (self, hub=True, targets='all', block=False):
+    def shutdown(self, hub=True, targets='all', block=False):
         ''' Shutdown the executor, including all workers and controllers.
         The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
 
@@ -223,7 +223,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
              NotImplemented exception
         '''
 
-        if self.controller :
+        if self.controller:
             logger.debug("IPP:Shutdown sequence: Attempting controller kill")
             self.controller.close()
 
@@ -237,11 +237,11 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         logger.debug("Done with executor shutdown")
         return True
 
-    def __repr__ (self):
+    def __repr__(self):
         return "<IPP Executor for site:{0}>".format(self.sitename)
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
-    pool1_config = {"poolname" : "pool1",
-                    "queue"    : "foo" }
+    pool1_config = {"poolname": "pool1",
+                    "queue": "foo"}

@@ -18,7 +18,7 @@ def test(duration=0):
     return "Hello from {0}".format(platform.uname())
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     results = {}
     print("Launching tasks...")

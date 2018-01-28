@@ -41,7 +41,7 @@ def test_python_remote_slow(count=20):
         print(fu.result())
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
 
     test_python_remote()

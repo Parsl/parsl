@@ -66,7 +66,7 @@ def test_mapred_type2(width=5):
     assert r  == red.result(), "[TEST] MapRed type2 expected %s, got %s" % (r, red.result())
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="5", help="width of the pipeline")
@@ -78,7 +78,7 @@ if __name__ == '__main__' :
 
 
     tests = [test_mapred_type1, test_mapred_type2]
-    for test in tests :
+    for test in tests:
         print("*" * 50)
         try:
 

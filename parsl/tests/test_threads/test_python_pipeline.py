@@ -30,21 +30,21 @@ def test_increment(depth=5):
     '''
     futs = {0:0}
     for i in range(1,depth):
-        futs[i] = increment( futs[i-1] )
+        futs[i] = increment(futs[i-1])
 
-    print([ futs[i].result() for i in futs if type(futs[i]) != int ])
+    print([futs[i].result() for i in futs if type(futs[i]) != int])
 
 def test_increment_slow(depth=4):
     ''' Test simple pipeline A->B...->N with delay
     '''
     futs = {0:0}
     for i in range(1,depth):
-        futs[i] = slow_increment( futs[i-1] , 0.5)
+        futs[i] = slow_increment(futs[i-1], 0.5)
 
     print(futs[i])
-    print([ futs[i].result() for i in futs if type(futs[i]) != int ])
+    print([futs[i].result() for i in futs if type(futs[i]) != int])
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="5", help="width of the pipeline")

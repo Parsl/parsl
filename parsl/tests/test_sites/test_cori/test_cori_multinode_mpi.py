@@ -47,7 +47,7 @@ def bash_mpi_app(stdout=None, stderr=None):
 mpi_hello
     '''
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     items = []
     for i in range(0,4):

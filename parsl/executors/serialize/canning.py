@@ -176,13 +176,13 @@ class CannedFunction(CannedObject):
         self._check_type(f)
         self.code = f.__code__
         if f.__defaults__:
-            self.defaults = [ can(fd) for fd in f.__defaults__ ]
+            self.defaults = [can(fd) for fd in f.__defaults__]
         else:
             self.defaults = None
         
         closure = py3compat.get_closure(f)
         if closure:
-            self.closure = tuple( can(cell) for cell in closure )
+            self.closure = tuple(can(cell) for cell in closure)
         else:
             self.closure = None
         
@@ -227,7 +227,7 @@ class CannedClass(CannedObject):
         else:
             mro = cls.mro()
         
-        self.parents = [ can(c) for c in mro[1:] ]
+        self.parents = [can(c) for c in mro[1:]]
         self.buffers = []
 
     def _check_type(self, obj):
@@ -421,20 +421,20 @@ def can_dependent(obj):
 # These dicts can be extended for custom serialization of new objects
 
 can_map = {
-    'numpy.ndarray' : CannedArray,
-    FunctionType : CannedFunction,
-    bytes : CannedBytes,
-    memoryview : CannedMemoryView,
-    cell_type : CannedCell,
-    class_type : can_class,
+    'numpy.ndarray': CannedArray,
+    FunctionType: CannedFunction,
+    bytes: CannedBytes,
+    memoryview: CannedMemoryView,
+    cell_type: CannedCell,
+    class_type: can_class,
     'ipyparallel.dependent': can_dependent,
 }
 if buffer is not memoryview:
     can_map[buffer] = CannedBuffer
 
 uncan_map = {
-    CannedObject : lambda obj, g: obj.get_object(g),
-    dict : uncan_dict,
+    CannedObject: lambda obj, g: obj.get_object(g),
+    dict: uncan_dict,
 }
 
 # for use in _import_mapping:

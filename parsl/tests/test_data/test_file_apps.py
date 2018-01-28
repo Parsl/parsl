@@ -11,7 +11,7 @@ dfk = DataFlowKernel(executors=[workers])
 
 
 @App('bash', dfk)
-def cat (inputs=[], outputs=[], stdout=None, stderr=None):
+def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
     return '''echo %s
     cat %s &> {outputs[0]}
@@ -21,7 +21,7 @@ def cat (inputs=[], outputs=[], stdout=None, stderr=None):
 def test_files():
 
     fs = [File('data/' + f) for f in os.listdir('data')]
-    x = cat (inputs=fs, outputs=['cat_out.txt'], stdout='f_app.out', stderr='f_app.err')
+    x = cat(inputs=fs, outputs=['cat_out.txt'], stdout='f_app.out', stderr='f_app.err')
     d_x = x.outputs[0]
     print(x.result())
     print(d_x, type(d_x))
@@ -55,14 +55,14 @@ def test_increment(depth=5):
         print(prev.filepath)
 
     for key in futs:
-        if key > 0 :
+        if key > 0:
             fu = futs[key]
             data = open(fu.result(), 'r').read().strip()
             assert data == str(key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
 
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     test_files()
     test_increment()

@@ -16,7 +16,7 @@ dfk = DataFlowKernel(executors=[workers])
 def increment(x):
     return x+1
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="100", help="width of the pipeline")

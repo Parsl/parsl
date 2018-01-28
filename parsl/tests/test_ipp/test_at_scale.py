@@ -22,7 +22,7 @@ def double(x):
 def plain_double(x):
     return x*2
 
-def test_plain (n=10):
+def test_plain(n=10):
     start = time.time()
     x = []
     for i in range(0, n):
@@ -35,7 +35,7 @@ def test_plain (n=10):
 
     return ttc
 
-def test_parallel (n=10):
+def test_parallel(n=10):
     start = time.time()
     x = []
     for i in range(0, n):
@@ -48,7 +48,7 @@ def test_parallel (n=10):
 
     return ttc
 
-def test_parallel2 (n=10):
+def test_parallel2(n=10):
     start = time.time()
     x = []
     for i in range(0, n):
@@ -62,7 +62,7 @@ def test_parallel2 (n=10):
     return ttc
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     parser   = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")

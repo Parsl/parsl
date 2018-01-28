@@ -25,33 +25,33 @@ from libsubmit import *
 
 class ExecProviderFactory (object):
 
-    def __init__ (self):
+    def __init__(self):
         ''' Constructor for the execution provider factory.
 
         Args:
              None
         '''
 
-        self.executors = { 'ipp' : IPyParallelExecutor,
-                           'swift_t' : TurbineExecutor,
-                           'threads' : ThreadPoolExecutor,
-                           None : lambda *args, **kwargs : None }
+        self.executors = {'ipp': IPyParallelExecutor,
+                           'swift_t': TurbineExecutor,
+                           'threads': ThreadPoolExecutor,
+                           None: lambda *args, **kwargs: None}
 
-        self.execution_providers = { 'slurm'  : Slurm,
-                                     'local'  : Local,
-                                     'aws'    : EC2Provider,
-                                     'cobalt' : Cobalt,
-                                     'condor' : Condor,
-                                     'torque' : Torque,
-                                     None     : lambda *args, **kwargs : None }
+        self.execution_providers = {'slurm': Slurm,
+                                     'local': Local,
+                                     'aws': EC2Provider,
+                                     'cobalt': Cobalt,
+                                     'condor': Condor,
+                                     'torque': Torque,
+                                     None: lambda *args, **kwargs: None}
 
-        self.channels = { 'ssh' : SshChannel,
-                          'ssh-il' : SshILChannel,
-                          'local' : LocalChannel,
-                          None : lambda *args, **kwargs : None }
+        self.channels = {'ssh': SshChannel,
+                          'ssh-il': SshILChannel,
+                          'local': LocalChannel,
+                          None: lambda *args, **kwargs: None}
 
 
-    def validate_config (self, config):
+    def validate_config(self, config):
         ''' Validate_config validates config
         There is no logic implemented here yet.
         This might be a good first task for a new dev.
@@ -63,7 +63,7 @@ class ExecProviderFactory (object):
         '''
         return True
 
-    def make (self, rundir, config):
+    def make(self, rundir, config):
         ''' Construct the appropriate provider, executors and channels and link them together.
         '''
 
@@ -104,7 +104,7 @@ class ExecProviderFactory (object):
 
             executor_name = site["execution"]["executor"]
 
-            if executor_name in self.executors :
+            if executor_name in self.executors:
 
                 controller = None
 

@@ -15,7 +15,7 @@ def platform_info(dur=1):
     return "Hello from {0}".format(platform.uname())
 
 
-def test_all (N=20, dur=1):
+def test_all(N=20, dur=1):
     ''' Testing local:cobalt:aprun, with checks on number of nodes
     '''
     results = {}
