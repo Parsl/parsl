@@ -34,11 +34,11 @@ def test_deferred_choice():
     s = square(r)
     i = increment(r)
     print(s.done())
-    while s.done() != True and i.done() != True:
+    while s.done() is not True and i.done() is not True:
         pass
-    if s.done() == True:
+    if s.done() is True:
         print(s.result())
-    elif i.done() == True:
+    elif i.done() is True:
         print(i.result())
     
 

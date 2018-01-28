@@ -69,7 +69,7 @@ class UsageTracker (object) :
         if testvar == 'true' :
             test = True
 
-        if self.config and self.config["globals"]["usageTracking"] == False:
+        if self.config and self.config["globals"]["usageTracking"] is False:
             track = False
 
         envvar = str(os.environ.get("PARSL_TRACKING", True)).lower()

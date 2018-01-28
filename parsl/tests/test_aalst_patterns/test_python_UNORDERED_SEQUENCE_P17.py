@@ -36,12 +36,12 @@ def test_unordered_sequence():
     s = square(r)
     i = increment(r)
     print(s.done())
-    while s.done() != True and i.done() != True:
+    while s.done() is not True and i.done() is not True:
         pass
-    if i.done() == True:
+    if i.done() is True:
         print(i.result())
         print(square(i.result()).result())
-    elif s.done() == True:
+    elif s.done() is True:
         print(s.result())
         print(increment(s.result()).result())
         

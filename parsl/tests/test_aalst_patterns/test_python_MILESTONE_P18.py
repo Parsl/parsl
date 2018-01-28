@@ -38,8 +38,8 @@ def test_milestone():
     r = rand().result()
     i = increment(r)
     s = square(r)
-    while s.done() != True:
-        if i.done() == True:
+    while s.done() is not True:
+        if i.done() is True:
             print(cubed(r).result())
             return 
 

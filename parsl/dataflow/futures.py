@@ -48,7 +48,7 @@ class AppFuture(Future):
 
         Updates the super() with the result() or exception()
         '''
-        if executor_fu.done() == True:
+        if executor_fu.done() is True:
             try :
                 super().set_result(executor_fu.result())
             except Exception as e:

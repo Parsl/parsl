@@ -68,7 +68,8 @@ def update_config (config, rundir):
                     }
     }
 
-    sites = config["sites"] ; del config["sites"]
+    sites = config["sites"]
+    del config["sites"]
 
     recursive_update(config_base, config)
 

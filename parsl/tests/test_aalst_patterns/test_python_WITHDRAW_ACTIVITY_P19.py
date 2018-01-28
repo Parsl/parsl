@@ -53,7 +53,7 @@ def test_withdraw(x = 3):
         r = rand().result()
         cubes.append(cubed(r))
         squares.append(square(r))
-        if cubes[i].done() == True:
+        if cubes[i].done() is True:
             print(True) 
             squares[i] = None 
         else:

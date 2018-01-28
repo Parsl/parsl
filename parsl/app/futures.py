@@ -75,7 +75,7 @@ class DataFuture(Future):
         self.parent = parent
         self._exception = None
 
-        if fut == None:
+        if fut is None:
             logger.debug("Setting result to filepath since no future was passed")
             self.set_result = self.file_obj
 

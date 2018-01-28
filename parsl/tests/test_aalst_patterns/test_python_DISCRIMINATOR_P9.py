@@ -28,7 +28,7 @@ def test_discriminator(x = 4):
     for i in range(x):
         squares.append(square(rand().result()))
         cubes.append(cubed(rand().result()))
-        while squares[i].done() == False and cubes[i].done() == False:
+        while squares[i].done() is False and cubes[i].done() is False:
             pass
         total.append(squares[i].result() + cubes[i].result())
     for i in range(x):
