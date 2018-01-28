@@ -75,5 +75,9 @@ We will also try and mine the data to answer operational questions such as:
 Feedback
 --------
 
-Please send us your feedback at Parsl-devel@ci.uchicago.edu. Feedback from our user communities will be useful in determining our path forward with this in the future. We do ask that if you have concerns or objections, please be specific in your feedback. For example, while saying "Our site has a policy against sending such data" is good information for us to know in the future, a link to such a policy would be even better.
+Please send us your feedback at parsl@googlegroups.com. Feedback from our user communities will be
+useful in determining our path forward with this in the future. We do ask that if you have concerns
+or objections, please be specific in your feedback. For example, while saying "Our site has a policy
+against sending such data" is good information for us to know in the future, a link to such a policy
+would be even better.
 
