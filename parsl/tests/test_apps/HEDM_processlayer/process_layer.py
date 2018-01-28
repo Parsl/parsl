@@ -22,8 +22,7 @@ import random
 import argparse
 
 workers = ThreadPoolExecutor(max_workers=8)
-#workers = IPyParallelExecutor()
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 def create_dirs(cwd):
@@ -90,12 +89,13 @@ def main(count):
         if i % 1000 :
             print("Launching light : ", i)
         outname = 'outputs/light{0}'.format(i)
-        loop1, _ = light_app('.', 0, inputs=[c1], outputs=[outname+'.txt'], stdout=outname+'.out')
+        loop1 = light_app('.', 0, inputs=[c1], outputs=[outname+'.txt'], stdout=outname+'.out')
         light_loop.extend([loop1])
 
     # <Bash app dependent on for loop>
-    c2, [csv_file] = csv_maker('.', count*10, 0, inputs=light_loop, outputs=['csv_maker.csv'],
+    c2 = csv_maker('.', count*10, 0, inputs=light_loop, outputs=['csv_maker.csv'],
                    stdout='outputs/catter2.out', stderr='outputs/catter2.err')
+    csv_file = c2.outputs[0]
 
     # This is a blocking call that forces the workflow to wait for the csv_file to be produced.
     lines = open(csv_file.result(), 'r').readlines()
@@ -105,13 +105,16 @@ def main(count):
     for i in lines:
         i = i.strip()
         outname = 'outputs/mid{0}'.format(i)
-        loop1, _ = light_app('.', 0, inputs=[c1], outputs=[outname+'.txt'], stdout=outname+'.out')
+        loop1 = light_app('.', 0, inputs=[c1], outputs=[outname+'.txt'], stdout=outname+'.out')
         mid_loop.extend([loop1])
 
     # <Bash app dependent on mid for loop>
     c3 = catter('.', 3, inputs=mid_loop, stdout='outputs/catter3.out', stderr='outputs/catter3.err')
     return c3
 
+def test_HEDM (count=10):
+    x = main(count)
+    x.result()
 
 if __name__ == "__main__" :
     parser   = argparse.ArgumentParser()
