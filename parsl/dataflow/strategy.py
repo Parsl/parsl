@@ -122,12 +122,13 @@ class Strategy (object) :
 
 
     def _strategy_noop (self, tasks, *args, kind=None, **kwargs):
-        ''' Peek at the DFK and the sites specified,
+        ''' Do nothing!
 
-        We assume here that tasks are not held in a runnable
-        state, and that all tasks from an app would be sent to
-        a single specific site, i.e tasks cannot be specified
-        to go to one of more sites.
+        Args:
+            - tasks (task_ids): Not used here.
+
+        KWargs:
+            - kind (Not used)
         '''
         pass
 
@@ -138,7 +139,14 @@ class Strategy (object) :
         state, and that all tasks from an app would be sent to
         a single specific site, i.e tasks cannot be specified
         to go to one of more sites.
+
+        Args:
+            - tasks (task_ids): Not used here.
+
+        KWargs:
+            - kind (Not used)
         '''
+
 
         # Add logic to check sites
         #for task in tasks :

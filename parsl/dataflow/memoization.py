@@ -16,17 +16,15 @@ class Memoizer(object):
     at call time, but works **only** when the result of a previous
     call is available at the time the duplicate call is made.
 
-    For instance:
+    For instance::
 
-    No advantage from                 Memoization helps
-    memoization here:                 here:
+       No advantage from                 Memoization helps
+       memoization here:                 here:
 
-    ..code :: python
-
-        TaskA                         TaskB
-          |   TaskA                     |
-          |     |   TaskA              done  (TaskB)
-          |     |     |                              (TaskB)
+        TaskA                            TaskB
+          |   TaskA                        |
+          |     |   TaskA                done  (TaskB)
+          |     |     |                                (TaskB)
         done    |     |
               done    |
                     done
