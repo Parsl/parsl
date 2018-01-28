@@ -51,7 +51,7 @@ class DataFlowKernel(object):
     """ DataFlowKernel
     """
 
-    def __init__(self, config=None, executors=None, lazy_fail=True,
+    def __init__(self, config=None, executors=None, lazy_fail=True, memoize=True,
                  rundir=None, fail_retries=2, checkpointFiles=None):
         """ Initialize the DataFlowKernel
 
@@ -83,7 +83,7 @@ class DataFlowKernel(object):
         cpts = self.load_checkpoints(checkpointFiles)
         print("Checkpoints : ", cpts)
         # Initialize the memoizer
-        self.memoizer = Memoizer(self, checkpoint=cpts)
+        self.memoizer = Memoizer(self, memoize=memoize, checkpoint=cpts)
 
         if self._config :
             self._executors_managed = True
@@ -582,6 +582,8 @@ class DataFlowKernel(object):
                     else:
                         t['result'] = r
 
+                    # We are using pickle here since pickle dumps to a file in 'w+'
+                    # mode behave like a incremental log.
                     pickle.dump(t, f)
                     count += 1
                     self.tasks[task_id]['checkpoint'] = True
