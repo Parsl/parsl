@@ -10,7 +10,19 @@ import shutil
 import argparse
 
 #parsl.set_stream_logger()
-config = {
+def test_initial_checkpoint_write (n=4):
+    """ 2. Load the memoization table from previous checkpoint
+    """
+
+    last_checkpoint = 'runinfo/{0}'.format(sorted(os.listdir('runinfo/'))[-1])
+    while True:
+        if not os.path.exists(last_checkpoint):
+            print("Waiting for path")
+            sleep(0.1)
+        else:
+            break
+
+    config = {
     "sites" : [
         { "site" : "Local_Threads",
           "auth" : { "channel" : None },
@@ -19,24 +31,19 @@ config = {
               "provider" : None,
               "maxThreads" : 2,
           }
-        }],
-    "globals" : {"lazyErrors" : True,
-                 "checkpoint" : True,
+    }],
+        "globals" : {"lazyErrors" : True,
+                     "checkpoint" : True,
+        }
     }
-}
+    dfk = DataFlowKernel(config=config, checkpointFiles=[last_checkpoint])
+    
+    @App('python', dfk)
+    def slow_double (x, sleep_dur=1):
+        import time
+        time.sleep(sleep_dur)
+        return x*2
 
-last_checkpoint = 'runinfo/{0}'.format(sorted(os.listdir('runinfo/'))[-1])
-dfk = DataFlowKernel(config=config, checkpointFiles=[last_checkpoint])
-
-@App('python', dfk)
-def slow_double (x, sleep_dur=1):
-    import time
-    time.sleep(sleep_dur)
-    return x*2
-
-def test_initial_checkpoint_write (n=4):
-    """ Launch a few apps and write the checkpoint once a few have completed
-    """
     d = {}
 
     start = time.time()

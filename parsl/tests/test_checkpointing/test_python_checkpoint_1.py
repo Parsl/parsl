@@ -34,7 +34,7 @@ def slow_double (x, sleep_dur=1):
     return x*2
 
 def test_initial_checkpoint_write (n=4):
-    """ Launch a few apps and write the checkpoint once a few have completed
+    """ 1. Launch a few apps and write the checkpoint once a few have completed
     """
 
     d = {}
@@ -50,6 +50,7 @@ def test_initial_checkpoint_write (n=4):
     cpt_dir = dfk.checkpoint()
     assert not os.path.exists(cpt_dir+'/dfk') , "DFK checkpoint missing"
     assert not os.path.exists(cpt_dir+'/tasks') , "Tasks checkpoint missing"
+    return
 
 if __name__ == '__main__' :
 
