@@ -35,7 +35,7 @@ class ThreadPoolExecutor(ParslExecutor):
 
         self.config = config
 
-        if sys.version_info > (3,6):
+        if sys.version_info > (3, 6):
             self.executor = cf.ThreadPoolExecutor(max_workers=config["execution"]["maxThreads"],
                                                   thread_name_prefix=config["execution"]["threadNamePrefix"])
         else:

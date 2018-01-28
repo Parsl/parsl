@@ -44,7 +44,7 @@ def test_increment(depth=5):
     # Create the first entry in the dictionary holding the futures
     prev = File("test0.txt")
     futs = {}
-    for i in range(1,depth):
+    for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
         fu = increment(inputs=[prev], # Depend on the future from previous call
                                outputs=[File("test{0}.txt".format(i))], # Name the file to be created here

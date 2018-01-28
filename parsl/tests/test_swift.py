@@ -49,12 +49,12 @@ if __name__ == "__main__":
     test_except()
     exit(0)
     futs = {}
-    for i in range(0,1):
+    for i in range(0, 1):
         futs[i] = tex.submit(slow_foo, 3, 10)
 
 
     x.result(timeout=10)
-    for x in range(0,10):
+    for x in range(0, 10):
         print(futs)
         time.sleep(4)
 

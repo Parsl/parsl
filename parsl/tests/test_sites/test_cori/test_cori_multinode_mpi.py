@@ -50,7 +50,7 @@ mpi_hello
 if __name__ == "__main__":
 
     items = []
-    for i in range(0,4):
+    for i in range(0, 4):
         x = bash_mpi_app(stdout="parsl.{0}.out".format(i),
                          stderr="parsl.{0}.err".format(i))
         items.extend([x])

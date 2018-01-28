@@ -61,7 +61,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
                   engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                   engine_dir='.',
                   controller=None,
-                  config = None):
+                  config=None):
         ''' Initialize the IPyParallel pool. The initialization takes all relevant parameters via KWargs.
 
         .. note::
@@ -104,7 +104,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
 
         self.executor = Client(url_file=self.client_file)
-        self.config   = config
+        self.config = config
         self.sitename = config['site'] if config else 'Static_IPP'
         # NOTE: Copying the config here only partially fixes the issue. There needs to be
         # multiple controllers launched by the factory, and each must have different jsons.
@@ -143,7 +143,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
             self._scaling_enabled = False
             logger.debug("Starting IpyParallelExecutor with no provider")
 
-        self.lb_view  = self.executor.load_balanced_view()
+        self.lb_view = self.executor.load_balanced_view()
         logger.debug("Starting executor")
 
 

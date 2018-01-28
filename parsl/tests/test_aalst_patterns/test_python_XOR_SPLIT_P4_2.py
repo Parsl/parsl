@@ -6,7 +6,7 @@ from parsl import *
 import argparse
 import random
 
-workers = ThreadPoolExecutor(max_workers = 4)
+workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
@@ -31,7 +31,7 @@ def return_one():
 def return_zero():
     return 0
 
-def test_XOR_split(x = 4):
+def test_XOR_split(x=4):
     num = []
     for i in range(x):
         num.append(eval_number(rand().result()))
@@ -40,6 +40,6 @@ def test_XOR_split(x = 4):
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--a", "--number", default = "4", action = "store", dest = "a", type = int)
+    parser.add_argument("--a", "--number", default="4", action="store", dest="a", type=int)
     args = parser.parse_args()
     test_XOR_split(args.a)

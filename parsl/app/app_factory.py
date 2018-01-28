@@ -74,7 +74,7 @@ class AppFactory(object):
         return self.__str__()
 
     def __str__(self):
-        return '<class %s"%s for %s>' %(self.app_class.__name__,
+        return '<class %s"%s for %s>' % (self.app_class.__name__,
                                         self.__class__.__name__,
                                         self.__name__)
 

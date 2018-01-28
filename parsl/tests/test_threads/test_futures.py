@@ -31,7 +31,7 @@ def delay_incr(x, delay=0, outputs=[]):
     import time
     import os
     if outputs:
-        bufsize=0
+        bufsize = 0
         with open(outputs[0], 'w') as outs:
             outs.write(str(x+1))
     time.sleep(delay)
@@ -130,10 +130,10 @@ def test_fut_case_4():
 
 if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

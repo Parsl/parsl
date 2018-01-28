@@ -43,16 +43,16 @@ class Controller(object):
 
         logger.debug("Starting ipcontroller, baseDir:%s" % ipythonDir)
 
-        self.mode       = mode
-        self.range_min  = 50000
-        self.range_max  = 60000
-        self.reuse      = reuse
-        self.port       = ''
+        self.mode = mode
+        self.range_min = 50000
+        self.range_max = 60000
+        self.reuse = reuse
+        self.port = ''
         self.ipythonDir = None
-        self.profile    = 'default'
-        ipp_basedir     = ''
-        reuse_string    = ''
-        profile_string  = ''
+        self.profile = 'default'
+        ipp_basedir = ''
+        reuse_string = ''
+        profile_string = ''
 
         if mode == "manual":
             return

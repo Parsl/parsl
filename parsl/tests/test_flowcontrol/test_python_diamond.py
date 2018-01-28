@@ -26,7 +26,7 @@ def test_python(width=10):
     stage_1 = [diamond(sleep=60, inputs=[0])]
 
     stage_2 = []
-    for i in range(0,width):
+    for i in range(0, width):
         stage_2.extend([diamond(sleep=20, inputs=stage_1)])
 
     stage_3 = [diamond(sleep=30, inputs=stage_2)]

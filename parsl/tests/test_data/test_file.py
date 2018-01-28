@@ -6,7 +6,7 @@ from parsl.data_provider.files import File
 
 def test_files():
     fp = os.path.abspath('test_file.py')
-    strings  = [{'f': 'file://test_file.py', 'protocol': 'file', 'path': 'test_file.py'},
+    strings = [{'f': 'file://test_file.py', 'protocol': 'file', 'path': 'test_file.py'},
                 {'f': './test_file.py', 'protocol': 'file', 'path': './test_file.py'},
                 {'f': fp, 'protocol': 'file', 'path': fp},
                 ]

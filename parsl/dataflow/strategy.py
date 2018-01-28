@@ -169,10 +169,10 @@ class Strategy (object):
             status = exc.status()
 
             # Get the shape and bounds for the site
-            minBlocks   = site_config["execution"]["block"]["minBlocks"]
-            maxBlocks   = site_config["execution"]["block"]["maxBlocks"]
-            initBlocks  = site_config["execution"]["block"]["initBlocks"]
-            taskBlocks  = site_config["execution"]["block"]["taskBlocks"]
+            minBlocks = site_config["execution"]["block"]["minBlocks"]
+            maxBlocks = site_config["execution"]["block"]["maxBlocks"]
+            initBlocks = site_config["execution"]["block"]["initBlocks"]
+            taskBlocks = site_config["execution"]["block"]["taskBlocks"]
             parallelism = site_config["execution"]["block"]["parallelism"]
 
             active_blocks = sum([1 for x in status if x in ('RUNNING',

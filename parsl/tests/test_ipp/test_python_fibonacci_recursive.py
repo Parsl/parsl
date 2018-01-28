@@ -9,12 +9,12 @@ dfk = DataFlowKernel(workers)
 def fibonacci(n):
     if n == 0:
         return 0
-    elif n == 2 or n ==1:
+    elif n == 2 or n == 1:
         return 1
     else:
         return fibonacci(n - 1).result() + fibonacci(n - 2).result()
 
-def test_fibonacci(x = 5):
+def test_fibonacci(x=5):
     results = []
     for i in range(x):
         results.append(fibonacci(i))
@@ -25,6 +25,6 @@ def test_fibonacci(x = 5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--x", default = '5', action = "store", dest = "b", type = int)
+    parser.add_argument("-b", "--x", default='5', action="store", dest="b", type=int)
     args = parser.parse_args()
     test_fibonacci(args.b)

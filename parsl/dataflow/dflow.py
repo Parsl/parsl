@@ -88,17 +88,17 @@ class DataFlowKernel(object):
             # set global vars from config
             self.lazy_fail = self._config["globals"].get("lazyFail", lazy_fail)
             self.fail_retries = self._config["globals"].get("fail_retries", fail_retries)
-            self.flowcontrol     = FlowControl(self, self._config)
+            self.flowcontrol = FlowControl(self, self._config)
         else:
             self._executors_managed = False
             self.fail_retries = fail_retries
-            self.lazy_fail    = lazy_fail
-            self.executors    = {i:x for i,x in enumerate(executors)}
-            self.flowcontrol  = FlowNoControl(self, None)
+            self.lazy_fail = lazy_fail
+            self.executors = {i: x for i, x in enumerate(executors)}
+            self.flowcontrol = FlowNoControl(self, None)
 
-        self.task_count      = 0
+        self.task_count = 0
         self.fut_task_lookup = {}
-        self.tasks           = {}
+        self.tasks = {}
 
         logger.debug("Using executors: {0}".format(self.executors))
         atexit.register(self.cleanup)
@@ -229,9 +229,9 @@ class DataFlowKernel(object):
             self.handle_update(task_id, memo_fu, memo_cbk=True)
             return memo_fu
 
-        task_name    = executable.__name__
+        task_name = executable.__name__
         target_sites = self.tasks[task_id]["sites"]
-        executor     = None
+        executor = None
         if isinstance(target_sites, str) and target_sites.lower() == 'all':
             # Pick a random site from the list
             site, executor = random.choice(list(self.executors.items()))
@@ -249,7 +249,7 @@ class DataFlowKernel(object):
 
         exec_fu = executor.submit(executable, *args, **kwargs)
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
-        logger.debug("Task[%s] launched on executor:%s" %(task_id, executor))
+        logger.debug("Task[%s] launched on executor:%s" % (task_id, executor))
         return exec_fu
 
     @staticmethod
@@ -267,7 +267,7 @@ class DataFlowKernel(object):
 
         # Check the positional args
         depends = []
-        count   = 0
+        count = 0
         for dep in args:
             if isinstance(dep, Future) or issubclass(dep.__class__, Future):
                 if not dep.done():
@@ -409,11 +409,11 @@ class DataFlowKernel(object):
             self.tasks[task_id]['kwargs'] = kwargs
             if not exceptions:
                 self.tasks[task_id]['exec_fu'] = self.launch_task(task_id, func, *new_args, **kwargs)
-                self.tasks[task_id]['app_fu']  = AppFuture(self.tasks[task_id]['exec_fu'],
+                self.tasks[task_id]['app_fu'] = AppFuture(self.tasks[task_id]['exec_fu'],
                                                            tid=task_id,
                                                            stdout=task_stdout,
                                                            stderr=task_stderr)
-                self.tasks[task_id]['status']  = States.running
+                self.tasks[task_id]['status'] = States.running
             else:
                 self.tasks[task_id]['exec_fu'] = None
                 app_fu = AppFuture(self.tasks[task_id]['exec_fu'],
@@ -423,15 +423,15 @@ class DataFlowKernel(object):
                 app_fu.set_exception(DependencyError(exceptions,
                                                      "Failures in input dependencies",
                                                      None))
-                self.tasks[task_id]['app_fu']  = app_fu
-                self.tasks[task_id]['status']  = States.dep_fail
+                self.tasks[task_id]['app_fu'] = app_fu
+                self.tasks[task_id]['status'] = States.dep_fail
         else:
             # Send to pending, create the AppFuture with no parent and have it set
             # when an executor future is available.
-            self.tasks[task_id]['app_fu']  = AppFuture(None, tid=task_id,
+            self.tasks[task_id]['app_fu'] = AppFuture(None, tid=task_id,
                                                        stdout=task_stdout,
                                                        stderr=task_stderr)
-            self.tasks[task_id]['status']  = States.pending
+            self.tasks[task_id]['status'] = States.pending
 
         logger.debug("Task:%s Launched with AppFut:%s", task_id, task_def['app_fu'])
         return task_def['app_fu']

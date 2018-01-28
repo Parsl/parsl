@@ -30,7 +30,7 @@ def test_python(N=2000, sleep_duration=0.5):
     results = {}
 
     start = time.time()
-    for i in range(0,N):
+    for i in range(0, N):
         results[i] = python_app(sleep_duration=sleep_duration)
     end = time.time()
     print("Launched {} tasks in : {}. Task rate: {} Tasks/sec".format(N, end-start, float(N)/(end-start)))

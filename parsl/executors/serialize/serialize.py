@@ -71,7 +71,7 @@ def _extract_buffers(obj, threshold=MAX_BYTES):
 def _restore_buffers(obj, buffers):
     """restore buffers extracted by """
     if isinstance(obj, CannedObject) and obj.buffers:
-        for i,buf in enumerate(obj.buffers):
+        for i, buf in enumerate(obj.buffers):
             if buf is None:
                 obj.buffers[i] = buffers.pop(0)
 
@@ -203,4 +203,4 @@ def unpack_apply_message(bufs, g=None, copy=True):
         kwargs[key] = kwarg
     assert not kwarg_bufs, "Shouldn't be any kwarg bufs left over"
 
-    return f,args,kwargs
+    return f, args, kwargs

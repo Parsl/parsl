@@ -115,7 +115,7 @@ class ExecProviderFactory (object):
                     site["controller"] = copy.copy(config["controller"])
 
                     site["controller"]['ipythonDir'] = self.rundir
-                    site["controller"]['profile']    = config["controller"].get('profile', site["site"])
+                    site["controller"]['profile'] = config["controller"].get('profile', site["site"])
 
                     controller = Controller(**site["controller"])
                     logger.debug("Controller engine file : %s", controller.engine_file)

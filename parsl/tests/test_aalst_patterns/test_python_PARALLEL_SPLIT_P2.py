@@ -7,7 +7,7 @@ from parsl import *
 import random
 import argparse
 
-workers = ThreadPoolExecutor(max_workers = 4)
+workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
@@ -22,7 +22,7 @@ def square(x):
 def cubed(x): 
     return x**3
 
-def test_parallel_split(x = 4):
+def test_parallel_split(x=4):
     for i in range(x):
         num = rand().result()
         y = square(num).result()
@@ -32,7 +32,7 @@ def test_parallel_split(x = 4):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--input", default = "4", action = "store", dest = "a", type = int)
+    parser.add_argument("-a", "--input", default="4", action="store", dest="a", type=int)
     args = parser.parse_args()
     test_parallel_split(args.a)
     

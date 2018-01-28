@@ -67,7 +67,7 @@ def test_3():
 
     end = time.time()
 
-    delta =  (end-start)*10
+    delta = (end-start)*10
     print("delta : ", delta)
     assert delta > 4, "Took too little time"
     assert delta < 5, "Took too much time"

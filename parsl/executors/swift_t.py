@@ -62,16 +62,16 @@ def runner(incoming_q, outgoing_q):
         Returns the serialized result/exception
         '''
         all_names = dir(__builtins__)
-        user_ns   = locals()
+        user_ns = locals()
         user_ns.update({'__builtins__': {k: getattr(__builtins__, k)  for k in all_names}})
 
         f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
         fname = getattr(f, '__name__', 'f')
-        prefix     = "parsl_"
-        fname      = prefix+"f"
-        argname    = prefix+"args"
-        kwargname  = prefix+"kwargs"
+        prefix = "parsl_"
+        fname = prefix+"f"
+        argname = prefix+"args"
+        kwargname = prefix+"kwargs"
         resultname = prefix+"result"
 
         user_ns.update({fname: f,
@@ -294,16 +294,16 @@ class TurbineExecutor(ParslExecutor):
         self.mp_manager = mp.Manager()
         self.outgoing_q = self.mp_manager.Queue()
         self.incoming_q = self.mp_manager.Queue()
-        self.isAlive   = True
+        self.isAlive = True
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
-        self.worker  = mp.Process(target=runner, args = (self.outgoing_q, self.incoming_q))
+        self.worker = mp.Process(target=runner, args=(self.outgoing_q, self.incoming_q))
         self.worker.start()
         logger.debug("Created worker : %s", self.worker)
-        self.tasks   = {}
+        self.tasks = {}
 
     def submit(self, func, *args, **kwargs):
         ''' Submits work to the the outgoing_q, an external process listens on this
@@ -326,7 +326,7 @@ class TurbineExecutor(ParslExecutor):
 
         self.tasks[task_id] = Future()
 
-        fn_buf  = pack_apply_message(func, args, kwargs,
+        fn_buf = pack_apply_message(func, args, kwargs,
                                      buffer_threshold=1024*1024,
                                      item_threshold=1024)
 

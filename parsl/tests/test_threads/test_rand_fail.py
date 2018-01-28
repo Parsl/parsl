@@ -17,7 +17,7 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     s = sleep_dur + random.randint(-sleep_rand_max, sleep_rand_max)
     #print("Sleeping for : ", s)
     time.sleep(s)
-    x = float(random.randint(0,100)) / 100
+    x = float(random.randint(0, 100)) / 100
     if x <= fail_prob:
         #print("Fail")
         raise Exception("App failure")
@@ -30,7 +30,7 @@ def test_no_deps(numtasks=10):
     '''
 
     fus = []
-    for i in range(0,10):
+    for i in range(0, 10):
 
         fu = sleep_fail(0.1, 0, .8)
         fus.extend([fu])
@@ -57,7 +57,7 @@ def test_fail_sequence(numtasks=10):
     sleep_dur = 0.1
     fail_prob = 0.4
 
-    fus = {0:None}
+    fus = {0: None}
     for i in range(0, numtasks):
         print("Chaining {0} to {1}".format(i+1, fus[i]))
         fus[i+1] = sleep_fail(sleep_dur, 0, fail_prob, inputs=[fus[i]])
@@ -79,7 +79,7 @@ def test_deps(numtasks=10):
     '''
 
     fus = []
-    for i in range(0,numtasks):
+    for i in range(0, numtasks):
         fu = sleep_fail(0.2, 0, .4)
         fus.extend([fu])
 
@@ -120,10 +120,10 @@ def test_deps(numtasks=10):
 
 if __name__ == "__main__":
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

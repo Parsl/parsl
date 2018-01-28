@@ -26,7 +26,7 @@ def bash_app(stdout=None, stderr=None):
 def test_python(N=100):
     import os
     results = {}
-    for i in range(0,N):
+    for i in range(0, N):
         results[i] = python_app()
 
     print("Waiting ....")

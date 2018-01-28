@@ -36,8 +36,8 @@ import subprocess
 import random
 print ("starting ipcontroller")
 
-rand_port =random.randint(55000, 59000)
-p = subprocess.Popen(['ipcontroller', '--reuse', '--port={0}'.format(rand_port),'--ip=*'], stdout=None, stderr=None)
+rand_port = random.randint(55000, 59000)
+p = subprocess.Popen(['ipcontroller', '--reuse', '--port={0}'.format(rand_port), '--ip=*'], stdout=None, stderr=None)
 
 epf = ExecProviderFactory()
 resource = epf.make(config)

@@ -41,10 +41,10 @@ if __name__ == "__main__":
     print("Starting launch")
 
     jobs = {}
-    for i in range(0,20):
+    for i in range(0, 20):
         jobs[i] = sleep_double(i)
 
     start = time.time()
-    for i in range(0,10):
+    for i in range(0, 10):
         print(jobs[i].result())
     print("Time to finish : ", time.time() - start)

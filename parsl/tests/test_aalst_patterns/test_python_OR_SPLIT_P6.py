@@ -6,7 +6,7 @@ from parsl import *
 import random
 import argparse
 
-workers = ThreadPoolExecutor(max_workers = 4)
+workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
@@ -25,7 +25,7 @@ def square(x, y):
 def double(x, y):
     return 2*(x + y)
 
-def test_or_split(x = 4, y = 5):
+def test_or_split(x=4, y=5):
     if x < 5:
         print(add(x, y).result())
     if y > 7:
@@ -37,8 +37,8 @@ def test_or_split(x = 4, y = 5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--num1", default = "4", action = "store", dest = "x", type = int)
-    parser.add_argument("-y", "--num2", default = "5", action = "store", dest = "y", type = int)
+    parser.add_argument("-x", "--num1", default="4", action="store", dest="x", type=int)
+    parser.add_argument("-y", "--num2", default="5", action="store", dest="y", type=int)
     args = parser.parse_args()
     test_or_split(args.x, args.y)
     

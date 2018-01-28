@@ -18,10 +18,10 @@ def increment(x):
 
 if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="100", help="width of the pipeline")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

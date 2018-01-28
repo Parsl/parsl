@@ -23,7 +23,7 @@ def bash_app(stdout=None, stderr=None):
 def test_python():
     import os
     results = {}
-    for i in range(0,2):
+    for i in range(0, 2):
         results[i] = python_app()
 
     print("Waiting ....")

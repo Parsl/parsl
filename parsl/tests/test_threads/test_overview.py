@@ -21,12 +21,12 @@ def app_sum(inputs=[]):
     return sum(inputs)
 
 
-def test_1(N = 10):
+def test_1(N=10):
     ''' Testing code snippet from the documentation
     '''
 
     # Create a list of integers
-    items = range(0,N)
+    items = range(0, N)
 
     # Map Phase : Apply an *app* function to each item in list
     mapped_results = []
@@ -45,12 +45,12 @@ def slow_app_double(x, sleep_dur=0.05):
     return x*2
 
 
-def test_2(N = 10):
+def test_2(N=10):
     ''' Testing code snippet from the documentation
     '''
 
     # Create a list of integers
-    items = range(0,N)
+    items = range(0, N)
 
     # Map Phase : Apply an *app* function to each item in list
     mapped_results = []
@@ -63,10 +63,10 @@ def test_2(N = 10):
     assert total.result() != sum(items), "Sum is wrong {0} != {1}".format(total.result(), sum(items))
 
 if __name__ == "__main__":
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true', help="Debug enable flag")
     parser.add_argument("-c", "--count", default='100', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

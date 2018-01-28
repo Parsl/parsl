@@ -41,9 +41,9 @@ def test_increment(depth=5):
     # Create the first entry in the dictionary holding the futures
     prev = "test0.txt"
     futs = {}
-    for i in range(1,depth):
+    for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
-        fu  = increment(inputs=[prev], # Depend on the future from previous call
+        fu = increment(inputs=[prev], # Depend on the future from previous call
                                outputs=["test{0}.txt".format(i)], # Name the file to be created here
                                stdout="incr{0}.out".format(i),
                                stderr="incr{0}.err".format(i))
@@ -68,7 +68,7 @@ def test_increment_slow(depth=5, dur=0.5):
     prev = "test0.txt"
     futs = {}
     print("**************TYpe : ", type(dur), dur)
-    for i in range(1,depth):
+    for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
         fu = slow_increment(dur,
                                     inputs=[prev], # Depend on the future from previous call
@@ -88,10 +88,10 @@ def test_increment_slow(depth=5, dur=0.5):
 
 if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="5", help="width of the pipeline")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         pass

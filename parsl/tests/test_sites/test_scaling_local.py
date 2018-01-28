@@ -21,7 +21,7 @@ def test_config_A():
     time.sleep(3)
     #stats = local.status([x,y])
     
-    print(local.cancel([x,y]))
+    print(local.cancel([x, y]))
     print(local.status([x, y]))
 
 if __name__ == "__main__":

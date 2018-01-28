@@ -38,7 +38,7 @@ def test_python(N=10):
     import os
     r1 = {}
     r2 = {}
-    for i in range(0,N):
+    for i in range(0, N):
         r1[i] = python_app_1()
         r2[i] = python_app_2()
     print("Waiting ....")
@@ -63,10 +63,10 @@ def test_bash():
 
 if __name__ == "__main__":
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

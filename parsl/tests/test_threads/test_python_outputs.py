@@ -21,7 +21,7 @@ def double(x, outputs=[]):
 
 def launch_apps(n, dirpath):
 
-    outdir=dirpath
+    outdir = dirpath
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     else:
@@ -31,7 +31,7 @@ def launch_apps(n, dirpath):
     all_futs = {}
     for i in range(n):
 
-        fus, _  = double(i, outputs=['{0}/{1}.txt'.format(dirpath, i)])
+        fus, _ = double(i, outputs=['{0}/{1}.txt'.format(dirpath, i)])
         print(fus.outputs)
         all_futs[fus] = fus
 
@@ -42,9 +42,9 @@ def launch_apps(n, dirpath):
 
 if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
 
     x = launch_apps(10, "outputs")

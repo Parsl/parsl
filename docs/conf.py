@@ -62,7 +62,7 @@ author = 'Yadu Nand Babuji'
 # built documents.
 #
 # The short X.Y version.
-version = parsl.__version__.rsplit('.',1)[0]
+version = parsl.__version__.rsplit('.', 1)[0]
 # The full version, including alpha/beta/rc tags.
 release = parsl.__version__
 

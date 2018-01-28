@@ -144,12 +144,12 @@ class Reference(CannedObject):
     """object for wrapping a remote reference by name."""
     def __init__(self, name):
         if not isinstance(name, string_types):
-            raise TypeError("illegal name: %r"%name)
+            raise TypeError("illegal name: %r" % name)
         self.name = name
         self.buffers = []
 
     def __repr__(self):
-        return "<Reference: %r>"%self.name
+        return "<Reference: %r>" % self.name
 
     def get_object(self, g=None):
         if g is None:
@@ -219,7 +219,7 @@ class CannedClass(CannedObject):
         self.name = cls.__name__
         self.old_style = not isinstance(cls, type)
         self._canned_dict = {}
-        for k,v in cls.__dict__.items():
+        for k, v in cls.__dict__.items():
             if k not in ('__weakref__', '__dict__'):
                 self._canned_dict[k] = can(v)
         if self.old_style:
@@ -248,7 +248,7 @@ class CannedArray(CannedObject):
         elif obj.dtype == 'O':
             # can't handle object dtype with buffer approach
             self.pickled = True
-        elif obj.dtype.fields and any(dt == 'O' for dt,sz in obj.dtype.fields.values()):
+        elif obj.dtype.fields and any(dt == 'O' for dt, sz in obj.dtype.fields.values()):
             self.pickled = True
         if self.pickled:
             # just pickle it
@@ -300,7 +300,7 @@ def _import_mapping(mapping, original=None):
     """
     #log = get_logger()
     #log.debug("Importing canning map")
-    for key,value in list(mapping.items()):
+    for key, value in list(mapping.items()):
         if isinstance(key, string_types):
             try:
                 cls = import_item(key)
@@ -331,7 +331,7 @@ def can(obj):
     
     import_needed = False
     
-    for cls,canner in iteritems(can_map):
+    for cls, canner in iteritems(can_map):
         if isinstance(cls, string_types):
             import_needed = True
             break
@@ -376,7 +376,7 @@ def uncan(obj, g=None):
     """invert canning"""
     
     import_needed = False
-    for cls,uncanner in iteritems(uncan_map):
+    for cls, uncanner in iteritems(uncan_map):
         if isinstance(cls, string_types):
             import_needed = True
             break
@@ -395,7 +395,7 @@ def uncan_dict(obj, g=None):
     if istype(obj, dict):
         newobj = {}
         for k, v in iteritems(obj):
-            newobj[k] = uncan(v,g)
+            newobj[k] = uncan(v, g)
         return newobj
     else:
         return obj
@@ -403,7 +403,7 @@ def uncan_dict(obj, g=None):
 def uncan_sequence(obj, g=None):
     if istype(obj, sequence_types):
         t = type(obj)
-        return t([uncan(i,g) for i in obj])
+        return t([uncan(i, g) for i in obj])
     else:
         return obj
 

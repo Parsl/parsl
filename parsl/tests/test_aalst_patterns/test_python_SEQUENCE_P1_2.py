@@ -6,7 +6,7 @@ from parsl import *
 import random 
 import argparse
 
-workers = ThreadPoolExecutor(max_workers = 4)
+workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
@@ -18,7 +18,7 @@ def rand():
 def multiply_rand(x):
     return x * random.randint(1, 10)
 
-def test_sequence(x = 5):
+def test_sequence(x=5):
     flights = []
     miles = []
     for i in range(x):
@@ -30,7 +30,7 @@ def test_sequence(x = 5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--flight", default = "5", action = "store", dest = "a", type = int)
+    parser.add_argument("-a", "--flight", default="5", action="store", dest="a", type=int)
     args = parser.parse_args()
     test_sequence(args.a)
     

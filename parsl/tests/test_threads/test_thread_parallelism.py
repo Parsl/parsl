@@ -40,7 +40,7 @@ def test_parallel_sleep_bash(n=10, sleep_dur=2, tolerance=0.3):
     start = time.time()
 
     d = []
-    for i in range(0,n):
+    for i in range(0, n):
         d.extend([sleep_bash(sleep_dur)])
 
     for i in d:
@@ -60,7 +60,7 @@ def test_parallel_sleep_python(n=10, sleep_dur=2, tolerance=0.3):
     start = time.time()
 
     d = []
-    for i in range(0,n):
+    for i in range(0, n):
         d.extend([sleep_python(sleep_dur)])
 
     for i in d:

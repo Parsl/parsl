@@ -20,7 +20,7 @@ dfk = DataFlowKernel(executors=[workers])
 def generate(limit):
     from random import randint
     """Generate a random integer and return it"""
-    return randint(1,limit)
+    return randint(1, limit)
 
 # write a message to a file
 @App('bash', dfk)

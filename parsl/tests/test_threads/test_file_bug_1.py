@@ -26,12 +26,12 @@ def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
     return cmd_line
 
 def test_behavior():
-    app1_future = app1(inputs = [],
-                       outputs = ["simple-out.txt"])
+    app1_future = app1(inputs=[],
+                       outputs=["simple-out.txt"])
     #app1_future.result()
 
     app2_future = app2(inputs=[app1_future.outputs[0]],
-                       outputs = ["simple-out2.txt"])
+                       outputs=["simple-out2.txt"])
     app2_future.result()
 
     name = 'a'
@@ -47,10 +47,10 @@ def test_behavior():
 
 if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

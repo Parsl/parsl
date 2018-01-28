@@ -6,7 +6,7 @@ from parsl import *
 import random
 import argparse
 
-workers = ThreadPoolExecutor(max_workers = 10)
+workers = ThreadPoolExecutor(max_workers=10)
 dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
@@ -21,7 +21,7 @@ def square(x):
 def cubed(x):
     return x**3
 
-def test_discriminator(x = 4):
+def test_discriminator(x=4):
     squares = []
     cubes = []
     total = []
@@ -37,6 +37,6 @@ def test_discriminator(x = 4):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--num1", default = "4", action = "store", dest = "x", type = int)
+    parser.add_argument("-x", "--num1", default="4", action="store", dest="x", type=int)
     args = parser.parse_args()
     test_discriminator(args.x)

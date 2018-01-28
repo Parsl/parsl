@@ -32,7 +32,7 @@ def create_dirs(cwd):
         if os.path.exists(rel_dir):
             shutil.rmtree(rel_dir)
         os.makedirs(rel_dir)
-        for i in range(0, random.randint(1,5)):
+        for i in range(0, random.randint(1, 5)):
             rdir = '{0}/{1}'.format(rel_dir, i)
             os.makedirs(rdir)
             with open('{0}/results'.format(rdir, i), 'w') as f:
@@ -117,10 +117,10 @@ def test_HEDM(count=10):
     x.result()
 
 if __name__ == "__main__":
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

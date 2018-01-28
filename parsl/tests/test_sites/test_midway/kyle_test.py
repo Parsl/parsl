@@ -54,7 +54,7 @@ dfk = DataFlowKernel(config=config)
 def sort(unsorted: str,
          outputs: list = [],
          stderr: str='output/p4_c_sort.err',
-         stdout: str='output/p4_c_sort.out')-> Future:
+         stdout: str='output/p4_c_sort.out') -> Future:
     """Call sort executable on file `unsorted`"""
 
     return "sort -g {} > {}".format(unsorted, outputs[0])
@@ -69,10 +69,10 @@ s.result()
 
 with open('p4/unsorted.txt', 'r') as f:
 
-    print(f.read().replace("\n",","))
+    print(f.read().replace("\n", ","))
 
 
 
 with open('output/sorted_c.txt', 'r') as f:
 
-    print(f.read().replace("\n",","))
+    print(f.read().replace("\n", ","))

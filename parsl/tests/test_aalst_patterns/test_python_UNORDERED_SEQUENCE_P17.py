@@ -8,7 +8,7 @@ import random
 import argparse
 import time 
 
-workers = ThreadPoolExecutor(max_workers = 4)
+workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
@@ -48,6 +48,6 @@ def test_unordered_sequence():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--input", default = "4", action = "store", dest = "x", type = int)
+    parser.add_argument("-x", "--input", default="4", action="store", dest="x", type=int)
     args = parser.parse_args()
     test_unordered_sequence()

@@ -26,7 +26,7 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
 def test_parallel_for(n=10):
     ''' Testing a bash outputs in a parallel for
     '''
-    outdir='outputs'
+    outdir = 'outputs'
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     else:
@@ -36,7 +36,7 @@ def test_parallel_for(n=10):
     d = {}
 
     start = time.time()
-    for i in range(0,n):
+    for i in range(0, n):
         d[i] = echo_to_file(inputs=['Hello World {0}'.format(i)],
                             outputs=['{0}/out.{1}.txt'.format(outdir, i)],
                             stdout='{0}/std.{1}.out'.format(outdir, i),
@@ -44,7 +44,7 @@ def test_parallel_for(n=10):
                            )
         #time.sleep(0.01)
 
-    assert len(d.keys())   == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
+    assert len(d.keys()) == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
 
     [d[i].result() for i in d]
     print([d[i].outputs for i in d])
@@ -58,10 +58,10 @@ def test_parallel_for(n=10):
 
 if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

@@ -44,22 +44,22 @@ class AppBase (object):
              - APP object.
 
         '''
-        self.__name__   = func.__name__
-        self.func       = func
-        self.executor   = executor
-        self.exec_type  = exec_type
-        self.status     = 'created'
-        self.sites      = sites
+        self.__name__ = func.__name__
+        self.func = func
+        self.executor = executor
+        self.exec_type = exec_type
+        self.status = 'created'
+        self.sites = sites
 
         sig = signature(func)
-        self.kwargs     = {}
+        self.kwargs = {}
         for s in sig.parameters:
             if sig.parameters[s].default != Parameter.empty:
                 self.kwargs[s] = sig.parameters[s].default
 
-        self.stdout  = sig.parameters['stdout'].default  if 'stdout'  in sig.parameters else None
-        self.stderr  = sig.parameters['stderr'].default  if 'stderr'  in sig.parameters else None
-        self.inputs  = sig.parameters['inputs'].default  if 'inputs'  in sig.parameters else []
+        self.stdout = sig.parameters['stdout'].default  if 'stdout'  in sig.parameters else None
+        self.stderr = sig.parameters['stderr'].default  if 'stderr'  in sig.parameters else None
+        self.inputs = sig.parameters['inputs'].default  if 'inputs'  in sig.parameters else []
         self.outputs = sig.parameters['outputs'].default if 'outputs' in sig.parameters else []
 
     def __call__(self, *args, **kwargs):

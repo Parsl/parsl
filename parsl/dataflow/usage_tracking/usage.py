@@ -42,10 +42,10 @@ class UsageTracker (object):
                 self.UDP_IP = ip
         else:
             self.UDP_IP = ip
-        self.UDP_PORT= port
-        self.dfk     = dfk
-        self.config  = self.dfk.config
-        self.uuid    = str(uuid.uuid4())
+        self.UDP_PORT = port
+        self.dfk = dfk
+        self.config = self.dfk.config
+        self.uuid = str(uuid.uuid4())
         self.test_mode, self.tracking_enabled = self.check_tracking_enabled()
         logger.debug("Tracking status: {}".format(self.tracking_enabled))
         logger.debug("Testing mode   : {}".format(self.test_mode))
@@ -63,7 +63,7 @@ class UsageTracker (object):
         '''
 
         track = True   # By default we track usage
-        test  = False  # By default we are not in testing mode
+        test = False  # By default we are not in testing mode
 
         testvar = str(os.environ.get("PARSL_TESTING", 'None')).lower()
         if testvar == 'true':
@@ -174,6 +174,6 @@ if __name__ == '__main__':
     #ut = UsageTracker(dfk, ip='52.3.111.203')
     ut = UsageTracker(dfk, domain_name='tracking.parsl-project.org')
 
-    for i in range(0,2):
+    for i in range(0, 2):
         x = ut.send_message()
         print(x)

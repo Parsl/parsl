@@ -38,7 +38,7 @@ def test_func_1(width=10):
 
     fu_1 = []
     for i in range(1, width+1):
-        fu = map_one(i, random.randint(0,5)/10)
+        fu = map_one(i, random.randint(0, 5)/10)
         fu_1.extend([fu])
 
     fu_2 = []
@@ -46,7 +46,7 @@ def test_func_1(width=10):
         fu = map_two(fu, 0)
         fu_2.extend([fu])
 
-    assert sum([i.result() for i in fu_2]) == sum(range(1,width+1))*10, "Sums do not match"
+    assert sum([i.result() for i in fu_2]) == sum(range(1, width+1))*10, "Sums do not match"
     return fu_2
 
 
@@ -54,7 +54,7 @@ def test_func_2(width=10):
 
     fu_1 = []
     for i in range(1, width+1):
-        fu = map_one(i, random.randint(0,5))
+        fu = map_one(i, random.randint(0, 5))
         fu_1.extend([fu])
 
     fu_2 = []
@@ -62,16 +62,16 @@ def test_func_2(width=10):
         fu = add_two(fu_1[i], fu_1[i+1], 0)
         fu_2.extend([fu])
 
-    assert sum([i.result() for i in fu_2]) == sum(range(1,width+1))*2, "Sums do not match"
+    assert sum([i.result() for i in fu_2]) == sum(range(1, width+1))*2, "Sums do not match"
     return fu_2
 
 
 if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="10", help="width of the pipeline")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()

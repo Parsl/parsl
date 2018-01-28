@@ -5,7 +5,7 @@ from parsl import *
 import random
 import argparse
 
-workers = ThreadPoolExecutor(max_workers = 20)
+workers = ThreadPoolExecutor(max_workers=20)
 dfk = DataFlowKernel(executors=[workers])
 
 @App('python', dfk)
@@ -42,6 +42,6 @@ def test_multi_merge():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--num1", default = "4", action = "store", dest = "x", type = int)
+    parser.add_argument("-x", "--num1", default="4", action="store", dest="x", type=int)
     args = parser.parse_args()
     test_multi_merge()

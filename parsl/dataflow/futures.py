@@ -71,12 +71,12 @@ class AppFuture(Future):
         '''
         self._tid = tid
         super().__init__()
-        self.parent   = parent
+        self.parent = parent
         #if self.parent:
         #    parent.add_done_callback(self.parent_callback)
         self._outputs = []
-        self._stdout  = stdout
-        self._stderr  = stderr
+        self._stdout = stdout
+        self._stderr = stderr
 
 
     @property

@@ -40,7 +40,7 @@ def test_parallel(N=10):
 
     # doubled_z will be done in ~4s
     print(doubled_z.result())
-    end  = time.time()
+    end = time.time()
     delta = time.time() - start
 
     assert doubled_z.result() == N*2, "Expected doubled_z = N*2 = {0}".format(N*2)

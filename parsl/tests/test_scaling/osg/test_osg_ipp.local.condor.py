@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     results = {}
     print("Launching tasks...")
-    for i in range(0,10):
+    for i in range(0, 10):
         results[i] = test(20)
 
     print("Waiting ....")

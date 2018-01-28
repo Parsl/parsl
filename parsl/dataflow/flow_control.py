@@ -84,13 +84,13 @@ class FlowControl(object):
              - interval (int) : seconds after which timer expires
         '''
 
-        self.dfk       = dfk
+        self.dfk = dfk
         self.threshold = threshold
-        self.interval  = interval
-        self.cb_args   = args
-        self.strategy  = Strategy(dfk)
-        self.callback  = self.strategy.strategize
-        self._handle   = None
+        self.interval = interval
+        self.cb_args = args
+        self.strategy = Strategy(dfk)
+        self.callback = self.strategy.strategize
+        self._handle = None
         self._event_count = 0
         self._event_buffer = []
         self._wake_up_time = time.time() + 1
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     print("This is broken")
     def cback(*args):
         print("*"*40)
-        print("Callback at {0} with args : {1}".format(time.time(),args))
+        print("Callback at {0} with args : {1}".format(time.time(), args))
         print("*"*40)
 
 
