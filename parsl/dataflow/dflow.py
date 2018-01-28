@@ -1,23 +1,3 @@
-'''
-DataFlowKernel
-==============
-
-The DataFlowKernel adds dependency awareness to an existing executor.
-It is responsible for managing futures, such that when dependencies are resolved,
-pending tasks move to the runnable state.
-
-Here's a simplified diagram of what happens internally::
-
-    User             |        DFK         |    Executor
-    ----------------------------------------------------------
-                     |                    |
-          Task-------+> +Submit           |
-        App_Fu<------+--|                 |
-                     |  Dependencies met  |
-                     |         task-------+--> +Submit
-                     |        Ex_Fu<------+----|
-'''
-
 import os
 import time
 import copy
@@ -48,7 +28,21 @@ from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 logger = logging.getLogger(__name__)
 
 class DataFlowKernel(object):
-    """ DataFlowKernel
+    """The DataFlowKernel adds dependency awareness to an existing executor.
+    It is responsible for managing futures, such that when dependencies are resolved,
+    pending tasks move to the runnable state.
+
+    Here's a simplified diagram of what happens internally::
+
+         User             |        DFK         |    Executor
+        ----------------------------------------------------------
+                          |                    |
+               Task-------+> +Submit           |
+             App_Fu<------+--|                 |
+                          |  Dependencies met  |
+                          |         task-------+--> +Submit
+                          |        Ex_Fu<------+----|
+
     """
 
     def __init__(self, config=None, executors=None, lazy_fail=True, memoize=True,
@@ -62,6 +56,7 @@ class DataFlowKernel(object):
             - config (Dict) : A single data object encapsulating all config attributes
             - executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
             - lazy_fail(Bool) : Default=True, determine failure behavior
+            - memoize (Bool) :Enable memoization of apps
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             - fail_retries(int): Default=2, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
@@ -208,58 +203,6 @@ class DataFlowKernel(object):
                         raise e
 
         return
-
-
-    def write_status_log(self):
-        ''' Write status log.
-
-        Args:
-           None
-
-        Kwargs:
-           None
-        '''
-
-        state_lens = {States.unsched : 0,
-                      States.pending : 0,
-                      States.runnable: 0,
-                      States.running : 0,
-                      States.done    : 0,
-                      States.failed  : 0,
-                      States.dep_fail: 0}
-
-        for tid in self.tasks:
-            state_lens[self.tasks[tid]['status']] += 1
-
-        logger.debug("Pending:%d   Runnable:%d   Done:%d", state_lens[States.pending],
-                     state_lens[States.runnable],
-                     state_lens[States.done])
-
-
-    def print_status_log(self):
-        ''' Print status log in terms of pending, runnable and done tasks
-
-        Args:
-           None
-
-        Kwargs:
-           None
-        '''
-
-        state_lens = {States.unsched : 0,
-                      States.pending : 0,
-                      States.runnable: 0,
-                      States.running : 0,
-                      States.done    : 0,
-                      States.failed  : 0,
-                      States.dep_fail: 0}
-
-        for tid in self.tasks:
-            state_lens[self.tasks[tid]['status']] += 1
-
-        print("Pending:{0}   Runnable:{1}   Done:{2}".format( state_lens[States.pending],
-                                                              state_lens[States.runnable],
-                                                              state_lens[States.done] ))
 
     def launch_task(self, task_id, executable, *args, **kwargs):
         ''' Handle the actual submission of the task to the executor layer
@@ -493,14 +436,6 @@ class DataFlowKernel(object):
 
         logger.debug("Task:%s Launched with AppFut:%s", task_id, task_def['app_fu'])
         return task_def['app_fu']
-
-
-    def checkpoint (self, task_id=None, checkpoint_file=None):
-        ''' Write updated checkpoint to the checkpoint_file
-        '''
-        if checkpoint_file :
-            with open(checkpoint_file, 'wb+') as f:
-                pickle.dump(self, f)
 
     def cleanup (self):
         '''  DataFlowKernel cleanup. This involves killing resources explicitly and
