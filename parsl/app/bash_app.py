@@ -9,6 +9,7 @@ from parsl.app.app import AppBase
 
 logger = logging.getLogger(__name__)
 
+
 def remote_side_bash_executor(func, *args, **kwargs):
     ''' The callable fn for external apps.
     This is the function that executes the bash app type function that returns
@@ -24,7 +25,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
 
-    start_t = time.time()
+    # start_t = time.time()
 
     func_name = func.__name__
 
@@ -38,13 +39,13 @@ def remote_side_bash_executor(func, *args, **kwargs):
     except AttributeError as e:
         if partial_cmdline:
             raise pe.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
-                                                                                                     e), None)
+                                                                                                       e), None)
         else:
             raise pe.BashAppNoReturn("[{}] Bash App returned NoneType, must return str object".format(func_name), None)
 
     except IndexError as e:
         raise pe.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
-                                                                                                e), None)
+                                                                                                   e), None)
     except Exception as e:
         logging.error("[{}] Caught exception during cmd_line resolution : {}".format(func_name,
                                                                                      e))
@@ -63,8 +64,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
     except Exception as e:
         raise pe.BadStdStreamFile([stdout, stderr], e)
 
-    start_time = time.time()
-
     returncode = None
     try:
         proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
@@ -73,13 +72,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     except subprocess.TimeoutExpired as e:
         print("Timeout")
-        status = 'failed'
         raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout), e)
 
     except Exception as e:
         print ("Caught exception : ", e)
-        error = e
-        status = 'failed'
         raise pe.AppException("[{}] App caught exception : {}".format(func_name, proc.returncode), e)
 
     if returncode != 0:
@@ -99,7 +95,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     if missing:
         raise pe.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
 
-    exec_duration = time.time() - start_t
+    # exec_duration = time.time() - start_t
     return returncode
 
 
@@ -125,7 +121,6 @@ class BashApp(AppBase):
                    App_fut
 
         '''
-        trace_method = False
 
         # Update kwargs in the app definition with one's passed in at calltime
         self.kwargs.update(kwargs)
