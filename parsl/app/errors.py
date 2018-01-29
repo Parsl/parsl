@@ -1,5 +1,7 @@
 ''' Exceptions raise by Apps.
 '''
+
+
 class ParslError(Exception):
     """ Base class for all exceptions
 
@@ -14,6 +16,7 @@ class NotFutureError(ParslError):
     '''
     pass
 
+
 class InvalidAppTypeError(ParslError):
     ''' An invalid app type was requested from the the @App decorator.
     '''
@@ -24,11 +27,13 @@ class AppException(ParslError):
     ''' An error raised during execution of an app.
     What this exception contains depends entirely on context
     '''
+
     def __repr__(self):
         return "{0} Reason:{1}".format(self.__class__, self.reason)
 
     def __str__(self):
         return self.__repr__()
+
 
 class AppBadFormatting(ParslError):
     ''' An error raised during formatting of a bash function
@@ -61,6 +66,7 @@ class AppFailure(AppException):
         self.exitcode = exitcode
         self.retries = retries
 
+
 class AppTimeout(AppException):
     ''' An error raised during execution of an app when it exceeds its allotted walltime
 
@@ -75,6 +81,7 @@ class AppTimeout(AppException):
         self.reason = reason
         self.exitcode = -55
         self.retries = retries
+
 
 class BashAppNoReturn(AppException):
     ''' Bash app returned no string.
@@ -112,6 +119,7 @@ class MissingOutputs(ParslError):
     def __str__(self):
         return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
 
+
 class BadStdStreamFile(ParslError):
     ''' Error raised due to bad filepaths specified for STDOUT/ STDERR
 
@@ -131,6 +139,7 @@ class BadStdStreamFile(ParslError):
 
     def __str__(self):
         return self.__repr__()
+
 
 class DependencyError(ParslError):
     ''' Error raised at the end of app execution due to missing

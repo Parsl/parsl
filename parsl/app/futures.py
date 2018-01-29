@@ -27,6 +27,7 @@ _STATE_TO_DESCRIPTION_MAP = {
     FINISHED: "finished"
 }
 
+
 class DataFuture(Future):
     """ A datafuture points at an AppFuture
 
@@ -206,8 +207,6 @@ class DataFuture(Future):
                 _STATE_TO_DESCRIPTION_MAP[self._state])
 
 
-
-
 def testing_nonfuture():
     fpath = '~/shuffled.txt'
     df = DataFuture(None, fpath)
@@ -215,8 +214,9 @@ def testing_nonfuture():
     print("Result : ", df.filepath)
     assert df.filepath == os.path.abspath(os.path.expanduser(fpath))
 
+
 if __name__ == "__main__":
-    #logging.basicConfig(filename='futures.testing.log',level=logging.DEBUG)
+    # logging.basicConfig(filename='futures.testing.log',level=logging.DEBUG)
     import sys
     import random
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -234,6 +234,5 @@ if __name__ == "__main__":
 
     print(foo.done())
     print(df.done())
-
 
     testing_nonfuture()

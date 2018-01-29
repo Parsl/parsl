@@ -13,6 +13,7 @@ from parsl.app.errors import InvalidAppTypeError
 
 logger = logging.getLogger(__name__)
 
+
 class AppFactory(object):
     ''' AppFactory streamlines creation of apps
     '''
@@ -46,7 +47,6 @@ class AppFactory(object):
         fn_source = getsource(func)
         self.func_hash = md5(fn_source.encode('utf-8')).hexdigest()
 
-
     def __call__(self, *args, **kwargs):
         ''' Create a new object of app_class with the args,
         execute the app_object and return the futures
@@ -75,8 +75,8 @@ class AppFactory(object):
 
     def __str__(self):
         return '<class %s"%s for %s>' % (self.app_class.__name__,
-                                        self.__class__.__name__,
-                                        self.__name__)
+                                         self.__class__.__name__,
+                                         self.__name__)
 
 
 class AppFactoryFactory(object):
@@ -86,6 +86,7 @@ class AppFactoryFactory(object):
 
 
     '''
+
     def __init__(self, name):
         ''' Constructor
 

@@ -9,10 +9,12 @@ from parsl.app.app import AppBase
 
 logger = logging.getLogger(__name__)
 
+
 class PythonApp(AppBase):
     """ Extends AppBase to cover the Python App
 
     """
+
     def __init__(self, func, executor, walltime=60, sites='all', fn_hash=None):
         ''' Initialize the super. This bit is the same for both bash & python apps.
         '''

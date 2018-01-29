@@ -57,9 +57,9 @@ class AppBase (object):
             if sig.parameters[s].default != Parameter.empty:
                 self.kwargs[s] = sig.parameters[s].default
 
-        self.stdout = sig.parameters['stdout'].default  if 'stdout'  in sig.parameters else None
-        self.stderr = sig.parameters['stderr'].default  if 'stderr'  in sig.parameters else None
-        self.inputs = sig.parameters['inputs'].default  if 'inputs'  in sig.parameters else []
+        self.stdout = sig.parameters['stdout'].default if 'stdout' in sig.parameters else None
+        self.stderr = sig.parameters['stderr'].default if 'stderr' in sig.parameters else None
+        self.inputs = sig.parameters['inputs'].default if 'inputs' in sig.parameters else []
         self.outputs = sig.parameters['outputs'].default if 'outputs' in sig.parameters else []
 
     def __call__(self, *args, **kwargs):
@@ -77,6 +77,7 @@ def app_wrapper(func):
         return x
 
     return wrapper
+
 
 def App(apptype, executor, walltime=60, sites='all'):
     ''' The App decorator function
