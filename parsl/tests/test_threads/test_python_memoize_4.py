@@ -11,7 +11,7 @@ import argparse
 
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(executors=[workers])
+dfk = DataFlowKernel(executors=[workers], memoize=True)
 
 
 def test_python_memoization(n=4):
