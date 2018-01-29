@@ -1,0 +1,13 @@
+[flake8]
+# D203: 1 blank line required before class docstring
+# E124: closing bracket does not match visual indentation
+# E126: continuation line over-indented for hanging indent
+ignore = D203, E124, E126
+max-line-length = 160
+exclude = executors/serialize/, tests/
+#        .git,
+#        __pycache__,
+#        docs/source/conf.py,
+#        old,
+#        build,
+#        dist
