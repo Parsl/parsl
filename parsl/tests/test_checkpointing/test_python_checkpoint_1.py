@@ -21,7 +21,7 @@ config = {
           }
          }],
     "globals": {"lazyErrors": True,
-                "memoize": True
+                "memoize": True,
                 "checkpoint": True,
                 }
 }
