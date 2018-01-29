@@ -34,6 +34,7 @@ if PY3:
 # Serialization Functions
 #-----------------------------------------------------------------------------
 
+
 def _nbytes(buf):
     """Return byte-size of a memoryview or buffer"""
     if isinstance(buf, memoryview):
@@ -49,6 +50,7 @@ def _nbytes(buf):
     else:
         # not a memoryview, raw bytes/ py2 buffer
         return len(buf)
+
 
 def _extract_buffers(obj, threshold=MAX_BYTES):
     """extract buffers larger than a certain threshold"""
@@ -68,12 +70,14 @@ def _extract_buffers(obj, threshold=MAX_BYTES):
                 obj.buffers[i] = bytes(buf)
     return buffers
 
+
 def _restore_buffers(obj, buffers):
     """restore buffers extracted by """
     if isinstance(obj, CannedObject) and obj.buffers:
         for i, buf in enumerate(obj.buffers):
             if buf is None:
                 obj.buffers[i] = buffers.pop(0)
+
 
 def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
     """Serialize an object into a list of sendable buffers.
@@ -113,6 +117,7 @@ def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
     buffers.insert(0, pickle.dumps(cobj, PICKLE_PROTOCOL))
     return buffers
 
+
 def deserialize_object(buffers, g=None):
     """reconstruct an object serialized by serialize_object from data buffers.
 
@@ -147,6 +152,7 @@ def deserialize_object(buffers, g=None):
 
     return newobj, bufs
 
+
 def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
     """pack up a function, args, and kwargs to be sent over the wire
 
@@ -179,10 +185,11 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
 
     return msg
 
+
 def unpack_apply_message(bufs, g=None, copy=True):
     """unpack f,args,kwargs from buffers packed by pack_apply_message()
     Returns: original f,args,kwargs"""
-    bufs = list(bufs) # allow us to pop
+    bufs = list(bufs)  # allow us to pop
     assert len(bufs) >= 2, "not enough buffers!"
     pf = buffer_to_bytes_py2(bufs.pop(0))
     f = uncan(pickle.loads(pf), g)

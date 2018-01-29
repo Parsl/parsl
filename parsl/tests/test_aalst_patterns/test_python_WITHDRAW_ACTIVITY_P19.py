@@ -1,5 +1,5 @@
 # A point in the workflow process where an enabled activity is disabled, or
-# a thread waiting for execution is removed 
+# a thread waiting for execution is removed
 
 import parsl
 from parsl import *
@@ -10,20 +10,24 @@ import time
 workers = ThreadPoolExecutor(max_workers=10)
 dfk = DataFlowKernel(executors=[workers])
 
+
 @App('python', dfk)
 def rand():
     x = random.randint(1, 10)
     print(x)
     return x
 
+
 @App('python', dfk)
 def square(x):
     z = x**2
     return z
 
+
 @App('python', dfk)
 def increment(x):
     return x + 1
+
 
 @App('python', dfk)
 def cubed(x):
@@ -32,6 +36,7 @@ def cubed(x):
         return x**3
     else:
         return x**3
+
 
 @App('python', dfk)
 def sum_elements(x=[], y=[], z=[]):
@@ -45,6 +50,7 @@ def sum_elements(x=[], y=[], z=[]):
         total += z[k].result()
     return total
 
+
 def test_withdraw(x=3):
     cubes = []
     squares = []
@@ -54,12 +60,13 @@ def test_withdraw(x=3):
         cubes.append(cubed(r))
         squares.append(square(r))
         if cubes[i].done() is True:
-            print(True) 
-            squares[i] = None 
+            print(True)
+            squares[i] = None
         else:
-            print(False) 
+            print(False)
         increments.append(increment(r))
     print(sum_elements(cubes, squares, increments).result())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

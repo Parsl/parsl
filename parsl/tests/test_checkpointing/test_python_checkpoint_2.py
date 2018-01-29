@@ -23,29 +23,30 @@ while True:
 config = {
     "sites": [
         {"site": "Local_Threads",
-          "auth": {"channel": None},
-          "execution": {
-              "executor": "threads",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "threads",
               "provider": None,
               "maxThreads": 2,
           }
          }],
     "globals": {"lazyErrors": True,
-                 "checkpoint": True,
+                "checkpoint": True,
                 }
 }
 dfk = DataFlowKernel(config=config, checkpointFiles=[last_checkpoint])
+
 
 @App('python', dfk)
 def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)
-    return x*2
+    return x * 2
+
 
 def test_initial_checkpoint_write(n=4):
     """ 2. Load the memoization table from previous checkpoint
     """
-
 
     d = {}
 

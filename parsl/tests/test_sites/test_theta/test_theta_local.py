@@ -7,6 +7,7 @@ os.environ["THETA_USERNAME"] = "yadunand"
 from theta import multiNode as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def platform_info(dur=1):
     import platform
@@ -25,9 +26,8 @@ def test_all(N=20, dur=1):
     print("Waiting ....")
     uniq_set = set([results[rid].result() for rid in results])
     print("Unique nodes : ", len(uniq_set))
-    
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
 
     test_all(dur=1)

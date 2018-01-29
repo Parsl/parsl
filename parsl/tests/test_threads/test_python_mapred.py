@@ -11,20 +11,23 @@ import shutil
 import argparse
 import random
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('python', dfk)
 def fan_out(x, dur):
     import time
     time.sleep(dur)
-    return x*2
+    return x * 2
+
 
 @App('python', dfk)
 def accumulate(inputs=[]):
     return sum(inputs)
+
 
 @App('python', dfk)
 def accumulate_t(*args):
@@ -36,7 +39,7 @@ def test_mapred_type1(width=5):
     '''
 
     futs = []
-    for i in range(1, width+1):
+    for i in range(1, width + 1):
         fu = fan_out(i, 1)
         futs.extend([fu])
 
@@ -44,7 +47,7 @@ def test_mapred_type1(width=5):
 
     red = accumulate(inputs=futs)
     #print([(i, i.done()) for i in futs])
-    r = sum([x*2 for x in range(1, width+1)])
+    r = sum([x * 2 for x in range(1, width + 1)])
     assert r == red.result(), "[TEST] MapRed type1 expected %s, got %s" % (r, red.result())
 
 
@@ -53,7 +56,7 @@ def test_mapred_type2(width=5):
     '''
 
     futs = []
-    for i in range(1, width+1):
+    for i in range(1, width + 1):
         fu = fan_out(i, 0.1)
         futs.extend([fu])
 
@@ -62,7 +65,7 @@ def test_mapred_type2(width=5):
     red = accumulate_t(*futs)
 
     #print([(i, i.done()) for i in futs])
-    r = sum([x*2 for x in range(1, width+1)])
+    r = sum([x * 2 for x in range(1, width + 1)])
     assert r == red.result(), "[TEST] MapRed type2 expected %s, got %s" % (r, red.result())
 
 
@@ -75,7 +78,6 @@ if __name__ == '__main__':
 
     if args.debug:
         parsl.set_stream_logger()
-
 
     tests = [test_mapred_type1, test_mapred_type2]
     for test in tests:

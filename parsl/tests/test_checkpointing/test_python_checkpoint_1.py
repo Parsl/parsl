@@ -9,29 +9,31 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 config = {
     "sites": [
         {"site": "Local_Threads",
-          "auth": {"channel": None},
-          "execution": {
-              "executor": "threads",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "threads",
               "provider": None,
               "maxThreads": 2,
           }
          }],
     "globals": {"lazyErrors": True,
-                 "checkpoint": True,
+                "checkpoint": True,
                 }
 }
 
 dfk = DataFlowKernel(config=config)
 
+
 @App('python', dfk)
 def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)
-    return x*2
+    return x * 2
+
 
 def test_initial_checkpoint_write(n=4):
     """ 1. Launch a few apps and write the checkpoint once a few have completed
@@ -48,9 +50,10 @@ def test_initial_checkpoint_write(n=4):
         d[i].result()
     print("Done sleeping")
     cpt_dir = dfk.checkpoint()
-    assert not os.path.exists(cpt_dir+'/dfk'), "DFK checkpoint missing"
-    assert not os.path.exists(cpt_dir+'/tasks'), "Tasks checkpoint missing"
+    assert not os.path.exists(cpt_dir + '/dfk'), "DFK checkpoint missing"
+    assert not os.path.exists(cpt_dir + '/tasks'), "Tasks checkpoint missing"
     return
+
 
 if __name__ == '__main__':
 

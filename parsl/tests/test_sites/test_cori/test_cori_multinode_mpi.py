@@ -11,6 +11,7 @@ from cori import multiNodeMPI as config
 parsl.set_stream_logger()
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def python_app_slow(duration):
     import platform
@@ -30,6 +31,7 @@ def test_python_remote(count=10):
     for fu in fus:
         print(fu.result())
 
+
 def test_python_remote_slow(count=20):
 
     fus = []
@@ -46,6 +48,7 @@ def bash_mpi_app(stdout=None, stderr=None):
     return '''ls -thor
 mpi_hello
     '''
+
 
 if __name__ == "__main__":
 

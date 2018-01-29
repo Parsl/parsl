@@ -4,14 +4,17 @@ from parsl import *
 workers = ThreadPoolExecutor(max_workers=4)
 data_flow_kernel = DataFlowKernel(executors=[workers])
 
+
 @App('bash', data_flow_kernel)
 def echo(message, outputs=[]):
     return 'echo {0} &> {outputs[0]}'
+
 
 @App('python', data_flow_kernel)
 def cat(inputs=[]):
     with open(inputs[0]) as f:
         return f.readlines()
+
 
 def test_slides():
     ''' Testing code snippet from slides '''

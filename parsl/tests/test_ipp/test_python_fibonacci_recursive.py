@@ -5,6 +5,7 @@ import argparse
 workers = IPyParallelExecutor()
 dfk = DataFlowKernel(workers)
 
+
 @App('python', dfk)
 def fibonacci(n):
     if n == 0:
@@ -14,6 +15,7 @@ def fibonacci(n):
     else:
         return fibonacci(n - 1).result() + fibonacci(n - 2).result()
 
+
 def test_fibonacci(x=5):
     results = []
     for i in range(x):
@@ -22,6 +24,7 @@ def test_fibonacci(x=5):
         while results[j].done() is not True:
             pass
         print(results[j].result())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

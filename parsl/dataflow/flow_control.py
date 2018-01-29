@@ -8,6 +8,7 @@ from parsl.dataflow.strategy import Strategy
 
 logger = logging.getLogger(__name__)
 
+
 class FlowNoControl(object):
     ''' FlowNoControl implements similar interfaces as FlowControl but
     with null handlers so as to mimic the FlowControl class.
@@ -36,6 +37,7 @@ class FlowNoControl(object):
         ''' This close fn does nothing
         '''
         pass
+
 
 class FlowControl(object):
     '''
@@ -119,7 +121,6 @@ class FlowControl(object):
             logger.debug("Eventcount >= threshold")
             self.make_callback(kind="event")
 
-
     def make_callback(self, kind=None):
         ''' Makes the callback and resets the timer.
         '''
@@ -127,22 +128,20 @@ class FlowControl(object):
         self.callback(tasks=self._event_buffer, kind=kind)
         self._event_buffer = []
 
-
     def close(self):
         ''' Merge the threads and terminate.
         '''
         self._thread.join()
 
 
-
 if __name__ == "__main__":
 
     print("This is broken")
-    def cback(*args):
-        print("*"*40)
-        print("Callback at {0} with args : {1}".format(time.time(), args))
-        print("*"*40)
 
+    def cback(*args):
+        print("*" * 40)
+        print("Callback at {0} with args : {1}".format(time.time(), args))
+        print("*" * 40)
 
     fc = FlowControl(cback)
 

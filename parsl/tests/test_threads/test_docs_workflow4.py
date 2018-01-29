@@ -11,17 +11,20 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=8)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('bash', dfk)
 def generate(outputs=[]):
     return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}"
 
+
 @App('bash', dfk)
 def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
     return "cat {0} >> {1}".format(" ".join(inputs), outputs[0])
+
 
 @App('python', dfk)
 def total(inputs=[]):
@@ -30,6 +33,7 @@ def total(inputs=[]):
         for l in f:
             total += int(l)
     return total
+
 
 def test_parallel_dataflow():
     ''' Test parallel dataflow from docs on Composing workflows
@@ -51,6 +55,3 @@ def test_parallel_dataflow():
 if __name__ == "__main__":
 
     test_parallel_dataflow()
-
-
-

@@ -11,15 +11,17 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=8)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('python', dfk)
 def generate(limit):
     from random import randint
     """Generate a random integer and return it"""
     return randint(1, limit)
+
 
 def test_parallel_for(N=5):
     ''' Test parallel workflows from docs on Composing workflows
@@ -30,13 +32,8 @@ def test_parallel_for(N=5):
 
     # wait for all apps to finish and collect the results
     outputs = [i.result() for i in rand_nums]
-
-
+    return outputs
 
 if __name__ == "__main__":
 
     test_parallel_for()
-
-
-
-

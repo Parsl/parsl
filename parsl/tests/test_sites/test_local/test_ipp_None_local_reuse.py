@@ -10,10 +10,12 @@ print(libsubmit.__version__)
 from local import localIPPReuse as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())
+
 
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):

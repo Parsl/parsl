@@ -3,6 +3,7 @@ class ProviderFactoryError(Exception):
 
     Only to be invoked when only a more specific error is not available.
     """
+
     def __repr__(self):
         return "Pool:{0}, Reason:{1}".format(self.pool, self.reason)
 

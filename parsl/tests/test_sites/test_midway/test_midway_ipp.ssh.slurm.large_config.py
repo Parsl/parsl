@@ -3,7 +3,7 @@ import parsl
 import libsubmit
 import os
 import time
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 print(parsl.__version__)
 print(libsubmit.__version__)
 
@@ -33,14 +33,14 @@ def test_python(N=2000, sleep_duration=0.5):
     for i in range(0, N):
         results[i] = python_app(sleep_duration=sleep_duration)
     end = time.time()
-    print("Launched {} tasks in : {}. Task rate: {} Tasks/sec".format(N, end-start, float(N)/(end-start)))
+    print("Launched {} tasks in : {}. Task rate: {} Tasks/sec".format(N, end - start, float(N) / (end - start)))
     print("Waiting ....")
 
     start = time.time()
     x = [results[i].result() for i in results]
     end = time.time()
-    print("Completed all tasks in :", end-start)
-    print("Ideal time : {}*{} = {} / parallelism".format(N, sleep_duration, N*sleep_duration))
+    print("Completed all tasks in :", end - start)
+    print("Ideal time : {}*{} = {} / parallelism".format(N, sleep_duration, N * sleep_duration))
     print("Unique items : ")
     for item in set(x):
         print(item)
@@ -58,4 +58,4 @@ def test_bash():
 if __name__ == "__main__":
 
     test_python()
-    #test_bash()
+    # test_bash()

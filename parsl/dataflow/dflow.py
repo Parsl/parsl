@@ -22,7 +22,7 @@ from parsl.dataflow.config_defaults import update_config
 from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 
-#from parsl.dataflow.start_controller import Controller
+# from parsl.dataflow.start_controller import Controller
 # Exceptions
 
 logger = logging.getLogger(__name__)
@@ -289,7 +289,7 @@ class DataFlowKernel(object):
                     count += 1
                 depends.extend([dep])
 
-        #logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
+        # logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count, depends
 
     @staticmethod
@@ -523,7 +523,7 @@ class DataFlowKernel(object):
                     logger.debug("Task[%s]: checkpointed", task_id)
 
         end = time.time()
-        print("Done dumping {} tasks in {}s".format(count, end -start))
+        print("Done dumping {} tasks in {}s".format(count, end - start))
         return checkpoint_dir
 
     def _load_checkpoints(self, checkpointDirs):

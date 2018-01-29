@@ -11,16 +11,18 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=8)
 
 #workers = ProcessPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
+
 @App('bash', dfk)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {inputs[0]} > {outputs[0]}'
     return cmd_line
+
 
 @App('bash', dfk)
 def foo(x, y, stdout=None):
@@ -72,7 +74,7 @@ def test_parallel_for(n=10):
                             outputs=['{0}/out.{1}.txt'.format(outdir, i)],
                             stdout='{0}/std.{1}.out'.format(outdir, i),
                             stderr='{0}/std.{1}.err'.format(outdir, i))
-        #time.sleep(0.01)
+        # time.sleep(0.01)
 
     assert len(d.keys()) == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
 
@@ -80,7 +82,7 @@ def test_parallel_for(n=10):
     print("Duration : {0}s".format(time.time() - start))
     stdout_file_count = len([item for item in os.listdir(outdir) if item.endswith('.out')])
     assert stdout_file_count == n, "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
-                                                                          n, outdir)
+                                                                         n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
 
@@ -97,4 +99,4 @@ if __name__ == '__main__':
 
     #x = test_parallel_for(int(args.count))
     y = test_command_format_1()
-    #raise_error(0)
+    # raise_error(0)

@@ -8,7 +8,7 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
@@ -23,6 +23,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     '''
     return cmd_line
 
+
 @App('bash', dfk)
 def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
     cmd_line = '''
@@ -31,6 +32,7 @@ def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
     sleep {0}
     '''
     return cmd_line
+
 
 def test_increment(depth=5):
     ''' Test simple pipeline A->B...->N
@@ -43,10 +45,10 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
-        fu = increment(inputs=[prev], # Depend on the future from previous call
-                               outputs=["test{0}.txt".format(i)], # Name the file to be created here
-                               stdout="incr{0}.out".format(i),
-                               stderr="incr{0}.err".format(i))
+        fu = increment(inputs=[prev],  # Depend on the future from previous call
+                       outputs=["test{0}.txt".format(i)],  # Name the file to be created here
+                       stdout="incr{0}.out".format(i),
+                       stderr="incr{0}.err".format(i))
         [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
@@ -71,10 +73,10 @@ def test_increment_slow(depth=5, dur=0.5):
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
         fu = slow_increment(dur,
-                                    inputs=[prev], # Depend on the future from previous call
-                                    outputs=["test{0}.txt".format(i)], # Name the file to be created here
-                                    stdout="incr{0}.out".format(i),
-                                    stderr="incr{0}.err".format(i))
+                            inputs=[prev],  # Depend on the future from previous call
+                            outputs=["test{0}.txt".format(i)],  # Name the file to be created here
+                            stdout="incr{0}.out".format(i),
+                            stderr="incr{0}.err".format(i))
         [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
@@ -97,6 +99,6 @@ if __name__ == '__main__':
         pass
         parsl.set_stream_logger()
 
-    #test_increment(depth=int(args.width))
-    #test_increment(depth=int(args.width))
+    # test_increment(depth=int(args.width))
+    # test_increment(depth=int(args.width))
     test_increment_slow(depth=int(args.width))

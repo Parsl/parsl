@@ -4,14 +4,14 @@ USERNAME = os.environ["OSG_USERNAME"]
 multiNode = {
     "sites": [
         {"site": "OSG_Remote",
-          "auth": {
-              "channel": "ssh",
+         "auth": {
+             "channel": "ssh",
               "hostname": "login.osgconnect.net",
               "username": USERNAME,
               "scriptDir": "/home/{}/parsl_scripts/".format(USERNAME)
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "condor",
               "block": {                 # Definition of a block
                   "nodes": 1,            # of nodes in that block
@@ -39,13 +39,13 @@ pip3 install ipyparallel"""
 localMultiNode = {
     "sites": [
         {"site": "OSG_Local_IPP",
-          "auth": {
-              "channel": "local",
+         "auth": {
+             "channel": "local",
               "username": USERNAME,
               "scriptDir": "/home/{}/parsl_scripts/".format(USERNAME)
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "condor",
               "block": {                 # Definition of a block
                   "nodes": 1,            # of nodes in that block
@@ -72,4 +72,3 @@ pip3 install ipyparallel"""
     "controller": {"publicIp": '192.170.227.195'},
     "globals": {"lazyErrors": True}
 }
-

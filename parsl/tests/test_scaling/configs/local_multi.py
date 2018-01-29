@@ -7,21 +7,21 @@ to specify the site to which apps should be directed.
 threads_ipp = {
     "sites": [
         {"site": "Local_threads",
-          "auth": {
-              "channel": None,
+         "auth": {
+             "channel": None,
           },
-          "execution": {
-              "executor": "threads",
+         "execution": {
+             "executor": "threads",
               "provider": None,
               "max_workers": 4
           }
          },
         {"site": "Local_IPP",
-          "auth": {
-              "channel": None,
+         "auth": {
+             "channel": None,
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "local",
               "block": {                 # Definition of a block
                   "nodes": 1,            # of nodes in that block
@@ -46,9 +46,9 @@ send work to two separate remote sites, or to two separate partitions.
 multi_ipp = {
     "sites": [
         {"site": "Local_IPP_1",
-          "auth": {"channel": None},
-          "execution": {
-              "executor": "ipp",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "ipp",
               "provider": "local",
               "block": {
                   "nodes": 1,            # of nodes in that block
@@ -59,9 +59,9 @@ multi_ipp = {
           }
          },
         {"site": "Local_IPP_2",
-          "auth": {"channel": None},
-          "execution": {
-              "executor": "ipp",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "ipp",
               "provider": "local",
               "block": {
                   "nodes": 1,            # of nodes in that block

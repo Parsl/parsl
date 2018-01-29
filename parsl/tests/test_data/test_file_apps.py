@@ -4,7 +4,7 @@ import os
 
 from parsl.data_provider.files import File
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=8)
 dfk = DataFlowKernel(executors=[workers])
@@ -35,6 +35,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     echo $(($x+1)) > {outputs[0]}
     '''
 
+
 def test_increment(depth=5):
     ''' Test simple pipeline A->B...->N
     '''
@@ -46,10 +47,10 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
-        fu = increment(inputs=[prev], # Depend on the future from previous call
-                               outputs=[File("test{0}.txt".format(i))], # Name the file to be created here
-                               stdout="incr{0}.out".format(i),
-                               stderr="incr{0}.err".format(i))
+        fu = increment(inputs=[prev],  # Depend on the future from previous call
+                       outputs=[File("test{0}.txt".format(i))],  # Name the file to be created here
+                       stdout="incr{0}.out".format(i),
+                       stderr="incr{0}.err".format(i))
         [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
@@ -59,7 +60,6 @@ def test_increment(depth=5):
             fu = futs[key]
             data = open(fu.result(), 'r').read().strip()
             assert data == str(key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
-
 
 
 if __name__ == '__main__':

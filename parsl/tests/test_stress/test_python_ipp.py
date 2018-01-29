@@ -12,9 +12,11 @@ import random
 workers = IPyParallelExecutor()
 dfk = DataFlowKernel(executors=[workers])
 
+
 @App('python', dfk)
 def increment(x):
-    return x+1
+    return x + 1
+
 
 if __name__ == '__main__':
 
@@ -31,5 +33,5 @@ if __name__ == '__main__':
     for i in range(int(args.count)):
         x[i] = increment(i)
     end = time.time()
-    print("Launched {0} tasks in {1} s".format(args.count, end-start))
+    print("Launched {0} tasks in {1} s".format(args.count, end - start))
     #print([x[k].result() for k in x])

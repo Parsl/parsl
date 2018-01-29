@@ -8,14 +8,16 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('bash', dfk)
 def app1(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
     cmd_line = '''echo 'test' > {outputs[0]}'''
     return cmd_line
+
 
 @App('bash', dfk)
 def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
@@ -25,10 +27,11 @@ def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
     cmd_line = '''echo '{inputs[0]}' > {outputs[0]}'''
     return cmd_line
 
+
 def test_behavior():
     app1_future = app1(inputs=[],
                        outputs=["simple-out.txt"])
-    #app1_future.result()
+    # app1_future.result()
 
     app2_future = app2(inputs=[app1_future.outputs[0]],
                        outputs=["simple-out2.txt"])
@@ -57,4 +60,4 @@ if __name__ == '__main__':
 
     x = test_behavior()
 
-    #raise_error(0)
+    # raise_error(0)

@@ -4,16 +4,16 @@ USERNAME = os.environ['MIDWAY_USERNAME']
 singleNode = {
     "sites": [
         {"site": "Local_IPP",
-          "auth": {
-              "channel": "ssh",
+         "auth": {
+             "channel": "ssh",
               "hostname": "swift.rcc.uchicago.edu",
               "username": USERNAME,
               "scriptDir": "/scratch/midway2/{0}/parsl_scripts".format(USERNAME)
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "slurm",
-              "block": { # Definition of a block
+              "block": {  # Definition of a block
                   "nodes": 1,            # of nodes in that block
                   "taskBlocks": 1,       # total tasks in a block
                   "initBlocks": 1,
@@ -25,25 +25,25 @@ singleNode = {
               }
           }
          }
-        ],
+    ],
     "globals": {"lazyErrors": True}
 }
 
 multiCore = {
     "sites": [
         {"site": "Local_IPP",
-          "auth": {
-              "channel": "ssh",
+         "auth": {
+             "channel": "ssh",
               "hostname": "swift.rcc.uchicago.edu",
               "username": USERNAME,
               "scriptDir": "/scratch/midway2/{0}/parsl_scripts".format(USERNAME)
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "slurm",
               "block": {                  # Definition of a block
                   "nodes": 1,             # of nodes in that block
-                  "taskBlocks": "$CORES", # total tasks in a block
+                  "taskBlocks": "$CORES",  # total tasks in a block
                   "walltime": "00:05:00",
                   "initBlocks": 1,
                   "maxBlocks": 1,
@@ -54,25 +54,25 @@ multiCore = {
               }
           }
          }
-        ],
+    ],
     "globals": {"lazyErrors": True}
 }
 
 multiNode = {
     "sites": [
         {"site": "Local_IPP",
-          "auth": {
-              "channel": "ssh",
+         "auth": {
+             "channel": "ssh",
               "hostname": "swift.rcc.uchicago.edu",
               "username": USERNAME,
               "scriptDir": "/scratch/midway2/{0}/parsl_scripts".format(USERNAME)
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "slurm",
               "block": {                  # Definition of a block
                   "nodes": 1,             # of nodes in that block
-                  "taskBlocks": "$(($CORES*1))", # total tasks in a block
+                  "taskBlocks": "$(($CORES*1))",  # total tasks in a block
                   "walltime": "00:05:00",
                   "initBlocks": 8,
                   "maxBlocks": 1,
@@ -83,6 +83,6 @@ multiNode = {
               }
           }
          }
-        ],
+    ],
     "globals": {"lazyErrors": True}
 }

@@ -20,7 +20,7 @@ def test_factory_1():
                  "executor": "ipp",
                  "provider": "slurm",  # LIKELY SHOULD BE BOUND TO SITE
                  "scriptDir": ".scripts",
-                 "block": { # Definition of a block
+                 "block": {  # Definition of a block
                      "nodes": 1,            # of nodes in that block
                      "taskBlocks": 1,        # total tasks in a block
                      "walltime": "00:05:00",
@@ -41,23 +41,25 @@ def test_factory_1():
     epf = ExecProviderFactory()
     executor = epf.make(config)
 
+
 def test_factory_2():
 
     config = {"site": "ipp_local",
-                "execution":
-                {"executor": "ipp",
-                   "provider": "local",
-                   "channel": "None",
-                   "options":
-                  {"initParallelism": 2,
-                   "maxParallelism": 2,
-                   "minParallelism": 0,
+              "execution":
+              {"executor": "ipp",
+               "provider": "local",
+               "channel": "None",
+               "options":
+               {"initParallelism": 2,
+                "maxParallelism": 2,
+                "minParallelism": 0,
                    "walltime": "00:25:00",
                    }
                  }}
 
     epf = ExecProviderFactory()
     executor = epf.make(config)
+
 
 def test_factory_3():
 
@@ -78,13 +80,13 @@ def test_factory_3():
             "lazyErrors": True
         }
     }
-    
+
     epf = ExecProviderFactory()
     executor = epf.make(config)
 
 
 if __name__ == '__main__':
 
-    #test_factory_1()
-    #test_factory_2()
+    # test_factory_1()
+    # test_factory_2()
     test_factory_3()

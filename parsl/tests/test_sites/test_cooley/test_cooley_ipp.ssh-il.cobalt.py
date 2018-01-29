@@ -7,6 +7,7 @@ os.environ["COOLEY_USERNAME"] = "yadunand"
 from cooley import singleNode as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def test():
     import platform

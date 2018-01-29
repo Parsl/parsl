@@ -10,6 +10,7 @@ os.environ["OSG_USERNAME"] = "yadunand"
 from osg import localMultiNode as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def test(duration=0):
     import platform
@@ -29,4 +30,3 @@ if __name__ == "__main__":
 
     for key in results:
         print(results[key].result())
-

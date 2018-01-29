@@ -1,14 +1,15 @@
-# A point in the workflow process where when one of several branches is  
-# activated, the other branches are withdrawn 
+# A point in the workflow process where when one of several branches is
+# activated, the other branches are withdrawn
 
 import parsl
 from parsl import *
 import random
 import argparse
-import time 
+import time
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('python', dfk)
 def rand():
@@ -16,18 +17,21 @@ def rand():
     print(x)
     return x
 
+
 @App('python', dfk)
 def square(x):
-    if x > 5: 
+    if x > 5:
         return x**2
     else:
         time.sleep(5)
         return x**2
 
+
 @App('python', dfk)
 def increment(x):
     time.sleep(1)
     return x + 1
+
 
 def test_deferred_choice():
     r = rand().result()
@@ -40,7 +44,7 @@ def test_deferred_choice():
         print(s.result())
     elif i.done() is True:
         print(i.result())
-    
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

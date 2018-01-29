@@ -25,6 +25,7 @@ def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
     '''
     return cmd_line
 
+
 def test_data_future_result():
     ''' Testing the behavior of a result call on DataFutures
     '''
@@ -37,7 +38,6 @@ def test_data_future_result():
     print("Result? : ", data_futs[0].result(timeout=1))
 
 
-
 def test_app_future_result():
     ''' Testing the behavior of a result call on AppFutures
     '''
@@ -48,7 +48,6 @@ def test_app_future_result():
     print("Launching and waiting on data_futs")
     print("Done?   : ", sim_fut.done())
     print("Result? : ", sim_fut.result(timeout=1))
-
 
 
 if __name__ == '__main__':

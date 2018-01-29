@@ -1,5 +1,6 @@
 from enum import IntEnum
 
+
 class States(IntEnum):
     ''' Map states for tasks to an Int
     '''

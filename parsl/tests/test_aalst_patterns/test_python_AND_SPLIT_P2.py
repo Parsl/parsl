@@ -8,20 +8,22 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
+
 @App('python', dfk)
 def increment(x):
-    return x+1
+    return x + 1
+
 
 @App('python', dfk)
 def slow_increment(x, dur):
     import time
     time.sleep(dur)
-    return x+1
+    return x + 1
 
 
 def test_and_split(depth=5):
@@ -45,5 +47,5 @@ if __name__ == '__main__':
         pass
         parsl.set_stream_logger()
 
-    #test_increment(depth=int(args.width))
+    # test_increment(depth=int(args.width))
     test_and_split(depth=int(args.width))

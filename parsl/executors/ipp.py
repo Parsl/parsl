@@ -25,7 +25,6 @@ class IPyParallelExecutor(ParslExecutor):
 
     '''
 
-
     def compose_launch_cmd(self, filepath, engine_dir):
         ''' Reads the json contents from filepath and uses that to compose the engine launch command
 
@@ -55,13 +54,12 @@ mkdir -p '.ipengine_logs'
 ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 '''.format(engine_dir, engine_json)
 
-
     def __init__(self, execution_provider=None,
-                  reuse_controller=True,
-                  engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
-                  engine_dir='.',
-                  controller=None,
-                  config=None):
+                 reuse_controller=True,
+                 engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
+                 engine_dir='.',
+                 controller=None,
+                 config=None):
         ''' Initialize the IPyParallel pool. The initialization takes all relevant parameters via KWargs.
 
         .. note::
@@ -93,8 +91,8 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
             if not os.path.exists(self.client_file):
                 logger.debug("Waiting for {0}".format(self.client_file))
 
-            sleep_dur = 20 # 20 seconds
-            for i in range(0, int(sleep_dur/0.2)):
+            sleep_dur = 20  # 20 seconds
+            for i in range(0, int(sleep_dur / 0.2)):
                 time.sleep(0.2)
                 if os.path.exists(self.client_file):
                     break
@@ -102,18 +100,16 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
             if not os.path.exists(self.client_file):
                 raise Exception("Controller client file is missing at {0}".format(self.client_file))
 
-
         self.executor = Client(url_file=self.client_file)
         self.config = config
         self.sitename = config['site'] if config else 'Static_IPP'
         # NOTE: Copying the config here only partially fixes the issue. There needs to be
         # multiple controllers launched by the factory, and each must have different jsons.
         # There could be timing issues here,
-        #local_engine_json = "{0}.{1}.engine.json".format(self.config["site"], int(time.time()))
-        #copyfile(engine_json_file, local_engine_json)
-        #if not os.path.exists(self.config["execution"]["script_dir"]):
+        # local_engine_json = "{0}.{1}.engine.json".format(self.config["site"], int(time.time()))
+        # copyfile(engine_json_file, local_engine_json)
+        # if not os.path.exists(self.config["execution"]["script_dir"]):
         #    os.makedirs(self.config["execution"]["script_dir"])
-
 
         self.launch_cmd = self.compose_launch_cmd(self.engine_file, engine_dir)
         self.execution_provider = execution_provider
@@ -146,12 +142,11 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         self.lb_view = self.executor.load_balanced_view()
         logger.debug("Starting executor")
 
-
     @property
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def submit(self,  *args, **kwargs):
+    def submit(self, *args, **kwargs):
         ''' Submits work to the thread pool
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
@@ -209,7 +204,6 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
         return status
 
-
     def shutdown(self, hub=True, targets='all', block=False):
         ''' Shutdown the executor, including all workers and controllers.
         The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
@@ -230,7 +224,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         # We do not actually do executor.shutdown because
         # this blocks even when requested to not block, killing the
         # controller is more effective although impolite.
-        #x = self.executor.shutdown(targets=targets,
+        # x = self.executor.shutdown(targets=targets,
         #                           hub=hub,
         #                           block=block)
 

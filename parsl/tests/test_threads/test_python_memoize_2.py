@@ -9,13 +9,13 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 config = {
     "sites": [
         {"site": "Local_Threads",
-          "auth": {"channel": None},
-          "execution": {
-              "executor": "threads",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "threads",
               "provider": None,
               "maxThreads": 4,
           }
@@ -40,9 +40,11 @@ def test_python_memoization(n=4):
         foo = random_uuid(0)
         assert foo.result() != x.result(), "Memoized results were used when memoization was disabled"
 
+
 dfk.cleanup()
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers], memoize=False)
+
 
 @App('python', dfk)
 def random_uuid(x):
@@ -58,7 +60,6 @@ def test_python_memoization(n=4):
     for i in range(0, n):
         foo = random_uuid(0)
         assert foo.result() != x.result(), "Memoized results were used when memoization was disabled"
-
 
 
 if __name__ == '__main__':

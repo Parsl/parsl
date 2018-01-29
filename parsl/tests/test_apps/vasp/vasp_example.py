@@ -19,7 +19,7 @@
 6 - Once these are done, we need to run some more python code that we don't actually
     have yet, but that a student here supposedly does have written and tested.
 
-We will be working on Stampede 2. we haven't put our code in a repo (though we should - Qingyi...) 
+We will be working on Stampede 2. we haven't put our code in a repo (though we should - Qingyi...)
    and everything we used can be installed via pip.
 
 """
@@ -55,20 +55,21 @@ def create_dirs(cwd):
             f.write("{0} test data\n".format(rel_dir))
 
 
-
 @App('python', dfk)
 def ls(pwd, outputs=[]):
     import os
     items = os.listdir(pwd)
     with open(outputs[0], 'w') as f:
-        f.write(' '.join(items)) 
+        f.write(' '.join(items))
         f.write('\n')
     # Returning list of items in current dir as python object
     return items
 
+
 @App('bash', dfk)
 def catter(dir, outputs=[], stdout=None, stderr=None):
     cmd_line = 'cat {0}/*/results > {outputs[0]}'
+
 
 if __name__ == "__main__":
 

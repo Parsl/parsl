@@ -12,32 +12,34 @@ import random
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
+
 @App('python', dfk)
 def increment(x):
-    return x+1
+    return x + 1
+
 
 @App('python', dfk)
 def slow_increment(x, dur):
     import time
     time.sleep(dur)
-    return x+1
+    return x + 1
+
 
 def test_increment(depth=5):
     futs = {0: 0}
     for i in range(1, depth):
-        futs[i] = increment(futs[i-1])
+        futs[i] = increment(futs[i - 1])
 
     x = sum([futs[i].result() for i in futs if type(futs[i]) != int])
     assert x == sum(range(1, depth)), "[TEST] increment [FAILED]"
 
 
-
 def test_slow_increment(depth=5):
     futs = {0: 0}
     for i in range(1, depth):
-        futs[i] = slow_increment(futs[i-1], 0.01)
+        futs[i] = slow_increment(futs[i - 1], 0.01)
 
-    x = sum([futs[i].result()    for i in futs if type(futs[i]) != int])
+    x = sum([futs[i].result() for i in futs if type(futs[i]) != int])
 
     assert x == sum(range(1, depth)), "[TEST] slow_increment [FAILED]"
 

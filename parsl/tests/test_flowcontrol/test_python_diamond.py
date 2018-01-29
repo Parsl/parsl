@@ -7,10 +7,11 @@ import time
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 from local import localIPP
 dfk = DataFlowKernel(config=localIPP)
+
 
 @App("python", dfk)
 def diamond(sleep=0, inputs=[]):
@@ -35,7 +36,6 @@ def test_python(width=10):
         time.sleep(30)
         for sitename in dfk.executors:
             print(dfk.executors[sitename].status())
-
 
 
 if __name__ == "__main__":

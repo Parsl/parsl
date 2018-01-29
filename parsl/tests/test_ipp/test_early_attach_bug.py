@@ -24,16 +24,17 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 workers = IPyParallelExecutor()
 dfk = DataFlowKernel(workers)
+
 
 @App('python', dfk)
 def sleep_double(x):
     import time
     time.sleep(1)
-    return x*2
+    return x * 2
 
 
 if __name__ == "__main__":

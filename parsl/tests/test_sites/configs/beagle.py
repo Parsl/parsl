@@ -15,16 +15,16 @@ USERNAME = os.environ['BEAGLE_USERNAME']
 singleNode = {
     "sites": [
         {"site": "Remote_IPP",
-          "auth": {
-              "channel": "ssh",
+         "auth": {
+             "channel": "ssh",
               "hostname": "login4.beagle.ci.uchicago.edu",
               "username": USERNAME,
               "scriptDir": "/lustre/beagle2/{}/parsl_scripts".format(USERNAME)
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "torque",
-              "block": { # Definition of a block
+              "block": {  # Definition of a block
                   "nodes": 1,            # of nodes in that block
                   "launcher": 'aprun',
                   "taskBlocks": 1,       # total tasks in a block
@@ -60,16 +60,16 @@ source activate parsl_env_3.6.3;
 multiNodeSrun = {
     "sites": [
         {"site": "Local_IPP",
-          "auth": {
-              "channel": "ssh",
+         "auth": {
+             "channel": "ssh",
               "hostname": "beagle.nersc.gov",
               "username": USERNAME,
               "scriptDir": "/global/homes/y/{}/parsl_scripts".format(USERNAME),
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "slurm",  # LIKELY SHOULD BE BOUND TO SITE
-              "block": { # Definition of a block
+              "block": {  # Definition of a block
                   "launcher": "srun",
                   "nodes": 4,            # of nodes in that block
                   "taskBlocks": 8,       # total tasks in a block
@@ -84,7 +84,7 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
               }
           }
          }
-        ],
+    ],
     "globals": {"lazyErrors": True}
 }
 
@@ -104,16 +104,16 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
 multiNodeMPI = {
     "sites": [
         {"site": "Remote_IPP_MultiNode",
-          "auth": {
-              "channel": "ssh",
+         "auth": {
+             "channel": "ssh",
               "hostname": "beagle.nersc.gov",
               "username": USERNAME,
               "scriptDir": "/global/homes/y/{}/parsl_scripts".format(USERNAME)
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "slurm",
-              "block": { # Definition of a block
+              "block": {  # Definition of a block
                   "launcher": "srun",
                   "nodes": 4,            # of nodes in that block
                   "taskBlocks": 2,       # total tasks in a block
@@ -128,6 +128,6 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
               }
           }
          }
-        ],
+    ],
     "globals": {"lazyErrors": True}
 }

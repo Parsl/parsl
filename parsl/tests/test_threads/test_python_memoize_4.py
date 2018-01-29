@@ -34,6 +34,7 @@ def test_python_memoization(n=4):
     y = random_uuid(0)
     assert x.result() != y.result(), "Memoized results were not used"
 
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()

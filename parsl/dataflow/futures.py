@@ -30,6 +30,7 @@ _STATE_TO_DESCRIPTION_MAP = {
     FINISHED: "finished"
 }
 
+
 class AppFuture(Future):
     """ An AppFuture points at a Future returned from an Executor
 
@@ -37,6 +38,7 @@ class AppFuture(Future):
     is resolved i.e file exists, then the DataFuture is assumed to be resolved.
 
     """
+
     def parent_callback(self, executor_fu):
         ''' Callback from executor future to update the parent.
 
@@ -53,7 +55,6 @@ class AppFuture(Future):
                 super().set_result(executor_fu.result())
             except Exception as e:
                 super().set_exception(e)
-
 
     def __init__(self, parent, tid=None, stdout=None, stderr=None):
         ''' Initialize the AppFuture.
@@ -72,12 +73,11 @@ class AppFuture(Future):
         self._tid = tid
         super().__init__()
         self.parent = parent
-        #if self.parent:
+        # if self.parent:
         #    parent.add_done_callback(self.parent_callback)
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
-
 
     @property
     def stdout(self):

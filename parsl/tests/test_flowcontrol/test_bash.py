@@ -5,14 +5,16 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 from .local import localIPP
 dfk = DataFlowKernel(config=localIPP)
 
+
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
+
 
 def test_bash():
     ''' Testing basic scaling|Bash 0 -> 1 block '''
@@ -23,4 +25,3 @@ def test_bash():
     x = bash_app(stdout="{0}.out".format(fname))
     print("Waiting ....")
     print(x.result())
-

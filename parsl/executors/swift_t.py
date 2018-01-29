@@ -19,7 +19,7 @@ from parsl.executors.base import ParslExecutor
 logger = logging.getLogger(__name__)
 
 
-BUFFER_THRESHOLD = 1024*1024
+BUFFER_THRESHOLD = 1024 * 1024
 ITEM_THRESHOLD = 1024
 
 
@@ -63,21 +63,21 @@ def runner(incoming_q, outgoing_q):
         '''
         all_names = dir(__builtins__)
         user_ns = locals()
-        user_ns.update({'__builtins__': {k: getattr(__builtins__, k)  for k in all_names}})
+        user_ns.update({'__builtins__': {k: getattr(__builtins__, k) for k in all_names}})
 
         f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
         fname = getattr(f, '__name__', 'f')
         prefix = "parsl_"
-        fname = prefix+"f"
-        argname = prefix+"args"
-        kwargname = prefix+"kwargs"
-        resultname = prefix+"result"
+        fname = prefix + "f"
+        argname = prefix + "args"
+        kwargname = prefix + "kwargs"
+        resultname = prefix + "result"
 
         user_ns.update({fname: f,
-                         argname: args,
-                         kwargname: kwargs,
-                         resultname: resultname})
+                        argname: args,
+                        kwargname: kwargs,
+                        resultname: resultname})
 
         code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
                                                argname, kwargname)
@@ -92,16 +92,15 @@ def runner(incoming_q, outgoing_q):
             raise e
 
         else:
-            #print("Done : {0}".format(locals()))
+            # print("Done : {0}".format(locals()))
             print("[RUNNER] Result    : {0}".format(user_ns.get(resultname)))
             return user_ns.get(resultname)
-
 
     while True:
         try:
             # Blocking wait on the queue
             msg = incoming_q.get(block=True, timeout=10)
-            #logger.debug("[RUNNER] Got message : %s", msg)
+            # logger.debug("[RUNNER] Got message : %s", msg)
 
         except queue.Empty:
             # Handle case where no items were on queue
@@ -259,7 +258,7 @@ class TurbineExecutor(ParslExecutor):
         Could be used later as a restart if the management thread dies.
         '''
 
-        logging.debug("In _start %s", "*"*40)
+        logging.debug("In _start %s", "*" * 40)
         if self._queue_management_thread is None:
             logging.debug("Starting management thread ")
             self._queue_management_thread = threading.Thread(target=self._queue_management_worker)
@@ -275,8 +274,8 @@ class TurbineExecutor(ParslExecutor):
 
         self.isAlive = False
         logging.debug("Waking management thread")
-        self.incoming_q.put(None) # Wake up the thread
-        self._queue_management_thread.join() # Force join
+        self.incoming_q.put(None)  # Wake up the thread
+        self._queue_management_thread.join()  # Force join
         logging.debug("Exiting thread")
         self.worker.join()
         return True
@@ -327,8 +326,8 @@ class TurbineExecutor(ParslExecutor):
         self.tasks[task_id] = Future()
 
         fn_buf = pack_apply_message(func, args, kwargs,
-                                     buffer_threshold=1024*1024,
-                                     item_threshold=1024)
+                                    buffer_threshold=1024 * 1024,
+                                    item_threshold=1024)
 
         msg = {"task_id": task_id,
                "buffer": fn_buf}
@@ -338,7 +337,6 @@ class TurbineExecutor(ParslExecutor):
 
         # Return the future
         return self.tasks[task_id]
-
 
     def scale_out(self, workers=1):
         ''' Scales out the number of active workers by 1
@@ -360,8 +358,6 @@ class TurbineExecutor(ParslExecutor):
         '''
 
         raise NotImplementedError
-
-
 
 
 if __name__ == "__main__":

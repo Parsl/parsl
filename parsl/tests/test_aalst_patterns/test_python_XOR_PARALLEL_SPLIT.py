@@ -8,25 +8,29 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=100)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('python', dfk)
 def random():
     import random
     return random.randint(1, 10)
 
+
 @App('python', dfk)
 def slow_increment(x, dur):
     import time
     time.sleep(dur)
-    return x+1
+    return x + 1
+
 
 @App('python', dfk)
 def join(inputs=[]):
     return sum(inputs)
+
 
 @App('python', dfk)
 def test_xor_split():
@@ -40,7 +44,6 @@ def test_xor_split():
     else:
         print("Result < 5")
         return 1
-
 
 
 if __name__ == '__main__':

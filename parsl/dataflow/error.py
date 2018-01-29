@@ -5,17 +5,20 @@ class DataFlowExceptions(Exception):
     """
     pass
 
+
 class DuplicateTaskError(DataFlowExceptions):
     """ Raised by the DataFlowKernel when it finds that a job with the same task-id has been
     launched before.
     """
     pass
 
+
 class MissingFutError(DataFlowExceptions):
     """ Raised when a particular future is not found within the dataflowkernel's datastructures.
     Deprecated.
     """
     pass
+
 
 class BadCheckpoint(DataFlowExceptions):
     ''' Error raised at the end of app execution due to missing
@@ -37,6 +40,7 @@ class BadCheckpoint(DataFlowExceptions):
 
     def __str__(self):
         return self.__repr__()
+
 
 class DependencyError(DataFlowExceptions):
     ''' Error raised at the end of app execution due to missing

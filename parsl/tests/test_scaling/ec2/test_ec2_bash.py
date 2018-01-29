@@ -11,6 +11,7 @@ parsl.set_stream_logger()
 from ec2 import singleNode as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("bash", dfk)
 def bash_app(seq_run_id):
     return '''uname -a;
@@ -30,6 +31,7 @@ def test_python_remote(count=10):
     for fu in fus:
         print(fu.result())
 
+
 def test_python_remote_slow(count=20):
 
     fus = []
@@ -43,7 +45,6 @@ def test_python_remote_slow(count=20):
 
 if __name__ == "__main__":
 
-
     test_python_remote()
     dfk.cleanup()
-    #test_python_remote_slow()
+    # test_python_remote_slow()

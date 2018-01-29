@@ -1,22 +1,25 @@
-#An activity in a workflow process is enabled after the completion of 
-#another activity in the same process 
+# An activity in a workflow process is enabled after the completion of
+# another activity in the same process
 
 import parsl
 from parsl import *
-import random 
+import random
 import argparse
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('python', dfk)
 def rand():
     x = random.randint(1, 1000)
     return x
 
+
 @App('python', dfk)
 def multiply_rand(x):
     return x * random.randint(1, 10)
+
 
 def test_sequence(x=5):
     flights = []
@@ -28,12 +31,9 @@ def test_sequence(x=5):
     for k in range(len(miles)):
         print(miles[k].result())
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--flight", default="5", action="store", dest="a", type=int)
     args = parser.parse_args()
     test_sequence(args.a)
-    
-                   
-    
-    

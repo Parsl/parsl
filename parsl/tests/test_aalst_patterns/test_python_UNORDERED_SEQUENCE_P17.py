@@ -1,15 +1,16 @@
 # A set of activities is executed in an arbitrary order. Each activity
 # in the set is executed, and no two activities are active at the same
-# time 
+# time
 
 import parsl
 from parsl import *
 import random
 import argparse
-import time 
+import time
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('python', dfk)
 def rand():
@@ -17,13 +18,15 @@ def rand():
     print(x)
     return x
 
+
 @App('python', dfk)
 def square(x):
-    if x > 5: 
+    if x > 5:
         return x**2
     else:
         time.sleep(5)
         return x**2
+
 
 @App('python', dfk)
 def increment(x):
@@ -44,7 +47,7 @@ def test_unordered_sequence():
     elif s.done() is True:
         print(s.result())
         print(increment(s.result()).result())
-        
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

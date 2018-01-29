@@ -11,16 +11,18 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=8)
 
 #workers = ProcessPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
+
 @App('bash', dfk)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out', walltime=0.5):
     return '''echo "sleeping";
     sleep 1 '''
+
 
 def test_walltime():
     ''' Testing walltime exceeded exception '''
@@ -32,7 +34,6 @@ def test_walltime():
     except Exception as e:
         print(e.__class__)
         print("Caught exception ", e)
-
 
 
 if __name__ == "__main__":

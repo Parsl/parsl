@@ -1,5 +1,5 @@
-# A "discriminator" is a point in a workflow process that waits for one of the incoming branches to complete before 
-# beginning the subsequent activity 
+# A "discriminator" is a point in a workflow process that waits for one of the incoming branches to complete before
+# beginning the subsequent activity
 
 import parsl
 from parsl import *
@@ -9,17 +9,21 @@ import argparse
 workers = ThreadPoolExecutor(max_workers=10)
 dfk = DataFlowKernel(executors=[workers])
 
+
 @App('python', dfk)
 def rand():
     return random.randint(1, 10)
+
 
 @App('python', dfk)
 def square(x):
     return x**2
 
+
 @App('python', dfk)
 def cubed(x):
     return x**3
+
 
 def test_discriminator(x=4):
     squares = []
@@ -33,7 +37,7 @@ def test_discriminator(x=4):
         total.append(squares[i].result() + cubes[i].result())
     for i in range(x):
         print(total[i])
-            
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

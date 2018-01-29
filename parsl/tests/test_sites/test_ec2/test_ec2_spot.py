@@ -11,6 +11,7 @@ parsl.set_stream_logger()
 from ec2 import spotNode as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def python_app_slow(duration):
     import platform
@@ -30,6 +31,7 @@ def test_python_remote(count=10):
     for fu in fus:
         print(fu.result())
 
+
 def test_python_remote_slow(count=20):
 
     fus = []
@@ -43,6 +45,5 @@ def test_python_remote_slow(count=20):
 
 if __name__ == "__main__":
 
-
     test_python_remote()
-    #test_python_remote_slow()
+    # test_python_remote_slow()

@@ -9,28 +9,30 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 config = {
     "sites": [
         {"site": "Local_Threads",
-          "auth": {"channel": None},
-          "execution": {
-              "executor": "threads",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "threads",
               "provider": None,
               "maxThreads": 4,
           }
          }],
     "globals": {"lazyErrors": True,
-                 "checkpoint": True,
+                "checkpoint": True,
                 }
 }
 
 dfk = DataFlowKernel(config=config)
 
+
 @App('python', dfk)
 def random_uuid(x):
     import uuid
     return str(uuid.uuid4())
+
 
 def test_python_memoization(n=4):
     """ Testing python memoization disable
@@ -43,14 +45,15 @@ def test_python_memoization(n=4):
         print(foo.result())
         assert foo.result() == x.result(), "Memoized results were not used"
 
+
 @App('bash', dfk)
 def slow_echo_to_file(msg, outputs=[], stderr='std.err', stdout='std.out'):
     return 'sleep 1; echo {0} > {outputs[0]}'
 
+
 def test_bash_memoization(n=4):
     """ Testing bash memoization
     """
-
 
     print("Launching : ", n)
     x = slow_echo_to_file("hello world", outputs=['h1.out'])
@@ -64,7 +67,7 @@ def test_bash_memoization(n=4):
     print("Waiting for results from round1")
     [d[i].result() for i in d]
     end = time.time()
-    delta = end-start
+    delta = end - start
     assert delta < 0.1, "Memoized results were not used"
 
 

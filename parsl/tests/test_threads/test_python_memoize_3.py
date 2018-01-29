@@ -12,6 +12,7 @@ import argparse
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers], memoize=False)
 
+
 @App('python', dfk)
 def random_uuid(x):
     import uuid
@@ -26,7 +27,6 @@ def test_python_memoization(n=4):
     for i in range(0, n):
         foo = random_uuid(0)
         assert foo.result() != x.result(), "Memoized results were used when memoization was disabled"
-
 
 
 if __name__ == '__main__':

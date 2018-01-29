@@ -16,7 +16,7 @@ multiNode = {
             "scriptDir": "./scripts",
             "block": {      # Definition of a block
                 "initBlocks": 1,
-                "maxBlocks": 1, # Limiting to just one block
+                "maxBlocks": 1,  # Limiting to just one block
                 "launcher": 'aprun',
                 "nodes": 8,            # of nodes in that block
                 "taskBlocks": 8,       # total tasks in a block
@@ -41,4 +41,3 @@ source activate /home/yadunand/theta_parsl/anaconda3/envs/theta_parslenv'''
         "publicIp": '10.236.1.193'
     }
 }
-

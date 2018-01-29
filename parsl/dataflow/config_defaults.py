@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def pp_config(config):
     ''' Pretty print the config, this should be part of the
     default logging to the debug logs.
@@ -18,6 +19,7 @@ def pp_config(config):
 
     logger.debug(pprint.pformat(config, indent=2))
     return
+
 
 def recursive_update(template, userdata):
     ''' Recursively update the template with userdata.
@@ -40,6 +42,7 @@ def recursive_update(template, userdata):
 
     return template
 
+
 def update_config(config, rundir):
     ''' Update the config datastructure with defaults. This is the one centralized
     location where the default live.
@@ -55,18 +58,18 @@ def update_config(config, rundir):
         return None
 
     config_base = {"sites": [],
-                    "globals": {
-                        "lazyErrors": False,   # Bool
-                        "usageTracking": True, # Bool
-                        "strategy": 'simple',  # ('simple',...)
-                        "memoize": True, # Bool
-                        "checkpointMethod": None,   # ('eager', 'lazy', 'at_exit', None)
-                        "checkpointFiles": None, # List of checkpoint files
-                    },
-                    "controller": {
-                        "mode": "auto"
-                    }
+                   "globals": {
+                       "lazyErrors": False,   # Bool
+                       "usageTracking": True,  # Bool
+                       "strategy": 'simple',  # ('simple',...)
+                       "memoize": True,  # Bool
+                       "checkpointMethod": None,   # ('eager', 'lazy', 'at_exit', None)
+                       "checkpointFiles": None,  # List of checkpoint files
+                   },
+                   "controller": {
+                       "mode": "auto"
                    }
+    }
 
     sites = config["sites"]
     del config["sites"]

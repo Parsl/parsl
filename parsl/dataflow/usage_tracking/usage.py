@@ -121,7 +121,7 @@ class UsageTracker (object):
                    't_apps': app_count,
                    'sites': site_count,
                    'c_time': None,
-                   'failed':app_fails,
+                   'failed': app_fails,
                    'test': self.test_mode,
                    }
 
@@ -161,7 +161,7 @@ class UsageTracker (object):
         x = self.send_UDP_message(message)
         end = time.time()
 
-        return x, end -start
+        return x, end - start
 
 
 if __name__ == '__main__':
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     workers = ThreadPoolExecutor(max_workers=4)
     dfk = DataFlowKernel(executors=[workers])
 
-    #ut = UsageTracker(dfk, ip='52.3.111.203')
+    # ut = UsageTracker(dfk, ip='52.3.111.203')
     ut = UsageTracker(dfk, domain_name='tracking.parsl-project.org')
 
     for i in range(0, 2):

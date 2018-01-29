@@ -5,15 +5,17 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 from .local import localIPP
 dfk = DataFlowKernel(config=localIPP)
+
 
 @App("python", dfk)
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())
+
 
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):

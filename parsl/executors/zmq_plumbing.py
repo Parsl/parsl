@@ -4,6 +4,7 @@ import zmq
 
 context = zmq.Context()
 
+
 class ZmQueue():
 
     def __init__(self, incoming, outgoing):
@@ -24,4 +25,3 @@ class ZmQueue():
         print("Posting on ", self.outgoing)
         print("Sending message", msg)
         return self.outgoing.send(msg)
-

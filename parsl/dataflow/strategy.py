@@ -106,7 +106,7 @@ class Strategy (object):
         self.dfk = dfk
         self.config = dfk.config
         self.sites = {}
-        self.max_idletime = 60 *2  # 2 minutes
+        self.max_idletime = 60 * 2  # 2 minutes
 
         for site in self.dfk.config["sites"]:
             self.sites[site['site']] = {'idle_since': None,
@@ -192,7 +192,7 @@ class Strategy (object):
                 # Fewer blocks that minBlocks
                 if active_blocks <= minBlocks:
                     # Ignore
-                    #logger.debug("Strategy: Case.1a")
+                    # logger.debug("Strategy: Case.1a")
                     pass
 
                 # Case 1b
@@ -213,7 +213,7 @@ class Strategy (object):
 
                     else:
                         pass
-                        #logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
+                        # logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
 
             # Case 2
             # More tasks than the available slots.
@@ -222,12 +222,12 @@ class Strategy (object):
                 # We have the max blocks possible
                 if active_blocks >= maxBlocks:
                     # Ignore since we already have the max nodes
-                    #logger.debug("Strategy: Case.2a")
+                    # logger.debug("Strategy: Case.2a")
                     pass
 
                 # Case 2b
                 else:
-                    #logger.debug("Strategy: Case.2b")
+                    # logger.debug("Strategy: Case.2b")
                     excess = math.ceil((len(active_tasks) * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess) / taskBlocks)
                     logger.debug("Requesting : {}".format(excess_blocks))
@@ -236,7 +236,7 @@ class Strategy (object):
             # Case 3
             # tasks ~ slots
             else:
-                #logger.debug("Strategy: Case 3")
+                # logger.debug("Strategy: Case 3")
                 pass
 
 

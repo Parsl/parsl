@@ -5,9 +5,10 @@ import time
 import parsl
 from parsl import *
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=10)
 dfk = DataFlowKernel(executors=[workers], lazy_fail=True)
+
 
 @App('python', dfk)
 def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
@@ -19,11 +20,12 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     time.sleep(s)
     x = float(random.randint(0, 100)) / 100
     if x <= fail_prob:
-        #print("Fail")
+        # print("Fail")
         raise Exception("App failure")
     else:
         pass
-        #print("Succeed")
+        # print("Succeed")
+
 
 def test_no_deps(numtasks=10):
     ''' Test basic error handling, with no dependent failures
@@ -40,9 +42,9 @@ def test_no_deps(numtasks=10):
         try:
             x = fu.result()
         except Exception as e:
-            print("Caught exception : ", "*"*20)
+            print("Caught exception : ", "*" * 20)
             print(e)
-            print("*"*20)
+            print("*" * 20)
             count += 1
 
     print("Caught failures of  {0}/{1}".format(count, len(fus)))
@@ -59,10 +61,10 @@ def test_fail_sequence(numtasks=10):
 
     fus = {0: None}
     for i in range(0, numtasks):
-        print("Chaining {0} to {1}".format(i+1, fus[i]))
-        fus[i+1] = sleep_fail(sleep_dur, 0, fail_prob, inputs=[fus[i]])
+        print("Chaining {0} to {1}".format(i + 1, fus[i]))
+        fus[i + 1] = sleep_fail(sleep_dur, 0, fail_prob, inputs=[fus[i]])
 
-    #time.sleep(numtasks*sleep_dur)
+    # time.sleep(numtasks*sleep_dur)
     for k in sorted(fus.keys()):
         try:
             x = fus[i].result()
@@ -71,6 +73,7 @@ def test_fail_sequence(numtasks=10):
             print("{0} : {1}".format(k, e))
 
     return
+
 
 def test_deps(numtasks=10):
     ''' Random failures in branches of Map -> Map -> reduce
@@ -117,7 +120,6 @@ def test_deps(numtasks=10):
         print("Shoot! no errors ")
 
 
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -128,8 +130,6 @@ if __name__ == "__main__":
     if args.debug:
         parsl.set_stream_logger()
 
-
     test_no_deps(numtasks=int(args.count))
     test_fail_sequence(numtasks=int(args.count))
     test_deps(numtasks=int(args.count))
-

@@ -23,6 +23,7 @@ from parsl.executors.ipp_controller import Controller
 # Execution Providers and channels
 from libsubmit import *
 
+
 class ExecProviderFactory (object):
 
     def __init__(self):
@@ -33,23 +34,22 @@ class ExecProviderFactory (object):
         '''
 
         self.executors = {'ipp': IPyParallelExecutor,
-                           'swift_t': TurbineExecutor,
-                           'threads': ThreadPoolExecutor,
-                           None: lambda *args, **kwargs: None}
-
-        self.execution_providers = {'slurm': Slurm,
-                                     'local': Local,
-                                     'aws': EC2Provider,
-                                     'cobalt': Cobalt,
-                                     'condor': Condor,
-                                     'torque': Torque,
-                                     None: lambda *args, **kwargs: None}
-
-        self.channels = {'ssh': SshChannel,
-                          'ssh-il': SshILChannel,
-                          'local': LocalChannel,
+                          'swift_t': TurbineExecutor,
+                          'threads': ThreadPoolExecutor,
                           None: lambda *args, **kwargs: None}
 
+        self.execution_providers = {'slurm': Slurm,
+                                    'local': Local,
+                                    'aws': EC2Provider,
+                                    'cobalt': Cobalt,
+                                    'condor': Condor,
+                                    'torque': Torque,
+                                    None: lambda *args, **kwargs: None}
+
+        self.channels = {'ssh': SshChannel,
+                         'ssh-il': SshILChannel,
+                         'local': LocalChannel,
+                         None: lambda *args, **kwargs: None}
 
     def validate_config(self, config):
         ''' Validate_config validates config
@@ -127,7 +127,7 @@ class ExecProviderFactory (object):
 
             else:
                 logger.error("Site:{0} requests an invalid executor:{0}".format(site["site"],
-                                                                               executor_name))
+                                                                                executor_name))
                 raise BadConfig(site["site"],
                                 "invalid executor:{0} requested".format(executor_name))
 

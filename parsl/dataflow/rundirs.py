@@ -5,6 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def make_rundir(config=None, path=None):
     ''' When an path has not been specified, make_rundir
     creates a rundir with the following hierarchy:
@@ -38,7 +39,7 @@ def make_rundir(config=None, path=None):
         if prev_rundirs:
             # Since we globbed on files named as 0-9
             x = sorted([int(os.path.basename(x)) for x in prev_rundirs])[-1]
-            current_rundir = os.path.join(path, '{0:03}'.format(x+1))
+            current_rundir = os.path.join(path, '{0:03}'.format(x + 1))
 
         os.makedirs(current_rundir)
         logger.debug("Parsl run initializing in rundir:{0}".format(current_rundir))

@@ -46,7 +46,7 @@ multiNode = {
         "execution": {
             "executor": "ipp",
             "provider": "cobalt",  # LIKELY SHOULD BE BOUND TO SITE
-            "block": { # Definition of a block
+            "block": {  # Definition of a block
                 "nodes": 1,            # of nodes in that block
                 "taskBlocks": 1,       # total tasks in a block
                 "initBlocks": 2,
@@ -63,4 +63,3 @@ multiNode = {
         "lazyErrors": True
     }
 }
-

@@ -8,13 +8,13 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 localThreads = {
     "sites": [
         {"site": "Local_Threads",
-          "auth": {"channel": None},
-          "execution": {
-              "executor": "threads",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "threads",
               "provider": None,
               "maxThreads": 10
           }
@@ -23,15 +23,18 @@ localThreads = {
 
 dfk = DataFlowKernel(config=localThreads)
 
+
 @App('python', dfk)
 def sleep_python(x):
     import time
     time.sleep(x)
     return x
 
+
 @App('bash', dfk)
 def sleep_bash(x):
     return 'sleep {0}'
+
 
 def test_parallel_sleep_bash(n=10, sleep_dur=2, tolerance=0.3):
     ''' Indirect test to ensure that 10 threads are live using bash apps
@@ -46,10 +49,11 @@ def test_parallel_sleep_bash(n=10, sleep_dur=2, tolerance=0.3):
     for i in d:
         i.result()
     end = time.time()
-    delta = end-start
+    delta = end - start
     print("Sleep time : {0}, expected ~{1}+/- 0.3s".format(delta, sleep_dur))
-    assert delta > sleep_dur-tolerance, "Slept too little"
-    assert delta < sleep_dur+tolerance, "Slept too much"
+    assert delta > sleep_dur - tolerance, "Slept too little"
+    assert delta < sleep_dur + tolerance, "Slept too much"
+
 
 def test_parallel_sleep_python(n=10, sleep_dur=2, tolerance=0.3):
     ''' Indirect test to ensure that 10 threads are live using python sleep apps
@@ -66,10 +70,10 @@ def test_parallel_sleep_python(n=10, sleep_dur=2, tolerance=0.3):
     for i in d:
         i.result()
     end = time.time()
-    delta = end-start
+    delta = end - start
     print("Sleep time : {0}, expected ~{1}+/- 0.3s".format(delta, sleep_dur))
-    assert delta > sleep_dur-tolerance, "Slept too little"
-    assert delta < sleep_dur+tolerance, "Slept too much"
+    assert delta > sleep_dur - tolerance, "Slept too little"
+    assert delta < sleep_dur + tolerance, "Slept too much"
 
 
 if __name__ == "__main__":

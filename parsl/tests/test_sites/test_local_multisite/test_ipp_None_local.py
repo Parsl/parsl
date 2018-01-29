@@ -12,6 +12,7 @@ parsl.set_stream_logger()
 from local_multi import threads_ipp as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk, sites=['Local_threads'])
 def python_app_2():
     import os
@@ -20,6 +21,7 @@ def python_app_2():
     time.sleep(1)
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
+
 @App("python", dfk, sites=['Local_IPP'])
 def python_app_1():
     import os
@@ -27,6 +29,7 @@ def python_app_1():
     import time
     time.sleep(1)
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
+
 
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
@@ -51,6 +54,7 @@ def test_python(N=5):
 
     return
 
+
 def test_bash():
     ''' Testing basic bash functionality '''
 
@@ -73,4 +77,4 @@ if __name__ == "__main__":
         parsl.set_stream_logger()
 
     test_python()
-    #test_bash()
+    # test_bash()

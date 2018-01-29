@@ -8,19 +8,22 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 workers = IPyParallelExecutor()
 print("Using ipyparallel workers")
 #workers = ThreadPoolExecutor(max_workers=4)
 print("Using threads pool 4")
 dfk = DataFlowKernel(workers)
 
+
 @App('python', dfk)
 def double(x):
-    return x*2
+    return x * 2
+
 
 def plain_double(x):
-    return x*2
+    return x * 2
+
 
 def test_plain(n=10):
     start = time.time()
@@ -35,6 +38,7 @@ def test_plain(n=10):
 
     return ttc
 
+
 def test_parallel(n=10):
     start = time.time()
     x = []
@@ -47,6 +51,7 @@ def test_parallel(n=10):
     print("Total time : ", ttc)
 
     return ttc
+
 
 def test_parallel2(n=10):
     start = time.time()
@@ -77,4 +82,4 @@ if __name__ == '__main__':
     x = test_parallel2(int(args.count))
 
     #x = test_stdout()
-    #raise_error(0)
+    # raise_error(0)

@@ -3,7 +3,7 @@ from parsl import *
 from parsl.execution_provider.slurm.slurm import Slurm
 from parsl.execution_provider.provider_factory import ExecProviderFactory
 
-from  jinja2 import Template, Environment
+from jinja2 import Template, Environment
 from jinja2.loaders import FileSystemLoader
 import os
 
@@ -14,11 +14,11 @@ WORKING_DIR = "working"
 #workers = ThreadPoolExecutor(max_workers=4)
 #dfk = DataFlowKernel(workers)
 config = {"site": "midway_westmere",
-            "execution":
-            {"executor": "ipp",
-               "provider": "slurm",
-               "channel": "local",
-               "options":
+          "execution":
+          {"executor": "ipp",
+           "provider": "slurm",
+           "channel": "local",
+           "options":
                {"init_parallelism": 2,
                 "max_parallelism": 2,
                 "min_parallelism": 0,
@@ -64,6 +64,8 @@ def mpi_hello(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False
 #################
 # App definitions
 #################
+
+
 @App('bash', dfk)
 def mpi_test(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
     cmd_line = '''module load amber/16+cuda-8.0
@@ -74,7 +76,7 @@ def mpi_test(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False)
 
 #x = mpi_hello(4, stdout="hello.out", stderr="hello.err")
 #print("Launched the mpi_hello app")
-#x.result()
+# x.result()
 
 
 x = mpi_test(4, stdout="hello.out", stderr="hello.err")

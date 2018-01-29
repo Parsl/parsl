@@ -6,14 +6,14 @@ from parsl.dataflow.futures import Future
 config = {
     "sites": [
         {"site": "Local_IPP",
-          "auth": {
-              "channel": "ssh",
+         "auth": {
+             "channel": "ssh",
               "hostname": "swift.rcc.uchicago.edu",
               "username": "yadunand",
               "scriptDir": "/scratch/midway/yadunand/parsl_scripts"
           },
-          "execution": {
-              "executor": "ipp",
+         "execution": {
+             "executor": "ipp",
               "provider": "slurm",
               "script_dir": ".scripts",
               "block": {                 # Definition of a block
@@ -42,13 +42,14 @@ config = {
 
          }
 
-        ],
+    ],
     "globals": {"lazyErrors": True},
     "controller": {"publicIp": '*'}
 }
 
 
 dfk = DataFlowKernel(config=config)
+
 
 @App('bash', dfk)
 def sort(unsorted: str,
@@ -60,17 +61,14 @@ def sort(unsorted: str,
     return "sort -g {} > {}".format(unsorted, outputs[0])
 
 
-
 s = sort("p4/unsorted.txt", outputs=["output/sorted_c.txt"])
 
 s.result()
 
 
-
 with open('p4/unsorted.txt', 'r') as f:
 
     print(f.read().replace("\n", ","))
-
 
 
 with open('output/sorted_c.txt', 'r') as f:
