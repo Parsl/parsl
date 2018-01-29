@@ -27,6 +27,7 @@ from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 
 logger = logging.getLogger(__name__)
 
+
 class DataFlowKernel(object):
     """The DataFlowKernel adds dependency awareness to an existing executor.
     It is responsible for managing futures, such that when dependencies are resolved,
@@ -229,7 +230,6 @@ class DataFlowKernel(object):
             self.handle_update(task_id, memo_fu, memo_cbk=True)
             return memo_fu
 
-        task_name = executable.__name__
         target_sites = self.tasks[task_id]["sites"]
         executor = None
         if isinstance(target_sites, str) and target_sites.lower() == 'all':
@@ -347,7 +347,6 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-
     def submit(self, func, *args, parsl_sites='all', fn_hash=None, memoize=True, **kwargs):
         ''' Add task to the dataflow system.
 
@@ -377,21 +376,21 @@ class DataFlowKernel(object):
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
         task_def = {'depends': depends,
-                     'sites': parsl_sites,
-                     'func': func,
-                     'func_name': func.__name__,
-                     'args': args,
-                     'kwargs': kwargs,
-                     'fn_hash': fn_hash,
-                     'memoize': memoize,
-                     'callback': None,
-                     'dep_cnt': dep_cnt,
-                     'exec_fu': None,
-                     'checkpoint': None,
-                     'fail_count': 0,
-                     'env': None,
-                     'status': States.unsched,
-                     'app_fu': None}
+                    'sites': parsl_sites,
+                    'func': func,
+                    'func_name': func.__name__,
+                    'args': args,
+                    'kwargs': kwargs,
+                    'fn_hash': fn_hash,
+                    'memoize': memoize,
+                    'callback': None,
+                    'dep_cnt': dep_cnt,
+                    'exec_fu': None,
+                    'checkpoint': None,
+                    'fail_count': 0,
+                    'env': None,
+                    'status': States.unsched,
+                    'app_fu': None}
 
         if task_id in self.tasks:
             raise DuplicateTaskError("Task {0} in pending list".format(task_id))
@@ -410,9 +409,9 @@ class DataFlowKernel(object):
             if not exceptions:
                 self.tasks[task_id]['exec_fu'] = self.launch_task(task_id, func, *new_args, **kwargs)
                 self.tasks[task_id]['app_fu'] = AppFuture(self.tasks[task_id]['exec_fu'],
-                                                           tid=task_id,
-                                                           stdout=task_stdout,
-                                                           stderr=task_stderr)
+                                                          tid=task_id,
+                                                          stdout=task_stdout,
+                                                          stderr=task_stderr)
                 self.tasks[task_id]['status'] = States.running
             else:
                 self.tasks[task_id]['exec_fu'] = None
@@ -429,8 +428,8 @@ class DataFlowKernel(object):
             # Send to pending, create the AppFuture with no parent and have it set
             # when an executor future is available.
             self.tasks[task_id]['app_fu'] = AppFuture(None, tid=task_id,
-                                                       stdout=task_stdout,
-                                                       stderr=task_stderr)
+                                                      stdout=task_stdout,
+                                                      stderr=task_stderr)
             self.tasks[task_id]['status'] = States.pending
 
         logger.debug("Task:%s Launched with AppFut:%s", task_id, task_def['app_fu'])
@@ -504,8 +503,8 @@ class DataFlowKernel(object):
                     if not hashsum:
                         continue
                     t = {'hash': hashsum,
-                          'exception': None,
-                          'result': None}
+                         'exception': None,
+                         'result': None}
                     try:
                         # Asking for the result will raise an exception if
                         # the app had failed. Should we even checkpoint these?
@@ -524,7 +523,7 @@ class DataFlowKernel(object):
                     logger.debug("Task[%s]: checkpointed", task_id)
 
         end = time.time()
-        print("Done dumping {} tasks in {}s".format(count, end-start))
+        print("Done dumping {} tasks in {}s".format(count, end -start))
         return checkpoint_dir
 
     def _load_checkpoints(self, checkpointDirs):
@@ -551,7 +550,7 @@ class DataFlowKernel(object):
                 while True:
                     try:
                         data = pickle.load(f)
-                        #Copy and hash only the input attributes
+                        # Copy and hash only the input attributes
                         memo_fu = Future()
                         if data['exception']:
                             memo_fu.set_exception(data['exception'])
@@ -563,7 +562,7 @@ class DataFlowKernel(object):
                         # Done with the checkpoint file
                         break
             logger.debug("Completed loading checkpoint:{0} with {1} tasks".format(checkpoint_file,
-                                                                              len(memo_lookup_table.keys())))
+                                                                                  len(memo_lookup_table.keys())))
         return memo_lookup_table
 
     def load_checkpoints(self, checkpointDirs):

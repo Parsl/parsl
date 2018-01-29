@@ -6,6 +6,7 @@ import math
 
 logger = logging.getLogger(__name__)
 
+
 class Strategy (object):
     '''FlowControl Strategy
 
@@ -105,21 +106,20 @@ class Strategy (object):
         self.dfk = dfk
         self.config = dfk.config
         self.sites = {}
-        self.max_idletime = 60*2 # 2 minutes
+        self.max_idletime = 60 *2  # 2 minutes
 
         for site in self.dfk.config["sites"]:
             self.sites[site['site']] = {'idle_since': None,
                                         'config': site}
 
         self.strategies = {None: self._strategy_noop,
-                            'simple': self._strategy_simple}
+                           'simple': self._strategy_simple}
 
         strtgy_name = self.config['globals'].get('strategy', None)
         self.strategize = self.strategies.get(strtgy_name,
                                               self._strategy_noop)
 
         logger.debug("Scaling strategy: {0}".format(strtgy_name))
-
 
     def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
         ''' Do nothing!
@@ -147,16 +147,14 @@ class Strategy (object):
             - kind (Not used)
         '''
 
-
         # Add logic to check sites
-        #for task in tasks :
+        # for task in tasks :
         #    if self.dfk.tasks[task]:
 
         for sitename in self.dfk.executors:
 
             exc = self.dfk.executors[sitename]
             site_config = self.sites[sitename]['config']
-            site_parallelism = site_config["execution"]
 
             if not exc.scaling_enabled:
                 logger.debug("Site:{0} Status:STATIC".format(sitename))

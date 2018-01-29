@@ -11,6 +11,7 @@ from parsl.dataflow.states import States
 
 logger = logging.getLogger(__name__)
 
+
 class UsageTracker (object):
     """ Anonymized Usage Tracking for Parsl
 
@@ -21,7 +22,7 @@ class UsageTracker (object):
     """
 
     def __init__(self, dfk, ip='52.3.111.203', port=50077,
-                  domain_name='tracking.parsl-project.org'):
+                 domain_name='tracking.parsl-project.org'):
         ''' Initialize usage tracking unless the user has opted-out.
         Tracks usage stats by inspecting the internal state of the dfk.
 
@@ -49,7 +50,7 @@ class UsageTracker (object):
         self.test_mode, self.tracking_enabled = self.check_tracking_enabled()
         logger.debug("Tracking status: {}".format(self.tracking_enabled))
         logger.debug("Testing mode   : {}".format(self.test_mode))
-        self.initialized = False # Once first message is sent this will be True
+        self.initialized = False  # Once first message is sent this will be True
 
     def check_tracking_enabled(self):
         ''' By default tracking is enabled.
@@ -78,7 +79,6 @@ class UsageTracker (object):
 
         return test, track
 
-
     def construct_start_message(self):
         """ Collect preliminary run info at the start of the DFK.
 
@@ -91,13 +91,12 @@ class UsageTracker (object):
         hname = socket.gethostname().encode('latin1')
         hashed_hostname = hashlib.sha256(hname).hexdigest()[0:10]
         message = {'uuid': self.uuid,
-                    'uname': hashed_username,
-                    'hname': hashed_hostname,
-                    'test': self.test_mode,
-                    'start': time.time()}
+                   'uname': hashed_username,
+                   'hname': hashed_hostname,
+                   'test': self.test_mode,
+                   'start': time.time()}
 
         return json.dumps(message)
-
 
     def construct_end_message(self):
         """ Collect the final run information at the time of DFK
@@ -118,22 +117,22 @@ class UsageTracker (object):
                          self.dfk.tasks[t]['status'] in failed_states])
 
         message = {'uuid': self.uuid,
-                    'end': time.time(),
-                    't_apps': app_count,
-                    'sites': site_count,
-                    'c_time': None,
-                    'test': self.test_mode,
+                   'end': time.time(),
+                   't_apps': app_count,
+                   'sites': site_count,
+                   'c_time': None,
+                   'failed':app_fails,
+                   'test': self.test_mode,
                    }
 
         return json.dumps(message)
-
 
     def send_UDP_message(self, message):
         """ Send UDP message
         """
         if self.tracking_enabled:
             try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
                 x = sock.sendto(bytes(message, "utf-8"), (self.UDP_IP, self.UDP_PORT))
                 sock.close()
             except OSError as e:
@@ -162,7 +161,8 @@ class UsageTracker (object):
         x = self.send_UDP_message(message)
         end = time.time()
 
-        return x, end-start
+        return x, end -start
+
 
 if __name__ == '__main__':
 

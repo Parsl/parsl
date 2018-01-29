@@ -10,14 +10,14 @@ from parsl.executors.errors import *
 
 logger = logging.getLogger(__name__)
 
+
 class Controller(object):
 
     ''' Start and maintain a ipyparallel controller
     '''
 
     def __init__(self, publicIp=None, port=None, portRange="", reuse=False,
-                  log=True, ipythonDir="~/.ipython", mode="auto", profile=None):
-
+                 log=True, ipythonDir="~/.ipython", mode="auto", profile=None):
         ''' Initialize ipython controllers to the user specified configs
 
         The specifig config sections that will be used by this are in the dict
@@ -127,6 +127,7 @@ class Controller(object):
         return os.path.join(self.ipythonDir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-engine.json')
+
     @property
     def client_file(self):
         ''' Client_file attribute specifies the file path to the specific ipython_dir/profile folders in
@@ -156,7 +157,7 @@ class Controller(object):
 
         try:
             pgid = os.getpgid(self.proc.pid)
-            status = os.killpg(pgid, signal.SIGTERM)
+            os.killpg(pgid, signal.SIGTERM)
             time.sleep(0.2)
             os.killpg(pgid, signal.SIGKILL)
             try:
