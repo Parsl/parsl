@@ -20,7 +20,7 @@ config = {
               "maxThreads": 4,
           }
          }],
-    "globals": {"memoize": False}
+    "globals": {"appCache": False}
 }
 dfk = DataFlowKernel(config=config)
 
@@ -43,7 +43,7 @@ def test_python_memoization(n=4):
 
 dfk.cleanup()
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(executors=[workers], memoize=False)
+dfk = DataFlowKernel(executors=[workers], appCache=False)
 
 
 @App('python', dfk)

@@ -9,7 +9,7 @@ import time
 import shutil
 import argparse
 
-# parsl.set_stream_logger()
+#parsl.set_stream_logger()
 config = {
     "sites": [
         {"site": "Local_Threads",
@@ -21,7 +21,6 @@ config = {
           }
          }],
     "globals": {"lazyErrors": True,
-                "memoize": True,
                 "checkpoint": True,
                 }
 }
@@ -29,8 +28,8 @@ config = {
 dfk = DataFlowKernel(config=config)
 
 
-@App('python', dfk)
-def random_uuid(x):
+@App('python', dfk, cache=True)
+def random_uuid(x, cache=True):
     import uuid
     return str(uuid.uuid4())
 
@@ -47,7 +46,7 @@ def test_python_memoization(n=4):
         assert foo.result() == x.result(), "Memoized results were not used"
 
 
-@App('bash', dfk)
+@App('bash', dfk, cache=True)
 def slow_echo_to_file(msg, outputs=[], stderr='std.err', stdout='std.out'):
     return 'sleep 1; echo {0} > {outputs[0]}'
 

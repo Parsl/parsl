@@ -10,8 +10,7 @@ import shutil
 import argparse
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(executors=[workers], memoize=False)
-
+dfk = DataFlowKernel(executors=[workers], appCache=False)
 
 @App('python', dfk)
 def random_uuid(x):

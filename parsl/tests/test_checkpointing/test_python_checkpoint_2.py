@@ -9,7 +9,6 @@ import shutil
 import argparse
 
 time.sleep(1)
-#parsl.set_stream_logger()
 last_checkpoint = os.path.abspath('runinfo/{0}'.format(sorted(os.listdir('runinfo/'))[-1]))
 while True:
     if not os.path.exists(last_checkpoint):
@@ -38,7 +37,7 @@ config = {
 dfk = DataFlowKernel(config=config, checkpointFiles=[last_checkpoint])
 
 
-@App('python', dfk)
+@App('python', dfk, cache=True)
 def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)

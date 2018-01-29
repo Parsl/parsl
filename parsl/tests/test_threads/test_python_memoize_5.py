@@ -9,14 +9,17 @@ import time
 import shutil
 import argparse
 
+
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(executors=[workers], appCache=True)
+dfk = DataFlowKernel(executors=[workers])
+
 
 def test_python_memoization(n=4):
     """ Testing python memoization when func bodies differ
+    This is the canonical use case.
     """
     @App('python', dfk)
-    def random_uuid(x):
+    def random_uuid(x, cache=True):
         import uuid
         return str(uuid.uuid4())
 
@@ -24,7 +27,7 @@ def test_python_memoization(n=4):
     print(x.result())
 
     @App('python', dfk)
-    def random_uuid(x):
+    def random_uuid(x, cache=True):
         import uuid
         print("hi")
         return str(uuid.uuid4())

@@ -21,15 +21,13 @@ config = {
           }
          }],
     "globals": {"lazyErrors": True,
-                "memoize": True,
-                "checkpoint": True,
                 }
 }
 
 dfk = DataFlowKernel(config=config)
 
 
-@App('python', dfk)
+@App('python', dfk, cache=True)
 def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)
