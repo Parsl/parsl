@@ -2,7 +2,6 @@ import sys
 import threading
 import logging
 import time
-import math
 
 from parsl.dataflow.strategy import Strategy
 

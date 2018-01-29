@@ -1,7 +1,6 @@
 import os
 import time
 import logging
-from shutil import copyfile
 from ipyparallel import Client
 
 from parsl.executors.base import ParslExecutor

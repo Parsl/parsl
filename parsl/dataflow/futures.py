@@ -9,7 +9,6 @@
 
 from concurrent.futures import Future
 import logging
-from parsl.dataflow.error import *
 
 logger = logging.getLogger(__name__)
 

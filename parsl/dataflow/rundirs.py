@@ -1,5 +1,4 @@
 import os
-import shutil
 from glob import glob
 import logging
 
@@ -24,7 +23,7 @@ def make_rundir(config=None, path=None):
         if not path:
             path = None
         elif config["globals"].get('runDir', None):
-            path = self.config["globals"]['runDir']
+            path = config["globals"]['runDir']
 
         if not path:
             path = "./runinfo"

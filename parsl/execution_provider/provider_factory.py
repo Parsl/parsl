@@ -4,10 +4,8 @@ Centralize creation of execution providers and executors.
 
 '''
 
-import os
 import copy
 import logging
-import libsubmit
 
 # Executors
 from parsl.executors.ipp import IPyParallelExecutor

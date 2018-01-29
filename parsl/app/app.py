@@ -6,15 +6,8 @@ Here lies the definitions for the @App decorator and the APP classes.
 The APP class encapsulates a generic leaf task that can be executed asynchronously.
 
 '''
-import sys
 import logging
-import subprocess
 from inspect import signature, Parameter
-from concurrent.futures import Future
-from parsl.app.futures import DataFuture
-from parsl.app.errors import *
-from parsl.dataflow.dflow import DataFlowKernel
-from functools import partial
 
 # Logging moved here in the PEP8 conformance fixes.
 logger = logging.getLogger(__name__)

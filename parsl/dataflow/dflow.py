@@ -1,13 +1,9 @@
 import os
 import time
-import copy
-import uuid
 import logging
 import atexit
-import signal
 import random
 import pickle
-from inspect import signature
 from concurrent.futures import Future
 from functools import partial
 
@@ -19,7 +15,6 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.config_defaults import update_config
-from parsl.app.futures import DataFuture
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 
 # from parsl.dataflow.start_controller import Controller

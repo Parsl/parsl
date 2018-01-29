@@ -132,10 +132,9 @@ class BadStdStreamFile(ParslError):
     def __init__(self, outputs):
         super().__init__()
         self.outputs = outputs
-        self.e = e
 
     def __repr__(self):
-        return "Paths:[{}], Reason:{}".format(self.outputs, self.e)
+        return "Paths:[{}]".format(self.outputs)
 
     def __str__(self):
         return self.__repr__()

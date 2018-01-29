@@ -1,5 +1,3 @@
-import sys
-import threading
 import logging
 import time
 import math

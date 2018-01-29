@@ -6,6 +6,8 @@
 import os
 import logging
 from concurrent.futures import Future
+
+from parsl.app.errors import *
 from parsl.data_provider.files import File
 
 logger = logging.getLogger(__name__)

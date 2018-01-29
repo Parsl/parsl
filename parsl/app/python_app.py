@@ -1,10 +1,6 @@
 import logging
-from functools import partial
 
-from concurrent.futures import Future
 from parsl.app.futures import DataFuture
-from parsl.app.errors import *
-from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app import AppBase
 
 logger = logging.getLogger(__name__)
