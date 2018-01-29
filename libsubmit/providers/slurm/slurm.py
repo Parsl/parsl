@@ -158,7 +158,12 @@ class Slurm(ExecutionProvider):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = self.channel.execute_wait("squeue --job {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = self.channel.execute_wait("squeue --job {0}".format(job_id_list), 5)
+
+        # Execute_wait failed. Do no update
+        if retcode != 0 :
+            return
+
         for line in stdout.split('\n'):
             parts = line.split()
             if parts and parts[0] != 'JOBID' :
