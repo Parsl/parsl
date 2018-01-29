@@ -11,13 +11,13 @@ import logging
 import subprocess
 from inspect import signature, Parameter
 from concurrent.futures import Future
-
-logger = logging.getLogger(__name__)
-
 from parsl.app.futures import DataFuture
 from parsl.app.errors import *
 from parsl.dataflow.dflow import DataFlowKernel
 from functools import partial
+
+# Logging moved here in the PEP8 conformance fixes.
+logger = logging.getLogger(__name__)
 
 
 class AppBase (object):

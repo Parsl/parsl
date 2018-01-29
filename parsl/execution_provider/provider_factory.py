@@ -9,8 +9,6 @@ import copy
 import logging
 import libsubmit
 
-logger = logging.getLogger(__name__)
-
 # Executors
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.executors.swift_t import TurbineExecutor
@@ -22,6 +20,8 @@ from parsl.executors.ipp_controller import Controller
 
 # Execution Providers and channels
 from libsubmit import *
+
+logger = logging.getLogger(__name__)
 
 
 class ExecProviderFactory (object):

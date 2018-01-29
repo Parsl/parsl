@@ -1,13 +1,13 @@
 import os
 import time
-
 import logging
-logger = logging.getLogger(__name__)
-
 from shutil import copyfile
 from ipyparallel import Client
+
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import *
+
+logger = logging.getLogger(__name__)
 
 
 class IPyParallelExecutor(ParslExecutor):
