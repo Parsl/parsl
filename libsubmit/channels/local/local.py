@@ -70,11 +70,8 @@ class LocalChannel (Channel):
         stdout = None
         stderr = None
 
-        if self.envs :
-            current_env = copy.copy(self.envs)
-        else :
-            current_env = {}
-            current_env.update(envs)
+        current_env = copy.deepcopy(self.envs)
+        current_env.update(envs)
 
         try :
             proc = subprocess.Popen(cmd,
