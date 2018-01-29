@@ -1,11 +1,10 @@
-import os
 from setuptools import setup, find_packages
 from parsl.version import VERSION
 
 with open('requirements.txt') as f:
     install_requires = f.readlines()
 
-#tests_require = parse_requirements('test-requirements.txt')
+# tests_require = parse_requirements('test-requirements.txt')
 
 setup(
     name='parsl',

@@ -6,7 +6,7 @@
 # F405: name may be undefined, or defined from star imports: module
 ignore = D203, E124, E126, F403, F405
 max-line-length = 160
-exclude = executors/serialize/, tests/
+exclude = parsl/executors/serialize/, parsl/tests/, parsl/libsubmit/
 #        .git,
 #        __pycache__,
 #        docs/source/conf.py,
