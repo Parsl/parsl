@@ -62,7 +62,7 @@ def update_config(config, rundir):
                        "lazyErrors": False,   # Bool
                        "usageTracking": True,  # Bool
                        "strategy": 'simple',  # ('simple',...)
-                       "memoize": True,  # Bool
+                       "memoize": False,  # Bool
                        "checkpointMethod": None,   # ('eager', 'lazy', 'at_exit', None)
                        "checkpointFiles": None,  # List of checkpoint files
                    },
