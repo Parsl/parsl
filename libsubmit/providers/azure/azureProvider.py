@@ -37,6 +37,91 @@ sudo pip3 install ipyparallel parsl
 
 
 class AzureProvider(ExecutionProvider):
+    '''
+    Here's a sample config for the Azure provider:
+
+    .. code-block:: python
+
+         { "auth" : {
+              "profile"    : #{Description: Specify the profile to be used from the standard Azure config file
+                             # ~/.azure/config.
+                             # Type : String,
+                             # Expected : "default", # Use the 'default' aws profile
+                             # Required : False},
+
+            },
+
+           "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case ec2
+                             # Type : String,
+                             # Expected : "aws",
+                             # Required :  True },
+
+              "block" : { # Definition of a block
+
+                  "nodes"      : #{Description : # of nodes to provision per block
+                                 # Type : Integer,
+                                 # Default: 1},
+
+                  "taskBlocks" : #{Description : # of workers to launch per block
+                                 # as either an number or as a bash expression.
+                                 # for eg, "1" , "$(($CORES / 2))"
+                                 # Type : String,
+                                 #  Default: "1" },
+
+                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
+                                 # Type : String,
+                                 # Default : "00:20:00" },
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # WARNING :: Not Implemented
+                                 # Type : Integer
+                                 # Default : ? },
+
+                  "options"   : {  # Scheduler specific options
+
+
+                      "templateFileLocation" : #{Description : location of template file for azure instance
+                                       # Type : String,
+                                       # Required : False
+                                       # Default : templates/template.json },
+
+                      "region"       : #{"Description : AWS region to launch machines in
+                                       # in the submit script to the scheduler
+                                       # Type : String,
+                                       # Default : 'us-east-2',
+                                       # Required : False },
+
+                      "keyName"      : #{"Description : Name of the azure private key (.pem file)
+                                       # that is usually generated on the console to allow ssh access
+                                       # to the EC2 instances, mostly for debugging.
+                                       # in the submit script to the scheduler
+                                       # Type : String,
+                                       # Required : True },
+
+                  }
+              }
+            }
+         }
+    '''
+
     def __init__(self, config: dict, channel=None):
         """INITIALIZE AZURE PROVIDER. USES AZURE PYTHON SDK TO PROVIDE EXECUTION RESOURCES
             ARGS:
@@ -79,7 +164,8 @@ class AzureProvider(ExecutionProvider):
         self.config = config
         options = self.config["execution"]["block"]["options"]
         logger.warn("Options %s", options)
-        self.instance_type = options.get("instanceType", "t2.small")
+        self.instance_type = options.get(
+            "azure_template_file", "template.json")
         self.image_id = options["imageId"]
         self.key_name = options["keyName"]
         self.region = options.get("region", 'us-east-2')
@@ -208,11 +294,17 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         Returns:
             - List of status codes.
         '''
-        raise NotImplementedError
+        states = []
+        statuses = self.deployer.get_vm_status(
+            [self.resources.get(job_id) for job_id in job_ids])
+        for status in statuses:
+            states.append(translate_table.get(
+                status.state['Name'], "PENDING"))
+        return states
 
-    ########################################################
-    # Cancel
-    ########################################################
+        ########################################################
+        # Cancel
+        ########################################################
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
 
@@ -225,7 +317,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         '''
         for job_id in job_ids:
             try:
-                self.deployer.destroy(job_id)
+                self.deployer.destroy(self.resources.get(job_id))
                 return True
             except e:
                 logger.error("Failed to cancel {}".format(repr(job_id)))
