@@ -41,6 +41,35 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
     "globals" : {   "lazyErrors" : True }
 }
 
+singleNodeLocal = {
+    "sites" : [
+        { "site" : "Local_IPP_Cori",
+          "auth" : {
+              "channel" : "local",
+              "hostname" : "cori.nersc.gov",
+              "username" : USERNAME,
+              "scriptDir" : "/global/homes/y/{}/parsl_scripts".format(USERNAME)
+          },
+          "execution" : {
+              "executor" : "ipp",
+              "provider" : "slurm",
+              "block" : { # Definition of a block
+                  "nodes" : 1,            # of nodes in that block
+                  "taskBlocks" : 1,       # total tasks in a block
+                  "initBlocks" : 1,
+                  "maxBlocks" : 1,
+                  "options" : {
+                      "partition" : "regular",
+                      "overrides" : '''#SBATCH --constraint=haswell
+module load python/3.5-anaconda ; source activate parsl_env_3.5'''
+                  }
+              }
+          }
+        }
+    ],
+    "globals" : {   "lazyErrors" : True }
+}
+
 
 '''
                       Block {Min:0, init:1, Max:1}
