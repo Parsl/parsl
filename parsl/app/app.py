@@ -21,7 +21,7 @@ class AppBase (object):
 
     """
 
-    def __init__(self, func, executor, walltime=60, sites='all', exec_type="bash"):
+    def __init__(self, func, executor, walltime=60, sites='all', cache=False, exec_type="bash"):
         ''' Constructor for the APP object.
 
         Args:
@@ -32,6 +32,7 @@ class AppBase (object):
              - walltime (int) : Walltime in seconds for the app execution
              - sites (str|list) : List of site names that this app could execute over. default is 'all'
              - exec_type (string) : App type (bash|python)
+             - cache (Bool) : Enable caching of this app ?
 
         Returns:
              - APP object.
@@ -43,6 +44,7 @@ class AppBase (object):
         self.exec_type = exec_type
         self.status = 'created'
         self.sites = sites
+        self.cache = cache
 
         sig = signature(func)
         self.kwargs = {}
@@ -72,18 +74,20 @@ def app_wrapper(func):
     return wrapper
 
 
-def App(apptype, executor, walltime=60, sites='all'):
+def App(apptype, executor, walltime=60, cache=False, sites='all'):
     ''' The App decorator function
 
     Args:
-        apptype (string) : Apptype can be bash|python
-        executor (Executor) : Executor object wrapping threads/process pools etc.
+        - apptype (string) : Apptype can be bash|python
+        - executor (Executor) : Executor object wrapping threads/process pools etc.
 
     Kwargs:
-        walltime (int) : Walltime for app in seconds,
+        - walltime (int) : Walltime for app in seconds,
              default=60
-        sites (str|List) : List of site names on which the app could execute
+        - sites (str|List) : List of site names on which the app could execute
              default='all'
+        - cache (Bool) : Enable caching of the app call
+             default=False
 
     Returns:
          An AppFactory object, which when called runs the apps through the executor.
@@ -92,6 +96,9 @@ def App(apptype, executor, walltime=60, sites='all'):
     from parsl import APP_FACTORY_FACTORY
 
     def Exec(f):
-        return APP_FACTORY_FACTORY.make(apptype, executor, f, sites=sites, walltime=walltime)
+        return APP_FACTORY_FACTORY.make(apptype, executor, f,
+                                        sites=sites,
+                                        cache=cache,
+                                        walltime=walltime)
 
     return Exec

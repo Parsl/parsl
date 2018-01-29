@@ -11,11 +11,13 @@ class PythonApp(AppBase):
 
     """
 
-    def __init__(self, func, executor, walltime=60, sites='all', fn_hash=None):
+    def __init__(self, func, executor, walltime=60, cache=False,
+                 sites='all', fn_hash=None):
         ''' Initialize the super. This bit is the same for both bash & python apps.
         '''
         super().__init__(func, executor, walltime=walltime, sites=sites, exec_type="python")
         self.fn_hash = fn_hash
+        self.cache = cache
 
     def __call__(self, *args, **kwargs):
         ''' This is where the call to a python app is handled
@@ -35,6 +37,7 @@ class PythonApp(AppBase):
         app_fut = self.executor.submit(self.func, *args,
                                        parsl_sites=self.sites,
                                        fn_hash=self.fn_hash,
+                                       cache=self.cache,
                                        **kwargs)
 
         logger.debug("App[%s] assigned Task_id:[%s]" % (self.func.__name__,

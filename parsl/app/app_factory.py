@@ -18,7 +18,7 @@ class AppFactory(object):
     ''' AppFactory streamlines creation of apps
     '''
 
-    def __init__(self, app_class, executor, func, sites='all', walltime=60):
+    def __init__(self, app_class, executor, func, cache=False, sites='all', walltime=60):
         ''' Construct an AppFactory for a particular app_class
 
         Args:
@@ -29,6 +29,7 @@ class AppFactory(object):
         Kwargs:
             - walltime(int) : Walltime in seconds, default=60
             - sites (str|list) : List of site names that this app could execute over. default is 'all'
+            - cache (Bool) : Enable caching of app.
 
         Returns:
             An AppFactory Object
@@ -41,7 +42,7 @@ class AppFactory(object):
         self.walltime = walltime
         self.sites = sites
         self.sig = signature(func)
-
+        self.cache = cache
         # Function source hashing is done here to avoid redoing this every time
         # the app is called.
         fn_source = getsource(func)
@@ -67,6 +68,7 @@ class AppFactory(object):
                                  self.executor,
                                  sites=self.sites,
                                  walltime=self.walltime,
+                                 cache=self.cache,
                                  fn_hash=self.func_hash)
         return app_obj(*args, **kwargs)
 

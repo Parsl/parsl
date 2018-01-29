@@ -41,7 +41,7 @@ class DataFlowKernel(object):
 
     """
 
-    def __init__(self, config=None, executors=None, lazy_fail=True, memoize=True,
+    def __init__(self, config=None, executors=None, lazy_fail=True, appCache=True,
                  rundir=None, fail_retries=2, checkpointFiles=None):
         """ Initialize the DataFlowKernel
 
@@ -52,7 +52,7 @@ class DataFlowKernel(object):
             - config (Dict) : A single data object encapsulating all config attributes
             - executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
             - lazy_fail(Bool) : Default=True, determine failure behavior
-            - memoize (Bool) :Enable memoization of apps
+            - appCache (Bool) :Enable caching of apps
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             - fail_retries(int): Default=2, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
@@ -73,7 +73,7 @@ class DataFlowKernel(object):
         # Load checkpoints if any
         cpts = self.load_checkpoints(checkpointFiles)
         # Initialize the memoizer
-        self.memoizer = Memoizer(self, memoize=memoize, checkpoint=cpts)
+        self.memoizer = Memoizer(self, memoize=appCache, checkpoint=cpts)
 
         if self._config:
             self._executors_managed = True
@@ -342,7 +342,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, *args, parsl_sites='all', fn_hash=None, memoize=True, **kwargs):
+    def submit(self, func, *args, parsl_sites='all', fn_hash=None, cache=False, **kwargs):
         ''' Add task to the dataflow system.
 
         Args:
@@ -370,6 +370,7 @@ class DataFlowKernel(object):
         # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
+        # print("Memoize app:{} : {}".format(func.__name__, cache))
         task_def = {'depends': depends,
                     'sites': parsl_sites,
                     'func': func,
@@ -377,7 +378,7 @@ class DataFlowKernel(object):
                     'args': args,
                     'kwargs': kwargs,
                     'fn_hash': fn_hash,
-                    'memoize': memoize,
+                    'memoize': cache,
                     'callback': None,
                     'dep_cnt': dep_cnt,
                     'exec_fu': None,
@@ -462,7 +463,10 @@ class DataFlowKernel(object):
     def checkpoint(self):
         ''' Checkpoint the dfk incrementally to a checkpoint file.
         When called, every task that has been completed yet not
-        checkpointed is checkpointed to a file
+        checkpointed is checkpointed to a file.
+
+        .. note::
+            Checkpointing only works if memoization is enabled
 
         Returns:
             Checkpoint dir if checkpoints were written successfully.

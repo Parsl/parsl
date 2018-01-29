@@ -1,8 +1,6 @@
 import hashlib
 import logging
-import pprint
 from parsl.executors.serialize.serialize import serialize_object
-pp = pprint.PrettyPrinter(indent=4)
 
 logger = logging.getLogger(__name__)
 
@@ -51,14 +49,16 @@ class Memoizer(object):
         self.memoize = True
         self.dfk = dfk
 
-        if self.dfk.config and not self.dfk.config["globals"]["memoize"]:
+        if self.dfk.config and not self.dfk.config["globals"]["appCache"]:
             self.memoize = False
         if not memoize:
             self.memoize = False
 
         if self.memoize:
+            logger.info("App caching initialized")
             self.memo_lookup_table = checkpoint
         else:
+            logger.info("App caching disabled for all apps")
             self.memo_lookup_table = {}
 
     def make_hash(self, task):
@@ -109,9 +109,9 @@ class Memoizer(object):
         if hashsum in self.memo_lookup_table:
             present = True
             result = self.memo_lookup_table[hashsum]
+            logger.info("Task[%s]: Using result from cache", task_id)
 
         task['hashsum'] = hashsum
-        logger.debug("Task[%s]: hit:%s", task_id, present)
         return present, result
 
     def hash_lookup(self, hashsum):
@@ -146,7 +146,8 @@ class Memoizer(object):
             return
 
         if task['hashsum'] in self.memo_lookup_table:
-            logger.warn("Collision in memoization table : %s" % task_id)
+            logger.info('Updating appCache entry with latest %s:%s call' %
+                        task[task_id]['func_name'], task_id)
             self.memo_lookup_table[task['hashsum']] = r
         else:
             self.memo_lookup_table[task['hashsum']] = r
