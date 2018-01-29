@@ -9,7 +9,6 @@
 
 from concurrent.futures import Future
 import logging
-from parsl.dataflow.error import *
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +29,7 @@ _STATE_TO_DESCRIPTION_MAP = {
     FINISHED: "finished"
 }
 
+
 class AppFuture(Future):
     """ An AppFuture points at a Future returned from an Executor
 
@@ -37,6 +37,7 @@ class AppFuture(Future):
     is resolved i.e file exists, then the DataFuture is assumed to be resolved.
 
     """
+
     def parent_callback(self, executor_fu):
         ''' Callback from executor future to update the parent.
 
@@ -48,14 +49,13 @@ class AppFuture(Future):
 
         Updates the super() with the result() or exception()
         '''
-        if executor_fu.done() == True:
-            try :
+        if executor_fu.done() is True:
+            try:
                 super().set_result(executor_fu.result())
             except Exception as e:
                 super().set_exception(e)
 
-
-    def __init__ (self, parent, tid=None, stdout=None, stderr=None):
+    def __init__(self, parent, tid=None, stdout=None, stderr=None):
         ''' Initialize the AppFuture.
 
         Args:
@@ -71,13 +71,12 @@ class AppFuture(Future):
         '''
         self._tid = tid
         super().__init__()
-        self.parent   = parent
-        #if self.parent:
+        self.parent = parent
+        # if self.parent:
         #    parent.add_done_callback(self.parent_callback)
         self._outputs = []
-        self._stdout  = stdout
-        self._stderr  = stderr
-
+        self._stdout = stdout
+        self._stderr = stderr
 
     @property
     def stdout(self):
@@ -101,9 +100,9 @@ class AppFuture(Future):
 
     def result(self, timeout=None):
 
-        if self.parent :
+        if self.parent:
             x = self.parent._exception
-            if x :
+            if x:
                 raise x
             return self.parent.result(timeout=timeout)
         else:
@@ -173,7 +172,7 @@ class AppFuture(Future):
                             self.__class__.__name__,
                             id(self),
                             _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.parent._result.__class__.__name__ )
+                            self.parent._result.__class__.__name__)
                 return '<%s at %#x state=%s>' % (
                     self.__class__.__name__,
                     id(self),

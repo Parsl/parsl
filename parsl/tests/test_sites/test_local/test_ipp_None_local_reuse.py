@@ -10,10 +10,12 @@ print(libsubmit.__version__)
 from local import localIPPReuse as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())
+
 
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
@@ -25,7 +27,7 @@ def test_python():
 
     import os
     results = {}
-    for i in range(0,2):
+    for i in range(0, 2):
         results[i] = python_app()
 
     print("Waiting ....")
@@ -43,7 +45,7 @@ def test_bash():
     print(x.result())
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     test_python()
     test_bash()

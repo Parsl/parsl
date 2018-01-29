@@ -4,12 +4,15 @@ Centralize app object creation.
 
 '''
 import logging
+from dill.source import getsource
+from hashlib import md5
 from inspect import signature
 from parsl.app.bash_app import BashApp
 from parsl.app.python_app import PythonApp
 from parsl.app.errors import InvalidAppTypeError
 
 logger = logging.getLogger(__name__)
+
 
 class AppFactory(object):
     ''' AppFactory streamlines creation of apps
@@ -39,6 +42,11 @@ class AppFactory(object):
         self.sites = sites
         self.sig = signature(func)
 
+        # Function source hashing is done here to avoid redoing this every time
+        # the app is called.
+        fn_source = getsource(func)
+        self.func_hash = md5(fn_source.encode('utf-8')).hexdigest()
+
     def __call__(self, *args, **kwargs):
         ''' Create a new object of app_class with the args,
         execute the app_object and return the futures
@@ -58,16 +66,17 @@ class AppFactory(object):
         app_obj = self.app_class(self.func,
                                  self.executor,
                                  sites=self.sites,
-                                 walltime=self.walltime)
+                                 walltime=self.walltime,
+                                 fn_hash=self.func_hash)
         return app_obj(*args, **kwargs)
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return '<class %s"%s for %s>' %(self.app_class.__name__,
-                                        self.__class__.__name__,
-                                        self.__name__)
+        return '<class %s"%s for %s>' % (self.app_class.__name__,
+                                         self.__class__.__name__,
+                                         self.__name__)
 
 
 class AppFactoryFactory(object):
@@ -77,6 +86,7 @@ class AppFactoryFactory(object):
 
 
     '''
+
     def __init__(self, name):
         ''' Constructor
 
@@ -87,8 +97,8 @@ class AppFactoryFactory(object):
              object(AppFactory)
         '''
         self.name = name
-        self.apps = {'bash' : BashApp,
-                     'python' : PythonApp}
+        self.apps = {'bash': BashApp,
+                     'python': PythonApp}
 
     def make(self, kind, executor, func, **kwargs):
         ''' Creates a new App of the kind specified

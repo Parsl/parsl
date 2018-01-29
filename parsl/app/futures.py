@@ -6,6 +6,8 @@
 import os
 import logging
 from concurrent.futures import Future
+
+from parsl.app.errors import *
 from parsl.data_provider.files import File
 
 logger = logging.getLogger(__name__)
@@ -26,6 +28,7 @@ _STATE_TO_DESCRIPTION_MAP = {
     CANCELLED_AND_NOTIFIED: "cancelled",
     FINISHED: "finished"
 }
+
 
 class DataFuture(Future):
     """ A datafuture points at an AppFuture
@@ -75,7 +78,7 @@ class DataFuture(Future):
         self.parent = parent
         self._exception = None
 
-        if fut == None:
+        if fut is None:
             logger.debug("Setting result to filepath since no future was passed")
             self.set_result = self.file_obj
 
@@ -206,8 +209,6 @@ class DataFuture(Future):
                 _STATE_TO_DESCRIPTION_MAP[self._state])
 
 
-
-
 def testing_nonfuture():
     fpath = '~/shuffled.txt'
     df = DataFuture(None, fpath)
@@ -215,8 +216,9 @@ def testing_nonfuture():
     print("Result : ", df.filepath)
     assert df.filepath == os.path.abspath(os.path.expanduser(fpath))
 
+
 if __name__ == "__main__":
-    #logging.basicConfig(filename='futures.testing.log',level=logging.DEBUG)
+    # logging.basicConfig(filename='futures.testing.log',level=logging.DEBUG)
     import sys
     import random
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -234,6 +236,5 @@ if __name__ == "__main__":
 
     print(foo.done())
     print(df.done())
-
 
     testing_nonfuture()

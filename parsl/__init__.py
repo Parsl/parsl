@@ -34,17 +34,17 @@ from parsl.app.app import App
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.data_provider.files import File
-import parsl.execution_provider
 
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app_factory import AppFactoryFactory
 APP_FACTORY_FACTORY = AppFactoryFactory('central')
-#print(APP_FACTORY)
+# print(APP_FACTORY)
 
 __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
-__all__ = ['App', 'DataFlowKernel', 'ThreadPoolExecutor', 'IPyParallelExecutor']
+__all__ = ['App', 'DataFlowKernel', 'File', 'ThreadPoolExecutor', 'IPyParallelExecutor']
+
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     '''
@@ -60,7 +60,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     '''
 
     if format_string is None:
-        #format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
+        # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
         format_string = "%(asctime)s %(name)s [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)

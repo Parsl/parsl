@@ -11,6 +11,7 @@ from cori import multiNodeSrun as config
 parsl.set_stream_logger()
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def python_app_slow(duration):
     import platform
@@ -30,6 +31,7 @@ def test_python_remote(count=10):
     for fu in fus:
         print(fu.result())
 
+
 def test_python_remote_slow(count=20):
 
     fus = []
@@ -41,8 +43,7 @@ def test_python_remote_slow(count=20):
         print(fu.result())
 
 
-if __name__ == "__main__" :
-
+if __name__ == "__main__":
 
     test_python_remote()
     test_python_remote_slow()

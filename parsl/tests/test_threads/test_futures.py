@@ -21,7 +21,7 @@ import shutil
 import argparse
 
 workers = ThreadPoolExecutor(max_workers=8)
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 #workers = ProcessPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
@@ -30,18 +30,20 @@ dfk = DataFlowKernel(executors=[workers])
 def delay_incr(x, delay=0, outputs=[]):
     import time
     import os
-    if outputs :
-        bufsize=0
+    if outputs:
+        bufsize = 0
         with open(outputs[0], 'w') as outs:
-            outs.write(str(x+1))
+            outs.write(str(x + 1))
     time.sleep(delay)
-    return x+1
+    return x + 1
+
 
 def get_contents(filename):
     c = None
     with open(filename, 'r') as f:
         c = f.read()
     return c
+
 
 def test_fut_case_1():
     ''' Testing the behavior of AppFutures where there are no dependencies
@@ -58,6 +60,7 @@ def test_fut_case_1():
     assert result == 2, 'Output does not match expected 2, goot: "{0}"'.format(result)
     return True
 
+
 def test_fut_case_2():
     ''' Testing the behavior of DataFutures where there are no dependencies
     '''
@@ -70,8 +73,7 @@ def test_fut_case_2():
     print ("App_fu  : ", app_fu)
     print ("Data_fu : ", data_fu)
 
-
-    assert os.path.basename(result) == output_f , \
+    assert os.path.basename(result) == output_f, \
         "DataFuture did not return the filename, got : {0}".format(result)
     print("Status : ", data_fu.done())
     print("Result : ", result)
@@ -79,6 +81,7 @@ def test_fut_case_2():
     contents = get_contents(result)
     assert contents == '2', 'Output does not match expected "2", got: "{0}"'.format(contents)
     return True
+
 
 def test_fut_case_3():
     ''' Testing the behavior of AppFutures where there are dependencies
@@ -97,6 +100,7 @@ def test_fut_case_3():
 
     assert result == 3, 'Output does not match expected 2, goot: "{0}"'.format(result)
     return True
+
 
 def test_fut_case_4():
     ''' Testing the behavior of DataFutures where there are dependencies
@@ -120,7 +124,7 @@ def test_fut_case_4():
     print("Status : ", status)
     print("Result : ", result)
 
-    assert os.path.basename(result) == output_f2 , \
+    assert os.path.basename(result) == output_f2, \
         "DataFuture did not return the filename, got : {0}".format(result)
 
     contents = get_contents(result)
@@ -128,12 +132,12 @@ def test_fut_case_4():
     return True
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()
@@ -142,4 +146,4 @@ if __name__ == '__main__' :
     #y = test_fut_case_2()
     #y = test_fut_case_3()
     y = test_fut_case_4()
-    #raise_error(0)
+    # raise_error(0)

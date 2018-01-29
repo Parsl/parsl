@@ -11,7 +11,7 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=8)
 dfk = DataFlowKernel(executors=[workers])
 
@@ -20,9 +20,10 @@ dfk = DataFlowKernel(executors=[workers])
 def wait_sleep_double(x, fu_1, fu_2):
     import time
     time.sleep(2)   # Sleep for 2 seconds
-    return x*2
+    return x * 2
 
-def test_parallel (N=10):
+
+def test_parallel(N=10):
     ''' Parallel workflow example from docs on Composing a workflow
     '''
 
@@ -40,16 +41,13 @@ def test_parallel (N=10):
 
     # doubled_z will be done in ~4s
     print(doubled_z.result())
-    end  = time.time()
+    end = time.time()
     delta = time.time() - start
 
-    assert doubled_z.result() == N*2, "Expected doubled_z = N*2 = {0}".format(N*2)
+    assert doubled_z.result() == N * 2, "Expected doubled_z = N*2 = {0}".format(N * 2)
     assert delta > 4 and delta < 5, "Time delta exceeded expected 4 < duration < 5"
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     test_parallel()
-
-
-

@@ -19,7 +19,7 @@ from parsl.executors.base import ParslExecutor
 logger = logging.getLogger(__name__)
 
 
-BUFFER_THRESHOLD = 1024*1024
+BUFFER_THRESHOLD = 1024 * 1024
 ITEM_THRESHOLD = 1024
 
 
@@ -62,22 +62,22 @@ def runner(incoming_q, outgoing_q):
         Returns the serialized result/exception
         '''
         all_names = dir(__builtins__)
-        user_ns   = locals()
-        user_ns.update( {'__builtins__' : {k : getattr(__builtins__, k)  for k in all_names} } )
+        user_ns = locals()
+        user_ns.update({'__builtins__': {k: getattr(__builtins__, k) for k in all_names}})
 
         f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
         fname = getattr(f, '__name__', 'f')
-        prefix     = "parsl_"
-        fname      = prefix+"f"
-        argname    = prefix+"args"
-        kwargname  = prefix+"kwargs"
-        resultname = prefix+"result"
+        prefix = "parsl_"
+        fname = prefix + "f"
+        argname = prefix + "args"
+        kwargname = prefix + "kwargs"
+        resultname = prefix + "result"
 
-        user_ns.update({ fname : f,
-                         argname : args,
-                         kwargname : kwargs,
-                         resultname : resultname })
+        user_ns.update({fname: f,
+                        argname: args,
+                        kwargname: kwargs,
+                        resultname: resultname})
 
         code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
                                                argname, kwargname)
@@ -91,17 +91,16 @@ def runner(incoming_q, outgoing_q):
             logger.warning("Caught errors but will not handled %s", e)
             raise e
 
-        else :
-            #print("Done : {0}".format(locals()))
+        else:
+            # print("Done : {0}".format(locals()))
             print("[RUNNER] Result    : {0}".format(user_ns.get(resultname)))
             return user_ns.get(resultname)
 
-
-    while True :
+    while True:
         try:
             # Blocking wait on the queue
             msg = incoming_q.get(block=True, timeout=10)
-            #logger.debug("[RUNNER] Got message : %s", msg)
+            # logger.debug("[RUNNER] Got message : %s", msg)
 
         except queue.Empty:
             # Handle case where no items were on queue
@@ -113,7 +112,7 @@ def runner(incoming_q, outgoing_q):
                 # Attempt to send a stop notification to the management thread
                 outgoing_q.put(None)
 
-            except Exception :
+            except Exception:
                 pass
 
             break
@@ -123,7 +122,7 @@ def runner(incoming_q, outgoing_q):
 
         else:
             # Handle received message
-            if not msg :
+            if not msg:
                 # Empty message is a die request
                 logger.debug("[RUNNER] Received exit request")
                 outgoing_q.put(None)
@@ -133,16 +132,16 @@ def runner(incoming_q, outgoing_q):
                 logger.debug("[RUNNER] Got a valid task : %s", msg["task_id"])
                 try:
                     response_obj = execute_task(msg['buffer'])
-                    response = {"task_id" : msg["task_id"],
-                                "result"  : serialize_object(response_obj)}
+                    response = {"task_id": msg["task_id"],
+                                "result": serialize_object(response_obj)}
 
                     logger.warning("[RUNNER] Returing result : %s",
-                                   deserialize_object(response["result"]) )
+                                   deserialize_object(response["result"]))
 
                 except Exception as e:
                     logger.debug("[RUNNER] Caught task exception")
-                    response = {"task_id" : msg["task_id"],
-                                "exception"  : serialize_object(e)}
+                    response = {"task_id": msg["task_id"],
+                                "exception": serialize_object(e)}
 
                 outgoing_q.put(response)
 
@@ -259,10 +258,10 @@ class TurbineExecutor(ParslExecutor):
         Could be used later as a restart if the management thread dies.
         '''
 
-        logging.debug("In _start %s", "*"*40)
+        logging.debug("In _start %s", "*" * 40)
         if self._queue_management_thread is None:
             logging.debug("Starting management thread ")
-            self._queue_management_thread = threading.Thread (target=self._queue_management_worker)
+            self._queue_management_thread = threading.Thread(target=self._queue_management_worker)
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
 
@@ -275,13 +274,13 @@ class TurbineExecutor(ParslExecutor):
 
         self.isAlive = False
         logging.debug("Waking management thread")
-        self.incoming_q.put(None) # Wake up the thread
-        self._queue_management_thread.join() # Force join
+        self.incoming_q.put(None)  # Wake up the thread
+        self._queue_management_thread.join()  # Force join
         logging.debug("Exiting thread")
         self.worker.join()
         return True
 
-    def __init__ (self, swift_attribs=None, config=None, **kwargs):
+    def __init__(self, swift_attribs=None, config=None, **kwargs):
         ''' Initialize the thread pool
         Trying to implement the emews model.
 
@@ -294,18 +293,18 @@ class TurbineExecutor(ParslExecutor):
         self.mp_manager = mp.Manager()
         self.outgoing_q = self.mp_manager.Queue()
         self.incoming_q = self.mp_manager.Queue()
-        self.isAlive   = True
+        self.isAlive = True
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
-        self.worker  = mp.Process(target=runner, args = (self.outgoing_q, self.incoming_q))
+        self.worker = mp.Process(target=runner, args=(self.outgoing_q, self.incoming_q))
         self.worker.start()
         logger.debug("Created worker : %s", self.worker)
-        self.tasks   = {}
+        self.tasks = {}
 
-    def submit (self, func, *args, **kwargs):
+    def submit(self, func, *args, **kwargs):
         ''' Submits work to the the outgoing_q, an external process listens on this
         queue for new work. This method is simply pass through and behaves like a
         submit call as described here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
@@ -326,12 +325,12 @@ class TurbineExecutor(ParslExecutor):
 
         self.tasks[task_id] = Future()
 
-        fn_buf  = pack_apply_message(func, args, kwargs,
-                                     buffer_threshold=1024*1024,
-                                     item_threshold=1024)
+        fn_buf = pack_apply_message(func, args, kwargs,
+                                    buffer_threshold=1024 * 1024,
+                                    item_threshold=1024)
 
-        msg = {"task_id" : task_id,
-               "buffer"  : fn_buf }
+        msg = {"task_id": task_id,
+               "buffer": fn_buf}
 
         # Post task to the the outgoing queue
         self.outgoing_q.put(msg)
@@ -339,8 +338,7 @@ class TurbineExecutor(ParslExecutor):
         # Return the future
         return self.tasks[task_id]
 
-
-    def scale_out (self, workers=1):
+    def scale_out(self, workers=1):
         ''' Scales out the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
         This would be nice to have, and can be done
@@ -351,7 +349,7 @@ class TurbineExecutor(ParslExecutor):
 
         raise NotImplementedError
 
-    def scale_in (self, workers=1):
+    def scale_in(self, workers=1):
         ''' Scale in the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
@@ -362,9 +360,7 @@ class TurbineExecutor(ParslExecutor):
         raise NotImplementedError
 
 
-
-
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     print("Start")
     turb_x = TurbineExecutor()

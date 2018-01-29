@@ -6,6 +6,7 @@ on where(client-side, remote-side, intermediary-side) the File.filepath is
 being called from
 '''
 
+
 class File(object):
     ''' The Parsl File Class. This is planned to be a very simple class that simply
     captures various attributes of a file, and relies on client-side and worker-side
@@ -66,7 +67,6 @@ class File(object):
         pass
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     x = File('./files.py')
-

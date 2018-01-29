@@ -12,6 +12,7 @@ parsl.set_stream_logger()
 from local_multi import threads_ipp as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk, sites=['Local_threads'])
 def python_app_2():
     import os
@@ -20,6 +21,7 @@ def python_app_2():
     time.sleep(1)
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
+
 @App("python", dfk, sites=['Local_IPP'])
 def python_app_1():
     import os
@@ -27,6 +29,7 @@ def python_app_1():
     import time
     time.sleep(1)
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
+
 
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
@@ -39,7 +42,7 @@ def test_python(N=5):
     import os
     r1 = {}
     r2 = {}
-    for i in range(0,N):
+    for i in range(0, N):
         r1[i] = python_app_1()
         r2[i] = python_app_2()
     print("Waiting ....")
@@ -50,6 +53,7 @@ def test_python(N=5):
         print ("python_app_2 : ", r2[x].result())
 
     return
+
 
 def test_bash():
     ''' Testing basic bash functionality '''
@@ -62,15 +66,15 @@ def test_bash():
     print(x.result())
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
-    parser   = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()
 
     test_python()
-    #test_bash()
+    # test_bash()

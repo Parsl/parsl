@@ -11,44 +11,49 @@ import parsl
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
 
+
 @App('bash', dfk)
 def command_not_found(stderr='std.err', stdout='std.out'):
     cmd_line = 'catdogcat'
     return cmd_line
+
 
 @App('bash', dfk)
 def bash_misuse(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit(15)'
     return cmd_line
 
+
 @App('bash', dfk)
 def div_0(stderr='std.err', stdout='std.out'):
     cmd_line = '$((5/0))'
     return cmd_line
+
 
 @App('bash', dfk)
 def invalid_exit(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit 3.141'
     return cmd_line
 
+
 @App('bash', dfk)
 def not_executable(stderr='std.err', stdout='std.out'):
     cmd_line = '/dev/null'
     return cmd_line
+
 
 @App('bash', dfk)
 def bad_format(stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {0}'
     return cmd_line
 
-test_matrix = { div_0             : {'exit_code' : 1 },
-                bash_misuse       : {'exit_code' : 15 },
-                command_not_found : {'exit_code' : 127 },
-                invalid_exit      : {'exit_code' : 128 },
-                not_executable    : {'exit_code' : 126 }
-              }
 
-
+test_matrix = {div_0: {'exit_code': 1},
+               bash_misuse: {'exit_code': 15},
+               command_not_found: {'exit_code': 127},
+               invalid_exit: {'exit_code': 128},
+               not_executable: {'exit_code': 126}
+               }
 
 
 def test_bash_formatting():
@@ -78,6 +83,7 @@ def test_div_0(test_fn=div_0):
     os.remove('std.out')
     return True
 
+
 @nottest
 def test_bash_misuse(test_fn=bash_misuse):
 
@@ -93,6 +99,7 @@ def test_bash_misuse(test_fn=bash_misuse):
     os.remove('std.err')
     os.remove('std.out')
     return True
+
 
 def test_command_not_found(test_fn=command_not_found):
 
@@ -110,6 +117,7 @@ def test_command_not_found(test_fn=command_not_found):
     os.remove('std.out')
     return True
 
+
 @nottest
 def test_invalid_exit(test_fn=invalid_exit):
 
@@ -126,6 +134,7 @@ def test_invalid_exit(test_fn=invalid_exit):
     os.remove('std.out')
     return True
 
+
 def test_not_executable(test_fn=not_executable):
 
     err_code = test_matrix[test_fn]['exit_code']
@@ -141,6 +150,7 @@ def test_not_executable(test_fn=not_executable):
     os.remove('std.out')
     return True
 
+
 def run_app(test_fn, err_code):
     f = test_fn()
     print(f)
@@ -155,11 +165,12 @@ def run_app(test_fn, err_code):
     os.remove('std.out')
     return True
 
-if __name__ == '__main__' :
 
-    parser   = argparse.ArgumentParser()
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     print(test_bash_formatting())
 

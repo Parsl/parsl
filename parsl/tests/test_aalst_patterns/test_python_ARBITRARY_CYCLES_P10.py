@@ -1,13 +1,14 @@
 # A point in a workflow process where one or more activities can
-# be repeated 
+# be repeated
 
 import parsl
 from parsl import *
-import random 
+import random
 import argparse
 
-workers = ThreadPoolExecutor(max_workers = 10)
+workers = ThreadPoolExecutor(max_workers=10)
 dfk = DataFlowKernel(executors=[workers])
+
 
 @App('python', dfk)
 def rand():
@@ -16,24 +17,28 @@ def rand():
     print("random")
     return square(x).result()
 
+
 @App('python', dfk)
 def square(x):
     y = x**2
-    if y > 25: 
+    if y > 25:
         return increment(y).result()
     else:
         return cubed(x).result()
+
 
 @App('python', dfk)
 def cubed(x):
     y = x**3
     return square(y).result()
 
+
 @App('python', dfk)
 def increment(x):
     return x + 1
 
-def test_arbitrary(x = 2):
+
+def test_arbitrary(x=2):
     numbers = []
     for i in range(x):
         numbers.append(rand())
@@ -43,6 +48,6 @@ def test_arbitrary(x = 2):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--num", default = "2", action = "store", dest = "x", type = int)
+    parser.add_argument("-x", "--num", default="2", action="store", dest="x", type=int)
     args = parser.parse_args()
     test_arbitrary(args.x)

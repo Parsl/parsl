@@ -4,12 +4,8 @@ Centralize creation of execution providers and executors.
 
 '''
 
-import os
 import copy
 import logging
-import libsubmit
-
-logger = logging.getLogger(__name__)
 
 # Executors
 from parsl.executors.ipp import IPyParallelExecutor
@@ -23,35 +19,37 @@ from parsl.executors.ipp_controller import Controller
 # Execution Providers and channels
 from libsubmit import *
 
+logger = logging.getLogger(__name__)
+
+
 class ExecProviderFactory (object):
 
-    def __init__ (self):
+    def __init__(self):
         ''' Constructor for the execution provider factory.
 
         Args:
              None
         '''
 
-        self.executors = { 'ipp' : IPyParallelExecutor,
-                           'swift_t' : TurbineExecutor,
-                           'threads' : ThreadPoolExecutor,
-                           None : lambda *args, **kwargs : None }
+        self.executors = {'ipp': IPyParallelExecutor,
+                          'swift_t': TurbineExecutor,
+                          'threads': ThreadPoolExecutor,
+                          None: lambda *args, **kwargs: None}
 
-        self.execution_providers = { 'slurm'  : Slurm,
-                                     'local'  : Local,
-                                     'aws'    : EC2Provider,
-                                     'cobalt' : Cobalt,
-                                     'condor' : Condor,
-                                     'torque' : Torque,
-                                     None     : lambda *args, **kwargs : None }
+        self.execution_providers = {'slurm': Slurm,
+                                    'local': Local,
+                                    'aws': EC2Provider,
+                                    'cobalt': Cobalt,
+                                    'condor': Condor,
+                                    'torque': Torque,
+                                    None: lambda *args, **kwargs: None}
 
-        self.channels = { 'ssh' : SshChannel,
-                          'ssh-il' : SshILChannel,
-                          'local' : LocalChannel,
-                          None : lambda *args, **kwargs : None }
+        self.channels = {'ssh': SshChannel,
+                         'ssh-il': SshILChannel,
+                         'local': LocalChannel,
+                         None: lambda *args, **kwargs: None}
 
-
-    def validate_config (self, config):
+    def validate_config(self, config):
         ''' Validate_config validates config
         There is no logic implemented here yet.
         This might be a good first task for a new dev.
@@ -63,7 +61,7 @@ class ExecProviderFactory (object):
         '''
         return True
 
-    def make (self, rundir, config):
+    def make(self, rundir, config):
         ''' Construct the appropriate provider, executors and channels and link them together.
         '''
 
@@ -104,7 +102,7 @@ class ExecProviderFactory (object):
 
             executor_name = site["execution"]["executor"]
 
-            if executor_name in self.executors :
+            if executor_name in self.executors:
 
                 controller = None
 
@@ -115,7 +113,7 @@ class ExecProviderFactory (object):
                     site["controller"] = copy.copy(config["controller"])
 
                     site["controller"]['ipythonDir'] = self.rundir
-                    site["controller"]['profile']    = config["controller"].get('profile', site["site"])
+                    site["controller"]['profile'] = config["controller"].get('profile', site["site"])
 
                     controller = Controller(**site["controller"])
                     logger.debug("Controller engine file : %s", controller.engine_file)
@@ -127,7 +125,7 @@ class ExecProviderFactory (object):
 
             else:
                 logger.error("Site:{0} requests an invalid executor:{0}".format(site["site"],
-                                                                               executor_name))
+                                                                                executor_name))
                 raise BadConfig(site["site"],
                                 "invalid executor:{0} requested".format(executor_name))
 

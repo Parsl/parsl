@@ -19,7 +19,7 @@
 6 - Once these are done, we need to run some more python code that we don't actually
     have yet, but that a student here supposedly does have written and tested.
 
-We will be working on Stampede 2. we haven't put our code in a repo (though we should - Qingyi...) 
+We will be working on Stampede 2. we haven't put our code in a repo (though we should - Qingyi...)
    and everything we used can be installed via pip.
 
 """
@@ -35,18 +35,18 @@ dfk = DataFlowKernel(workers)
 
 def create_dirs(cwd):
 
-    for dir in ['relax.01', 'relax.02', 'relax.03'] :
+    for dir in ['relax.01', 'relax.02', 'relax.03']:
         rel_dir = '{0}/{1}'.format(cwd, dir)
         if os.path.exists(rel_dir):
             shutil.rmtree(rel_dir)
         os.makedirs(rel_dir)
-        for i in range(0, random.randint(1,5)):
+        for i in range(0, random.randint(1, 5)):
             rdir = '{0}/{1}'.format(rel_dir, i)
             os.makedirs(rdir)
             with open('{0}/results'.format(rdir, i), 'w') as f:
                 f.write("{0} {1} - test data\n".format(i, dir))
 
-    for dir in ['neb01', 'neb02', 'neb03', 'neb04'] :
+    for dir in ['neb01', 'neb02', 'neb03', 'neb04']:
         rel_dir = '{0}/{1}'.format(cwd, dir)
         if os.path.exists(rel_dir):
             shutil.rmtree(rel_dir)
@@ -55,22 +55,23 @@ def create_dirs(cwd):
             f.write("{0} test data\n".format(rel_dir))
 
 
-
 @App('python', dfk)
-def ls (pwd, outputs=[]):
+def ls(pwd, outputs=[]):
     import os
     items = os.listdir(pwd)
     with open(outputs[0], 'w') as f:
-        f.write(' '.join(items)) 
+        f.write(' '.join(items))
         f.write('\n')
     # Returning list of items in current dir as python object
     return items
 
+
 @App('bash', dfk)
-def catter (dir, outputs=[], stdout=None, stderr=None):
+def catter(dir, outputs=[], stdout=None, stderr=None):
     cmd_line = 'cat {0}/*/results > {outputs[0]}'
 
-if __name__ == "__main__" :
+
+if __name__ == "__main__":
 
     pwd = os.getcwd()
     create_dirs(pwd)
@@ -86,7 +87,7 @@ if __name__ == "__main__" :
                                   stderr='{0}.stderr'.format(dir))
 
     for dir in dir_fus:
-        try :
+        try:
             print(dir_fus[dir][0].result())
-        except Exception as e :
+        except Exception as e:
             print ("Caught exception{0}  on {1}".format(e, dir))

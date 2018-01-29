@@ -7,6 +7,7 @@ os.environ["COOLEY_USERNAME"] = "yadunand"
 from cooley import singleNode as config
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def test():
     import platform
@@ -14,7 +15,7 @@ def test():
 
 
 results = {}
-for i in range(0,5):
+for i in range(0, 5):
     results[i] = test()
 
 print("Waiting ....")

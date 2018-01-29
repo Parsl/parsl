@@ -7,6 +7,7 @@ def setup_package():
     print("Started ipcluster with pid:{0}".format(proc))
     return proc
 
+
 def teardown_package():
     import subprocess
     import time

@@ -1,13 +1,12 @@
 import os
 import time
-
 import logging
-logger = logging.getLogger(__name__)
-
-from shutil import copyfile
 from ipyparallel import Client
+
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import *
+
+logger = logging.getLogger(__name__)
 
 
 class IPyParallelExecutor(ParslExecutor):
@@ -25,7 +24,6 @@ class IPyParallelExecutor(ParslExecutor):
 
     '''
 
-
     def compose_launch_cmd(self, filepath, engine_dir):
         ''' Reads the json contents from filepath and uses that to compose the engine launch command
 
@@ -39,7 +37,7 @@ class IPyParallelExecutor(ParslExecutor):
 
         engine_json = None
         try:
-            with open (self.engine_file, 'r') as f:
+            with open(self.engine_file, 'r') as f:
                 engine_json = f.read()
 
         except OSError as e:
@@ -55,13 +53,12 @@ mkdir -p '.ipengine_logs'
 ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 '''.format(engine_dir, engine_json)
 
-
-    def __init__ (self, execution_provider=None,
-                  reuse_controller=True,
-                  engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
-                  engine_dir='.',
-                  controller=None,
-                  config = None):
+    def __init__(self, execution_provider=None,
+                 reuse_controller=True,
+                 engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
+                 engine_dir='.',
+                 controller=None,
+                 config=None):
         ''' Initialize the IPyParallel pool. The initialization takes all relevant parameters via KWargs.
 
         .. note::
@@ -85,7 +82,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         self.engine_file = engine_json_file
         self.client_file = None
 
-        if self.controller :
+        if self.controller:
             # Find the Client json
             self.client_file = self.controller.client_file
             self.engine_file = self.controller.engine_file
@@ -93,8 +90,8 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
             if not os.path.exists(self.client_file):
                 logger.debug("Waiting for {0}".format(self.client_file))
 
-            sleep_dur = 20 # 20 seconds
-            for i in range(0, int(sleep_dur/0.2)):
+            sleep_dur = 20  # 20 seconds
+            for i in range(0, int(sleep_dur / 0.2)):
                 time.sleep(0.2)
                 if os.path.exists(self.client_file):
                     break
@@ -102,18 +99,16 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
             if not os.path.exists(self.client_file):
                 raise Exception("Controller client file is missing at {0}".format(self.client_file))
 
-
         self.executor = Client(url_file=self.client_file)
-        self.config   = config
+        self.config = config
         self.sitename = config['site'] if config else 'Static_IPP'
         # NOTE: Copying the config here only partially fixes the issue. There needs to be
         # multiple controllers launched by the factory, and each must have different jsons.
         # There could be timing issues here,
-        #local_engine_json = "{0}.{1}.engine.json".format(self.config["site"], int(time.time()))
-        #copyfile(engine_json_file, local_engine_json)
-        #if not os.path.exists(self.config["execution"]["script_dir"]):
+        # local_engine_json = "{0}.{1}.engine.json".format(self.config["site"], int(time.time()))
+        # copyfile(engine_json_file, local_engine_json)
+        # if not os.path.exists(self.config["execution"]["script_dir"]):
         #    os.makedirs(self.config["execution"]["script_dir"])
-
 
         self.launch_cmd = self.compose_launch_cmd(self.engine_file, engine_dir)
         self.execution_provider = execution_provider
@@ -143,15 +138,14 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
             self._scaling_enabled = False
             logger.debug("Starting IpyParallelExecutor with no provider")
 
-        self.lb_view  = self.executor.load_balanced_view()
+        self.lb_view = self.executor.load_balanced_view()
         logger.debug("Starting executor")
-
 
     @property
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def submit (self,  *args, **kwargs):
+    def submit(self, *args, **kwargs):
         ''' Submits work to the thread pool
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
@@ -163,12 +157,12 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         logger.debug("Got kwargs : %s,", kwargs)
         return self.lb_view.apply_async(*args, **kwargs)
 
-    def scale_out (self, *args, **kwargs):
+    def scale_out(self, *args, **kwargs):
         ''' Scales out the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
         '''
-        if self.execution_provider :
+        if self.execution_provider:
             r = self.execution_provider.submit(self.launch_cmd, *args, **kwargs)
             self.engines.extend([r])
         else:
@@ -177,7 +171,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
         return r
 
-    def scale_in (self, blocks, *args, **kwargs):
+    def scale_in(self, blocks, *args, **kwargs):
         ''' Scale in the number of active workers by 1
         This method is notImplemented for threads and will raise the error if called.
 
@@ -187,9 +181,9 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         status = dict(zip(self.engines, self.execution_provider.status(self.engines)))
 
         # This works for blocks=0
-        to_kill = [engine for engine in status if status[engine] == "RUNNING" ][:blocks]
+        to_kill = [engine for engine in status if status[engine] == "RUNNING"][:blocks]
 
-        if self.execution_provider :
+        if self.execution_provider:
             r = self.execution_provider.cancel(to_kill, *args, **kwargs)
         else:
             logger.error("No execution provider available")
@@ -197,11 +191,11 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
         return r
 
-    def status (self):
+    def status(self):
         ''' Returns the status of the executor via probing the execution providers.
 
         '''
-        if self.execution_provider :
+        if self.execution_provider:
             status = self.execution_provider.status(self.engines)
 
         else:
@@ -209,8 +203,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
         return status
 
-
-    def shutdown (self, hub=True, targets='all', block=False):
+    def shutdown(self, hub=True, targets='all', block=False):
         ''' Shutdown the executor, including all workers and controllers.
         The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
 
@@ -223,25 +216,25 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
              NotImplemented exception
         '''
 
-        if self.controller :
+        if self.controller:
             logger.debug("IPP:Shutdown sequence: Attempting controller kill")
             self.controller.close()
 
         # We do not actually do executor.shutdown because
         # this blocks even when requested to not block, killing the
         # controller is more effective although impolite.
-        #x = self.executor.shutdown(targets=targets,
+        # x = self.executor.shutdown(targets=targets,
         #                           hub=hub,
         #                           block=block)
 
         logger.debug("Done with executor shutdown")
         return True
 
-    def __repr__ (self):
+    def __repr__(self):
         return "<IPP Executor for site:{0}>".format(self.sitename)
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
-    pool1_config = {"poolname" : "pool1",
-                    "queue"    : "foo" }
+    pool1_config = {"poolname": "pool1",
+                    "queue": "foo"}

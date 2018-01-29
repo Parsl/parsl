@@ -5,10 +5,11 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 from .local import localIPP
 dfk = DataFlowKernel(config=localIPP)
+
 
 @App("python", dfk)
 def python_app():
@@ -21,9 +22,8 @@ def test_python():
 
     import os
     results = {}
-    for i in range(0,2):
+    for i in range(0, 2):
         results[i] = python_app()
 
     print("Waiting ....")
     print(results[0].result())
-

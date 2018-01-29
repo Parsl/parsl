@@ -24,27 +24,28 @@ import time
 import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 workers = IPyParallelExecutor()
 dfk = DataFlowKernel(workers)
+
 
 @App('python', dfk)
 def sleep_double(x):
     import time
     time.sleep(1)
-    return x*2
+    return x * 2
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     print("Starting launch")
 
     jobs = {}
-    for i in range(0,20):
+    for i in range(0, 20):
         jobs[i] = sleep_double(i)
 
     start = time.time()
-    for i in range(0,10):
+    for i in range(0, 10):
         print(jobs[i].result())
     print("Time to finish : ", time.time() - start)

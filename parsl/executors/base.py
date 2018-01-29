@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
+
 class ParslExecutor(metaclass=ABCMeta):
     """ Define the strict interface for all Executor classes
     This is a metaclass that only enforces concrete implementations of
@@ -48,4 +49,3 @@ class ParslExecutor(metaclass=ABCMeta):
         and Executors wrapped in a resource provider
         '''
         pass
-

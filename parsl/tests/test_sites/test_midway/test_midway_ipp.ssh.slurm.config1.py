@@ -26,7 +26,7 @@ def bash_app(stdout=None, stderr=None):
 def test_python(N=100):
     import os
     results = {}
-    for i in range(0,N):
+    for i in range(0, N):
         results[i] = python_app()
 
     print("Waiting ....")
@@ -42,7 +42,7 @@ def test_bash():
     print(x.result())
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     test_python()
-    #test_bash()
+    # test_bash()

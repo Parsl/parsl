@@ -1,12 +1,11 @@
-import sys
-import threading
 import logging
 import time
 import math
 
 logger = logging.getLogger(__name__)
 
-class Strategy (object) :
+
+class Strategy (object):
     '''FlowControl Strategy
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
@@ -99,20 +98,20 @@ class Strategy (object) :
 
     '''
 
-    def __init__ (self, dfk):
+    def __init__(self, dfk):
         ''' Initialize strategy
         '''
         self.dfk = dfk
         self.config = dfk.config
         self.sites = {}
-        self.max_idletime = 60*2 # 2 minutes
+        self.max_idletime = 60 * 2  # 2 minutes
 
         for site in self.dfk.config["sites"]:
-            self.sites[site['site']] = {'idle_since' : None,
-                                        'config'     : site }
+            self.sites[site['site']] = {'idle_since': None,
+                                        'config': site}
 
-        self.strategies = { None      : self._strategy_noop,
-                            'simple'  : self._strategy_simple }
+        self.strategies = {None: self._strategy_noop,
+                           'simple': self._strategy_simple}
 
         strtgy_name = self.config['globals'].get('strategy', None)
         self.strategize = self.strategies.get(strtgy_name,
@@ -120,37 +119,42 @@ class Strategy (object) :
 
         logger.debug("Scaling strategy: {0}".format(strtgy_name))
 
+    def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
+        ''' Do nothing!
 
-    def _strategy_noop (self, tasks, *args, kind=None, **kwargs):
-        ''' Peek at the DFK and the sites specified,
+        Args:
+            - tasks (task_ids): Not used here.
 
-        We assume here that tasks are not held in a runnable
-        state, and that all tasks from an app would be sent to
-        a single specific site, i.e tasks cannot be specified
-        to go to one of more sites.
+        KWargs:
+            - kind (Not used)
         '''
         pass
 
-    def _strategy_simple (self, tasks, *args, kind=None, **kwargs):
+    def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
         ''' Peek at the DFK and the sites specified,
 
         We assume here that tasks are not held in a runnable
         state, and that all tasks from an app would be sent to
         a single specific site, i.e tasks cannot be specified
         to go to one of more sites.
+
+        Args:
+            - tasks (task_ids): Not used here.
+
+        KWargs:
+            - kind (Not used)
         '''
 
         # Add logic to check sites
-        #for task in tasks :
+        # for task in tasks :
         #    if self.dfk.tasks[task]:
 
-        for sitename in self.dfk.executors :
+        for sitename in self.dfk.executors:
 
             exc = self.dfk.executors[sitename]
             site_config = self.sites[sitename]['config']
-            site_parallelism = site_config["execution"]
 
-            if not exc.scaling_enabled :
+            if not exc.scaling_enabled:
                 logger.debug("Site:{0} Status:STATIC".format(sitename))
                 continue
 
@@ -161,10 +165,10 @@ class Strategy (object) :
             status = exc.status()
 
             # Get the shape and bounds for the site
-            minBlocks   = site_config["execution"]["block"]["minBlocks"]
-            maxBlocks   = site_config["execution"]["block"]["maxBlocks"]
-            initBlocks  = site_config["execution"]["block"]["initBlocks"]
-            taskBlocks  = site_config["execution"]["block"]["taskBlocks"]
+            minBlocks = site_config["execution"]["block"]["minBlocks"]
+            maxBlocks = site_config["execution"]["block"]["maxBlocks"]
+            initBlocks = site_config["execution"]["block"]["initBlocks"]
+            taskBlocks = site_config["execution"]["block"]["taskBlocks"]
             parallelism = site_config["execution"]["block"]["parallelism"]
 
             active_blocks = sum([1 for x in status if x in ('RUNNING',
@@ -181,12 +185,12 @@ class Strategy (object) :
 
             # Case 1
             # No tasks.
-            if len(active_tasks) == 0 :
+            if len(active_tasks) == 0:
                 # Case 1a
                 # Fewer blocks that minBlocks
-                if active_blocks <= minBlocks :
+                if active_blocks <= minBlocks:
                     # Ignore
-                    #logger.debug("Strategy: Case.1a")
+                    # logger.debug("Strategy: Case.1a")
                     pass
 
                 # Case 1b
@@ -207,33 +211,33 @@ class Strategy (object) :
 
                     else:
                         pass
-                        #logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
+                        # logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
 
             # Case 2
             # More tasks than the available slots.
-            elif (float(active_slots) / len(active_tasks)) < parallelism :
+            elif (float(active_slots) / len(active_tasks)) < parallelism:
                 # Case 2a
                 # We have the max blocks possible
                 if active_blocks >= maxBlocks:
                     # Ignore since we already have the max nodes
-                    #logger.debug("Strategy: Case.2a")
+                    # logger.debug("Strategy: Case.2a")
                     pass
 
                 # Case 2b
                 else:
-                    #logger.debug("Strategy: Case.2b")
+                    # logger.debug("Strategy: Case.2b")
                     excess = math.ceil((len(active_tasks) * parallelism) - active_slots)
-                    excess_blocks = math.ceil (float(excess) / taskBlocks)
+                    excess_blocks = math.ceil(float(excess) / taskBlocks)
                     logger.debug("Requesting : {}".format(excess_blocks))
                     exc.scale_out(excess_blocks)
 
             # Case 3
             # tasks ~ slots
             else:
-                #logger.debug("Strategy: Case 3")
+                # logger.debug("Strategy: Case 3")
                 pass
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     pass

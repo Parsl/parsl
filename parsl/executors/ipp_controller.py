@@ -1,5 +1,4 @@
 import os
-import sys
 import subprocess
 import time
 import random
@@ -10,14 +9,14 @@ from parsl.executors.errors import *
 
 logger = logging.getLogger(__name__)
 
+
 class Controller(object):
 
     ''' Start and maintain a ipyparallel controller
     '''
 
-    def __init__ (self, publicIp=None, port=None, portRange="", reuse=False,
-                  log=True, ipythonDir="~/.ipython", mode="auto", profile=None):
-
+    def __init__(self, publicIp=None, port=None, portRange="", reuse=False,
+                 log=True, ipythonDir="~/.ipython", mode="auto", profile=None):
         ''' Initialize ipython controllers to the user specified configs
 
         The specifig config sections that will be used by this are in the dict
@@ -43,34 +42,34 @@ class Controller(object):
 
         logger.debug("Starting ipcontroller, baseDir:%s" % ipythonDir)
 
-        self.mode       = mode
-        self.range_min  = 50000
-        self.range_max  = 60000
-        self.reuse      = reuse
-        self.port       = ''
+        self.mode = mode
+        self.range_min = 50000
+        self.range_max = 60000
+        self.reuse = reuse
+        self.port = ''
         self.ipythonDir = None
-        self.profile    = 'default'
-        ipp_basedir     = ''
-        reuse_string    = ''
-        profile_string  = ''
+        self.profile = 'default'
+        ipp_basedir = ''
+        reuse_string = ''
+        profile_string = ''
 
-        if mode == "manual" :
+        if mode == "manual":
             return
         if self.reuse:
             reuse_string = '--reuse'
 
-        if ipythonDir :
+        if ipythonDir:
             self.ipythonDir = os.path.abspath(os.path.expanduser(ipythonDir))
             ipp_basedir = '--ipython-dir={0}'.format(self.ipythonDir)
 
-        if profile :
+        if profile:
             # Profile string is set only if non-"default" profile is specified
             self.profile = profile
             profile_string = '--profile={0}'.format(profile)
 
         # If portRange is specified pick a random port from that range
         try:
-            if portRange :
+            if portRange:
                 self.range_min, self.range_max = map(int, portRange.split(','))
                 self.port = '--port={0}'.format(random.randint(self.range_min, self.range_max))
         except Exception as e:
@@ -80,18 +79,18 @@ class Controller(object):
             raise ControllerErr(msg)
 
         # If port is specified use it, this will override the portRange
-        if port :
+        if port:
             self.port = '--port={0}'.format(port)
 
         # We have a publicIp default always = None
-        if publicIp :
+        if publicIp:
             self.publicIp = '--location={0}'.format(publicIp)
         else:
             self.publicIp = ''
 
-        if log :
-            stdout = open(os.path.join(self.ipythonDir, "{0}.controller.out".format(self.profile) ), 'w')
-            stderr = open(os.path.join(self.ipythonDir, "{0}.controller.err".format(self.profile) ), 'w')
+        if log:
+            stdout = open(os.path.join(self.ipythonDir, "{0}.controller.out".format(self.profile)), 'w')
+            stderr = open(os.path.join(self.ipythonDir, "{0}.controller.err".format(self.profile)), 'w')
         else:
             stdout = open(os.devnull, 'w')
             stderr = open(os.devnull, 'w')
@@ -117,7 +116,7 @@ class Controller(object):
         return
 
     @property
-    def engine_file (self):
+    def engine_file(self):
         ''' Engine_file attribute specifies the file path to the specific ipython_dir/profile folders in
         which the ipcontroller-engine.json file is stored.
 
@@ -127,6 +126,7 @@ class Controller(object):
         return os.path.join(self.ipythonDir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-engine.json')
+
     @property
     def client_file(self):
         ''' Client_file attribute specifies the file path to the specific ipython_dir/profile folders in
@@ -146,24 +146,24 @@ class Controller(object):
         Args:
               - None
         '''
-        if self.reuse :
+        if self.reuse:
             logger.debug("Ipcontroller not shutting down: reuse enabled")
             return
 
-        if self.mode == "manual" :
+        if self.mode == "manual":
             logger.debug("Ipcontroller not shutting down: Manual mode")
             return
 
         try:
             pgid = os.getpgid(self.proc.pid)
-            status = os.killpg(pgid, signal.SIGTERM)
+            os.killpg(pgid, signal.SIGTERM)
             time.sleep(0.2)
             os.killpg(pgid, signal.SIGKILL)
             try:
                 self.proc.wait(timeout=1)
                 x = self.proc.returncode
                 logger.debug("Controller exited with {0}".format(x))
-            except subprocess.TimeoutExpired :
+            except subprocess.TimeoutExpired:
                 logger.warn("Ipcontroller process:{0} cleanup failed. May require manual cleanup".format(self.proc.pid))
 
         except Exception as e:

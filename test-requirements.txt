@@ -1,3 +1,4 @@
+ipyparallel
 nose
 pytest
 coverage

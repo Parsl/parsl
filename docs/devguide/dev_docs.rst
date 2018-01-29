@@ -89,6 +89,12 @@ Exceptions
 
 .. autoclass:: parsl.dataflow.error.MissingFutError
 
+DataFlowKernel
+==============
+
+.. autoclass:: parsl.dataflow.dflow.DataFlowKernel
+   :members:  __init__, submit, cleanup, load_checkpoints, config, handle_update, launch_task, _count_deps, _count_all_deps, sanitize_and_wrap, _load_checkpoints
+
 
 Executors
 =========
@@ -222,7 +228,6 @@ SshILChannel
    :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
 
 
-
 Launchers
 =========
 
@@ -245,14 +250,41 @@ srunMpiLauncher
 .. autofunction:: libsubmit.launchers.srunMpiLauncher
 
 
+Flow Control
+============
+
+This section deals with functionality related to controlling the flow of tasks to various different
+execution sites.
+
+FlowControl
+-----------
+
+.. autoclass:: parsl.dataflow.flow_control.FlowControl
+   :members:  __init__, notify, make_callback, close, _wake_up_timer
+
+FlowNoControl
+-------------
+
+.. autoclass:: parsl.dataflow.flow_control.FlowNoControl
+   :members:  __init__, notify, close
+
+
 Strategy
-========
+--------
 
 Strategies are responsible for tracking the compute requirements of a workflow as it
 is executed and scaling the resources to match it.
 
 .. autoclass:: parsl.dataflow.strategy.Strategy
-   :members:  __init__, strategize
+   :members:  __init__, _strategy_noop, _strategy_simple, strategize
+
+Memoization
+===========
+
+.. autoclass:: parsl.dataflow.memoization.Memoizer
+   :members:  __init__, make_hash, check_memo, hash_lookup, update_memo
+
+
 
 
 
