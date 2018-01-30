@@ -16,7 +16,7 @@ class ParslExecutor(metaclass=ABCMeta):
         whether it should just be func, args, kwargs or be the partially evaluated
         fn
         '''
-
+        pass
 
     @abstractmethod
     def scale_out(self, *args, **kwargs):
@@ -24,6 +24,7 @@ class ParslExecutor(metaclass=ABCMeta):
         which will have the scaling methods, scale_out itself should be a coroutine, since
         scaling tasks can be slow.
         '''
+        pass
 
     @abstractmethod
     def scale_in(self, *args, **kwargs):
@@ -31,16 +32,17 @@ class ParslExecutor(metaclass=ABCMeta):
         which will have the scaling methods, scale_in itself should be a corinine, since
         scaling tasks can be slow.
         '''
-
+        pass
 
     @abstractmethod
     def shutdown(self, *args, **kwargs):
         ''' Shutdown the executor which includes all attached resources such as workers and
         controllers '''
-
+        pass
 
     @abstractproperty
     def scaling_enabled(self):
         ''' The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
         '''
+        pass
