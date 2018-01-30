@@ -125,5 +125,4 @@ The following shows an example configuration for accessing NERSC's Cori supercom
             }
             ],
         "globals" : {   "lazyErrors" : True },
-        "controller" : { "publicIp" : '*' }
     }
