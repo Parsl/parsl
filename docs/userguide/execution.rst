@@ -60,3 +60,11 @@ are shown in the following figures.
    MPI launchers supported by the target system such as aprun, srun, mpirun, mpiexec etc.
 
    .. image:: ../images/N4_T2.png
+
+
+Elasticity
+----------
+
+Elasticity 
+.. note::
+   This feature is available since Parsl 0.4.0

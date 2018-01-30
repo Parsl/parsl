@@ -35,6 +35,7 @@ Parsl can be used to realize a variety of workflows:
    userguide/data
    userguide/exceptions
    userguide/execution
+   userguide/app_caching
    userguide/checkpoints
    userguide/configuring
    userguide/faq
