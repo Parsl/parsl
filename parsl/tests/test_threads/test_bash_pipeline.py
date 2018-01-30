@@ -3,9 +3,6 @@
 import parsl
 from parsl import *
 
-import os
-import time
-import shutil
 import argparse
 
 # parsl.set_stream_logger()
@@ -46,7 +43,8 @@ def test_increment(depth=5):
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
         fu = increment(inputs=[prev],  # Depend on the future from previous call
-                       outputs=["test{0}.txt".format(i)],  # Name the file to be created here
+                       # Name the file to be created here
+                       outputs=["test{0}.txt".format(i)],
                        stdout="incr{0}.out".format(i),
                        stderr="incr{0}.err".format(i))
         [prev] = fu.outputs
@@ -57,7 +55,8 @@ def test_increment(depth=5):
         if key > 0:
             fu = futs[key]
             data = open(fu.result(), 'r').read().strip()
-            assert data == str(key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+            assert data == str(
+                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
 
 
 def test_increment_slow(depth=5, dur=0.5):
@@ -73,8 +72,10 @@ def test_increment_slow(depth=5, dur=0.5):
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
         fu = slow_increment(dur,
-                            inputs=[prev],  # Depend on the future from previous call
-                            outputs=["test{0}.txt".format(i)],  # Name the file to be created here
+                            # Depend on the future from previous call
+                            inputs=[prev],
+                            # Name the file to be created here
+                            outputs=["test{0}.txt".format(i)],
                             stdout="incr{0}.out".format(i),
                             stderr="incr{0}.err".format(i))
         [prev] = fu.outputs
@@ -85,18 +86,20 @@ def test_increment_slow(depth=5, dur=0.5):
         if key > 0:
             fu = futs[key]
             data = open(fu.result(), 'r').read().strip()
-            assert data == str(key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+            assert data == str(
+                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--width", default="5", help="width of the pipeline")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-w", "--width", default="5",
+                        help="width of the pipeline")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:
-        pass
         parsl.set_stream_logger()
 
     # test_increment(depth=int(args.width))

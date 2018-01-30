@@ -1,6 +1,4 @@
 import os
-import time
-import shutil
 import argparse
 
 from nose.tools import nottest
@@ -60,10 +58,10 @@ def test_bash_formatting():
 
     f = bad_format()
     try:
-        x = f.result()
+        f.result()
     except Exception as e:
         print("Caught exception", e)
-        assert type(e) == parsl.app.errors.AppBadFormatting, "Expected AppBadFormatting got : {0}".format(e)
+        assert isinstance(e, parsl.app.errors.AppBadFormatting), "Expected AppBadFormatting got : {0}".format(e)
     return True
 
 
@@ -72,7 +70,7 @@ def test_div_0(test_fn=div_0):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
-        x = f.result()
+        f.result()
     except Exception as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
@@ -90,7 +88,7 @@ def test_bash_misuse(test_fn=bash_misuse):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
-        x = f.result()
+        f.result()
     except Exception as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
@@ -106,7 +104,7 @@ def test_command_not_found(test_fn=command_not_found):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
-        x = f.result()
+        f.result()
     except Exception as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
@@ -124,7 +122,7 @@ def test_invalid_exit(test_fn=invalid_exit):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
-        x = f.result()
+        f.result()
     except Exception as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
@@ -140,7 +138,7 @@ def test_not_executable(test_fn=not_executable):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
-        x = f.result()
+        f.result()
     except Exception as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
@@ -155,7 +153,7 @@ def run_app(test_fn, err_code):
     f = test_fn()
     print(f)
     try:
-        x = f.result()
+        f.result()
     except Exception as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
@@ -169,7 +167,8 @@ def run_app(test_fn, err_code):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     print(test_bash_formatting())

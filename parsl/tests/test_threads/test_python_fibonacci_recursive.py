@@ -1,4 +1,3 @@
-import parsl
 from parsl import *
 import argparse
 
@@ -26,6 +25,7 @@ def test_fibonacci(x=5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--num", default='5', action="store", dest="a", type=int)
+    parser.add_argument("-a", "--num", default='5',
+                        action="store", dest="a", type=int)
     args = parser.parse_args()
     test_fibonacci(args.a)

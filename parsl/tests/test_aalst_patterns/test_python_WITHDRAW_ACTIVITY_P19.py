@@ -1,7 +1,6 @@
 # A point in the workflow process where an enabled activity is disabled, or
 # a thread waiting for execution is removed
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -70,6 +69,7 @@ def test_withdraw(x=3):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--input", default="3", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--input", default="3",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_withdraw(args.x)

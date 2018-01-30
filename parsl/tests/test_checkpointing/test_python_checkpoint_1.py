@@ -3,10 +3,8 @@
 
 import parsl
 from parsl import *
-from nose.tools import nottest
 import os
 import time
-import shutil
 import argparse
 
 # parsl.set_stream_logger()
@@ -16,9 +14,9 @@ config = {
          "auth": {"channel": None},
          "execution": {
              "executor": "threads",
-              "provider": None,
-              "maxThreads": 2,
-          }
+             "provider": None,
+             "maxThreads": 2,
+         }
          }],
     "globals": {"lazyErrors": True,
                 }
@@ -39,7 +37,7 @@ def test_initial_checkpoint_write(n=4):
     """
 
     d = {}
-    start = time.time()
+    time.time()
     print("Launching : ", n)
     for i in range(0, n):
         d[i] = slow_double(i)
@@ -57,8 +55,10 @@ def test_initial_checkpoint_write(n=4):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-c", "--count", default="10",
+                        help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:

@@ -3,13 +3,8 @@
 import parsl
 from parsl import *
 
-from nose.tools import nottest
 print("Parsl version: ", parsl.__version__)
 
-import os
-import time
-import shutil
-import argparse
 
 # parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=8)

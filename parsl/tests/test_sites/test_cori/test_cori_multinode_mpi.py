@@ -1,10 +1,6 @@
 import parsl
 from parsl import *
-#from nose.tools import nottest
 import os
-import time
-import shutil
-import argparse
 
 os.environ['CORI_USERNAME'] = 'yadunand'
 from cori import multiNodeMPI as config

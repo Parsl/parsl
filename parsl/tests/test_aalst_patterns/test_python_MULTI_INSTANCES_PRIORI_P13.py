@@ -1,7 +1,6 @@
 # In this pattern, multiple instances of an activity can be enabled, with the
 # number of instances of a given activity known at design time
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -42,6 +41,7 @@ def test_multi_instances():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--int", default="5", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--int", default="5",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_multi_instances()

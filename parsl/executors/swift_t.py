@@ -222,7 +222,6 @@ class TurbineExecutor(ParslExecutor):
 
             except Exception as e:
                 logger.debug("[MTHREAD] caught unknown exception : %s", e)
-                pass
 
             else:
 

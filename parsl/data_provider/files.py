@@ -58,13 +58,11 @@ class File(object):
         ''' The stage_in call transports the file from the side of origin
         to the local side
         '''
-        pass
 
     def stage_out(self):
         ''' The stage_out call transports the file from local filesystem
         to the origin side
         '''
-        pass
 
 
 if __name__ == '__main__':

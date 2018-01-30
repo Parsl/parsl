@@ -1,10 +1,8 @@
 # A point in a workflow process where an instance of an activity is removed completely
 
-import parsl
 from parsl import *
 import random
 import argparse
-import time
 
 workers = ThreadPoolExecutor(max_workers=10)
 dfk = DataFlowKernel(executors=[workers])
@@ -67,6 +65,7 @@ def test_withdraw(x=3):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--input", default="3", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--input", default="3",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_withdraw(args.x)

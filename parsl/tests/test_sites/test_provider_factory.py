@@ -1,5 +1,4 @@
 import parsl
-from parsl import *
 
 parsl.set_stream_logger()
 
@@ -39,7 +38,7 @@ def test_factory_1():
     }
 
     epf = ExecProviderFactory()
-    executor = epf.make(config)
+    epf.make(config)
 
 
 def test_factory_2():
@@ -54,11 +53,11 @@ def test_factory_2():
                 "maxParallelism": 2,
                 "minParallelism": 0,
                    "walltime": "00:25:00",
-                   }
-                 }}
+                }
+               }}
 
     epf = ExecProviderFactory()
-    executor = epf.make(config)
+    epf.make(config)
 
 
 def test_factory_3():
@@ -82,7 +81,7 @@ def test_factory_3():
     }
 
     epf = ExecProviderFactory()
-    executor = epf.make(config)
+    epf.make(config)
 
 
 if __name__ == '__main__':

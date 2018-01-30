@@ -38,7 +38,7 @@ class UsageTracker (object):
         if domain_name:
             try:
                 self.UDP_IP = socket.gethostbyname(domain_name)
-            except Exception as e:
+            except Exception:
                 logging.debug("Could not lookup domain_name, defaulting to 52.3.111.203")
                 self.UDP_IP = ip
         else:
@@ -135,7 +135,7 @@ class UsageTracker (object):
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
                 x = sock.sendto(bytes(message, "utf-8"), (self.UDP_IP, self.UDP_PORT))
                 sock.close()
-            except OSError as e:
+            except OSError:
                 logger.debug("Unable to reach the network to send usage data")
                 x = 0
         else:

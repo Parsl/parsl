@@ -1,9 +1,7 @@
 # In this workflow, there is a point in the process where multiple subprocesses/activities
 # converge into one single thread of control
 
-import parsl
 from parsl import *
-import random
 import argparse
 
 workers = ThreadPoolExecutor(max_workers=4)
@@ -37,6 +35,7 @@ def test_join(x=5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--num", default="5", action="store", dest="a", type=int)
+    parser.add_argument("-a", "--num", default="5",
+                        action="store", dest="a", type=int)
     args = parser.parse_args()
     test_join(args.a)

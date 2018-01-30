@@ -276,7 +276,7 @@ Strategies are responsible for tracking the compute requirements of a workflow a
 is executed and scaling the resources to match it.
 
 .. autoclass:: parsl.dataflow.strategy.Strategy
-   :members:  __init__, _strategy_noop, _strategy_simple, strategize
+   :members:  __init__, _strategy_noop, _strategy_simple
 
 Memoization
 ===========

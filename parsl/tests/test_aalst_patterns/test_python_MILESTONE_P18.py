@@ -2,7 +2,6 @@
 # and has not expired yet. For example, if there are three activities A, B, and C,
 # A may only be enabled if B has been executed and C has not been executed
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -51,6 +50,7 @@ def test_milestone():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--input", default="4", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--input", default="4",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_milestone()

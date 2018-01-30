@@ -19,10 +19,7 @@ from parsl import *
 
 print("Parsl version: ", parsl.__version__)
 
-import os
 import time
-import shutil
-import argparse
 
 # parsl.set_stream_logger()
 

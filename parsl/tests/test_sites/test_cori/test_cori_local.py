@@ -1,15 +1,12 @@
 import parsl
 from parsl import *
-#from nose.tools import nottest
 import os
-import time
-import shutil
-import argparse
 
 os.environ['CORI_USERNAME'] = 'yadunand'
 from cori import singleNodeLocal as config
 parsl.set_stream_logger()
 dfk = DataFlowKernel(config=config)
+
 
 @App("python", dfk)
 def python_app_slow(duration):
@@ -30,6 +27,7 @@ def test_python_remote(count=10):
     for fu in fus:
         print(fu.result())
 
+
 def test_python_remote_slow(count=5):
 
     fus = []
@@ -41,8 +39,7 @@ def test_python_remote_slow(count=5):
         print(fu.result())
 
 
-if __name__ == "__main__" :
-
+if __name__ == "__main__":
 
     test_python_remote()
     test_python_remote_slow()

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import time
 
 import parsl
 from parsl import *
@@ -16,7 +15,7 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     import random
 
     s = sleep_dur + random.randint(-sleep_rand_max, sleep_rand_max)
-    #print("Sleeping for : ", s)
+
     time.sleep(s)
     x = float(random.randint(0, 100)) / 100
     if x <= fail_prob:
@@ -40,7 +39,7 @@ def test_no_deps(numtasks=10):
     count = 0
     for fu in fus:
         try:
-            x = fu.result()
+            fu.result()
         except Exception as e:
             print("Caught exception : ", "*" * 20)
             print(e)
@@ -123,8 +122,10 @@ def test_deps(numtasks=10):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-c", "--count", default="10",
+                        help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:

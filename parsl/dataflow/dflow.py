@@ -116,6 +116,7 @@ class DataFlowKernel(object):
     def config(self):
         ''' Returns the fully initialized config that the DFK is
         actively using. DO *NOT* update.
+
         Returns:
              - config (dict)
         '''
@@ -250,13 +251,14 @@ class DataFlowKernel(object):
     @staticmethod
     def _count_all_deps(task_id, args, kwargs):
         ''' Internal. Count the number of unresolved futures in the list depends
+
         Args:
-            task_id (uuid string) : Task_id
-            args (List[args]) : The list of args list to the fn
-            kwargs (Dict{kwargs}) : The dict of all kwargs passed to the fn
+            - task_id (uuid string) : Task_id
+            - args (List[args]) : The list of args list to the fn
+            - kwargs (Dict{kwargs}) : The dict of all kwargs passed to the fn
 
         Returns:
-            count, [list of dependencies]
+            - count, [list of dependencies]
 
         '''
 
@@ -344,24 +346,26 @@ class DataFlowKernel(object):
 
     def submit(self, func, *args, parsl_sites='all', fn_hash=None, cache=False, **kwargs):
         ''' Add task to the dataflow system.
+        If all deps are met :
+           send to the runnable queue and launch the task
+        Else:
+           post the task in the pending queue
 
         Args:
-             func : A function object
-             *args : Args to the function
+            - func : A function object
+            - *args : Args to the function
 
         KWargs :
-             Standard kwargs to the func as provided by the user
-             parsl_sites : List of sites as defined in the config, Default :'all'
-             This is the only kwarg that is passed in by the app definition.
-
-        If all deps are met :
-              send to the runnable queue
-              and launch the task
-        Else:
-              post the task in the pending queue
+            - parsl_sites (List|String) : List of sites this call could go to.
+                    Default='all'
+            - fn_hash (Str) : Hash of the function and inputs
+                    Default=None
+            - cache (Bool) : To enable memoization or not
+            - kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
                (AppFuture) [DataFutures,]
+
         '''
 
         task_id = self.task_count

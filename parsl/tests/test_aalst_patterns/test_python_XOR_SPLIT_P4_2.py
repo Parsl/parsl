@@ -1,7 +1,6 @@
 # A point in the workflow process where one of several branches is chosen baced on a decision or
 # workflow control data
 
-import parsl
 from parsl import *
 import argparse
 import random
@@ -46,6 +45,7 @@ def test_XOR_split(x=4):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--a", "--number", default="4", action="store", dest="a", type=int)
+    parser.add_argument("--a", "--number", default="4",
+                        action="store", dest="a", type=int)
     args = parser.parse_args()
     test_XOR_split(args.a)

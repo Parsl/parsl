@@ -1,10 +1,6 @@
 import parsl
 from parsl import *
-#from nose.tools import nottest
 import os
-import time
-import shutil
-import argparse
 
 os.environ['SWAN_USERNAME'] = 'p01953'
 from swan import singleNode as config

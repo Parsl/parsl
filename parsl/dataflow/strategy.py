@@ -128,7 +128,6 @@ class Strategy (object):
         KWargs:
             - kind (Not used)
         '''
-        pass
 
     def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
         ''' Peek at the DFK and the sites specified,

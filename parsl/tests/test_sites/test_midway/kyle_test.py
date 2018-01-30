@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from parsl import App, DataFlowKernel, ThreadPoolExecutor, IPyParallelExecutor
+from parsl import App, DataFlowKernel
 from parsl.dataflow.futures import Future
 
 config = {
@@ -8,37 +8,37 @@ config = {
         {"site": "Local_IPP",
          "auth": {
              "channel": "ssh",
-              "hostname": "swift.rcc.uchicago.edu",
-              "username": "yadunand",
-              "scriptDir": "/scratch/midway/yadunand/parsl_scripts"
-          },
+             "hostname": "swift.rcc.uchicago.edu",
+             "username": "yadunand",
+             "scriptDir": "/scratch/midway/yadunand/parsl_scripts"
+         },
          "execution": {
              "executor": "ipp",
-              "provider": "slurm",
-              "script_dir": ".scripts",
-              "block": {                 # Definition of a block
-                  "nodes": 1,            # nodes in that block
-                  "taskBlocks": 1,       # total tasks in a block
+             "provider": "slurm",
+             "script_dir": ".scripts",
+             "block": {                 # Definition of a block
+                 "nodes": 1,            # nodes in that block
+                 "taskBlocks": 1,       # total tasks in a block
 
-                  "walltime": "00:05:00",
+                 "walltime": "00:05:00",
 
-                  "initBlocks": 1,
+                 "initBlocks": 1,
 
-                  "minBlocks": 0,
+                 "minBlocks": 0,
 
-                  "maxBlocks": 1,
+                 "maxBlocks": 1,
 
-                  "scriptDir": ".",
+                 "scriptDir": ".",
 
-                  "options": {
+                 "options": {
 
-                      "partition": "westmere"
+                     "partition": "westmere"
 
-                  }
+                 }
 
-              }
+             }
 
-          }
+         }
 
          }
 

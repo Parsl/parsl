@@ -1,8 +1,4 @@
-import os
-import sys
-import argparse
 
-import parsl
 from parsl import *
 
 from parsl.app.app_factory import AppFactoryFactory, AppFactory
@@ -28,10 +24,10 @@ def app_3(x):
 def test_factory():
     appff = AppFactoryFactory('main')
     app_f = appff.make('bash', workers, app_2, walltime=60)
-    assert type(app_f) == AppFactory, "AppFactoryFactory made the wrong type"
+    assert isinstance(app_f, AppFactory), "AppFactoryFactory made the wrong type"
 
     app_f_2 = appff.make('python', workers, app_3, walltime=60)
-    assert type(app_f_2) == AppFactory, "AppFactoryFactory made the wrong type"
+    assert isinstance(app_f_2, AppFactory), "AppFactoryFactory made the wrong type"
 
 
 def test_factory_names():

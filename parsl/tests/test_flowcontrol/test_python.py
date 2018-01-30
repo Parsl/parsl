@@ -20,7 +20,6 @@ def python_app():
 def test_python():
     ''' Testing basic scaling|Python 0 -> 1 block '''
 
-    import os
     results = {}
     for i in range(0, 2):
         results[i] = python_app()

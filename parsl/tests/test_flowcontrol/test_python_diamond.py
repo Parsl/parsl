@@ -1,7 +1,6 @@
 from parsl import *
 import parsl
 import libsubmit
-import os
 import time
 
 print(parsl.__version__)
@@ -15,7 +14,6 @@ dfk = DataFlowKernel(config=localIPP)
 
 @App("python", dfk)
 def diamond(sleep=0, inputs=[]):
-    import platform
     import time
     time.sleep(sleep)
     return sum(inputs)

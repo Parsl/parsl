@@ -84,7 +84,8 @@ def csv_maker(dir, count, dur, inputs=[], outputs=[], stdout=None, stderr=None):
 def main(count):
 
     # <Bash app >
-    c1 = catter('.', 0, stdout='outputs/catter1.out', stderr='outputs/catter1.err')
+    c1 = catter('.', 0, stdout='outputs/catter1.out',
+                stderr='outputs/catter1.err')
 
     light_loop = []
     # Foreach parallel loop 10K calls
@@ -92,7 +93,8 @@ def main(count):
         if i % 1000:
             print("Launching light : ", i)
         outname = 'outputs/light{0}'.format(i)
-        loop1 = light_app('.', 0, inputs=[c1], outputs=[outname + '.txt'], stdout=outname + '.out')
+        loop1 = light_app('.', 0, inputs=[c1], outputs=[
+                          outname + '.txt'], stdout=outname + '.out')
         light_loop.extend([loop1])
 
     # <Bash app dependent on for loop>
@@ -108,11 +110,13 @@ def main(count):
     for i in lines:
         i = i.strip()
         outname = 'outputs/mid{0}'.format(i)
-        loop1 = light_app('.', 0, inputs=[c1], outputs=[outname + '.txt'], stdout=outname + '.out')
+        loop1 = light_app('.', 0, inputs=[c1], outputs=[
+                          outname + '.txt'], stdout=outname + '.out')
         mid_loop.extend([loop1])
 
     # <Bash app dependent on mid for loop>
-    c3 = catter('.', 3, inputs=mid_loop, stdout='outputs/catter3.out', stderr='outputs/catter3.err')
+    c3 = catter('.', 3, inputs=mid_loop,
+                stdout='outputs/catter3.out', stderr='outputs/catter3.err')
     return c3
 
 
@@ -123,8 +127,10 @@ def test_HEDM(count=10):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-c", "--count", default="10",
+                        help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:
@@ -133,7 +139,7 @@ if __name__ == "__main__":
     # Remove outputs and recreate
     shutil.rmtree("outputs", True)
     os.mkdir("outputs")
-    #x = test_parallel_for(int(args.count))
+    # x = test_parallel_for(int(args.count))
     x = main(int(args.count))
     print("Waiting for workflow result")
     x.result()

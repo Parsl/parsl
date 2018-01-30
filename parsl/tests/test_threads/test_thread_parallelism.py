@@ -1,12 +1,7 @@
 ''' Testing python apps
 '''
-import parsl
 from parsl import *
-from nose.tools import nottest
-import os
 import time
-import shutil
-import argparse
 
 # parsl.set_stream_logger()
 localThreads = {
@@ -15,9 +10,9 @@ localThreads = {
          "auth": {"channel": None},
          "execution": {
              "executor": "threads",
-              "provider": None,
-              "maxThreads": 10
-          }
+             "provider": None,
+             "maxThreads": 10
+         }
          }],
 }
 

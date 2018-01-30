@@ -2,14 +2,13 @@
 '''
 import parsl
 from parsl import *
-from nose.tools import nottest
 import os
 import time
-import shutil
 import argparse
 
 time.sleep(1)
-last_checkpoint = os.path.abspath('runinfo/{0}'.format(sorted(os.listdir('runinfo/'))[-1]))
+last_checkpoint = os.path.abspath(
+    'runinfo/{0}'.format(sorted(os.listdir('runinfo/'))[-1]))
 while True:
     if not os.path.exists(last_checkpoint):
         print("Waiting for path")
@@ -25,9 +24,9 @@ config = {
          "auth": {"channel": None},
          "execution": {
              "executor": "threads",
-              "provider": None,
-              "maxThreads": 2,
-          }
+             "provider": None,
+             "maxThreads": 2,
+         }
          }],
     "globals": {"lazyErrors": True,
                 "memoize": True,
@@ -67,8 +66,10 @@ def test_initial_checkpoint_write(n=4):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-c", "--count", default="10",
+                        help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:

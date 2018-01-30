@@ -3,9 +3,6 @@
 import parsl
 from parsl import *
 
-import os
-import time
-import shutil
 import argparse
 
 # parsl.set_stream_logger()
@@ -39,12 +36,13 @@ def test_and_split(depth=5):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--width", default="10", help="width of the pipeline")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-w", "--width", default="10",
+                        help="width of the pipeline")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:
-        pass
         parsl.set_stream_logger()
 
     # test_increment(depth=int(args.width))

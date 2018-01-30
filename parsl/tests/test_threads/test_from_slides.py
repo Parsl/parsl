@@ -1,4 +1,3 @@
-import parsl
 from parsl import *
 
 workers = ThreadPoolExecutor(max_workers=4)

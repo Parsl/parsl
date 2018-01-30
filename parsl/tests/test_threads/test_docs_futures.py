@@ -1,12 +1,7 @@
 ''' Testing python apps
 '''
-import parsl
 from parsl import *
-from nose.tools import nottest
-import os
 import time
-import shutil
-import argparse
 
 # parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=4)
@@ -87,9 +82,9 @@ def test_4():
     try:
         doubled_x.result()
 
-    except ZeroDivisionError as e:
+    except ZeroDivisionError:
         print("Oops! You tried to divide by 0 ")
-    except Exception as e:
+    except Exception:
         print("Oops! Something really bad happened")
 
 

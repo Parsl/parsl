@@ -1,7 +1,6 @@
 # A "discriminator" is a point in a workflow process that waits for one of the incoming branches to complete before
 # beginning the subsequent activity
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -41,6 +40,7 @@ def test_discriminator(x=4):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--num1", default="4", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--num1", default="4",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_discriminator(args.x)

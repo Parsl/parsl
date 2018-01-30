@@ -4,7 +4,6 @@ import parsl
 from parsl import *
 import os
 import time
-import shutil
 import argparse
 
 # parsl.set_stream_logger()
@@ -36,7 +35,9 @@ def test_simple(n=10):
     start = time.time()
     x = double(n)
     print("Result : ", x.result())
-    assert x.result() == n * 2, "Expected double to return:{0} instead got:{1}".format(n * 2, x.result())
+    assert x.result() == n * \
+        2, "Expected double to return:{0} instead got:{1}".format(
+            n * 2, x.result())
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
@@ -47,7 +48,9 @@ def test_imports(n=10):
     start = time.time()
     x = import_echo(n)
     print("Result : ", x.result())
-    assert x.result() == n * 2, "Expected double to return:{0} instead got:{1}".format(n * 2, x.result())
+    assert x.result() == n * \
+        2, "Expected double to return:{0} instead got:{1}".format(
+            n * 2, x.result())
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
@@ -61,7 +64,8 @@ def test_parallel_for(n=10):
         d[i] = double(i)
         # time.sleep(0.01)
 
-    assert len(d.keys()) == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
+    assert len(
+        d.keys()) == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
 
     [d[i].result() for i in d]
     print("Duration : {0}s".format(time.time() - start))
@@ -69,7 +73,6 @@ def test_parallel_for(n=10):
     return d
 
 
-#@nottest
 def test_stdout():
 
     string = "Hello World!"
@@ -86,8 +89,10 @@ def test_stdout():
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-c", "--count", default="10",
+                        help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:

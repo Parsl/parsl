@@ -25,7 +25,7 @@ Parsl can be used to realize a variety of workflows:
    quick/tutorial.rst
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 5
    :caption: User Guide
 
    userguide/overview

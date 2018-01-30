@@ -2,10 +2,6 @@
 '''
 import parsl
 from parsl import *
-from nose.tools import nottest
-import os
-import time
-import shutil
 import argparse
 
 # parsl.set_stream_logger()
@@ -38,7 +34,8 @@ def test_1(N=10):
 
     total = app_sum(inputs=mapped_results)
 
-    assert total.result() != sum(items), "Sum is wrong {0} != {1}".format(total.result(), sum(items))
+    assert total.result() != sum(items), "Sum is wrong {0} != {1}".format(
+        total.result(), sum(items))
 
 
 @App('python', dfk)
@@ -63,24 +60,27 @@ def test_2(N=10):
 
     total = app_sum(inputs=mapped_results)
 
-    assert total.result() != sum(items), "Sum is wrong {0} != {1}".format(total.result(), sum(items))
+    assert total.result() != sum(items), "Sum is wrong {0} != {1}".format(
+        total.result(), sum(items))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true', help="Debug enable flag")
-    parser.add_argument("-c", "--count", default='100', help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Debug enable flag")
+    parser.add_argument("-c", "--count", default='100',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()
 
-    #print("Launching with 10")
+    # print("Launching with 10")
     # test_1(10)
     print("Launching with {0}".format(args.count))
     test_1(int(args.count))
 
-    #print("Launching slow with 10")
+    # print("Launching slow with 10")
     # test_2(10)
-    #print("Launching slow with 20")
+    # print("Launching slow with 20")
     # test_2(20)

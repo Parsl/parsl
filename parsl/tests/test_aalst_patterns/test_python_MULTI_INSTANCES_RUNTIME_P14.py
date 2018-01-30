@@ -2,7 +2,6 @@
 # number of instances of a given activity known during runtime before the
 # instances of the activity are created
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -37,13 +36,15 @@ def sum_elements(x=[]):
 
 def test_multi_instances(x=5):
     numbers = []
-    [numbers.append(increment_one(square(rand().result()).result())) for i in range(x)]
+    [numbers.append(increment_one(square(rand().result()).result()))
+     for i in range(x)]
     total = sum_elements(numbers)
     print(total.result())
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--int", default="5", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--int", default="5",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_multi_instances(args.x)

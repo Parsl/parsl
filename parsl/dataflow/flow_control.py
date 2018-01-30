@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 class FlowNoControl(object):
     ''' FlowNoControl implements similar interfaces as FlowControl but
     with null handlers so as to mimic the FlowControl class.
+
     '''
+
 
     def __init__(self, dfk, config, *args, threshold=2, interval=2):
         ''' Initialize the flowcontrol object. This does nothing.
@@ -25,17 +27,14 @@ class FlowNoControl(object):
              - interval (int) : seconds after which timer expires
         '''
 
-        pass
 
     def notify(self, event_id):
         ''' This notifiy fn does nothing
         '''
-        pass
 
     def close(self):
         ''' This close fn does nothing
         '''
-        pass
 
 
 class FlowControl(object):

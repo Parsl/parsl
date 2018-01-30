@@ -1,18 +1,16 @@
 import parsl
 from parsl import *
-from parsl.execution_provider.slurm.slurm import Slurm
 from parsl.execution_provider.provider_factory import ExecProviderFactory
 
-from jinja2 import Template, Environment
+from jinja2 import Environment
 from jinja2.loaders import FileSystemLoader
-import os
 
 parsl.set_stream_logger()
 WORKING_DIR = "working"
 
 # Let's create a pool of threads to execute our functions
-#workers = ThreadPoolExecutor(max_workers=4)
-#dfk = DataFlowKernel(workers)
+# workers = ThreadPoolExecutor(max_workers=4)
+# dfk = DataFlowKernel(workers)
 config = {"site": "midway_westmere",
           "execution":
           {"executor": "ipp",
@@ -29,15 +27,16 @@ config = {"site": "midway_westmere",
                 "account": "pi-chard",
                 "submit_script_dir": ".scripts"
                 }
-             }}
+           }}
 
 
 import subprocess
 import random
-print ("starting ipcontroller")
+print("starting ipcontroller")
 
 rand_port = random.randint(55000, 59000)
-p = subprocess.Popen(['ipcontroller', '--reuse', '--port={0}'.format(rand_port), '--ip=*'], stdout=None, stderr=None)
+p = subprocess.Popen(['ipcontroller', '--reuse',
+                      '--port={0}'.format(rand_port), '--ip=*'], stdout=None, stderr=None)
 
 epf = ExecProviderFactory()
 resource = epf.make(config)
@@ -54,30 +53,22 @@ def create_template(template_name, output_name, contents):
     packmol_file.close()
 
 
-#################
-# App definitions
-#################
 @App('bash', dfk)
 def mpi_hello(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
-    cmd_line = "mpirun -n {0} mpi_hello"
-
-#################
-# App definitions
-#################
+    pass
 
 
 @App('bash', dfk)
 def mpi_test(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
-    cmd_line = '''module load amber/16+cuda-8.0
+    return '''module load amber/16+cuda-8.0
     mpirun -n 6 mpi_hello
     mpirun -np 6 pmemd.MPI -O -i config_files/min.in -o min.out -c prot.rst7 -p prot.parm7 -r min.rst7 -ref prot.rst7
     '''
 
 
-#x = mpi_hello(4, stdout="hello.out", stderr="hello.err")
-#print("Launched the mpi_hello app")
+# x = mpi_hello(4, stdout="hello.out", stderr="hello.err")
+# print("Launched the mpi_hello app")
 # x.result()
-
 
 x = mpi_test(4, stdout="hello.out", stderr="hello.err")
 print("Launched the mpi_hello app")

@@ -1,7 +1,6 @@
 # An activity in a workflow process is enabled after the completion of
 # another activity in the same process
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -34,6 +33,7 @@ def test_sequence(x=5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--flight", default="5", action="store", dest="a", type=int)
+    parser.add_argument("-a", "--flight", default="5",
+                        action="store", dest="a", type=int)
     args = parser.parse_args()
     test_sequence(args.a)

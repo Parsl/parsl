@@ -68,7 +68,7 @@ def ls(pwd, outputs=[]):
 
 @App('bash', dfk)
 def catter(dir, outputs=[], stdout=None, stderr=None):
-    cmd_line = 'cat {0}/*/results > {outputs[0]}'
+    pass
 
 
 if __name__ == "__main__":
@@ -90,4 +90,4 @@ if __name__ == "__main__":
         try:
             print(dir_fus[dir][0].result())
         except Exception as e:
-            print ("Caught exception{0}  on {1}".format(e, dir))
+            print("Caught exception{0}  on {1}".format(e, dir))

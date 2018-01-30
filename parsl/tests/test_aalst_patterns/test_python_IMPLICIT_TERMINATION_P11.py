@@ -1,7 +1,6 @@
 # A given process is terminated once there are no longer any active activities
 # in the workflow
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -50,6 +49,7 @@ def test_implicit_termination(x=5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--int", default="5", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--int", default="5",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_implicit_termination(args.x)

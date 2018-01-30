@@ -9,27 +9,27 @@ threads_ipp = {
         {"site": "Local_threads",
          "auth": {
              "channel": None,
-          },
+         },
          "execution": {
              "executor": "threads",
-              "provider": None,
-              "max_workers": 4
-          }
+             "provider": None,
+             "max_workers": 4
+         }
          },
         {"site": "Local_IPP",
          "auth": {
              "channel": None,
-          },
+         },
          "execution": {
              "executor": "ipp",
-              "provider": "local",
-              "block": {                 # Definition of a block
-                  "nodes": 1,            # of nodes in that block
-                  "taskBlocks": 1,       # total tasks in a block
-                  "walltime": "00:05:00",
-                  "initBlocks": 4,
-              }
-          }
+             "provider": "local",
+             "block": {                 # Definition of a block
+                 "nodes": 1,            # of nodes in that block
+                 "taskBlocks": 1,       # total tasks in a block
+                 "walltime": "00:05:00",
+                 "initBlocks": 4,
+             }
+         }
          }],
 
     "globals": {
@@ -49,27 +49,27 @@ multi_ipp = {
          "auth": {"channel": None},
          "execution": {
              "executor": "ipp",
-              "provider": "local",
-              "block": {
-                  "nodes": 1,            # of nodes in that block
-                  "taskBlocks": 1,       # total tasks in a block
-                  "walltime": "00:15:00",
-                  "initBlocks": 4,
-              }
-          }
+             "provider": "local",
+             "block": {
+                 "nodes": 1,            # of nodes in that block
+                 "taskBlocks": 1,       # total tasks in a block
+                 "walltime": "00:15:00",
+                 "initBlocks": 4,
+             }
+         }
          },
         {"site": "Local_IPP_2",
          "auth": {"channel": None},
          "execution": {
              "executor": "ipp",
-              "provider": "local",
-              "block": {
-                  "nodes": 1,            # of nodes in that block
-                  "taskBlocks": 1,       # total tasks in a block
-                  "walltime": "00:15:00",
-                  "initBlocks": 2,
-              }
-          }
+             "provider": "local",
+             "block": {
+                 "nodes": 1,            # of nodes in that block
+                 "taskBlocks": 1,       # total tasks in a block
+                 "walltime": "00:15:00",
+                 "initBlocks": 2,
+             }
+         }
          }],
     "globals": {
         "lazyErrors": True

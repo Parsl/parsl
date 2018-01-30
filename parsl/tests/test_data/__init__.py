@@ -3,7 +3,7 @@ def setup_package():
     import os
     try:
         os.mkdir("data")
-    except:
+    except BaseException:
         pass
 
     with open("data/test1.txt", 'w') as f:

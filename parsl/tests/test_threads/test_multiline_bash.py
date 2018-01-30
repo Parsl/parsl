@@ -1,5 +1,4 @@
 from parsl import *
-import parsl
 
 import os
 import time
@@ -55,7 +54,8 @@ def run_test():
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     # if args.debug:

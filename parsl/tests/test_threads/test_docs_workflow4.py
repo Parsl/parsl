@@ -3,13 +3,8 @@
 import parsl
 from parsl import *
 
-from nose.tools import nottest
 print("Parsl version: ", parsl.__version__)
 
-import os
-import time
-import shutil
-import argparse
 
 # parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=8)
@@ -45,11 +40,12 @@ def test_parallel_dataflow():
         output_files.append(generate(outputs=['random-%s.txt' % i]))
 
     # concatenate the files into a single file
-    cc = concat(inputs=[i.outputs[0] for i in output_files], outputs=["all.txt"])
+    cc = concat(inputs=[i.outputs[0]
+                        for i in output_files], outputs=["all.txt"])
 
     # calculate the average of the random numbers
     totals = total(inputs=[cc.outputs[0]])
-    print (totals.result())
+    print(totals.result())
 
 
 if __name__ == "__main__":

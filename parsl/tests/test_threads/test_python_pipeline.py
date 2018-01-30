@@ -4,9 +4,6 @@
 import parsl
 from parsl import *
 
-import os
-import time
-import shutil
 import argparse
 
 # parsl.set_stream_logger()
@@ -34,7 +31,7 @@ def test_increment(depth=5):
     for i in range(1, depth):
         futs[i] = increment(futs[i - 1])
 
-    print([futs[i].result() for i in futs if type(futs[i]) != int])
+    print([futs[i].result() for i in futs if not isinstance(futs[i], int)])
 
 
 def test_increment_slow(depth=4):
@@ -45,18 +42,19 @@ def test_increment_slow(depth=4):
         futs[i] = slow_increment(futs[i - 1], 0.5)
 
     print(futs[i])
-    print([futs[i].result() for i in futs if type(futs[i]) != int])
+    print([futs[i].result() for i in futs if not isinstance(futs[i], int)])
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--width", default="5", help="width of the pipeline")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-w", "--width", default="5",
+                        help="width of the pipeline")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:
-        pass
         parsl.set_stream_logger()
 
     # test_increment(depth=int(args.width))

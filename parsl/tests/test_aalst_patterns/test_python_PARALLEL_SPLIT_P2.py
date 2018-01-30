@@ -2,7 +2,6 @@
 # threads of control which can be executed in parallel, this allows calls to be executed either
 # simultaneously or in any order
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -37,6 +36,7 @@ def test_parallel_split(x=4):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--input", default="4", action="store", dest="a", type=int)
+    parser.add_argument("-a", "--input", default="4",
+                        action="store", dest="a", type=int)
     args = parser.parse_args()
     test_parallel_split(args.a)

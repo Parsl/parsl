@@ -3,22 +3,19 @@
 
 import parsl
 from parsl import *
-from nose.tools import nottest
-import os
 import time
-import shutil
 import argparse
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 config = {
     "sites": [
         {"site": "Local_Threads",
          "auth": {"channel": None},
          "execution": {
              "executor": "threads",
-              "provider": None,
-              "maxThreads": 4,
-          }
+             "provider": None,
+             "maxThreads": 4,
+         }
          }],
     "globals": {"lazyErrors": True,
                 "checkpoint": True,
@@ -74,12 +71,14 @@ def test_bash_memoization(n=4):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-c", "--count", default="10",
+                        help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()
 
     x = test_python_memoization(n=4)
-    #x = test_bash_memoization (n=4)
+    x = test_bash_memoization(n=4)

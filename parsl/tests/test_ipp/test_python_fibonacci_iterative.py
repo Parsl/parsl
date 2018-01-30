@@ -1,5 +1,4 @@
 
-import parsl
 from parsl import *
 import argparse
 
@@ -26,7 +25,7 @@ def test_fibonacci(num=5):
         x2 = get_num(x1, x2)
         x1 = temp
     for i in range(len(results)):
-        if type(results[i]) is int:
+        if isinstance(results[i], int):
             print(results[i])
         else:
             print(results[i].result())
@@ -34,6 +33,7 @@ def test_fibonacci(num=5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--num", default="5", action="store", dest="a", type=int)
+    parser.add_argument("-a", "--num", default="5",
+                        action="store", dest="a", type=int)
     args = parser.parse_args()
     test_fibonacci(args.a)

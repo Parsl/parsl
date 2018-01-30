@@ -1,6 +1,4 @@
 from parsl import *
-import parsl
-import libsubmit
 # libsubmit.set_stream_logger()
 # parsl.set_stream_logger()
 import os

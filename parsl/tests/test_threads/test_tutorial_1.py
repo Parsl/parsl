@@ -2,11 +2,8 @@
 import parsl
 from parsl import *
 
-#from nose.tools import nottest
+# from nose.tools import nottest
 
-import os
-import time
-import shutil
 import argparse
 
 # Let's create a pool of threads to execute our functions
@@ -44,7 +41,7 @@ def test_app_future_result():
     # We call sim_mol_dyn with
     sim_fut = sim_mol_dyn(5, 0.5, outputs=['sim.out'],
                           stdout='stdout.txt', stderr='stderr.txt')
-    data_futs = sim_fut.outputs
+    sim_fut.outputs
     print("Launching and waiting on data_futs")
     print("Done?   : ", sim_fut.done())
     print("Result? : ", sim_fut.result(timeout=1))
@@ -53,8 +50,10 @@ def test_app_future_result():
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10", help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
+    parser.add_argument("-c", "--count", default="10",
+                        help="Count of apps to launch")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
     args = parser.parse_args()
 
     if args.debug:

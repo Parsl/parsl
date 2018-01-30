@@ -1,7 +1,6 @@
 # A point in the workflow process where when one of several branches is
 # activated, the other branches are withdrawn
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -48,6 +47,7 @@ def test_deferred_choice():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--input", default="4", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--input", default="4",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_deferred_choice()

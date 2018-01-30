@@ -1,6 +1,5 @@
 from parsl import *
 import parsl
-import libsubmit
 import os
 parsl.set_stream_logger()
 os.environ["THETA_USERNAME"] = "yadunand"

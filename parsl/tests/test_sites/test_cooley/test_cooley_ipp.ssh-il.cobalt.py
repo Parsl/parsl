@@ -1,6 +1,4 @@
 from parsl import *
-import parsl
-import libsubmit
 import os
 
 os.environ["COOLEY_USERNAME"] = "yadunand"

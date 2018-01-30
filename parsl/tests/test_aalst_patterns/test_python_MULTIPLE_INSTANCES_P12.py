@@ -2,7 +2,6 @@
 # be created. Each time a new instance is created, a new thread is created that
 # is independent of all the other threads
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -32,6 +31,7 @@ def test_multi_instances(x=5):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--num", default="5", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--num", default="5",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_multi_instances(args.x)

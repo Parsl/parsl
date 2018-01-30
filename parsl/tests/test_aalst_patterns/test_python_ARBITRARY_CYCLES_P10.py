@@ -1,7 +1,6 @@
 # A point in a workflow process where one or more activities can
 # be repeated
 
-import parsl
 from parsl import *
 import random
 import argparse
@@ -48,6 +47,7 @@ def test_arbitrary(x=2):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-x", "--num", default="2", action="store", dest="x", type=int)
+    parser.add_argument("-x", "--num", default="2",
+                        action="store", dest="x", type=int)
     args = parser.parse_args()
     test_arbitrary(args.x)

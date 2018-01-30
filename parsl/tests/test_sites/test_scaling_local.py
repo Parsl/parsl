@@ -1,10 +1,5 @@
 import parsl
-from parsl import *
-#from nose.tools import nottest
-import os
 import time
-import shutil
-import argparse
 from parsl.execution_provider.local.local import Local
 parsl.set_stream_logger()
 
@@ -20,7 +15,6 @@ def test_config_A():
     y = local.submit("ipengine ", blocksize=1)
     print("Started : ", y)
     time.sleep(3)
-    #stats = local.status([x,y])
 
     print(local.cancel([x, y]))
     print(local.status([x, y]))
