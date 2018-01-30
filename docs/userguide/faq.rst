@@ -5,7 +5,7 @@ How can I debug a Parsl script?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Parsl interfaces with the Python logger. To enable logging of parsl's
-progress to stdout turn on the logger as follows. Alternatively, you
+progress to stdout, turn on the logger as follows. Alternatively, you
 can configure the file logger to write to an output file.
 
 .. code-block:: python
@@ -20,7 +20,7 @@ can configure the file logger to write to an output file.
    parsl.set_file_logger(FILENAME, level=logging.DEBUG)
 
 .. note::
-   Parsl's logging will not capture STDOUT/STDERR from the apps's themselves.
+   Parsl's logging will not capture STDOUT/STDERR from the apps themselves.
    Follow instructions below for application logs.
 
 
@@ -57,7 +57,7 @@ How do I specify where Apps should be run?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Parsl's multi-site support allows you to define the site (including local threads)
-on which an App should be executed. For example :
+on which an App should be executed. For example:
 
 .. code-block:: python
 
@@ -74,8 +74,9 @@ Workers do not connect back to Parsl
 
 If you are running via ssh to a remote system from your local machine, or from the
 login node of a cluster/supercomputer, it is necessary to have a public IP to which
-the workers could connect back. While on certain systems our pilot job system, ipyparallel
-can identify the IP address automatically it is safer to specify the address explicitly.
+the workers can connect back. While our pilot job system, ipyparallel, 
+can identify the IP address automatically on certain systems,
+it is safer to specify the address explicitly.
 
 Here's how you specify the address in the config dictionary passed to the DataFlowKernel:
 
@@ -125,15 +126,15 @@ Parsl complains about missing packages
 
 If ``parsl`` is cloned from a github repository and added to the ``PYTHONPATH``, it is
 possible to miss the installation of some dependent libraries. In this configuration,
-``parsl`` will raise errors such as :
+``parsl`` will raise errors such as:
 
 ``ModuleNotFoundError: No module named 'ipyparallel'``
 
 In this situation, please install the required packages. If you are on a machine with
-sudo privileges you could install the packages for all users, or if you choose install
+sudo privileges you could install the packages for all users, or if you choose, install
 to a virtual environment using packages such as virtualenv and conda.
 
-For instance with conda, follow this `cheatsheet <https://conda.io/docs/_downloads/conda-cheatsheet.pdf>`_ to create a virtual environment :
+For instance, with conda, follow this `cheatsheet <https://conda.io/docs/_downloads/conda-cheatsheet.pdf>`_ to create a virtual environment:
 
 .. code-block:: bash
 
@@ -152,7 +153,7 @@ and you run into this error, please check your config structure.
 In v0.3.0, ``config['controller']['publicIp'] = '*'`` was commonly
 used to specify that the IP address should be autodetected.
 This has changed in v0.4.0 and setting ``'publicIp' = '*'`` results
-in an error with a traceback that looks like this :
+in an error with a traceback that looks like this:
 
 .. code-block:: python
 
@@ -164,14 +165,14 @@ in an error with a traceback that looks like this :
 
 In v0.4.0, the controller block defaults to detecting the IP address
 automatically, and if that does not work for you, you can specify the
-IP address explicitly like this : ``config['controller']['publicIp'] = 'IP.ADD.RES.S'``
+IP address explicitly like this: ``config['controller']['publicIp'] = 'IP.ADD.RES.S'``
 
 How do I run code that uses Python2.X?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Modules or code that requires Python2.X cannot be run as python apps,
-however they may be run via bash apps. The primary limitation here with
-python apps are that all the inputs and outputs including the function
+Modules or code that require Python2.X cannot be run as python apps,
+however they may be run via bash apps. The primary limitation with
+python apps is that all the inputs and outputs including the function
 would be mangled when being transmitted between python interpretors with
 different version numbers (also see :ref:`pyversion`)
 
