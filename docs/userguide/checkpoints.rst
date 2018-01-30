@@ -1,14 +1,14 @@
 Checkpointing
 -------------
 
-Checkpointing extends appCaching a step further and allows you to re-use
+Checkpointing extends AppCaching a step further and allows you to re-use
 results from and across multiple workflows.
 
 .. note::
-   Checkpointing is *only* possible for apps which have appCaching enabled.
+   Checkpointing is *only* possible for apps which have AppCaching enabled.
 
 .. note::
-   If appCaching is disabled in the ``config['globals']``, checkpointing will
+   If AppCaching is disabled in the ``config['globals']``, checkpointing will
    **not** work
 
 Parsl follows an incremental checkpointing model, where each call to checkpoint,
