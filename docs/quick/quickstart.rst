@@ -1,12 +1,10 @@
 Quickstart
 ==========
 
-| To try Parsl now go to our `online tutorial notebook <http://try.parsl-project.org>`_
-
-| Installing the latest version of Parsl is easy, and requires just a few steps:
+To try Parsl now (without installing any code) experiment with our `hosted tutorial notebooks <http://try.parsl-project.org>`_
 
 
-Installing
+Installation
 ----------
 
 Parsl is available on PyPI, but first make sure you have Python3.5+
@@ -16,7 +14,7 @@ Parsl is available on PyPI, but first make sure you have Python3.5+
 Parsl has been tested on Linux and MacOS.
 
 
-Installing using Pip
+Installation using Pip
 ^^^^^^^^^^^^^^^^^^^
 
 While ``pip`` and ``pip3`` can be used to install Parsl we suggest the following approach
@@ -36,7 +34,7 @@ for reliable installation when many Python environments are avaialble.
 .. note:: For more detailed info on setting up Jupyter with Python3.5 go `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
 
 
-Installing using Conda
+Installation using Conda
 ^^^^^^^^^^^^^^^^^^^^^^
 
 1. Install Conda and setup python3.6 following the instructions `here <https://conda.io/docs/user-guide/install/macos.html>`_::
