@@ -89,7 +89,8 @@ class LocalChannel (Channel):
             print("Caught exception : {0}".format(e))
             logger.warn("Execution of command [%s] failed due to \n %s ", cmd, e)
             # Set retcode to non-zero so that this can be handled in the provider.
-            retcode = -1
+            if retcode == 0:
+                retcode = -1
             return (retcode, None, None)
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
