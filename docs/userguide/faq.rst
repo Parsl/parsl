@@ -105,6 +105,8 @@ Here's how you specify the address in the config dictionary passed to the DataFl
     }
 
 
+.. _pyversion:
+
 Remote execution fails with SystemError(unknown opcode)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -112,6 +114,11 @@ When running with Ipyparallel workers, it is important to ensure that the Python
 on the client side matches that on the side of the workers. If there's a mismatch,
 the apps sent to the workers will fail with the following error:
 ``ipyparallel.error.RemoteError: SystemError(unknown opcode)``
+
+.. note::
+   It is recommended that both the parsl script and all workers are set to use python
+   with the same Major.Minor version numbers. For eg. use Python3.5.X on both local
+   and worker side.
 
 Parsl complains about missing packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -144,10 +151,10 @@ If you are making the transition from Parsl v0.3.0 to v0.4.0
 and you run into this error, please check your config structure.
 In v0.3.0, ``config['controller']['publicIp'] = '*'`` was commonly
 used to specify that the IP address should be autodetected.
-This has changed in v0.4.0 and setting `'publicIp' = '*'` results
+This has changed in v0.4.0 and setting ``'publicIp' = '*'`` results
 in an error with a traceback that looks like this :
 
-.. code-block:python::
+.. code-block:: python
 
    File "/usr/local/lib/python3.5/dist-packages/ipyparallel/client/client.py", line 483, in __init__
    self._query_socket.connect(cfg['registration'])
@@ -159,4 +166,21 @@ In v0.4.0, the controller block defaults to detecting the IP address
 automatically, and if that does not work for you, you can specify the
 IP address explicitly like this : ``config['controller']['publicIp'] = 'IP.ADD.RES.S'``
 
+How do I run code that uses Python2.X?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Modules or code that requires Python2.X cannot be run as python apps,
+however they may be run via bash apps. The primary limitation here with
+python apps are that all the inputs and outputs including the function
+would be mangled when being transmitted between python interpretors with
+different version numbers (also see :ref:`pyversion`)
+
+Here's an example of running a python2.7 code as a bash application:
+
+.. code-block:: python
+
+   @app('bash', dfk)
+   def python_27_app (arg1, arg2 ...):
+   return '''conda activate py2.7_env  # Use conda to ensure right env
+   python2.7 my_python_app.py -arg {0} -d {1}
+   '''.format(arg1, arg2)
