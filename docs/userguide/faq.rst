@@ -181,6 +181,6 @@ Here's an example of running a python2.7 code as a bash application:
 
    @app('bash', dfk)
    def python_27_app (arg1, arg2 ...):
-   return '''conda activate py2.7_env  # Use conda to ensure right env
-   python2.7 my_python_app.py -arg {0} -d {1}
-   '''.format(arg1, arg2)
+       return '''conda activate py2.7_env  # Use conda to ensure right env
+       python2.7 my_python_app.py -arg {0} -d {1}
+       '''.format(arg1, arg2)
