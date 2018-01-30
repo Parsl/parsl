@@ -346,10 +346,11 @@ class DataFlowKernel(object):
 
     def submit(self, func, *args, parsl_sites='all', fn_hash=None, cache=False, **kwargs):
         ''' Add task to the dataflow system.
-        If all deps are met :
-           send to the runnable queue and launch the task
-        Else:
-           post the task in the pending queue
+
+        >>> IF all deps are met :
+        >>>   send to the runnable queue and launch the task
+        >>> ELSE:
+        >>>   post the task in the pending queue
 
         Args:
             - func : A function object

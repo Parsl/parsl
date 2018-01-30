@@ -39,23 +39,22 @@ class FlowNoControl(object):
 
 
 class FlowControl(object):
-    '''
-    FlowControl timer is designed to implement threshold-interval based
+    '''FlowControl timer is designed to implement threshold-interval based
     flow control. The overall goal is to trap the flow of apps from the
     workflow, measure it and redirect it the appropriate executors for
     processing.
 
     This is based on the following logic :
 
-    BEGIN (INTERVAL, THRESHOLD, callback) :
-         start = current_time()
-
-         while (current_time()-start < INTERVAL) :
-              count = get_events_since(start)
-              if count >= THRESHOLD :
-                  break
-
-         callback()
+    >>> BEGIN (INTERVAL, THRESHOLD, callback) :
+    >>>     start = current_time()
+    >>>
+    >>>     while (current_time()-start < INTERVAL) :
+    >>>          count = get_events_since(start)
+    >>>          if count >= THRESHOLD :
+    >>>              break
+    >>>
+    >>>     callback()
 
     This logic ensures that the callbacks are activated with a maximum delay
     of INTERVAL for systems with infrequent events as well as systems which would
