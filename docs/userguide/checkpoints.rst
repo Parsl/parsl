@@ -11,13 +11,13 @@ results from and across multiple workflows.
    If appCaching is disabled in the ``config['globals']``, checkpointing will
    **not** work
 
-Parsl follows an incremental checkpointing model, where each call to checkpoint,
-will checkpoint all newly updated results since the last checkpoint. When loading
+Parsl follows an incremental checkpointing model, where each call to checkpoint
+will checkpoint all results that have updated since the last checkpoint. When loading
 checkpoints, if entries with results from multiple functions (with identical hashes)
-are encountered only the last entry read will be considered.
+are encountered, only the last entry read will be considered.
 
 Checkpointing comes with the same caveats as AppCaching but with one key
-difference, each checkpointing event is manually triggered by the user.
+difference: each checkpointing event is manually triggered by the user.
 Checkpoints are loaded from checkpoint files at the start of the
 DataFlowKernel and written out to checkpoint files only when the
 ``DataFlowKernel.checkpoint()`` function is invoked. The checkpoint is written
