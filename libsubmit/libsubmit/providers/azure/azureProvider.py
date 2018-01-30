@@ -137,7 +137,7 @@ class AzureProvider(ExecutionProvider):
 
         if not _azure_enabled:
             raise OptionalModuleMissing(
-                ['azure', 'haikunator'], "Azure Provider requires the azure and haikunator modules.")
+                ['azure'], "Azure Provider requires the azure module.")
 
         credentials = UserPassCredentials(
             self.config['username'], self.config['pass'])
