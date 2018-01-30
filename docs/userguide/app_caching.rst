@@ -50,7 +50,7 @@ all subsequent calls will return immediately with the cached result.
 Performance
 """""""""""
 
-If appCaching is enabled, some minor performance penalty will be seen
+If AppCaching is enabled, some minor performance penalty will be seen
 especially when thousands of subsecond tasks are launched rapidly.
 
 .. note::
@@ -61,25 +61,25 @@ Configuring
 ^^^^^^^^^^^
 
 The ``appCache`` option in the config is the master switch, which if set
-to ``False`` disables all appCaching. By default the global ``appCache``
-is **enabled**, and appCaching is disabled for each app individually, which
+to ``False`` disables all AppCaching. By default the global ``appCache``
+is **enabled**, and AppCaching is disabled for each app individually, which
 can be enabled to pick and choose what apps are to be cached.
 
-Disabling appCaching globally :
+Disabling AppCaching globally :
 
-1. Disabling appCaching globally via config:
+1. Disabling AppCaching globally via config:
 
     .. code-block:: python
 
        config = {
            "sites": [{ ... }],
            "globals": {
-                "appCache": False # <-- Disable appCaching globally
+                "appCache": False # <-- Disable AppCaching globally
        }
 
        dfk = DataFlowKernel(config=config)
 
-2. Disabling appCaching globally via option to DataFlowKernel:
+2. Disabling AppCaching globally via option to DataFlowKernel:
 
     .. code-block:: python
 
