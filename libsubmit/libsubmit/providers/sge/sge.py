@@ -31,7 +31,7 @@ translate_table = {'qw': 'PENDING',
                    }
 
 
-class GridEngine():  # ExcecutionProvider):
+class GridEngine(ExecutionProvider):
     """ Define the Grid Engine provider
 
     .. code:: python
@@ -71,7 +71,7 @@ class GridEngine():  # ExcecutionProvider):
         self.scriptDir = self.config["execution"]["scriptDir"]
         if not os.path.exists(self.scriptDir):
             os.makedirs(self.scriptDir)
-
+        self.has_ipcontroller = False
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
         atexit.register(self.bye)
@@ -200,5 +200,22 @@ EOF
         '''
         return False
 
+    def start_ipcontroller(self, ip="*", options='--quiet'):
+        '''
+        Start the IPController so that the worker nodes can connect
+        Args:
+            :param ip (str) what ip the ipcontroller should listen on
+            :param options (str) options for ipcontroller
+        '''
+        out = os.popen('ipcontroller --ip="{}" {} &'.format(ip, options))
+        self.has_ipcontroller = True
+        time.sleep(5)
+
+    def stop_ipcontroller(self):
+        os.popen("killall ipcontroller")
+        self.has_ipcontroller = False
+
     def bye(self):
         self.cancel([i for i in list(self.resources)])
+        if self.has_ipcontroller:
+            self.stop_ipcontroller()
