@@ -186,11 +186,12 @@ class Cobalt(ExecutionProvider):
                 jobs_missing.remove(job_id)
 
         print("Jobs list : " , self.resources)
+
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = translate_table['CD']
+            if self.resources[missing_job]['status'] in ['running', 'killing', 'exiting']:
+                self.resources[missing_job]['status'] = translate_table['exiting']
 
     def status (self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
@@ -310,19 +311,21 @@ class Cobalt(ExecutionProvider):
 
         # Calculate nodes
         nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
-                     nodes,
-                     self.config["execution"]["block"].get("taskBlocks", 1))
-
         job_config = self.config["execution"]["block"]["options"]
         job_config["nodes"] = nodes
         job_config["overrides"] = job_config.get("overrides", '')
         job_config["jobname"] = job_name
+        job_config["taskBlocks"] =  self.config["execution"]["block"].get("taskBlocks", 1)
+
+        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
+                     job_config["nodes"],
+                     job_config["taskBlocks"])
+
         # Wrap the cmd_string
         lname = self.config["execution"]["block"].get("launcher", "singleNode")
         launcher = Launchers.get(lname, None)
         job_config["user_script"] = launcher(cmd_string,
-                                             self.config["execution"]["block"]["taskBlocks"])
+                                             job_config["taskBlocks"])
 
         # Get queue request if requested
         self.queue = ''
@@ -341,18 +344,20 @@ class Cobalt(ExecutionProvider):
                                                                          account_opt,
                                                                          channel_script_path))
 
-        retcode, stdout, stderr = self.channel.execute_wait(
-            "qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
-                                                    self.queue,
-                                                    self.max_walltime,
-                                                    account_opt,
-                                                    channel_script_path), 5)
+        cmd_string = "qsub -n {0} {1} -t {2} {3} {4}".format(nodes,
+                                                             self.queue,
+                                                             self.max_walltime,
+                                                             account_opt,
+                                                             channel_script_path)
+
+        retcode, stdout, stderr = self.channel.execute_wait(cmd_string, 10)
 
         # TODO : FIX this block
         if retcode != 0 :
-            logger.error("Launch failed stdout:\n{0}  \nstderr:{1}\n".format(stdout, stderr))
-        logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
-                      stdout.strip(), stderr.strip())
+            logger.error("Failed command  : {0}".format(cmd_string))
+            logger.error("Launch failed stdout:\n{0} \nstderr:{1}\n".format(stdout, stderr))
+
+        logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         job_id = None
 
