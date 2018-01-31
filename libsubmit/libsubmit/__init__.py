@@ -12,6 +12,7 @@ from libsubmit.version import VERSION
 from libsubmit.error import *
 from libsubmit.providers.slurm.slurm import Slurm
 from libsubmit.providers.aws.aws import EC2Provider
+from libsubmit.providers.sge.sge import GridEngine
 from libsubmit.providers.azure.azureProvider import AzureProvider
 from libsubmit.providers.jetstream.jetstream import Jetstream
 from libsubmit.providers.condor.condor import Condor
@@ -26,7 +27,7 @@ __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
 __all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'Jetstream',
-           'Local', 'Cobalt', 'Condor', 'Torque',
+           'Local', 'Cobalt', 'Condor', 'Torque', 'GridEngine'
            'LocalChannel', 'SshChannel', 'SshILChannel']
 
 def set_stream_logger(name='libsubmit', level=logging.DEBUG, format_string=None):
