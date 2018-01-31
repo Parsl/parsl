@@ -160,7 +160,7 @@ class EC2Provider(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
         self.resources = {}
-
+        # atexit.register(self.goodbye)
         self.config = config
         options = self.config["execution"]["block"]["options"]
         logger.warn("Options %s", options)
@@ -751,6 +751,5 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         '''
         return len(self.instances)
 
-    # @atexit.register
-    # def goodbye():
-    #     self.teardown()
+    def goodbye(self):
+        self.teardown()

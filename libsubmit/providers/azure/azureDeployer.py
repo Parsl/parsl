@@ -14,7 +14,6 @@ class Deployer(object):
     :raises KeyError: If AZURE_CLIENT_ID, AZURE_CLIENT_SECRET or AZURE_TENANT_ID env
         variables or not defined
     """
-    name_generator = Haikunator()
     config = ""
 
     def __init__(self, subscription_id, resource_group, config,

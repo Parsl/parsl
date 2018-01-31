@@ -26,11 +26,15 @@ class LocalChannel (Channel):
             - envs (dict) : A dictionary of env variables to be set when launching the shell
             - channel_script_dir (string): (default="./.scripts") Directory to place scripts
         '''
+        import pprint 
+        pp = pprint.PrettyPrinter(indent=4)
+
 
         self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
         local_env     = os.environ.copy()
-        self.envs     = local_env.update(envs)
+        self.envs     = copy.deepcopy(local_env)
+        self.envs.update(envs)
         self.channel_script_dir = os.path.abspath(scriptDir)
         try:
             os.makedirs(self.channel_script_dir)
@@ -66,11 +70,8 @@ class LocalChannel (Channel):
         stdout = None
         stderr = None
 
-        if self.envs :
-            current_env = copy.copy(self.envs)
-        else :
-            current_env = {}
-            current_env.update(envs)
+        current_env = copy.deepcopy(self.envs)
+        current_env.update(envs)
 
         try :
             proc = subprocess.Popen(cmd,
@@ -86,11 +87,11 @@ class LocalChannel (Channel):
 
         except Exception as e:
             print("Caught exception : {0}".format(e))
-            logger.warn("Execution of command [%s] failed due to \n %s ",  (cmd, e))
+            logger.warn("Execution of command [%s] failed due to \n %s ", cmd, e)
             # Set retcode to non-zero so that this can be handled in the provider.
             if retcode == 0:
                 retcode = -1
-                return (recode, None, None)
+            return (retcode, None, None)
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
