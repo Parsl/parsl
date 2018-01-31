@@ -23,11 +23,11 @@ else:
     _ge_enabled = True
 
 translate_table = {'qw': 'PENDING',
+                   't': 'PENDING',
                    'r': 'RUNNING',
                    'd': 'COMPLETED',
-                   'shutting-down': 'COMPLETED',  # (configuring),
                    'rd': 'COMPLETED',  # We shouldn't really see this state
-                   'stopped': 'COMPLETED',  # We shouldn't really see this state
+                   'c': 'COMPLETED',  # We shouldn't really see this state
                    }
 
 
