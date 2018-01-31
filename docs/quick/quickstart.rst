@@ -5,7 +5,7 @@ To try Parsl now (without installing any code) experiment with our `hosted tutor
 
 
 Installation
-----------
+------------
 
 Parsl is available on PyPI, but first make sure you have Python3.5+
 
@@ -15,7 +15,7 @@ Parsl has been tested on Linux and MacOS.
 
 
 Installation using Pip
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 
 While ``pip`` and ``pip3`` can be used to install Parsl we suggest the following approach
 for reliable installation when many Python environments are avaialble.
@@ -23,7 +23,7 @@ for reliable installation when many Python environments are avaialble.
 1. Install Parsl::
 
      $ python3 -m pip install parsl
-     
+
      (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
 
 2. Install Jupyter for Tutorial notebooks::
@@ -35,7 +35,7 @@ for reliable installation when many Python environments are avaialble.
 
 
 Installation using Conda
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. Install Conda and setup python3.6 following the instructions `here <https://conda.io/docs/user-guide/install/macos.html>`_::
 
@@ -45,7 +45,7 @@ Installation using Conda
 2. Install Parsl::
 
      $ python3 -m pip install parsl
-     
+
      (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
 
 
@@ -76,7 +76,3 @@ For testing:
 
 * nose
 * coverage
-
-
-
-
