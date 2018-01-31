@@ -16,6 +16,11 @@ Parsl can be used to realize a variety of workflows:
 * Workflows with many short duration tasks where no task-level fault tolerance is required
 * Workflows with long running tasks with fault tolerance
 
+.. note::
+   By default, Parsl collects anonymous usage statistics for reporting and
+   improvement purposes. To understand what stats are collected and to disable
+   collection please refer to the `usage tracking guide <http://parsl.readthedocs.io/en/latest/userguide/usage_tracking.html>`__
+
 
 .. toctree::
    :maxdepth: 3
