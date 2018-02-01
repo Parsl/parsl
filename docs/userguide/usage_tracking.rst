@@ -1,3 +1,5 @@
+.. _label-usage-tracking:
+
 Usage Statistics Collection
 ===========================
 

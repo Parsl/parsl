@@ -1,6 +1,73 @@
 Changelog
 =========
 
+Parsl 0.4.0
+-----------
+
+Here are the major changes included in the Parsl 0.4.0 release.
+
+New functionality
+^^^^^^^^^^^^^^^^^
+
+* Elastic scaling in response to workflow pressure. `issue#46 <https://github.com/Parsl/parsl/issues/46>`_
+  Options `minBlocks`, `maxBlocks`, and `parallelism` now work and controls workflow execution.
+  Refer docs : :ref:`label-elasticity`
+
+* Multisite support enabled targetting apps within a single workflow to different
+  sites `issue#48 <https://github.com/Parsl/parsl/issues/48>`_
+
+     .. code-block:: python
+
+          @app('python', dfk, sites=['SITE1', 'SITE2']
+          def my_app(...):
+             ...
+
+* Anonymized usage tracking added. `issue34 <https://github.com/Parsl/parsl/issues/34>`_
+  Refer to docs : :ref:`label-usage-tracking`
+
+* AppCaching and Checkpointing `issue43 <https://github.com/Parsl/parsl/issues/43>`_
+
+     .. code-block:: python
+
+          # Set cache=True to enable appCaching
+          @app('python', dfk, cache=True)
+          def my_app(...):
+              ...
+
+
+          # To checkpoint a workflow:
+          dfk.checkpoint()
+
+   Refer to docs : :ref:`label-checkpointing`, :ref:`label-appcaching`
+
+* Parsl now creates a new directory under `./runinfo/` with an incrementing number per workflow
+  invocation
+
+* Troubleshooting guide and more documentation
+
+* PEP8 conformance tests added to travis testing `issue#72 <https://github.com/Parsl/parsl/issues/72>`_
+
+
+Bug Fixes
+^^^^^^^^^
+
+* Missing documentation from libsubmit was added back
+  `issue#41 <https://github.com/Parsl/parsl/issues/41>`_
+
+* Fixes for `script_dir` | `scriptDir` inconsistencies `issue#64 <https://github.com/Parsl/parsl/issues/64>`_
+  We now use `scriptDir` exclusively.
+
+* Config defaults module failure when part of the option set is provided `issue#74<https://github.com/Parsl/parsl/issues/74>`_
+
+* Fixes for network errors with usage_tracking `issue#70 <https://github.com/Parsl/parsl/issues/70>`_
+
+* PEP8 conformance of code and tests with limited exclusions `issue#72 <https://github.com/Parsl/parsl/issues/72>`_
+
+* Doc bug in recommending `max_workers` instead of `maxThreads` `issue#73 <https://github.com/Parsl/parsl/issues/70>`_
+
+
+
+
 Parsl 0.3.1
 -----------
 

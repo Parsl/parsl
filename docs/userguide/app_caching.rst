@@ -1,3 +1,5 @@
+.. _label-appcaching:
+
 AppCaching
 ----------
 
