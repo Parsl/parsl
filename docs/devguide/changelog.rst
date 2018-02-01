@@ -18,7 +18,7 @@ New functionality
 
      .. code-block:: python
 
-          @app('python', dfk, sites=['SITE1', 'SITE2']
+          @App('python', dfk, sites=['SITE1', 'SITE2'])
           def my_app(...):
              ...
 
@@ -30,7 +30,7 @@ New functionality
      .. code-block:: python
 
           # Set cache=True to enable appCaching
-          @app('python', dfk, cache=True)
+          @App('python', dfk, cache=True)
           def my_app(...):
               ...
 
