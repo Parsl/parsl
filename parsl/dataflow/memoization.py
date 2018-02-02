@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 
 class Memoizer(object):
-    ''' Memoizer is responsible for ensuring that when a task is repeated
-    ie. the same function is called with the same exact arguments, the
+    ''' Memoizer is responsible for ensuring that when a task is repeated,
+    i.e., the same function is called with the same exact arguments, the
     result from a previous execution is reused. `wiki <https://en.wikipedia.org/wiki/Memoization>`_
 
     The memoizer implementation here does not collapse duplicate calls
@@ -28,14 +28,14 @@ class Memoizer(object):
                     done
 
     The memoizer creates a lookup table by hashing the function name
-    and it's inputs, and storing the results of the function.
+    and its inputs, and storing the results of the function.
 
-    When a task is ready for launch, ie. all of it's arguments
-    have resolved, we add it's hash to the task datastructure.
+    When a task is ready for launch, i.e., all of its arguments
+    have resolved, we add its hash to the task datastructure.
     '''
 
     def __init__(self, dfk, memoize=True, checkpoint={}):
-        ''' Initialize the memoizer. If either the global config or the kwarg memoize is set to false
+        ''' Initialize the memoizer. If either the global config or the kwarg memoize is set to false,
         memoization is disabled.
 
         Args:
@@ -84,8 +84,8 @@ class Memoizer(object):
         return hashedsum
 
     def check_memo(self, task_id, task):
-        ''' Check memo table first creates a hash of the task and it's relevant
-        inputs and checks the lookup table for this hash. If present the
+        ''' Check memo table first creates a hash of the task and its relevant
+        inputs and checks the lookup table for this hash. If present, the
         results are returned. The result is a tuple indicating whether a memo
         exists and the result, since a Null result is possible and could be confusing.
         This seems like a reasonable option without relying on an cache_miss exception.
@@ -138,7 +138,7 @@ class Memoizer(object):
              - task (dict) : A task dict from dfk.tasks
              - r (Result future): Result future
 
-        A warning is issued when a hash collission occures during the update.
+        A warning is issued when a hash collision occures during the update.
         This is not likely.
         '''
 
