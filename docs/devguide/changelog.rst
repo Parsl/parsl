@@ -11,9 +11,10 @@ New functionality
 
 * Elastic scaling in response to workflow pressure. `issue#46 <https://github.com/Parsl/parsl/issues/46>`_
   Options `minBlocks`, `maxBlocks`, and `parallelism` now work and controls workflow execution.
-  Refer docs : :ref:`label-elasticity`
+  
+  Documented in: :ref:`label-elasticity`
 
-* Multisite support enabled targetting apps within a single workflow to different
+* Multisite support, enables targetting apps within a single workflow to different
   sites `issue#48 <https://github.com/Parsl/parsl/issues/48>`_
 
      .. code-block:: python
@@ -22,10 +23,11 @@ New functionality
           def my_app(...):
              ...
 
-* Anonymized usage tracking added. `issue34 <https://github.com/Parsl/parsl/issues/34>`_
-  Refer to docs : :ref:`label-usage-tracking`
+* Anonymized usage tracking added. `issue#34 <https://github.com/Parsl/parsl/issues/34>`_
 
-* AppCaching and Checkpointing `issue43 <https://github.com/Parsl/parsl/issues/43>`_
+  Documented in: :ref:`label-usage-tracking`
+
+* AppCaching and Checkpointing `issue#43 <https://github.com/Parsl/parsl/issues/43>`_
 
      .. code-block:: python
 
@@ -38,7 +40,7 @@ New functionality
           # To checkpoint a workflow:
           dfk.checkpoint()
 
-   Refer to docs : :ref:`label-checkpointing`, :ref:`label-appcaching`
+   Documented in: :ref:`label-checkpointing`, :ref:`label-appcaching`
 
 * Parsl now creates a new directory under `./runinfo/` with an incrementing number per workflow
   invocation
@@ -57,7 +59,7 @@ Bug Fixes
 * Fixes for `script_dir` | `scriptDir` inconsistencies `issue#64 <https://github.com/Parsl/parsl/issues/64>`_
   We now use `scriptDir` exclusively.
 
-* Config defaults module failure when part of the option set is provided `issue#74<https://github.com/Parsl/parsl/issues/74>`_
+* Config defaults module failure when part of the option set is provided `issue#74 <https://github.com/Parsl/parsl/issues/74>`_
 
 * Fixes for network errors with usage_tracking `issue#70 <https://github.com/Parsl/parsl/issues/70>`_
 
@@ -79,7 +81,7 @@ This is a point release with mostly minor features and several bug fixes
 * This upgrade will also push the libsubmit requirement from 0.2.4 -> 0.2.5.
 
 
-Several critical fixes from libsubmit are brought in :
+Several critical fixes from libsubmit are brought in:
 
 * Several fixes and improvements to Condor from @annawoodard.
 * Support for Torque scheduler
@@ -98,7 +100,7 @@ Here are the major changes that are included in the Parsl 0.3.0 release.
 New functionality
 ^^^^^^^^^^^^^^^^^
 
-* Arguments to DFK has changed ::
+* Arguments to DFK has changed:
 
     # Old
     dfk(executor_obj)
