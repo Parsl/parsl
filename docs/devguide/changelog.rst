@@ -22,10 +22,10 @@ New functionality
           def my_app(...):
              ...
 
-* Anonymized usage tracking added. `issue34 <https://github.com/Parsl/parsl/issues/34>`_
+* Anonymized usage tracking added. `issue#34 <https://github.com/Parsl/parsl/issues/34>`_
   Refer to docs : :ref:`label-usage-tracking`
 
-* AppCaching and Checkpointing `issue43 <https://github.com/Parsl/parsl/issues/43>`_
+* AppCaching and Checkpointing `issue#43 <https://github.com/Parsl/parsl/issues/43>`_
 
      .. code-block:: python
 
