@@ -14,7 +14,7 @@ Failures might occur to one or more of the following reasons:
 1. Task exceed specified walltime.
 2. Formatting error while formatting the command-line string in ``Bash Apps``
 3. Task failed during execution
-4. Task completed execution but failed to produce one or more of it's specified
+4. Task completed execution but failed to produce one or more of its specified
    outputs.
 5. The App failed to launch, for example if an input dependency is not met.
 
