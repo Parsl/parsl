@@ -2,7 +2,7 @@ Roadmap
 =======
 
 
-Sufficient capabilities to use Parsl in many common situations already exist.  This document indicates where Parsl is going; it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold. Help in providing any of the yet-to-be-developed capabilities is welcome.
+Sufficient capabilities to use Parsl in many common situations already exist.  This document indicates where Parsl is going; it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold, with the release in which they were added marked for releases since 0.3.0. Help in providing any of the yet-to-be-developed capabilities is welcome.
 
 The upcoming release is Parsl-0.4.0 and features in preparation are documented via Github `issues <https://github.com/Parsl/parsl/issues>`_ and `milestones <https://github.com/Parsl/parsl/milestone/2>`_.
 
@@ -61,8 +61,8 @@ Resource provisioning and execution
     * **srun**
     * aprun
     * Various MPI launch mechanisms (Mpiexec, mpirun..)
-* Support for remote execution using **SSH** and OAuth-based authentication (0.3.0)
-* **Utilizing multiple sites for a single script’s execution(0.4.0)**
+* Support for remote execution using **SSH** and OAuth-based authentication (SSH execution support added in 0.3.0)
+* **Utilizing multiple sites for a single script’s execution (0.4.0)**
 * Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
 * API/method for {adding entries to, viewing entries} in repository
 * IPP workers to support multiple threads of execution per node.
