@@ -49,8 +49,8 @@ The App will wait for all inputs to be satisfied before execution.
 Can I pass any Python object between Apps?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-No. Unfortunately, only picklable objects can be passed between Apps.
-For objects that can't be pickled it is recommended to use object specific methods
+No. Unfortunately, only `picklable <https://docs.python.org/3/library/pickle.html#what-can-be-pickled-and-unpickled>`_ objects can be passed between Apps.
+For objects that can't be pickled, it is recommended to use object specific methods
 to write the object into a file and use files to communicate between Apps.
 
 How do I specify where Apps should be run?
