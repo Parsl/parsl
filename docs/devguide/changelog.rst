@@ -14,7 +14,7 @@ New functionality
   
   Documented in: :ref:`label-elasticity`
 
-* Multisite support enabled targetting apps within a single workflow to different
+* Multisite support, enables targetting apps within a single workflow to different
   sites `issue#48 <https://github.com/Parsl/parsl/issues/48>`_
 
      .. code-block:: python
