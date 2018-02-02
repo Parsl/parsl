@@ -9,7 +9,7 @@ the workflow have not been changed yet are computed again, wasting
 valuable developer time and computation resources. ``AppCaching``
 solves this problem by caching results from apps that have completed
 so that they can be re-used. By default individual apps are set to
-``not`` cache, and must be enabled explicitly like :
+``not`` cache, and must be enabled explicitly like:
 
 .. code-block:: python
 
@@ -21,7 +21,7 @@ so that they can be re-used. By default individual apps are set to
 Caveats
 ^^^^^^^
 
-Here are some important considerations before using AppCaching :
+Here are some important considerations before using AppCaching:
 
 Jupyter
 """""""
