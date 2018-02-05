@@ -11,13 +11,12 @@ from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.launchers import Launchers
 from libsubmit.error import *
 from libsubmit.providers.aws.template import template_string
-import xmltodict
 
 logger = logging.getLogger(__name__)
 
 try:
-    import os
-
+    import xmltodict
+    
 except ImportError:
     _ge_enabled = False
 else:
