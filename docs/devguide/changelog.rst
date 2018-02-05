@@ -59,6 +59,8 @@ Bug Fixes
 * Fixes for `script_dir` | `scriptDir` inconsistencies `issue#64 <https://github.com/Parsl/parsl/issues/64>`_
   We now use `scriptDir` exclusively.
 
+* Fix for caching not working on jupyter notebooks `issue#90 <https://github.com/Parsl/parsl/issues/90>`_
+
 * Config defaults module failure when part of the option set is provided `issue#74 <https://github.com/Parsl/parsl/issues/74>`_
 
 * Fixes for network errors with usage_tracking `issue#70 <https://github.com/Parsl/parsl/issues/70>`_
