@@ -242,4 +242,4 @@ EFO
         return False
 
     def bye(self):
-        self.cancel([i for i in list(self.resources)]
+        self.cancel([i for i in list(self.resources)])
