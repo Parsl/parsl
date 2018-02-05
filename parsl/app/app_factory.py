@@ -4,7 +4,7 @@ Centralize app object creation.
 
 '''
 import logging
-from dill.source import getsource
+from inspect import getsource
 from hashlib import md5
 from inspect import signature
 from parsl.app.bash_app import BashApp
@@ -45,8 +45,16 @@ class AppFactory(object):
         self.cache = cache
         # Function source hashing is done here to avoid redoing this every time
         # the app is called.
-        fn_source = getsource(func)
-        self.func_hash = md5(fn_source.encode('utf-8')).hexdigest()
+        if cache is True:
+            try:
+                fn_source = getsource(func)
+            except OSError:
+                logger.debug("Unable to get source code for AppCaching. Recommend creating module")
+                fn_source = func.__name__
+
+            self.func_hash = md5(fn_source.encode('utf-8')).hexdigest()
+        else:
+            self.func_hash = func.__name__
 
     def __call__(self, *args, **kwargs):
         ''' Create a new object of app_class with the args,
