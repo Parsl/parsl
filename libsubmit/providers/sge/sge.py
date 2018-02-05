@@ -11,6 +11,7 @@ from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.launchers import Launchers
 from libsubmit.error import *
 from libsubmit.providers.aws.template import template_string
+import xmltodict
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ translate_table = {'qw': 'PENDING',
                    't': 'PENDING',
                    'r': 'RUNNING',
                    'd': 'COMPLETED',
+                   'dr': 'STOPPING',
                    'rd': 'COMPLETED',  # We shouldn't really see this state
                    'c': 'COMPLETED',  # We shouldn't really see this state
                    }
@@ -71,7 +73,6 @@ class GridEngine(ExecutionProvider):
         self.scriptDir = self.config["execution"]["scriptDir"]
         if not os.path.exists(self.scriptDir):
             os.makedirs(self.scriptDir)
-        self.has_ipcontroller = False
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
         atexit.register(self.bye)
@@ -90,7 +91,7 @@ ipengine
 EOF
 """.format(path, lib_path)
 
-    def submit(self, cmd_string=None, blocksize=1, job_name="parsl.auto"):
+    def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
@@ -110,14 +111,14 @@ EOF
         '''
         job_id = None
         try:
-            qsub_pilot = """qsub -e /dev/null -o /dev/null -terse << EOF
-PATH=/local/cluster/bin
+            qsub_pilot = """qsub -e /dev/null -o /dev/null -terse << EFO
+PATH=/local/cluster/bin/:$PATH
 export PATH
-LD_LIBRARY_PATH=/local/cluster/lib
+LD_LIBRARY_PATH=/local/cluster/lib/
 export LD_LIBRARY_PATH
-ipengine
-EOF
-"""
+{}
+EFO
+""".format(cmd_string)
             job_id = os.popen(qsub_pilot).read().strip()
             logger.debug("Provisioned a slot")
             new_slot = {job_id: {"job_name": job_name,
@@ -147,8 +148,48 @@ EOF
              - ExecutionProviderExceptions or its subclasses
 
         '''
+        
+        xml_as_dict = xmltodict.parse(os.popen("qstat -xml").read())
+        statuses = []
+        j_id = 0
+        all_jobs = xml_as_dict.get("job_info", {}).get("queue_info", {})
+        all_jobs = all_jobs if all_jobs else {}
+        if len(all_jobs.items()) > 1:
+            for job_list in all_jobs.get("job_list"):
+                status = job_list["state"]
+                j_id = job_list["JB_job_number"]
+                if j_id in job_ids:
+                    statuses.append(translate_table[status])
+        
+        elif len(all_jobs.items())==1:
+            job_list = all_jobs.get("job_list")
+            job_list = [job_list] if type(job_list) != list else job_list
+            for job in job_list:
+                status = job["state"]
+                j_id = job["JB_job_number"]
+                if j_id in job_ids:
+                    statuses.append(translate_table[status])
+        else:
+            job_list = []
+            try:
+                job_list = xml_as_dict.get("job_info", {}).get("job_info", {}).get("job_list", [])
+                job_list = [job_list] if type(job_list) != list else job_list
+            except Exception as e:
+                job_list = []
+            for job in job_list:
+                status = job["state"]
+                j_id = job["JB_job_number"]                
+                if j_id in job_ids:
+                    statuses.append(translate_table[status])
+                
+        for i in range(len(job_ids) - len(statuses)):
+            statuses.append("COMPLETED")
+        return statuses
 
-        pass
+
+
+
+        
 
     def cancel(self, job_ids):
         ''' Cancels the resources identified by the job_ids provided by the user.
@@ -200,22 +241,5 @@ EOF
         '''
         return False
 
-    def start_ipcontroller(self, ip="*", options='--quiet'):
-        '''
-        Start the IPController so that the worker nodes can connect
-        Args:
-            :param ip (str) what ip the ipcontroller should listen on
-            :param options (str) options for ipcontroller
-        '''
-        out = os.popen('ipcontroller --ip="{}" {} &'.format(ip, options))
-        self.has_ipcontroller = True
-        time.sleep(5)
-
-    def stop_ipcontroller(self):
-        os.popen("killall ipcontroller")
-        self.has_ipcontroller = False
-
     def bye(self):
-        self.cancel([i for i in list(self.resources)])
-        if self.has_ipcontroller:
-            self.stop_ipcontroller()
+        self.cancel([i for i in list(self.resources)]
