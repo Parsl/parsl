@@ -43,7 +43,8 @@ Execution core and parallelism (DFK)
 * Scheduling and allocation algorithms that determine job placement based on **job** and data requirements (including deadlines) as well as **site capabilities**
 * **Logic to manage (provision, resize) execution resource block based on job requirements, and fitting tasks into the resource blocks (0.4.0)**
 * Retry logic to support recovery and fault tolerance
-* Workflow level checkpointing and restart
+    - **This can be done by the user now with Exception handling**
+* **Workflow level checkpointing and restart (0.4.0)**
 
 Resource provisioning and execution
 -----------------------------------
@@ -59,7 +60,7 @@ Resource provisioning and execution
     * **Nova/OpenStack/Jetstream (partial support)**
 * **Support for launcher mechanisms**
     * **srun**
-    * aprun
+    * **aprun (Partial support on Crays and Theta as of 0.4.0)**
     * Various MPI launch mechanisms (Mpiexec, mpirun..)
 * Support for remote execution using **SSH** and OAuth-based authentication (SSH execution support added in 0.3.0)
 * **Utilizing multiple sites for a single script’s execution (0.4.0)**
