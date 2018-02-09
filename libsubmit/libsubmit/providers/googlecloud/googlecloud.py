@@ -69,6 +69,7 @@ class GoogleCloud():  # ExcecutionProvider):
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.config["auth"]["keyfile"]
         version = self.options.get('googleVersion', 'v1')
         self.client = googleapiclient.discovery.build('compute', version)
+        self.channel = None
         self.project_id = self.config["execution"]["block"]["options"]["projectID"]
         self.zone = self.get_correct_zone(
             self.config["execution"]["block"]["options"]["region"])
