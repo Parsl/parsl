@@ -13,6 +13,7 @@ from libsubmit.error import *
 from libsubmit.providers.slurm.slurm import Slurm
 from libsubmit.providers.sge.sge import GridEngine
 from libsubmit.providers.aws.aws import EC2Provider
+from libsubmit.providers.sge.sge import GridEngine
 from libsubmit.providers.azure.azureProvider import AzureProvider
 from libsubmit.providers.jetstream.jetstream import Jetstream
 from libsubmit.providers.condor.condor import Condor
@@ -29,6 +30,7 @@ __version__ = VERSION
 __all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'Jetstream',
            'Local', 'Cobalt', 'Condor', 'Torque', 'GridEngine',
            'LocalChannel', 'SshChannel', 'SshILChannel']
+
 
 def set_stream_logger(name='libsubmit', level=logging.DEBUG, format_string=None):
     '''
@@ -53,6 +55,7 @@ def set_stream_logger(name='libsubmit', level=logging.DEBUG, format_string=None)
     formatter = logging.Formatter(format_string)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
 
 def set_file_logger(filename, name='libsubmit', level=logging.DEBUG, format_string=None):
     ''' Add a stream log handler
