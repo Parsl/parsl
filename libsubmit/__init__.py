@@ -13,6 +13,7 @@ from libsubmit.error import *
 from libsubmit.providers.slurm.slurm import Slurm
 from libsubmit.providers.sge.sge import GridEngine
 from libsubmit.providers.aws.aws import EC2Provider
+from libsubmit.providers.googlecloud.googlecloud import GoogleCloud
 from libsubmit.providers.sge.sge import GridEngine
 from libsubmit.providers.azure.azureProvider import AzureProvider
 from libsubmit.providers.jetstream.jetstream import Jetstream
@@ -27,7 +28,7 @@ from libsubmit.channels.local.local import LocalChannel
 __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
-__all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'Jetstream',
+__all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'GoogleCloud', 'Jetstream',
            'Local', 'Cobalt', 'Condor', 'Torque', 'GridEngine',
            'LocalChannel', 'SshChannel', 'SshILChannel']
 
