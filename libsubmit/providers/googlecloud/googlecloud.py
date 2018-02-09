@@ -55,13 +55,25 @@ class GoogleCloud():  # ExcecutionProvider):
      """
 
     def __init__(self, config, channel=None):
-        ''' Initialize the GridEngine class
+        ''' Initialize the GoogleCompute class
 
         Args:
              - Config (dict): Dictionary with all the config options.
 
         KWargs:
              - Channel (None): A channel is not required for google cloud.
+             
+        Google compute instances require a few specific configuration options:
+            - auth['keyfile'](string): Path to authorization private key json file. 
+                                       This is required for auth. A new one can be 
+                                       generated here: 
+                                       https://console.cloud.google.com/apis/credentials
+            - options['projectID'](string): Project ID from google compute engine
+            - options['region'](string): Region in which to start instances
+            - options['instanceType'](string): google instance type. Default:"n1-standard-1"
+            - options['osProject'](string): OS project code for google compute engine
+            - options['osFamily'](string): OS family to request
+            - options['googleVersion'](string): Google compute engine version to use ('v1' or 'beta')
         '''
         self.config = config
         self.sitename = config['site']
@@ -92,8 +104,7 @@ class GoogleCloud():  # ExcecutionProvider):
 
     def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
-        instantiation of a resource most often to start a pilot (such as IPP engine
-        or even Swift-T engines).
+        instantiation of a resource most often to start a pilot.
 
         Args :
              - cmd_string (str) : The bash command string to be executed.
@@ -195,14 +206,13 @@ class GoogleCloud():  # ExcecutionProvider):
         compute = self.client
         project = self.project_id
         zone = self.zone
-        # Get the latest Debian Jessie image.
         image_response = compute.images().getFromFamily(
             project=self.options["osProject"], family=self.options["osFamily"]).execute()
         source_disk_image = image_response['selfLink']
 
         # Configure the machine
         machine_type = "zones/{}/machineTypes/{}".format(
-            zone, self.options["instanceType"])
+            zone, self.options.get("instanceType", "n1-standard-1"))
         startup_script = cmd_string
 
         config = {
@@ -220,8 +230,7 @@ class GoogleCloud():  # ExcecutionProvider):
                 }
             ],
 
-            # Specify a network interface with NAT to access the public
-            # internet.
+   
             'networkInterfaces': [{
                 'network': 'global/networks/default',
                 'accessConfigs': [
@@ -229,7 +238,7 @@ class GoogleCloud():  # ExcecutionProvider):
                 ]
             }],
 
-            # Allow the instance to access cloud storage and logging.
+          
             'serviceAccounts': [{
                 'email': 'default',
                 'scopes': [
@@ -238,8 +247,7 @@ class GoogleCloud():  # ExcecutionProvider):
                 ]
             }],
 
-            # Metadata is readable from the instance and allows you to
-            # pass configuration from deployment scripts to instances.
+            
             'metadata': {
                 'items': [{
                     # Startup script is automatically executed by the
