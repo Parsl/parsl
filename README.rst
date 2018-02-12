@@ -18,9 +18,9 @@ The latest version available on PyPi is v0.4.0.
 QuickStart
 ==========
 
-Parsl is now available on PyPI, but first make sure you have Python3.5+
+Parsl is now available on PyPI, but first make sure you have Python3.5+ ::
 
-   >>> python3 --version
+    $ python3 --version
 
 Install Parsl using pip::
 
@@ -33,6 +33,13 @@ To run the Parsl tutorial notebooks you will need to install Jupyter::
 Detailed information about setting up Jupyter with Python3.5 is available `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
 
 Note: By default, Parsl collects anonymous usage statistics for reporting and improvement purposes. To understand what stats are collected and to disable collection please refer to the `usage tracking guide <http://parsl.readthedocs.io/en/latest/userguide/usage_tracking.html>`__
+
+Documentation
+=============
+
+The complete parsl documentation is hosted `here <parsl.readthedocs.io>`_.
+
+The Parsl tutorial is `here <http://parsl.readthedocs.io/en/latest/quick/tutorial.html#>`_ and the same tutorial set hosted on live Jupyter notebooks are available `here <http://try.parsl-project.org:8000/>`_
 
 
 For Developers
