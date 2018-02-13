@@ -2,6 +2,7 @@
 
 '''
 
+import copy
 import collections
 import pprint
 import logging
@@ -71,10 +72,11 @@ def update_config(config, rundir):
                    }
     }
 
-    sites = config["sites"]
-    del config["sites"]
+    _config = copy.deepcopy(config)
+    sites = copy.deepcopy(_config["sites"])
+    del _config["sites"]
 
-    recursive_update(config_base, config)
+    recursive_update(config_base, _config)
 
     config_sites = []
     for site in sites:
