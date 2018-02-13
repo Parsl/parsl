@@ -230,6 +230,11 @@ class Strategy (object):
                     logger.debug("Requesting : {}".format(excess_blocks))
                     exc.scale_out(excess_blocks)
 
+            elif active_slots == 0 and len(active_tasks) > 0:
+                # Case 4
+                # Check if slots are being lost quickly ?
+                logger.debug("Requesting single slot")
+                exc.scale_out(1)
             # Case 3
             # tasks ~ slots
             else:
