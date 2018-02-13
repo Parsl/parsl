@@ -2,12 +2,9 @@
 '''
 import parsl
 from parsl import *
-from nose.tools import nottest
-import os
-import time
 import argparse
-import copy
 import json
+
 
 def test_immutable_config(n=2):
     """ Regression test for immutable config #98
@@ -30,7 +27,9 @@ def test_immutable_config(n=2):
     dfk = DataFlowKernel(config=localThreads)
     after = json.dumps(localThreads, sort_keys=True)
 
+    dfk.cleanup()
     assert original == after, "Config modified"
+
 
 if __name__ == '__main__':
 
