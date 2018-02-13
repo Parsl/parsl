@@ -7,7 +7,7 @@ variety of execution systems such as clouds, grids, cluster and supercomputers.
 This library is designed to simplify submission of pilot systems such as ipython-parallel
 to a variety of compute resources.
 
-#The latest version available on PyPi is v0.1.0 .
+#The latest version available on PyPi is v0.3.0 .
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/libsubmit/blob/master/LICENSE
@@ -19,4 +19,8 @@ to a variety of compute resources.
    :target: http://libsubmit.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
+Documentation
+=============
 
+Developer documentation for libsubmit is available `here <http://libsubmit.readthedocs.io/en/latest/devguide/dev_docs.html#>`_.
+Since libsubmit is designed primarily to be used by `Parsl <http://parsl-project.org/>`_ as it's resource provider most of the user documentation is blended into Parsl documentation `here <http://parsl.readthedocs.io>`_
