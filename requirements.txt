@@ -2,5 +2,5 @@ ipyparallel
 paramiko
 boto3
 azure
-haikunator
+xmltodict
 python-novaclient
