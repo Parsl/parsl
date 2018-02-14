@@ -101,6 +101,7 @@ class Memoizer(object):
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
         '''
         if not self.memoize or not task['memoize']:
+            task['hashsum'] = None
             return None, None
 
         hashsum = self.make_hash(task)

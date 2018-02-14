@@ -191,7 +191,6 @@ class DataFlowKernel(object):
                         fu.set_exception(DependencyError(exceptions,
                                                          tid,
                                                          None))
-                        print(self.tasks[tid]['app_fu'])
 
                     except AttributeError as e:
                         logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
@@ -375,7 +374,6 @@ class DataFlowKernel(object):
         # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
 
-        # print("Memoize app:{} : {}".format(func.__name__, cache))
         task_def = {'depends': depends,
                     'sites': parsl_sites,
                     'func': func,
@@ -496,7 +494,6 @@ class DataFlowKernel(object):
                      }
             pickle.dump(state, f)
 
-        print("Dumped DFK")
         count = 0
 
         with open(checkpoint_tasks, 'wb+') as f:
@@ -527,7 +524,11 @@ class DataFlowKernel(object):
                     logger.debug("Task[%s]: checkpointed", task_id)
 
         end = time.time()
-        print("Done dumping {} tasks in {}s".format(count, end - start))
+        if count == 0:
+            logger.warn('No tasks checkpointed, please ensure caching is enabled')
+        else:
+            logger.debug("Done checkpointing {} tasks in {}s".format(count,
+                                                                     end - start))
         return checkpoint_dir
 
     def _load_checkpoints(self, checkpointDirs):
@@ -549,22 +550,32 @@ class DataFlowKernel(object):
         memo_lookup_table = {}
 
         for checkpoint_dir in checkpointDirs:
-            checkpoint_file = os.path.join(checkpoint_dir, 'checkpoint', 'tasks.pkl')
-            with open(checkpoint_file, 'rb') as f:
-                while True:
-                    try:
-                        data = pickle.load(f)
-                        # Copy and hash only the input attributes
-                        memo_fu = Future()
-                        if data['exception']:
-                            memo_fu.set_exception(data['exception'])
-                        else:
-                            memo_fu.set_result(data['result'])
-                        memo_lookup_table[data['hash']] = memo_fu
+            checkpoint_file = os.path.join(checkpoint_dir, 'tasks.pkl')
+            try:
+                with open(checkpoint_file, 'rb') as f:
+                    while True:
+                        try:
+                            data = pickle.load(f)
+                            # Copy and hash only the input attributes
+                            memo_fu = Future()
+                            if data['exception']:
+                                memo_fu.set_exception(data['exception'])
+                            else:
+                                memo_fu.set_result(data['result'])
+                            memo_lookup_table[data['hash']] = memo_fu
 
-                    except EOFError:
-                        # Done with the checkpoint file
-                        break
+                        except EOFError:
+                            # Done with the checkpoint file
+                            break
+            except FileNotFoundError:
+                reason = "Checkpoint file was not found: {}".format(checkpoint_file)
+                logger.error(reason)
+                raise BadCheckpoint(reason)
+            except Exception as e:
+                reason = "Failed to load Checkpoint: {}".format(checkpoint_file)
+                logger.error(reason)
+                raise BadCheckpoint(reason)
+
             logger.debug("Completed loading checkpoint:{0} with {1} tasks".format(checkpoint_file,
                                                                                   len(memo_lookup_table.keys())))
         return memo_lookup_table
