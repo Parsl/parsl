@@ -91,13 +91,23 @@ The general shape and bounds of a site are user specified through:
 2. ``initBlocks``: # of blocks to provision at initialization of workflow
 3. ``maxBlocks``: Maximum # of blocks that can be active at a site from one workflow.
 
+
+Parallelism
+^^^^^^^^^^^
+
+In the context of execution in parsl, the level of parallelism is expressed in terms
+of the ratio of taskBlocks to all active tasks. Each taskBlock is capable of executing
+a single task at any given time. If there are N taskBlocks for N active tasks, the
+full parallelism is expressed (Ratio of 1). If there is one taskBlock for N active tasks,
+the least parallelism is expressed and all active tasks are executed sequentially.
+
 .. code:: python
 
-   slots = current_capacity * taskBlocks
+   total_taskBlocks = # of blocks * taskBlocks
 
    active_tasks = pending_tasks + running_tasks
 
-   Parallelism = slots / tasks
+   Parallelism = total_taskBlocks / active_tasks
                = [0, 1] (i.e,  0 <= p <= 1)
 
 For eg:
@@ -126,6 +136,33 @@ For eg:
 
 | let's say min:init:max = 0:0:4 and taskBlocks=2
 |
+
+
+Here is a typical configuration :
+
+.. code:: python:
+
+    localIPP = {
+        "sites": [
+            {"site": "Local_IPP",
+             "auth": {
+                 "channel": None,
+             },
+             "execution": {
+                 "executor": "ipp",
+                 "provider": "local", # Run locally
+                 "block": {  # Definition of a block
+                     "minBlocks" : 1, # }
+                     "maxBlocks" : 2, # }<---- Shape of the blocks
+                     "initBlocks": 1, # }
+                     "taskBlocks": 4, # <----- No. of workers in a block
+                     "parallelism" : 0.5 # <-- Parallelism
+                 }
+             }
+            }]
+    }
+
+A diagram that describes the behavior of such a site is below:
 In the diagram, X <- task
 at 2 tasks :
 at 5 tasks, we overflow as the capacity of a single block is fully used.
