@@ -30,7 +30,7 @@ def test_python_memoization(n=4):
         import uuid
         return str(uuid.uuid4())
 
-    y= random_uuid(0)
+    y = random_uuid(0)
 
     assert x.result() != y.result(), "Memoized results were not used"
 
