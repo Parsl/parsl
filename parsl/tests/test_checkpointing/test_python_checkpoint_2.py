@@ -6,13 +6,13 @@ import os
 import time
 import argparse
 
-time.sleep(1)
+time.sleep(0.2)
 last_checkpoint = os.path.abspath(
-    'runinfo/{0}'.format(sorted(os.listdir('runinfo/'))[-1]))
-while True:
+    'runinfo/{0}/checkpoint'.format(sorted(os.listdir('runinfo/'))[-1]))
+for i in range(0, 10):
     if not os.path.exists(last_checkpoint):
         print("Waiting for path")
-        sleep(0.1)
+        time.sleep(0.1)
     else:
         print("Path exists to checkpoint")
         break
