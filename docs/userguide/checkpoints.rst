@@ -38,11 +38,13 @@ Example code follows:
        time.sleep(sleep_dur)
        return x * 2
 
-   for i in range(0, n):
-       d[i] = slow_double(i)
+   N = 5  # Number of calls to slow_double
+   d = [] # List to store the futures
+   for i in range(0, N):
+       d.append(slow_double(i))
 
    # Wait for the results
-   [d[i].result() for i in range(0, n)]
+   [i.result() for i in d]
 
    cpt_dir = dfk.checkpoint()
    print(cpt_dir) # Prints the checkpoint dir
