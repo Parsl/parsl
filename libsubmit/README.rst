@@ -7,7 +7,7 @@ variety of execution systems such as clouds, grids, cluster and supercomputers.
 This library is designed to simplify submission of pilot systems such as ipython-parallel
 to a variety of compute resources.
 
-#The latest version available on PyPi is v0.1.0 .
+#The latest version available on PyPi is v0.3.0 .
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/libsubmit/blob/master/LICENSE
