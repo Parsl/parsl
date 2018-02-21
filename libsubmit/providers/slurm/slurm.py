@@ -8,6 +8,7 @@ from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.providers.slurm.template import template_string
 from libsubmit.launchers import Launchers
 import libsubmit.error as ep_error
+from libsubmit.providers.cluster_provider import ClusterProvider
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,7 @@ translate_table = { 'PD' :  'PENDING',
                     'RV' : 'FAILED', #(revoked) and
                     'SE' : 'FAILED' } # (special exit state
 
-
-class Slurm(ExecutionProvider):
+class Slurm(ClusterProvider):
     ''' Slurm Execution Provider
 
     This provider uses sbatch to submit, squeue for status and scancel to cancel
@@ -103,7 +103,6 @@ class Slurm(ExecutionProvider):
             }
          }
     '''
-
     def __repr__ (self):
         return "<Slurm Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
 
@@ -117,29 +116,8 @@ class Slurm(ExecutionProvider):
              - Channel (None): A channel is required for slurm.
         '''
 
-        self.channel = channel
-        if self.channel == None:
-            logger.error("Provider:Slurm cannot be initialized without a channel")
-            raise(ep_error.ChannelRequired(self.__class__.__name__,
-                                           "Missing a channel to execute commands"))
-        self.config = config
-        self.sitename = config['site']
-        self.current_blocksize = 0
-        launcher_name   = self.config["execution"]["block"].get("launcher",
-                                                                "singleNode")
-        self.launcher   = Launchers.get(launcher_name, None)
-        self.scriptDir = self.config["execution"]["scriptDir"]
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        super().__init__(config, channel=channel)
 
-        # Dictionary that keeps track of jobs, keyed on job_id
-        self.resources = {}
-
-    @property
-    def channels_required(self):
-        ''' Returns Bool on whether a channel is required
-        '''
-        return True
 
     ###########################################################################################################
     # Status
@@ -153,17 +131,16 @@ class Slurm(ExecutionProvider):
         Returns:
               [status...] : Status list of all jobs
         '''
-
         job_id_list  = ','.join(self.resources.keys())
+        cmd = "squeue --job {0}".format(job_id_list)
 
-        jobs_missing = list(self.resources.keys())
-
-        retcode, stdout, stderr = self.channel.execute_wait("squeue --job {0}".format(job_id_list), 5)
+        retcode, stdout, stderr = super().execute_wait(cmd)
 
         # Execute_wait failed. Do no update
         if retcode != 0 :
             return
 
+        jobs_missing = list(self.resources.keys())
         for line in stdout.split('\n'):
             parts = line.split()
             if parts and parts[0] != 'JOBID' :
@@ -176,21 +153,7 @@ class Slurm(ExecutionProvider):
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = translate_table['CD']
-
-    def status (self, job_ids):
-        '''  Get the status of a list of jobs identified by their ids.
-
-        Args:
-            - job_ids (List of ids) : List of identifiers for the jobs
-
-        Returns:
-            - List of status codes.
-
-        '''
-        self._status()
-        return [self.resources[jid]['status'] for jid in job_ids]
-
+                self.resources[missing_job]['status'] = 'COMPLETED'
 
     ###########################################################################################################
     # Submit
@@ -338,17 +301,6 @@ class Slurm(ExecutionProvider):
 
         return rets
 
-    @property
-    def scaling_enabled(self):
-        return True
-
-    @property
-    def current_capacity(self):
-        ''' Returns the current blocksize.
-        This may need to return more information in the futures :
-        { minsize, maxsize, current_requested }
-        '''
-        return self.current_blocksize
 
     def _test_add_resource (self, job_id):
         self.resources.extend([{'job_id' : job_id,
