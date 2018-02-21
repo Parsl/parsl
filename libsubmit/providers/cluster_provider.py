@@ -1,5 +1,6 @@
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.exec_utils import wtime_to_minutes
+from string import Template
 import os
 import logging
 import libsubmit.error as ep_error
@@ -72,6 +73,41 @@ class ClusterProvider(ExecutionProvider):
 
     def execute_wait(self, cmd, timeout=10):
         return self.channel.execute_wait(cmd, timeout)
+
+
+    def _write_submit_script(self, template_string, script_filename, job_name, configs):
+        '''
+        Load the template string with config values and write the generated submit script to
+        a submit script file.
+
+        Args:
+              - template_string (string) : The template string to be used for the writing submit script
+              - script_filename (string) : Name of the submit script
+              - job_name (string) : job name
+              - configs (dict) : configs that get pushed into the template
+
+        Returns:
+              - True: on success
+
+        Raises:
+              SchedulerMissingArgs : If template is missing args
+              ScriptPathError : Unable to write submit script out
+        '''
+
+        try:
+            submit_script = Template(template_string).substitute(jobname=job_name, **configs)
+            with open(script_filename, 'w') as f:
+                f.write(submit_script)
+
+        except KeyError as e:
+            logger.error("Missing keys for submit script : %s", e)
+            raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
+
+        except IOError as e:
+            logger.error("Failed writing to submit script: %s", script_filename)
+            raise(ep_error.ScriptPathError(script_filename, e))
+
+        return True
 
     def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
