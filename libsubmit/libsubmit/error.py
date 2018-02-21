@@ -43,7 +43,7 @@ class ChannelRequired(ExecutionProviderExceptions):
     ''' Execution provider requires a channel.
     '''
     def __init__ (self, provider, reason):
-        self.provider = module_names
+        self.provider = provider
         self.reason = reason
 
     def __repr__ (self):
