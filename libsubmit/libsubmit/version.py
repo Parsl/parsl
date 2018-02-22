@@ -1,4 +1,4 @@
 ''' Set module version
 <Major>.<Minor>.<maintenance>[-alpha/beta/..]
 '''
-VERSION = '0.3.1'
+VERSION = '0.3.2a0'
