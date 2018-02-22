@@ -25,7 +25,7 @@ translate_table = {'qw': 'PENDING',
                    'eqw': 'FAILED', # Error states
                    'ehqw': 'FAILED', # ..
                    'ehrqw': 'FAILED', # ..
-                   'd': 'COMPLETED', 
+                   'd': 'COMPLETED',
                    'dr': 'COMPLETED',
                    'dt' : 'COMPLETED',
                    'drt': 'COMPLETED',
@@ -37,22 +37,72 @@ translate_table = {'qw': 'PENDING',
 class GridEngine(ClusterProvider):
     """ Define the Grid Engine provider
 
-    .. code:: python
+    .. warning::
+        Please note that in the config documented below, description and values
+        are placed inside a schema that is delimited by <{ schema.. }>
 
-                                +------------------
-                                |
-          script_string ------->|  submit
-               id      <--------|---+
-                                |
-          [ ids ]       ------->|  status
-          [statuses]   <--------|----+
-                                |
-          [ ids ]       ------->|  cancel
-          [cancel]     <--------|----+
-                                |
-          [True/False] <--------|  scaling_enabled
-                                |
-                                +-------------------
+    Here's the config schema for the GridEngine provider:
+
+    .. code-block:: python
+
+         { "execution" : { # Definition of all execution aspects of a site
+
+              "executor"   : #{Description: Define the executor used as task executor,
+                             # Type : String,
+                             # Expected : "ipp",
+                             # Required : True},
+
+              "provider"   : #{Description : The provider name, in this case slurm
+                             # Type : String,
+                             # Expected : "gridEngine",
+                             # Required :  True },
+
+              "scriptDir"  : #{Description : Relative or absolute path to a
+                             # directory in which intermediate scripts are placed
+                             # Type : String,
+                             # Default : "./.scripts"},
+
+              "block" : { # Definition of a block
+
+                  "nodes"      : #{Description : # of nodes to provision per block
+                                 # Type : Integer,
+                                 # Default: 1},
+
+                  "taskBlocks" : #{Description : # of workers to launch per block
+                                 # as either an number or as a bash expression.
+                                 # for eg, "1" , "$(($CORES / 2))"
+                                 # Type : String,
+                                 #  Default: "1" },
+
+                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
+                                 # Type : String,
+                                 # Default : "00:20:00" },
+
+                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                                 # the DFK
+                                 # Type : Integer
+                                 # Default : ?
+                                 # Required :    },
+
+                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                                 # Type : Integer
+                                 # Default : 0 },
+
+                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                                 # Type : Integer
+                                 # Default : ? },
+
+                  "options"   : {  # Scheduler specific options
+
+                      "overrides" : #{"Description : String to append to the submit_scipt block
+                                    # in the submit script to the scheduler
+                                    # Type : String,
+                                    # Required : False },
+                  }
+              }
+            }
+         }
+
      """
 
     def __init__(self, config, channel=None):
@@ -62,7 +112,7 @@ class GridEngine(ClusterProvider):
              - Config (dict): Dictionary with all the config options.
 
         KWargs:
-             - Channel (None): A channel is required for slurm.
+             - Channel (None): A channel is required for GridEngine.
         '''
         super().__init__(config, channel=channel)
 
@@ -191,31 +241,4 @@ class GridEngine(ClusterProvider):
 
         return rets
 
-    @property
-    def scaling_enabled(self):
-        ''' Scaling is enabled
 
-        Returns:
-              - Status (Bool)
-        '''
-        return True
-
-    @property
-    def current_capacity(self):
-        ''' Returns the current blocksize.
-        This may need to return more information in the futures :
-        { minsize, maxsize, current_requested }
-        '''
-        return self.current_blocksize
-
-    @property
-    def channels_required(self):
-        ''' GridEngine does not require a channel
-
-        Returns:
-              - Status (Bool)
-        '''
-        return False
-
-    def bye(self):
-        self.cancel([i for i in list(self.resources)])
