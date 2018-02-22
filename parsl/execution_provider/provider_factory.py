@@ -36,13 +36,17 @@ class ExecProviderFactory (object):
                           'threads': ThreadPoolExecutor,
                           None: lambda *args, **kwargs: None}
 
-        self.execution_providers = {'slurm': Slurm,
-                                    'local': Local,
+        self.execution_providers = {'local': Local,
+                                    # Cloud Systems
                                     'aws': EC2Provider,
+                                    'googleCloud': GoogleCloud,
+                                    'azure': AzureProvider,
+                                    # Cluster/HPC systems
+                                    'slurm': Slurm,
                                     'cobalt': Cobalt,
                                     'condor': Condor,
                                     'torque': Torque,
-                                    'gridEngine' : GridEngine,
+                                    'gridEngine': GridEngine,
                                     None: lambda *args, **kwargs: None}
 
         self.channels = {'ssh': SshChannel,
