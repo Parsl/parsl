@@ -2,7 +2,6 @@ ipyparallel
 paramiko
 boto3
 azure
-xmltodict
 python-novaclient
 google-api-python-client
 google-auth
