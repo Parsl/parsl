@@ -5,7 +5,6 @@ import json
 import time
 import logging
 import atexit
-import xmltodict
 from datetime import datetime, timedelta
 from string import Template
 from libsubmit.providers.gridEngine.template import template_string
