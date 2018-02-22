@@ -103,9 +103,6 @@ class Slurm(ClusterProvider):
             }
          }
     '''
-    def __repr__ (self):
-        return "<Slurm Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
-
     def __init__ (self, config, channel=None):
         ''' Initialize the Slurm class
 
@@ -193,7 +190,7 @@ class Slurm(ClusterProvider):
             blocksize = self.config["execution"]["block"].get("nodes",1)
 
         # Set job name
-        job_name = "parsl.{0}.{1}".format(job_name,time.time())
+        job_name = "{0}.{1}".format(job_name,time.time())
 
         # Set script path
         script_path = "{0}/{1}.submit".format(self.scriptDir,
@@ -239,7 +236,6 @@ class Slurm(ClusterProvider):
         else:
             print("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
-
         return job_id
 
     ###########################################################################################################
