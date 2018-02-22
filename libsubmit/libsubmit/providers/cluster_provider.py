@@ -74,6 +74,27 @@ class ClusterProvider(ExecutionProvider):
     def execute_wait(self, cmd, timeout=10):
         return self.channel.execute_wait(cmd, timeout)
 
+    def get_configs (self, cmd_string, blocksize):
+        ''' Compose a flat dict job_config with all necessary configs
+        for writing the submit script
+        '''
+        nodes = self.config["execution"]["block"].get("nodes", 1)
+        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
+                     nodes,
+                     self.config["execution"]["block"].get("taskBlocks", 1))
+
+        job_config = self.config["execution"]["block"]["options"]
+        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["nodes"] = nodes
+        job_config["taskBlocks"] = self.config["execution"]["block"]["taskBlocks"]
+        job_config["walltime"] = self.config["execution"]["block"]["walltime"]
+        job_config["overrides"] = job_config.get("overrides", '')
+        job_config["user_script"] = cmd_string
+
+        job_config["user_script"] = self.launcher(cmd_string,
+                                                  taskBlocks=job_config["taskBlocks"])
+        return job_config
+
 
     def _write_submit_script(self, template_string, script_filename, job_name, configs):
         '''
@@ -96,6 +117,7 @@ class ClusterProvider(ExecutionProvider):
 
         try:
             submit_script = Template(template_string).substitute(jobname=job_name, **configs)
+            #submit_script = Template(template_string).safe_substitute(jobname=job_name, **configs)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
@@ -106,6 +128,12 @@ class ClusterProvider(ExecutionProvider):
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
             raise(ep_error.ScriptPathError(script_filename, e))
+        except Exception as e:
+            print("Template : ", template_string)
+            print("Args : ", job_name)
+            print("Kwargs : ", configs)
+            logger.error("Uncategorized error: %s",e)
+            raise(e)
 
         return True
 
@@ -127,11 +155,12 @@ class ClusterProvider(ExecutionProvider):
         Raises:
              - ExecutionProviderExceptions or its subclasses
         '''
+        raise NotImplementedError
 
-        pass
 
     def _status(self):
         raise NotImplementedError
+
 
     def status(self, job_ids):
         ''' Get the status of a list of jobs identified by the job identifiers
@@ -164,7 +193,7 @@ class ClusterProvider(ExecutionProvider):
              - ExecutionProviderExceptions or its subclasses
         '''
 
-        pass
+        raise NotImplementedError
 
     @property
     def scaling_enabled(self):
