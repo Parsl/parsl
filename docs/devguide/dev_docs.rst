@@ -151,6 +151,13 @@ ExecutionProvider (Base)
 .. autoclass:: libsubmit.providers.provider_base.ExecutionProvider
    :members:  __init__, submit, status, cancel, scaling_enabled, channels_required
 
+Local
+-----
+
+.. autoclass:: libsubmit.providers.local.local.Local
+   :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
+
+
 Slurm
 -----
 
@@ -175,13 +182,11 @@ Torque
 .. autoclass:: libsubmit.providers.torque.torque.Torque
    :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
-Local
------
+GridEngine
+----------
 
-.. autoclass:: libsubmit.providers.local.local.Local
-   :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
-
-AWS
+.. autoclass:: libsubmit.providers.gridEngine.gridEngine.GridEngine
+   :members:  __init__, submit, status, cancel, _status, scaling_enabled, current_capacity, channels_required
 
 
 Amazon Web Services
@@ -198,6 +203,12 @@ Azure
 
 .. autoclass:: libsubmit.providers.azure.azureDeployer.Deployer
    :members: __init__, deploy, destroy
+
+Google Cloud Platform
+---------------------
+
+.. autoclass:: libsubmit.providers.googlecloud.googlecloud.GoogleCloud
+    :members:  __init__, submit, status, cancel, create_instance, get_correct_zone, delete_instance
 
 Channels
 ========
