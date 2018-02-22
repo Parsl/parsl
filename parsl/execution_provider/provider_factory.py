@@ -42,6 +42,7 @@ class ExecProviderFactory (object):
                                     'cobalt': Cobalt,
                                     'condor': Condor,
                                     'torque': Torque,
+                                    'gridEngine' : GridEngine,
                                     None: lambda *args, **kwargs: None}
 
         self.channels = {'ssh': SshChannel,
