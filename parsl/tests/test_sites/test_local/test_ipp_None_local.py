@@ -5,7 +5,7 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-# parsl.set_stream_logger()
+parsl.set_stream_logger()
 
 from .local import localIPP
 dfk = DataFlowKernel(config=localIPP)

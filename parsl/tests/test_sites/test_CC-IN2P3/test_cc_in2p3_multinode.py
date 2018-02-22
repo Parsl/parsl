@@ -1,6 +1,5 @@
 import parsl
 from parsl import *
-import os
 
 from cc_in2p3 import multiNodeLocal as config
 parsl.set_stream_logger()
