@@ -453,6 +453,9 @@ class DataFlowKernel(object):
         if not self._executors_managed:
             return
 
+        logger.debug("Terminating flow_control and strategy threads")
+        self.flowcontrol.close()
+
         for executor in self.executors.values():
             if executor.scaling_enabled:
                 job_ids = executor.execution_provider.resources.keys()

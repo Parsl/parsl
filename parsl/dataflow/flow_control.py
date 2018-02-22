@@ -94,16 +94,24 @@ class FlowControl(object):
         self._event_count = 0
         self._event_buffer = []
         self._wake_up_time = time.time() + 1
-        self._thread = threading.Thread(target=self._wake_up_timer)
+        self._kill_event = threading.Event()
+        self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,))
         self._thread.daemon = True
         self._thread.start()
 
-    def _wake_up_timer(self):
+    def _wake_up_timer(self, kill_event):
 
         # Sleep till time to wake up
         while True:
             prev = self._wake_up_time
-            time.sleep(max(prev - time.time(), 0))
+
+            # Waiting for the event returns True only when the event
+            # is set, usually by the parent thread
+            time_to_die = kill_event.wait(float(max(prev - time.time(), 0)))
+
+            if time_to_die:
+                return
+
             if prev == self._wake_up_time:
                 self.make_callback(kind='timer')
             else:
@@ -129,6 +137,7 @@ class FlowControl(object):
     def close(self):
         ''' Merge the threads and terminate.
         '''
+        self._kill_event.set()
         self._thread.join()
 
 
