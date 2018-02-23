@@ -294,7 +294,8 @@ class EC2Provider(ExecutionProvider):
 
             logger.debug(
                 "Site[{0}]: Using credential file to create session".format(self))
-            session = boto3.session.Session(**creds, region_name=self.region)
+            session = boto3.session.Session(region_name=self.region,
+                                            **creds)
 
         elif "profile" in self.config["auth"]:
 
