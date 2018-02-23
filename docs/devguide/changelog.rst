@@ -1,6 +1,30 @@
 Changelog
 =========
 
+Parsl 0.4.1
+-----------
+
+Released. Feb 23rd, 2018.
+
+
+New functionality
+^^^^^^^^^^^^^^^^^
+
+* GoogleCloud provider support via libsubmit
+* GridEngine provider support via libsubmit
+
+
+Bug Fixes
+^^^^^^^^^
+* Cobalt provider issues with job state #101
+* Parsl updates config inadvertently #98
+* No blocks provisioned if parallelism/blocks = 0 #97
+* Checkpoint restart assumes rundir bug #95
+* Logger continues after cleanup called enhancement #93
+* Error checkpointing when no cache enabled  #92
+* Several fixes to libsubmit.
+
+
 Parsl 0.4.0
 -----------
 
@@ -11,7 +35,7 @@ New functionality
 
 * Elastic scaling in response to workflow pressure. `issue#46 <https://github.com/Parsl/parsl/issues/46>`_
   Options `minBlocks`, `maxBlocks`, and `parallelism` now work and controls workflow execution.
-  
+
   Documented in: :ref:`label-elasticity`
 
 * Multisite support, enables targetting apps within a single workflow to different
