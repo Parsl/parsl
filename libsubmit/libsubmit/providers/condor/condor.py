@@ -224,8 +224,8 @@ class Condor(ExecutionProvider):
 
         # This section needs to be brought upto par with the condor provider.
         try:
-            submit_script = Template(template_string).substitute(**configs,
-                                                                 jobname=job_name)
+            submit_script = Template(template_string).substitute(jobname=job_name,
+                                                                 **configs)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
