@@ -4,6 +4,7 @@ import logging
 import atexit
 import random
 import pickle
+import threading
 from concurrent.futures import Future
 from functools import partial
 
@@ -95,6 +96,7 @@ class DataFlowKernel(object):
         self.task_count = 0
         self.fut_task_lookup = {}
         self.tasks = {}
+        self.task_launch_lock = threading.Lock()
 
         logger.debug("Using executors: {0}".format(self.executors))
         atexit.register(self.cleanup)
@@ -169,17 +171,23 @@ class DataFlowKernel(object):
                 self.tasks[tid]['args'] = new_args
                 self.tasks[tid]['kwargs'] = kwargs
                 if not exceptions:
-                    logger.debug("Task[%s] Launching Task".format(tid))
+                    logger.debug("Task[{0}] Launching Task".format(tid))
                     # There are no dependency errors
-                    self.tasks[tid]['status'] = States.running
-                    exec_fu = self.launch_task(tid, self.tasks[tid]['func'], *new_args, **kwargs)
-                    self.tasks[task_id]['exec_fu'] = exec_fu
-                    try:
-                        self.tasks[tid]['app_fu'].update_parent(exec_fu)
-                        self.tasks[tid]['exec_fu'] = exec_fu
-                    except AttributeError as e:
-                        logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
-                        raise e
+                    exec_fu = None
+                    # Acquire a lock, retest the state, launch
+                    with self.task_launch_lock :
+                        if self.tasks[tid]['status'] == States.pending:
+                            self.tasks[tid]['status'] = States.running
+                            exec_fu = self.launch_task(tid, self.tasks[tid]['func'], *new_args, **kwargs)
+
+                    if exec_fu :
+                        self.tasks[task_id]['exec_fu'] = exec_fu
+                        try:
+                            self.tasks[tid]['app_fu'].update_parent(exec_fu)
+                            self.tasks[tid]['exec_fu'] = exec_fu
+                        except AttributeError as e:
+                            logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
+                            raise e
                 else:
                     logger.debug("Task[%s]: Deferring Task due to dependency failure", tid)
                     # Raise a dependency exception
