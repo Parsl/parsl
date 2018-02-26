@@ -175,12 +175,12 @@ class DataFlowKernel(object):
                     # There are no dependency errors
                     exec_fu = None
                     # Acquire a lock, retest the state, launch
-                    with self.task_launch_lock :
+                    with self.task_launch_lock:
                         if self.tasks[tid]['status'] == States.pending:
                             self.tasks[tid]['status'] = States.running
                             exec_fu = self.launch_task(tid, self.tasks[tid]['func'], *new_args, **kwargs)
 
-                    if exec_fu :
+                    if exec_fu:
                         self.tasks[task_id]['exec_fu'] = exec_fu
                         try:
                             self.tasks[tid]['app_fu'].update_parent(exec_fu)
