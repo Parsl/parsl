@@ -5,8 +5,6 @@ import libsubmit
 print(parsl.__version__)
 print(libsubmit.__version__)
 
-# parsl.set_stream_logger()
-
 from .local import localIPP
 dfk = DataFlowKernel(config=localIPP)
 
@@ -17,12 +15,19 @@ def python_app():
     return "Hello from {0}".format(platform.uname())
 
 
-def test_python():
+def test_python(N=2):
     ''' Testing basic scaling|Python 0 -> 1 block '''
 
     results = {}
-    for i in range(0, 2):
+    for i in range(0, N):
         results[i] = python_app()
 
     print("Waiting ....")
-    print(results[0].result())
+    for i in range(0, N):
+        print(results[0].result())
+
+
+if __name__ == '__main__':
+
+    parsl.set_stream_logger()
+    test_python()

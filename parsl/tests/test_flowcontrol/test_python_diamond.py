@@ -8,7 +8,7 @@ print(libsubmit.__version__)
 
 # parsl.set_stream_logger()
 
-from local import localIPP
+from .local import localIPP
 dfk = DataFlowKernel(config=localIPP)
 
 

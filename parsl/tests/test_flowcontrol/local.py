@@ -22,7 +22,7 @@ localIPP = {
              "provider": "local",  # LIKELY SHOULD BE BOUND TO SITE
              "block": {  # Definition of a block
                  "taskBlocks": 4,       # total tasks in a block
-                 "initBlocks": 0,
+                 "initBlocks": 4,
              }
          }
          }]
