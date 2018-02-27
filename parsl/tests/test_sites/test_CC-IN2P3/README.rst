@@ -19,7 +19,28 @@ For DESC users :
     source activate parsl_env_3.6
 
     # Install Parsl
-    pip install parsl
+   pip install parsl
+
+Running tests
+=============
+
+In order to run tests make sure you have Parsl and the test requirements installed.
+
+.. code-block:: bash
+
+    # Clone parsl
+    git clone https://github.com/Parsl/parsl.git
+    cd parsl
+
+    # Activate the env from the previous section
+    source activate parsl_env_3.6
+
+    # Install the test-requirements
+    python3 -m pip install -r test-requirements.txt
+
+    # Run the CC-IN2P3 tests
+    cd parsl/tests/test_sites/test_CC-IN2P3/
+    nosetests .
 
 Important Notes
 ===============
