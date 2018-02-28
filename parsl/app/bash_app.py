@@ -56,9 +56,13 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     try:
         std_out = open(stdout, 'w') if stdout else None
+    except Exception as e:
+        raise pe.BadStdStreamFile(stdout, e)
+
+    try:
         std_err = open(stderr, 'w') if stderr else None
     except Exception as e:
-        raise pe.BadStdStreamFile([stdout, stderr], e)
+        raise pe.BadStdStreamFile(stderr, e)
 
     returncode = None
     try:

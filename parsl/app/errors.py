@@ -126,12 +126,14 @@ class BadStdStreamFile(ParslError):
        exception object
     '''
 
-    def __init__(self, outputs):
+    def __init__(self, outputs, exception):
         super().__init__()
-        self.outputs = outputs
+        self._outputs = outputs
+        self._exception = exception
 
     def __repr__(self):
-        return "Paths:[{}]".format(self.outputs)
+        return "FilePath:[{}] Exception:{}".format(self._outputs,
+                                                   self._exception)
 
     def __str__(self):
         return self.__repr__()
