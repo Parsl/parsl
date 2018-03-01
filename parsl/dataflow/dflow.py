@@ -6,7 +6,6 @@ import random
 import pickle
 import threading
 
-import ipyparallel
 from concurrent.futures import Future
 from functools import partial
 
@@ -159,7 +158,7 @@ class DataFlowKernel(object):
              memo_cbk(Bool) : Indicates that the call is coming from a memo update,
              that does not require additional memo updates.
         '''
-        #TODO : Remove, this check is redundant
+        # TODO : Remove, this check is redundant
         if future.done():
 
             if not memo_cbk:
@@ -180,7 +179,7 @@ class DataFlowKernel(object):
                     logger.debug("[TODO] Eager fail, skipping retry logic")
                     raise e
 
-                if self.tasks[task_id]['fail_count'] <= self.fail_retries :
+                if self.tasks[task_id]['fail_count'] <= self.fail_retries:
                     logger.error("Task[{0}]: Retrying".format(task_id))
                     # Set tasks for a retry
                     self.tasks[task_id]['status'] = States.pending
@@ -189,7 +188,7 @@ class DataFlowKernel(object):
                     logger.error("Task[{0}]: All retry attempts:{1} have failed".format(task_id, self.fail_retries))
                     self.tasks[task_id]['status'] = States.failed
 
-            else :
+            else:
                 logger.debug("Task[{}]: COMPLETED with {}".format(task_id, future))
                 self.tasks[task_id]['status'] = States.done
 
@@ -434,7 +433,7 @@ class DataFlowKernel(object):
                     'exec_fu': None,
                     'checkpoint': None,
                     'fail_count': 0,
-                    'fail_history' : [],
+                    'fail_history': [],
                     'env': None,
                     'status': States.unsched,
                     'app_fu': None}
