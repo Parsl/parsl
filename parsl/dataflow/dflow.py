@@ -5,6 +5,8 @@ import atexit
 import random
 import pickle
 import threading
+
+import ipyparallel
 from concurrent.futures import Future
 from functools import partial
 
@@ -108,7 +110,9 @@ class DataFlowKernel(object):
         count = 0
         for dep in depends:
             if isinstance(dep, Future) or issubclass(type(dep), Future):
-                logger.debug("Task[%s]: dep:%s done:%s", task_id, dep, dep.done())
+                logger.debug("Task[{0}]: dep:{1} done:{2}".format(task_id,
+                                                                  dep,
+                                                                  dep.done()))
                 if not dep.done():
                     count += 1
 
@@ -125,6 +129,22 @@ class DataFlowKernel(object):
 
         return self._config
 
+    """
+    print("evalue : ", type(e.evalue), e.evalue)
+    print("ename : ", type(e.ename), e.ename)
+    print("engine_info : ", e.engine_info)
+    print("args: ", e.args)
+    print("dir: ", dir(e))
+    print("traceback : ", type(e.traceback), e.traceback)
+    print("traceback : ", e.traceback)
+    logger.error("Caught IPP RemoteError :{}".format(e))
+    print("[RETRY] Here2")
+    # If eager fail, raise error
+    if not self.lazy_fail:
+    #raise e
+    raise eval("{0}(*{1})".format(e.args[0], e.args[1:])) from e.traceback
+    """
+
     def handle_update(self, task_id, future, memo_cbk=False):
         ''' This function is called only as a callback from a task being done
         Move done task from runnable -> done
@@ -132,30 +152,46 @@ class DataFlowKernel(object):
 
         Args:
              task_id (string) : Task id which is a uuid string
-             future (Future) : The future object corresponding to the task which makes this callback
+             future (Future) : The future object corresponding to the task which
+             makes this callback
 
         KWargs:
-             memo_cbk(Bool) : Indicates that the call is coming from a memo update, that does not require
-                              additional memo updates.
+             memo_cbk(Bool) : Indicates that the call is coming from a memo update,
+             that does not require additional memo updates.
         '''
+        #TODO : Remove, this check is redundant
         if future.done():
 
             if not memo_cbk:
-                # Update the memoizer with the new result if this is not a result from a memo lookup
+                # Update the memoizer with the new result if this is not a
+                # result from a memo lookup
                 self.memoizer.update_memo(task_id, self.tasks[task_id], future)
-            # Untested
-            if not self.lazy_fail:
-                # Fail early
-                try:
-                    future.result()
-                except Exception as e:
-                    logger.warn("Exception : %s", future._exception)
-                    logger.error("Task[%s]: FAILED with %s", task_id, future)
-                    self.tasks[task_id]['status'] = States.failed
+
+            try:
+                future.result()
+
+            except Exception as e:
+                logger.error("[TODO] Task[{0}]: FAILED with {1}".format(task_id, future))
+                self.tasks[task_id]['fail_history'].append(future._exception)
+                self.tasks[task_id]['fail_count'] += 1
+
+                # If eager fail, raise error
+                if not self.lazy_fail:
+                    logger.debug("[TODO] Eager fail, skipping retry logic")
                     raise e
 
-            logger.debug("Task[%s]: COMPLETED with %s", task_id, future)
-            self.tasks[task_id]['status'] = States.done
+                if self.tasks[task_id]['fail_count'] <= self.fail_retries :
+                    logger.error("Task[{0}]: Retrying".format(task_id))
+                    # Set tasks for a retry
+                    self.tasks[task_id]['status'] = States.pending
+
+                else:
+                    logger.error("Task[{0}]: All retry attempts:{1} have failed".format(task_id, self.fail_retries))
+                    self.tasks[task_id]['status'] = States.failed
+
+            else :
+                logger.debug("Task[{}]: COMPLETED with {}".format(task_id, future))
+                self.tasks[task_id]['status'] = States.done
 
         # Identify tasks that have resolved dependencies and launch
         for tid in list(self.tasks):
@@ -186,10 +222,10 @@ class DataFlowKernel(object):
                             self.tasks[tid]['app_fu'].update_parent(exec_fu)
                             self.tasks[tid]['exec_fu'] = exec_fu
                         except AttributeError as e:
-                            logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
+                            logger.error("Task[{}]: Caught AttributeError at update_parent".format(tid))
                             raise e
                 else:
-                    logger.debug("Task[%s]: Deferring Task due to dependency failure", tid)
+                    logger.debug("Task[{}]: Deferring Task due to dependency failure".format(tid))
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
                     try:
@@ -201,7 +237,7 @@ class DataFlowKernel(object):
                                                          None))
 
                     except AttributeError as e:
-                        logger.error("Task[%s]: Caught AttributeError at update_parent", tid)
+                        logger.error("Task[{}]: Caught AttributeError at update_parent".format(tid))
                         raise e
 
         return
@@ -246,13 +282,16 @@ class DataFlowKernel(object):
                 executor = self.executors[site]
 
             except Exception as e:
-                logger.error("Task[%s]: requests invalid site [%s]" % task_id, target_sites)
+                logger.error("Task[{}]: requests invalid site [{}]".format(task_id,
+                                                                           target_sites))
         else:
-            logger.error("App[%s]: sites defined is invalid, neither str|list" % self.tasks[task_id]['func'].__name__)
+            logger.error("App[{}]: sites defined is invalid, neither str|list".format(
+                self.tasks[task_id]['func'].__name__))
 
         exec_fu = executor.submit(executable, *args, **kwargs)
+        exec_fu.retries_left = self.fail_retries - self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
-        logger.debug("Task[%s] launched on executor:%s" % (task_id, executor))
+        logger.debug("Task[{}] launched on executor:{}".format(task_id, executor))
         return exec_fu
 
     @staticmethod
@@ -395,6 +434,7 @@ class DataFlowKernel(object):
                     'exec_fu': None,
                     'checkpoint': None,
                     'fail_count': 0,
+                    'fail_history' : [],
                     'env': None,
                     'status': States.unsched,
                     'app_fu': None}
@@ -439,7 +479,8 @@ class DataFlowKernel(object):
                                                       stderr=task_stderr)
             self.tasks[task_id]['status'] = States.pending
 
-        logger.debug("Task:%s Launched with AppFut:%s", task_id, task_def['app_fu'])
+        logger.debug("Task[{}] Launched with AppFut:{}".format(task_id,
+                                                               task_def['app_fu']))
         return task_def['app_fu']
 
     def cleanup(self):
@@ -532,7 +573,7 @@ class DataFlowKernel(object):
                     pickle.dump(t, f)
                     count += 1
                     self.tasks[task_id]['checkpoint'] = True
-                    logger.debug("Task[%s]: checkpointed", task_id)
+                    logger.debug("Task[{}]: checkpointed".format(task_id))
 
         end = time.time()
         if count == 0:
