@@ -9,6 +9,7 @@
 
 from concurrent.futures import Future
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,8 @@ class AppFuture(Future):
 
         Updates the super() with the result() or exception()
         '''
+        print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
+        self._retries_left = executor_fu.retries_left
         if executor_fu.done() is True:
             try:
                 super().set_result(executor_fu.result())
@@ -71,9 +74,14 @@ class AppFuture(Future):
         '''
         self._tid = tid
         super().__init__()
+        self.prev_parent = None
         self.parent = parent
-        # if self.parent:
-        #    parent.add_done_callback(self.parent_callback)
+        self._retries_left = None
+        if self.parent:
+            self._retries_left = self.parent.retries_left
+
+        self._parent_update_lock = threading.Lock()
+        self._parent_update_event = threading.Event()
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
@@ -95,18 +103,33 @@ class AppFuture(Future):
         before the parent exists. Add a callback to the parent to update the
         state
         '''
+        # with self._parent_update_lock:
         self.parent = fut
         fut.add_done_callback(self.parent_callback)
+        self._parent_update_event.set()
 
     def result(self, timeout=None):
+        """ Result. Waits for the result of the AppFuture
+        KWargs:
+              timeout (int): Timeout in seconds
+        """
 
-        if self.parent:
-            x = self.parent._exception
-            if x:
-                raise x
-            return self.parent.result(timeout=timeout)
-        else:
-            return super().result(timeout=timeout)
+        try:
+            if self.parent:
+                return self.parent.result(timeout=timeout)
+            else:
+                return super().result(timeout=timeout)
+
+        except Exception as e:
+            logger.debug("[TODO] {} Retries:{}".format(self.parent,
+                                                       self.parent.retries_left))
+
+            if self.parent.retries_left > 0:
+                self._parent_update_event.wait()
+                self._parent_update_event.clear()
+                return self.result(timeout=timeout)
+            else:
+                raise
 
     def cancel(self):
         if self.parent:
