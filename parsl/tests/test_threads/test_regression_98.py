@@ -19,7 +19,7 @@ def test_immutable_config(n=2):
                  "provider": None,
                  "maxThreads": 4
              }
-            }],
+             }],
         "globals": {"lazyErrors": True}
     }
 

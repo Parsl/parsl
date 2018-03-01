@@ -61,7 +61,8 @@ def test_bash_formatting():
         f.result()
     except Exception as e:
         print("Caught exception", e)
-        assert isinstance(e, parsl.app.errors.AppBadFormatting), "Expected AppBadFormatting got : {0}".format(e)
+        assert isinstance(
+            e, parsl.app.errors.AppBadFormatting), "Expected AppBadFormatting got : {0}".format(e)
     return True
 
 
