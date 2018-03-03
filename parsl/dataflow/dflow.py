@@ -44,7 +44,7 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazy_fail=True, appCache=True,
-                 rundir=None, fail_retries=2, checkpointFiles=None):
+                 rundir=None, failRetries=0, checkpointFiles=None):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
@@ -56,7 +56,7 @@ class DataFlowKernel(object):
             - lazy_fail(Bool) : Default=True, determine failure behavior
             - appCache (Bool) :Enable caching of apps
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
-            - fail_retries(int): Default=2, Set the number of retry attempts in case of failure
+            - failRetries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
 
         Returns:
@@ -85,11 +85,11 @@ class DataFlowKernel(object):
 
             # set global vars from config
             self.lazy_fail = self._config["globals"].get("lazyFail", lazy_fail)
-            self.fail_retries = self._config["globals"].get("fail_retries", fail_retries)
+            self.fail_retries = self._config["globals"].get("failRetries", failRetries)
             self.flowcontrol = FlowControl(self, self._config)
         else:
             self._executors_managed = False
-            self.fail_retries = fail_retries
+            self.fail_retries = failRetries
             self.lazy_fail = lazy_fail
             self.executors = {i: x for i, x in enumerate(executors)}
             self.flowcontrol = FlowNoControl(self, None)
@@ -170,7 +170,7 @@ class DataFlowKernel(object):
                 future.result()
 
             except Exception as e:
-                logger.error("[TODO] Task[{0}]: FAILED with {1}".format(task_id, future))
+                logger.debug("[TODO] Task[{0}]: FAILED with {1}".format(task_id, future))
                 self.tasks[task_id]['fail_history'].append(future._exception)
                 self.tasks[task_id]['fail_count'] += 1
 
@@ -180,12 +180,13 @@ class DataFlowKernel(object):
                     raise e
 
                 if self.tasks[task_id]['fail_count'] <= self.fail_retries:
-                    logger.error("Task[{0}]: Retrying".format(task_id))
+                    logger.debug("Task[{0}]: Retrying".format(task_id))
                     # Set tasks for a retry
                     self.tasks[task_id]['status'] = States.pending
 
                 else:
-                    logger.error("Task[{0}]: All retry attempts:{1} have failed".format(task_id, self.fail_retries))
+                    logger.debug("Task[{0}]: All retry attempts:{1} have failed".format(task_id,
+                                                                                        self.fail_retries))
                     self.tasks[task_id]['status'] = States.failed
 
             else:
@@ -229,6 +230,7 @@ class DataFlowKernel(object):
                     self.tasks[tid]['status'] = States.dep_fail
                     try:
                         fu = Future()
+                        fu.retries_left = 0
                         self.tasks[tid]['exec_fu'] = fu
                         self.tasks[tid]['app_fu'].update_parent(fu)
                         fu.set_exception(DependencyError(exceptions,
