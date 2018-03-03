@@ -9,6 +9,7 @@ from nose.tools import nottest
 workers = ThreadPoolExecutor(max_workers=10)
 dfk = DataFlowKernel(executors=[workers], lazy_fail=True)
 
+
 @nottest
 def test_dont_test_dummy():
     pass
@@ -29,6 +30,7 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     else:
         pass
         # print("Succeed")
+
 
 # @nottest
 def test_no_deps(numtasks=10):
@@ -52,6 +54,7 @@ def test_no_deps(numtasks=10):
             count += 1
 
     print("Caught failures of  {0}/{1}".format(count, len(fus)))
+
 
 # @nottest
 def test_fail_sequence(numtasks=10):
