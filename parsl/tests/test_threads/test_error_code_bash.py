@@ -5,9 +5,10 @@ from nose.tools import nottest
 
 from parsl import *
 import parsl
+# parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(executors=[workers])
+dfk = DataFlowKernel(executors=[workers], failRetries=0)
 
 
 @App('bash', dfk)

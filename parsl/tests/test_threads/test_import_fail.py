@@ -3,7 +3,7 @@
 from parsl import *
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(executors=[workers])
+dfk = DataFlowKernel(executors=[workers], failRetries=0)
 
 
 @App('python', dfk)

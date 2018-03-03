@@ -2,6 +2,7 @@
 '''
 import parsl
 import parsl.app.errors as perror
+import argparse
 from parsl import *
 
 print("Parsl version: ", parsl.__version__)
@@ -16,7 +17,7 @@ def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
     return 'echo "{0}"; echo "{0}" >&2'.format(msg)
 
 
-def test_bad_stdout():
+def _test_bad_stdout():
     ''' Testing bad stdout file
     '''
     stdout = "/x/test_bad_stdout.stdout"
@@ -32,7 +33,7 @@ def test_bad_stdout():
     return
 
 
-def test_bad_stderr():
+def _test_bad_stderr():
     ''' Testing bad stderr file
     '''
     stdout = "test_bad_stdout.stdout"
@@ -61,3 +62,4 @@ if __name__ == '__main__':
         parsl.set_stream_logger()
 
     y = test_bad_stdout()
+    y = test_bad_stderr()
