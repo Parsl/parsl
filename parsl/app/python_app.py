@@ -40,7 +40,7 @@ class PythonApp(AppBase):
                                        cache=self.cache,
                                        **kwargs)
 
-        logger.debug("App[%s] assigned Task[%s]" % (self.func.__name__,
+        logger.debug("App[{}] assigned Task[{}]".format(self.func.__name__,
                                                         app_fut.tid))
         out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
                     for o in kwargs.get('outputs', [])]
