@@ -3,11 +3,12 @@ import argparse
 
 import parsl
 from parsl import *
-# from parsl.configs.local import localThreads as config
-from parsl.configs.local import localIPP as config
+from parsl.configs.local import localThreads as config
+# from parsl.configs.local import localIPP as config
 config["globals"]["lazy_fail"] = True
+config["globals"]["failRetries"] = 2
 
-parsl.set_stream_logger()
+#parsl.set_stream_logger()
 
 dfk = DataFlowKernel(config=config)
 
@@ -162,7 +163,7 @@ if __name__ == "__main__":
     if args.debug:
         parsl.set_stream_logger()
 
-    test_fail_nowait(numtasks=int(args.count))
+    #test_fail_nowait(numtasks=int(args.count))
     # test_no_deps(numtasks=int(args.count))
     # test_fail_sequence(numtasks=int(args.count))
-    # test_deps(numtasks=int(args.count))
+    test_deps(numtasks=int(args.count))
