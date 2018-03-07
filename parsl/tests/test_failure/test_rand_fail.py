@@ -8,7 +8,7 @@ from parsl.configs.local import localThreads as config
 config["globals"]["lazy_fail"] = True
 config["globals"]["failRetries"] = 2
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 dfk = DataFlowKernel(config=config)
 
@@ -144,7 +144,8 @@ def test_fail_nowait(numtasks=10):
     try:
         [x.result() for x in fus]
     except Exception as e:
-        assert isinstance(e, TypeError), "Expected a TypeError, got {}".format(e)
+        assert isinstance(
+            e, TypeError), "Expected a TypeError, got {}".format(e)
 
     # fus[0].result()
     time.sleep(1)
@@ -163,7 +164,7 @@ if __name__ == "__main__":
     if args.debug:
         parsl.set_stream_logger()
 
-    #test_fail_nowait(numtasks=int(args.count))
+    # test_fail_nowait(numtasks=int(args.count))
     # test_no_deps(numtasks=int(args.count))
     # test_fail_sequence(numtasks=int(args.count))
     test_deps(numtasks=int(args.count))
