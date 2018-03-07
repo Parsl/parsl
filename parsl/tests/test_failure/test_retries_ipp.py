@@ -21,6 +21,7 @@ def sleep_then_fail(inputs=[], sleep_dur=0.1):
     math.ceil("Trigger TypeError")
     return 0
 
+
 @App('python', dfk)
 def sleep(sleep_dur=0.1):
     import time
@@ -39,7 +40,7 @@ def test_fail_nowait(numtasks=10):
     try:
         [x.result() for x in fus]
     except Exception as e:
-        #assert isinstance(e, TypeError), "Expected a TypeError, got {}".format(e)
+        # assert isinstance(e, TypeError), "Expected a TypeError, got {}".format(e)
         pass
 
     print("Done")
@@ -61,7 +62,7 @@ def test_fail_delayed(numtasks=10):
     try:
         [x.result() for x in fus]
     except Exception as e:
-        #assert isinstance(e, TypeError), "Expected a TypeError, got {}".format(e)
+        # assert isinstance(e, TypeError), "Expected a TypeError, got {}".format(e)
         pass
 
     print("Done")
