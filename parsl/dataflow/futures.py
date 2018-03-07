@@ -50,7 +50,7 @@ class AppFuture(Future):
 
         Updates the super() with the result() or exception()
         '''
-        print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
+        # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
         if executor_fu.done() is True:
             try:
                 super().set_result(executor_fu.result())
@@ -116,8 +116,8 @@ class AppFuture(Future):
                 return super().result(timeout=timeout)
 
         except Exception as e:
-            logger.debug("[TODO] {} Retries:{}".format(self.parent,
-                                                       self.parent.retries_left))
+            # logger.debug("[TODO] {} Retries:{}".format(self.parent,
+            #                                           self.parent.retries_left))
 
             if self.parent.retries_left > 0:
                 self._parent_update_event.wait()
