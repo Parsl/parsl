@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 import argparse
+import os
 
 import parsl
 from parsl import *
 
-# from parsl.configs.local import localThreads as config
 from parsl.configs.local import localIPP as config
 config["globals"]["lazy_fail"] = True
-
-parsl.set_stream_logger()
 
 dfk = DataFlowKernel(config=config, failRetries=2)
 
@@ -22,6 +20,26 @@ def sleep_then_fail(inputs=[], sleep_dur=0.1):
     return 0
 
 
+@App('bash', dfk)
+def succeed_on_retry(filename, success_on=2, stdout="succeed.out"):
+    ''' If the input file does not exist it creates it.
+    Then, if the file contains success_on lines it exits with 0
+    '''
+
+    return '''if [[ ! -e {0} ]]; then touch {0}; fi;
+    tries=`wc -l {0} | cut -f1 -d' '`
+    echo $tries >> {0}
+
+    if [[ "$tries" -eq "{success_on}" ]]
+    then
+        echo "Match. Success"
+    else
+        echo "Tries != success_on , exiting with error"
+        exit 5
+    fi
+    '''
+
+
 @App('python', dfk)
 def sleep(sleep_dur=0.1):
     import time
@@ -30,7 +48,7 @@ def sleep(sleep_dur=0.1):
 
 
 def test_fail_nowait(numtasks=10):
-    ''' Test retries on tasks with no dependencies. Threads
+    ''' Test retries on tasks with no dependencies. IPP
     '''
     fus = []
     for i in range(0, numtasks):
@@ -47,7 +65,7 @@ def test_fail_nowait(numtasks=10):
 
 
 def test_fail_delayed(numtasks=10):
-    ''' Test retries on tasks with dependencies. Threads.
+    ''' Test retries on tasks with dependencies. IPP
 
     This is testing retry behavior when AppFutures are created
     with no parent.
@@ -66,6 +84,20 @@ def test_fail_delayed(numtasks=10):
         pass
 
     print("Done")
+
+
+def test_retry():
+    """ Test retries via app that succeeds on the Nth retry. IPP
+    """
+
+    fname = "retry.out"
+    try:
+        os.remove(fname)
+    except OSError:
+        pass
+    fu = succeed_on_retry(fname)
+
+    fu.result()
 
 
 if __name__ == "__main__":
