@@ -7,7 +7,7 @@ from parsl import set_stream_logger
 # from parsl.configs.local import localThreads as config
 from parsl.configs.local import localIPP as config
 config["globals"]["lazy_fail"] = False
-config["globals"]["failRetries"] = 2
+config["globals"]["retries"] = 2
 
 # parsl.set_stream_logger()
 
