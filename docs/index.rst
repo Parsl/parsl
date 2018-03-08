@@ -29,6 +29,7 @@ Parsl can be used to realize a variety of workflows:
    quick/quickstart.rst
    quick/tutorial.rst
 
+.. _user_docs:
 .. toctree::
    :maxdepth: 5
    :caption: User Guide
@@ -38,8 +39,8 @@ Parsl can be used to realize a variety of workflows:
    userguide/futures
    userguide/workflow
    userguide/data
-   userguide/exceptions
    userguide/execution
+   userguide/exceptions
    userguide/app_caching
    userguide/checkpoints
    userguide/configuring

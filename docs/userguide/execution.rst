@@ -124,7 +124,7 @@ For eg:
 |        => compute with the most resources.
 |           one task is stacked per slot.
 
-.. code:: python
+.. code-block:: python
 
      blocks = min ( maxBlocks,
                    ceil( active_tasks / slots ) )
@@ -140,7 +140,7 @@ For eg:
 
 Here is a typical configuration :
 
-.. code:: python:
+.. code:: python
 
     localIPP = {
         "sites": [
@@ -168,3 +168,49 @@ at 2 tasks :
 at 5 tasks, we overflow as the capacity of a single block is fully used.
 
 .. image:: parsl_parallelism.gif
+
+
+Multi-Site
+----------
+
+.. note::
+   This feature is available since Parsl 0.4.0
+
+Parsl supports the definition of any number of execution sites in the config,
+as well as specifying which of these sites could execute specific apps.
+
+The common scenarios for this feature are:
+
+* The workflow has an initial simulation stage that runs on the compute heavy
+  nodes of an HPC system followed by an analysis and visualization stage that
+  is suited for the GPU nodes.
+* The workflow follows a repeated fan-out, fan-in model where the long running
+  fan-out tasks are computed on a cluster and the quick fan-in computation is
+  suited for the running on threads on the login node.
+* Have apps that wait and evaluate the results of a computation to determine
+  whether, the app should be relaunched. Only apps running on threads may
+  launch apps. Often, science simulations have stochastic behavior and
+  terminate early with a checkpoint. In such cases, having a wrapper app
+  that checks for the exit conditions and determines success is ideal.
+
+
+Here's a code snippet that shows how sites can be specified in the ``App`` decorator.
+
+.. code-block:: python
+
+     #(CPU Heavy app) (CPU Heavy app) (CPU Heavy app) <--- Run on compute queue
+     #      |                |               |
+     #    (data)           (data)          (data)
+     #       \               |              /
+     #       (Analysis & Visualization phase)         <--- Run on GPU node
+
+     # A mock Molecular Dynamics simulation app
+     @App('bash', dfk, sites=["Theta.Phi"])
+     def MD_Sim(arg, outputs=[]):
+         return "MD_simulate {} -o {}".format(arg, outputs[0])
+
+     # Visualize results from the mock MD simulation app
+     @App('bash', dfk, sites=["Cooley.GPU"])
+     def Visualize(inputs=[], outputs=[]):
+         bash_array = " ".join(inputs)
+         return "viz {} -o {}".format(bash_array, outputs[0])
