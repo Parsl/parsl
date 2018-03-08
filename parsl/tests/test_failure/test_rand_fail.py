@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import argparse
 
-import parsl
+# import parsl
 from parsl import *
-from parsl.configs.local import localThreads as config
-# from parsl.configs.local import localIPP as config
-config["globals"]["lazy_fail"] = True
+from parsl import set_stream_logger
+# from parsl.configs.local import localThreads as config
+from parsl.configs.local import localIPP as config
+config["globals"]["lazy_fail"] = False
 config["globals"]["failRetries"] = 2
 
 # parsl.set_stream_logger()
@@ -137,7 +138,7 @@ def test_fail_nowait(numtasks=10):
     '''
     import time
     fus = []
-    for i in range(0, 10):
+    for i in range(0, numtasks):
         fu = sleep_then_fail(sleep_dur=0.1)
         fus.extend([fu])
 
@@ -162,9 +163,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.debug:
-        parsl.set_stream_logger()
+        set_stream_logger()
 
-    # test_fail_nowait(numtasks=int(args.count))
+    test_fail_nowait(numtasks=int(args.count))
     # test_no_deps(numtasks=int(args.count))
     # test_fail_sequence(numtasks=int(args.count))
-    test_deps(numtasks=int(args.count))
+    # test_deps(numtasks=int(args.count))
