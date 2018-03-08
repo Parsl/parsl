@@ -46,7 +46,7 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazy_fail=True, appCache=True,
-                 rundir=None, failRetries=0, checkpointFiles=None):
+                 rundir=None, retries=0, checkpointFiles=None):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
@@ -58,7 +58,7 @@ class DataFlowKernel(object):
             - lazy_fail(Bool) : Default=True, determine failure behavior
             - appCache (Bool) :Enable caching of apps
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
-            - failRetries(int): Default=0, Set the number of retry attempts in case of failure
+            - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
 
         Returns:
@@ -92,11 +92,11 @@ class DataFlowKernel(object):
 
             # set global vars from config
             self.lazy_fail = self._config["globals"].get("lazyFail", lazy_fail)
-            self.fail_retries = self._config["globals"].get("failRetries", failRetries)
+            self.fail_retries = self._config["globals"].get("retries", retries)
             self.flowcontrol = FlowControl(self, self._config)
         else:
             self._executors_managed = False
-            self.fail_retries = failRetries
+            self.fail_retries = retries
             self.lazy_fail = lazy_fail
             self.executors = {i: x for i, x in enumerate(executors)}
             self.flowcontrol = FlowNoControl(self, None)

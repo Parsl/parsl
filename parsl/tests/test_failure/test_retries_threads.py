@@ -8,7 +8,7 @@ from parsl import *
 from parsl.configs.local import localThreads as config
 config["globals"]["lazy_fail"] = True
 
-dfk = DataFlowKernel(config=config, failRetries=2)
+dfk = DataFlowKernel(config=config, retries=2)
 
 
 @App('python', dfk)

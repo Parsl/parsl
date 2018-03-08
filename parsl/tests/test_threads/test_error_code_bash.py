@@ -8,7 +8,7 @@ import parsl
 # parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(executors=[workers], failRetries=0)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('bash', dfk)
