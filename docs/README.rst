@@ -6,12 +6,12 @@ Tutorial
 --------
 
 The tutorial notebooks need to be synced manually for now. When changes are made, the notebook
-has to be converted to .rst format, and placed under docs/quick/Tutorial.rst.
+has to be converted to .rst format, and placed under docs/quick/tutorial.rst.
 
 The command to make the convertion is:
 
->>> jupyter nbconvert --to rst Tutorial.ipynb
->>> sed -i 's/ipython3/python/g' Tutorial.rst
+>>> jupyter nbconvert --to rst tutorial.ipynb
+>>> sed -i 's/ipython3/python/g' tutorial.rst
 
 Builds
 ------
