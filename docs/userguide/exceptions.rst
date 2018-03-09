@@ -56,7 +56,7 @@ to ``App`` failures. By retrying failed apps, transient failures (eg. machine fa
 network failure) and intermittent failures within applications can be addressed.
 When ``retries`` are enabled (set to integer > 0), parsl will automatically
 re-launch applications that have failed, until the retry limit is reached.
-This feature will be available in Parsl since `v0.5.0`.
+This feature will be available starting in Parsl `v0.5.0`.
 
 By default ``retries = 0``. Retries can be enabled by setting ``retries`` in the
 config passed to the DataFlowKernel, or as an explicit keyword argument to the
@@ -87,7 +87,7 @@ Here is an example of setting retries via keyword argument to the DFK:
 Lazy Fail
 ---------
 
-While Retries addresses resiliency at the level of ``Apps``, lazy failure adds
+While Retries address resiliency at the level of ``Apps``, lazy failure adds
 resiliency at the workflow level. When lazy failures are enabled, the workflow does
 not halt as soon as it encounters a failure, but continues execution of every
 app that is unaffected. Lazy failures is the default behavior in parsl, with the
