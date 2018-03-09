@@ -7,7 +7,7 @@ from nose.tools import nottest
 
 # parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=10)
-dfk = DataFlowKernel(executors=[workers], lazy_fail=True)
+dfk = DataFlowKernel(executors=[workers], lazyErrors=True)
 
 
 @nottest

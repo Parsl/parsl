@@ -55,7 +55,7 @@ class DataFlowKernel(object):
         KWargs:
             - config (Dict) : A single data object encapsulating all config attributes
             - executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
-            - lazy_fail(Bool) : Default=True, determine failure behavior
+            - lazyErrors(Bool) : Default=True, allow workflow to continue on app failures.
             - appCache (Bool) :Enable caching of apps
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             - retries(int): Default=0, Set the number of retry attempts in case of failure
@@ -97,7 +97,7 @@ class DataFlowKernel(object):
         else:
             self._executors_managed = False
             self.fail_retries = retries
-            self.lazy_fail = lazy_fail
+            self.lazy_fail = lazyErrors
             self.executors = {i: x for i, x in enumerate(executors)}
             self.flowcontrol = FlowNoControl(self, None)
 

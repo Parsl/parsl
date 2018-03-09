@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 import argparse
+# from nose.tools import nottest
 
-# import parsl
+import parsl
 from parsl import *
-from parsl import set_stream_logger
-# from parsl.configs.local import localThreads as config
-from parsl.configs.local import localIPP as config
-config["globals"]["lazy_fail"] = False
+# from parsl import set_stream_logger
+from parsl.configs.local import localThreads as config
+# from parsl.configs.local import localIPP as config
+config["globals"]["lazyErrors"] = True
 config["globals"]["retries"] = 2
 
-# parsl.set_stream_logger()
+# set_stream_logger()
 
 dfk = DataFlowKernel(config=config)
 
@@ -133,6 +134,7 @@ def sleep_then_fail(sleep_dur=0.1):
     return 0
 
 
+# @nottest
 def test_fail_nowait(numtasks=10):
     ''' Test basic error handling, with no dependent failures
     '''
@@ -145,8 +147,7 @@ def test_fail_nowait(numtasks=10):
     try:
         [x.result() for x in fus]
     except Exception as e:
-        assert isinstance(
-            e, TypeError), "Expected a TypeError, got {}".format(e)
+        assert isinstance(e, TypeError), "Expected a TypeError, got {}".format(e)
 
     # fus[0].result()
     time.sleep(1)
