@@ -45,7 +45,7 @@ class DataFlowKernel(object):
 
     """
 
-    def __init__(self, config=None, executors=None, lazy_fail=True, appCache=True,
+    def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
                  rundir=None, retries=0, checkpointFiles=None):
         """ Initialize the DataFlowKernel
 
@@ -58,7 +58,7 @@ class DataFlowKernel(object):
             - lazy_fail(Bool) : Default=True, determine failure behavior
             - appCache (Bool) :Enable caching of apps
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
-            - failRetries(int): Default=0, Set the number of retry attempts in case of failure
+            - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
 
         Returns:
@@ -91,12 +91,12 @@ class DataFlowKernel(object):
             self.executors = epf.make(self.rundir, self._config)
 
             # set global vars from config
-            self.lazy_fail = self._config["globals"].get("lazyErrors", lazy_fail)
+            self.lazy_fail = self._config["globals"].get("lazyErrors", lazyErrors)
             self.fail_retries = self._config["globals"].get("retries", retries)
             self.flowcontrol = FlowControl(self, self._config)
         else:
             self._executors_managed = False
-            self.fail_retries = failRetries
+            self.fail_retries = retries
             self.lazy_fail = lazy_fail
             self.executors = {i: x for i, x in enumerate(executors)}
             self.flowcontrol = FlowNoControl(self, None)
