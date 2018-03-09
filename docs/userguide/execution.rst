@@ -69,7 +69,7 @@ Elasticity
 
 
 .. note::
-   This feature is available since Parsl 0.4.0
+   This feature has been available since Parsl ``v0.4.0``
 
 As a workflow dag is processed by Parsl, new tasks are added and completed
 asynchronously. Parsl interfaces executors with execution providers to construct
@@ -187,11 +187,12 @@ The common scenarios for this feature are:
 * The workflow follows a repeated fan-out, fan-in model where the long running
   fan-out tasks are computed on a cluster and the quick fan-in computation is
   suited for the running on threads on the login node.
-* Have apps that wait and evaluate the results of a computation to determine
-  whether, the app should be relaunched. Only apps running on threads may
-  launch apps. Often, science simulations have stochastic behavior and
-  terminate early with a checkpoint. In such cases, having a wrapper app
-  that checks for the exit conditions and determines success is ideal.
+* The workflow includes apps that wait and evaluate the results of a
+  computation to determine whether the app should be relaunched.
+  Only apps running on threads may launch apps. Often, science simulations
+  have stochastic behavior and   terminate early with a checkpoint.
+  In such cases, having a wrapper app that checks for the exit conditions
+  and determines success is ideal.
 
 
 Here's a code snippet that shows how sites can be specified in the ``App`` decorator.
