@@ -174,7 +174,7 @@ Multi-Site
 ----------
 
 .. note::
-   This feature is available since Parsl 0.4.0
+   This feature has been available since Parsl 0.4.0
 
 Parsl supports the definition of any number of execution sites in the config,
 as well as specifying which of these sites could execute specific apps.
