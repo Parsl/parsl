@@ -38,7 +38,6 @@ from parsl.data_provider.files import File
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app_factory import AppFactoryFactory
 APP_FACTORY_FACTORY = AppFactoryFactory('central')
-# print(APP_FACTORY)
 
 __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
