@@ -165,14 +165,12 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['fail_history'].append(future._exception)
                 self.tasks[task_id]['fail_count'] += 1
 
-                # If eager fail, raise error
                 if not self.lazy_fail:
                     logger.debug("Eager fail, skipping retry logic")
                     raise e
 
                 if self.tasks[task_id]['fail_count'] <= self.fail_retries:
-                    logger.debug("Task {}: Retrying".format(task_id))
-                    # Set tasks for a retry
+                    logger.debug("Task {} marked for retry".format(task_id))
                     self.tasks[task_id]['status'] = States.pending
 
                 else:
@@ -276,7 +274,7 @@ class DataFlowKernel(object):
                 logger.error("Task {}: requests invalid site [{}]".format(task_id,
                                                                           target_sites))
         else:
-            logger.error("App[{}]: sites defined is invalid, neither str|list".format(
+            logger.error("App {} specifies invalid site option, expects str|list".format(
                 self.tasks[task_id]['func'].__name__))
 
         exec_fu = executor.submit(executable, *args, **kwargs)
@@ -474,7 +472,7 @@ class DataFlowKernel(object):
                                                       stderr=task_stderr)
             self.tasks[task_id]['status'] = States.pending
 
-        logger.debug("Task {} Launched with AppFut:{}".format(task_id,
+        logger.debug("Task {} launched with AppFut:{}".format(task_id,
                                                               task_def['app_fu']))
 
         return task_def['app_fu']
