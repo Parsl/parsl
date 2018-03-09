@@ -83,7 +83,7 @@ class DataFlowKernel(object):
             self.executors = epf.make(self.rundir, self._config)
 
             # set global vars from config
-            self.lazy_fail = self._config["globals"].get("lazyFail", lazy_fail)
+            self.lazy_fail = self._config["globals"].get("lazyErrors", lazy_fail)
             self.fail_retries = self._config["globals"].get("fail_retries", fail_retries)
             self.flowcontrol = FlowControl(self, self._config)
         else:

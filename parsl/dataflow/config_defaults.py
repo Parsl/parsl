@@ -60,7 +60,7 @@ def update_config(config, rundir):
 
     config_base = {"sites": [],
                    "globals": {
-                       "lazyErrors": False,   # Bool
+                       "lazyErrors": True,   # Bool
                        "usageTracking": True,  # Bool
                        "strategy": 'simple',  # ('simple',...)
                        "appCache": True,  # Bool
