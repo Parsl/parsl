@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+""" Testing bash apps
+"""
 import parsl
 import parsl.app.errors as perror
 import argparse
@@ -18,8 +18,8 @@ def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
 
 
 def _test_bad_stdout():
-    ''' Testing bad stdout file
-    '''
+    """ Testing bad stdout file
+    """
     stdout = "/x/test_bad_stdout.stdout"
     stderr = "test_bad_stdout.stderr"
     fu = echo_to_streams("Hello world", stderr=stderr, stdout=stdout)
@@ -34,8 +34,8 @@ def _test_bad_stdout():
 
 
 def _test_bad_stderr():
-    ''' Testing bad stderr file
-    '''
+    """ Testing bad stderr file
+    """
     stdout = "test_bad_stdout.stdout"
     stderr = "/x/test_bad_stdout.stderr"
     fu = echo_to_streams("Hello world", stderr=stderr, stdout=stdout)

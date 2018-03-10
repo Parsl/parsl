@@ -1,4 +1,4 @@
-''' Testing behavior of futures
+""" Testing behavior of futures
 
 We have the following cases for AppFutures:
 
@@ -10,7 +10,7 @@ Same applies to datafutures, and we need to know the behavior wrt.
 1. result() called on 1, vs 2
 2. done() called on 1, vs 2
 
-'''
+"""
 import parsl
 from parsl import *
 
@@ -42,8 +42,8 @@ def get_contents(filename):
 
 
 def test_fut_case_1():
-    ''' Testing the behavior of AppFutures where there are no dependencies
-    '''
+    """ Testing the behavior of AppFutures where there are no dependencies
+    """
 
     app_fu = delay_incr(1, delay=0.5)
 
@@ -59,8 +59,8 @@ def test_fut_case_1():
 
 
 def test_fut_case_2():
-    ''' Testing the behavior of DataFutures where there are no dependencies
-    '''
+    """ Testing the behavior of DataFutures where there are no dependencies
+    """
     output_f = 'test_fut_case_2.txt'
     app_fu = delay_incr(1, delay=10, outputs=[output_f])
     data_fu = app_fu.outputs[0]
@@ -82,10 +82,10 @@ def test_fut_case_2():
 
 
 def test_fut_case_3():
-    ''' Testing the behavior of AppFutures where there are dependencies
+    """ Testing the behavior of AppFutures where there are dependencies
 
     The first call has a delay of 0.5s, and the second call depends on the first
-    '''
+    """
 
     app_1 = delay_incr(1, delay=0.5)
     app_2 = delay_incr(app_1)
@@ -102,12 +102,12 @@ def test_fut_case_3():
 
 
 def test_fut_case_4():
-    ''' Testing the behavior of DataFutures where there are dependencies
+    """ Testing the behavior of DataFutures where there are dependencies
 
     The first call has a delay of 0.5s, and the second call depends on the first
-    '''
-    ''' Testing the behavior of DataFutures where there are no dependencies
-    '''
+    """
+    """ Testing the behavior of DataFutures where there are no dependencies
+    """
     output_f1 = 'test_fut_case_4_f1.txt'
     output_f2 = 'test_fut_case_4_f2.txt'
     app_1 = delay_incr(1, delay=0.5, outputs=[output_f1])

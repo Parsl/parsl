@@ -12,12 +12,12 @@ logger = logging.getLogger(__name__)
 
 class Controller(object):
 
-    ''' Start and maintain a ipyparallel controller
-    '''
+    """Start and maintain a ipyparallel controller
+    """
 
     def __init__(self, publicIp=None, port=None, portRange="", reuse=False,
                  log=True, ipythonDir="~/.ipython", mode="auto", profile=None):
-        ''' Initialize ipython controllers to the user specified configs
+        """Initialize ipython controllers to the user specified configs
 
         The specifig config sections that will be used by this are in the dict
         config["controller"]
@@ -38,7 +38,7 @@ class Controller(object):
                      Default : None
               - mode (str) : If "auto" the default automatic behavior is maintained.
                              If "manual" the controller is assumed to be created by the user.
-        '''
+        """
 
         logger.debug("Starting ipcontroller, baseDir:%s" % ipythonDir)
 
@@ -117,35 +117,35 @@ class Controller(object):
 
     @property
     def engine_file(self):
-        ''' Engine_file attribute specifies the file path to the specific ipython_dir/profile folders in
+        """Engine_file attribute specifies the file path to the specific ipython_dir/profile folders in
         which the ipcontroller-engine.json file is stored.
 
         Returns :
               - str, File path to engine file
-        '''
+        """
         return os.path.join(self.ipythonDir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-engine.json')
 
     @property
     def client_file(self):
-        ''' Client_file attribute specifies the file path to the specific ipython_dir/profile folders in
+        """Client_file attribute specifies the file path to the specific ipython_dir/profile folders in
         which the ipcontroller-client.json file is stored.
 
         Returns :
               - str, File path to client file
-        '''
+        """
 
         return os.path.join(self.ipythonDir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-client.json')
 
     def close(self):
-        ''' Terminate the controller process and it's child processes.
+        """Terminate the controller process and it's child processes.
 
         Args:
               - None
-        '''
+        """
         if self.reuse:
             logger.debug("Ipcontroller not shutting down: reuse enabled")
             return

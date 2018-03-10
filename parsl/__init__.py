@@ -1,4 +1,4 @@
-'''
+"""
 Parsl
 =====
 
@@ -26,7 +26,7 @@ However the following helper functions are provided for logging:
 2. set_file_logger
     This sets the logging to a file. This is ideal for reporting issues to the dev team.
 
-'''
+"""
 import logging
 
 from parsl.version import VERSION
@@ -49,8 +49,7 @@ __all__ = [
 
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
-    '''
-    Add a stream log handler
+    """Add a stream log handler
 
     Args:
          - name (string) : Set the logger name.
@@ -59,7 +58,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
 
     Returns:
          - None
-    '''
+    """
 
     if format_string is None:
         # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
@@ -75,7 +74,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
 
 
 def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
-    ''' Add a stream log handler
+    """Add a stream log handler
 
     Args:
         - filename (string): Name of the file to write logs to
@@ -85,7 +84,7 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
 
     Returns:
        -  None
-    '''
+    """
 
     if format_string is None:
         format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
@@ -100,9 +99,9 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
 
 
 class NullHandler(logging.Handler):
-    ''' Setup default logging to /dev/null since this is library.
+    """Setup default logging to /dev/null since this is library.
 
-    '''
+    """
 
     def emit(self, record):
         pass

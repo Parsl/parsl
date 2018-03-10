@@ -1,8 +1,8 @@
-''' Execution Provider Factory
+"""Execution Provider Factory
 
 Centralize creation of execution providers and executors.
 
-'''
+"""
 
 import copy
 import logging
@@ -25,11 +25,11 @@ logger = logging.getLogger(__name__)
 class ExecProviderFactory (object):
 
     def __init__(self):
-        ''' Constructor for the execution provider factory.
+        """Constructor for the execution provider factory.
 
         Args:
              None
-        '''
+        """
 
         self.executors = {'ipp': IPyParallelExecutor,
                           'swift_t': TurbineExecutor,
@@ -55,7 +55,7 @@ class ExecProviderFactory (object):
                          None: lambda *args, **kwargs: None}
 
     def validate_config(self, config):
-        ''' Validate_config validates config
+        """Validate_config validates config
         There is no logic implemented here yet.
         This might be a good first task for a new dev.
 
@@ -63,12 +63,12 @@ class ExecProviderFactory (object):
              - config (dict) : Config data structure
         Returns:
              - Bool: validity of config
-        '''
+        """
         return True
 
     def make(self, rundir, config):
-        ''' Construct the appropriate provider, executors and channels and link them together.
-        '''
+        """Construct the appropriate provider, executors and channels and link them together.
+        """
 
         self.rundir = rundir
         sites = {}

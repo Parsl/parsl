@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+""" Testing bash apps
+"""
 import parsl
 from parsl import *
 
@@ -24,8 +24,8 @@ def slow_increment(x, dur):
 
 
 def test_and_split(depth=5):
-    ''' Test simple pipeline A->B...->N
-    '''
+    """ Test simple pipeline A->B...->N
+    """
     futs = {}
     for i in range(depth):
         futs[i] = increment(i)

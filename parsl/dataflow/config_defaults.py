@@ -1,6 +1,6 @@
-''' Home of the configuration defaults.
+"""Home of the configuration defaults.
 
-'''
+"""
 
 import copy
 import collections
@@ -11,19 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 def pp_config(config):
-    ''' Pretty print the config, this should be part of the
+    """Pretty print the config, this should be part of the
     default logging to the debug logs.
 
     Args:
         - config (dict) : The config data structure
-    '''
+    """
 
     logger.debug(pprint.pformat(config, indent=2))
     return
 
 
 def recursive_update(template, userdata):
-    ''' Recursively update the template with userdata.
+    """Recursively update the template with userdata.
     If we don't do this the value updates for nested collections
     would get simply overwritten rathen than updated.
 
@@ -33,7 +33,7 @@ def recursive_update(template, userdata):
 
     Returns:
         Updated template stucture.
-    '''
+    """
 
     for k, v in userdata.items():
         if isinstance(v, collections.Mapping):
@@ -45,7 +45,7 @@ def recursive_update(template, userdata):
 
 
 def update_config(config, rundir):
-    ''' Update the config datastructure with defaults. This is the one centralized
+    """Update the config datastructure with defaults. This is the one centralized
     location where the default live.
 
     Args:
@@ -53,7 +53,7 @@ def update_config(config, rundir):
 
     Returns:
          - A standardized config dict if a config was passed, else None.
-    '''
+    """
 
     if not config:
         return None

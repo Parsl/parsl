@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 class Memoizer(object):
-    ''' Memoizer is responsible for ensuring that when a task is repeated,
+    """Memoizer is responsible for ensuring that when a task is repeated,
     i.e., the same function is called with the same exact arguments, the
     result from a previous execution is reused. `wiki <https://en.wikipedia.org/wiki/Memoization>`_
 
@@ -32,10 +32,10 @@ class Memoizer(object):
 
     When a task is ready for launch, i.e., all of its arguments
     have resolved, we add its hash to the task datastructure.
-    '''
+    """
 
     def __init__(self, dfk, memoize=True, checkpoint={}):
-        ''' Initialize the memoizer. If either the global config or the kwarg memoize is set to false,
+        """Initialize the memoizer. If either the global config or the kwarg memoize is set to false,
         memoization is disabled.
 
         Args:
@@ -44,7 +44,7 @@ class Memoizer(object):
         KWargs:
             - memoize (Bool): enable memoization or not.
             - checkpoint (Dict): A checkpoint loaded as a dict.
-        '''
+        """
 
         self.memoize = True
         self.dfk = dfk
@@ -62,7 +62,7 @@ class Memoizer(object):
             self.memo_lookup_table = {}
 
     def make_hash(self, task):
-        ''' Create a hash of the task inputs. This uses a serialization library borrowed from
+        """Create a hash of the task inputs. This uses a serialization library borrowed from
         ipyparallel. If this fails here, then all ipp calls are also likely to fail due to failure
         at serialization.
 
@@ -71,7 +71,7 @@ class Memoizer(object):
 
         Returns:
             - hash (str) : A unique hash string
-        '''
+        """
 
         # Function name TODO: Add fn body later
         t = [serialize_object(task['func_name'])[0],
@@ -84,7 +84,7 @@ class Memoizer(object):
         return hashedsum
 
     def check_memo(self, task_id, task):
-        ''' Check memo table first creates a hash of the task and its relevant
+        """Check memo table first creates a hash of the task and its relevant
         inputs and checks the lookup table for this hash. If present, the
         results are returned. The result is a tuple indicating whether a memo
         exists and the result, since a Null result is possible and could be confusing.
@@ -99,7 +99,7 @@ class Memoizer(object):
             - Result (Py Obj): Result of the function if present in table
 
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
-        '''
+        """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
             return None, None
@@ -116,7 +116,7 @@ class Memoizer(object):
         return present, result
 
     def hash_lookup(self, hashsum):
-        ''' Lookup a hash in the memoization table. Will raise a KeyError if hash is not
+        """Lookup a hash in the memoization table. Will raise a KeyError if hash is not
         in the memoization lookup table.
 
         Args:
@@ -128,11 +128,11 @@ class Memoizer(object):
 
         Raises:
             - KeyError: if hash not in table
-        '''
+        """
         return self.memo_lookup_table[hashsum]
 
     def update_memo(self, task_id, task, r):
-        ''' Updates the memoization lookup table with the result from a task.
+        """Updates the memoization lookup table with the result from a task.
 
         Args:
              - task_id (int): Integer task id
@@ -141,7 +141,7 @@ class Memoizer(object):
 
         A warning is issued when a hash collision occures during the update.
         This is not likely.
-        '''
+        """
 
         if not self.memoize or not task['memoize']:
             return

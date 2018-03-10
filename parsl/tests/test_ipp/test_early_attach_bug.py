@@ -1,4 +1,4 @@
-''' Testing early attach behavior with LoadBalanced view
+""" Testing early attach behavior with LoadBalanced view
 
 Test setup:
 
@@ -13,7 +13,7 @@ at the time the apps were submitted to it. It is not capable of rebalancing the 
 among the engine once it has been sent to the the engine's queue.
 
 
-'''
+"""
 import parsl
 from parsl import *
 

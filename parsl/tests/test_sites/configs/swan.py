@@ -1,7 +1,7 @@
 import os
 
 USERNAME = os.environ['SWAN_USERNAME']
-''' SWAN NOTES:
+""" SWAN NOTES:
 
 Env:
 swan has a module cray-python/3.6.1.1 which can be used readily to setup and virtual
@@ -12,9 +12,9 @@ python3 -m venv parsl_env
 source parsl_env/bin/activate
 pip install parsl
 
-'''
+"""
 
-'''
+"""
 ================== Block
 | ++++++++++++++ | Node
 | |            | |
@@ -22,7 +22,7 @@ pip install parsl
 | |            | |
 | ++++++++++++++ |
 ==================
-'''
+"""
 
 singleNode = {
     "sites": [
@@ -44,9 +44,9 @@ singleNode = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "debug",
-                     "overrides": '''module load cray-python/3.6.1.1
+                     "overrides": """module load cray-python/3.6.1.1
 source /home/users/{}/parsl_env/bin/activate
-'''.format(USERNAME)
+""".format(USERNAME)
                  }
              }
          }
@@ -56,7 +56,7 @@ source /home/users/{}/parsl_env/bin/activate
 }
 
 
-'''
+"""
                       Block {Min:0, init:1, Max:1}
 ========================================================================
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
@@ -67,7 +67,7 @@ source /home/users/{}/parsl_env/bin/activate
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
 ========================================================================
 
-'''
+"""
 multiNodeSrun = {
     "sites": [
         {"site": "Local_IPP",
@@ -89,8 +89,8 @@ multiNodeSrun = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "debug",
-                     "overrides": '''#SBATCH --constraint=haswell
-module load python/3.5-anaconda ; source activate parsl_env_3.5'''
+                     "overrides": """#SBATCH --constraint=haswell
+module load python/3.5-anaconda ; source activate parsl_env_3.5"""
                  }
              }
          }
@@ -100,7 +100,7 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
 }
 
 
-'''
+"""
                       Block {Min:0, init:1, Max:1}
 ========================================================================
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
@@ -111,7 +111,7 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
 ========================================================================
 
-'''
+"""
 multiNodeMPI = {
     "sites": [
         {"site": "Remote_IPP_MultiNode",
@@ -133,8 +133,8 @@ multiNodeMPI = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "debug",
-                     "overrides": '''#SBATCH --constraint=haswell
-module load python/3.5-anaconda ; source activate parsl_env_3.5'''
+                     "overrides": """#SBATCH --constraint=haswell
+module load python/3.5-anaconda ; source activate parsl_env_3.5"""
                  }
              }
          }

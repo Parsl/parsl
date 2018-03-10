@@ -16,7 +16,7 @@ def python_app():
 
 
 def test_python(N=2):
-    ''' Testing basic scaling|Python 0 -> 1 block '''
+    """ Testing basic scaling|Python 0 -> 1 block """
 
     results = {}
     for i in range(0, N):

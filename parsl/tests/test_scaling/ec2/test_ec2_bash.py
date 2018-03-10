@@ -9,15 +9,15 @@ dfk = DataFlowKernel(config=config)
 
 @App("bash", dfk)
 def bash_app(seq_run_id):
-    return '''uname -a;
+    return """uname -a;
 echo {0}
 aws s3 cp logfile s3://mybucket/{0}
-    '''
+    """
 
 
 def test_python_remote(count=10):
-    ''' Run with no delay
-    '''
+    """ Run with no delay
+    """
     fus = []
     for i in range(0, count):
         fu = python_app_slow(0)

@@ -4,7 +4,7 @@ import os
 HOME = os.environ["HOME"]
 USERNAME = getpass.getuser()
 
-'''
+"""
 ================== Block
 | ++++++++++++++ | Node
 | |            | |
@@ -12,7 +12,7 @@ USERNAME = getpass.getuser()
 | |            | |
 | ++++++++++++++ |
 ==================
-'''
+"""
 
 singleNodeLocal = {
     "sites": [
@@ -32,8 +32,8 @@ singleNodeLocal = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "debug",
-                     "overrides": '''export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH;
-source activate parsl_env_3.5'''
+                     "overrides": """export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH;
+source activate parsl_env_3.5"""
                  }
              }
          }
@@ -42,7 +42,7 @@ source activate parsl_env_3.5'''
     "globals": {"lazyErrors": True}
 }
 
-'''
+"""
                       Block {Min:0, init:1, Max:1}
 ========================================================================
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
@@ -53,7 +53,7 @@ source activate parsl_env_3.5'''
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
 ========================================================================
 
-'''
+"""
 multiNodeLocal = {
     "sites": [
         {"site": "Local_CC-IN2P3",
@@ -71,8 +71,8 @@ multiNodeLocal = {
                  "maxBlocks": 4,
                  "options": {
                      "partition": "debug",
-                     "overrides": '''export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH;
-source activate parsl_env_3.5'''
+                     "overrides": """export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH;
+source activate parsl_env_3.5"""
                  }
              }
          }

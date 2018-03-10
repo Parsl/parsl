@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class FlowNoControl(object):
-    ''' FlowNoControl implements similar interfaces as FlowControl but
+    """FlowNoControl implements similar interfaces as FlowControl but
     with null handlers so as to mimic the FlowControl class.
 
-    '''
+    """
 
     def __init__(self, dfk, config, *args, threshold=2, interval=2):
-        ''' Initialize the flowcontrol object. This does nothing.
+        """Initialize the flowcontrol object. This does nothing.
 
         Args:
              - dfk (DataFlowKernel) : DFK object to track parsl progress
@@ -24,22 +24,22 @@ class FlowNoControl(object):
         KWargs:
              - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
-        '''
+        """
         pass
 
     def notify(self, event_id):
-        ''' This notifiy fn does nothing
-        '''
+        """This notifiy fn does nothing
+        """
         pass
 
     def close(self):
-        ''' This close fn does nothing
-        '''
+        """This close fn does nothing
+        """
         pass
 
 
 class FlowControl(object):
-    '''FlowControl timer is designed to implement threshold-interval based
+    """FlowControl timer is designed to implement threshold-interval based
     flow control. The overall goal is to trap the flow of apps from the
     workflow, measure it and redirect it the appropriate executors for
     processing.
@@ -71,10 +71,10 @@ class FlowControl(object):
     messages are present only when the timer thread is started, so this could be
     from a duplicate logger being added by the thread.
 
-    '''
+    """
 
     def __init__(self, dfk, config, *args, threshold=20, interval=5):
-        ''' Initialize the flowcontrol object
+        """Initialize the flowcontrol object
         We start the timer thread here
 
         Args:
@@ -84,7 +84,7 @@ class FlowControl(object):
         KWargs:
              - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
-        '''
+        """
 
         self.dfk = dfk
         self.threshold = threshold
@@ -126,8 +126,8 @@ class FlowControl(object):
                 print("Sleeping a bit more")
 
     def notify(self, event_id):
-        ''' Let the FlowControl system know that there's an event
-        '''
+        """Let the FlowControl system know that there's an event
+        """
 
         self._event_buffer.extend([event_id])
         self._event_count += 1
@@ -136,19 +136,19 @@ class FlowControl(object):
             self.make_callback(kind="event")
 
     def make_callback(self, kind=None):
-        ''' Makes the callback and resets the timer.
+        """Makes the callback and resets the timer.
 
         KWargs:
                - kind (str): Default=None, used to pass information on what
                  triggered the callback
-        '''
+        """
         self._wake_up_time = time.time() + self.interval
         self.callback(tasks=self._event_buffer, kind=kind)
         self._event_buffer = []
 
     def close(self):
-        ''' Merge the threads and terminate.
-        '''
+        """Merge the threads and terminate.
+        """
         self._kill_event.set()
         self._thread.join()
 

@@ -17,7 +17,7 @@ def bash_app(stdout=None, stderr=None):
 
 
 def test_bash():
-    ''' Testing basic scaling|Bash 0 -> 1 block '''
+    """ Testing basic scaling|Bash 0 -> 1 block """
 
     import os
     fname = os.path.basename(__file__)

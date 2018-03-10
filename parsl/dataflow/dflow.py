@@ -46,7 +46,7 @@ class DataFlowKernel(object):
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
                  rundir=None, retries=0, checkpointFiles=None, checkpointMode=None):
-        """ Initialize the DataFlowKernel
+        """Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
         options passed in via the config.
@@ -127,7 +127,7 @@ class DataFlowKernel(object):
 
     @staticmethod
     def _count_deps(depends, task_id):
-        ''' Internal. Count the number of unresolved futures in the list depends'''
+        """Internal. Count the number of unresolved futures in the list depends"""
 
         count = 0
         for dep in depends:
@@ -139,17 +139,17 @@ class DataFlowKernel(object):
 
     @property
     def config(self):
-        ''' Returns the fully initialized config that the DFK is
+        """Returns the fully initialized config that the DFK is
         actively using. DO *NOT* update.
 
         Returns:
              - config (dict)
-        '''
+        """
 
         return self._config
 
     def handle_update(self, task_id, future, memo_cbk=False):
-        ''' This function is called only as a callback from a task being done
+        """This function is called only as a callback from a task being done
         Move done task from runnable -> done
         Move newly doable tasks from pending -> runnable , and launch
 
@@ -161,7 +161,7 @@ class DataFlowKernel(object):
         KWargs:
              memo_cbk(Bool) : Indicates that the call is coming from a memo update,
              that does not require additional memo updates.
-        '''
+        """
         # TODO : Remove, this check is redundant
         final_state_flag = False
 
@@ -260,7 +260,7 @@ class DataFlowKernel(object):
         return
 
     def launch_task(self, task_id, executable, *args, **kwargs):
-        ''' Handle the actual submission of the task to the executor layer
+        """Handle the actual submission of the task to the executor layer
 
         If the app task has the sites attributes not set (default=='all')
         the task is launched on a randomly selected executor from the
@@ -279,7 +279,7 @@ class DataFlowKernel(object):
 
         Returns:
             Future that tracks the execution of the submitted executable
-        '''
+        """
 
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
@@ -314,7 +314,7 @@ class DataFlowKernel(object):
 
     @staticmethod
     def _count_all_deps(task_id, args, kwargs):
-        ''' Internal. Count the number of unresolved futures in the list depends
+        """Internal. Count the number of unresolved futures in the list depends
 
         Args:
             - task_id (uuid string) : Task_id
@@ -324,7 +324,7 @@ class DataFlowKernel(object):
         Returns:
             - count, [list of dependencies]
 
-        '''
+        """
 
         # Check the positional args
         depends = []
@@ -355,7 +355,7 @@ class DataFlowKernel(object):
 
     @staticmethod
     def sanitize_and_wrap(task_id, args, kwargs):
-        ''' This function should be called **ONLY** when all the futures we track
+        """This function should be called **ONLY** when all the futures we track
         have been resolved. If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error .
 
@@ -368,7 +368,7 @@ class DataFlowKernel(object):
         Return:
              partial Function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
 
-        '''
+        """
 
         dep_failures = []
 
@@ -409,7 +409,7 @@ class DataFlowKernel(object):
         return new_args, kwargs, dep_failures
 
     def submit(self, func, *args, parsl_sites='all', fn_hash=None, cache=False, **kwargs):
-        ''' Add task to the dataflow system.
+        """Add task to the dataflow system.
 
         >>> IF all deps are met :
         >>>   send to the runnable queue and launch the task
@@ -431,7 +431,7 @@ class DataFlowKernel(object):
         Returns:
                (AppFuture) [DataFutures,]
 
-        '''
+        """
 
         task_id = self.task_count
         self.task_count += 1
@@ -521,14 +521,14 @@ class DataFlowKernel(object):
         return task_def['app_fu']
 
     def cleanup(self):
-        '''  DataFlowKernel cleanup. This involves killing resources explicitly and
+        """DataFlowKernel cleanup. This involves killing resources explicitly and
         sending die messages to IPP workers.
 
         If the executors are managed, i.e created by the DFK
             then : we scale_in each of the executors and call executor.shutdown
             else : we do nothing. Executor cleanup is left to the user.
 
-        '''
+        """
 
         logger.info("DFK cleanup initiated")
 
@@ -562,7 +562,7 @@ class DataFlowKernel(object):
         logger.info("DFK cleanup complete")
 
     def checkpoint(self):
-        ''' Checkpoint the dfk incrementally to a checkpoint file.
+        """Checkpoint the dfk incrementally to a checkpoint file.
         When called, every task that has been completed yet not
         checkpointed is checkpointed to a file.
 
@@ -573,7 +573,7 @@ class DataFlowKernel(object):
             Checkpoint dir if checkpoints were written successfully.
             By default the checkpoints are written to the RUNDIR of the current
             run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
-        '''
+        """
 
         logger.info("Checkpointing.. ")
 
@@ -635,7 +635,7 @@ class DataFlowKernel(object):
         return checkpoint_dir
 
     def _load_checkpoints(self, checkpointDirs):
-        ''' Load a checkpoint file into a lookup table.
+        """Load a checkpoint file into a lookup table.
 
         The data being loaded from the pickle file mostly contains input
         attributes of the task: func, args, kwargs, env...
@@ -649,7 +649,7 @@ class DataFlowKernel(object):
 
         Returns:
             - memoized_lookup_table (dict)
-        '''
+        """
         memo_lookup_table = {}
 
         for checkpoint_dir in checkpointDirs:
@@ -686,7 +686,7 @@ class DataFlowKernel(object):
         return memo_lookup_table
 
     def load_checkpoints(self, checkpointDirs):
-        ''' Load checkpoints from the checkpoint files into a dictionary.
+        """Load checkpoints from the checkpoint files into a dictionary.
         The results are used to pre-populate the memoizer's lookup_table
 
         Kwargs:
@@ -695,7 +695,7 @@ class DataFlowKernel(object):
 
         Returns:
              - dict containing, hashed -> future mappings
-        '''
+        """
         self.memo_lookup_table = None
 
         if not checkpointDirs:
