@@ -103,7 +103,7 @@ class AppFactoryFactory(object):
              name(string) : Name for the appfactory
 
         Returns:
-             object(AppFactory)
+             object(AppFactoryFactory)
         """
         self.name = name
         self.apps = {'bash': BashApp,
