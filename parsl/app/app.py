@@ -60,7 +60,7 @@ class AppBase (object):
     def __call__(self, *args, **kwargs):
         ''' The __call__ function must be implemented in the subclasses
         '''
-        raise NotImplemented
+        raise NotImplementedError
 
 
 def app_wrapper(func):
