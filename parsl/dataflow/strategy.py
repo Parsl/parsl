@@ -99,8 +99,7 @@ class Strategy (object):
     """
 
     def __init__(self, dfk):
-        """Initialize strategy
-        """
+        """Initialize strategy"""
         self.dfk = dfk
         self.config = dfk.config
         self.sites = {}

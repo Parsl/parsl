@@ -6,5 +6,4 @@ class ExecutorException(Exception):
 
 
 class TaskExecException(ExecutorException):
-    """Task execution raised an error in the remote process
-    """
+    """Task execution raised an error in the remote process"""

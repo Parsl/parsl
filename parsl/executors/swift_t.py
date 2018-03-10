@@ -253,8 +253,7 @@ class TurbineExecutor(ParslExecutor):
     # When the executor gets lost, the weakref callback will wake up
     # the queue management thread.
     def weakref_cb(self, q=None):
-        """We do not use this yet
-        """
+        """We do not use this yet"""
 
         q.put(None)
 
@@ -275,8 +274,7 @@ class TurbineExecutor(ParslExecutor):
             logging.debug("Management thread already exists, returning")
 
     def shutdown(self):
-        """Shutdown method, to kill the threads and workers.
-        """
+        """Shutdown method, to kill the threads and workers."""
 
         self.is_alive = False
         logging.debug("Waking management thread")

@@ -7,8 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class ThreadPoolExecutor(ParslExecutor):
-    """The thread pool executor
-    """
+    """The thread pool executor"""
 
     def __init__(self, max_workers=2, thread_name_prefix='',
                  execution_provider=None, config=None, **kwargs):

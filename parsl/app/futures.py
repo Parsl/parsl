@@ -94,20 +94,17 @@ class DataFuture(Future):
 
     @property
     def tid(self):
-        """Returns the task_id of the task that will resolve this DataFuture
-        """
+        """Returns the task_id of the task that will resolve this DataFuture"""
         return self._tid
 
     @property
     def filepath(self):
-        """Filepath of the File object this datafuture represents
-        """
+        """Filepath of the File object this datafuture represents"""
         return self.file_obj.filepath
 
     @property
     def filename(self):
-        """Filepath of the File object this datafuture represents
-        """
+        """Filepath of the File object this datafuture represents"""
         return self.filepath
 
     def result(self, timeout=None):

@@ -1,6 +1,4 @@
-"""Home of the configuration defaults.
-
-"""
+"""Home of the configuration defaults."""
 
 import copy
 import collections

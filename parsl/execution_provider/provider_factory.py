@@ -67,8 +67,7 @@ class ExecProviderFactory (object):
         return True
 
     def make(self, rundir, config):
-        """Construct the appropriate provider, executors and channels and link them together.
-        """
+        """Construct the appropriate provider, executors and channels and link them together."""
 
         self.rundir = rundir
         sites = {}

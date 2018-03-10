@@ -2,8 +2,7 @@ from enum import IntEnum
 
 
 class States(IntEnum):
-    """Map states for tasks to an Int
-    """
+    """Map states for tasks to an int"""
     unsched = -1
     pending = 0
     runnable = 1

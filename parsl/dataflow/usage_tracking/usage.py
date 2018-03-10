@@ -128,8 +128,7 @@ class UsageTracker (object):
         return json.dumps(message)
 
     def send_UDP_message(self, message):
-        """Send UDP message
-        """
+        """Send UDP message"""
         if self.tracking_enabled:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP

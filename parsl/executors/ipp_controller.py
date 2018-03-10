@@ -11,9 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class Controller(object):
-
-    """Start and maintain a ipyparallel controller
-    """
+    """Start and maintain a ipyparallel controller"""
 
     def __init__(self, publicIp=None, port=None, portRange="", reuse=False,
                  log=True, ipythonDir="~/.ipython", mode="auto", profile=None):

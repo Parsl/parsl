@@ -7,13 +7,13 @@ logger = logging.getLogger(__name__)
 
 
 class PythonApp(AppBase):
-    """Extends AppBase to cover the Python App
-
-    """
+    """Extends AppBase to cover the Python App"""
 
     def __init__(self, func, executor, walltime=60, cache=False,
                  sites='all', fn_hash=None):
-        """Initialize the super. This bit is the same for both bash & python apps.
+        """Initialize the super.
+
+        This bit is the same for both bash & python apps.
         """
         super().__init__(func, executor, walltime=walltime, sites=sites, exec_type="python")
         self.fn_hash = fn_hash

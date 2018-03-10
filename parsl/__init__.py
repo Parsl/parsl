@@ -99,9 +99,7 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
 
 
 class NullHandler(logging.Handler):
-    """Setup default logging to /dev/null since this is library.
-
-    """
+    """Setup default logging to /dev/null since this is library."""
 
     def emit(self, record):
         pass

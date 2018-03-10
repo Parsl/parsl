@@ -305,9 +305,7 @@ class CannedMemoryView(CannedBytes):
 
 
 def _import_mapping(mapping, original=None):
-    """import any string-keys in a type mapping
-    
-    """
+    """Import any string-keys in a type mapping"""
     #log = get_logger()
     #log.debug("Importing canning map")
     for key, value in list(mapping.items()):

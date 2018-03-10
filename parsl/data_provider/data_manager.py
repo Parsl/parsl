@@ -30,8 +30,7 @@ class DataManager(ParslExecutor):
         self.config = config
 
     def submit(self, *args, **kwargs):
-        """Submit a staging request.
-        """
+        """Submit a staging request."""
         return self.executor.submit(*args, **kwargs)
 
     def scale_in(self, blocks, *args, **kwargs):

@@ -103,7 +103,9 @@ class BashApp(AppBase):
 
     def __init__(self, func, executor, walltime=60, cache=False,
                  sites='all', fn_hash=None):
-        """Initialize the super. This bit is the same for both bash & python apps.
+        """Initialize the super.
+
+        This bit is the same for both bash & python apps.
         """
         super().__init__(func, executor, walltime=60, sites=sites, exec_type="bash")
         self.fn_hash = fn_hash

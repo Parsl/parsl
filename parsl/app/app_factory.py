@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class AppFactory(object):
-    """AppFactory streamlines creation of apps
-    """
+    """AppFactory streamlines creation of apps"""
 
     def __init__(self, app_class, executor, func, cache=False, sites='all', walltime=60):
         """Construct an AppFactory for a particular app_class

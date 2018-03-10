@@ -192,9 +192,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         return r
 
     def status(self):
-        """Returns the status of the executor via probing the execution providers.
-
-        """
+        """Returns the status of the executor via probing the execution providers."""
         if self.execution_provider:
             status = self.execution_provider.status(self.engines)
 

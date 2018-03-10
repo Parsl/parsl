@@ -28,13 +28,11 @@ class FlowNoControl(object):
         pass
 
     def notify(self, event_id):
-        """This notifiy fn does nothing
-        """
+        """This notifiy fn does nothing"""
         pass
 
     def close(self):
-        """This close fn does nothing
-        """
+        """This close fn does nothing"""
         pass
 
 
@@ -126,8 +124,7 @@ class FlowControl(object):
                 print("Sleeping a bit more")
 
     def notify(self, event_id):
-        """Let the FlowControl system know that there's an event
-        """
+        """Let the FlowControl system know that there's an event"""
 
         self._event_buffer.extend([event_id])
         self._event_count += 1
@@ -147,8 +144,7 @@ class FlowControl(object):
         self._event_buffer = []
 
     def close(self):
-        """Merge the threads and terminate.
-        """
+        """Merge the threads and terminate."""
         self._kill_event.set()
         self._thread.join()
 

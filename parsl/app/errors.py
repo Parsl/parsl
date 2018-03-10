@@ -1,5 +1,4 @@
-"""Exceptions raise by Apps.
-"""
+"""Exceptions raise by Apps."""
 
 
 class ParslError(Exception):
@@ -16,8 +15,7 @@ class NotFutureError(ParslError):
 
 
 class InvalidAppTypeError(ParslError):
-    """An invalid app type was requested from the the @App decorator.
-    """
+    """An invalid app type was requested from the the @App decorator."""
 
 
 class AppException(ParslError):
