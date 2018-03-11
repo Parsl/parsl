@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-"""
-Test process layer.
+"""Test process layer.
 
 <bash>
 Foreach ….

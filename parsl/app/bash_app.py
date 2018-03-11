@@ -7,8 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def remote_side_bash_executor(func, *args, **kwargs):
-    """
-    Execute the bash app type function and return the command line string.
+    """Execute the bash app type function and return the command line string.
 
     This string is reformatted with the *args, and **kwargs
     from call time.

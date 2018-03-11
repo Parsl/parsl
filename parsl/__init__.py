@@ -1,5 +1,4 @@
-"""
-Parsl is a Parallel Scripting Library, designed to enable efficient workflow execution.
+"""Parsl is a Parallel Scripting Library, designed to enable efficient workflow execution.
 
 Importing
 ---------
