@@ -21,7 +21,7 @@ def bash_app(stdout=None, stderr=None):
 
 
 def test_python():
-    """ Testing basic python functionality """
+    """Testing basic python functionality."""
 
     results = {}
     for i in range(0, 2):
@@ -32,7 +32,7 @@ def test_python():
 
 
 def test_bash():
-    """ Testing basic bash functionality """
+    """Testing basic bash functionality."""
 
     import os
     fname = os.path.basename(__file__)

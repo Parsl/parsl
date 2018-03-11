@@ -1,9 +1,8 @@
-"""AppFuture
+"""This module implements the AppFutures.
 
     We have two basic types of futures:
     1. DataFutures which represent data objects
     2. AppFutures which represent the futures on App/Leaf tasks.
-    This module implements the AppFutures
 
 """
 
@@ -32,7 +31,7 @@ _STATE_TO_DESCRIPTION_MAP = {
 
 
 class AppFuture(Future):
-    """An AppFuture points at a Future returned from an Executor
+    """An AppFuture points at a Future returned from an Executor.
 
     We are simply wrapping a AppFuture, and adding the specific case where, if the future
     is resolved i.e file exists, then the DataFuture is assumed to be resolved.
@@ -94,9 +93,10 @@ class AppFuture(Future):
         return self._tid
 
     def update_parent(self, fut):
-        """Handle the case where the user has called result on the AppFuture
-        before the parent exists. Add a callback to the parent to update the
-        state
+        """Add a callback to the parent to update the state.
+
+        This handles the case where the user has called result on the AppFuture
+        before the parent exists.
         """
         # with self._parent_update_lock:
         self.parent = fut
@@ -104,7 +104,9 @@ class AppFuture(Future):
         self._parent_update_event.set()
 
     def result(self, timeout=None):
-        """Result. Waits for the result of the AppFuture
+        """Result.
+
+        Waits for the result of the AppFuture
         KWargs:
               timeout (int): Timeout in seconds
         """

@@ -1,4 +1,4 @@
-"""Execution Provider Factory
+"""Execution Provider Factory.
 
 Centralize creation of execution providers and executors.
 
@@ -55,7 +55,7 @@ class ExecProviderFactory (object):
                          None: lambda *args, **kwargs: None}
 
     def validate_config(self, config):
-        """Validate_config validates config
+        """Validate configuration.
         There is no logic implemented here yet.
         This might be a good first task for a new dev.
 

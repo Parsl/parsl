@@ -1,5 +1,5 @@
 class ProviderFactoryError(Exception):
-    """Base class for all exceptions
+    """Base class for all exceptions.
 
     Only to be invoked when only a more specific error is not available.
     """
@@ -12,7 +12,7 @@ class ProviderFactoryError(Exception):
 
 
 class BadConfig(ProviderFactoryError):
-    """The user provided a bad config
+    """The user provided a bad config.
 
     Contains:
         - Reason

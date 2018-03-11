@@ -25,9 +25,7 @@ else:
 
 
 def _get_cell_type(a=None):
-    """the type of a closure cell doesn't seem to be importable,
-    so just create one
-    """
+    """The type of a closure cell doesn't seem to be importable, so just create one."""
     def inner():
         return a
     return type(py3compat.get_closure(inner)[0])
@@ -41,7 +39,7 @@ cell_type = _get_cell_type()
 
 
 def interactive(f):
-    """decorator for making functions appear as interactively defined.
+    """Decorator for making functions appear as interactively defined.
     This results in the function being linked to the user_ns as globals()
     instead of the module globals().
     """
@@ -59,9 +57,9 @@ def interactive(f):
 
 
 def use_dill():
-    """use dill to expand serialization support
-    
-    adds support for object methods and closures to serialization.
+    """Use dill to expand serialization support.
+
+    Adds support for object methods and closures to serialization.
     """
     import dill
 
@@ -73,9 +71,9 @@ def use_dill():
 
 
 def use_cloudpickle():
-    """use cloudpickle to expand serialization support
-    
-    adds support for object methods and closures to serialization.
+    """Use cloudpickle to expand serialization support.
+
+    Adds support for object methods and closures to serialization.
     """
     import cloudpickle
 
@@ -87,8 +85,8 @@ def use_cloudpickle():
 
 
 def use_pickle():
-    """revert to using stdlib pickle
-    
+    """Revert to using stdlib pickle.
+
     Reverts custom serialization enabled by use_dill|cloudpickle.
     """
     from . import serialize
@@ -105,11 +103,11 @@ def use_pickle():
 
 class CannedObject(object):
     def __init__(self, obj, keys=[], hook=None):
-        """can an object for safe pickling
-        
+        """Can an object for safe pickling.
+
         Parameters
         ==========
-        
+
         obj:
             The object to be canned
         keys: list (optional)
@@ -117,8 +115,8 @@ class CannedObject(object):
         hook: callable (optional)
             An optional extra callable,
             which can do additional processing of the uncanned object.
-        
-        large data may be offloaded into the buffers list,
+
+        Large data may be offloaded into the buffers list,
         used for zero-copy transfers.
         """
         self.keys = keys
@@ -162,7 +160,7 @@ class Reference(CannedObject):
 
 
 class CannedCell(CannedObject):
-    """Can a closure cell"""
+    """Can a closure cell."""
 
     def __init__(self, cell):
         self.cell_contents = can(cell.cell_contents)
@@ -305,7 +303,7 @@ class CannedMemoryView(CannedBytes):
 
 
 def _import_mapping(mapping, original=None):
-    """Import any string-keys in a type mapping"""
+    """Import any string-keys in a type mapping."""
     #log = get_logger()
     #log.debug("Importing canning map")
     for key, value in list(mapping.items()):
@@ -323,8 +321,8 @@ def _import_mapping(mapping, original=None):
 
 
 def istype(obj, check):
-    """like isinstance(obj, check), but strict
-    
+    """Like isinstance(obj, check), but strict.
+
     This won't catch subclasses.
     """
     if isinstance(check, tuple):
@@ -337,7 +335,7 @@ def istype(obj, check):
 
 
 def can(obj):
-    """prepare an object for pickling"""
+    """Prepare an object for pickling."""
 
     import_needed = False
 
@@ -365,7 +363,7 @@ def can_class(obj):
 
 
 def can_dict(obj):
-    """can the *values* of a dict"""
+    """Can the *values* of a dict."""
     if istype(obj, dict):
         newobj = {}
         for k, v in iteritems(obj):
@@ -379,7 +377,7 @@ sequence_types = (list, tuple, set)
 
 
 def can_sequence(obj):
-    """can the elements of a sequence"""
+    """Can the elements of a sequence."""
     if istype(obj, sequence_types):
         t = type(obj)
         return t([can(i) for i in obj])
@@ -388,7 +386,7 @@ def can_sequence(obj):
 
 
 def uncan(obj, g=None):
-    """invert canning"""
+    """Invert canning."""
 
     import_needed = False
     for cls, uncanner in iteritems(uncan_map):

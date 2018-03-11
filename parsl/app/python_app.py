@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class PythonApp(AppBase):
-    """Extends AppBase to cover the Python App"""
+    """Extends AppBase to cover the Python App."""
 
     def __init__(self, func, executor, walltime=60, cache=False,
                  sites='all', fn_hash=None):
@@ -20,7 +20,7 @@ class PythonApp(AppBase):
         self.cache = cache
 
     def __call__(self, *args, **kwargs):
-        """This is where the call to a python app is handled
+        """This is where the call to a python app is handled.
 
         Args:
              - Arbitrary

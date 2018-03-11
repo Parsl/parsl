@@ -2,20 +2,21 @@
 
 
 class ParslError(Exception):
-    """Base class for all exceptions
+    """Base class for all exceptions.
 
-    Only to be invoked when only a more specific error is not available.
+    Only to be invoked when a more specific error is not available.
     """
 
 
 class NotFutureError(ParslError):
-    """Basically a type error. A non future item was passed to a function
-    that expected a future.
+    """A non future item was passed to a function that expected a future.
+
+    This is basically a type error.
     """
 
 
 class InvalidAppTypeError(ParslError):
-    """An invalid app type was requested from the the @App decorator."""
+    """An invalid app type was requested from the @App decorator."""
 
 
 class AppException(ParslError):
@@ -31,7 +32,7 @@ class AppException(ParslError):
 
 
 class AppBadFormatting(ParslError):
-    """An error raised during formatting of a bash function
+    """An error raised during formatting of a bash function.
     What this exception contains depends entirely on context
     Contains:
     reason(string)
@@ -63,7 +64,7 @@ class AppFailure(AppException):
 
 
 class AppTimeout(AppException):
-    """An error raised during execution of an app when it exceeds its allotted walltime
+    """An error raised during execution of an app when it exceeds its allotted walltime.
 
     Contains:
     reason(string)
@@ -95,8 +96,7 @@ class BashAppNoReturn(AppException):
 
 
 class MissingOutputs(ParslError):
-    """Error raised at the end of app execution due to missing
-    output files
+    """Error raised at the end of app execution due to missing output files.
 
     Contains:
     reason(string)
@@ -116,7 +116,7 @@ class MissingOutputs(ParslError):
 
 
 class BadStdStreamFile(ParslError):
-    """Error raised due to bad filepaths specified for STDOUT/ STDERR
+    """Error raised due to bad filepaths specified for STDOUT/ STDERR.
 
     Contains:
        reason(string)
@@ -138,8 +138,7 @@ class BadStdStreamFile(ParslError):
 
 
 class DependencyError(ParslError):
-    """Error raised at the end of app execution due to missing
-    output files
+    """Error raised at the end of app execution due to missing output files.
 
     Contains:
     reason(string)

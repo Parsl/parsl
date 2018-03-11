@@ -6,12 +6,12 @@ logger = logging.getLogger(__name__)
 
 
 class DataManager(ParslExecutor):
-    """The DataManager uses the familiar Executor interface, where staging tasks are submitted
+    """DataManager uses the familiar Executor interface, where staging tasks are submitted
     to it, and DataFutures are returned.
     """
 
     def __init__(self, max_workers=10, config=None):
-        """Initialize the DataManager
+        """Initialize the DataManager.
 
         Kwargs:
            - max_workers (int) : Number of threads (Default=10)

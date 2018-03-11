@@ -1,4 +1,4 @@
-"""Testing python apps"""
+"""Testing python apps."""
 import parsl
 from parsl import *
 import os

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class UsageTracker (object):
-    """Anonymized Usage Tracking for Parsl
+    """Anonymized Usage Tracking for Parsl.
 
     Client for this is here : https://github.com/Parsl/parsl_tracking
     This issue captures the discussion that went into functionality
@@ -99,8 +99,7 @@ class UsageTracker (object):
         return json.dumps(message)
 
     def construct_end_message(self):
-        """Collect the final run information at the time of DFK
-        cleanup.
+        """Collect the final run information at the time of DFK cleanup.
 
         Returns:
              - Message dict dumped as json string, ready for UDP
@@ -128,7 +127,7 @@ class UsageTracker (object):
         return json.dumps(message)
 
     def send_UDP_message(self, message):
-        """Send UDP message"""
+        """Send UDP message."""
         if self.tracking_enabled:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP

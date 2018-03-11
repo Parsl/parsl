@@ -1,8 +1,5 @@
-"""AppFactoryFactory
+"""Centralize app object creation."""
 
-Centralize app object creation.
-
-"""
 import logging
 from inspect import getsource
 from hashlib import md5
@@ -15,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class AppFactory(object):
-    """AppFactory streamlines creation of apps"""
+    """AppFactory streamlines creation of apps."""
 
     def __init__(self, app_class, executor, func, cache=False, sites='all', walltime=60):
-        """Construct an AppFactory for a particular app_class
+        """Construct an AppFactory for a particular app_class.
 
         Args:
             - app_class(Class) : An app class
@@ -56,8 +53,7 @@ class AppFactory(object):
             self.func_hash = func.__name__
 
     def __call__(self, *args, **kwargs):
-        """Create a new object of app_class with the args,
-        execute the app_object and return the futures
+        """Create a new object of app_class with the args, execute the app_object and return the futures.
 
         Args:
              Arbitrary args to the decorated function
@@ -97,7 +93,7 @@ class AppFactoryFactory(object):
     """
 
     def __init__(self, name):
-        """Constructor
+        """Constructor.
 
         Args:
              name(string) : Name for the appfactory
@@ -110,7 +106,7 @@ class AppFactoryFactory(object):
                      'python': PythonApp}
 
     def make(self, kind, executor, func, **kwargs):
-        """Creates a new App of the kind specified
+        """Creates a new App of the kind specified.
 
         Args:
             kind(string) : For now only(bash|python)

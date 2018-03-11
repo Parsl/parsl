@@ -46,7 +46,7 @@ class DataFlowKernel(object):
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
                  rundir=None, retries=0, checkpointFiles=None, checkpointMode=None):
-        """Initialize the DataFlowKernel
+        """Initialize the DataFlowKernel.
 
         Please note that keyword args passed to the DFK here will always override
         options passed in via the config.
@@ -127,7 +127,10 @@ class DataFlowKernel(object):
 
     @staticmethod
     def _count_deps(depends, task_id):
-        """Internal. Count the number of unresolved futures in the list depends"""
+        """Internal.
+
+        Count the number of unresolved futures in the list depends.
+        """
 
         count = 0
         for dep in depends:
@@ -139,8 +142,9 @@ class DataFlowKernel(object):
 
     @property
     def config(self):
-        """Returns the fully initialized config that the DFK is
-        actively using. DO *NOT* update.
+        """Returns the fully initialized config that the DFK is actively using.
+
+        DO *NOT* update.
 
         Returns:
              - config (dict)
@@ -149,7 +153,7 @@ class DataFlowKernel(object):
         return self._config
 
     def handle_update(self, task_id, future, memo_cbk=False):
-        """This function is called only as a callback from a task being done
+        """This function is called only as a callback from a task being done.
         Move done task from runnable -> done
         Move newly doable tasks from pending -> runnable , and launch
 
@@ -260,7 +264,7 @@ class DataFlowKernel(object):
         return
 
     def launch_task(self, task_id, executable, *args, **kwargs):
-        """Handle the actual submission of the task to the executor layer
+        """Handle the actual submission of the task to the executor layer.
 
         If the app task has the sites attributes not set (default=='all')
         the task is launched on a randomly selected executor from the
@@ -314,7 +318,9 @@ class DataFlowKernel(object):
 
     @staticmethod
     def _count_all_deps(task_id, args, kwargs):
-        """Internal. Count the number of unresolved futures in the list depends
+        """Internal.
+
+        Count the number of unresolved futures in the list depends.
 
         Args:
             - task_id (uuid string) : Task_id
@@ -355,8 +361,9 @@ class DataFlowKernel(object):
 
     @staticmethod
     def sanitize_and_wrap(task_id, args, kwargs):
-        """This function should be called **ONLY** when all the futures we track
-        have been resolved. If the user hid futures a level below, we will not catch
+        """This function should be called **ONLY** when all the futures we track have been resolved.
+
+        If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error .
 
         Args:
@@ -521,8 +528,9 @@ class DataFlowKernel(object):
         return task_def['app_fu']
 
     def cleanup(self):
-        """DataFlowKernel cleanup. This involves killing resources explicitly and
-        sending die messages to IPP workers.
+        """DataFlowKernel cleanup.
+
+        This involves killing resources explicitly and sending die messages to IPP workers.
 
         If the executors are managed, i.e created by the DFK
             then : we scale_in each of the executors and call executor.shutdown

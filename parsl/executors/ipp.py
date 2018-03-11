@@ -25,7 +25,7 @@ class IPyParallelExecutor(ParslExecutor):
     """
 
     def compose_launch_cmd(self, filepath, engine_dir):
-        """Reads the json contents from filepath and uses that to compose the engine launch command
+        """Reads the json contents from filepath and uses that to compose the engine launch command.
 
         Args:
             filepath: Path to the engine file
@@ -146,7 +146,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         return self._scaling_enabled
 
     def submit(self, *args, **kwargs):
-        """Submits work to the thread pool
+        """Submits work to the thread pool.
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
@@ -158,7 +158,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         return self.lb_view.apply_async(*args, **kwargs)
 
     def scale_out(self, *args, **kwargs):
-        """Scales out the number of active workers by 1
+        """Scales out the number of active workers by 1.
         This method is notImplemented for threads and will raise the error if called.
 
         """
@@ -172,7 +172,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         return r
 
     def scale_in(self, blocks, *args, **kwargs):
-        """Scale in the number of active workers by 1
+        """Scale in the number of active workers by 1.
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:

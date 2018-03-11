@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class Controller(object):
-    """Start and maintain a ipyparallel controller"""
+    """Start and maintain a ipyparallel controller."""
 
     def __init__(self, publicIp=None, port=None, portRange="", reuse=False,
                  log=True, ipythonDir="~/.ipython", mode="auto", profile=None):
-        """Initialize ipython controllers to the user specified configs
+        """Initialize ipython controllers to the user specified configs.
 
         The specifig config sections that will be used by this are in the dict
         config["controller"]
@@ -115,8 +115,9 @@ class Controller(object):
 
     @property
     def engine_file(self):
-        """Engine_file attribute specifies the file path to the specific ipython_dir/profile folders in
-        which the ipcontroller-engine.json file is stored.
+        """Specify path to the ipcontroller-engine.json file.
+
+        This file is stored in in the ipython_dir/profile folders.
 
         Returns :
               - str, File path to engine file
@@ -127,8 +128,9 @@ class Controller(object):
 
     @property
     def client_file(self):
-        """Client_file attribute specifies the file path to the specific ipython_dir/profile folders in
-        which the ipcontroller-client.json file is stored.
+        """Specify path to the ipcontroller-client.json file.
+
+        This file is stored in in the ipython_dir/profile folders.
 
         Returns :
               - str, File path to client file

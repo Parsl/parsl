@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class FlowNoControl(object):
-    """FlowNoControl implements similar interfaces as FlowControl but
-    with null handlers so as to mimic the FlowControl class.
+    """FlowNoControl implements similar interfaces as FlowControl.
+    Null handlers are used so as to mimic the FlowControl class.
 
     """
 
@@ -28,17 +28,18 @@ class FlowNoControl(object):
         pass
 
     def notify(self, event_id):
-        """This notifiy fn does nothing"""
+        """This notifiy fn does nothing."""
         pass
 
     def close(self):
-        """This close fn does nothing"""
+        """This close fn does nothing."""
         pass
 
 
 class FlowControl(object):
-    """FlowControl timer is designed to implement threshold-interval based
-    flow control. The overall goal is to trap the flow of apps from the
+    """Implements threshold-interval based flow control.
+
+    The overall goal is to trap the flow of apps from the
     workflow, measure it and redirect it the appropriate executors for
     processing.
 
@@ -72,7 +73,7 @@ class FlowControl(object):
     """
 
     def __init__(self, dfk, config, *args, threshold=20, interval=5):
-        """Initialize the flowcontrol object
+        """Initialize the flowcontrol object.
         We start the timer thread here
 
         Args:
@@ -124,7 +125,7 @@ class FlowControl(object):
                 print("Sleeping a bit more")
 
     def notify(self, event_id):
-        """Let the FlowControl system know that there's an event"""
+        """Let the FlowControl system know that there is an event."""
 
         self._event_buffer.extend([event_id])
         self._event_count += 1

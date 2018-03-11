@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 def pp_config(config):
-    """Pretty print the config, this should be part of the
-    default logging to the debug logs.
+    """Pretty print the config.
+
+    This should be part of the default logging to the debug logs.
 
     Args:
         - config (dict) : The config data structure
@@ -43,8 +44,9 @@ def recursive_update(template, userdata):
 
 
 def update_config(config, rundir):
-    """Update the config datastructure with defaults. This is the one centralized
-    location where the default live.
+    """Update the config datastructure with defaults.
+
+    This is the one centralized location where the default live.
 
     Args:
          - config (dict) : The config dictionary

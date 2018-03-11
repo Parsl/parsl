@@ -36,7 +36,7 @@ def bash_app(stdout=None, stderr=None):
 
 
 def test_python(N=10):
-    """ Testing basic python functionality """
+    """Testing basic python functionality."""
 
     r1 = {}
     r2 = {}
@@ -54,7 +54,7 @@ def test_python(N=10):
 
 
 def test_bash():
-    """ Testing basic bash functionality """
+    """Testing basic bash functionality."""
 
     import os
     fname = os.path.basename(__file__)

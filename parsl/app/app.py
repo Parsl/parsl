@@ -1,8 +1,6 @@
 """
-Parsl Apps
-==========
+Definitions for the @App decorator and the APP classes.
 
-Here lies the definitions for the @App decorator and the APP classes.
 The APP class encapsulates a generic leaf task that can be executed asynchronously.
 
 """
@@ -58,8 +56,7 @@ class AppBase (object):
         self.outputs = sig.parameters['outputs'].default if 'outputs' in sig.parameters else []
 
     def __call__(self, *args, **kwargs):
-        """The __call__ function must be implemented in the subclasses
-        """
+        """The __call__ function must be implemented in the subclasses."""
         raise NotImplementedError
 
 
@@ -75,7 +72,7 @@ def app_wrapper(func):
 
 
 def App(apptype, executor, walltime=60, cache=False, sites='all'):
-    """The App decorator function
+    """The App decorator function.
 
     Args:
         - apptype (string) : Apptype can be bash|python

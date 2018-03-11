@@ -2,7 +2,7 @@
 
 
 class ExecutorError(Exception):
-    """Base class for all exceptions
+    """Base class for all exceptions.
 
     Only to be invoked when only a more specific error is not available.
     """
@@ -23,7 +23,7 @@ class ScalingFailed(ExecutorError):
 
 
 class ControllerErr(ExecutorError):
-    """Error raise by IPP controller"""
+    """Error raise by IPP controller."""
 
     def __init__(self, reason):
         self.reason = reason

@@ -24,8 +24,9 @@ ITEM_THRESHOLD = 1024
 
 
 def runner(incoming_q, outgoing_q):
-    """This is a function that mocks the Swift-T side. It listens on the the
-    incoming_q for tasks and posts returns on the outgoing_q
+    """This is a function that mocks the Swift-T side.
+
+    It listens on the the incoming_q for tasks and posts returns on the outgoing_q.
 
     Args:
          - incoming_q (Queue object) : The queue to listen on
@@ -146,7 +147,9 @@ def runner(incoming_q, outgoing_q):
 
 
 class TurbineExecutor(ParslExecutor):
-    """The Turbine executor. Bypass the Swift/T language and run on top off the Turbine engines
+    """The Turbine executor.
+
+    Bypass the Swift/T language and run on top off the Turbine engines
     in an MPI environment.
 
     Here is a diagram
@@ -169,12 +172,7 @@ class TurbineExecutor(ParslExecutor):
     """
 
     def _queue_management_worker(self):
-<<<<<<< HEAD
-        '''Listen to the queue for task status messages and handle them.
-=======
-        """The queue management worker is responsible for listening to the incoming_q
-        for task status messages and updating tasks with results/exceptions/updates
->>>>>>> Fix D300 and D210 errors
+        """Listen to the queue for task status messages and handle them.
 
         Depending on the message, tasks will be updated with results, exceptions,
         or updates. It expects the following messages:
@@ -204,15 +202,8 @@ class TurbineExecutor(ParslExecutor):
                "started"  : tstamp
             }
 
-<<<<<<< HEAD
         The `None` message is a die request.
-        '''
-=======
-        The None message is a die request.
-        None
-
         """
->>>>>>> Fix D300 and D210 errors
 
         while True:
             logger.debug("[MTHREAD] Management thread active")
@@ -253,7 +244,7 @@ class TurbineExecutor(ParslExecutor):
     # When the executor gets lost, the weakref callback will wake up
     # the queue management thread.
     def weakref_cb(self, q=None):
-        """We do not use this yet"""
+        """We do not use this yet."""
 
         q.put(None)
 
@@ -285,7 +276,7 @@ class TurbineExecutor(ParslExecutor):
         return True
 
     def __init__(self, swift_attribs=None, config=None, **kwargs):
-        """Initialize the thread pool
+        """Initialize the thread pool.
         Trying to implement the emews model.
 
         Kwargs:
@@ -310,7 +301,9 @@ class TurbineExecutor(ParslExecutor):
         self._scaling_enabled = False
 
     def submit(self, func, *args, **kwargs):
-        """Submits work to the the outgoing_q, an external process listens on this
+        """Submits work to the the outgoing_q.
+
+        The outgoing_q is an external process listens on this
         queue for new work. This method is simply pass through and behaves like a
         submit call as described here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
@@ -348,7 +341,7 @@ class TurbineExecutor(ParslExecutor):
         return self._scaling_enabled
 
     def scale_out(self, workers=1):
-        """Scales out the number of active workers by 1
+        """Scales out the number of active workers by 1.
         This method is notImplemented for threads and will raise the error if called.
         This would be nice to have, and can be done
 
@@ -359,7 +352,7 @@ class TurbineExecutor(ParslExecutor):
         raise NotImplementedError
 
     def scale_in(self, workers=1):
-        """Scale in the number of active workers by 1
+        """Scale in the number of active workers by 1.
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:

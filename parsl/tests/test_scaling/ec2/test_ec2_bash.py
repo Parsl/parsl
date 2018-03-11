@@ -16,7 +16,7 @@ aws s3 cp logfile s3://mybucket/{0}
 
 
 def test_python_remote(count=10):
-    """ Run with no delay
+    """ Run with no delay.
     """
     fus = []
     for i in range(0, count):

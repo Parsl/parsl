@@ -1,8 +1,5 @@
 """
-Parsl
-=====
-
-Parallel Scripting Library, designed to enable efficient workflow execution.
+Parsl is a Parallel Scripting Library, designed to enable efficient workflow execution.
 
 Importing
 ---------
@@ -49,7 +46,7 @@ __all__ = [
 
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler
+    """Add a stream log handler.
 
     Args:
          - name (string) : Set the logger name.
@@ -74,7 +71,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
 
 
 def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler
+    """Add a stream log handler.
 
     Args:
         - filename (string): Name of the file to write logs to
