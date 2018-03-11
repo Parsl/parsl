@@ -148,6 +148,7 @@ class AppFuture(Future):
 
     def done(self):
         """Check if the future is done.
+
         If a parent is set, we return the status of the parent.
         else, there is no parent assigned, meaning the status is False.
 

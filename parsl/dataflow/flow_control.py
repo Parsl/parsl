@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class FlowNoControl(object):
     """FlowNoControl implements similar interfaces as FlowControl.
+
     Null handlers are used so as to mimic the FlowControl class.
 
     """
@@ -74,6 +75,7 @@ class FlowControl(object):
 
     def __init__(self, dfk, config, *args, threshold=20, interval=5):
         """Initialize the flowcontrol object.
+
         We start the timer thread here
 
         Args:

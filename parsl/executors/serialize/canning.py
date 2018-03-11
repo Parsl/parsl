@@ -40,6 +40,7 @@ cell_type = _get_cell_type()
 
 def interactive(f):
     """Decorator for making functions appear as interactively defined.
+
     This results in the function being linked to the user_ns as globals()
     instead of the module globals().
     """

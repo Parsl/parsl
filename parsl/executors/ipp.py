@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class IPyParallelExecutor(ParslExecutor):
-    """The Ipython parallel executor.
+    """The IPython Parallel executor.
+
     This executor allows us to take advantage of multiple processes running locally
     or remotely via  IPythonParallel's pilot execution system.
 
@@ -147,6 +148,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
     def submit(self, *args, **kwargs):
         """Submits work to the thread pool.
+
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
@@ -159,6 +161,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
     def scale_out(self, *args, **kwargs):
         """Scales out the number of active workers by 1.
+
         This method is notImplemented for threads and will raise the error if called.
 
         """
@@ -173,6 +176,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
     def scale_in(self, blocks, *args, **kwargs):
         """Scale in the number of active workers by 1.
+
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:
@@ -203,6 +207,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.
+
         The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
 
         Kwargs:

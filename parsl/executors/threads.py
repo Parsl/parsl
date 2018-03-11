@@ -12,6 +12,7 @@ class ThreadPoolExecutor(ParslExecutor):
     def __init__(self, max_workers=2, thread_name_prefix='',
                  execution_provider=None, config=None, **kwargs):
         """Initialize the thread pool.
+
         Config options that are really used are :
 
         config.sites.site.execution.options = {"maxThreads" : <int>,
@@ -48,6 +49,7 @@ class ThreadPoolExecutor(ParslExecutor):
 
     def submit(self, *args, **kwargs):
         """Submits work to the thread pool.
+
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
@@ -59,6 +61,7 @@ class ThreadPoolExecutor(ParslExecutor):
 
     def scale_out(self, workers=1):
         """Scales out the number of active workers by 1.
+
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:
@@ -69,6 +72,7 @@ class ThreadPoolExecutor(ParslExecutor):
 
     def scale_in(self, workers=1):
         """Scale in the number of active workers by 1.
+
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:
@@ -79,6 +83,7 @@ class ThreadPoolExecutor(ParslExecutor):
 
     def shutdown(self, block=False):
         """Shutdown the ThreadPool.
+
         This method is notImplemented for threads and will raise the error if called.
         The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
 

@@ -111,6 +111,7 @@ class DataFuture(Future):
 
     def result(self, timeout=None):
         """A blocking call that returns either the result or raises an exception.
+
         Assumptions : A DataFuture always has a parent AppFuture. The AppFuture does callbacks when
         setup.
 

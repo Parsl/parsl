@@ -86,6 +86,7 @@ class AppFactory(object):
 
 class AppFactoryFactory(object):
     """An instance AppFactoryFactory will be factory that creates object of a particular kind.
+
     AppFactoryFactory has the various apps registered with it, and it will return an AppFactory
     that constructs objects of a specific kind.
 

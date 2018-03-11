@@ -23,6 +23,7 @@ def pp_config(config):
 
 def recursive_update(template, userdata):
     """Recursively update the template with userdata.
+
     If we don't do this the value updates for nested collections
     would get simply overwritten rathen than updated.
 

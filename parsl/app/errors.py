@@ -21,6 +21,7 @@ class InvalidAppTypeError(ParslError):
 
 class AppException(ParslError):
     """An error raised during execution of an app.
+
     What this exception contains depends entirely on context
     """
 
@@ -33,6 +34,7 @@ class AppException(ParslError):
 
 class AppBadFormatting(ParslError):
     """An error raised during formatting of a bash function.
+
     What this exception contains depends entirely on context
     Contains:
     reason(string)
@@ -49,6 +51,7 @@ class AppBadFormatting(ParslError):
 
 class AppFailure(AppException):
     """An error raised during execution of an app.
+
     What this exception contains depends entirely on context
     Contains:
     reason(string)

@@ -56,6 +56,7 @@ class ExecProviderFactory (object):
 
     def validate_config(self, config):
         """Validate configuration.
+
         There is no logic implemented here yet.
         This might be a good first task for a new dev.
 

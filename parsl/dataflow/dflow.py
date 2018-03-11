@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 class DataFlowKernel(object):
     """The DataFlowKernel adds dependency awareness to an existing executor.
+
     It is responsible for managing futures, such that when dependencies are resolved,
     pending tasks move to the runnable state.
 
@@ -154,6 +155,7 @@ class DataFlowKernel(object):
 
     def handle_update(self, task_id, future, memo_cbk=False):
         """This function is called only as a callback from a task being done.
+
         Move done task from runnable -> done
         Move newly doable tasks from pending -> runnable , and launch
 
@@ -571,6 +573,7 @@ class DataFlowKernel(object):
 
     def checkpoint(self):
         """Checkpoint the dfk incrementally to a checkpoint file.
+
         When called, every task that has been completed yet not
         checkpointed is checkpointed to a file.
 
@@ -695,6 +698,7 @@ class DataFlowKernel(object):
 
     def load_checkpoints(self, checkpointDirs):
         """Load checkpoints from the checkpoint files into a dictionary.
+
         The results are used to pre-populate the memoizer's lookup_table
 
         Kwargs:

@@ -24,6 +24,7 @@ class UsageTracker (object):
     def __init__(self, dfk, ip='52.3.111.203', port=50077,
                  domain_name='tracking.parsl-project.org'):
         """Initialize usage tracking unless the user has opted-out.
+
         Tracks usage stats by inspecting the internal state of the dfk.
 
         Args:
@@ -143,6 +144,7 @@ class UsageTracker (object):
 
     def send_message(self):
         """Send message over UDP.
+
         If tracking is disables, the bytes_sent will always be set to -1
 
         Returns:

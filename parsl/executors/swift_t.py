@@ -250,6 +250,7 @@ class TurbineExecutor(ParslExecutor):
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
+
         Checks if a thread already exists, then starts it.
         Could be used later as a restart if the management thread dies.
         """
@@ -277,6 +278,7 @@ class TurbineExecutor(ParslExecutor):
 
     def __init__(self, swift_attribs=None, config=None, **kwargs):
         """Initialize the thread pool.
+
         Trying to implement the emews model.
 
         Kwargs:
@@ -342,6 +344,7 @@ class TurbineExecutor(ParslExecutor):
 
     def scale_out(self, workers=1):
         """Scales out the number of active workers by 1.
+
         This method is notImplemented for threads and will raise the error if called.
         This would be nice to have, and can be done
 
@@ -353,6 +356,7 @@ class TurbineExecutor(ParslExecutor):
 
     def scale_in(self, workers=1):
         """Scale in the number of active workers by 1.
+
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:
