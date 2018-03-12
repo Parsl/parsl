@@ -132,7 +132,6 @@ class DataFlowKernel(object):
 
         Count the number of unresolved futures in the list depends.
         """
-
         count = 0
         for dep in depends:
             if isinstance(dep, Future) or issubclass(type(dep), Future):
@@ -150,7 +149,6 @@ class DataFlowKernel(object):
         Returns:
              - config (dict)
         """
-
         return self._config
 
     def handle_update(self, task_id, future, memo_cbk=False):
@@ -286,7 +284,6 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
-
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             self.handle_update(task_id, memo_fu, memo_cbk=True)
@@ -333,7 +330,6 @@ class DataFlowKernel(object):
             - count, [list of dependencies]
 
         """
-
         # Check the positional args
         depends = []
         count = 0
@@ -378,7 +374,6 @@ class DataFlowKernel(object):
              partial Function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
 
         """
-
         dep_failures = []
 
         # Replace item in args
@@ -441,7 +436,6 @@ class DataFlowKernel(object):
                (AppFuture) [DataFutures,]
 
         """
-
         task_id = self.task_count
         self.task_count += 1
 
@@ -539,7 +533,6 @@ class DataFlowKernel(object):
             else : we do nothing. Executor cleanup is left to the user.
 
         """
-
         logger.info("DFK cleanup initiated")
 
         # Checkpointing takes priority over the rest of the tasks
@@ -585,7 +578,6 @@ class DataFlowKernel(object):
             By default the checkpoints are written to the RUNDIR of the current
             run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
         """
-
         logger.info("Checkpointing.. ")
 
         checkpoint_dir = '{0}/checkpoint'.format(self.rundir)

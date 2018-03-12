@@ -110,7 +110,6 @@ class AppFuture(Future):
         KWargs:
               timeout (int): Timeout in seconds
         """
-
         try:
             if self.parent:
                 return self.parent.result(timeout=timeout)
@@ -156,7 +155,6 @@ class AppFuture(Future):
               - True : If the future has successfully resolved.
               - False : Pending resolution
         """
-
         if self.parent:
             return self.parent.done()
         else:

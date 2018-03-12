@@ -86,7 +86,6 @@ class FlowControl(object):
              - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
         """
-
         self.dfk = dfk
         self.threshold = threshold
         self.interval = interval
@@ -128,7 +127,6 @@ class FlowControl(object):
 
     def notify(self, event_id):
         """Let the FlowControl system know that there is an event."""
-
         self._event_buffer.extend([event_id])
         self._event_count += 1
         if self._event_count >= self.threshold:

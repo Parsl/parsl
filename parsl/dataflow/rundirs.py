@@ -19,7 +19,6 @@ def make_rundir(config=None, path=None):
         - path (str): String path to a specific run dir
                Default : None.
     """
-
     try:
         if not path:
             path = None

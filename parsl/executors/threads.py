@@ -26,7 +26,6 @@ class ThreadPoolExecutor(ParslExecutor):
 
 
         """
-
         self._scaling_enabled = False
         if not config:
             config = {"execution": {}}
@@ -56,7 +55,6 @@ class ThreadPoolExecutor(ParslExecutor):
         Returns:
               Future
         """
-
         return self.executor.submit(*args, **kwargs)
 
     def scale_out(self, workers=1):

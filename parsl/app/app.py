@@ -88,7 +88,6 @@ def App(apptype, executor, walltime=60, cache=False, sites='all'):
     Returns:
          An AppFactory object, which when called runs the apps through the executor.
     """
-
     from parsl import APP_FACTORY_FACTORY
 
     def Exec(f):

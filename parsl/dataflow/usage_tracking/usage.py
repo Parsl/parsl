@@ -63,7 +63,6 @@ class UsageTracker (object):
             2. Environment variable PARSL_TRACKING is set to false (case insensitive)
 
         """
-
         track = True   # By default we track usage
         test = False  # By default we are not in testing mode
 
@@ -86,7 +85,6 @@ class UsageTracker (object):
         Returns :
               - Message dict dumped as json string, ready for UDP
         """
-
         uname = getpass.getuser().encode('latin1')
         hashed_username = hashlib.sha256(uname).hexdigest()[0:10]
         hname = socket.gethostname().encode('latin1')
@@ -105,7 +103,6 @@ class UsageTracker (object):
         Returns:
              - Message dict dumped as json string, ready for UDP
         """
-
         app_count = self.dfk.task_count
 
         site_count = 0

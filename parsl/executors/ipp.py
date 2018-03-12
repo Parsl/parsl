@@ -33,7 +33,6 @@ class IPyParallelExecutor(ParslExecutor):
             engine_dir : CWD for the engines .
 
         """
-
         self.engine_file = os.path.expanduser(filepath)
 
         engine_json = None
@@ -218,7 +217,6 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         Raises:
              NotImplemented exception
         """
-
         if self.controller:
             logger.debug("IPP:Shutdown sequence: Attempting controller kill")
             self.controller.close()

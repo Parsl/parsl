@@ -30,7 +30,6 @@ class ExecProviderFactory (object):
         Args:
              None
         """
-
         self.executors = {'ipp': IPyParallelExecutor,
                           'swift_t': TurbineExecutor,
                           'threads': ThreadPoolExecutor,
@@ -69,7 +68,6 @@ class ExecProviderFactory (object):
 
     def make(self, rundir, config):
         """Construct the appropriate provider, executors and channels and link them together."""
-
         self.rundir = rundir
         sites = {}
 

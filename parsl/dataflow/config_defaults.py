@@ -16,7 +16,6 @@ def pp_config(config):
     Args:
         - config (dict) : The config data structure
     """
-
     logger.debug(pprint.pformat(config, indent=2))
     return
 
@@ -34,7 +33,6 @@ def recursive_update(template, userdata):
     Returns:
         Updated template stucture.
     """
-
     for k, v in userdata.items():
         if isinstance(v, collections.Mapping):
             template[k] = recursive_update(template.get(k, {}), v)
@@ -55,7 +53,6 @@ def update_config(config, rundir):
     Returns:
          - A standardized config dict if a config was passed, else None.
     """
-
     if not config:
         return None
 

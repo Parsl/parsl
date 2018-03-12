@@ -12,7 +12,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
     This string is reformatted with the *args, and **kwargs
     from call time.
     """
-
     import os
     import time
     import subprocess
@@ -127,7 +126,6 @@ class BashApp(AppBase):
                    App_fut
 
         """
-
         # Update kwargs in the app definition with one's passed in at calltime
         self.kwargs.update(kwargs)
 

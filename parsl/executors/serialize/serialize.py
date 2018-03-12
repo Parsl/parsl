@@ -168,7 +168,6 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
 
     With length at least two + len(args) + len(kwargs)
     """
-
     arg_bufs = list(chain.from_iterable(
         serialize_object(arg, buffer_threshold, item_threshold) for arg in args))
 
@@ -189,7 +188,8 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
 def unpack_apply_message(bufs, g=None, copy=True):
     """Unpack f,args,kwargs from buffers packed by pack_apply_message().
 
-    Returns: original f,args,kwargs"""
+    Returns: original f,args,kwargs
+    """
     bufs = list(bufs)  # allow us to pop
     assert len(bufs) >= 2, "not enough buffers!"
     pf = buffer_to_bytes_py2(bufs.pop(0))

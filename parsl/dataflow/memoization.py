@@ -48,7 +48,6 @@ class Memoizer(object):
             - memoize (Bool): enable memoization or not.
             - checkpoint (Dict): A checkpoint loaded as a dict.
         """
-
         self.memoize = True
         self.dfk = dfk
 
@@ -77,7 +76,6 @@ class Memoizer(object):
         Returns:
             - hash (str) : A unique hash string
         """
-
         # Function name TODO: Add fn body later
         t = [serialize_object(task['func_name'])[0],
              serialize_object(task['fn_hash'])[0],
@@ -148,7 +146,6 @@ class Memoizer(object):
         A warning is issued when a hash collision occures during the update.
         This is not likely.
         """
-
         if not self.memoize or not task['memoize']:
             return
 

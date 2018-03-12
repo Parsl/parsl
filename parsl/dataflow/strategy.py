@@ -142,7 +142,6 @@ class Strategy (object):
         KWargs:
             - kind (Not used)
         """
-
         # Add logic to check sites
         # for task in tasks :
         #    if self.dfk.tasks[task]:

@@ -27,8 +27,7 @@ def foo(x, y, stdout=None):
 
 
 def test_command_format_1():
-    """Tes command format for BashApps."""
-
+    """Test command format for BashApps."""
     stdout = os.path.abspath('std.out')
     if os.path.exists(stdout):
         os.remove(stdout)

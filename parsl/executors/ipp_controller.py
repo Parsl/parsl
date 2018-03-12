@@ -37,7 +37,6 @@ class Controller(object):
               - mode (str) : If "auto" the default automatic behavior is maintained.
                              If "manual" the controller is assumed to be created by the user.
         """
-
         logger.debug("Starting ipcontroller, baseDir:%s" % ipythonDir)
 
         self.mode = mode
@@ -135,7 +134,6 @@ class Controller(object):
         Returns :
               - str, File path to client file
         """
-
         return os.path.join(self.ipythonDir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-client.json')

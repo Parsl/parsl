@@ -18,7 +18,6 @@ class DataManager(ParslExecutor):
            - config (dict): The config dict object for the site:
 
         """
-
         self._scaling_enabled = False
         self.executor = cf.ProcessPoolExecutor(max_workers=max_workers)
 

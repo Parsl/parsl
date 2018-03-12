@@ -21,7 +21,6 @@ class File(object):
         Args:
              - url (string) : url string of the file eg.
         """
-
         self.url = url
         *protocol, path = self.url.split('://', 1)
 

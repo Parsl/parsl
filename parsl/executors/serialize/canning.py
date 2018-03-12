@@ -44,7 +44,6 @@ def interactive(f):
     This results in the function being linked to the user_ns as globals()
     instead of the module globals().
     """
-
     # build new FunctionType, so it can have the right globals
     # interactive functions never have closures, that's kind of the point
     if isinstance(f, FunctionType):
@@ -142,7 +141,7 @@ class CannedObject(object):
 
 
 class Reference(CannedObject):
-    """object for wrapping a remote reference by name."""
+    """Object for wrapping a remote reference by name."""
 
     def __init__(self, name):
         if not isinstance(name, string_types):
@@ -337,7 +336,6 @@ def istype(obj, check):
 
 def can(obj):
     """Prepare an object for pickling."""
-
     import_needed = False
 
     for cls, canner in iteritems(can_map):
@@ -388,7 +386,6 @@ def can_sequence(obj):
 
 def uncan(obj, g=None):
     """Invert canning."""
-
     import_needed = False
     for cls, uncanner in iteritems(uncan_map):
         if isinstance(cls, string_types):

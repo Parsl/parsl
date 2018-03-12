@@ -49,7 +49,6 @@ class DataFuture(Future):
 
         Updates the super() with the result() or exception()
         """
-
         if parent_fu.done() is True:
             e = parent_fu._exception
             if e:
@@ -125,7 +124,6 @@ class DataFuture(Future):
             - Exception raised by app if failed.
 
         """
-
         if self.parent:
             if self.parent.done():
                 # This explicit call to raise exceptions might be redundant.

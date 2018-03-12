@@ -59,10 +59,10 @@ def runner(incoming_q, outgoing_q):
     logger.debug("[RUNNER] Starting")
 
     def execute_task(bufs):
-        '''Deserialize the buffer and execute the task.
+        """Deserialize the buffer and execute the task.
 
         Returns the serialized result or exception.
-        '''
+        """
         user_ns = locals()
         user_ns.update({'__builtins__': __builtins__})
 
@@ -204,7 +204,6 @@ class TurbineExecutor(ParslExecutor):
 
         The `None` message is a die request.
         """
-
         while True:
             logger.debug("[MTHREAD] Management thread active")
             try:
@@ -245,7 +244,6 @@ class TurbineExecutor(ParslExecutor):
     # the queue management thread.
     def weakref_cb(self, q=None):
         """We do not use this yet."""
-
         q.put(None)
 
     def _start_queue_management_thread(self):
@@ -254,7 +252,6 @@ class TurbineExecutor(ParslExecutor):
         Checks if a thread already exists, then starts it.
         Could be used later as a restart if the management thread dies.
         """
-
         logging.debug("In _start %s", "*" * 40)
         if self._queue_management_thread is None:
             logging.debug("Starting management thread ")
@@ -267,8 +264,12 @@ class TurbineExecutor(ParslExecutor):
 
     def shutdown(self):
         """Shutdown method, to kill the threads and workers."""
+<<<<<<< HEAD
 
         self.is_alive = False
+=======
+        self.isAlive = False
+>>>>>>> Fix D202 docstring errors
         logging.debug("Waking management thread")
         self.incoming_q.put(None)  # Wake up the thread
         self._queue_management_thread.join()  # Force join
@@ -351,7 +352,6 @@ class TurbineExecutor(ParslExecutor):
         Raises:
              NotImplemented exception
         """
-
         raise NotImplementedError
 
     def scale_in(self, workers=1):
@@ -362,7 +362,6 @@ class TurbineExecutor(ParslExecutor):
         Raises:
              NotImplemented exception
         """
-
         raise NotImplementedError
 
 

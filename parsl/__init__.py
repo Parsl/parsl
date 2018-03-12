@@ -55,7 +55,6 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     Returns:
          - None
     """
-
     if format_string is None:
         # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
         format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
@@ -81,7 +80,6 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
     Returns:
        -  None
     """
-
     if format_string is None:
         format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
