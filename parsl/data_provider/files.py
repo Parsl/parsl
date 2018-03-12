@@ -6,6 +6,14 @@ on where(client-side, remote-side, intermediary-side) the File.filepath is
 being called from
 '''
 
+import os
+import logging
+from urllib.parse import urlparse
+from parsl.data_provider.data_manager import DataManager
+
+
+logger = logging.getLogger(__name__)
+
 
 class File(object):
     ''' The Parsl File Class. This is planned to be a very simple class that simply
@@ -13,21 +21,35 @@ class File(object):
     systems to enable to appropriate transfer of files.
     '''
 
-    def __init__(self, url, cache=False, caching_dir=".", staging='direct'):
+    def __init__(self, url, to=None, site=None, dman=None, cache=False, caching_dir=".", staging='direct'):
         ''' Construct a File object from a url string
 
         Args:
-             - url (string) : url string of the file eg.
+             - url (string) : url string of the file e.g.
+               'input.txt'
+               'file:///scratch/proj101/input.txt'
+               'globus://go#ep1/~/data/input.txt'
+               'globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/home/johndoe/data/input.txt'
+               'ftp://ftp.sra.ebi.ac.uk/vol1/ERA156/ERA156312/fastq/LC_C14_cRNA_sequence_R1.txt.gz'
+             - dman (DataManager) : data manager
+             - to (string) : path the remote file will be staged to
+             - site (string) : site the remote file will be staged to
         '''
 
         self.url = url
-        *protocol, path = self.url.split('://', 1)
+        parsed_url = urlparse(self.url)
+        self.scheme = parsed_url.scheme if parsed_url.scheme else 'file'
+        self.netloc = parsed_url.netloc
+        self.path = parsed_url.path
+        self.filename = os.path.basename(self.path)
+        self.to = to if to else '.'
+        self.dman = dman if dman else DataManager.get_data_manager()
+        self.dman.add_file(self)
 
-        self.protocol = protocol[0] if protocol else 'file'
-        self.path = path
         self.cache = cache
         self.caching_dir = caching_dir
         self.staging = staging
+        self.staged_in = True if self.scheme == 'file' else 'False'
 
     def __str__(self):
         return self.url
@@ -47,6 +69,10 @@ class File(object):
              - filepath (string)
 
         '''
+        if self.scheme == 'globus':
+            if hasattr(self, 'local_path'):
+                return self.local_path
+
         if 'exec_site' not in globals() or self.staging == 'direct':
             # Assume local and direct
             return self.path
@@ -55,16 +81,20 @@ class File(object):
             return self.path
 
     def stage_in(self):
-        ''' The stage_in call transports the file from the side of origin
-        to the local side
+        ''' The stage_in call transports the file from the site of origin
+        to the local site
         '''
+        return self.dman.stage_in(self)
 
     def stage_out(self):
         ''' The stage_out call transports the file from local filesystem
-        to the origin side
+        to the origin site
         '''
+        return self.dman.stage_out(self)
 
 
 if __name__ == '__main__':
 
     x = File('./files.py')
+
+
