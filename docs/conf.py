@@ -33,7 +33,16 @@ import parsl
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.linkcode'
 ]
+
+def linkcode_resolve(domain, info):
+    if domain != 'py':
+        return None
+    if not info['module']:
+        return None
+    filename = info['module'].replace('.', '/')
+    return "http://github.com/Parsl/parsl/blob/master/{}.py".format(filename)
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
