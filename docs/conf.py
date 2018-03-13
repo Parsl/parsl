@@ -33,6 +33,8 @@ import parsl
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode'
 ]
 
@@ -98,7 +100,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 #
-# default_role = None
+default_role = 'all'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #

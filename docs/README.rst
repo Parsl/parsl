@@ -12,9 +12,14 @@ The command to perform the conversion is:
     $ jupyter nbconvert --to rst Tutorial.ipynb
     $ sed -i 's/ipython3/python/g' Tutorial.rst
 
+Documentation location
+----------------------
 
->>> jupyter nbconvert --to rst Tutorial.ipynb
->>> sed -i 's/ipython3/python/g' Tutorial.rst
+Documentation is maintained in Python docstrings throughout the code. These are imported via the
+`autodoc <http://www.sphinx-doc.org/en/stable/ext/autodoc.html>`_ Sphinx extension in
+``docs/devguide/dev_docs.rst``. Individual stubs for user-facing classes (located in ``stubs``) are
+generated automatically via sphinx-autogen.  Parsl modules, classes, and methods can be
+cross-referenced from a docstring by enclosing it in backticks (\`).
 
 Remote builds
 -------------
@@ -25,12 +30,14 @@ upon git commits.
 Local builds
 ------------
 
-Dev_Docs
 To build the documentation locally, use
 ::
     $ make html
 
-The developer documentation for the codebase is embedded in the codebase and imported through
-docs/devguide/dev_docs.rst. So do not be alarmed to see no text within the .rst file.
+Regenerate module stubs
+--------------------------
 
+If necessary, docstring stubs can be regenerated using
+::
+    $ sphinx-autogen api.rst
 

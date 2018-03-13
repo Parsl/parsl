@@ -23,44 +23,13 @@ Parsl can be used to realize a variety of workflows:
 
 
 .. toctree::
-   :maxdepth: 3
-   :caption: Quickstart
 
-   quick/quickstart.rst
-   quick/tutorial.rst
-
-.. _user_docs:
-.. toctree::
-   :maxdepth: 5
-   :caption: User Guide
-
-   userguide/overview
-   userguide/apps
-   userguide/futures
-   userguide/workflow
-   userguide/data
-   userguide/execution
-   userguide/exceptions
-   userguide/app_caching
-   userguide/checkpoints
-   userguide/configuring
-   userguide/faq
-   userguide/usage_tracking
-
-.. _dev_docs:
-.. toctree::
-   :maxdepth: 4
-   :caption: Developer Documentation
-
-   devguide/changelog
-   devguide/design
-   devguide/roadmap
-   devguide/dev_docs
-   devguide/packaging
-
-
-Indices and tables
-##################
+   quickstart
+   tutorial
+   userguide/index
+   faq
+   api
+   devguide/index
 
 * :ref:`genindex`
 * :ref:`modindex`
