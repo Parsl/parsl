@@ -34,15 +34,16 @@ _STATE_TO_DESCRIPTION_MAP = {
 class DataFuture(Future):
     """A datafuture points at an AppFuture.
 
-    We are simply wrapping a AppFuture, and adding the specific case where, if the future
-    is resolved i.e file exists, then the DataFuture is assumed to be resolved.
+    We are simply wrapping a AppFuture, and adding the specific case where, if
+    the future is resolved i.e file exists, then the DataFuture is assumed to be
+    resolved.
     """
 
     def parent_callback(self, parent_fu):
         """Callback from executor future to update the parent.
 
         Args:
-            - executor_fu (Future): Future returned by the executor along with callback
+            - parent_fu (Future): Future returned by the executor along with callback
 
         Returns:
             - None
