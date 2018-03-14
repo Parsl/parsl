@@ -278,7 +278,7 @@ class DataFlowKernel(object):
             task_id (uuid string) : A uuid string that uniquely identifies the task
             executable (callable) : A callable object
             args (list of positional args)
-            kwargs (list of keyword args)
+            kwargs (arbitrary keyword arguments)
 
 
         Returns:
