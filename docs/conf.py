@@ -33,7 +33,18 @@ import parsl
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.linkcode'
 ]
+
+def linkcode_resolve(domain, info):
+    if domain != 'py':
+        return None
+    if not info['module']:
+        return None
+    filename = info['module'].replace('.', '/')
+    return "http://github.com/Parsl/parsl/blob/master/{}.py".format(filename)
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -89,7 +100,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 #
-# default_role = None
+default_role = 'all'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #

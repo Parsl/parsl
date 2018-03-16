@@ -42,7 +42,10 @@ APP_FACTORY_FACTORY = AppFactoryFactory('central')
 __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
-__all__ = ['App', 'DataFlowKernel', 'File', 'ThreadPoolExecutor', 'IPyParallelExecutor']
+__all__ = [
+    'App', 'DataFlowKernel', 'File', 'ThreadPoolExecutor',
+    'IPyParallelExecutor', 'set_stream_logger', 'set_file_logger'
+]
 
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
