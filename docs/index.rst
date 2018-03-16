@@ -28,7 +28,7 @@ Parsl can be used to realize a variety of workflows:
    tutorial
    userguide/index
    faq
-   api
+   reference
    devguide/index
 
 * :ref:`genindex`
