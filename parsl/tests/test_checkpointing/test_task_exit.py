@@ -1,6 +1,7 @@
 ''' Testing python apps
 '''
 import parsl
+import time
 from parsl import *
 import argparse
 
@@ -42,7 +43,8 @@ def test_at_task_exit(n=4):
 
     for i in range(0, n):
         d[i].result()
-    print("Done sleeping")
+
+    time.sleep(1)
 
     print("Rundir : ", dfk.rundir)
     with open("{}/parsl.log".format(dfk.rundir), 'r') as f:
