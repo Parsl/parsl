@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-with open('parsl/version.py') as f:
+with open('libsubmit/version.py') as f:
     exec(f.read())
 
 install_requires = [
