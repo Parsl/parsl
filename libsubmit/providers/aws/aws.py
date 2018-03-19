@@ -39,98 +39,98 @@ class EC2Provider(ExecutionProvider):
     .. code-block:: python
 
          { "auth" : { # Definition of authentication method for AWS. One of 3 methods are required to authenticate
-                      # with AWS : keyfile, profile or env_variables. If keyfile or profile is not set Boto3 will
-                      # look for the following env variables :
+                      # with AWS: keyfile, profile or env_variables. If keyfile or profile is not set, Boto3 will
+                      # look for the following env variables:
                       # AWS_ACCESS_KEY_ID : The access key for your AWS account.
                       # AWS_SECRET_ACCESS_KEY : The secret key for your AWS account.
                       # AWS_SESSION_TOKEN : The session key for your AWS account.
 
               "keyfile"    : #{Description: Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'
-                             # Type : String,
-                             # Required : False},
+                             # Type: String,
+                             # Required: False},
 
               "profile"    : #{Description: Specify the profile to be used from the standard aws config file
                              # ~/.aws/config.
-                             # Type : String,
-                             # Expected : "default", # Use the 'default' aws profile
-                             # Required : False},
+                             # Type: String,
+                             # Expected: "default", # Use the 'default' aws profile
+                             # Required: False},
 
             },
 
            "execution" : { # Definition of all execution aspects of a site
 
               "executor"   : #{Description: Define the executor used as task executor,
-                             # Type : String,
-                             # Expected : "ipp",
-                             # Required : True},
+                             # Type: String,
+                             # Expected: "ipp",
+                             # Required: True},
 
-              "provider"   : #{Description : The provider name, in this case ec2
-                             # Type : String,
-                             # Expected : "aws",
-                             # Required :  True },
+              "provider"   : #{Description: The provider name, in this case ec2
+                             # Type: String,
+                             # Expected: "aws",
+                             # Required:  True },
 
               "block" : { # Definition of a block
 
-                  "nodes"      : #{Description : # of nodes to provision per block
-                                 # Type : Integer,
+                  "nodes"      : #{Description: # of nodes to provision per block
+                                 # Type: Integer,
                                  # Default: 1},
 
-                  "taskBlocks" : #{Description : # of workers to launch per block
+                  "taskBlocks" : #{Description: # of workers to launch per block
                                  # as either an number or as a bash expression.
                                  # for eg, "1" , "$(($CORES / 2))"
-                                 # Type : String,
-                                 #  Default: "1" },
+                                 # Type: String,
+                                 # Default: "1" },
 
-                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
-                                 # Type : String,
-                                 # Default : "00:20:00" },
+                  "walltime"  :  #{Description: Walltime requested per block in HH:MM:SS
+                                 # Type: String,
+                                 # Default: "00:20:00" },
 
-                  "initBlocks" : #{Description : # of blocks to provision at the start of
+                  "initBlocks" : #{Description: # of blocks to provision at the start of
                                  # the DFK
-                                 # Type : Integer
-                                 # Default : ?
-                                 # Required :    },
+                                 # Type: Integer
+                                 # Default: ?
+                                 # Required:    },
 
-                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
+                  "minBlocks" :  #{Description: Minimum # of blocks outstanding at any time
                                  # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : 0 },
+                                 # Type: Integer
+                                 # Default: 0 },
 
-                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
+                  "maxBlocks" :  #{Description: Maximum # Of blocks outstanding at any time
                                  # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : ? },
+                                 # Type: Integer
+                                 # Default: ? },
 
                   "options"   : {  # Scheduler specific options
 
 
-                      "instanceType" : #{Description : Instance type t2.small|t2...
-                                       # Type : String,
-                                       # Required : False
-                                       # Default : t2.small },
+                      "instanceType" : #{Description: Instance type t2.small|t2...
+                                       # Type: String,
+                                       # Required: False
+                                       # Default: t2.small },
 
-                      "imageId"      : #{"Description : String to append to the #SBATCH blocks
+                      "imageId"      : #{"Description: String to append to the #SBATCH blocks
                                        # in the submit script to the scheduler
-                                       # Type : String,
-                                       # Required : False },
+                                       # Type: String,
+                                       # Required: False },
 
-                      "region"       : #{"Description : AWS region to launch machines in
+                      "region"       : #{"Description: AWS region to launch machines in
                                        # in the submit script to the scheduler
-                                       # Type : String,
-                                       # Default : 'us-east-2',
-                                       # Required : False },
+                                       # Type: String,
+                                       # Default: 'us-east-2',
+                                       # Required: False },
 
-                      "keyName"      : #{"Description : Name of the AWS private key (.pem file)
+                      "keyName"      : #{"Description: Name of the AWS private key (.pem file)
                                        # that is usually generated on the console to allow ssh access
                                        # to the EC2 instances, mostly for debugging.
                                        # in the submit script to the scheduler
-                                       # Type : String,
-                                       # Required : True },
+                                       # Type: String,
+                                       # Required: True },
 
-                      "spotMaxBid"   : #{"Description : If requesting spot market machines, specify
+                      "spotMaxBid"   : #{"Description: If requesting spot market machines, specify
                                        # the max Bid price.
-                                       # Type : Float,
-                                       # Required : False },
+                                       # Type: Float,
+                                       # Required: False },
                   }
               }
             }
@@ -211,7 +211,7 @@ class EC2Provider(ExecutionProvider):
         self.sn_ids = []
 
     def read_state_file(self, statefile):
-        """If this script has been run previously, it will be persisitent
+        """If this script has been run previously, it will be persistent
            by writing resource ids to state file. On run, 
            the script looks for a state file
            before creating new infrastructure
@@ -219,8 +219,8 @@ class EC2Provider(ExecutionProvider):
            Information on VPCs, security groups, and subnets are saved,
            as well as running instances and their states.
 
-           AWS has a maximum number of VPCs per region per account so we don't
-           want to clutter users' aws accounts with security groups and vpcs that
+           AWS has a maximum number of VPCs per region per account, so we don't
+           want to clutter users' AWS accounts with security groups and VPCs that
            will be used only once.
 
         """
@@ -239,7 +239,7 @@ class EC2Provider(ExecutionProvider):
 
     def write_state_file(self):
         ''' Save information that must persist to a file.
-            We don't want to create a new vpc and new identical 
+            We don't want to create a new VPC and new identical 
             security groups, so we save information about them 
             in a file between runs
         '''
@@ -264,9 +264,9 @@ class EC2Provider(ExecutionProvider):
         the user default keys file ~/.aws/config.
 
         Lastly boto3 will look for the keys in env variables:
-        AWS_ACCESS_KEY_ID : The access key for your AWS account.
-        AWS_SECRET_ACCESS_KEY : The secret key for your AWS account.
-        AWS_SESSION_TOKEN : The session key for your AWS account.
+        AWS_ACCESS_KEY_ID: The access key for your AWS account.
+        AWS_SECRET_ACCESS_KEY: The secret key for your AWS account.
+        AWS_SESSION_TOKEN: The session key for your AWS account.
         This is only needed when you are using temporary credentials.
         The AWS_SECURITY_TOKEN environment variable can also be used,
         but is only supported for backwards compatibility purposes.
@@ -341,7 +341,7 @@ class EC2Provider(ExecutionProvider):
                 AmazonProvidedIpv6CidrBlock=False,
             )
         except Exception as e:
-            # This failiure will cause a full abort
+            # This failure will cause a full abort
             logger.error("{}\n".format(e))
             raise e
 
@@ -382,14 +382,14 @@ class EC2Provider(ExecutionProvider):
 
     def security_group(self, vpc):
         ''' Create and configure security group.
-        Allows all ICMP in, all tcp and udp in within vpc
+        Allows all ICMP in, all TCP and UDP in within VPC
 
         This security group is very open. It allows all
         incoming ping requests on all ports. It also allows
         all outgoing traffic on all ports. This can be limited
         by changing the allowed port ranges.
 
-        :param vpc - vpc in which to set up security group
+        :param vpc - VPC in which to set up security group
         '''
 
         sg = vpc.create_security_group(
@@ -400,7 +400,7 @@ class EC2Provider(ExecutionProvider):
             'CidrIp': '172.32.0.0/16'
         }]
 
-        # Allows all ICMP in, all tcp and udp in within vpc
+        # Allows all ICMP in, all TCP and UDP in within VPC
 
         inPerms = [{
             'IpProtocol': 'TCP',
@@ -418,7 +418,7 @@ class EC2Provider(ExecutionProvider):
             'ToPort': -1,
             'IpRanges': [{'CidrIp': '0.0.0.0/0'}],
         }]
-        # Allows all TCP out, all tcp and udp out within vpc
+        # Allows all TCP out, all TCP and UDP out within VPC
         outPerms = [{
             'IpProtocol': 'TCP',
             'FromPort': 0,
@@ -444,9 +444,9 @@ class EC2Provider(ExecutionProvider):
     def config_route_table(self, vpc, internet_gateway):
         ''' Configure route table for vpc
         Args:
-            :param vpc (dict) : dictionary representing the vpc 
+            :param vpc (dict): dictionary representing the vpc 
                                 created by create_vpc()
-            :param internet_gateway (dict) : dictionary representing igw
+            :param internet_gateway (dict): dictionary representing igw
                                              created by create_vpc() 
         '''
         route_table = vpc.create_route_table()
@@ -459,13 +459,13 @@ class EC2Provider(ExecutionProvider):
         return '' if s is None else s
 
     def spin_up_instance(self, cmd_string, job_name):
-        ''' Starts an instance in the vpc in first available
+        ''' Starts an instance in the VPC in first available
         subnet. Starts up n instances if nodes per block > 1
         Not supported. We only do 1 node per block
 
         Args:
-            - cmd_string (str) : Command string to execute on the node
-            - job_name (str) : Name associated with the instances
+            - cmd_string (str): Command string to execute on the node
+            - job_name (str): Name associated with the instances
 
         '''
 
@@ -523,8 +523,8 @@ class EC2Provider(ExecutionProvider):
         return instance
 
     def shut_down_instance(self, instances=None):
-        ''' Shuts down a list of instances if provided or the last
-        instance started up if none provided
+        ''' Shuts down a list of instances, if provided, or the last
+        instance started up, if none provided
 
         [TODO] ...
         '''
@@ -549,7 +549,7 @@ class EC2Provider(ExecutionProvider):
         return term
 
     def get_instance_state(self, instances=None):
-        """Get stateus of all instances on EC2 which were started by this
+        """Get states of all instances on EC2 which were started by this
         file"""
         if instances:
             desc = self.client.describe_instances(InstanceIds=instances)
@@ -570,7 +570,7 @@ class EC2Provider(ExecutionProvider):
         except Exception as e:
             logger.error(e)
             logger.info(
-                "Couldn't find user ipyparallel config file. Trying default location.")
+                "Couldn't find user iPyParallel config file. Trying default location.")
             with open(os.path.expanduser("~/.ipython/profile_default/security/ipcontroller-engine.json")) as f:
                 config = f.read().strip()
         else:
@@ -606,8 +606,8 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
             try:
                 if job_id in self.resources:
                     self.ec2.Instance(job_id)
-                    print("State : ", self.resources[job_id]["instance"].state)
-                    print("Reason : ",
+                    print("State: ", self.resources[job_id]["instance"].state)
+                    print("Reason: ",
                           self.resources[job_id]["instance"].state_reason)
                     # self.resources[job_id]["instance"].update()
                     s = self.resources[job_id]["instance"].state['Name']
@@ -615,9 +615,9 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
                     all_states.extend([state_string])
 
             except Exception as e:
-                logger.warn('Caught exception : {0}'.format(e))
+                logger.warn('Caught exception: {0}'.format(e))
                 logger.warn(
-                    'Could not get state of instance:{0}'.format(job_id))
+                    'Could not get state of instance: {0}'.format(job_id))
                 all_states.extend(['UNKNOWN'])
 
         return all_states
@@ -631,7 +631,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
 
         Args:
              - cmd_string (str): Commandline invocation to be made on the remote side.
-             - blocksize (int) : Number of blocks requested
+             - blocksize (int): Number of blocks requested
 
         Kwargs:
              - job_name (String): Prefix for job name
@@ -650,7 +650,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
             logger.error("Failed to submit request to EC2")
             return None
 
-        logger.debug("Started instance_id : {0}".format(instance.instance_id))
+        logger.debug("Started instance_id: {0}".format(instance.instance_id))
 
         state = translate_table.get(instance.state['Name'], "PENDING")
 
@@ -667,10 +667,10 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         ''' Cancels the jobs specified by a list of job ids
 
         Args:
-             job_ids (list) : List of of job identifiers
+             job_ids (list): List of of job identifiers
 
         Returns :
-             [True/False...] : If the cancel operation fails the entire list will be False.
+             [True/False...]: If the cancel operation fails the entire list will be False.
         '''
 
         try:
@@ -680,7 +680,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
                 "Caught error while attempting to remove instances: {0}".format(job_ids))
             raise e
         else:
-            logger.debug("Removed the instances : {0}".format(job_ids))
+            logger.debug("Removed the instances: {0}".format(job_ids))
 
         for job_id in job_ids:
             self.resources[job_id]["status"] = "COMPLETED"
@@ -712,7 +712,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
 
     def teardown(self):
         """Terminate all EC2 instances, delete all subnets,
-           delete security group, delete vpc
+           delete security group, delete VPC,
            and reset all instance variables
         """
 
@@ -747,7 +747,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
     @property
     def current_capacity(self):
         ''' Returns the current blocksize.
-        This may need to return more information in the futures :
+        This may need to return more information in the futures:
         { minsize, maxsize, current_requested }
         '''
         return len(self.instances)
