@@ -1,5 +1,4 @@
 import os
-import time
 import logging
 import atexit
 import random
@@ -15,7 +14,7 @@ from parsl.dataflow.error import *
 from parsl.dataflow.states import States
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.flow_control import FlowControl, FlowNoControl
+from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.config_defaults import update_config
@@ -46,7 +45,7 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
-                 rundir=None, retries=0, checkpointFiles=None):
+                 rundir=None, retries=0, checkpointFiles=None, checkpointMethod=None):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
@@ -60,6 +59,7 @@ class DataFlowKernel(object):
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
+            - checkpointMethod (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
 
         Returns:
             DataFlowKernel object
@@ -67,7 +67,7 @@ class DataFlowKernel(object):
         # Create run dirs for this run
         self.rundir = make_rundir(config=config, path=rundir)
         parsl.set_file_logger("{}/parsl.log".format(self.rundir),
-                              level=logging.INFO)
+                              level=logging.DEBUG)
 
         logger.info("Parsl version: {}".format(parsl.__version__))
         logger.info("Libsubmit version: {}".format(libsubmit.__version__))
@@ -83,6 +83,8 @@ class DataFlowKernel(object):
         cpts = self.load_checkpoints(checkpointFiles)
         # Initialize the memoizer
         self.memoizer = Memoizer(self, memoize=appCache, checkpoint=cpts)
+        self.checkpointed_tasks = 0
+        self._checkpoint_timer = None
 
         if self._config:
             self._executors_managed = True
@@ -94,12 +96,27 @@ class DataFlowKernel(object):
             self.lazy_fail = self._config["globals"].get("lazyErrors", lazyErrors)
             self.fail_retries = self._config["globals"].get("retries", retries)
             self.flowcontrol = FlowControl(self, self._config)
+            self.checkpoint_method = self._config["globals"].get("checkpoint",
+                                                                 checkpointMethod)
+            if self.checkpoint_method == "periodic":
+                print("Setting periodic")
+                period = self._config["globals"].get("checkpointPeriod",
+                                                     "00:30:00")
+                try:
+                    h, m, s = map(int, period.split(':'))
+                    checkpoint_period = (h * 3600) + (m * 60) + s
+                    self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
+                except Exception as e:
+                    logger.error("invalid checkpointPeriod provided:{0} expected HH:MM:SS".format(period))
+                    self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
+
         else:
             self._executors_managed = False
             self.fail_retries = retries
             self.lazy_fail = lazyErrors
             self.executors = {i: x for i, x in enumerate(executors)}
             self.flowcontrol = FlowNoControl(self, None)
+            self.checkpoint_method = checkpointMethod
 
         self.task_count = 0
         self.fut_task_lookup = {}
@@ -147,12 +164,9 @@ class DataFlowKernel(object):
              that does not require additional memo updates.
         '''
         # TODO : Remove, this check is redundant
-        if future.done():
+        final_state_flag = False
 
-            if not memo_cbk:
-                # Update the memoizer with the new result if this is not a
-                # result from a memo lookup
-                self.memoizer.update_memo(task_id, self.tasks[task_id], future)
+        if future.done():
 
             try:
                 future.result()
@@ -177,11 +191,21 @@ class DataFlowKernel(object):
                     logger.info("Task {} failed after {} retry attempts".format(task_id,
                                                                                 self.fail_retries))
                     self.tasks[task_id]['status'] = States.failed
+                    final_state_flag = True
 
             else:
-                logger.info(
-                    "Task {} completed with {}".format(task_id, future))
+                logger.info("Task {} completed".format(task_id))
                 self.tasks[task_id]['status'] = States.done
+                final_state_flag = True
+
+        if not memo_cbk and final_state_flag is True:
+            # Update the memoizer with the new result if this is not a
+            # result from a memo lookup and the task has reached a terminal state.
+            self.memoizer.update_memo(task_id, self.tasks[task_id], future)
+
+            if self.checkpoint_method is 'task_exit':
+                self.checkpoint()
+                logger.debug("Task {} checkpoint created at task exit".format(task_id))
 
         # Identify tasks that have resolved dependencies and launch
         for tid in list(self.tasks):
@@ -509,6 +533,15 @@ class DataFlowKernel(object):
 
         logger.info("DFK cleanup initiated")
 
+        # Checkpointing takes priority over the rest of the tasks
+        # checkpoint if any valid checkpoint method is specified
+        if self.checkpoint_method is not None:
+            self.checkpoint()
+
+            if self._checkpoint_timer:
+                logger.info("Stopping checkpoint timer")
+                self._checkpoint_timer.close()
+
         # Send final stats
         self.usage_tracker.send_message()
         # We do not need to cleanup if the executors are managed outside
@@ -544,7 +577,6 @@ class DataFlowKernel(object):
         '''
 
         logger.info("Checkpointing.. ")
-        start = time.time()
 
         checkpoint_dir = '{0}/checkpoint'.format(self.rundir)
         checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
@@ -561,7 +593,6 @@ class DataFlowKernel(object):
             pickle.dump(state, f)
 
         count = 0
-
         with open(checkpoint_tasks, 'wb+') as f:
             for task_id in self.tasks:
                 if self.tasks[task_id]['app_fu'].done() and \
@@ -587,15 +618,18 @@ class DataFlowKernel(object):
                     pickle.dump(t, f)
                     count += 1
                     self.tasks[task_id]['checkpoint'] = True
-                    logger.debug("Task {}: checkpointed".format(task_id))
+                    logger.debug("Task {} checkpointed".format(task_id))
 
-        end = time.time()
+        self.checkpointed_tasks += count
+
         if count == 0:
-            logger.warn(
-                'No tasks checkpointed, please ensure caching is enabled')
+            if self.checkpointed_tasks == 0:
+                logger.warn("No tasks checkpointed, please ensure caching is enabled")
+            else:
+                logger.debug("No tasks checkpointed")
         else:
-            logger.info("Done checkpointing {} tasks in {}s".format(count,
-                                                                    end - start))
+            logger.info("Done checkpointing {} tasks".format(count))
+
         return checkpoint_dir
 
     def _load_checkpoints(self, checkpointDirs):
