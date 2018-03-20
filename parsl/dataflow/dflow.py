@@ -583,7 +583,10 @@ class DataFlowKernel(object):
         checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
         if not os.path.exists(checkpoint_dir):
-            os.makedirs(checkpoint_dir)
+            try:
+                os.makedirs(checkpoint_dir)
+            except FileExistsError as e:
+                pass
 
         with open(checkpoint_dfk, 'wb') as f:
             state = {'config': self.config,
