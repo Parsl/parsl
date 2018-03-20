@@ -49,13 +49,14 @@ Development Process
 
 Parsl development follows a common pull request-based workflow similar to `GitHub flow <http://scottchacon.com/2011/08/31/github-flow.html>`_. That is:
 
-* every development activity should have a related GitHub issue
+* every development activity (except very minor changes, which can be discussed in the PR) should have a related GitHub issue
 * all development occurs in branches
 * the master branch is always stable
 * development branches should include tests for added features
 * development branches should be tested after being brought up-to-date with the master (in this way, what is being tested is what is actually going into the code; otherwise unexpected issues from merging may come up)
 * branches what have been successfully tested are merged via pull requests (PRs)
-* PRs should be used for review and discussion
+* PRs should be used for review and discussion (except hot fixes, which can be pushed to master)
+* PRs should be reviewed in a timely manner, to reduce effort keeping them synced with other changes happening on the master branch
 
 Git commit messages should include a single summary sentence followed by a more explanatory paragraph. Note: all commit messages should reference the GitHub issue to which they relate. 
 
