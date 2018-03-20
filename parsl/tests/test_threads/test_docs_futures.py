@@ -20,6 +20,9 @@ def test_1():
     x = double(5)
     print(x.done())
 
+    # Testing. Adding explicit block
+    x.result()
+
 
 @App('python', dfk)
 def sleep_double(x):
