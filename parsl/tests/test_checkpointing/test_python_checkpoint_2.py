@@ -5,6 +5,11 @@ from parsl import *
 import os
 import time
 import argparse
+import subprocess
+import sys
+
+fn = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'test_python_checkpoint_1.py')
+subprocess.check_output([sys.executable, fn])
 
 time.sleep(0.2)
 last_checkpoint = os.path.abspath(
@@ -16,7 +21,6 @@ for i in range(0, 10):
     else:
         print("Path exists to checkpoint")
         break
-
 
 config = {
     "sites": [
@@ -33,6 +37,7 @@ config = {
                 "checkpoint": True,
                 }
 }
+
 dfk = DataFlowKernel(config=config, checkpointFiles=[last_checkpoint])
 
 
