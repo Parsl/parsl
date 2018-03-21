@@ -131,15 +131,15 @@ the remote-execution aspect.
 
 Here is a set of features that should be implemented or borrowed :
 
-* [Must have] New remote execution system must have the `executor interface <https://docs.python.org/3/library/concurrent.futures.html#executor-objects>`_.
-* [Must have] Executors must be memory efficient wrt to holding jobs in memory.
-* [Must have] Continue to support both BashApps and PythonApps.
-* [?] Capable of using templates to submit jobs to Cluster resource managers.
-* [?] Dynamically launch and shutdown workers.
+* [Done] New remote execution system must have the `executor interface <https://docs.python.org/3/library/concurrent.futures.html#executor-objects>`_.
+* [Done] Executors must be memory efficient wrt to holding jobs in memory.
+* [Done] Continue to support both BashApps and PythonApps.
+* [Done] Capable of using templates to submit jobs to Cluster resource managers.
+* [Done] Dynamically launch and shutdown workers.
 
 .. note::
-   Since the current roadmap to remote execution is through ipython-parallel, we will limit ourselves to Python3.5
-   to avoid library naming issues.
+   Since the current roadmap to remote execution is through ipython-parallel, we will limit support
+   to Python3.5+ to avoid library naming issues.
 
 
 Availability of Python3.5 on target resources
