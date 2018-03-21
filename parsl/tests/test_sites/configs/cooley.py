@@ -22,14 +22,14 @@ singleNodeLocal = {
                 "maxBlocks": 1,
                 "options": {
                     "partition": "debug",
-                    "account" : 'CSC249ADCD01',
+                    "account": 'CSC249ADCD01',
                     "overrides": "source /home/yadunand/setup_cooley_env.sh"
                 }
             }
         }
     }
     ],
-    "controller" : {"publicIp" : "10.230.100.209"},
+    "controller": {"publicIp": "10.230.100.209"},
     "globals": {"lazyErrors": True}
 
 }
