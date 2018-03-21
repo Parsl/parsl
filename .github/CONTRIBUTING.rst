@@ -59,11 +59,25 @@ Parsl development follows a common pull request-based workflow similar to `GitHu
 * PRs should be reviewed in a timely manner, to reduce effort keeping them synced with other changes happening on the master branch
 
 Git commit messages should include a single summary sentence followed by a more explanatory paragraph. Note: all commit messages should reference the GitHub issue to which they relate. 
-
+::
     Implemented Globus data staging support 
 
-    Added the ability to reference and automatically transfer Globus-accessible files. References are represented using the Parsl file format “globus://endpoint/path/file.” If Globus endpoints are known for source and destination Parsl will use the Globus transfer service to move data to the compute host.  Fixes #-1.
+    Added the ability to reference and automatically transfer Globus-accessible
+    files. References are represented using the Parsl file format
+    “globus://endpoint/path/file.” If Globus endpoints are known for source and
+    destination Parsl will use the Globus transfer service to move data to the
+    compute host. Fixes #-1.
 
+Git hooks
+---------
+
+Developers may find it useful to setup a pre-commit git hook to automatically lint and run tests. This is a script which is run before each commit. For example::
+
+    $ cat ~/parsl/.git/hooks/pre-commit
+    #!/bin/sh
+
+    flake8 parsl
+    nosetests -vx parsl/tests/test_threads parsl/tests/test_data parsl/tests/test_checkpointing
 
 Project documentation
 ---------------------
