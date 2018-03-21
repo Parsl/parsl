@@ -282,6 +282,12 @@ FlowNoControl
 .. autoclass:: parsl.dataflow.flow_control.FlowNoControl
    :members:  __init__, notify, close
 
+Timer
+-----
+
+.. autoclass:: parsl.dataflow.flow_control.Timer
+   :members:  __init__, close, make_callback, _wake_up_timer
+
 
 Strategy
 --------
