@@ -32,7 +32,6 @@ config = {
     }
 }
 
-dman = DataManager(config=config)
 dfk = DataFlowKernel(config=config)
 
 
