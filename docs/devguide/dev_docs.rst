@@ -96,7 +96,7 @@ DataFlowKernel
 ==============
 
 .. autoclass:: parsl.dataflow.dflow.DataFlowKernel
-   :members:  __init__, submit, cleanup, load_checkpoints, config, handle_update, launch_task, _count_deps, _count_all_deps, sanitize_and_wrap, _load_checkpoints
+   :members:  __init__, submit, cleanup, load_checkpoints, checkpoint, config, handle_update, launch_task, _count_deps, _count_all_deps, sanitize_and_wrap, _load_checkpoints
 
 
 Executors
