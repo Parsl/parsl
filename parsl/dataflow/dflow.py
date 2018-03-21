@@ -16,6 +16,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.config_defaults import update_config
+from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 
 # from parsl.dataflow.start_controller import Controller
@@ -43,7 +44,7 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazy_fail=True, appCache=True,
-                 rundir=None, fail_retries=2, checkpointFiles=None):
+                 rundir=None, fail_retries=2, checkpointFiles=None, data_manager=None):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
@@ -66,6 +67,12 @@ class DataFlowKernel(object):
 
         # Update config with defaults
         self._config = update_config(config, self.rundir)
+
+        # Set the data manager
+        if data_manager:
+            self.data_manager = data_manager
+        else:
+            self.data_manager = DataManager(config=self._config)
 
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)

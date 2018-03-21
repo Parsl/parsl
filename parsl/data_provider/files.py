@@ -44,12 +44,13 @@ class File(object):
         self.filename = os.path.basename(self.path)
         self.to = to if to else '.'
         self.dman = dman if dman else DataManager.get_data_manager()
-        self.dman.add_file(self)
+        self.data_future = {}
+        if self.scheme != 'file':
+            self.dman.add_file(self)
 
         self.cache = cache
         self.caching_dir = caching_dir
         self.staging = staging
-        self.staged_in = True if self.scheme == 'file' else 'False'
 
     def __str__(self):
         return self.url
@@ -80,11 +81,11 @@ class File(object):
             # Return self.path for now
             return self.path
 
-    def stage_in(self):
+    def stage_in(self, site=None):
         ''' The stage_in call transports the file from the site of origin
         to the local site
         '''
-        return self.dman.stage_in(self)
+        return self.dman.stage_in(self, site)
 
     def stage_out(self):
         ''' The stage_out call transports the file from local filesystem
@@ -92,9 +93,14 @@ class File(object):
         '''
         return self.dman.stage_out(self)
 
+    def set_data_future(self, df, site=None):
+        self.data_future[site] = df
+
+    def get_data_future(self, site):
+        return self.data_future.get(site)
+
 
 if __name__ == '__main__':
 
     x = File('./files.py')
-
 
