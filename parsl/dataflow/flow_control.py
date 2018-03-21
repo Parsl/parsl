@@ -100,6 +100,12 @@ class FlowControl(object):
         self._thread.start()
 
     def _wake_up_timer(self, kill_event):
+        ''' Internal. This is the function that the thread will execute.
+        waits on an event so that the thread can make a quick exit when close() is called
+
+        Args:
+            - kill_event (threading.Event) : Event to wait on
+        '''
 
         # Sleep till time to wake up
         while True:
@@ -129,6 +135,10 @@ class FlowControl(object):
 
     def make_callback(self, kind=None):
         ''' Makes the callback and resets the timer.
+
+        KWargs:
+               - kind (str): Default=None, used to pass information on what
+                 triggered the callback
         '''
         self._wake_up_time = time.time() + self.interval
         self.callback(tasks=self._event_buffer, kind=kind)
@@ -182,6 +192,12 @@ class Timer(object):
         self._thread.start()
 
     def _wake_up_timer(self, kill_event):
+        ''' Internal. This is the function that the thread will execute.
+        waits on an event so that the thread can make a quick exit when close() is called
+
+        Args:
+            - kill_event (threading.Event) : Event to wait on
+        '''
 
         # Sleep till time to wake up
         while True:
