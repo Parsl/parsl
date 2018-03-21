@@ -10,7 +10,7 @@ The following text is not well structured, and is mostly a brain dump that needs
 Moving from Swift to an established language (python) came with its own tradeoffs. We get the backing
 of a rich and very well known language to handle the language aspects as well as the libraries.
 However, we lose the parallel evaluation of every statement in a script. The thesis is that what we
-lose is minimal and will not affect 95% of our workflows. This is not yet substanciated.
+lose is minimal and will not affect 95% of our workflows. This is not yet substantiated.
 
 Please note that there are two Swift languages: `Swift/K <http://swift-lang.org/main/>`_
 and `Swift/T <http://swift-lang.org/Swift-T/index.php>`_ . These have diverged in syntax and behavior.
