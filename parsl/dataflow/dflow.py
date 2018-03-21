@@ -45,7 +45,8 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
-                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None):
+                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None,
+                 data_manager=None):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
@@ -74,6 +75,12 @@ class DataFlowKernel(object):
 
         # Update config with defaults
         self._config = update_config(config, self.rundir)
+
+        # Set the data manager
+        if data_manager:
+            self.data_manager = data_manager
+        else:
+            self.data_manager = DataManager(config=self._config)
 
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)

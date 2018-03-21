@@ -2,7 +2,6 @@ import logging
 import json
 import globus_sdk
 from globus_sdk.exc import TransferAPIError
-from parsl.dataflow.dflow import DataFlowKernel
 
 
 logger = logging.getLogger(__name__)
@@ -16,7 +15,7 @@ REDIRECT_URI = 'https://auth.globus.org/v2/web/auth-code'
 SCOPES = ('openid '
           'urn:globus:auth:scope:transfer.api.globus.org:all')
 
-TOKEN_FILE = '.globus.json'
+TOKEN_FILE = 'runinfo/.globus.json'
 
 
 get_input = getattr(__builtins__, 'raw_input', input)
@@ -82,7 +81,7 @@ def _get_native_app_authorizer(client_id):
             on_refresh=_update_tokens_file_on_refresh)
 
 
-def getGlobus():
+def get_globus():
     Globus.init()
     return Globus()
 

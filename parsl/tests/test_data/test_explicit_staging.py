@@ -22,8 +22,7 @@ config = {
                 "globus": {
                     "endpoint_name": "1afdfb30-1102-11e8-a7ed-0a448319c2f8",
                     "endpoint_path": "/",
-                    "local_directory": "/home/lukasz/projects/parsl/share",
-                    "comment": "RCC Midway"
+                    "local_directory": "/home/lukasz/projects/parsl/share"
                 }
             }
         }
@@ -58,9 +57,10 @@ endpoint.
 '''
 sorted_file = File('globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/~/sorted.txt')
 
-unsorted_file.stage_in()
+dfu = unsorted_file.stage_in()
 
-f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
+f = sort_strings(inputs=[dfu], outputs=[sorted_file])
 f.result()
 
-sorted_file.stage_out()
+fs = sorted_file.stage_out()
+fs.result()
