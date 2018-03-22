@@ -1,13 +1,13 @@
 import logging
 import json
 import globus_sdk
-from globus_sdk.exc import TransferAPIError
+# from globus_sdk.exc import TransferAPIError
 
 
 logger = logging.getLogger(__name__)
 
 '''
-'Parls Application' OAuth2 client registered with Globus Auth
+'Parsl Application' OAuth2 client registered with Globus Auth
 by lukasz@globusid.org
 '''
 CLIENT_ID = '8b8060fd-610e-4a74-885e-1051c71ad473'
@@ -41,9 +41,9 @@ def _do_native_app_authentication(client_id, redirect_uri,
 
     client = globus_sdk.NativeAppAuthClient(client_id=client_id)
     client.oauth2_start_flow(
-            requested_scopes=requested_scopes,
-            redirect_uri=redirect_uri,
-            refresh_tokens=True)
+        requested_scopes=requested_scopes,
+        redirect_uri=redirect_uri,
+        refresh_tokens=True)
 
     url = client.oauth2_get_authorize_url()
     print('Native App Authorization URL: \n{}'.format(url))
@@ -61,9 +61,9 @@ def _get_native_app_authorizer(client_id):
 
     if not tokens:
         tokens = _do_native_app_authentication(
-                client_id=client_id,
-                redirect_uri=REDIRECT_URI,
-                requested_scopes=SCOPES)
+            client_id=client_id,
+            redirect_uri=REDIRECT_URI,
+            requested_scopes=SCOPES)
         try:
             _save_tokens_to_file(TOKEN_FILE, tokens)
         except Exception:
@@ -74,11 +74,11 @@ def _get_native_app_authorizer(client_id):
     auth_client = globus_sdk.NativeAppAuthClient(client_id=client_id)
 
     return globus_sdk.RefreshTokenAuthorizer(
-            transfer_tokens['refresh_token'],
-            auth_client,
-            access_token=transfer_tokens['access_token'],
-            expires_at=transfer_tokens['expires_at_seconds'],
-            on_refresh=_update_tokens_file_on_refresh)
+        transfer_tokens['refresh_token'],
+        auth_client,
+        access_token=transfer_tokens['access_token'],
+        expires_at=transfer_tokens['expires_at_seconds'],
+        on_refresh=_update_tokens_file_on_refresh)
 
 
 def get_globus():
@@ -95,6 +95,7 @@ in the Globus class. In particular, the Globus class is reponsible for:
  - submitting file transfers,
  - monitoring transfers.
 """
+
 
 class Globus(object):
 
@@ -121,5 +122,5 @@ class Globus(object):
         if task['status'] != 'SUCCEEDED':
             logger.error(task)
             raise Exception('Transfer {}, from {}{} to {}{} to failed due to error: {}'.format(
-                    task['task_id'], src_ep, src_path, dst_ep, dst_path,
-                    task['nice_status_short_description']))
+                task['task_id'], src_ep, src_path, dst_ep, dst_path,
+                task['nice_status_short_description']))
