@@ -46,15 +46,17 @@ class FlowControl(object):
 
     This is based on the following logic :
 
-    >>> BEGIN (INTERVAL, THRESHOLD, callback) :
-    >>>     start = current_time()
-    >>>
-    >>>     while (current_time()-start < INTERVAL) :
-    >>>          count = get_events_since(start)
-    >>>          if count >= THRESHOLD :
-    >>>              break
-    >>>
-    >>>     callback()
+    .. code-block:: none
+
+        BEGIN (INTERVAL, THRESHOLD, callback) :
+            start = current_time()
+
+            while (current_time()-start < INTERVAL) :
+                 count = get_events_since(start)
+                 if count >= THRESHOLD :
+                     break
+
+            callback()
 
     This logic ensures that the callbacks are activated with a maximum delay
     of INTERVAL for systems with infrequent events as well as systems which would
@@ -157,14 +159,17 @@ class Timer(object):
 
     This is based on the following logic :
 
-    >>> BEGIN (INTERVAL, THRESHOLD, callback) :
-    >>>     start = current_time()
-    >>>
-    >>>     while (current_time()-start < INTERVAL) :
-    >>>          wait()
-    >>>          break
-    >>>
-    >>>     callback()
+    .. code-block:: none
+
+
+        BEGIN (INTERVAL, THRESHOLD, callback) :
+            start = current_time()
+
+            while (current_time()-start < INTERVAL) :
+                 wait()
+                 break
+
+            callback()
 
     '''
 
