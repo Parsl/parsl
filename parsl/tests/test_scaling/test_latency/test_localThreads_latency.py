@@ -1,10 +1,7 @@
 from parsl import *
-import os
 import time
 import argparse
-
-os.environ['MIDWAY_USERNAME'] = 'yadunand'
-from midway import multiNode as config
+from parsl.configs.local import localThreads as config
 dfk = DataFlowKernel(config=config)
 
 
@@ -22,10 +19,6 @@ def python_noop():
 @App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
-
-
-def average(l):
-    return sum(l) / len(l)
 
 
 def test_python(count):
@@ -65,6 +58,10 @@ def test_python(count):
     print("Roundtrip |   Min:{0:0.3}ms Max:{1:0.3}ms Average:{2:0.3}ms".format(min_rtt,
                                                                                max_rtt,
                                                                                avg_rtt))
+
+
+def average(l):
+    return sum(l) / len(l)
 
 
 def test_bash():

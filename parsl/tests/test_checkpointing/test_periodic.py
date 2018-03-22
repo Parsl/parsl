@@ -1,10 +1,12 @@
 import parsl
 from parsl import *
-import os
 import time
 import argparse
+from dateutil.parser import parse
+import datetime
 
 # parsl.set_stream_logger()
+
 config = {
     "sites": [
         {"site": "Local_Threads",
@@ -14,11 +16,13 @@ config = {
              "provider": None,
              "maxThreads": 2,
          }
-         }],
+        }],
     "globals": {"lazyErrors": True,
-                }
+                "memoize": True,
+                "checkpointMode": "periodic",
+                "checkpointPeriod": "00:00:05",
+    }
 }
-
 dfk = DataFlowKernel(config=config)
 
 
@@ -29,12 +33,20 @@ def slow_double(x, sleep_dur=1):
     return x * 2
 
 
-def test_initial_checkpoint_write(n=4):
-    """ 1. Launch a few apps and write the checkpoint once a few have completed
+def tstamp_to_seconds(line):
+    print("Parsing line : ", line)
+    parsed = parse(line, fuzzy=True)
+    epoch = datetime.datetime.utcfromtimestamp(0)
+    f = (parsed - epoch).total_seconds()
+    return f
+
+
+def test_periodic(n=4):
+    """ Test checkpointing with task_periodic behavior
     """
 
     d = {}
-    time.time()
+
     print("Launching : ", n)
     for i in range(0, n):
         d[i] = slow_double(i)
@@ -43,19 +55,19 @@ def test_initial_checkpoint_write(n=4):
     for i in range(0, n):
         d[i].result()
     print("Done sleeping")
-    cpt_dir = dfk.checkpoint()
 
-    cptpath = cpt_dir + '/dfk.pkl'
-    print("Path exists : ", os.path.exists(cptpath))
-    assert os.path.exists(
-        cptpath), "DFK checkpoint missing: {0}".format(cptpath)
+    time.sleep(10)
+    dfk.cleanup()
 
-    cptpath = cpt_dir + '/tasks.pkl'
-    print("Path exists : ", os.path.exists(cptpath))
-    assert os.path.exists(
-        cptpath), "Tasks checkpoint missing: {0}".format(cptpath)
+    # Here we will check if the loglines came back with 5 seconds deltas
+    print("Rundir : ", dfk.rundir)
 
-    return
+    with open("{}/parsl.log".format(dfk.rundir), 'r') as f:
+        expected_msg = "] check".format(n)
+        lines = [line for line in f.readlines() if expected_msg in line.lower()]
+        deltas = [tstamp_to_seconds(line) for line in lines]
+        assert int(deltas[1] - deltas[0]) == 5, "Delta between checkpoints exceeded period "
+        assert int(deltas[2] - deltas[1]) == 5, "Delta between checkpoints exceeded period "
 
 
 if __name__ == '__main__':
@@ -70,4 +82,4 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    x = test_initial_checkpoint_write(n=4)
+    x = test_periodic(n=4)

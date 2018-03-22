@@ -1,10 +1,8 @@
 import parsl
-from parsl import *
-import os
 import time
+from parsl import *
 import argparse
 
-# parsl.set_stream_logger()
 config = {
     "sites": [
         {"site": "Local_Threads",
@@ -14,11 +12,12 @@ config = {
              "provider": None,
              "maxThreads": 2,
          }
-         }],
+        }],
     "globals": {"lazyErrors": True,
-                }
+                "memoize": True,
+                "checkpointMode": "task_exit",
+    }
 }
-
 dfk = DataFlowKernel(config=config)
 
 
@@ -29,12 +28,12 @@ def slow_double(x, sleep_dur=1):
     return x * 2
 
 
-def test_initial_checkpoint_write(n=4):
-    """ 1. Launch a few apps and write the checkpoint once a few have completed
+def test_at_task_exit(n=4):
+    """ Test checkpointing at task_exit behavior
     """
 
     d = {}
-    time.time()
+
     print("Launching : ", n)
     for i in range(0, n):
         d[i] = slow_double(i)
@@ -42,20 +41,13 @@ def test_initial_checkpoint_write(n=4):
 
     for i in range(0, n):
         d[i].result()
-    print("Done sleeping")
-    cpt_dir = dfk.checkpoint()
 
-    cptpath = cpt_dir + '/dfk.pkl'
-    print("Path exists : ", os.path.exists(cptpath))
-    assert os.path.exists(
-        cptpath), "DFK checkpoint missing: {0}".format(cptpath)
+    time.sleep(1)
 
-    cptpath = cpt_dir + '/tasks.pkl'
-    print("Path exists : ", os.path.exists(cptpath))
-    assert os.path.exists(
-        cptpath), "Tasks checkpoint missing: {0}".format(cptpath)
-
-    return
+    print("Rundir : ", dfk.rundir)
+    with open("{}/parsl.log".format(dfk.rundir), 'r') as f:
+        lines = [line for line in f.readlines() if "Checkpointing.." in line]
+        assert len(lines) == n, "Expected {} checkpoint events, got {}".format(n, len(lines))
 
 
 if __name__ == '__main__':
@@ -70,4 +62,4 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    x = test_initial_checkpoint_write(n=4)
+    x = test_at_task_exit(n=4)

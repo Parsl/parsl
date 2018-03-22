@@ -1,10 +1,8 @@
 from parsl import *
-import os
 import time
 import argparse
 
-os.environ['MIDWAY_USERNAME'] = 'yadunand'
-from midway import multiNode as config
+from parsl.configs.local import localIPP as config
 dfk = DataFlowKernel(config=config)
 
 
@@ -83,9 +81,6 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
     args = parser.parse_args()
-
-    # if args.debug:
-    #     parsl.set_stream_logger()
 
     test_python(int(args.count))
     # test_bash()
