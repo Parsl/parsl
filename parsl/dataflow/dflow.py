@@ -96,9 +96,9 @@ class DataFlowKernel(object):
             self.lazy_fail = self._config["globals"].get("lazyErrors", lazyErrors)
             self.fail_retries = self._config["globals"].get("retries", retries)
             self.flowcontrol = FlowControl(self, self._config)
-            self.checkpoint_method = self._config["globals"].get("checkpointMode",
-                                                                 checkpointMode)
-            if self.checkpoint_method == "periodic":
+            self.checkpoint_mode = self._config["globals"].get("checkpointMode",
+                                                               checkpointMode)
+            if self.checkpoint_mode == "periodic":
                 period = self._config["globals"].get("checkpointPeriod",
                                                      "00:30:00")
                 try:
@@ -115,7 +115,7 @@ class DataFlowKernel(object):
             self.lazy_fail = lazyErrors
             self.executors = {i: x for i, x in enumerate(executors)}
             self.flowcontrol = FlowNoControl(self, None)
-            self.checkpoint_method = checkpointMode
+            self.checkpoint_mode = checkpointMode
 
         self.task_count = 0
         self.fut_task_lookup = {}
@@ -202,7 +202,7 @@ class DataFlowKernel(object):
             # result from a memo lookup and the task has reached a terminal state.
             self.memoizer.update_memo(task_id, self.tasks[task_id], future)
 
-            if self.checkpoint_method is 'task_exit':
+            if self.checkpoint_mode is 'task_exit':
                 self.checkpoint()
                 logger.debug("Task {} checkpoint created at task exit".format(task_id))
 
@@ -534,7 +534,7 @@ class DataFlowKernel(object):
 
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
-        if self.checkpoint_method is not None:
+        if self.checkpoint_mode is not None:
             self.checkpoint()
 
             if self._checkpoint_timer:
