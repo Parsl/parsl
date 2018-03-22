@@ -302,6 +302,7 @@ class TurbineExecutor(ParslExecutor):
         self.worker.start()
         logger.debug("Created worker : %s", self.worker)
         self.tasks = {}
+        self._scaling_enabled = False
 
     def submit(self, func, *args, **kwargs):
         ''' Submits work to the the outgoing_q, an external process listens on this
@@ -336,6 +337,10 @@ class TurbineExecutor(ParslExecutor):
 
         # Return the future
         return self.tasks[task_id]
+
+    @property
+    def scaling_enabled(self):
+        return self._scaling_enabled
 
     def scale_out(self, workers=1):
         ''' Scales out the number of active workers by 1

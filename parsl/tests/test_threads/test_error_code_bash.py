@@ -5,6 +5,7 @@ from nose.tools import nottest
 
 from parsl import *
 import parsl
+# parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
@@ -61,7 +62,8 @@ def test_bash_formatting():
         f.result()
     except Exception as e:
         print("Caught exception", e)
-        assert isinstance(e, parsl.app.errors.AppBadFormatting), "Expected AppBadFormatting got : {0}".format(e)
+        assert isinstance(
+            e, parsl.app.errors.AppBadFormatting), "Expected AppBadFormatting got : {0}".format(e)
     return True
 
 

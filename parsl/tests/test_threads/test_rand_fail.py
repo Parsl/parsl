@@ -3,10 +3,16 @@ import argparse
 
 import parsl
 from parsl import *
+from nose.tools import nottest
 
 # parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=10)
-dfk = DataFlowKernel(executors=[workers], lazy_fail=True)
+dfk = DataFlowKernel(executors=[workers], lazyErrors=True)
+
+
+@nottest
+def test_dont_test_dummy():
+    pass
 
 
 @App('python', dfk)
@@ -26,12 +32,13 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
         # print("Succeed")
 
 
+# @nottest
 def test_no_deps(numtasks=10):
     ''' Test basic error handling, with no dependent failures
     '''
 
     fus = []
-    for i in range(0, 10):
+    for i in range(0, numtasks):
 
         fu = sleep_fail(0.1, 0, .8)
         fus.extend([fu])
@@ -49,6 +56,7 @@ def test_no_deps(numtasks=10):
     print("Caught failures of  {0}/{1}".format(count, len(fus)))
 
 
+# @nottest
 def test_fail_sequence(numtasks=10):
     ''' Test failure in a sequence of dependencies
 
@@ -133,4 +141,4 @@ if __name__ == "__main__":
 
     test_no_deps(numtasks=int(args.count))
     test_fail_sequence(numtasks=int(args.count))
-    test_deps(numtasks=int(args.count))
+    test_simple_deps(numtasks=int(args.count))

@@ -60,12 +60,13 @@ def update_config(config, rundir):
 
     config_base = {"sites": [],
                    "globals": {
-                       "lazyErrors": False,   # Bool
+                       "lazyErrors": True,   # Bool
                        "usageTracking": True,  # Bool
                        "strategy": 'simple',  # ('simple',...)
                        "appCache": True,  # Bool
-                       "checkpointMethod": None,   # ('eager', 'lazy', 'at_exit', None)
-                       "checkpointFiles": None,  # List of checkpoint files
+                       "checkpoint": None,  # (None, 'periodic', 'dfk_exit', 'task_exit')
+                       "checkpointPeriod": None,  # (None, 'HH:MM:SS')
+                       "checkpointFiles": None,   # List of checkpoint files
                    },
                    "controller": {
                        "mode": "auto"

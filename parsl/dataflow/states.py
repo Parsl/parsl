@@ -11,6 +11,7 @@ class States(IntEnum):
     done = 3
     failed = 4
     dep_fail = 5
+    retry = 6
 
 
 if __name__ == "__main__":

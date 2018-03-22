@@ -10,11 +10,10 @@ Note: the continuous integration environment will validate all pull requests usi
 Naming conventions
 ==================
 
-Variable and method names should be all lowercase, with underscores between words.  Class names should be CamelCase.
+The following convention should be followed:ClassName, ExceptionName, GLOBAL_CONSTANT_NAME, and lowercase_with_underscores for everything else.
 
 Version increments
 ==================
-
 
 Parsl follows the ``major.minor[.maintenance[.build]]`` numbering scheme for versions. Once major features 
 for a specific milestone (minor version) are met, the minor version is incremented and released via PyPI and Conda. 
@@ -48,21 +47,37 @@ Or to run a specific test::
 Development Process
 -------------------
 
-Parsl development follows a common pull request-based workflow. That is:
+Parsl development follows a common pull request-based workflow similar to `GitHub flow <http://scottchacon.com/2011/08/31/github-flow.html>`_. That is:
 
-* every development activity should have a related GitHub issue
+* every development activity (except very minor changes, which can be discussed in the PR) should have a related GitHub issue
 * all development occurs in branches
 * the master branch is always stable
 * development branches should include tests for added features
-* branches are merged via pull requests (PRs)
-* PRs should be used for review and discussion
+* development branches should be tested after being brought up-to-date with the master (in this way, what is being tested is what is actually going into the code; otherwise unexpected issues from merging may come up)
+* branches what have been successfully tested are merged via pull requests (PRs)
+* PRs should be used for review and discussion (except hot fixes, which can be pushed to master)
+* PRs should be reviewed in a timely manner, to reduce effort keeping them synced with other changes happening on the master branch
 
 Git commit messages should include a single summary sentence followed by a more explanatory paragraph. Note: all commit messages should reference the GitHub issue to which they relate. 
-
+::
     Implemented Globus data staging support 
 
-    Added the ability to reference and automatically transfer Globus-accessible files. References are represented using the Parsl file format “globus://endpoint/path/file.” If Globus endpoints are known for source and destination Parsl will use the Globus transfer service to move data to the compute host.  Fixes #-1.
+    Added the ability to reference and automatically transfer Globus-accessible
+    files. References are represented using the Parsl file format
+    “globus://endpoint/path/file.” If Globus endpoints are known for source and
+    destination Parsl will use the Globus transfer service to move data to the
+    compute host. Fixes #-1.
 
+Git hooks
+---------
+
+Developers may find it useful to setup a pre-commit git hook to automatically lint and run tests. This is a script which is run before each commit. For example::
+
+    $ cat ~/parsl/.git/hooks/pre-commit
+    #!/bin/sh
+
+    flake8 parsl
+    nosetests -vx parsl/tests/test_threads parsl/tests/test_data parsl/tests/test_checkpointing
 
 Project documentation
 ---------------------

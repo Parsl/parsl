@@ -1,7 +1,13 @@
 .. _label-exceptions:
 
+Error Handling
+==============
+
+In this section we will cover the various mechanisms Parsl provides to add resiliency
+and robustness to workflows.
+
 Exceptions
-==========
+----------
 
 Apps fail in remote settings due to a variety of reasons. To handle errors
 Parsl captures, tracks, and provides functionality to appropriately respond to failures during
@@ -42,8 +48,99 @@ of a failed task. For example:
            print('Oops! Something really bad happened')
 
 
+Retries
+-------
+
+Retries are one of the simplest and most frequently used methods to add resiliency
+to ``App`` failures. By retrying failed apps, transient failures (eg. machine failure,
+network failure) and intermittent failures within applications can be addressed.
+When ``retries`` are enabled (set to integer > 0), parsl will automatically
+re-launch applications that have failed, until the retry limit is reached.
+This feature will be available starting in Parsl `v0.5.0`.
+
+By default ``retries = 0``. Retries can be enabled by setting ``retries`` in the
+config passed to the DataFlowKernel, or as an explicit keyword argument to the
+DataFlowKernel at its initialization.
+
+Here is an example of setting retries via the config:
+
+.. code-block:: python
+
+   from parsl import DataFlowKernel, App
+   from parsl.configs.local import localIPP as config
+   config["globals"]["retries"] = 2
+
+   dfk = DataFlowKernel(config=config)
 
 
 
+Here is an example of setting retries via keyword argument to the DFK:
+
+.. code-block:: python
+
+   from parsl import DataFlowKernel, App
+   from parsl.configs.local import localIPP as config
+
+   dfk = DataFlowKernel(config=config, retries=2)
 
 
+Lazy Fail
+---------
+
+While Retries address resiliency at the level of ``Apps``, lazy failure adds
+resiliency at the workflow level. When lazy failures are enabled, the workflow does
+not halt as soon as it encounters a failure, but continues execution of every
+app that is unaffected. Lazy failures is the default behavior in parsl, with the
+expectation that when running production workflows, individual app failures can be
+deferred until the end of the workflow. During the development and testing of
+workflows, failing immediately on any failure is oftern preferred and this behavior
+is possible by setting ``lazy_fail=False``.
+
+
+For eg:
+
+.. code-block:: python
+
+    Here's a workflow graph, where
+         (X)  is runnable,
+         [X]  is completed,
+         (X*) is failed.
+         (!X) is dependency failed
+
+      (A)           [A]           (A)
+      / \           / \           / \
+    (B) (C)       [B] (C*)      [B] (C*)
+     |   |   =>    |   |   =>    |   |
+    (D) (E)       (D) (E)       [D] (!E)
+      \ /           \ /           \ /
+      (F)           (F)           (!F)
+
+      time ----->
+
+
+There are two way to disable lazy failures, via setting the ``config['globals']['lazyErrors']=False``
+or by setting ``lazy_fail=False`` as keyword argument to the DataFlowKernel at initialization.
+
+Here is an example of disabling lazy failures via the config passed to the DFK
+
+.. code-block:: python
+
+   from parsl import DataFlowKernel, App
+   from parsl.configs.local import localIPP as config
+   config["globals"]["lazyErrors"] = False
+
+   dfk = DataFlowKernel(config=config)
+
+
+
+Here is an example of disabling lazy failures via keyword argument to the DFK:
+
+.. code-block:: python
+
+   from parsl import DataFlowKernel, App
+   from parsl.configs.local import localIPP as config
+
+   dfk = DataFlowKernel(config=config, lazy_fail=False)
+
+.. note:: The naming inconsistency in the config option and kwargs to dfk will be fixed
+          in 0.5.0 release

@@ -66,7 +66,7 @@ class ThreadPoolExecutor(ParslExecutor):
              NotImplemented exception
         '''
 
-        raise NotImplemented
+        raise NotImplementedError
 
     def scale_in(self, workers=1):
         ''' Scale in the number of active workers by 1
@@ -76,7 +76,7 @@ class ThreadPoolExecutor(ParslExecutor):
              NotImplemented exception
         '''
 
-        raise NotImplemented
+        raise NotImplementedError
 
     def shutdown(self, block=False):
         ''' Shutdown the ThreadPool

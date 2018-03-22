@@ -1,5 +1,7 @@
 from setuptools import setup, find_packages
-from parsl.version import VERSION
+
+with open('parsl/version.py') as f:
+    exec(f.read())
 
 with open('requirements.txt') as f:
     install_requires = f.readlines()

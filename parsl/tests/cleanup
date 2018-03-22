@@ -4,7 +4,7 @@ for dir in */
     do
         echo "Cleaning dir: $dir"
         cd $dir
-        rm -rf *txt *out *err outputs *~ runinfo
+        rm -rf *txt *out *err outputs *~ runinfo ipengine.json
         cd ..
     done
 
