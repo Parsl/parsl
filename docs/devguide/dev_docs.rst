@@ -96,7 +96,7 @@ DataFlowKernel
 ==============
 
 .. autoclass:: parsl.dataflow.dflow.DataFlowKernel
-   :members:  __init__, submit, cleanup, load_checkpoints, checkpoint, config, handle_update, launch_task, _count_deps, _count_all_deps, sanitize_and_wrap, _load_checkpoints
+   :members:
 
 
 Executors
@@ -152,51 +152,51 @@ ExecutionProvider (Base)
 ------------------------
 
 .. autoclass:: libsubmit.providers.provider_base.ExecutionProvider
-   :members:  __init__, submit, status, cancel, scaling_enabled, channels_required
+   :members:
 
 Local
 -----
 
 .. autoclass:: libsubmit.providers.local.local.Local
-   :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
+   :members:
 
 
 Slurm
 -----
 
 .. autoclass:: libsubmit.providers.slurm.slurm.Slurm
-   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+   :members:
 
 Cobalt
 ------
 
 .. autoclass:: libsubmit.providers.cobalt.cobalt.Cobalt
-   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+   :members:
 
 Condor
 ------
 
 .. autoclass:: libsubmit.providers.condor.condor.Condor
-   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+   :members:
 
 Torque
 ------
 
 .. autoclass:: libsubmit.providers.torque.torque.Torque
-   :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
+   :members:
 
 GridEngine
 ----------
 
 .. autoclass:: libsubmit.providers.gridEngine.gridEngine.GridEngine
-   :members:  __init__, submit, status, cancel, _status, scaling_enabled, current_capacity, channels_required
+   :members:
 
 
 Amazon Web Services
 -------------------
 
 .. autoclass:: libsubmit.providers.aws.aws.EC2Provider
-    :members:  __init__, submit, status, cancel, read_state_file, show_summary, create_session, create_vpc, spin_up_instance, shut_down_instance, get_instance_state, teardown, scale_in, scale_out
+    :members:
 
 Azure
 -----
@@ -224,22 +224,22 @@ to the resource managers of compute facilities. The simplest Channel, *LocalChan
 locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
 .. autoclass:: libsubmit.channels.channel_base.Channel
-   :members:  execute_wait, script_dir, execute_no_wait, push_file, close
+   :members:
 
 LocalChannel
 ------------
 .. autoclass:: libsubmit.channels.local.local.LocalChannel
-   :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
+   :members:
 
 SshChannel
 ----------
 .. autoclass:: libsubmit.channels.ssh.ssh.SshChannel
-   :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
+   :members:
 
 SshILChannel
 ------------
 .. autoclass:: libsubmit.channels.ssh_il.ssh_il.SshILChannel
-   :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
+   :members:
 
 
 Launchers
@@ -274,19 +274,19 @@ FlowControl
 -----------
 
 .. autoclass:: parsl.dataflow.flow_control.FlowControl
-   :members:  __init__, notify, make_callback, close, _wake_up_timer
+   :members:
 
 FlowNoControl
 -------------
 
 .. autoclass:: parsl.dataflow.flow_control.FlowNoControl
-   :members:  __init__, notify, close
+   :members:
 
 Timer
 -----
 
 .. autoclass:: parsl.dataflow.flow_control.Timer
-   :members:  __init__, close, make_callback, _wake_up_timer
+   :members:
 
 
 Strategy
@@ -296,13 +296,13 @@ Strategies are responsible for tracking the compute requirements of a workflow a
 is executed and scaling the resources to match it.
 
 .. autoclass:: parsl.dataflow.strategy.Strategy
-   :members:  __init__, _strategy_noop, _strategy_simple
+   :members:
 
 Memoization
 ===========
 
 .. autoclass:: parsl.dataflow.memoization.Memoizer
-   :members:  __init__, make_hash, check_memo, hash_lookup, update_memo
+   :members:
 
 
 
