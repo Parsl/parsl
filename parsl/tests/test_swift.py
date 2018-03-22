@@ -18,9 +18,11 @@ def slow_foo(x, y):
     time.sleep(x)
     return x * y
 
+
 def bad_foo(x, y):
     time.sleep(x)
     return x * y
+
 
 def test_simple():
     print("Start")
@@ -31,6 +33,7 @@ def test_simple():
     assert x.result() == 50, "X != 50"
     print("done")
 
+
 def test_slow():
     futs = {}
     tex = TurbineExecutor()
@@ -39,6 +42,7 @@ def test_slow():
 
     total = sum([futs[i].result(timeout=10) for i in futs])
     assert total == 6, "expected 6, got {}".format(total)
+
 
 def test_except():
     def get_bad_result():
