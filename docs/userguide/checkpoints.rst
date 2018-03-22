@@ -24,13 +24,13 @@ Checkpointing works in the following modes:
    failed (after retries if enabled). This mode reduces the risk of losing information
    from completed tasks to a minimum.
 
-   >>> config["globals"]["checkpoint"] = 'task_exit'
+   >>> config["globals"]["checkpointMode"] = 'task_exit'
 
 
 2. ``periodic``: The periodic mode allows the user to specify the interval at which
    all task information pending checkpointing should be checkpointed.
 
-   >>> config["globals"]["checkpoint"] = 'periodic'
+   >>> config["globals"]["checkpointMode"] = 'periodic'
    >>> config["globals"]["checkpointPeriod"] = "01:00:00"
 
 3. ``dfk_exit``: In this mode, task checkpointing is done when the DataFlowKernel is
@@ -39,7 +39,7 @@ Checkpointing works in the following modes:
    there's still some likelihood that information might be lost if the workflow is
    terminated abruptly (machine failure, SIGKILL etc)
 
-   >>> config["globals"]["checkpoint"] = 'dfk_exit'
+   >>> config["globals"]["checkpointMode"] = 'dfk_exit'
 
 4. Manual: Apart from these modes, it is also possible to manually initiate a checkpoint
    by calling ``DataFlowKernel.checkpoint()`` in the workflow code.
@@ -62,7 +62,7 @@ Example code for setting the checkpoint methods:
             }],
         "globals": {"lazyErrors": True,
                     "memoize": True,
-                    "checkpoint": "dfk_exit"
+                    "checkpointMode": "dfk_exit"
         }
     }
     dfk = DataFlowKernel(config=config)
