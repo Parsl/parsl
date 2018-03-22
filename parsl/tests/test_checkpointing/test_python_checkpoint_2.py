@@ -1,5 +1,3 @@
-''' Testing python apps
-'''
 import parsl
 from parsl import *
 import os
@@ -34,8 +32,7 @@ config = {
          }],
     "globals": {"lazyErrors": True,
                 "memoize": True,
-                "checkpoint": True,
-                }
+    }
 }
 
 dfk = DataFlowKernel(config=config, checkpointFiles=[last_checkpoint])

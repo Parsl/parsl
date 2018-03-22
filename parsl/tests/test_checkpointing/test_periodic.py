@@ -1,5 +1,3 @@
-''' Testing python apps
-'''
 import parsl
 from parsl import *
 import time
@@ -21,7 +19,7 @@ config = {
         }],
     "globals": {"lazyErrors": True,
                 "memoize": True,
-                "checkpoint": "periodic",
+                "checkpointMode": "periodic",
                 "checkpointPeriod": "00:00:05",
     }
 }

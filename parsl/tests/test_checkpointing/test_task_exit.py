@@ -1,5 +1,3 @@
-''' Testing python apps
-'''
 import parsl
 import time
 from parsl import *
@@ -17,7 +15,7 @@ config = {
         }],
     "globals": {"lazyErrors": True,
                 "memoize": True,
-                "checkpoint": "task_exit",
+                "checkpointMode": "task_exit",
     }
 }
 dfk = DataFlowKernel(config=config)
