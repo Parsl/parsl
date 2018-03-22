@@ -37,7 +37,7 @@ dfk = DataFlowKernel(config=config)
 
 @App('python', dfk)
 def sort_strings(inputs=[], outputs=[]):
-    with open(inputs[0].filepath, 'r') as u:
+    with open(inputs[0], 'r') as u:
         strs = u.readlines()
         strs.sort()
         with open(outputs[0].filepath, 'w') as s:
@@ -57,6 +57,7 @@ endpoint.
 sorted_file = File('globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/~/sorted.txt')
 
 dfu = unsorted_file.stage_in()
+dfu.result()
 
 f = sort_strings(inputs=[dfu], outputs=[sorted_file])
 f.result()
