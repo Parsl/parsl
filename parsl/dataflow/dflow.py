@@ -45,7 +45,7 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
-                 rundir=None, retries=0, checkpointFiles=None, checkpointMethod=None):
+                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None):
         """ Initialize the DataFlowKernel
 
         Please note that keyword args passed to the DFK here will always override
@@ -59,7 +59,7 @@ class DataFlowKernel(object):
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
-            - checkpointMethod (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
+            - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
 
         Returns:
             DataFlowKernel object
@@ -96,8 +96,8 @@ class DataFlowKernel(object):
             self.lazy_fail = self._config["globals"].get("lazyErrors", lazyErrors)
             self.fail_retries = self._config["globals"].get("retries", retries)
             self.flowcontrol = FlowControl(self, self._config)
-            self.checkpoint_method = self._config["globals"].get("checkpoint",
-                                                                 checkpointMethod)
+            self.checkpoint_method = self._config["globals"].get("checkpointMode",
+                                                                 checkpointMode)
             if self.checkpoint_method == "periodic":
                 period = self._config["globals"].get("checkpointPeriod",
                                                      "00:30:00")
@@ -115,7 +115,7 @@ class DataFlowKernel(object):
             self.lazy_fail = lazyErrors
             self.executors = {i: x for i, x in enumerate(executors)}
             self.flowcontrol = FlowNoControl(self, None)
-            self.checkpoint_method = checkpointMethod
+            self.checkpoint_method = checkpointMode
 
         self.task_count = 0
         self.fut_task_lookup = {}
