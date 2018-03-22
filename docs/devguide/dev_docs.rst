@@ -56,6 +56,7 @@ AppFutures
 
 .. autoclass:: parsl.dataflow.futures.AppFuture
    :members:
+   :special-members:
    :noindex:
 
 
@@ -64,6 +65,7 @@ DataFutures
 
 .. autoclass:: parsl.app.futures.DataFuture
    :members:
+   :special-members:
    :noindex:
 
 
@@ -97,6 +99,8 @@ DataFlowKernel
 
 .. autoclass:: parsl.dataflow.dflow.DataFlowKernel
    :members:
+   :special-members:
+
 
 
 Executors
@@ -153,50 +157,59 @@ ExecutionProvider (Base)
 
 .. autoclass:: libsubmit.providers.provider_base.ExecutionProvider
    :members:
+   :special-members:
+
 
 Local
 -----
 
 .. autoclass:: libsubmit.providers.local.local.Local
    :members:
-
+   :special-members:
 
 Slurm
 -----
 
 .. autoclass:: libsubmit.providers.slurm.slurm.Slurm
    :members:
+   :special-members:
 
 Cobalt
 ------
 
 .. autoclass:: libsubmit.providers.cobalt.cobalt.Cobalt
    :members:
+   :special-members:
 
 Condor
 ------
 
 .. autoclass:: libsubmit.providers.condor.condor.Condor
    :members:
+   :special-members:
 
 Torque
 ------
 
 .. autoclass:: libsubmit.providers.torque.torque.Torque
    :members:
+   :special-members:
 
 GridEngine
 ----------
 
 .. autoclass:: libsubmit.providers.gridEngine.gridEngine.GridEngine
    :members:
+   :special-members:
 
 
 Amazon Web Services
 -------------------
 
 .. autoclass:: libsubmit.providers.aws.aws.EC2Provider
-    :members:
+   :members:
+   :special-members:
+
 
 Azure
 -----
@@ -225,21 +238,29 @@ locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
 .. autoclass:: libsubmit.channels.channel_base.Channel
    :members:
+   :special-members:
+
 
 LocalChannel
 ------------
 .. autoclass:: libsubmit.channels.local.local.LocalChannel
    :members:
+   :special-members:
+
 
 SshChannel
 ----------
 .. autoclass:: libsubmit.channels.ssh.ssh.SshChannel
    :members:
+   :special-members:
+
 
 SshILChannel
 ------------
 .. autoclass:: libsubmit.channels.ssh_il.ssh_il.SshILChannel
    :members:
+   :special-members:
+
 
 
 Launchers
@@ -281,12 +302,16 @@ FlowNoControl
 
 .. autoclass:: parsl.dataflow.flow_control.FlowNoControl
    :members:
+   :special-members:
+
 
 Timer
 -----
 
 .. autoclass:: parsl.dataflow.flow_control.Timer
    :members:
+   :special-members:
+
 
 
 Strategy
@@ -297,12 +322,16 @@ is executed and scaling the resources to match it.
 
 .. autoclass:: parsl.dataflow.strategy.Strategy
    :members:
+   :special-members:
+
 
 Memoization
 ===========
 
 .. autoclass:: parsl.dataflow.memoization.Memoizer
    :members:
+   :special-members:
+
 
 
 
