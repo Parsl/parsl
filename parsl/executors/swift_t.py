@@ -58,8 +58,9 @@ def runner(incoming_q, outgoing_q):
     logger.debug("[RUNNER] Starting")
 
     def execute_task(bufs):
-        ''' Deserialize the buf, and execute the task.
-        Returns the serialized result/exception
+        ''' Deserialize the buffer and execute the task.
+
+        Returns the serialized result or exception.
         '''
         all_names = dir(__builtins__)
         user_ns = locals()
@@ -83,31 +84,28 @@ def runner(incoming_q, outgoing_q):
                                                argname, kwargname)
 
         try:
-
-            print("[RUNNER] Executing : {0}".format(code))
+            logger.debug("[RUNNER] Executing: {0}".format(code))
             exec(code, user_ns, user_ns)
 
         except Exception as e:
-            logger.warning("Caught errors but will not handled %s", e)
+            logger.warning("Caught exception; will raise it: {}".format(e))
             raise e
 
         else:
-            # print("Done : {0}".format(locals()))
-            print("[RUNNER] Result    : {0}".format(user_ns.get(resultname)))
+            logger.debug("[RUNNER] Result: {0}".format(user_ns.get(resultname)))
             return user_ns.get(resultname)
 
     while True:
         try:
             # Blocking wait on the queue
             msg = incoming_q.get(block=True, timeout=10)
-            # logger.debug("[RUNNER] Got message : %s", msg)
 
         except queue.Empty:
-            # Handle case where no items were on queue
-            logger.debug("[RUNNER] got nothing")
+            # Handle case where no items were in the queue
+            logger.debug("[RUNNER] Queue is empty")
 
-        except IOError as ioerror:
-            logger.debug("[RUNNER] broken pipe, error: %s", ioerror)
+        except IOError as e:
+            logger.debug("[RUNNER] Broken pipe: {}".format(e))
             try:
                 # Attempt to send a stop notification to the management thread
                 outgoing_q.put(None)
@@ -118,7 +116,7 @@ def runner(incoming_q, outgoing_q):
             break
 
         except Exception as e:
-            logger.debug("[RUNNER] caught unknown exception : %s", e)
+            logger.debug("[RUNNER] Caught unknown exception: {}".format(e))
 
         else:
             # Handle received message
@@ -129,17 +127,17 @@ def runner(incoming_q, outgoing_q):
                 break
             else:
                 # Received a valid message, handle it
-                logger.debug("[RUNNER] Got a valid task : %s", msg["task_id"])
+                logger.debug("[RUNNER] Got a valid task with ID {}".format(msg["task_id"]))
                 try:
                     response_obj = execute_task(msg['buffer'])
                     response = {"task_id": msg["task_id"],
                                 "result": serialize_object(response_obj)}
 
-                    logger.warning("[RUNNER] Returing result : %s",
-                                   deserialize_object(response["result"]))
+                    logger.debug("[RUNNER] Returing result: {}".format(
+                                   deserialize_object(response["result"])))
 
                 except Exception as e:
-                    logger.debug("[RUNNER] Caught task exception")
+                    logger.debug("[RUNNER] Caught task exception: {}".format(e))
                     response = {"task_id": msg["task_id"],
                                 "exception": serialize_object(e)}
 
@@ -152,7 +150,7 @@ class TurbineExecutor(ParslExecutor):
     ''' The Turbine executor. Bypass the Swift/T language and run on top off the Turbine engines
     in an MPI environment.
 
-    Here's a simple diagram
+    Here is a diagram
 
     .. code:: python
 
@@ -172,10 +170,10 @@ class TurbineExecutor(ParslExecutor):
     '''
 
     def _queue_management_worker(self):
-        ''' The queue management worker is responsible for listening to the incoming_q
-        for task status messages and updating tasks with results/exceptions/updates
+        '''Listen to the queue for task status messages and handle them.
 
-        It expects the following messages:
+        Depending on the message, tasks will be updated with results, exceptions,
+        or updates. It expects the following messages:
 
         .. code:: python
 
@@ -190,7 +188,7 @@ class TurbineExecutor(ParslExecutor):
                "exception" : serialized exception object, on failure
             }
 
-        We don't support these yet, but they could be added easily as heartbeat.
+        We do not support these yet, but they could be added easily.
 
         .. code:: python
 
@@ -202,9 +200,7 @@ class TurbineExecutor(ParslExecutor):
                "started"  : tstamp
             }
 
-        The None message is a die request.
-        None
-
+        The `None` message is a die request.
         '''
 
         while True:
@@ -213,15 +209,15 @@ class TurbineExecutor(ParslExecutor):
                 msg = self.incoming_q.get(block=True, timeout=1)
 
             except queue.Empty as e:
-                # timed out.
+                # Timed out.
                 pass
 
             except IOError as e:
-                logger.debug("[MTHREAD] caught broken queue : %s : errno:%s", e, e.errno)
+                logger.debug("[MTHREAD] Caught broken queue with exception code {}: {}".format(e.errno, e))
                 return
 
             except Exception as e:
-                logger.debug("[MTHREAD] caught unknown exception : %s", e)
+                logger.debug("[MTHREAD] Caught unknown exception: {}".format(e))
 
             else:
 
@@ -230,7 +226,7 @@ class TurbineExecutor(ParslExecutor):
                     return
 
                 else:
-                    logger.debug("[MTHREAD] Got message : %s", msg)
+                    logger.debug("[MTHREAD] Received message: {}".format(msg))
                     task_fut = self.tasks[msg['task_id']]
                     if 'result' in msg:
                         result, _ = deserialize_object(msg['result'])
@@ -240,7 +236,7 @@ class TurbineExecutor(ParslExecutor):
                         exception, _ = deserialize_object(msg['exception'])
                         task_fut.set_exception(exception)
 
-            if not self.isAlive:
+            if not self.is_alive:
                 break
 
     # When the executor gets lost, the weakref callback will wake up
@@ -271,7 +267,7 @@ class TurbineExecutor(ParslExecutor):
         ''' Shutdown method, to kill the threads and workers.
         '''
 
-        self.isAlive = False
+        self.is_alive = False
         logging.debug("Waking management thread")
         self.incoming_q.put(None)  # Wake up the thread
         self._queue_management_thread.join()  # Force join
@@ -288,11 +284,11 @@ class TurbineExecutor(ParslExecutor):
 
         '''
         self.config = config
-        logger.debug("In __init__")
+        logger.debug("Initializing TurbineExecutor")
         self.mp_manager = mp.Manager()
         self.outgoing_q = self.mp_manager.Queue()
         self.incoming_q = self.mp_manager.Queue()
-        self.isAlive = True
+        self.is_alive = True
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
@@ -321,7 +317,7 @@ class TurbineExecutor(ParslExecutor):
         '''
         task_id = uuid.uuid4()
 
-        logger.debug("Before pushing to queue : func:%s func_args:%s", func, args)
+        logger.debug("Pushing function {} to queue with args {}".format(func, args))
 
         self.tasks[task_id] = Future()
 
