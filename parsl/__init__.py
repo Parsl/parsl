@@ -63,13 +63,13 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
 
     if format_string is None:
         # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
-        format_string = "%(asctime)s %(name)s [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
     handler = logging.StreamHandler()
     handler.setLevel(level)
-    formatter = logging.Formatter(format_string)
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -88,13 +88,13 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
     '''
 
     if format_string is None:
-        format_string = "%(asctime)s %(name)s [%(levelname)s] %(message)s"
+        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
-    formatter = logging.Formatter(format_string)
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
