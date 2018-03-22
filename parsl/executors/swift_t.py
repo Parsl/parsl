@@ -62,9 +62,8 @@ def runner(incoming_q, outgoing_q):
 
         Returns the serialized result or exception.
         '''
-        all_names = dir(__builtins__)
         user_ns = locals()
-        user_ns.update({'__builtins__': {k: getattr(__builtins__, k) for k in all_names}})
+        user_ns.update({'__builtins__': __builtins__})
 
         f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
