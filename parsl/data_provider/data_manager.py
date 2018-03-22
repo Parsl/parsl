@@ -150,7 +150,7 @@ class DataManager(ParslExecutor):
             return f
 
     def _file_transfer_in(self, file):
-        return file
+        pass
 
     def _globus_transfer_in(self, file, globus_ep):
         file.local_path = os.path.join(
@@ -162,7 +162,7 @@ class DataManager(ParslExecutor):
                 file.path, dst_path)
 
     def _file_transfer_out(self, file):
-        return file
+        pass
 
     def _globus_transfer_out(self, file, globus_ep):
         src_path = os.path.join(
