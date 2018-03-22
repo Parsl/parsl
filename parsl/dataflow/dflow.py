@@ -18,6 +18,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.config_defaults import update_config
+from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 
 # from parsl.dataflow.start_controller import Controller

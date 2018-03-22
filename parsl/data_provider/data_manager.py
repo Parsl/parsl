@@ -43,12 +43,9 @@ class DataManager(ParslExecutor):
         self._scaling_enabled = False
         self.executor = cf.ThreadPoolExecutor(max_workers=max_workers)
 
-        if not config:
-            logger.error("No config provided to DataManager")
-            raise Exception(
-                "DataManager must be initialized with a valid config. No config provided.")
-
         self.config = config
+        if not self.config:
+            self.config = {"sites": []}
         self.files = []
         self.globus = None
 
