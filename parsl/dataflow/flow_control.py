@@ -18,8 +18,8 @@ class FlowNoControl(object):
         ''' Initialize the flowcontrol object. This does nothing.
 
         Args:
-             - dfk (DFK object) : DFK object to track parsl progress
-             - config (Dict) : Config dict structure
+             - dfk (DataFlowKernel) : DFK object to track parsl progress
+             - config (dict) : Config dict structure
 
         KWargs:
              - threshold (int) : Tasks after which the callback is triggered
@@ -76,8 +76,8 @@ class FlowControl(object):
         We start the timer thread here
 
         Args:
-             - dfk (DFK object) : DFK object to track parsl progress
-             - config (Dict) : Config dict structure
+             - dfk (DataFlowKernel) : DFK object to track parsl progress
+             - config (dict) : Config dict structure
 
         KWargs:
              - threshold (int) : Tasks after which the callback is triggered
@@ -173,8 +173,8 @@ class Timer(object):
         We start the timer thread here
 
         Args:
-             - dfk (DFK object) : DFK object to track parsl progress
-             - config (Dict) : Config dict structure
+             - dfk (DataFlowKernel) : DFK object to track parsl progress
+             - config (dict) : Config dict structure
 
         KWargs:
              - threshold (int) : Tasks after which the callback is triggered
