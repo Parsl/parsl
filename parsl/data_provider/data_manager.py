@@ -117,7 +117,7 @@ class DataManager(ParslExecutor):
             return df
 
         if file.scheme == 'file':
-            f = self.submit(self._file_transfer_in)
+            f = self.submit(self._file_transfer_in, file)
         elif file.scheme == 'globus':
             f = self.submit(self._globus_transfer_in, file, globus_ep)
 
@@ -149,8 +149,8 @@ class DataManager(ParslExecutor):
             f = self.submit(self._globus_transfer_out, file, globus_ep)
             return f
 
-    def _file_transfer_in(self):
-        pass
+    def _file_transfer_in(self, file):
+        return file
 
     def _globus_transfer_in(self, file, globus_ep):
         file.local_path = os.path.join(
@@ -161,8 +161,8 @@ class DataManager(ParslExecutor):
                 file.netloc, globus_ep['endpoint_name'],
                 file.path, dst_path)
 
-    def _file_transfer_out(self):
-        pass
+    def _file_transfer_out(self, file):
+        return file
 
     def _globus_transfer_out(self, file, globus_ep):
         src_path = os.path.join(

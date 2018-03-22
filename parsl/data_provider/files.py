@@ -53,7 +53,7 @@ class File(object):
         self.staging = staging
 
     def __str__(self):
-        return self.url
+        return self.filepath
 
     def __repr__(self):
         return self.__str__()
