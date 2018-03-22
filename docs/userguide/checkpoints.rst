@@ -18,22 +18,22 @@ will checkpoint all results that have updated since the last checkpoint. When lo
 checkpoints, if entries with results from multiple functions (with identical hashes)
 are encountered, only the last entry read will be considered.
 
-Checkpointing works in the following modes :
+Checkpointing works in the following modes:
 
-1. ``task_exit`` : In this mode, each app is checkpointed when it has completed or
+1. ``task_exit``: In this mode, each app is checkpointed when it has completed or
    failed (after retries if enabled). This mode reduces the risk of losing information
    from completed tasks to a minimum.
 
    >>> config["globals"]["checkpoint"] = 'task_exit'
 
 
-2. ``periodic`` : The periodic mode allows the user to specify the interval at which
+2. ``periodic``: The periodic mode allows the user to specify the interval at which
    all task information pending checkpointing should be checkpointed.
 
    >>> config["globals"]["checkpoint"] = 'periodic'
    >>> config["globals"]["checkpointPeriod"] = "01:00:00"
 
-3. ``dfk_exit`` : In this mode, task checkpointing is done when the DataFlowKernel is
+3. ``dfk_exit``: In this mode, task checkpointing is done when the DataFlowKernel is
    about to exit. This reduces the risk of losing task information and results from
    premature workflow termination from exceptions, terminate signals etc. However
    there's still some likelihood that information might be lost if the workflow is
@@ -41,12 +41,12 @@ Checkpointing works in the following modes :
 
    >>> config["globals"]["checkpoint"] = 'dfk_exit'
 
-4. Manual : Apart from these modes, it is also possible to manually initiate a checkpoint
+4. Manual: Apart from these modes, it is also possible to manually initiate a checkpoint
    by calling ``DataFlowKernel.checkpoint()`` in the workflow code.
 
 In all of the above methods the checkpoint is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 
-Example code for setting the checkpoint methods :
+Example code for setting the checkpoint methods:
 
 .. code-block:: python
 
@@ -69,7 +69,7 @@ Example code for setting the checkpoint methods :
 
 
 
-Example code of manually invoking checkpoint :
+Example code of manually invoking checkpoint:
 
 .. code-block:: python
 
