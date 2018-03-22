@@ -99,7 +99,6 @@ class DataFlowKernel(object):
             self.checkpoint_method = self._config["globals"].get("checkpoint",
                                                                  checkpointMethod)
             if self.checkpoint_method == "periodic":
-                print("Setting periodic")
                 period = self._config["globals"].get("checkpointPeriod",
                                                      "00:30:00")
                 try:
