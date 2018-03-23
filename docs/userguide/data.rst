@@ -42,9 +42,10 @@ The following example shows how files on remote Globus endpoints can be specifie
                 {
                     "data": {
                         "globus": {
-                            "endpoint_name": "1afdfb30-1102-11e8-a7ed-0a448319c2f8",
-                            "endpoint_path": "/parsl",
-                            "local_directory": "/home/$USER/projects/share/parsl"
+                            "endpoint_name": "af7bda53-6d04-11e5-ba46-22000b92c6ec",
+                            "endpoint_path": "/home/$USER/",
+                            "local_directory": "/home/$USER/",
+                            "comment": "UChicago RCC Midway"
                         }
                     }
                 }
@@ -53,7 +54,7 @@ The following example shows how files on remote Globus endpoints can be specifie
 
         @App('python', dfk)
         def sort_strings(inputs=[], outputs=[]):
-            with open(inputs[0].filepath, 'r') as u:
+            with open(inputs[0], 'r') as u:
                 strs = u.readlines()
                 strs.sort()
                 with open(outputs[0].filepath, 'w') as s:
@@ -64,11 +65,13 @@ The following example shows how files on remote Globus endpoints can be specifie
         unsorted_file = File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
         sorted_file = File ('globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/~/sorted.txt')
 
-        unsorted_file.stage_in()
+        dfu = unsorted_file.stage_in()
+        dfu.result()
 
         f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
         f.result()
 
-        sorted_file.stage_out()
+        dfs = sorted_file.stage_out()
+        dfs.result()
 
-If an app wants to read or write remote files on a globus endpoint, Parsl must know a UUID or name of an endpoint associated with a site the app is executed at to be able to stage the files to the site before the files can be open or staged them out after At least one of the sites specified in the config must include the "globus" attribute with "globus_endpoint" and a path that points to a directory at the site where remote files are to be staged. A root of a Globus endpoint may not match a root of the filesystem at the site. In this case, Parsl needs to know a directory on the endpoint that corresponds to "local_directory".
+If an app wants to read or write remote files on a globus endpoint, Parsl must know a UUID or name of an endpoint associated with a site the app is executed at to be able to stage the files to the site before the files can be open or staged them out after At least one of the sites specified in the config must include the "globus" attribute with "globus_endpoint" and a path that points to a directory at the site where remote files are to be staged. A root of a Globus endpoint may not match a root of the filesystem at the site. In this case, Parsl needs to know a directory on the endpoint that corresponds to "local_directory". In the example, a root of the 'UChicago RCC Midway' endpoint points to the Midway cluster filesystem root.
