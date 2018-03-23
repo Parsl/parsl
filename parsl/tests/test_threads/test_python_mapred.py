@@ -1,4 +1,4 @@
-""" Testing python map_reduce
+"""Testing python map_reduce
 """
 import parsl
 from parsl import *
@@ -31,7 +31,7 @@ def accumulate_t(*args):
 
 
 def test_mapred_type1(width=5):
-    """ MapReduce test with the reduce stage taking futures in inputs=[]
+    """MapReduce test with the reduce stage taking futures in inputs=[]
     """
 
     futs = []
@@ -49,7 +49,7 @@ def test_mapred_type1(width=5):
 
 
 def test_mapred_type2(width=5):
-    """ MapReduce test with the reduce stage taking futures on the args
+    """MapReduce test with the reduce stage taking futures on the args
     """
 
     futs = []

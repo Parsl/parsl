@@ -24,7 +24,7 @@ def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
 
 
 def test_data_future_result():
-    """ Testing the behavior of a result call on DataFutures
+    """Testing the behavior of a result call on DataFutures
     """
     # We call sim_mol_dyn with
     sim_fut = sim_mol_dyn(5, 0, outputs=['sim.out'],
@@ -36,7 +36,7 @@ def test_data_future_result():
 
 
 def test_app_future_result():
-    """ Testing the behavior of a result call on AppFutures
+    """Testing the behavior of a result call on AppFutures
     """
     # We call sim_mol_dyn with
     sim_fut = sim_mol_dyn(5, 0.5, outputs=['sim.out'],

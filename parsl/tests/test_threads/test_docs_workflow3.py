@@ -1,4 +1,4 @@
-""" Testing bash apps
+"""Testing bash apps
 """
 import parsl
 from parsl import *
@@ -19,7 +19,7 @@ def generate(limit):
 
 
 def test_parallel_for(N=5):
-    """ Test parallel workflows from docs on Composing workflows
+    """Test parallel workflows from docs on Composing workflows
     """
     rand_nums = []
     for i in range(1, 5):

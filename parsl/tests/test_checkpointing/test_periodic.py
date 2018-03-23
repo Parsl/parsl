@@ -42,7 +42,7 @@ def tstamp_to_seconds(line):
 
 
 def test_periodic(n=4):
-    """ Test checkpointing with task_periodic behavior
+    """Test checkpointing with task_periodic behavior
     """
 
     d = {}

@@ -1,4 +1,4 @@
-""" Testing python apps
+"""Testing python apps
 """
 
 import parsl
@@ -7,7 +7,7 @@ import argparse
 
 
 def test_python_memoization(n=4):
-    """ Test for memoization from checkpoints. Regression test for issue #95.
+    """Test for memoization from checkpoints. Regression test for issue #95.
     """
 
     workers = ThreadPoolExecutor(max_workers=4)

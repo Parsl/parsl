@@ -1,4 +1,4 @@
-""" Testing python apps
+"""Testing python apps
 """
 from parsl import *
 import time
@@ -110,7 +110,7 @@ def cat(inputs=[], outputs=[], stdout='cat.out', stderr='cat.err'):
 
 
 def test_5():
-    """ Testing behavior of outputs """
+    """Testing behavior of outputs """
     # Call echo specifying the outputfile
     hello = echo("Hello World!", outputs=['hello1.txt'])
 

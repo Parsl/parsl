@@ -1,4 +1,4 @@
-""" Testing bash apps
+"""Testing bash apps
 """
 import parsl
 from parsl import *
@@ -20,7 +20,7 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out', wall
 
 
 def test_walltime():
-    """ Testing walltime exceeded exception """
+    """Testing walltime exceeded exception """
     x = echo_to_file()
 
     try:

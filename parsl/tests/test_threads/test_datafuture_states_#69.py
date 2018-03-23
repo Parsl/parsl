@@ -19,7 +19,7 @@ def sleep(sleep_dur=0.1):
 
 
 def test_immediate_datafuture():
-    """ Test DataFuture string representation, for AppFutures launched with parent
+    """Test DataFuture string representation, for AppFutures launched with parent
     """
 
     import time
@@ -38,7 +38,7 @@ def test_immediate_datafuture():
 
 
 def test_delayed_datafuture():
-    """ Test DataFuture string representation, for AppFutures with delayed parent
+    """Test DataFuture string representation, for AppFutures with delayed parent
     """
 
     import time

@@ -1,4 +1,4 @@
-""" Testing python apps
+"""Testing python apps
 """
 import parsl
 from parsl import *
@@ -7,7 +7,7 @@ import json
 
 
 def test_immutable_config(n=2):
-    """ Regression test for immutable config #98
+    """Regression test for immutable config #98
     """
 
     localThreads = {

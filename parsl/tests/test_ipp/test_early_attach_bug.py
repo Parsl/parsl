@@ -1,4 +1,4 @@
-""" Testing early attach behavior with LoadBalanced view
+"""Testing early attach behavior with LoadBalanced view
 
 Test setup:
 

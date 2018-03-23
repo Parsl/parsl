@@ -1,4 +1,4 @@
-""" Testing behavior of futures
+"""Testing behavior of futures
 
 We have the following cases for AppFutures:
 
@@ -42,7 +42,7 @@ def get_contents(filename):
 
 
 def test_fut_case_1():
-    """ Testing the behavior of AppFutures where there are no dependencies
+    """Testing the behavior of AppFutures where there are no dependencies
     """
 
     app_fu = delay_incr(1, delay=0.5)
@@ -59,7 +59,7 @@ def test_fut_case_1():
 
 
 def test_fut_case_2():
-    """ Testing the behavior of DataFutures where there are no dependencies
+    """Testing the behavior of DataFutures where there are no dependencies
     """
     output_f = 'test_fut_case_2.txt'
     app_fu = delay_incr(1, delay=10, outputs=[output_f])
@@ -82,7 +82,7 @@ def test_fut_case_2():
 
 
 def test_fut_case_3():
-    """ Testing the behavior of AppFutures where there are dependencies
+    """Testing the behavior of AppFutures where there are dependencies
 
     The first call has a delay of 0.5s, and the second call depends on the first
     """
@@ -102,11 +102,11 @@ def test_fut_case_3():
 
 
 def test_fut_case_4():
-    """ Testing the behavior of DataFutures where there are dependencies
+    """Testing the behavior of DataFutures where there are dependencies
 
     The first call has a delay of 0.5s, and the second call depends on the first
     """
-    """ Testing the behavior of DataFutures where there are no dependencies
+    """Testing the behavior of DataFutures where there are no dependencies
     """
     output_f1 = 'test_fut_case_4_f1.txt'
     output_f2 = 'test_fut_case_4_f2.txt'

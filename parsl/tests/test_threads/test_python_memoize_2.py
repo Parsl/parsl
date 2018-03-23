@@ -1,4 +1,4 @@
-""" Testing python apps
+"""Testing python apps
 """
 
 import parsl
@@ -28,7 +28,7 @@ def random_uuid(x):
 
 
 def test_python_memoization(n=4):
-    """ Testing python memoization disable via config
+    """Testing python memoization disable via config
     """
     x = random_uuid(0)
 
@@ -50,7 +50,7 @@ def random_uuid(x):
 
 
 def test_python_memoization(n=4):
-    """ Testing python memoization disable via DFK call
+    """Testing python memoization disable via DFK call
     """
     x = random_uuid(0)
 

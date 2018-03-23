@@ -1,4 +1,4 @@
-""" Testing bash apps
+"""Testing bash apps
 """
 import parsl
 from parsl import *
@@ -24,7 +24,7 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
 
 
 def test_parallel_for(n=10):
-    """ Testing a bash outputs in a parallel for
+    """Testing a bash outputs in a parallel for
     """
     outdir = 'outputs'
     if not os.path.exists(outdir):

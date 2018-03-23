@@ -102,12 +102,12 @@ class FlowControl(object):
         self._thread.start()
 
     def _wake_up_timer(self, kill_event):
-        ''' Internal. This is the function that the thread will execute.
+        """Internal. This is the function that the thread will execute.
         waits on an event so that the thread can make a quick exit when close() is called
 
         Args:
             - kill_event (threading.Event) : Event to wait on
-        '''
+        """
 
         # Sleep till time to wake up
         while True:
@@ -151,7 +151,7 @@ class FlowControl(object):
 
 
 class Timer(object):
-    '''This timer is a simplified version of the FlowControl timer.
+    """This timer is a simplified version of the FlowControl timer.
     This timer does not employ notify events.
 
     This is based on the following logic :
@@ -168,10 +168,10 @@ class Timer(object):
 
             callback()
 
-    '''
+    """
 
     def __init__(self, callback, *args, interval=5):
-        ''' Initialize the flowcontrol object
+        """Initialize the flowcontrol object
         We start the timer thread here
 
         Args:
@@ -181,7 +181,7 @@ class Timer(object):
         KWargs:
              - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
-        '''
+        """
 
         self.interval = interval
         self.cb_args = args
@@ -194,12 +194,12 @@ class Timer(object):
         self._thread.start()
 
     def _wake_up_timer(self, kill_event):
-        ''' Internal. This is the function that the thread will execute.
+        """Internal. This is the function that the thread will execute.
         waits on an event so that the thread can make a quick exit when close() is called
 
         Args:
             - kill_event (threading.Event) : Event to wait on
-        '''
+        """
 
         # Sleep till time to wake up
         while True:
@@ -218,14 +218,14 @@ class Timer(object):
                 print("Sleeping a bit more")
 
     def make_callback(self, kind=None):
-        ''' Makes the callback and resets the timer.
-        '''
+        """Makes the callback and resets the timer.
+        """
         self._wake_up_time = time.time() + self.interval
         self.callback(*self.cb_args)
 
     def close(self):
-        ''' Merge the threads and terminate.
-        '''
+        """Merge the threads and terminate.
+        """
         self._kill_event.set()
         self._thread.join()
 

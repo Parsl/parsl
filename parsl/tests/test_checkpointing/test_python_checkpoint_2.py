@@ -46,7 +46,7 @@ def slow_double(x, sleep_dur=1):
 
 
 def test_initial_checkpoint_write(n=4):
-    """ 2. Load the memoization table from previous checkpoint
+    """2. Load the memoization table from previous checkpoint
     """
 
     d = {}

@@ -1,4 +1,4 @@
-""" Testing bash apps
+"""Testing bash apps
 """
 import parsl
 from parsl import *
@@ -28,7 +28,7 @@ def foo(x, y, stdout=None):
 
 
 def test_command_format_1():
-    """ Testing command format for BashApps
+    """Testing command format for BashApps
     """
 
     stdout = os.path.abspath('std.out')
@@ -55,7 +55,7 @@ def test_command_format_1():
 
 
 def test_parallel_for(n=10):
-    """ Testing a simple parallel for loop
+    """Testing a simple parallel for loop
     """
     outdir = os.path.abspath('outputs')
     if not os.path.exists(outdir):

@@ -1,4 +1,4 @@
-""" Testing bash apps
+"""Testing bash apps
 """
 import parsl
 from parsl import *
@@ -77,7 +77,7 @@ def test_parallel_for(n=10):
 
 @nottest
 def test_stdout():
-    """ This one does not work as we don't catch stdout and stderr for python apps.
+    """This one does not work as we don't catch stdout and stderr for python apps.
     """
     string = "Hello World!"
     fu = echo(10, string, stdout='std.out')

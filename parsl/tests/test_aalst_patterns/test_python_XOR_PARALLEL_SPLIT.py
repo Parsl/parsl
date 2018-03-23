@@ -1,4 +1,4 @@
-""" Testing bash apps
+"""Testing bash apps
 """
 import parsl
 from parsl import *
@@ -31,7 +31,7 @@ def join(inputs=[]):
 
 @App('python', dfk)
 def test_xor_split():
-    """ Test XOR split. Do A if x else B
+    """Test XOR split. Do A if x else B
     """
     x = random()
 

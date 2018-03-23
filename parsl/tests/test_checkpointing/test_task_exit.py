@@ -29,7 +29,7 @@ def slow_double(x, sleep_dur=1):
 
 
 def test_at_task_exit(n=4):
-    """ Test checkpointing at task_exit behavior
+    """Test checkpointing at task_exit behavior
     """
 
     d = {}

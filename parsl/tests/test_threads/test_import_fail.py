@@ -1,4 +1,4 @@
-""" Testing python apps
+"""Testing python apps
 """
 from parsl import *
 

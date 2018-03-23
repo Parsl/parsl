@@ -1,4 +1,4 @@
-""" Testing python apps
+"""Testing python apps
 """
 
 import parsl
@@ -10,7 +10,7 @@ dfk = DataFlowKernel(executors=[workers], appCache=True)
 
 
 def test_python_memoization(n=4):
-    """ Testing python memoization when func bodies differ
+    """Testing python memoization when func bodies differ
     """
     @App('python', dfk)
     def random_uuid(x):

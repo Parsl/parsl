@@ -1,4 +1,4 @@
-""" Testing python apps
+"""Testing python apps
 """
 from parsl import *
 import time
@@ -32,7 +32,7 @@ def sleep_bash(x):
 
 
 def test_parallel_sleep_bash(n=10, sleep_dur=2, tolerance=0.3):
-    """ Indirect test to ensure that 10 threads are live using bash apps
+    """Indirect test to ensure that 10 threads are live using bash apps
     """
 
     start = time.time()
@@ -51,7 +51,7 @@ def test_parallel_sleep_bash(n=10, sleep_dur=2, tolerance=0.3):
 
 
 def test_parallel_sleep_python(n=10, sleep_dur=2, tolerance=0.3):
-    """ Indirect test to ensure that 10 threads are live using python sleep apps
+    """Indirect test to ensure that 10 threads are live using python sleep apps
     This works only because the 10 threads are essentially sleeping and not
     doing manipulation of python objects and causing serialization via GIL.
     """

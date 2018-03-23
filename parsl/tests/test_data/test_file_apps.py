@@ -14,7 +14,7 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
     return """echo %s
     cat %s &> {outputs[0]}
-    """ % (infiles, infiles)
+    """% (infiles, infiles)
 
 
 def test_files():
@@ -37,7 +37,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
 
 
 def test_increment(depth=5):
-    """ Test simple pipeline A->B...->N
+    """Test simple pipeline A->B...->N
     """
     # Create the first file
     open("test0.txt", 'w').write('0\n')

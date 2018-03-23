@@ -33,7 +33,7 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
 
 
 def test_no_deps(numtasks=10):
-    """ Test basic error handling, with no dependent failures
+    """Test basic error handling, with no dependent failures
     """
 
     fus = []
@@ -56,7 +56,7 @@ def test_no_deps(numtasks=10):
 
 
 def test_fail_sequence(numtasks=10):
-    """ Test failure in a sequence of dependencies
+    """Test failure in a sequence of dependencies
 
     App1 -> App2 ... -> AppN
     """
@@ -81,7 +81,7 @@ def test_fail_sequence(numtasks=10):
 
 
 def test_deps(numtasks=10):
-    """ Random failures in branches of Map -> Map -> reduce
+    """Random failures in branches of Map -> Map -> reduce
 
     App1   App2  ... AppN
     """
@@ -136,7 +136,7 @@ def sleep_then_fail(sleep_dur=0.1):
 
 # @nottest
 def test_fail_nowait(numtasks=10):
-    """ Test basic error handling, with no dependent failures
+    """Test basic error handling, with no dependent failures
     """
     import time
     fus = []

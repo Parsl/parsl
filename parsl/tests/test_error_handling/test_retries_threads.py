@@ -22,7 +22,7 @@ def sleep_then_fail(inputs=[], sleep_dur=0.1):
 
 @App('bash', dfk)
 def succeed_on_retry(filename, success_on=2, stdout="succeed.out"):
-    """ If the input file does not exist it creates it.
+    """If the input file does not exist it creates it.
     Then, if the file contains success_on lines it exits with 0
     """
 
@@ -48,7 +48,7 @@ def sleep(sleep_dur=0.1):
 
 
 def test_fail_nowait(numtasks=10):
-    """ Test retries on tasks with no dependencies. Threads
+    """Test retries on tasks with no dependencies. Threads
     """
     fus = []
     for i in range(0, numtasks):
@@ -65,7 +65,7 @@ def test_fail_nowait(numtasks=10):
 
 
 def test_fail_delayed(numtasks=10):
-    """ Test retries on tasks with dependencies. Threads.
+    """Test retries on tasks with dependencies. Threads.
 
     This is testing retry behavior when AppFutures are created
     with no parent.
@@ -87,7 +87,7 @@ def test_fail_delayed(numtasks=10):
 
 
 def test_retry():
-    """ Test retries via app that succeeds on the Nth retry.
+    """Test retries via app that succeeds on the Nth retry.
     """
 
     fname = "retry.out"

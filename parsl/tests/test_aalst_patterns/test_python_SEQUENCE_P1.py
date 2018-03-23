@@ -1,4 +1,4 @@
-""" Testing bash apps
+"""Testing bash apps
 """
 import parsl
 from parsl import *
@@ -24,7 +24,7 @@ def slow_increment(x, dur):
 
 
 def test_increment(depth=5):
-    """ Test simple pipeline A->B...->N
+    """Test simple pipeline A->B...->N
     """
     futs = {0: 0}
     for i in range(1, depth):
@@ -34,7 +34,7 @@ def test_increment(depth=5):
 
 
 def test_increment_slow(depth=4):
-    """ Test simple pipeline A->B...->N with delay
+    """Test simple pipeline A->B...->N with delay
     """
     futs = {0: 0}
     for i in range(1, depth):
