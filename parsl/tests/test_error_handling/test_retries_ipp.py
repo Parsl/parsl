@@ -22,11 +22,11 @@ def sleep_then_fail(inputs=[], sleep_dur=0.1):
 
 @App('bash', dfk)
 def succeed_on_retry(filename, success_on=2, stdout="succeed.out"):
-    ''' If the input file does not exist it creates it.
+    """If the input file does not exist it creates it.
     Then, if the file contains success_on lines it exits with 0
-    '''
+    """
 
-    return '''if [[ ! -e {0} ]]; then touch {0}; fi;
+    return """if [[ ! -e {0} ]]; then touch {0}; fi;
     tries=`wc -l {0} | cut -f1 -d' '`
     echo $tries >> {0}
 
@@ -37,7 +37,7 @@ def succeed_on_retry(filename, success_on=2, stdout="succeed.out"):
         echo "Tries != success_on , exiting with error"
         exit 5
     fi
-    '''
+    """
 
 
 @App('python', dfk)
@@ -48,8 +48,8 @@ def sleep(sleep_dur=0.1):
 
 
 def test_fail_nowait(numtasks=10):
-    ''' Test retries on tasks with no dependencies. IPP
-    '''
+    """Test retries on tasks with no dependencies. IPP
+    """
     fus = []
     for i in range(0, numtasks):
         fu = sleep_then_fail(sleep_dur=0.1)
@@ -65,11 +65,11 @@ def test_fail_nowait(numtasks=10):
 
 
 def test_fail_delayed(numtasks=10):
-    ''' Test retries on tasks with dependencies. IPP
+    """Test retries on tasks with dependencies. IPP
 
     This is testing retry behavior when AppFutures are created
     with no parent.
-    '''
+    """
 
     x = sleep()
     fus = []
@@ -87,7 +87,7 @@ def test_fail_delayed(numtasks=10):
 
 
 def test_retry():
-    """ Test retries via app that succeeds on the Nth retry. IPP
+    """Test retries via app that succeeds on the Nth retry. IPP
     """
 
     fname = "retry.out"

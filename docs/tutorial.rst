@@ -156,10 +156,10 @@ outputs list is made available via the `outputs` attribute of the AppFuture.
         # The bash app function composes a commandline invocations as a string of arbitrary length
         # that is returned by the function. Positional and Keyword args to the fn() are formatted
         # into the returned string
-        return '''echo "{0}" > {outputs[0]}
+        return """echo "{0}" > {outputs[0]}
         sleep {1};
         ls ;
-        '''
+        """
     # We call sim_mol_dyn with
     sim_fut = sim_mol_dyn(5, 3, outputs=['sim.out'], stdout='stdout.txt', stderr='stderr.txt')
 

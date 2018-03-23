@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 
@@ -31,8 +31,8 @@ def total(inputs=[]):
 
 
 def test_parallel_dataflow():
-    ''' Test parallel dataflow from docs on Composing workflows
-    '''
+    """Test parallel dataflow from docs on Composing workflows
+    """
 
     # create 5 files with random numbers
     output_files = []

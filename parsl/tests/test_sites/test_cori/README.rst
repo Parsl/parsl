@@ -76,8 +76,8 @@ Here's a config for Cori that starts with a request for 2 nodes.
                   "scriptDir"  : ".",
                   "options"    : {
                       "partition" : "debug",
-                      "overrides" : '''#SBATCH --constraint=haswell
-       module load python/3.5-anaconda ; source activate parsl_env_3.5'''
+                      "overrides" : """#SBATCH --constraint=haswell
+       module load python/3.5-anaconda ; source activate parsl_env_3.5"""
                   }
               }
             }

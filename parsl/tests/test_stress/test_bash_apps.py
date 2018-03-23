@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 
@@ -14,7 +14,7 @@ dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def sleep_foo(sleepdur, stdout=None):
-    return '''sleep {0}'''
+    return """sleep {0}"""
 
 
 if __name__ == '__main__':

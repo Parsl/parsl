@@ -7,12 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 def remote_side_bash_executor(func, *args, **kwargs):
-    ''' The callable fn for external apps.
-    This is the function that executes the bash app type function that returns
-    the commandline string. This string is reformatted with the *args, and **kwargs
-    from call time.
-    '''
+    """Execute the bash app type function and return the command line string.
 
+    This string is reformatted with the *args, and **kwargs
+    from call time.
+    """
     import os
     import time
     import subprocess
@@ -103,14 +102,16 @@ class BashApp(AppBase):
 
     def __init__(self, func, executor, walltime=60, cache=False,
                  sites='all', fn_hash=None):
-        ''' Initialize the super. This bit is the same for both bash & python apps.
-        '''
+        """Initialize the super.
+
+        This bit is the same for both bash & python apps.
+        """
         super().__init__(func, executor, walltime=60, sites=sites, exec_type="bash")
         self.fn_hash = fn_hash
         self.cache = cache
 
     def __call__(self, *args, **kwargs):
-        ''' This is where the call to a Bash app is handled
+        """Handle the call to a Bash app.
 
         Args:
              - Arbitrary
@@ -124,8 +125,7 @@ class BashApp(AppBase):
              else:
                    App_fut
 
-        '''
-
+        """
         # Update kwargs in the app definition with one's passed in at calltime
         self.kwargs.update(kwargs)
 

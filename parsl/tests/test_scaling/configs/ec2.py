@@ -1,4 +1,5 @@
-'''
+"""Config for EC2.
+
 Block {Min:0, init:1, Max:1}
 ==================
 | ++++++++++++++ |
@@ -9,7 +10,7 @@ Block {Min:0, init:1, Max:1}
 | ++++++++++++++ |
 ==================
 
-'''
+"""
 singleNode = {
     "sites": [
         {"site": "Remote_IPP",
@@ -40,7 +41,7 @@ singleNode = {
 }
 
 
-'''
+"""
 Block {Min:0, init:1, Max:1}
 ==================
 | ++++++++++++++ |
@@ -51,7 +52,7 @@ Block {Min:0, init:1, Max:1}
 | ++++++++++++++ |
 ==================
 
-'''
+"""
 spotNode = {
     "sites": [
         {"site": "Remote_IPP",
@@ -83,7 +84,7 @@ spotNode = {
 }
 
 
-'''
+"""
 Block {Min:0, init:1, Max:1}
 ==================
 | ++++++++++++++ |
@@ -94,7 +95,7 @@ Block {Min:0, init:1, Max:1}
 | ++++++++++++++ |
 ==================
 
-'''
+"""
 badSpotConfig = {
     "sites": [
         {"site": "Remote_IPP",

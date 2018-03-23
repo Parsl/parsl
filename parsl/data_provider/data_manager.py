@@ -6,19 +6,18 @@ logger = logging.getLogger(__name__)
 
 
 class DataManager(ParslExecutor):
-    """ The DataManager uses the familiar Executor interface, where staging tasks are submitted
+    """DataManager uses the familiar Executor interface, where staging tasks are submitted
     to it, and DataFutures are returned.
     """
 
     def __init__(self, max_workers=10, config=None):
-        ''' Initialize the DataManager
+        """Initialize the DataManager.
 
         Kwargs:
            - max_workers (int) : Number of threads (Default=10)
            - config (dict): The config dict object for the site:
 
-        '''
-
+        """
         self._scaling_enabled = False
         self.executor = cf.ProcessPoolExecutor(max_workers=max_workers)
 
@@ -30,8 +29,7 @@ class DataManager(ParslExecutor):
         self.config = config
 
     def submit(self, *args, **kwargs):
-        ''' Submit a staging request.
-        '''
+        """Submit a staging request."""
         return self.executor.submit(*args, **kwargs)
 
     def scale_in(self, blocks, *args, **kwargs):

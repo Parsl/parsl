@@ -60,10 +60,10 @@ def mpi_hello(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False
 
 @App('bash', dfk)
 def mpi_test(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
-    return '''module load amber/16+cuda-8.0
+    return """module load amber/16+cuda-8.0
     mpirun -n 6 mpi_hello
     mpirun -np 6 pmemd.MPI -O -i config_files/min.in -o min.out -c prot.rst7 -p prot.parm7 -r min.rst7 -ref prot.rst7
-    '''
+    """
 
 
 # x = mpi_hello(4, stdout="hello.out", stderr="hello.err")

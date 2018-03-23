@@ -29,7 +29,7 @@ def slow_double(x, sleep_dur=1, cache=True):
 
 
 def test_checkpointing():
-    """ Testing code snippet from documentation
+    """Testing code snippet from documentation
     """
 
     N = 5  # Number of calls to slow_double

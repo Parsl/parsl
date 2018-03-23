@@ -1,5 +1,5 @@
-''' Testing python apps
-'''
+"""Testing python apps
+"""
 
 import parsl
 from parsl import *
@@ -11,7 +11,7 @@ dfk = DataFlowKernel(executors=[workers])
 
 
 def test_python_memoization(n=4):
-    """ Testing python memoization when func bodies differ
+    """Testing python memoization when func bodies differ
     This is the canonical use case.
     """
     @App('python', dfk)

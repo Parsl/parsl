@@ -56,8 +56,7 @@ def sort(unsorted: str,
          outputs: list = [],
          stderr: str='output/p4_c_sort.err',
          stdout: str='output/p4_c_sort.out') -> Future:
-    """Call sort executable on file `unsorted`"""
-
+    """Call sort executable on file `unsorted`."""
     return "sort -g {} > {}".format(unsorted, outputs[0])
 
 

@@ -11,12 +11,12 @@ dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def multi_line(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
-    cmd_line = '''echo {inputs[0]} &> {outputs[0]}
+    cmd_line = """echo {inputs[0]} &> {outputs[0]}
     echo {inputs[1]} &> {outputs[1]}
     echo {inputs[2]} &> {outputs[2]}
     echo "Testing STDOUT"
     echo "Testing STDERR" 1>&2
-    '''
+    """
     return cmd_line
 
 

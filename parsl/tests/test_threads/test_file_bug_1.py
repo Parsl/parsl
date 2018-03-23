@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 import argparse
@@ -11,7 +11,7 @@ dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def app1(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
-    cmd_line = '''echo 'test' > {outputs[0]}'''
+    cmd_line = """echo 'test' > {outputs[0]}"""
     return cmd_line
 
 
@@ -20,7 +20,7 @@ def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
 
     with open('somefile.txt', 'w') as f:
         f.write("%s\n" % inputs[0])
-    cmd_line = '''echo '{inputs[0]}' > {outputs[0]}'''
+    cmd_line = """echo '{inputs[0]}' > {outputs[0]}"""
     return cmd_line
 
 

@@ -24,8 +24,8 @@ multiNode = {
                 "options": {
                     "account": "CSC249ADCD01",
                     "partition": "default",
-                    "overrides": '''export PATH=/home/yadunand/theta_parsl/anaconda3/bin/:$PATH;
-source activate /home/yadunand/theta_parsl/anaconda3/envs/theta_parslenv'''
+                    "overrides": """export PATH=/home/yadunand/theta_parsl/anaconda3/bin/:$PATH;
+source activate /home/yadunand/theta_parsl/anaconda3/envs/theta_parslenv"""
                 }
             }
         }

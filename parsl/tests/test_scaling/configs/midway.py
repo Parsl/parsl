@@ -20,7 +20,7 @@ singleNode = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "westmere",
-                     "overrides": '''module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
+                     "overrides": """module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate"""
                  }
              }
          }
@@ -46,7 +46,7 @@ singleNodeLocal = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "westmere",
-                     "overrides": '''module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
+                     "overrides": """module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate"""
                  }
              }
          }
@@ -76,7 +76,7 @@ multiCore = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "westmere",
-                     "overrides": '''module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
+                     "overrides": """module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate"""
                  }
              }
          }
@@ -105,7 +105,7 @@ multiNode = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "westmere",
-                     "overrides": '''module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
+                     "overrides": """module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate"""
                  }
              }
          }

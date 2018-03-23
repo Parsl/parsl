@@ -35,7 +35,7 @@ def python_app():
 
 
 def test_python(N=2):
-    """ No blocks provisioned if parallelism==0
+    """No blocks provisioned if parallelism==0
 
     If I set initBlocks=0 and parallelism=0 I don't think any blocks will be provisioned.
     I tested and the script makes no progress. Perhaps we should catch this case and present an error to users.

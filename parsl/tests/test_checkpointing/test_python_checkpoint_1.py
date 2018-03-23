@@ -30,7 +30,7 @@ def slow_double(x, sleep_dur=1):
 
 
 def test_initial_checkpoint_write(n=4):
-    """ 1. Launch a few apps and write the checkpoint once a few have completed
+    """1. Launch a few apps and write the checkpoint once a few have completed
     """
 
     d = {}

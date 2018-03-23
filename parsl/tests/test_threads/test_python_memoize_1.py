@@ -28,7 +28,7 @@ def random_uuid(x, cache=True):
 
 
 def test_python_memoization(n=4):
-    """ Testing python memoization disable
+    """Testing python memoization disable
     """
     x = random_uuid(0)
     print(x.result())
@@ -45,7 +45,7 @@ def slow_echo_to_file(msg, outputs=[], stderr='std.err', stdout='std.out'):
 
 
 def test_bash_memoization(n=4):
-    """ Testing bash memoization
+    """Testing bash memoization
     """
 
     print("Launching : ", n)

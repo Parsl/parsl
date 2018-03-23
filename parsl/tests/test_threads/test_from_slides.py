@@ -16,7 +16,7 @@ def cat(inputs=[]):
 
 
 def test_slides():
-    ''' Testing code snippet from slides '''
+    """Testing code snippet from slides """
 
     hello = echo("Hello World!", outputs=['hello1.txt'])
     message = cat(inputs=[hello.outputs[0]])

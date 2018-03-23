@@ -1,9 +1,11 @@
-'''  The following config uses threads, say for local lightweight apps
+"""Config which uses threads.
+
+Threads are useful, for example, for local lightweight apps
 and IPP workers for heavy weight applications.
 The @app decorator in the example uses a new parameter sites=[<list of sites>]
 to specify the site to which apps should be directed.
 
-'''
+"""
 threads_ipp = {
     "sites": [
         {"site": "Local_threads",
@@ -38,10 +40,10 @@ threads_ipp = {
 }
 
 
-''' The following config uses two IPP sites designed for python apps which may
+"""The following config uses two IPP sites designed for python apps which may
 not show any performance improvements on local threads. This also allows you to
 send work to two separate remote sites, or to two separate partitions.
-'''
+"""
 
 multi_ipp = {
     "sites": [

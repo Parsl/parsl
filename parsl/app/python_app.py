@@ -7,20 +7,20 @@ logger = logging.getLogger(__name__)
 
 
 class PythonApp(AppBase):
-    """ Extends AppBase to cover the Python App
-
-    """
+    """Extends AppBase to cover the Python App."""
 
     def __init__(self, func, executor, walltime=60, cache=False,
                  sites='all', fn_hash=None):
-        ''' Initialize the super. This bit is the same for both bash & python apps.
-        '''
+        """Initialize the super.
+
+        This bit is the same for both bash & python apps.
+        """
         super().__init__(func, executor, walltime=walltime, sites=sites, exec_type="python")
         self.fn_hash = fn_hash
         self.cache = cache
 
     def __call__(self, *args, **kwargs):
-        ''' This is where the call to a python app is handled
+        """This is where the call to a python app is handled.
 
         Args:
              - Arbitrary
@@ -33,7 +33,7 @@ class PythonApp(AppBase):
              else:
                    App_fut
 
-        '''
+        """
         app_fut = self.executor.submit(self.func, *args,
                                        parsl_sites=self.sites,
                                        fn_hash=self.fn_hash,

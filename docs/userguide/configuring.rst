@@ -116,9 +116,9 @@ The following shows an example configuration for accessing NERSC's Cori supercom
                       "scriptDir" : ".",
                       "options" : {
                           "partition" : "debug",
-                          "overrides" : '''#SBATCH --constraint=haswell
+                          "overrides" : """#SBATCH --constraint=haswell
     module load python/3.5-anaconda ;
-    source activate /global/homes/y/yadunand/.conda/envs/parsl_env_3.5'''
+    source activate /global/homes/y/yadunand/.conda/envs/parsl_env_3.5"""
                       }
                   }
               }

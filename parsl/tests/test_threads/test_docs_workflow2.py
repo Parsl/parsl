@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 
@@ -20,8 +20,8 @@ def wait_sleep_double(x, fu_1, fu_2):
 
 
 def test_parallel(N=10):
-    ''' Parallel workflow example from docs on Composing a workflow
-    '''
+    """Parallel workflow example from docs on Composing a workflow
+    """
 
     # Launch two apps, which will execute in parallel, since they don't have to
     # wait on any futures

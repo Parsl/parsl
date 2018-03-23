@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 import os

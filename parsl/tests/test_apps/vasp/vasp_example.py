@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 
-"""
+"""Example for vasp.
+
 [Notes from Dan]
 1 - a python code that runs and creates a tar file - it writes the tar file directly,
     rather than creating the contents and then tarring them, though someone likely could
