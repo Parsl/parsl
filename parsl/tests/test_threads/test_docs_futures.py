@@ -121,7 +121,7 @@ def test_5():
     hello2 = cat(inputs=[hello.outputs[0]], outputs=['hello2.txt'])
 
     hello2.result()
-    with open(hello2.outputs[0].result(), 'r') as f:
+    with open(hello2.outputs[0].result().filepath, 'r') as f:
         print(f.read())
 
 

@@ -34,7 +34,7 @@ dfk = DataFlowKernel(config=config)
 
 @App('python', dfk)
 def sort_strings(inputs=[], outputs=[]):
-    with open(inputs[0], 'r') as u:
+    with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
         strs.sort()
         with open(outputs[0].filepath, 'w') as s:

@@ -35,7 +35,7 @@ def test_procedural(N=10):
 
     saved = save(message, outputs=['output.txt'])
 
-    with open(saved.outputs[0].result(), 'r') as f:
+    with open(saved.outputs[0].result().filepath, 'r') as f:
         item = int(f.read().strip())
         assert item <= N, "Expected file to contain int <= N"
         assert item >= 1, "Expected file to contain int >= 1"

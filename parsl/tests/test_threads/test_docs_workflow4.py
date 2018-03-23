@@ -18,7 +18,7 @@ def generate(outputs=[]):
 
 @App('bash', dfk)
 def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
-    return "cat {0} >> {1}".format(" ".join(inputs), outputs[0])
+    return "cat {0} >> {1}".format(" ".join(inputs), outputs[0].filepath)
 
 
 @App('python', dfk)
