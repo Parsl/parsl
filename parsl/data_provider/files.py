@@ -103,4 +103,3 @@ class File(object):
 if __name__ == '__main__':
 
     x = File('./files.py')
-
