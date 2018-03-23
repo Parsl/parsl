@@ -66,7 +66,7 @@ def test_fut_case_2():
     data_fu = app_fu.outputs[0]
 
     data_fu.done()
-    result = data_fu.result()
+    result = data_fu.result().filepath
     print("App_fu  : ", app_fu)
     print("Data_fu : ", data_fu)
 
@@ -116,7 +116,7 @@ def test_fut_case_4():
     data_2 = app_2.outputs[0]
 
     status = data_2.done()
-    result = data_2.result()
+    result = data_2.result().filepath
     print("App_fu  : ", app_2)
     print("Data_fu : ", data_2)
 

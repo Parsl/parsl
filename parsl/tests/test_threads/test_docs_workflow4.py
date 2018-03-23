@@ -18,13 +18,13 @@ def generate(outputs=[]):
 
 @App('bash', dfk)
 def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
-    return "cat {0} >> {1}".format(" ".join(inputs), outputs[0].filepath)
+    return "cat {0} >> {1}".format(" ".join(map(lambda x: x.filepath, inputs)), outputs[0])
 
 
 @App('python', dfk)
 def total(inputs=[]):
     total = 0
-    with open(inputs[0], 'r') as f:
+    with open(inputs[0].filepath, 'r') as f:
         for l in f:
             total += int(l)
     return total

@@ -11,7 +11,7 @@ def echo(message, outputs=[]):
 
 @App('python', data_flow_kernel)
 def cat(inputs=[]):
-    with open(inputs[0]) as f:
+    with open(inputs[0].filepath) as f:
         return f.readlines()
 
 
