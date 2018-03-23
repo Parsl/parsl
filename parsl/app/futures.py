@@ -138,7 +138,7 @@ class DataFuture(Future):
             else:
                 self.parent.result(timeout=timeout)
 
-        return self.file_obj.filepath
+        return self.file_obj
 
     def cancel(self):
         ''' Cancel the task that this DataFuture is tracking.
