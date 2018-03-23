@@ -4,7 +4,7 @@ import time
 import argparse
 from dateutil.parser import parse
 import datetime
-
+from nose.tools import nottest
 # parsl.set_stream_logger()
 
 config = {
@@ -41,6 +41,7 @@ def tstamp_to_seconds(line):
     return f
 
 
+@nottest
 def test_periodic(n=4):
     """ Test checkpointing with task_periodic behavior
     """
