@@ -14,7 +14,7 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
     return """echo %s
     cat %s &> {outputs[0]}
-    """% (infiles, infiles)
+    """ % (infiles, infiles)
 
 
 def test_files():

@@ -264,12 +264,7 @@ class TurbineExecutor(ParslExecutor):
 
     def shutdown(self):
         """Shutdown method, to kill the threads and workers."""
-<<<<<<< HEAD
-
         self.is_alive = False
-=======
-        self.isAlive = False
->>>>>>> Fix D202 docstring errors
         logging.debug("Waking management thread")
         self.incoming_q.put(None)  # Wake up the thread
         self._queue_management_thread.join()  # Force join
