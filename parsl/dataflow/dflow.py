@@ -50,7 +50,7 @@ class DataFlowKernel(object):
                  rundir=None, retries=0, checkpointFiles=None, checkpointMode=None,
                  data_manager=None):
         """ Initialize the DataFlowKernel.
-        
+
         Please note that keyword args passed to the DFK here will always override
         options passed in via the config.
 

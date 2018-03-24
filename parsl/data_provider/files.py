@@ -23,7 +23,6 @@ class File(object):
     systems to enable to appropriate transfer of files.
     """
 
-    
     def __init__(self, url, to=None, site=None, dman=None, cache=False, caching_dir=".", staging='direct'):
         """Construct a File object from a url string.
 
