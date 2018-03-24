@@ -16,16 +16,16 @@ dfk = DataFlowKernel(executors=[workers])
 def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
     # The bash app function, requires that the bash script is assigned to the special variable
     # cmd_line. Positional and Keyword args to the fn() are formatted into the cmd_line string
-    cmd_line = '''echo "{0}" > {outputs[0]}
+    cmd_line = """echo "{0}" > {outputs[0]}
     sleep {1};
     ls ;
-    '''
+    """
     return cmd_line
 
 
 def test_data_future_result():
-    ''' Testing the behavior of a result call on DataFutures
-    '''
+    """Testing the behavior of a result call on DataFutures
+    """
     # We call sim_mol_dyn with
     sim_fut = sim_mol_dyn(5, 0, outputs=['sim.out'],
                           stdout='stdout.txt', stderr='stderr.txt')
@@ -36,8 +36,8 @@ def test_data_future_result():
 
 
 def test_app_future_result():
-    ''' Testing the behavior of a result call on AppFutures
-    '''
+    """Testing the behavior of a result call on AppFutures
+    """
     # We call sim_mol_dyn with
     sim_fut = sim_mol_dyn(5, 0.5, outputs=['sim.out'],
                           stdout='stdout.txt', stderr='stderr.txt')

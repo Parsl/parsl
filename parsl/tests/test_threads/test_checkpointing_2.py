@@ -3,7 +3,7 @@ from parsl import *
 
 
 def test_2():
-    """ From docs. Attempt loading checkpoint from previous run
+    """From docs. Attempt loading checkpoint from previous run
     """
 
     from parsl.configs.local import localThreads as config

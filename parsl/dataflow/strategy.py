@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 class Strategy (object):
-    '''FlowControl Strategy
+    """FlowControl Strategy.
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
     asynchronously. Parsl interfaces executors with execution providers to construct
@@ -96,11 +96,10 @@ class Strategy (object):
         |slot   slot|       |slot   slot|
         +-----------+       +-----------+
 
-    '''
+    """
 
     def __init__(self, dfk):
-        ''' Initialize strategy
-        '''
+        """Initialize strategy."""
         self.dfk = dfk
         self.config = dfk.config
         self.sites = {}
@@ -120,17 +119,17 @@ class Strategy (object):
         logger.debug("Scaling strategy: {0}".format(strtgy_name))
 
     def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
-        ''' Do nothing!
+        """Do nothing.
 
         Args:
             - tasks (task_ids): Not used here.
 
         KWargs:
             - kind (Not used)
-        '''
+        """
 
     def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
-        ''' Peek at the DFK and the sites specified,
+        """Peek at the DFK and the sites specified.
 
         We assume here that tasks are not held in a runnable
         state, and that all tasks from an app would be sent to
@@ -142,8 +141,7 @@ class Strategy (object):
 
         KWargs:
             - kind (Not used)
-        '''
-
+        """
         # Add logic to check sites
         # for task in tasks :
         #    if self.dfk.tasks[task]:

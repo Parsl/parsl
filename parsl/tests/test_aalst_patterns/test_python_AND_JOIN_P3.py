@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 
@@ -29,8 +29,8 @@ def join(inputs=[]):
 
 
 def test_and_join(depth=5):
-    ''' Test simple pipeline A->B...->N
-    '''
+    """Test simple pipeline A->B...->N
+    """
     futs = {}
     for i in range(depth):
         futs[i] = increment(i)

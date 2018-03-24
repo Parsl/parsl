@@ -1,9 +1,8 @@
-''' Exceptions raise by Executors.
-'''
+"""Exceptions raise by Executors."""
 
 
 class ExecutorError(Exception):
-    """ Base class for all exceptions
+    """Base class for all exceptions.
 
     Only to be invoked when only a more specific error is not available.
     """
@@ -16,8 +15,7 @@ class ExecutorError(Exception):
 
 
 class ScalingFailed(ExecutorError):
-    ''' Scaling failed due to error in Execution provider.
-    '''
+    """Scaling failed due to error in Execution provider."""
 
     def __init__(self, sitename, reason):
         self.site = sitename
@@ -25,8 +23,7 @@ class ScalingFailed(ExecutorError):
 
 
 class ControllerErr(ExecutorError):
-    ''' Error raise by IPP controller
-    '''
+    """Error raise by IPP controller."""
 
     def __init__(self, reason):
         self.reason = reason

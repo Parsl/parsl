@@ -16,8 +16,8 @@ def platform_info(dur=1):
 
 
 def test_all(N=20, dur=1):
-    ''' Testing local:cobalt:aprun, with checks on number of nodes
-    '''
+    """ Testing local:cobalt:aprun, with checks on number of nodes
+    """
     results = {}
     for i in range(0, 5):
         results[i] = platform_info(dur=dur)

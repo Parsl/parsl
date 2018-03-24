@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
+"""Test process layer.
 
-"""
 <bash>
 Foreach ….
     10 K app calls in parallel
@@ -73,11 +73,11 @@ def light_app(dir, dur, inputs=[], outputs=[], stdout=None, stderr=None):
 @App('bash', dfk)
 def csv_maker(dir, count, dur, inputs=[], outputs=[], stdout=None, stderr=None):
 
-    cmd_line = '''cd {0};
+    cmd_line = """cd {0};
     # create a file with count lines
     shuf -i 1-{1} &> {outputs[0]}
     sleep {2}
-    '''
+    """
     return cmd_line
 
 

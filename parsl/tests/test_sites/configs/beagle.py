@@ -2,7 +2,7 @@ import os
 
 USERNAME = os.environ['BEAGLE_USERNAME']
 
-'''
+"""
 ================== Block
 | ++++++++++++++ | Node
 | |            | |
@@ -10,7 +10,7 @@ USERNAME = os.environ['BEAGLE_USERNAME']
 | |            | |
 | ++++++++++++++ |
 ==================
-'''
+"""
 
 singleNode = {
     "sites": [
@@ -32,10 +32,10 @@ singleNode = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "debug",
-                     "overrides": '''export PATH=/lustre/beagle2/yadunand/bin/anaconda3/bin:$PATH
+                     "overrides": """export PATH=/lustre/beagle2/yadunand/bin/anaconda3/bin:$PATH
 which python3;
 source activate parsl_env_3.6.3;
-'''
+"""
                  }
              }
          }
@@ -45,7 +45,7 @@ source activate parsl_env_3.6.3;
 }
 
 
-'''
+"""
                       Block {Min:0, init:1, Max:1}
 ========================================================================
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
@@ -56,7 +56,7 @@ source activate parsl_env_3.6.3;
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
 ========================================================================
 
-'''
+"""
 multiNodeSrun = {
     "sites": [
         {"site": "Local_IPP",
@@ -78,8 +78,8 @@ multiNodeSrun = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "debug",
-                     "overrides": '''#SBATCH --constraint=haswell
-module load python/3.5-anaconda ; source activate parsl_env_3.5'''
+                     "overrides": """#SBATCH --constraint=haswell
+module load python/3.5-anaconda ; source activate parsl_env_3.5"""
                  }
              }
          }
@@ -89,7 +89,7 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
 }
 
 
-'''
+"""
                       Block {Min:0, init:1, Max:1}
 ========================================================================
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
@@ -100,7 +100,7 @@ module load python/3.5-anaconda ; source activate parsl_env_3.5'''
 | ++++++++++++++ || ++++++++++++++ || ++++++++++++++ || ++++++++++++++ |
 ========================================================================
 
-'''
+"""
 multiNodeMPI = {
     "sites": [
         {"site": "Remote_IPP_MultiNode",
@@ -122,8 +122,8 @@ multiNodeMPI = {
                  "maxBlocks": 1,
                  "options": {
                      "partition": "debug",
-                     "overrides": '''#SBATCH --constraint=haswell
-module load python/3.5-anaconda ; source activate parsl_env_3.5'''
+                     "overrides": """#SBATCH --constraint=haswell
+module load python/3.5-anaconda ; source activate parsl_env_3.5"""
                  }
              }
          }

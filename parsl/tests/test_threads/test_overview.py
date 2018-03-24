@@ -1,5 +1,5 @@
-''' Testing python apps
-'''
+"""Testing python apps
+"""
 import parsl
 from parsl import *
 import argparse
@@ -20,8 +20,8 @@ def app_sum(inputs=[]):
 
 
 def test_1(N=10):
-    ''' Testing code snippet from the documentation
-    '''
+    """Testing code snippet from the documentation
+    """
 
     # Create a list of integers
     items = range(0, N)
@@ -46,8 +46,8 @@ def slow_app_double(x, sleep_dur=0.05):
 
 
 def test_2(N=10):
-    ''' Testing code snippet from the documentation
-    '''
+    """Testing code snippet from the documentation
+    """
 
     # Create a list of integers
     items = range(0, N)

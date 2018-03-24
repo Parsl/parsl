@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 
@@ -14,26 +14,26 @@ dfk = DataFlowKernel(executors=[workers])
 @App('bash', dfk)
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
-    cmd_line = '''
+    cmd_line = """
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
-    '''
+    """
     return cmd_line
 
 
 @App('bash', dfk)
 def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
-    cmd_line = '''
+    cmd_line = """
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
     sleep {0}
-    '''
+    """
     return cmd_line
 
 
 def test_increment(depth=5):
-    ''' Test simple pipeline A->B...->N
-    '''
+    """Test simple pipeline A->B...->N
+    """
     # Create the first file
     open("test0.txt", 'w').write('0\n')
 
@@ -60,8 +60,8 @@ def test_increment(depth=5):
 
 
 def test_increment_slow(depth=5, dur=0.5):
-    ''' Test simple pipeline slow (sleep.5) A->B...->N
-    '''
+    """Test simple pipeline slow (sleep.5) A->B...->N
+    """
     # Create the first file
     open("test0.txt", 'w').write('0\n')
 

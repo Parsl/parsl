@@ -1,10 +1,10 @@
-''' Define the File Type.
+"""Define the File Type.
 
 The primary purpose of the File object is to track the protocol to be used
 to transfer the file as well as to give the appropriate filepath depending
 on where(client-side, remote-side, intermediary-side) the File.filepath is
 being called from
-'''
+"""
 
 import os
 import logging
@@ -16,13 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class File(object):
-    ''' The Parsl File Class. This is planned to be a very simple class that simply
+    """The Parsl File Class.
+
+    This is planned to be a very simple class that simply
     captures various attributes of a file, and relies on client-side and worker-side
     systems to enable to appropriate transfer of files.
-    '''
+    """
 
+    
     def __init__(self, url, to=None, site=None, dman=None, cache=False, caching_dir=".", staging='direct'):
-        ''' Construct a File object from a url string
+        """Construct a File object from a url string.
 
         Args:
              - url (string) : url string of the file e.g.
@@ -34,8 +37,7 @@ class File(object):
              - dman (DataManager) : data manager
              - to (string) : path the remote file will be staged to
              - site (string) : site the remote file will be staged to
-        '''
-
+        """
         self.url = url
         parsed_url = urlparse(self.url)
         self.scheme = parsed_url.scheme if parsed_url.scheme else 'file'
@@ -60,7 +62,8 @@ class File(object):
 
     @property
     def filepath(self):
-        ''' Returns the resolved filepath on the side where it is called from.
+        """Returns the resolved filepath on the side where it is called from.
+
         File.filepath returns the appropriate filepath when called from within
         an app running remotely as well as regular python on the client side.
 
@@ -68,8 +71,7 @@ class File(object):
             - self
         Returns:
              - filepath (string)
-
-        '''
+        """
         if self.scheme == 'globus':
             if hasattr(self, 'local_path'):
                 return self.local_path

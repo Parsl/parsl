@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class UsageTracker (object):
-    """ Anonymized Usage Tracking for Parsl
+    """Anonymized Usage Tracking for Parsl.
 
     Client for this is here : https://github.com/Parsl/parsl_tracking
     This issue captures the discussion that went into functionality
@@ -23,7 +23,8 @@ class UsageTracker (object):
 
     def __init__(self, dfk, ip='52.3.111.203', port=50077,
                  domain_name='tracking.parsl-project.org'):
-        ''' Initialize usage tracking unless the user has opted-out.
+        """Initialize usage tracking unless the user has opted-out.
+
         Tracks usage stats by inspecting the internal state of the dfk.
 
         Args:
@@ -34,7 +35,7 @@ class UsageTracker (object):
              - port (int) : Port number, Default:50077
              - domain_name (string) : Domain name, will override IP
                   Default: tracking.parsl-project.org
-        '''
+        """
         if domain_name:
             try:
                 self.UDP_IP = socket.gethostbyname(domain_name)
@@ -53,7 +54,7 @@ class UsageTracker (object):
         self.initialized = False  # Once first message is sent this will be True
 
     def check_tracking_enabled(self):
-        ''' By default tracking is enabled.
+        """By default tracking is enabled.
 
         If Test mode is set via env variable PARSL_TESTING, a test flag is set
 
@@ -61,8 +62,7 @@ class UsageTracker (object):
             1. config["globals"]["usageTracking"] is set to False (Bool)
             2. Environment variable PARSL_TRACKING is set to false (case insensitive)
 
-        '''
-
+        """
         track = True   # By default we track usage
         test = False  # By default we are not in testing mode
 
@@ -80,12 +80,11 @@ class UsageTracker (object):
         return test, track
 
     def construct_start_message(self):
-        """ Collect preliminary run info at the start of the DFK.
+        """Collect preliminary run info at the start of the DFK.
 
         Returns :
               - Message dict dumped as json string, ready for UDP
         """
-
         uname = getpass.getuser().encode('latin1')
         hashed_username = hashlib.sha256(uname).hexdigest()[0:10]
         hname = socket.gethostname().encode('latin1')
@@ -99,13 +98,11 @@ class UsageTracker (object):
         return json.dumps(message)
 
     def construct_end_message(self):
-        """ Collect the final run information at the time of DFK
-        cleanup.
+        """Collect the final run information at the time of DFK cleanup.
 
         Returns:
              - Message dict dumped as json string, ready for UDP
         """
-
         app_count = self.dfk.task_count
 
         site_count = 0
@@ -128,8 +125,7 @@ class UsageTracker (object):
         return json.dumps(message)
 
     def send_UDP_message(self, message):
-        """ Send UDP message
-        """
+        """Send UDP message."""
         if self.tracking_enabled:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
@@ -144,7 +140,8 @@ class UsageTracker (object):
         return x
 
     def send_message(self):
-        """ Send message over UDP.
+        """Send message over UDP.
+
         If tracking is disables, the bytes_sent will always be set to -1
 
         Returns:

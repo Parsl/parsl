@@ -13,8 +13,8 @@ dfk = DataFlowKernel(config=config)
 
 @App("bash", dfk)
 def freesurfer(stdout=None, stderr=None):
-    return '''singularity exec ~madduri/freesurfer.simg recon-all
-    '''
+    return """singularity exec ~madduri/freesurfer.simg recon-all
+    """
 
 
 if __name__ == "__main__":

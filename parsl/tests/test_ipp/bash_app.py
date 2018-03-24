@@ -1,5 +1,4 @@
-''' Testing bash apps
-'''
+"""Test bash apps."""
 import parsl
 from parsl import *
 
@@ -23,14 +22,12 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
 
 @App('bash', dfk)
 def foo(x, y, stdout=None):
-    return '''echo {0} {1}
-    '''
+    return """echo {0} {1}
+    """
 
 
 def test_command_format_1():
-    ''' Testing command format for BashApps
-    '''
-
+    """Test command format for BashApps."""
     stdout = os.path.abspath('std.out')
     if os.path.exists(stdout):
         os.remove(stdout)
@@ -55,8 +52,7 @@ def test_command_format_1():
 
 
 def test_parallel_for(n=10):
-    ''' Testing a simple parallel for loop
-    '''
+    """Test a simple parallel for loop."""
     outdir = os.path.abspath('outputs')
     if not os.path.exists(outdir):
         os.makedirs(outdir)

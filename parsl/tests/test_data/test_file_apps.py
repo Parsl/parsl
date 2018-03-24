@@ -12,9 +12,9 @@ dfk = DataFlowKernel(executors=[workers])
 @App('bash', dfk)
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
-    return '''echo %s
+    return """echo %s
     cat %s &> {outputs[0]}
-    ''' % (infiles, infiles)
+    """ % (infiles, infiles)
 
 
 def test_files():
@@ -30,15 +30,15 @@ def test_files():
 @App('bash', dfk)
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
-    return '''
+    return """
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
-    '''
+    """
 
 
 def test_increment(depth=5):
-    ''' Test simple pipeline A->B...->N
-    '''
+    """Test simple pipeline A->B...->N
+    """
     # Create the first file
     open("test0.txt", 'w').write('0\n')
 

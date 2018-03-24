@@ -3,7 +3,7 @@ from parsl import *
 
 
 def test_1():
-    """ Checkpointing example from docs.
+    """Checkpointing example from docs.
     """
     from parsl.configs.local import localThreads as config
     dfk = DataFlowKernel(config=config)

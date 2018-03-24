@@ -20,7 +20,7 @@ def diamond(sleep=0, inputs=[]):
 
 
 def test_python(width=10):
-    ''' Diamond pattern to scale from 0 -> 1 -> N -> 1 -> 0 '''
+    """Diamond pattern to scale from 0 -> 1 -> N -> 1 -> 0 """
 
     stage_1 = [diamond(sleep=60, inputs=[0])]
 

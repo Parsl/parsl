@@ -43,7 +43,7 @@ Here's a config for Midway that starts with a request for 2 nodes.
                   "maxBlocks" : 1,
                   "options" : {
                       "partition" : "westmere",
-                      "overrides" : '''module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
+                      "overrides" : """module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate"""
                   }
               }
           }

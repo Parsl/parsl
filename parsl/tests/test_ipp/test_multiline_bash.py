@@ -13,12 +13,12 @@ dfk = DataFlowKernel(workers)
 def multi_line(inputs=[], outputs=[],
                stderr=os.path.abspath('std.err'),
                stdout=os.path.abspath('std.out')):
-    return '''echo {inputs[0]} &> {outputs[0]}
+    return """echo {inputs[0]} &> {outputs[0]}
     echo {inputs[1]} &> {outputs[1]}
     echo {inputs[2]} &> {outputs[2]}
     echo "Testing STDOUT"
     echo "Testing STDERR" 1>&2
-    '''
+    """
 
 
 def run_test():

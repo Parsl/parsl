@@ -28,8 +28,8 @@ localIPP = {
          }]
 }
 
-''' Use the following config with caution.
-'''
+"""Use the following config with caution.
+"""
 
 localIPPReuse = {
     "sites": [

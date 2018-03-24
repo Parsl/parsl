@@ -6,8 +6,9 @@ logger = logging.getLogger(__name__)
 
 
 def make_rundir(config=None, path=None):
-    ''' When an path has not been specified, make_rundir
-    creates a rundir with the following hierarchy:
+    """When a path has not been specified, make the run directory.
+
+    Creates a rundir with the following hierarchy:
         ./runinfo <- Home of all run directories
           |----000
           |----001 <- Directories for each run
@@ -17,8 +18,7 @@ def make_rundir(config=None, path=None):
     Kwargs:
         - path (str): String path to a specific run dir
                Default : None.
-    '''
-
+    """
     try:
         if not path:
             path = None

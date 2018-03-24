@@ -1,4 +1,4 @@
-"""serialization utilities for apply messages"""
+"""Serialization utilities for apply messages."""
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -36,7 +36,7 @@ if PY3:
 
 
 def _nbytes(buf):
-    """Return byte-size of a memoryview or buffer"""
+    """Return byte-size of a memoryview or buffer."""
     if isinstance(buf, memoryview):
         if PY3:
             # py3 introduces nbytes attribute
@@ -53,7 +53,7 @@ def _nbytes(buf):
 
 
 def _extract_buffers(obj, threshold=MAX_BYTES):
-    """extract buffers larger than a certain threshold"""
+    """Extract buffers larger than a certain threshold."""
     buffers = []
     if isinstance(obj, CannedObject) and obj.buffers:
         for i, buf in enumerate(obj.buffers):
@@ -72,7 +72,7 @@ def _extract_buffers(obj, threshold=MAX_BYTES):
 
 
 def _restore_buffers(obj, buffers):
-    """restore buffers extracted by """
+    """Restore extracted buffers."""
     if isinstance(obj, CannedObject) and obj.buffers:
         for i, buf in enumerate(obj.buffers):
             if buf is None:
@@ -119,7 +119,7 @@ def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
 
 
 def deserialize_object(buffers, g=None):
-    """reconstruct an object serialized by serialize_object from data buffers.
+    """Reconstruct an object serialized by serialize_object from data buffers.
 
     Parameters
     ----------
@@ -154,7 +154,7 @@ def deserialize_object(buffers, g=None):
 
 
 def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
-    """pack up a function, args, and kwargs to be sent over the wire
+    """Pack up a function, args, and kwargs to be sent over the wire.
 
     Each element of args/kwargs will be canned for special treatment,
     but inspection will not go any deeper than that.
@@ -168,7 +168,6 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
 
     With length at least two + len(args) + len(kwargs)
     """
-
     arg_bufs = list(chain.from_iterable(
         serialize_object(arg, buffer_threshold, item_threshold) for arg in args))
 
@@ -187,8 +186,10 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
 
 
 def unpack_apply_message(bufs, g=None, copy=True):
-    """unpack f,args,kwargs from buffers packed by pack_apply_message()
-    Returns: original f,args,kwargs"""
+    """Unpack f,args,kwargs from buffers packed by pack_apply_message().
+
+    Returns: original f,args,kwargs
+    """
     bufs = list(bufs)  # allow us to pop
     assert len(bufs) >= 2, "not enough buffers!"
     pf = buffer_to_bytes_py2(bufs.pop(0))

@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 
@@ -28,9 +28,9 @@ def save(message, outputs=[]):
 
 
 def test_procedural(N=10):
-    ''' Procedural workflow example from docs on
+    """Procedural workflow example from docs on
     Composing a workflow
-    '''
+    """
     message = generate(N)
 
     saved = save(message, outputs=['output.txt'])

@@ -1,5 +1,5 @@
-''' Testing python apps
-'''
+"""Testing python apps
+"""
 from parsl import *
 
 workers = ThreadPoolExecutor(max_workers=4)
@@ -12,7 +12,8 @@ def platform_name():
 
 
 def test_NameError(n=2):
-    "Catch NameError for missing name"
+    """Catch NameError for missing name
+    """
 
     p = platform_name()
 
@@ -31,7 +32,8 @@ def bad_import():
 
 
 def test_ImportError(n=2):
-    "Catch ImportError for missing name"
+    """Catch ImportError for missing name
+    """
 
     p = bad_import()
 

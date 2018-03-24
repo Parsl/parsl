@@ -1,5 +1,5 @@
-''' Testing bash apps
-'''
+"""Testing bash apps
+"""
 import parsl
 from parsl import *
 
@@ -15,12 +15,12 @@ dfk = DataFlowKernel(executors=[workers])
 
 @App('bash', dfk)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out', walltime=0.5):
-    return '''echo "sleeping";
-    sleep 1 '''
+    return """echo "sleeping";
+    sleep 1 """
 
 
 def test_walltime():
-    ''' Testing walltime exceeded exception '''
+    """Testing walltime exceeded exception """
     x = echo_to_file()
 
     try:

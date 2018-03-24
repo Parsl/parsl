@@ -17,8 +17,8 @@ def python_app_slow(duration):
 
 
 def test_python_remote(count=10):
-    ''' Run with no delay
-    '''
+    """ Run with no delay
+    """
     fus = []
     for i in range(0, count):
         fu = python_app_slow(0)
@@ -41,9 +41,9 @@ def test_python_remote_slow(count=20):
 
 @App("bash", dfk)
 def bash_mpi_app(stdout=None, stderr=None):
-    return '''ls -thor
+    return """ls -thor
 mpi_hello
-    '''
+    """
 
 
 if __name__ == "__main__":
