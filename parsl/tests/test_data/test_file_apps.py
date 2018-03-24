@@ -59,7 +59,7 @@ def test_increment(depth=5):
     for key in futs:
         if key > 0:
             fu = futs[key]
-            data = open(fu.result(), 'r').read().strip()
+            data = open(fu.result().filepath, 'r').read().strip()
             assert data == str(
                 key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
 

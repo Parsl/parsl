@@ -18,6 +18,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.config_defaults import update_config
+from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 
 # from parsl.dataflow.start_controller import Controller
@@ -46,22 +47,23 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
-                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None):
-        """Initialize the DataFlowKernel.
+                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None,
+                 data_manager=None):
+        """ Initialize the DataFlowKernel.
 
         Please note that keyword args passed to the DFK here will always override
         options passed in via the config.
 
         KWargs:
-            - config (Dict) : A single data object encapsulating all config attributes
+            - config (dict) : A single data object encapsulating all config attributes
             - executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
-            - lazyErrors(Bool) : Default=True, allow workflow to continue on app failures.
-            - appCache (Bool) :Enable caching of apps
+            - lazyErrors(bool) : Default=True, allow workflow to continue on app failures.
+            - appCache (bool) :Enable caching of apps
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
             - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
-
+            - data_manager (DataManager): User created DataManager
         Returns:
             DataFlowKernel object
         """
@@ -75,6 +77,12 @@ class DataFlowKernel(object):
 
         # Update config with defaults
         self._config = update_config(config, self.rundir)
+
+        # Set the data manager
+        if data_manager:
+            self.data_manager = data_manager
+        else:
+            self.data_manager = DataManager(config=self._config)
 
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)
