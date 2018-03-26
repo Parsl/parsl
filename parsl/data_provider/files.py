@@ -23,7 +23,7 @@ class File(object):
     systems to enable to appropriate transfer of files.
     """
 
-    def __init__(self, url, to=None, site=None, dman=None, cache=False, caching_dir=".", staging='direct'):
+    def __init__(self, url, dman=None, cache=False, caching_dir=".", staging='direct'):
         """Construct a File object from a url string.
 
         Args:
@@ -34,8 +34,6 @@ class File(object):
                'globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/home/johndoe/data/input.txt'
                'ftp://ftp.sra.ebi.ac.uk/vol1/ERA156/ERA156312/fastq/LC_C14_cRNA_sequence_R1.txt.gz'
              - dman (DataManager) : data manager
-             - to (string) : path the remote file will be staged to
-             - site (string) : site the remote file will be staged to
         """
         self.url = url
         parsed_url = urlparse(self.url)
@@ -43,7 +41,6 @@ class File(object):
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
-        self.to = to if to else '.'
         self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {}
         if self.scheme != 'file':
