@@ -45,7 +45,6 @@ The following example shows how files on remote Globus endpoints can be specifie
                             "endpoint_name": "af7bda53-6d04-11e5-ba46-22000b92c6ec",
                             "endpoint_path": "/home/$USER/",
                             "local_directory": "/home/$USER/",
-                            "comment": "UChicago RCC Midway"
                         }
                     }
                 }
