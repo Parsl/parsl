@@ -10,6 +10,7 @@ Reference Guide
     parsl.app.app.App
     parsl.app.futures.DataFuture
     parsl.dataflow.futures.AppFuture
+    parsl.data_provider.files.File
 
 .. autosummary::
     :toctree: stubs
