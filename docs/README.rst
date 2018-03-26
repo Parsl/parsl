@@ -39,5 +39,5 @@ Regenerate module stubs
 
 If necessary, docstring stubs can be regenerated using
 ::
-    $ sphinx-autogen api.rst
+    $ sphinx-autogen reference.rst
 
