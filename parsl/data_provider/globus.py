@@ -86,18 +86,16 @@ def get_globus():
     return Globus()
 
 
-"""
-All communication with the Globus Auth and Globus Transfer services is enclosed
-in the Globus class. In particular, the Globus class is reponsible for:
- - managing an OAuth2 authorizer - getting access and refresh tokens,
-   refreshing an access token, storing to and retrieving tokens from
-   .globus.json file,
- - submitting file transfers,
- - monitoring transfers.
-"""
-
-
 class Globus(object):
+    """
+    All communication with the Globus Auth and Globus Transfer services is enclosed
+    in the Globus class. In particular, the Globus class is reponsible for:
+     - managing an OAuth2 authorizer - getting access and refresh tokens,
+       refreshing an access token, storing to and retrieving tokens from
+       .globus.json file,
+     - submitting file transfers,
+     - monitoring transfers.
+    """
 
     authorizer = None
 

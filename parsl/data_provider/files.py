@@ -27,12 +27,12 @@ class File(object):
         """Construct a File object from a url string.
 
         Args:
-             - url (string) : url string of the file e.g.
-               'input.txt'
-               'file:///scratch/proj101/input.txt'
-               'globus://go#ep1/~/data/input.txt'
-               'globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/home/johndoe/data/input.txt'
-             - dman (DataManager) : data manager
+           - url (string) : url string of the file e.g.
+              - 'input.txt'
+              - 'file:///scratch/proj101/input.txt'
+              - 'globus://go#ep1/~/data/input.txt'
+              - 'globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/home/johndoe/data/input.txt'
+           - dman (DataManager) : data manager
         """
         self.url = url
         parsed_url = urlparse(self.url)
@@ -57,9 +57,9 @@ class File(object):
 
     @property
     def filepath(self):
-        """Returns the resolved filepath on the side where it is called from.
+        """Return the resolved filepath on the side where it is called from.
 
-        File.filepath returns the appropriate filepath when called from within
+        The appropriate filepath will be returned when called from within
         an app running remotely as well as regular python on the client side.
 
         Args:
@@ -79,15 +79,11 @@ class File(object):
             return self.path
 
     def stage_in(self, site=None):
-        ''' The stage_in call transports the file from the site of origin
-        to the local site
-        '''
+        """Transport file from the site of origin to local site."""
         return self.dman.stage_in(self, site)
 
     def stage_out(self):
-        ''' The stage_out call transports the file from local filesystem
-        to the origin site
-        '''
+        """Transport file from local filesystem to origin site."""
         return self.dman.stage_out(self)
 
     def set_data_future(self, df, site=None):

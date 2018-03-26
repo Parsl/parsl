@@ -15,7 +15,7 @@ class DataManager(ParslExecutor):
     """
     In general a site where remote file is going to be stage in is unknown until
     Executer submits an app that depends on the file. However, in most practical
-    cases, a site where an app ir executed and a file needs to be staged in is
+    cases, a site where an app is executed and a file needs to be staged in is
     known. Such cases should be detected by DataManager to optimize file
     transfers. Possible cases are:
     1. Config defines one site only.
@@ -90,8 +90,9 @@ class DataManager(ParslExecutor):
         raise Exception('No site with a Globus endpoint defined')
 
     def stage_in(self, file, site_name=None):
-        ''' The stage_in call transports the file from the site of origin
-        to the site. The function returns DataFuture.
+        """Transport the file from the site of origin to the site.
+
+        This function returns a DataFuture.
 
         Args:
             - self
@@ -100,7 +101,7 @@ class DataManager(ParslExecutor):
                                 If the site argument is not specified for a file
                                 with 'globus' scheme, the file will be staged in to
                                 the first site with the "globus" key in a config.
-        '''
+        """
 
         if file.scheme == 'file':
             site_name = None
@@ -123,8 +124,9 @@ class DataManager(ParslExecutor):
         return df
 
     def stage_out(self, file, site_name=None):
-        ''' The stage_out call transports the file from local filesystem
-        to the remote Globus endpoint. The function return DataFuture.
+        """Transport the file from the local filesystem to the remote Globus endpoint.
+
+        This function returns a DataFuture.
 
         Args:
             - self
@@ -133,7 +135,7 @@ class DataManager(ParslExecutor):
                                 If the site argument is not specified for a file
                                 with 'globus' scheme, the file will be staged in to
                                 the first site with the "globus" key in a config.
-        '''
+        """
 
         if file.scheme == 'file':
             site_name = None
