@@ -37,7 +37,7 @@ Note: By default, Parsl collects anonymous usage statistics for reporting and im
 Documentation
 =============
 
-The complete parsl documentation is hosted `here <parsl.readthedocs.io>`_.
+The complete parsl documentation is hosted `here <https://parsl.readthedocs.io>`_.
 
 The Parsl tutorial is `here <http://parsl.readthedocs.io/en/latest/quick/tutorial.html#>`_ and the same tutorial set hosted on live Jupyter notebooks are available `here <http://try.parsl-project.org:8000/>`_
 
