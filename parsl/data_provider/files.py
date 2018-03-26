@@ -32,7 +32,6 @@ class File(object):
                'file:///scratch/proj101/input.txt'
                'globus://go#ep1/~/data/input.txt'
                'globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/home/johndoe/data/input.txt'
-               'ftp://ftp.sra.ebi.ac.uk/vol1/ERA156/ERA156312/fastq/LC_C14_cRNA_sequence_R1.txt.gz'
              - dman (DataManager) : data manager
         """
         self.url = url
