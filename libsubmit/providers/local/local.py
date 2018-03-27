@@ -92,7 +92,13 @@ class Local(ExecutionProvider):
              - Config (dict): Dictionary with all the config options.
         '''
 
-        self.channel = channel
+        if channel is None:
+            if channel_script_dir is None:
+                self.channel = LocalChannel(scriptDir=channel_script_dir)
+            else:
+                self.channel = LocalChannel()
+        else:
+            self.channel = channel
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
@@ -218,7 +224,7 @@ class Local(ExecutionProvider):
 
         ret = self._write_submit_script(wrap_cmd_string, script_path)
 
-        job_id, proc = execute_no_wait('bash {0}'.format(script_path),
+        job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path),
                                        3)
         self.resources[job_id] = {'job_id' : job_id,
                                   'status' : 'RUNNING',
