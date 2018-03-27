@@ -25,7 +25,7 @@ class IPyParallelExecutor(ParslExecutor):
 
     """
 
-    def compose_launch_cmd(self, filepath, engine_dir):
+    def compose_launch_cmd(self, filepath, engine_dir, container_image):
         """Reads the json contents from filepath and uses that to compose the engine launch command.
 
         Args:
@@ -52,6 +52,35 @@ EOF
 mkdir -p '.ipengine_logs'
 ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 """.format(engine_dir, engine_json)
+
+    def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):
+        """Reads the json contents from filepath and uses that to compose the engine launch command.
+
+        Args:
+            filepath (str): Path to the engine file
+            engine_dir (str): CWD for the engines .
+            container_image (str): The container to be used to launch workers
+        """
+        self.engine_file = os.path.expanduser(filepath)
+
+        engine_json = None
+        try:
+            with open(self.engine_file, 'r') as f:
+                engine_json = f.read()
+
+        except OSError as e:
+            logger.error("Could not open engine_json : ", self.engine_file)
+            raise e
+
+        return """cd {0}
+cat <<EOF > ipengine.json
+{1}
+EOF
+
+DOCKER_ID=$(docker create --network host {2} ipengine --file=ipengine.json)
+docker cp ipengine.json $DOCKER_ID:/home/ipengine.json
+docker start $DOCKER_ID
+""".format(engine_dir, engine_json, container_image)
 
     def __init__(self, execution_provider=None,
                  reuse_controller=True,
@@ -101,6 +130,8 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
 
         self.executor = Client(url_file=self.client_file)
         self.config = config
+        self.container_type = None
+        self.container_image = None
         self.sitename = config['site'] if config else 'Static_IPP'
         # NOTE: Copying the config here only partially fixes the issue. There needs to be
         # multiple controllers launched by the factory, and each must have different jsons.
@@ -110,7 +141,16 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
         # if not os.path.exists(self.config["execution"]["script_dir"]):
         #    os.makedirs(self.config["execution"]["script_dir"])
 
-        self.launch_cmd = self.compose_launch_cmd(self.engine_file, engine_dir)
+        command_composer = self.compose_launch_cmd
+
+        if config and config["execution"]["container"]["type"]:
+            self.container_type = config["execution"]["container"]["type"]
+            self.container_image = config["execution"]["container"]["image"]
+            command_composer = self.compose_containerized_launch_cmd
+            logger.info("Launching IPP with Docker:{0}".format(self.container_image))
+
+        self.launch_cmd = command_composer(self.engine_file, engine_dir, self.container_image)
+        logger.debug("Launch cmd : {}".format(self.launch_cmd))
         self.execution_provider = execution_provider
         self.engines = []
 
