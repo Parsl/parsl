@@ -46,7 +46,7 @@ def _do_native_app_authentication(client_id, redirect_uri,
         refresh_tokens=True)
 
     url = client.oauth2_get_authorize_url()
-    print('Native App Authorization URL: \n{}'.format(url))
+    print('Please visit the following URL to provide authorization: \n{}'.format(url))
     auth_code = get_input('Enter the auth code: ').strip()
     token_response = client.oauth2_exchange_code_for_tokens(auth_code)
     return token_response.by_resource_server
@@ -86,18 +86,16 @@ def get_globus():
     return Globus()
 
 
-"""
-All communication with the Globus Auth and Globus Transfer services is enclosed
-in the Globus class. In particular, the Globus class is reponsible for:
- - managing an OAuth2 authorizer - getting access and refresh tokens,
-   refreshing an access token, storing to and retrieving tokens from
-   .globus.json file,
- - submitting file transfers,
- - monitoring transfers.
-"""
-
-
 class Globus(object):
+    """
+    All communication with the Globus Auth and Globus Transfer services is enclosed
+    in the Globus class. In particular, the Globus class is reponsible for:
+     - managing an OAuth2 authorizer - getting access and refresh tokens,
+       refreshing an access token, storing to and retrieving tokens from
+       .globus.json file,
+     - submitting file transfers,
+     - monitoring transfers.
+    """
 
     authorizer = None
 

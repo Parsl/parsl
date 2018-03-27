@@ -5,14 +5,18 @@ Data Management
 
 Parsl is designed to enable implementation of dataflow patterns. These patterns enable workflows to be defined in which the data passed between apps manages the flow of execution. Dataflow programming models are popular as they can cleanly express, via implicit parallelism, the concurrency needed by many applications in a simple and intuitive way.
 
-Parsl aims to abstract not only parallel execution but also execution location, which in turn requires abstractions for data location. This is crucial as it allows scripts to execute in different locations without regard for data location. Parsl implements a simple file abstraction that can be used to reference data. At present this model is limited to locally accessible files, but in the near future it will be extended to address remotely accessible files using FTP, HTTP, and Globus protocols.
+Parsl aims to abstract not only parallel execution but also execution location, which in turn requires abstractions for data location. This is crucial as it allows scripts to execute in different locations without regard for data location. Parsl implements a simple file abstraction that can be used to reference data. At present this model is limited to locally accessible files and Globus protocols, but in the near future it will be extended to address remotely accessible files using FTP, HTTP.
 
 Files
 -----
 
-Parsl's file abstraction abstracts local access to a file. It therefore requires only the file path to be defined. Irrespective of where the script, or its apps are executed, Parsl uses this abstraction to access that file. When referencing a Parsl file in an app, Parsl maps the object to the appropriate access path.
+The :py:class:`~parsl.data_provider.files.File` class abstracts the file access layer. Irrespective of where the script or its apps are executed, Parsl uses this abstraction to access that file. When referencing a Parsl file in an app, Parsl maps the object to the appropriate access path according to the selected scheme. Local and Globus schemes are supported, and are described in more detail below.
 
-The following example shows how Parsl files can be used in a simple ``cat`` app.
+
+Local
+^^^^^
+
+The `file` scheme refers to local files. Here is an example which runs `cat` on a local file:
 
 .. code-block:: python
 
@@ -24,16 +28,23 @@ The following example shows how Parsl files can be used in a simple ``cat`` app.
        open('test.txt', 'w').write('Hello\n')
 
        # create the Parsl file
-       parsl_file = parsl.data_provider.files.File('test.txt')
+       parsl_file = parsl.data_provider.files.File('file://test.txt')
 
        # call the cat app with the Parsl file
        cat(inputs=[parsl_file])
 
-Explicit Staging
-----------------
+Globus
+^^^^^^
 
-When an app needs to access a remote file that is specified as an input or output of the app, Parsl makes sure that the file is stage to a site where the app is executed. In many cases, a user may want to stage all files before any app is executed to avoid apps in the middle of the workflow will wait their input files to be staged.
-The following example shows how files on remote Globus endpoints can be specified as an app input and output and how to stage them in and out explicitely.
+The `globus` scheme represents files that can be accessed using the `Globus Transfer Service
+<https://docs.globus.org/how-to/get-started/>`_. A file using the Globus scheme must specify the UUID of the Globus
+endpoint and a path to the file on the endpoint, for example:
+
+.. code-block:: python
+
+        File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
+
+The file object is only an abstract representation of the file on the remote side. To inform Parsl where the file is to be transferred (where the Parsl app will be executed), the user must provide a configuration (passed to the DataFlowKernel) which specifies the `endpoint_name` (the UUID of the Globus endpoint that is associated with the system where the parsl App will run), the `endpoint_path` (the path to the directory where the file will be staged in for the Parsl App), and the `local_directory` (the path on the local filesystem that corresponds with the local filesystem). In most cases `endpoint_path` and `local_directory` are the same. They are different only if the root directory on the endpoint is not the root directory of the filesystem. For example:
 
 .. code-block:: python
 
@@ -45,12 +56,26 @@ The following example shows how files on remote Globus endpoints can be specifie
                             "endpoint_name": "af7bda53-6d04-11e5-ba46-22000b92c6ec",
                             "endpoint_path": "/home/$USER/",
                             "local_directory": "/home/$USER/",
-                            "comment": "UChicago RCC Midway"
                         }
                     }
                 }
             ]
         }
+
+
+To stage in (transfer a file to the location where the Parsl app will be executed), the :py:meth:`~parsl.data_provider.files.File.stage_in` and :py:meth:`~parsl.app.DataFuture.result` method must be executed explicitly, for example:
+
+.. code-block:: python
+
+        unsorted_file = File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/foo/bar/unsorted.txt')
+
+        dfu = unsorted_file.stage_in()
+        dfu.result()
+
+
+Here is a full example:
+
+.. code-block:: python
 
         @App('python', dfk)
         def sort_strings(inputs=[], outputs=[]):
@@ -61,9 +86,9 @@ The following example shows how files on remote Globus endpoints can be specifie
                     for e in strs:
                         s.write(e)
 
-        
-        unsorted_file = File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
-        sorted_file = File ('globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/~/sorted.txt')
+
+        unsorted_file = File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/foo/bar/unsorted.txt')
+        sorted_file = File ('globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/baz/sorted.txt')
 
         dfu = unsorted_file.stage_in()
         dfu.result()
@@ -74,4 +99,3 @@ The following example shows how files on remote Globus endpoints can be specifie
         dfs = sorted_file.stage_out()
         dfs.result()
 
-If an app wants to read or write remote files on a globus endpoint, Parsl must know a UUID or name of an endpoint associated with a site the app is executed at to be able to stage the files to the site before the files can be open or staged them out after At least one of the sites specified in the config must include the "globus" attribute with "globus_endpoint" and a path that points to a directory at the site where remote files are to be staged. A root of a Globus endpoint may not match a root of the filesystem at the site. In this case, Parsl needs to know a directory on the endpoint that corresponds to "local_directory". In the example, a root of the 'UChicago RCC Midway' endpoint points to the Midway cluster filesystem root.
