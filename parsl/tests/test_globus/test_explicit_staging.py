@@ -68,4 +68,14 @@ def test_explicit_staging():
 
 if __name__ == "__main__":
 
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
+    args = parser.parse_args()
+
+    if args.debug:
+        set_stream_logger()
+
     test_explicit_staging()
