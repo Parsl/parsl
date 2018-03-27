@@ -1,14 +1,15 @@
-import os
 import logging
-import subprocess
 import math
-import time
+import os
 import signal
+import subprocess
+import time
 from string import Template
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.launchers import Launchers
-from libsubmit.exec_utils import execute_no_wait
+
 import libsubmit.error as ep_error
+from libsubmit.channels.local.local import LocalChannel
+from libsubmit.launchers import Launchers
+from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
