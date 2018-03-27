@@ -80,6 +80,14 @@ EOF
 DOCKER_ID=$(docker create --network host {2} ipengine --file=ipengine.json)
 docker cp ipengine.json $DOCKER_ID:/home/ipengine.json
 docker start $DOCKER_ID
+
+at_exit() {{
+  echo "Caught SIGTERM/SIGKILL signal!"
+  docker stop $DOCKER_ID
+}}
+
+trap at_exit SIGTERM SIGINT
+sleep infinity
 """.format(engine_dir, engine_json, container_image)
 
     def __init__(self, execution_provider=None,
