@@ -44,7 +44,7 @@ class FlowControl(object):
     workflow, measure it and redirect it the appropriate executors for
     processing.
 
-    This is based on the following logic :
+    This is based on the following logic:
 
     .. code-block:: none
 
@@ -59,18 +59,16 @@ class FlowControl(object):
             callback()
 
     This logic ensures that the callbacks are activated with a maximum delay
-    of INTERVAL for systems with infrequent events as well as systems which would
+    of `interval` for systems with infrequent events as well as systems which would
     generate large bursts of events.
 
     Once a callback is triggered, the callback generally runs a strategy
     method on the sites available as well asqeuque
 
-
-    TODO : When the debug logs are enabled this module emits duplicate messages.
+    TODO: When the debug logs are enabled this module emits duplicate messages.
     This issue needs more debugging. What I've learnt so far is that the duplicate
     messages are present only when the timer thread is started, so this could be
     from a duplicate logger being added by the thread.
-
     """
 
     def __init__(self, dfk, config, *args, threshold=20, interval=5):
@@ -109,7 +107,6 @@ class FlowControl(object):
             - kill_event (threading.Event) : Event to wait on
         """
 
-        # Sleep till time to wake up
         while True:
             prev = self._wake_up_time
 

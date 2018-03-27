@@ -215,7 +215,7 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
             - block (Bool): To block for confirmations or not
 
         Raises:
-             NotImplemented exception
+             NotImplementedError
         """
         if self.controller:
             logger.debug("IPP:Shutdown sequence: Attempting controller kill")

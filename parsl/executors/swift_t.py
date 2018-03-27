@@ -341,11 +341,11 @@ class TurbineExecutor(ParslExecutor):
     def scale_out(self, workers=1):
         """Scales out the number of active workers by 1.
 
-        This method is notImplemented for threads and will raise the error if called.
+        This method is not implemented for threads and will raise the error if called.
         This would be nice to have, and can be done
 
         Raises:
-             NotImplemented exception
+             NotImplementedError
         """
         raise NotImplementedError
 
@@ -355,7 +355,7 @@ class TurbineExecutor(ParslExecutor):
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:
-             NotImplemented exception
+             NotImplementedError
         """
         raise NotImplementedError
 

@@ -32,9 +32,9 @@ class Strategy (object):
 
     The general shape and bounds of a site are user specified through:
 
-       1. minBlocks: Minimum # of blocks to maintain per site
-       2. initBlocks: # of blocks to provision at initialization of workflow
-       3. maxBlocks: Maximum # of blocks that can be active at a site from one workflow.
+       1. minBlocks: Minimum number of blocks to maintain per site
+       2. initBlocks: number of blocks to provision at initialization of workflow
+       3. maxBlocks: Maximum number of blocks that can be active at a site from one workflow.
 
 
     .. code:: python
@@ -46,7 +46,7 @@ class Strategy (object):
           Parallelism = slots / tasks
                       = [0, 1] (i.e,  0 <= p <= 1)
 
-    For eg:
+    For example:
 
     When p = 0,
          => compute with the least resources possible.
@@ -176,6 +176,7 @@ class Strategy (object):
             logger.debug("Min:{} initBlocks:{} Max:{}".format(minBlocks,
                                                               initBlocks,
                                                               maxBlocks))
+            # import pdb; pdb.set_trace()
             logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
                                                                    active_slots,
                                                                    parallelism))
@@ -225,7 +226,7 @@ class Strategy (object):
                     # logger.debug("Strategy: Case.2b")
                     excess = math.ceil((len(active_tasks) * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess) / taskBlocks)
-                    logger.debug("Requesting : {}".format(excess_blocks))
+                    logger.debug("Requesting {} more blocks".format(excess_blocks))
                     exc.scale_out(excess_blocks)
 
             elif active_slots == 0 and len(active_tasks) > 0:
