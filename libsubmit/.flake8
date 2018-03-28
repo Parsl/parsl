@@ -1,0 +1,14 @@
+[flake8]
+# D203: 1 blank line required before class docstring
+# E124: closing bracket does not match visual indentation
+# E126: continuation line over-indented for hanging indent
+# F403: ‘from module import *’ used; unable to detect undefined names
+# F405: name may be undefined, or defined from star imports: module
+# Ignoring the next one for valid tests
+# F811: redefinition of unused name from line N
+# This one is bad. Sometimes ordering matters, conditional imports
+# setting env vars necessary etc.
+# E402: module level import not at top of file
+ignore = D203, E124, E126, F403, F405, F811, E402
+max-line-length = 160
+exclude = parsl/executors/serialize/, parsl/libsubmit/
