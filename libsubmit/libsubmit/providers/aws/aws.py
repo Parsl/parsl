@@ -278,7 +278,7 @@ class EC2Provider(ExecutionProvider):
 
             try:
                 with open(credfile, 'r') as f:
-                    creds = json.load(credfile)
+                    creds = json.load(f)
             except json.JSONDecodeError as e:
                 logger.error(
                     "Site[{0}]: Json decode error in credential file {1}".format(self, credfile)
