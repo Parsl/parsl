@@ -115,8 +115,10 @@ class Globus(object):
         td = globus_sdk.TransferData(tc, src_ep, dst_ep)
         td.add_item(src_path, dst_path)
         task = tc.submit_transfer(td)
-        tc.task_wait(task['task_id'])
-        task = tc.get_task(task['task_id'])
+        while not tc.task_wait(task['task_id'], 600, 10):
+            task = tc.get_task(task['task_id'])
+            # TO DO: log eventual error events from Globus Transfer
+
         if task['status'] != 'SUCCEEDED':
             logger.error(task)
             raise Exception('Transfer {}, from {}{} to {}{} to failed due to error: {}'.format(

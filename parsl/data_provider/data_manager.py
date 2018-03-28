@@ -76,9 +76,9 @@ class DataManager(ParslExecutor):
             self._set_local_path(file)
 
     def _set_local_path(self, file):
-        site, globus_ep = self._get_globus_site()
+        globus_ep = self._get_globus_site()
         file.local_path = os.path.join(
-                globus_ep['local_directory'],
+                globus_ep['working_dir'],
                 file.filename)
 
     def _get_globus_site(self, site_name=None):
