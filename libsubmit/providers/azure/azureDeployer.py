@@ -97,5 +97,4 @@ class Deployer(object):
         '''
         rgn = rgn if rgn else self.resource_group
         return self.client.virtual_machines.get(
-            resource_group_name,
-            vm_name).instance_view.statuses[1].display_status
+            rgn, vm_name).instance_view.statuses[1].display_status
