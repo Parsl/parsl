@@ -89,8 +89,14 @@ class Local(ExecutionProvider):
     def __init__ (self, config, channel_script_dir=None, channel=None):
         ''' Initialize the local provider class
 
+
         Args:
              - Config (dict): Dictionary with all the config options.
+             - channel_script_dir (str): Script directory which will be
+                   passed to the default `LocalChannel` (this will have
+                   no effect if a `channel` is not None)
+             - channel (Channel): Channel to use; if none is provided, a
+                   default one will be created
         '''
 
         if channel is None:
