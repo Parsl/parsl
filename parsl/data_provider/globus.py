@@ -119,6 +119,7 @@ class Globus(object):
             task = tc.get_task(task['task_id'])
             # TO DO: log eventual error events from Globus Transfer
 
+        task = tc.get_task(task['task_id'])
         if task['status'] != 'SUCCEEDED':
             logger.error(task)
             raise Exception('Transfer {}, from {}{} to {}{} to failed due to error: {}'.format(
