@@ -77,8 +77,8 @@ cat <<EOF > ipengine.json
 {1}
 EOF
 
-DOCKER_ID=$(docker create --network host {2} ipengine --file=ipengine.json)
-docker cp ipengine.json $DOCKER_ID:/home/ipengine.json
+DOCKER_ID=$(docker create --network host {2} ipengine --file=/tmp/ipengine.json)
+docker cp ipengine.json $DOCKER_ID:/tmp/ipengine.json
 docker start $DOCKER_ID
 
 at_exit() {{
