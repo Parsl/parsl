@@ -84,13 +84,13 @@ class DataManager(ParslExecutor):
     def _get_globus_site(self, site_name=None):
         for s in self.config['sites']:
             if site_name is None or s['site'] == site_name:
-                if not 'data' in s:
+                if 'data' not in s:
                     continue
                 data = s['data']
-                if not 'globus' in s['data'] or not 'working_dir' in s['data']:
+                if 'globus' not in s['data'] or 'working_dir' not in s['data']:
                     continue
                 globus_ep = data['globus']
-                if not 'endpoint_name' in globus_ep:
+                if 'endpoint_name' not in globus_ep:
                     continue
                 working_dir = data['working_dir']
                 endpoint_name = data['globus']['endpoint_name']
