@@ -1,15 +1,16 @@
-import os
 import logging
-import subprocess
 import math
-import time
+import os
 import re
+import subprocess
+import time
 from string import Template
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.providers.condor.template import template_string
+
+import libsubmit.error as ep_error
 from libsubmit.exec_utils import wtime_to_minutes
 from libsubmit.launchers import Launchers
-import libsubmit.error as ep_error
+from libsubmit.providers.condor.template import template_string
+from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 

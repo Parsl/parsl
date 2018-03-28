@@ -1,11 +1,12 @@
+import atexit
+import json
+import logging
 import os
 import pprint
-import json
 import time
-import logging
-import atexit
-from libsubmit.providers.provider_base import ExecutionProvider
+
 from libsubmit.error import *
+from libsubmit.providers.provider_base import ExecutionProvider
 
 try:
     from azure.common.credentials import UserPassCredentials

@@ -1,10 +1,11 @@
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.exec_utils import wtime_to_minutes
-from string import Template
-import os
 import logging
+import os
+from string import Template
+
 import libsubmit.error as ep_error
+from libsubmit.exec_utils import wtime_to_minutes
 from libsubmit.launchers import Launchers
+from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 

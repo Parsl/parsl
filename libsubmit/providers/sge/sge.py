@@ -1,16 +1,17 @@
+import atexit
+import json
+import logging
+import math
 import os
 import pprint
-import math
-import json
 import time
-import logging
-import atexit
 from datetime import datetime, timedelta
 from string import Template
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.launchers import Launchers
+
 from libsubmit.error import *
+from libsubmit.launchers import Launchers
 from libsubmit.providers.aws.template import template_string
+from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 

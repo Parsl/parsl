@@ -1,10 +1,12 @@
 """A deployer class to deploy a template on Azure"""
-import os.path
 import json
-from haikunator import Haikunator
-from azure.common.credentials import ServicePrincipalCredentials, UserPassCredentials
+import os.path
+
+from azure.common.credentials import (ServicePrincipalCredentials,
+                                      UserPassCredentials)
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
+from haikunator import Haikunator
 
 
 class Deployer(object):

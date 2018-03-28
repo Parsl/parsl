@@ -1,8 +1,10 @@
-import sys
-import os
-import configparser
 import ast
+import configparser
 import logging
+import os
+import sys
+
+from libsubmit.error import *
 
 try :
     import novaclient
@@ -18,7 +20,6 @@ except ImportError:
 else:
     _nova_enabled = True
 
-from libsubmit.error import *
 
 logger = logging.getLogger(__name__)
 

@@ -1,11 +1,11 @@
-import os
-import logging
-import paramiko
 import getpass
+import logging
+import os
 
-from libsubmit.channels.ssh.ssh import SshChannel
+import paramiko
 from libsubmit.channels.channel_base import Channel
 from libsubmit.channels.errors import *
+from libsubmit.channels.ssh.ssh import SshChannel
 
 logger = logging.getLogger(__name__)
 
@@ -81,4 +81,3 @@ class SshILChannel (SshChannel):
         transport.auth_password(username, il_password)
 
         self.sftp_client = paramiko.SFTPClient.from_transport(transport)
-

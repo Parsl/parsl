@@ -1,6 +1,8 @@
-from libsubmit.channels.ssh.ssh import SshChannel
-from libsubmit.channels.local.local import LocalChannel
 import os
+
+from libsubmit.channels.local.local import LocalChannel
+from libsubmit.channels.ssh.ssh import SshChannel
+
 
 def test_local ():
 

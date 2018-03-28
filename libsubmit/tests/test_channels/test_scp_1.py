@@ -1,5 +1,7 @@
 import os
+
 from libsubmit.channels.ssh.ssh import SshChannel as Ssh
+
 
 def connect_and_list(hostname, username):
     out = ''

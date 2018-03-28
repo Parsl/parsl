@@ -1,9 +1,9 @@
-import os
-import logging
-import paramiko
-import getpass
 import errno
+import getpass
+import logging
+import os
 
+import paramiko
 from libsubmit.channels.channel_base import Channel
 from libsubmit.channels.errors import *
 

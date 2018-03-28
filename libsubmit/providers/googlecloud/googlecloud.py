@@ -1,13 +1,14 @@
+import atexit
+import json
+import logging
 import os
 import pprint
-import json
 import time
-import logging
-import atexit
 from datetime import datetime, timedelta
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.launchers import Launchers
+
 from libsubmit.error import *
+from libsubmit.launchers import Launchers
+from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
