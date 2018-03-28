@@ -89,6 +89,9 @@ class Local(ExecutionProvider):
     def __init__ (self, config, channel_script_dir=None, channel=None):
         ''' Initialize the local provider class
 
+        This provider is unique because the `LocalChannel` is simple enough
+        that a default can be provided. For this reason users can pass `channel=None`,
+        and a default `LocalChannel` will be created.
 
         Args:
              - Config (dict): Dictionary with all the config options.
