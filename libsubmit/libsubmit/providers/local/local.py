@@ -1,10 +1,7 @@
 import logging
-import math
 import os
 import signal
-import subprocess
 import time
-from string import Template
 
 import libsubmit.error as ep_error
 from libsubmit.channels.local.local import LocalChannel
@@ -13,17 +10,19 @@ from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
-translate_table = { 'PD' :  'PENDING',
-                    'R'  :  'RUNNING',
-                    'CA' : 'CANCELLED',
-                    'CF' : 'PENDING', #(configuring),
-                    'CG' : 'RUNNING', # (completing),
-                    'CD' : 'COMPLETED',
-                    'F'  : 'FAILED', # (failed),
-                    'TO' : 'TIMEOUT', # (timeout),
-                    'NF' : 'FAILED', # (node failure),
-                    'RV' : 'FAILED', #(revoked) and
-                    'SE' : 'FAILED' } # (special exit state
+translate_table = {
+    'PD': 'PENDING',
+    'R': 'RUNNING',
+    'CA': 'CANCELLED',
+    'CF': 'PENDING',  # (configuring),
+    'CG': 'RUNNING',  # (completing),
+    'CD': 'COMPLETED',
+    'F': 'FAILED',  # (failed),
+    'TO': 'TIMEOUT',  # (timeout),
+    'NF': 'FAILED',  # (node failure),
+    'RV': 'FAILED',  # (revoked) and
+    'SE': 'FAILED'
+}  # (special exit state
 
 
 class Local(ExecutionProvider):
@@ -83,10 +82,10 @@ class Local(ExecutionProvider):
 
     '''
 
-    def __repr__ (self):
+    def __repr__(self):
         return "<Local Execution Provider for site:{0}>".format(self.sitename)
 
-    def __init__ (self, config, channel_script_dir=None, channel=None):
+    def __init__(self, config, channel_script_dir=None, channel=None):
         ''' Initialize the local provider class
 
         This provider is unique because the `LocalChannel` is simple enough
@@ -112,15 +111,13 @@ class Local(ExecutionProvider):
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
-        self.scriptDir  = self.config["execution"]["scriptDir"]
+        self.scriptDir = self.config["execution"]["scriptDir"]
         self.taskBlocks = self.config["execution"]["block"].get("taskBlocks", 1)
-        launcher_name   = self.config["execution"]["block"].get("launcher",
-                                                                "singleNode")
-        self.launcher   = Launchers.get(launcher_name, None)
+        launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
+        self.launcher = Launchers.get(launcher_name, None)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
-
 
     @property
     def channels_required(self):
@@ -128,10 +125,7 @@ class Local(ExecutionProvider):
         '''
         return False
 
-    ###########################################################################################################
-    # Status
-    ###########################################################################################################
-    def status (self, job_ids):
+    def status(self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
 
         Args:
@@ -148,18 +142,15 @@ class Local(ExecutionProvider):
             if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
                 continue
 
-            if poll_code == None :
+            if poll_code is None:
                 self.resources[job_id]['status'] = 'RUNNING'
             elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
                 self.resources[job_id]['status'] = 'COMPLETED'
-            elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING' :
+            elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
                 self.resources[job_id]['status'] = 'FAILED'
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    ###########################################################################################################
-    # Write the submit script
-    ###########################################################################################################
     def _write_submit_script(self, script_string, script_filename):
         '''
         Load the template string with config values and write the generated submit script to
@@ -183,18 +174,15 @@ class Local(ExecutionProvider):
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            raise (ep_error.SchedulerMissingArgs(e.args, self.sitename))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
-            raise(ep_error.ScriptPathError(script_filename, e))
+            raise (ep_error.ScriptPathError(script_filename, e))
 
         return True
 
-    ###########################################################################################################
-    # Submit
-    ###########################################################################################################
-    def submit (self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
         ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -223,29 +211,18 @@ class Local(ExecutionProvider):
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.sh".format(self.scriptDir,
-                                              job_name)
+        script_path = "{0}/{1}.sh".format(self.scriptDir, job_name)
         script_path = os.path.abspath(script_path)
 
-        lname = self.config["execution"]["block"].get("launcher", "singleNode")
-        launcher = Launchers.get(lname, None)
-        wrap_cmd_string = self.launcher(cmd_string,
-                                        taskBlocks=self.taskBlocks)
+        wrap_cmd_string = self.launcher(cmd_string, taskBlocks=self.taskBlocks)
 
-        ret = self._write_submit_script(wrap_cmd_string, script_path)
+        self._write_submit_script(wrap_cmd_string, script_path)
 
-        job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path),
-                                       3)
-        self.resources[job_id] = {'job_id' : job_id,
-                                  'status' : 'RUNNING',
-                                  'blocksize' : blocksize,
-                                  'proc' : proc }
+        job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), 3)
+        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING', 'blocksize': blocksize, 'proc': proc}
 
         return job_id
 
-    ###########################################################################################################
-    # Cancel
-    ###########################################################################################################
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
 
@@ -279,6 +256,6 @@ class Local(ExecutionProvider):
         return False
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     print("Nothing here")

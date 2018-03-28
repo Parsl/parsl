@@ -1,38 +1,30 @@
-import atexit
-import json
 import logging
-import math
 import os
-import pprint
 import time
-from datetime import datetime, timedelta
-from string import Template
 
-from libsubmit.error import *
-from libsubmit.launchers import Launchers
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.gridEngine.template import template_string
 
 logger = logging.getLogger(__name__)
 
-translate_table = {'qw': 'PENDING',
-                   'hqw': 'PENDING',
-                   'hrwq': 'PENDING',
-                   't': 'PENDING',
-                   'r': 'RUNNING',
-                   's' : 'FAILED', # obsuspended
-                   'ts' : 'FAILED',
-                   't' : 'FAILED', # Suspended by alarm
-                   'eqw': 'FAILED', # Error states
-                   'ehqw': 'FAILED', # ..
-                   'ehrqw': 'FAILED', # ..
-                   'd': 'COMPLETED',
-                   'dr': 'COMPLETED',
-                   'dt' : 'COMPLETED',
-                   'drt': 'COMPLETED',
-                   'ds' : 'COMPLETED',
-                   'drs' : 'COMPLETES',
-                   }
+translate_table = {
+    'qw': 'PENDING',
+    'hqw': 'PENDING',
+    'hrwq': 'PENDING',
+    'r': 'RUNNING',
+    's': 'FAILED',  # obsuspended
+    'ts': 'FAILED',
+    't': 'FAILED',  # Suspended by alarm
+    'eqw': 'FAILED',  # Error states
+    'ehqw': 'FAILED',  # ..
+    'ehrqw': 'FAILED',  # ..
+    'd': 'COMPLETED',
+    'dr': 'COMPLETED',
+    'dt': 'COMPLETED',
+    'drt': 'COMPLETED',
+    'ds': 'COMPLETED',
+    'drs': 'COMPLETES',
+}
 
 
 class GridEngine(ClusterProvider):
@@ -46,28 +38,28 @@ class GridEngine(ClusterProvider):
 
     .. code-block:: python
 
-         { "execution" : { # Definition of all execution aspects of a site
+         { "execution": { # Definition of all execution aspects of a site
 
-              "executor"   : #{Description: Define the executor used as task executor,
-                             # Type : String,
-                             # Expected : "ipp",
-                             # Required : True},
+              "executor": # {Description: Define the executor used as task executor,
+                          # Type : String,
+                          # Expected : "ipp",
+                          # Required : True},
 
-              "provider"   : #{Description : The provider name, in this case slurm
-                             # Type : String,
-                             # Expected : "gridEngine",
-                             # Required :  True },
+              "provider": # {Description : The provider name, in this case slurm
+                          # Type : String,
+                          # Expected : "gridEngine",
+                          # Required :  True },
 
-              "scriptDir"  : #{Description : Relative or absolute path to a
-                             # directory in which intermediate scripts are placed
-                             # Type : String,
-                             # Default : "./.scripts"},
+              "scriptDir": #{Description : Relative or absolute path to a
+                           # directory in which intermediate scripts are placed
+                           # Type : String,
+                           # Default : "./.scripts"},
 
-              "block" : { # Definition of a block
+              "block": { # Definition of a block
 
-                  "nodes"      : #{Description : # of nodes to provision per block
-                                 # Type : Integer,
-                                 # Default: 1},
+                  "nodes": #{Description : # of nodes to provision per block
+                           # Type : Integer,
+                           # Default: 1},
 
                   "taskBlocks" : #{Description : # of workers to launch per block
                                  # as either an number or as a bash expression.
@@ -117,7 +109,6 @@ class GridEngine(ClusterProvider):
         '''
         super().__init__(config, channel=channel)
 
-
     def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
@@ -140,24 +131,21 @@ class GridEngine(ClusterProvider):
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
         if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes",1)
+            blocksize = self.config["execution"]["block"].get("nodes", 1)
 
         # Set job name
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir,
-                                              job_name)
+        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
         script_path = os.path.abspath(script_path)
 
         job_config = self.get_configs(cmd_string, blocksize)
 
         logger.debug("Writing submit script")
-        ret = self._write_submit_script(template_string, script_path,
-                                        job_name, job_config)
+        self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        channel_script_path = self.channel.push_file(script_path,
-                                                     self.channel.script_dir)
+        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
         cmd = "qsub -terse {0}".format(channel_script_path)
         retcode, stdout, stderr = super().execute_wait(cmd, 10)
 
@@ -166,14 +154,11 @@ class GridEngine(ClusterProvider):
                 job_id = line.strip()
                 if not job_id:
                     continue
-                self.resources[job_id] = {'job_id' : job_id,
-                                          'status' : 'PENDING',
-                                          'blocksize' : blocksize }
+                self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
                 return job_id
         else:
             print("[WARNING!!] Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
-
 
     def _status(self):
         ''' Get the status of a list of jobs identified by the job identifiers
@@ -188,20 +173,19 @@ class GridEngine(ClusterProvider):
 
         '''
 
-        job_id_list  = ','.join(self.resources.keys())
         cmd = "qstat"
 
         retcode, stdout, stderr = super().execute_wait(cmd)
 
         # Execute_wait failed. Do no update
-        if retcode != 0 :
+        if retcode != 0:
             return
 
         jobs_missing = list(self.resources.keys())
         for line in stdout.split('\n'):
             parts = line.split()
             if parts and parts[0].lower().lower() != 'job-id' \
-                    and not parts[0].startswith('----') :
+                    and not parts[0].startswith('----'):
                 job_id = parts[0]
                 status = translate_table.get(parts[4].lower(), 'UNKNOWN')
                 if job_id in self.resources:
@@ -213,7 +197,6 @@ class GridEngine(ClusterProvider):
         for missing_job in jobs_missing:
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
-
 
     def cancel(self, job_ids):
         ''' Cancels the resources identified by the job_ids provided by the user.
@@ -233,7 +216,7 @@ class GridEngine(ClusterProvider):
         retcode, stdout, stderr = super().execute_wait(cmd, 3)
 
         rets = None
-        if retcode == 0 :
+        if retcode == 0:
             for jid in job_ids:
                 self.resources[jid]['status'] = "COMPLETED"
             rets = [True for i in job_ids]

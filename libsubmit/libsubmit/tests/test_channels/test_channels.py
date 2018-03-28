@@ -1,10 +1,7 @@
-import os
-
 from libsubmit.channels.local.local import LocalChannel
-from libsubmit.channels.ssh.ssh import SshChannel
 
 
-def test_local ():
+def test_local():
 
     channel = LocalChannel(None, None)
 
@@ -15,9 +12,6 @@ def test_local ():
     print("Stderr: ", err)
 
 
-
-
-
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
     test_local()

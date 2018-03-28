@@ -20,7 +20,7 @@ queue
 
 '''
 
-# for later, 
+# for later,
 # if we want to remove on preemption, this might work:
 #    PERIODIC_REMOVE = (NumJobstarts > 1)
 # or if the pilot can trap signals, then we can send a special exit code on

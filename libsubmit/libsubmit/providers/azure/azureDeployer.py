@@ -2,11 +2,9 @@
 import json
 import os.path
 
-from azure.common.credentials import (ServicePrincipalCredentials,
-                                      UserPassCredentials)
+from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
-from haikunator import Haikunator
 
 
 class Deployer(object):

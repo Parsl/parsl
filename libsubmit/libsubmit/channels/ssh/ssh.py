@@ -4,12 +4,12 @@ import logging
 import os
 
 import paramiko
-from libsubmit.channels.channel_base import Channel
 from libsubmit.channels.errors import *
 
 logger = logging.getLogger(__name__)
 
-class SshChannel ():
+
+class SshChannel():
     ''' Ssh persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
@@ -19,11 +19,10 @@ class SshChannel ():
 
     '''
 
-    def __repr__ (self):
+    def __repr__(self):
         return "SSH:{0}".format(self.hostname)
 
-    def __init__ (self, hostname, username=None, password=None,
-                  scriptDir=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, scriptDir=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -53,11 +52,13 @@ class SshChannel ():
         else:
             self.channel_script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
 
-        try :
-            self.ssh_client.connect(hostname,
-                                    username=username,
-                                    password=password,
-                                    allow_agent=True)
+        try:
+            self.ssh_client.connect(
+                hostname,
+                username=username,
+                password=password,
+                allow_agent=True
+            )
             t = self.ssh_client.get_transport()
             self.sftp_client = paramiko.SFTPClient.from_transport(t)
 
@@ -72,7 +73,6 @@ class SshChannel ():
 
         except Exception as e:
             raise SSHException(e, self.hostname)
-
 
     @property
     def script_dir(self):
@@ -104,13 +104,12 @@ class SshChannel ():
         '''
 
         # Execute the command
-        stdin, stdout, stderr = self.ssh_client.exec_command(self.prepend_envs(cmd, envs),
-                                                             bufsize=-1,
-                                                             timeout=walltime)
+        stdin, stdout, stderr = self.ssh_client.exec_command(
+            self.prepend_envs(cmd, envs), bufsize=-1, timeout=walltime
+        )
         # Block on exit status from the command
         exit_status = stdout.channel.recv_exit_status()
-        return  exit_status, stdout.read().decode("utf-8"), stderr.read().decode("utf-8")
-
+        return exit_status, stdout.read().decode("utf-8"), stderr.read().decode("utf-8")
 
     def execute_no_wait(self, cmd, walltime=2, envs={}):
         ''' Execute asynchronousely without waiting for exitcode
@@ -130,11 +129,11 @@ class SshChannel ():
         '''
 
         # Execute the command
-        stdin, stdout, stderr = self.ssh_client.exec_command(self.prepend_envs(cmd, envs),
-                                                             bufsize=-1,
-                                                             timeout=walltime)
+        stdin, stdout, stderr = self.ssh_client.exec_command(
+            self.prepend_envs(cmd, envs), bufsize=-1, timeout=walltime
+        )
         # Block on exit status from the command
-        return  None, stdout, stderr
+        return None, stdout, stderr
 
     def push_file(self, local_source, remote_dir):
         ''' Transport a local file to a directory on a remote machine
@@ -152,29 +151,29 @@ class SshChannel ():
             - FileCopyException : FileCopy failed.
 
         '''
-        status = False
         remote_dest = remote_dir + '/' + os.path.basename(local_source)
 
         try:
             self.sftp_client.mkdir(remote_dir)
         except IOError as e:
             if e.errno is None:
-                logger.info("Copying {0} into existing directory {1}".format(local_source, remote_dir))
+                logger.info(
+                    "Copying {0} into existing directory {1}".format(local_source, remote_dir)
+                )
             else:
                 logger.error("Pushing {0} to {1} failed".format(local_source, remote_dir))
                 if e.errno == 2:
                     raise BadScriptPath(e, self.hostname)
                 elif e.errno == 13:
                     raise BadPermsScriptPath(e, self.hostname)
-                else :
+                else:
                     logger.error("File push failed due to SFTP client failure")
                     raise FileCopyException(e, self.hostname)
 
         try:
-            s = self.sftp_client.put(local_source, remote_dest, confirm=True)
+            self.sftp_client.put(local_source, remote_dest, confirm=True)
             # Set perm because some systems require the script to be executable
-            s = self.sftp_client.chmod(remote_dest, 0o777)
-            status = True
+            self.sftp_client.chmod(remote_dest, 0o777)
         except Exception as e:
             logger.error("File push failed")
             raise FileCopyException(e, self.hostname)
@@ -197,14 +196,13 @@ class SshChannel ():
             - FileCopyException : FileCopy failed.
         '''
 
-        status = False
         local_dest = local_dir + '/' + os.path.basename(remote_source)
 
         try:
             os.makedirs(local_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.error("Failed to create scriptDir : {0}".format(scriptDir))
+                logger.error("Failed to create scriptDir: {0}".format(scriptDir))
                 raise BadScriptPath(e, self.hostname)
 
         # Easier to check this than to waste time trying to pull file and
@@ -214,8 +212,7 @@ class SshChannel ():
             raise FileExists(None, self.hostname, filename=local_dest)
 
         try:
-            s = self.sftp_client.get(remote_source, local_dest)
-            status = True
+            self.sftp_client.get(remote_source, local_dest)
         except Exception as e:
             logger.error("File pull failed")
             raise FileCopyException(e, self.hostname)

@@ -1,36 +1,29 @@
 import atexit
-import json
 import logging
-import math
 import os
-import pprint
-import time
-from datetime import datetime, timedelta
-from string import Template
 
-from libsubmit.error import *
 from libsubmit.launchers import Launchers
-from libsubmit.providers.aws.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
 try:
     import xmltodict
-    
+
 except ImportError:
     _ge_enabled = False
 else:
     _ge_enabled = True
 
-translate_table = {'qw': 'PENDING',
-                   't': 'PENDING',
-                   'r': 'RUNNING',
-                   'd': 'COMPLETED',
-                   'dr': 'STOPPING',
-                   'rd': 'COMPLETED',  # We shouldn't really see this state
-                   'c': 'COMPLETED',  # We shouldn't really see this state
-                   }
+translate_table = {
+    'qw': 'PENDING',
+    't': 'PENDING',
+    'r': 'RUNNING',
+    'd': 'COMPLETED',
+    'dr': 'STOPPING',
+    'rd': 'COMPLETED',  # We shouldn't really see this state
+    'c': 'COMPLETED',  # We shouldn't really see this state
+}
 
 
 class GridEngine(ExecutionProvider):
@@ -67,8 +60,7 @@ class GridEngine(ExecutionProvider):
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
-        launcher_name = self.config["execution"]["block"].get("launcher",
-                                                              "singleNode")
+        launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
         self.launcher = Launchers.get(launcher_name, None)
         self.scriptDir = self.config["execution"]["scriptDir"]
         if not os.path.exists(self.scriptDir):
@@ -78,8 +70,7 @@ class GridEngine(ExecutionProvider):
         atexit.register(self.bye)
 
     def __repr__(self):
-        return "<Grid Engine Execution Provider for site:{0} with channel:{1}>".format(
-            self.sitename, self.channel)
+        return "<Grid Engine Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
 
     def create_cmd_string(self, path="/local/cluster/bin/:$PATH", lib_path="/local/cluster/lib/"):
         return """qsub -e /dev/null -o /dev/null -terse << EOF
@@ -121,9 +112,13 @@ EFO
 """.format(cmd_string)
             job_id = os.popen(qsub_pilot).read().strip()
             logger.debug("Provisioned a slot")
-            new_slot = {job_id: {"job_name": job_name,
-                                 "job_id": job_id,
-                                 "status": translate_table.get('qw', "PENDING")}}
+            new_slot = {
+                job_id: {
+                    "job_name": job_name,
+                    "job_id": job_id,
+                    "status": translate_table.get('qw', "PENDING")
+                }
+            }
             self.resources.update(new_slot)
         except Exception as e:
             logger.error("Failed to provision a slot")
@@ -148,7 +143,7 @@ EFO
              - ExecutionProviderExceptions or its subclasses
 
         '''
-        
+
         xml_as_dict = xmltodict.parse(os.popen("qstat -xml").read())
         statuses = []
         j_id = 0
@@ -160,8 +155,8 @@ EFO
                 j_id = job_list["JB_job_number"]
                 if j_id in job_ids:
                     statuses.append(translate_table[status])
-        
-        elif len(all_jobs.items())==1:
+
+        elif len(all_jobs.items()) == 1:
             job_list = all_jobs.get("job_list")
             job_list = [job_list] if type(job_list) != list else job_list
             for job in job_list:
@@ -178,18 +173,13 @@ EFO
                 job_list = []
             for job in job_list:
                 status = job["state"]
-                j_id = job["JB_job_number"]                
+                j_id = job["JB_job_number"]
                 if j_id in job_ids:
                     statuses.append(translate_table[status])
-                
+
         for i in range(len(job_ids) - len(statuses)):
             statuses.append("COMPLETED")
         return statuses
-
-
-
-
-        
 
     def cancel(self, job_ids):
         ''' Cancels the resources identified by the job_ids provided by the user.

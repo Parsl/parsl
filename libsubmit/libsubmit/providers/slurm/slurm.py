@@ -1,28 +1,26 @@
 import logging
-import math
 import os
-import subprocess
 import time
 
-import libsubmit.error as ep_error
-from libsubmit.launchers import Launchers
 from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.providers.slurm.template import template_string
 
 logger = logging.getLogger(__name__)
 
-translate_table = { 'PD' :  'PENDING',
-                    'R'  :  'RUNNING',
-                    'CA' : 'CANCELLED',
-                    'CF' : 'PENDING', #(configuring),
-                    'CG' : 'RUNNING', # (completing),
-                    'CD' : 'COMPLETED',
-                    'F'  : 'FAILED', # (failed),
-                    'TO' : 'TIMEOUT', # (timeout),
-                    'NF' : 'FAILED', # (node failure),
-                    'RV' : 'FAILED', #(revoked) and
-                    'SE' : 'FAILED' } # (special exit state
+translate_table = {
+    'PD': 'PENDING',
+    'R': 'RUNNING',
+    'CA': 'CANCELLED',
+    'CF': 'PENDING',  # (configuring),
+    'CG': 'RUNNING',  # (completing),
+    'CD': 'COMPLETED',
+    'F': 'FAILED',  # (failed),
+    'TO': 'TIMEOUT',  # (timeout),
+    'NF': 'FAILED',  # (node failure),
+    'RV': 'FAILED',  # (revoked) and
+    'SE': 'FAILED'
+}  # (special exit state
+
 
 class Slurm(ClusterProvider):
     ''' Slurm Execution Provider
@@ -103,7 +101,8 @@ class Slurm(ClusterProvider):
             }
          }
     '''
-    def __init__ (self, config, channel=None):
+
+    def __init__(self, config, channel=None):
         ''' Initialize the Slurm class
 
         Args:
@@ -115,10 +114,6 @@ class Slurm(ClusterProvider):
 
         super().__init__(config, channel=channel)
 
-
-    ###########################################################################################################
-    # Status
-    ###########################################################################################################
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
 
@@ -128,19 +123,19 @@ class Slurm(ClusterProvider):
         Returns:
               [status...] : Status list of all jobs
         '''
-        job_id_list  = ','.join(self.resources.keys())
+        job_id_list = ','.join(self.resources.keys())
         cmd = "squeue --job {0}".format(job_id_list)
 
         retcode, stdout, stderr = super().execute_wait(cmd)
 
         # Execute_wait failed. Do no update
-        if retcode != 0 :
+        if retcode != 0:
             return
 
         jobs_missing = list(self.resources.keys())
         for line in stdout.split('\n'):
             parts = line.split()
-            if parts and parts[0] != 'JOBID' :
+            if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
                 status = translate_table.get(parts[4], 'UNKNOWN')
                 self.resources[job_id]['status'] = status
@@ -152,10 +147,7 @@ class Slurm(ClusterProvider):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    ###########################################################################################################
-    # Submit
-    ###########################################################################################################
-    def submit (self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
         ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -187,20 +179,18 @@ class Slurm(ClusterProvider):
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
         if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes",1)
+            blocksize = self.config["execution"]["block"].get("nodes", 1)
 
         # Set job name
-        job_name = "{0}.{1}".format(job_name,time.time())
+        job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir,
-                                              job_name)
+        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
         script_path = os.path.abspath(script_path)
 
         # Calculate nodes
         nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
-                     nodes,
+        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, nodes,
                      self.config["execution"]["block"].get("taskBlocks", 1))
 
         job_config = self.config["execution"]["block"]["options"]
@@ -212,35 +202,27 @@ class Slurm(ClusterProvider):
         job_config["overrides"] = job_config.get("overrides", '')
         job_config["user_script"] = cmd_string
 
-
         # Wrap the cmd_string
-        job_config["user_script"] = self.launcher(cmd_string,
-                                                  taskBlocks=job_config["taskBlocks"])
+        job_config["user_script"] = self.launcher(cmd_string, taskBlocks=job_config["taskBlocks"])
 
         logger.debug("Writing submit script")
-        ret = self._write_submit_script(template_string, script_path, job_name, job_config)
+        self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-
 
         retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(channel_script_path), 10)
 
         job_id = None
-        if retcode == 0 :
+        if retcode == 0:
             for line in stdout.split('\n'):
                 if line.startswith("Submitted batch job"):
                     job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources[job_id] = {'job_id' : job_id,
-                                              'status' : 'PENDING',
-                                              'blocksize'   : blocksize }
+                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
         else:
             print("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 
-    ###########################################################################################################
-    # Cancel
-    ###########################################################################################################
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
 
@@ -254,22 +236,20 @@ class Slurm(ClusterProvider):
         job_id_list = ' '.join(job_ids)
         retcode, stdout, stderr = self.channel.execute_wait("scancel {0}".format(job_id_list), 3)
         rets = None
-        if retcode == 0 :
+        if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['CA'] # Setting state to cancelled
+                self.resources[jid]['status'] = translate_table['CA']  # Setting state to cancelled
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
 
         return rets
 
-
-    def _test_add_resource (self, job_id):
-        self.resources.extend([{'job_id' : job_id,
-                                'status' : 'PENDING',
-                                'size'   : 1 }])
+    def _test_add_resource(self, job_id):
+        self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])
         return True
 
-if __name__ == "__main__" :
+
+if __name__ == "__main__":
 
     print("None")

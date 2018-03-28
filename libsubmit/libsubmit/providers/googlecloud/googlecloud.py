@@ -1,37 +1,31 @@
 import atexit
-import json
 import logging
 import os
-import pprint
-import time
-from datetime import datetime, timedelta
 
-from libsubmit.error import *
 from libsubmit.launchers import Launchers
-from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
 try:
     import googleapiclient.discovery
-    from google.auth import compute_engine
 
 except ImportError:
     _google_enabled = False
 else:
     _google_enabled = True
 
-translate_table = {'PENDING': 'PENDING',
-                   'PROVISIONING': 'PENDING',
-                   "STAGING": "PENDING",
-                   'RUNNING': 'RUNNING',
-                   'DONE': 'COMPLETED',
-                   'STOPPING': 'COMPLETED',
-                   'STOPPED': 'COMPLETED',
-                   'TERMINATED': 'COMPLETED',
-                   'SUSPENDING': 'COMPLETED',
-                   'SUSPENDED': 'COMPLETED',
-                   }
+translate_table = {
+    'PENDING': 'PENDING',
+    'PROVISIONING': 'PENDING',
+    "STAGING": "PENDING",
+    'RUNNING': 'RUNNING',
+    'DONE': 'COMPLETED',
+    'STOPPING': 'COMPLETED',
+    'STOPPED': 'COMPLETED',
+    'TERMINATED': 'COMPLETED',
+    'SUSPENDING': 'COMPLETED',
+    'SUSPENDED': 'COMPLETED',
+}
 
 
 class GoogleCloud():  # ExcecutionProvider):
@@ -63,11 +57,11 @@ class GoogleCloud():  # ExcecutionProvider):
 
         KWargs:
              - Channel (None): A channel is not required for google cloud.
-             
+
         Google compute instances require a few specific configuration options:
-            - auth['keyfile'](string): Path to authorization private key json file. 
-                                       This is required for auth. A new one can be 
-                                       generated here: 
+            - auth['keyfile'](string): Path to authorization private key json file.
+                                       This is required for auth. A new one can be
+                                       generated here:
                                        https://console.cloud.google.com/apis/credentials
             - options['projectID'](string): Project ID from google compute engine
             - options['region'](string): Region in which to start instances
@@ -84,10 +78,8 @@ class GoogleCloud():  # ExcecutionProvider):
         self.client = googleapiclient.discovery.build('compute', version)
         self.channel = None
         self.project_id = self.config["execution"]["block"]["options"]["projectID"]
-        self.zone = self.get_correct_zone(
-            self.config["execution"]["block"]["options"]["region"])
-        launcher_name = self.config["execution"]["block"].get(
-            "launcher", "singleNode")
+        self.zone = self.get_correct_zone(self.config["execution"]["block"]["options"]["region"])
+        launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
         self.launcher = Launchers.get(launcher_name, None)
         self.scriptDir = self.config["execution"].get("scriptDir", ".scripts")
         self.name_int = 0
@@ -100,8 +92,7 @@ class GoogleCloud():  # ExcecutionProvider):
         atexit.register(self.bye)
 
     def __repr__(self):
-        return "<Google Cloud Platform Execution Provider for site:{0}>".format(
-            self.sitename, self.channel)
+        return "<Google Cloud Platform Execution Provider for site:{0}>".format(self.sitename, self.channel)
 
     def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
@@ -122,8 +113,7 @@ class GoogleCloud():  # ExcecutionProvider):
         '''
         instance, name = self.create_instance(cmd_string=cmd_string)
         self.current_blocksize += 1
-        self.resources[name] = {
-            "job_id": name, "status": translate_table[instance['status']]}
+        self.resources[name] = {"job_id": name, "status": translate_table[instance['status']]}
         return name
 
     def status(self, job_ids):
@@ -143,10 +133,8 @@ class GoogleCloud():  # ExcecutionProvider):
         '''
         statuses = []
         for job_id in job_ids:
-            instance = self.client.instances().get(
-                instance=job_id, project=self.project_id, zone=self.zone).execute()
-            self.resources[job_id][
-                'status'] = translate_table[instance['status']]
+            instance = self.client.instances().get(instance=job_id, project=self.project_id, zone=self.zone).execute()
+            self.resources[job_id]['status'] = translate_table[instance['status']]
             statuses.append(translate_table[instance['status']])
         return statuses
 
@@ -212,43 +200,38 @@ class GoogleCloud():  # ExcecutionProvider):
         source_disk_image = image_response['selfLink']
 
         # Configure the machine
-        machine_type = "zones/{}/machineTypes/{}".format(
-            zone, self.options.get("instanceType", "n1-standard-1"))
+        machine_type = "zones/{}/machineTypes/{}".format(zone, self.options.get("instanceType", "n1-standard-1"))
         startup_script = cmd_string
 
         config = {
-            'name': name,
-            'machineType': machine_type,
+            'name':
+            name,
+            'machineType':
+            machine_type,
 
             # Specify the boot disk and the image to use as a source.
-            'disks': [
-                {
-                    'boot': True,
-                    'autoDelete': True,
-                    'initializeParams': {
-                        'sourceImage': source_disk_image,
-                    }
+            'disks': [{
+                'boot': True,
+                'autoDelete': True,
+                'initializeParams': {
+                    'sourceImage': source_disk_image,
                 }
-            ],
-
-   
+            }],
             'networkInterfaces': [{
                 'network': 'global/networks/default',
-                'accessConfigs': [
-                    {'type': 'ONE_TO_ONE_NAT', 'name': 'External NAT'}
-                ]
+                'accessConfigs': [{
+                    'type': 'ONE_TO_ONE_NAT',
+                    'name': 'External NAT'
+                }]
             }],
-
-          
             'serviceAccounts': [{
-                'email': 'default',
+                'email':
+                'default',
                 'scopes': [
                     'https://www.googleapis.com/auth/devstorage.read_write',
                     'https://www.googleapis.com/auth/logging.write'
                 ]
             }],
-
-            
             'metadata': {
                 'items': [{
                     # Startup script is automatically executed by the
@@ -259,10 +242,7 @@ class GoogleCloud():  # ExcecutionProvider):
             }
         }
 
-        return compute.instances().insert(
-            project=project,
-            zone=zone,
-            body=config).execute(), name
+        return compute.instances().insert(project=project, zone=zone, body=config).execute(), name
 
     def get_correct_zone(self, region):
         res = self.client.zones().list(project=self.project_id).execute()
@@ -276,7 +256,4 @@ class GoogleCloud():  # ExcecutionProvider):
         project = self.project_id
         zone = self.zone
 
-        return compute.instances().delete(
-            project=project,
-            zone=zone,
-            instance=name).execute()
+        return compute.instances().delete(project=project, zone=zone, instance=name).execute()

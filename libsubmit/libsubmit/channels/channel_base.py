@@ -84,7 +84,6 @@ class Channel (metaclass=ABCMeta):
         '''
         pass
 
-
     @abstractmethod
     def close(self):
         ''' Closes the channel. Clean out any auth credentials.

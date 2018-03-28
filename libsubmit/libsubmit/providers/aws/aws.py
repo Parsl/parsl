@@ -1,15 +1,10 @@
-import atexit
 import json
 import logging
-import math
 import os
-import pprint
 import time
-from datetime import datetime, timedelta
 from string import Template
 
 from libsubmit.error import *
-from libsubmit.launchers import Launchers
 from libsubmit.providers.aws.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
 
@@ -24,13 +19,14 @@ except ImportError:
 else:
     _boto_enabled = True
 
-translate_table = {'pending': 'PENDING',
-                   'running': 'RUNNING',
-                   'terminated': 'COMPLETED',
-                   'shutting-down': 'COMPLETED',  # (configuring),
-                   'stopping': 'COMPLETED',  # We shouldn't really see this state
-                   'stopped': 'COMPLETED',  # We shouldn't really see this state
-                   }
+translate_table = {
+    'pending': 'PENDING',
+    'running': 'RUNNING',
+    'terminated': 'COMPLETED',
+    'shutting-down': 'COMPLETED',  # (configuring),
+    'stopping': 'COMPLETED',  # We shouldn't really see this state
+    'stopped': 'COMPLETED',  # We shouldn't really see this state
+}
 
 
 class EC2Provider(ExecutionProvider):
@@ -154,8 +150,7 @@ class EC2Provider(ExecutionProvider):
 
         self.channel = channel
         if not _boto_enabled:
-            raise OptionalModuleMissing(
-                ['boto3'], "AWS Provider requires boto3 module.")
+            raise OptionalModuleMissing(['boto3'], "AWS Provider requires boto3 module.")
 
         self.config = config
         self.sitename = config['site']
@@ -169,8 +164,10 @@ class EC2Provider(ExecutionProvider):
         self.image_id = options["imageId"]
         self.key_name = options["keyName"]
         self.region = options.get("region", 'us-east-2')
-        self.max_nodes = (self.config["execution"]["block"].get("maxBlocks", 1) *
-                          self.config["execution"]["block"].get("nodes", 1))
+        self.max_nodes = (
+            self.config["execution"]["block"].get("maxBlocks", 1) *
+            self.config["execution"]["block"].get("nodes", 1)
+        )
 
         self.spot_max_bid = options.get("spotMaxBid", 0)
 
@@ -181,14 +178,14 @@ class EC2Provider(ExecutionProvider):
             raise e
 
         try:
-            self.statefile = self.config["execution"]["block"]["options"].get("stateFile",
-                                                                              '.ec2site_{0}.json'.format(self.sitename))
+            self.statefile = self.config["execution"]["block"]["options"].get(
+                "stateFile", '.ec2site_{0}.json'.format(self.sitename)
+            )
             self.read_state_file(self.statefile)
 
         except Exception as e:
             self.create_vpc().id
-            logger.info(
-                "No State File. Cannot load previous options. Creating new infrastructure")
+            logger.info("No State File. Cannot load previous options. Creating new infrastructure")
             self.write_state_file()
 
     @property
@@ -213,7 +210,7 @@ class EC2Provider(ExecutionProvider):
 
     def read_state_file(self, statefile):
         """If this script has been run previously, it will be persistent
-           by writing resource ids to state file. On run, 
+           by writing resource ids to state file. On run,
            the script looks for a state file
            before creating new infrastructure
 
@@ -233,15 +230,14 @@ class EC2Provider(ExecutionProvider):
             self.sn_ids = state['snIDs']
             self.instances = state['instances']
         except Exception as e:
-            logger.debug(
-                "Caught exception while reading state file: {0}".format(e))
+            logger.debug("Caught exception while reading state file: {0}".format(e))
             raise e
         logger.debug("Done reading state from the local state file")
 
     def write_state_file(self):
         ''' Save information that must persist to a file.
-            We don't want to create a new VPC and new identical 
-            security groups, so we save information about them 
+            We don't want to create a new VPC and new identical
+            security groups, so we save information about them
             in a file between runs
         '''
         fh = open('awsproviderstate.json', 'w')
@@ -284,37 +280,35 @@ class EC2Provider(ExecutionProvider):
                 with open(credfile, 'r') as f:
                     creds = json.load(credfile)
             except json.JSONDecodeError as e:
-                logger.error("Site[{0}]: Json decode error in credential file {1}".format(
-                    self, credfile))
+                logger.error(
+                    "Site[{0}]: Json decode error in credential file {1}".format(self, credfile)
+                )
                 raise e
 
             except Exception as e:
-                logger.debug("Caught exception: {0} while reading credential file: {1}".format(
-                    self, credfile))
+                logger.debug(
+                    "Caught exception: {0} while reading credential file: {1}".format(
+                        self, credfile
+                    )
+                )
                 raise e
 
-            logger.debug(
-                "Site[{0}]: Using credential file to create session".format(self))
-            session = boto3.session.Session(region_name=self.region,
-                                            **creds)
+            logger.debug("Site[{0}]: Using credential file to create session".format(self))
+            session = boto3.session.Session(region_name=self.region, **creds)
 
         elif "profile" in self.config["auth"]:
 
-            logger.debug(
-                "Site[{0}]: Using profile name to create session".format(self))
-            session = boto3.session.Session(profile_name=self.config["auth"]["profile"],
-                                            region_name=self.region)
+            logger.debug("Site[{0}]: Using profile name to create session".format(self))
+            session = boto3.session.Session(
+                profile_name=self.config["auth"]["profile"], region_name=self.region
+            )
 
-        elif (os.getenv("AWS_ACCESS_KEY_ID") is not None
-              and os.getenv("AWS_SECRET_ACCESS_KEY") is not None):
-
-            logger.debug(
-                "Site[{0}]: Using env variables to create session".format(self))
+        elif (os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None):
+            logger.debug("Site[{0}]: Using env variables to create session".format(self))
             session = boto3.session.Session(region_name=self.region)
 
         else:
-            logger.error(
-                "Site[{0}]: Credentials not available to create session".format(self))
+            logger.error("Site[{0}]: Credentials not available to create session".format(self))
             session = boto3.session.Session(region_name=self.region)
             print(session)
 
@@ -365,19 +359,20 @@ class EC2Provider(ExecutionProvider):
 
                 # Create a large subnet (4000 max nodes)
                 subnet = vpc.create_subnet(
-                    CidrBlock='10.0.{}.0/20'.format(16 * num),
-                    AvailabilityZone=zone['ZoneName'])
+                    CidrBlock='10.0.{}.0/20'.format(16 * num), AvailabilityZone=zone['ZoneName']
+                )
 
                 # Make subnet accessible
                 subnet.meta.client.modify_subnet_attribute(
-                    SubnetId=subnet.id, MapPublicIpOnLaunch={"Value": True})
+                    SubnetId=subnet.id, MapPublicIpOnLaunch={"Value": True}
+                )
 
                 route_table.associate_with_subnet(SubnetId=subnet.id)
                 self.sn_ids.append(subnet.id)
             else:
                 logger.info("{} unavailable".format(zone['ZoneName']))
         # Security groups
-        sg = self.security_group(vpc)
+        self.security_group(vpc)
         self.vpc_id = vpc.id
         return vpc
 
@@ -394,48 +389,56 @@ class EC2Provider(ExecutionProvider):
         '''
 
         sg = vpc.create_security_group(
-            GroupName="private-subnet",
-            Description="security group for remote executors")
+            GroupName="private-subnet", Description="security group for remote executors"
+        )
 
-        ip_ranges = [{
-            'CidrIp': '172.32.0.0/16'
-        }]
+        ip_ranges = [{'CidrIp': '172.32.0.0/16'}]
 
         # Allows all ICMP in, all TCP and UDP in within VPC
 
-        inPerms = [{
-            'IpProtocol': 'TCP',
-            'FromPort': 0,
-            'ToPort': 65535,
-            'IpRanges': ip_ranges,
-        }, {
-            'IpProtocol': 'UDP',
-            'FromPort': 0,
-            'ToPort': 65535,
-            'IpRanges': ip_ranges,
-        }, {
-            'IpProtocol': 'ICMP',
-            'FromPort': -1,
-            'ToPort': -1,
-            'IpRanges': [{'CidrIp': '0.0.0.0/0'}],
-        }]
+        inPerms = [
+            {
+                'IpProtocol': 'TCP',
+                'FromPort': 0,
+                'ToPort': 65535,
+                'IpRanges': ip_ranges,
+            }, {
+                'IpProtocol': 'UDP',
+                'FromPort': 0,
+                'ToPort': 65535,
+                'IpRanges': ip_ranges,
+            }, {
+                'IpProtocol': 'ICMP',
+                'FromPort': -1,
+                'ToPort': -1,
+                'IpRanges': [{
+                    'CidrIp': '0.0.0.0/0'
+                }],
+            }
+        ]
         # Allows all TCP out, all TCP and UDP out within VPC
-        outPerms = [{
-            'IpProtocol': 'TCP',
-            'FromPort': 0,
-            'ToPort': 65535,
-            'IpRanges': [{'CidrIp': '0.0.0.0/0'}],
-        }, {
-            'IpProtocol': 'TCP',
-            'FromPort': 0,
-            'ToPort': 65535,
-            'IpRanges': ip_ranges,
-        }, {
-            'IpProtocol': 'UDP',
-            'FromPort': 0,
-            'ToPort': 65535,
-            'IpRanges': ip_ranges,
-        }, ]
+        outPerms = [
+            {
+                'IpProtocol': 'TCP',
+                'FromPort': 0,
+                'ToPort': 65535,
+                'IpRanges': [{
+                    'CidrIp': '0.0.0.0/0'
+                }],
+            },
+            {
+                'IpProtocol': 'TCP',
+                'FromPort': 0,
+                'ToPort': 65535,
+                'IpRanges': ip_ranges,
+            },
+            {
+                'IpProtocol': 'UDP',
+                'FromPort': 0,
+                'ToPort': 65535,
+                'IpRanges': ip_ranges,
+            },
+        ]
 
         sg.authorize_ingress(IpPermissions=inPerms)
         sg.authorize_egress(IpPermissions=outPerms)
@@ -445,15 +448,15 @@ class EC2Provider(ExecutionProvider):
     def config_route_table(self, vpc, internet_gateway):
         ''' Configure route table for vpc
         Args:
-            :param vpc (dict): dictionary representing the vpc 
+            :param vpc (dict): dictionary representing the vpc
                                 created by create_vpc()
             :param internet_gateway (dict): dictionary representing igw
-                                             created by create_vpc() 
+                                             created by create_vpc()
         '''
         route_table = vpc.create_route_table()
-        route_ig_ipv4 = route_table.create_route(
-            DestinationCidrBlock='0.0.0.0/0',
-            GatewayId=internet_gateway.internet_gateway_id)
+        route_table.create_route(
+            DestinationCidrBlock='0.0.0.0/0', GatewayId=internet_gateway.internet_gateway_id
+        )
         return route_table
 
     def xstr(self, s):
@@ -470,45 +473,43 @@ class EC2Provider(ExecutionProvider):
 
         '''
 
-        escaped_command = self.xstr(cmd_string)
-        command = Template(template_string).substitute(jobname=job_name,
-                                                       user_script=cmd_string)
+        command = Template(template_string).substitute(jobname=job_name, user_script=cmd_string)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
         ami_id = self.image_id
         total_instances = len(self.instances)
 
         if float(self.spot_max_bid) > 0:
-            spot_options = {'MarketType': 'spot',
-                            'SpotOptions': {
-                                'MaxPrice': str(self.spot_max_bid),
-                                'SpotInstanceType': 'one-time',
-                                'InstanceInterruptionBehavior': 'terminate'
-                            }
-                            }
+            spot_options = {
+                'MarketType': 'spot',
+                'SpotOptions': {
+                    'MaxPrice': str(self.spot_max_bid),
+                    'SpotInstanceType': 'one-time',
+                    'InstanceInterruptionBehavior': 'terminate'
+                }
+            }
         else:
             spot_options = {}
 
         if total_instances > self.max_nodes:
-            logger.warn(
-                "Exceeded instance limit ({}). Cannot Continue\n".format(self.max_nodes))
+            logger.warn("Exceeded instance limit ({}). Cannot Continue\n".format(self.max_nodes))
             return [None]
         try:
-            tag_spec = [{"ResourceType": "instance",
-                         "Tags": [{'Key': 'Name',
-                                   'Value': job_name}]}]
+            tag_spec = [{"ResourceType": "instance", "Tags": [{'Key': 'Name', 'Value': job_name}]}]
 
-            instance = self.ec2.create_instances(MinCount=1,
-                                                 MaxCount=1,
-                                                 InstanceType=instance_type,
-                                                 ImageId=ami_id,
-                                                 KeyName=self.key_name,
-                                                 SubnetId=subnet,
-                                                 SecurityGroupIds=[self.sg_id],
-                                                 TagSpecifications=tag_spec,
-                                                 InstanceMarketOptions=spot_options,
-                                                 InstanceInitiatedShutdownBehavior='terminate',
-                                                 UserData=command)
+            instance = self.ec2.create_instances(
+                MinCount=1,
+                MaxCount=1,
+                InstanceType=instance_type,
+                ImageId=ami_id,
+                KeyName=self.key_name,
+                SubnetId=subnet,
+                SecurityGroupIds=[self.sg_id],
+                TagSpecifications=tag_spec,
+                InstanceMarketOptions=spot_options,
+                InstanceInitiatedShutdownBehavior='terminate',
+                UserData=command
+            )
         except ClientError as e:
             print(e)
             logger.error(e.response)
@@ -519,8 +520,9 @@ class EC2Provider(ExecutionProvider):
             return [None]
 
         self.instances.append(instance[0].id)
-        logger.info("Started up 1 instance {} . Instance type:{}".format(
-            instance[0].id, instance_type))
+        logger.info(
+            "Started up 1 instance {} . Instance type:{}".format(instance[0].id, instance_type)
+        )
         return instance
 
     def shut_down_instance(self, instances=None):
@@ -537,8 +539,7 @@ class EC2Provider(ExecutionProvider):
             except Exception as e:
                 print(e)
             term = self.client.terminate_instances(InstanceIds=instances)
-            logger.info("Shut down {} instances (ids:{}".format(
-                len(instances), str(instances)))
+            logger.info("Shut down {} instances (ids:{}".format(len(instances), str(instances)))
         elif len(self.instances) > 0:
             instance = self.instances.pop()
             term = self.client.terminate_instances(InstanceIds=[instance])
@@ -559,8 +560,7 @@ class EC2Provider(ExecutionProvider):
         # pprint.pprint(desc['Reservations'],indent=4)
         for i in range(len(desc['Reservations'])):
             instance = desc['Reservations'][i]['Instances'][0]
-            self.instance_states[instance['InstanceId']
-                                 ] = instance['State']['Name']
+            self.instance_states[instance['InstanceId']] = instance['State']['Name']
         return self.instance_states
 
     def ipyparallel_configuration(self):
@@ -570,13 +570,11 @@ class EC2Provider(ExecutionProvider):
                 config = f.read().strip()
         except Exception as e:
             logger.error(e)
-            logger.info(
-                "Couldn't find user iPyParallel config file. Trying default location.")
+            logger.info("Couldn't find user iPyParallel config file. Trying default location.")
             with open(os.path.expanduser("~/.ipython/profile_default/security/ipcontroller-engine.json")) as f:
                 config = f.read().strip()
         else:
-            logger.error(
-                "Cannot find iPyParallel config file. Cannot proceed.")
+            logger.error("Cannot find iPyParallel config file. Cannot proceed.")
             return -1
         ipptemplate = """
 cat <<EOF > ipengine.json
@@ -589,9 +587,6 @@ ipengine --file=ipengine.json &> ipengine.log &
 ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return ipptemplate
 
-    #######################################################
-    # Status
-    #######################################################
     def status(self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
 
@@ -608,8 +603,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
                 if job_id in self.resources:
                     self.ec2.Instance(job_id)
                     print("State: ", self.resources[job_id]["instance"].state)
-                    print("Reason: ",
-                          self.resources[job_id]["instance"].state_reason)
+                    print("Reason: ", self.resources[job_id]["instance"].state_reason)
                     # self.resources[job_id]["instance"].update()
                     s = self.resources[job_id]["instance"].state['Name']
                     state_string = translate_table.get(s, 'UNKNOWN')
@@ -617,15 +611,11 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
 
             except Exception as e:
                 logger.warn('Caught exception: {0}'.format(e))
-                logger.warn(
-                    'Could not get state of instance: {0}'.format(job_id))
+                logger.warn('Could not get state of instance: {0}'.format(job_id))
                 all_states.extend(['UNKNOWN'])
 
         return all_states
 
-    ########################################################
-    # Submit
-    ########################################################
     def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
         '''Submits the cmd_string onto a freshly instantiated AWS EC2 instance.
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -644,8 +634,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         '''
 
         job_name = "parsl.auto.{0}".format(time.time())
-        [instance, *rest] = self.spin_up_instance(cmd_string=cmd_string,
-                                                  job_name=job_name)
+        [instance, *rest] = self.spin_up_instance(cmd_string=cmd_string, job_name=job_name)
 
         if not instance:
             logger.error("Failed to submit request to EC2")
@@ -655,15 +644,14 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
 
         state = translate_table.get(instance.state['Name'], "PENDING")
 
-        self.resources[instance.instance_id] = {"job_id": instance.instance_id,
-                                                "instance": instance,
-                                                "status": state}
+        self.resources[instance.instance_id] = {
+            "job_id": instance.instance_id,
+            "instance": instance,
+            "status": state
+        }
 
         return instance.instance_id
 
-    ########################################################
-    # Cancel
-    ########################################################
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
 
@@ -675,10 +663,9 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         '''
 
         try:
-            status = self.client.terminate_instances(InstanceIds=list(job_ids))
+            self.client.terminate_instances(InstanceIds=list(job_ids))
         except Exception as e:
-            logger.error(
-                "Caught error while attempting to remove instances: {0}".format(job_ids))
+            logger.error("Caught error while attempting to remove instances: {0}".format(job_ids))
             raise e
         else:
             logger.debug("Removed the instances: {0}".format(job_ids))
@@ -697,16 +684,15 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         """
         self.get_instance_state()
         status_string = "EC2 Summary:\n\tVPC IDs: {}\n\tSubnet IDs: \
-{}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n".format(
-            self.vpc_id,
-            self.sn_ids,
-            self.sg_id,
-            self.instances)
+{}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n"                                                          .format(
+            self.vpc_id, self.sn_ids, self.sg_id, self.instances
+        )
         status_string += "\tInstance States:\n\t\t"
         self.get_instance_state()
         for state in self.instance_states.keys():
             status_string += "Instance ID: {}  State: {}\n\t\t".format(
-                state, self.instance_states[state])
+                state, self.instance_states[state]
+            )
         status_string += "\n"
         logger.info(status_string)
         return status_string
@@ -720,8 +706,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         self.shut_down_instance(self.instances)
         self.instances = []
         try:
-            self.client.delete_internet_gateway(
-                InternetGatewayId=self.internet_gateway)
+            self.client.delete_internet_gateway(InternetGatewayId=self.internet_gateway)
             self.internet_gateway = None
             self.client.delete_route_table(RouteTableId=self.route_table)
             self.route_table = None
