@@ -158,7 +158,6 @@ sleep infinity
             logger.info("Launching IPP with Docker:{0}".format(self.container_image))
 
         self.launch_cmd = command_composer(self.engine_file, engine_dir, self.container_image)
-        logger.debug("Launch cmd : {}".format(self.launch_cmd))
         self.execution_provider = execution_provider
         self.engines = []
 
