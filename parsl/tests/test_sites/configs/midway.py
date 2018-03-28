@@ -26,7 +26,8 @@ singleNode = {
          }
          }
     ],
-    "globals": {"lazyErrors": True}
+    "globals": {"lazyErrors": True},
+    "controller": {"publicIp": os.environ.get('PUBLIC_IP', None)}
 }
 
 multiCore = {
