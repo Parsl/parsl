@@ -84,7 +84,7 @@ class Deployer(object):
         that's where the decorator comes in
         this will return all the data about the virtual machine
         '''
-        return compute_client.virtual_machines.get(
+        return self.client.virtual_machines.get(
             resource_group_name, vm_name, expand='instanceView')
 
     def get_vm_status(self, vm_name, rgn):
