@@ -95,9 +95,9 @@ class Local(ExecutionProvider):
 
         if channel is None:
             if channel_script_dir is None:
-                self.channel = LocalChannel(scriptDir=channel_script_dir)
-            else:
                 self.channel = LocalChannel()
+            else:
+                self.channel = LocalChannel(scriptDir=channel_script_dir)
         else:
             self.channel = channel
         self.config = config
