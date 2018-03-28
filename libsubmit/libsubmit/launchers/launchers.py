@@ -1,5 +1,4 @@
-
-def singleNodeLauncher (cmd_string, taskBlocks, walltime=None):
+def singleNodeLauncher(cmd_string, taskBlocks, walltime=None):
     ''' Worker launcher that wraps the user's cmd_string with the framework to
     launch multiple cmd_string invocations in parallel. This wrapper sets the
     bash env variable CORES to the number of cores on the machine. By setting
@@ -33,7 +32,7 @@ echo "All workers done"
     return x
 
 
-def srunLauncher (cmd_string, taskBlocks, walltime=None):
+def srunLauncher(cmd_string, taskBlocks, walltime=None):
     ''' Worker launcher that wraps the user's cmd_string with the SRUN launch framework
     to launch multiple cmd invocations in parallel on a single job allocation.
 
@@ -65,7 +64,8 @@ echo "Done"
 '''.format(cmd_string, taskBlocks)
     return x
 
-def srunMpiLauncher (cmd_string, taskBlocks, walltime=None):
+
+def srunMpiLauncher(cmd_string, taskBlocks, walltime=None):
     ''' Worker launcher that wraps the user's cmd_string with the SRUN launch framework
     to launch multiple cmd invocations in parallel on a single job allocation.
 
@@ -118,7 +118,8 @@ echo "Done"
 '''.format(cmd_string, taskBlocks)
     return x
 
-def aprunLauncher (cmd_string, taskBlocks, walltime=None):
+
+def aprunLauncher(cmd_string, taskBlocks, walltime=None):
     ''' Worker launcher that wraps the user's cmd_string with the Aprun launch framework
     to launch multiple cmd invocations in parallel on a single job allocation.
 
