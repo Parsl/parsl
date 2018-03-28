@@ -16,4 +16,4 @@ def wtime_to_minutes(time_string):
 
     '''
     hours, mins, seconds = time_string.split(':')
-    return int(hours)*60 + int(mins) + 1
+    return int(hours) * 60 + int(mins) + 1

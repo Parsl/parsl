@@ -1,5 +1,7 @@
 ''' Exceptions raise by Apps.
 '''
+
+
 class ChannelError(Exception):
     """ Base class for all exceptions
 
@@ -28,6 +30,7 @@ class BadHostKeyException(ChannelError):
         self.hostname = hostname
         self.e = e
 
+
 class BadScriptPath(ChannelError):
     ''' An error raised during execution of an app.
     What this exception contains depends entirely on context
@@ -43,6 +46,7 @@ class BadScriptPath(ChannelError):
         self.hostname = hostname
         self.e = e
 
+
 class BadPermsScriptPath(ChannelError):
     ''' User does not have permissions to access the script_dir on the remote site
 
@@ -57,6 +61,7 @@ class BadPermsScriptPath(ChannelError):
         self.reason = "User does not have permissions to access the script_dir"
         self.hostname = hostname
         self.e = e
+
 
 class FileExists(ChannelError):
     ''' Push or pull of file over channel fails since a file of the name already
@@ -90,6 +95,7 @@ class AuthException(ChannelError):
         self.hostname = hostname
         self.e = e
 
+
 class SSHException(ChannelError):
     ''' if there was any other error connecting or establishing an SSH session
 
@@ -99,11 +105,12 @@ class SSHException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self,e, hostname):
+    def __init__(self, e, hostname):
         super().__init__()
         self.reason = "Error connecting or establishing an SSH session"
         self.hostname = hostname
         self.e = e
+
 
 class FileCopyException(ChannelError):
     ''' File copy operation failed

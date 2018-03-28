@@ -1,5 +1,6 @@
 from libsubmit.channels.ssh.ssh import SshChannel as Ssh
 
+
 def connect_and_list(hostname, username):
     conn = Ssh(hostname, username=username)
     ec, out, err = conn.execute_wait("echo $HOSTNAME")
@@ -7,7 +8,7 @@ def connect_and_list(hostname, username):
     return out
 
 
-def test_midway ():
+def test_midway():
     ''' Test ssh channels to midway
     '''
     url = 'midway.rcc.uchicago.edu'
@@ -15,7 +16,8 @@ def test_midway ():
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
-def test_beagle ():
+
+def test_beagle():
     ''' Test ssh channels to beagle
     '''
     url = 'login04.beagle.ci.uchicago.edu'
@@ -23,7 +25,8 @@ def test_beagle ():
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
-def test_osg ():
+
+def test_osg():
     ''' Test ssh connectivity to osg
     '''
     url = 'login.osgconnect.net'
@@ -32,8 +35,7 @@ def test_osg ():
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
 
-
-def test_cori ():
+def test_cori():
     ''' Test ssh connectivity to cori
     '''
     url = 'cori.nersc.gov'
@@ -41,7 +43,6 @@ def test_cori ():
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
-    
 
 if __name__ == "__main__":
 

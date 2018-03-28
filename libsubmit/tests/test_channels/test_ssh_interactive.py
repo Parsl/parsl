@@ -1,6 +1,7 @@
 import libsubmit
 from libsubmit.channels.ssh_il.ssh_il import SshILChannel as Ssh
 
+
 def connect_and_list(hostname, username):
     conn = Ssh(hostname, username=username)
     ec, out, err = conn.execute_wait("echo $HOSTNAME")
@@ -8,7 +9,7 @@ def connect_and_list(hostname, username):
     return out
 
 
-def test_cooley ():
+def test_cooley():
     ''' Test ssh channels to midway
     '''
     url = 'cooley.alcf.anl.gov'
@@ -16,6 +17,7 @@ def test_cooley ():
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
     return
+
 
 if __name__ == "__main__":
     libsubmit.set_stream_logger()

@@ -1,15 +1,13 @@
-import os
-import logging
-import paramiko
 import getpass
+import logging
 
+import paramiko
 from libsubmit.channels.ssh.ssh import SshChannel
-from libsubmit.channels.channel_base import Channel
-from libsubmit.channels.errors import *
 
 logger = logging.getLogger(__name__)
 
-class SshILChannel (SshChannel):
+
+class SshILChannel(SshChannel):
     ''' Ssh persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
@@ -19,8 +17,7 @@ class SshILChannel (SshChannel):
 
     '''
 
-    def __init__ (self, hostname, username=None, password=None,
-                  scriptDir=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, scriptDir=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -50,16 +47,14 @@ class SshILChannel (SshChannel):
         else:
             self.channel_script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
 
-        try :
-            self.ssh_client.connect(hostname,
-                                    username=username,
-                                    password=password,
-                                    allow_agent=True)
+        try:
+            self.ssh_client.connect(
+                hostname, username=username, password=password, allow_agent=True
+            )
 
         except Exception as e:
             logger.debug("Caught the SSHException in SshInteractive")
             pass
-
         '''
         except paramiko.BadHostKeyException as e:
             raise BadHostKeyException(e, self.hostname)
@@ -81,4 +76,3 @@ class SshILChannel (SshChannel):
         transport.auth_password(username, il_password)
 
         self.sftp_client = paramiko.SFTPClient.from_transport(transport)
-

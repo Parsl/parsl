@@ -9,7 +9,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 from libsubmit.version import VERSION
-from libsubmit.error import *
 from libsubmit.providers.slurm.slurm import Slurm
 from libsubmit.providers.aws.aws import EC2Provider
 from libsubmit.providers.googlecloud.googlecloud import GoogleCloud

@@ -1,8 +1,8 @@
 """A deployer class to deploy a template on Azure"""
-import os.path
 import json
-from haikunator import Haikunator
-from azure.common.credentials import ServicePrincipalCredentials, UserPassCredentials
+import os.path
+
+from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.resource.resources.models import DeploymentMode
 
@@ -84,7 +84,7 @@ class Deployer(object):
         that's where the decorator comes in
         this will return all the data about the virtual machine
         '''
-        return compute_client.virtual_machines.get(
+        return self.client.virtual_machines.get(
             resource_group_name, vm_name, expand='instanceView')
 
     def get_vm_status(self, vm_name, rgn):
@@ -97,5 +97,4 @@ class Deployer(object):
         '''
         rgn = rgn if rgn else self.resource_group
         return self.client.virtual_machines.get(
-            resource_group_name,
-            vm_name).instance_view.statuses[1].display_status
+            rgn, vm_name).instance_view.statuses[1].display_status

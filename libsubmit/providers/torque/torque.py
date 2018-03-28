@@ -1,24 +1,25 @@
-import os
 import logging
-import subprocess
-import math
+import os
 import time
 from string import Template
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.providers.torque.template import template_string
 
 import libsubmit.error as ep_error
+from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.providers.torque.template import template_string
 
 logger = logging.getLogger(__name__)
 
 # From the man pages for qstat for PBS/Torque systems
-translate_table = { 'R'  :  'RUNNING',
-                    'C'  : 'COMPLETED', # Completed after having run
-                    'E'  : 'COMPLETED', # Exiting after having run
-                    'H'  : 'HELD', # Held
-                    'Q'  : 'PENDING', # Queued, and eligible to run
-                    'W'  : 'PENDING', # Job is waiting for it's execution time (-a option) to be reached
-                    'S'  : 'HELD' } # Suspended
+translate_table = {
+    'R': 'RUNNING',
+    'C': 'COMPLETED',  # Completed after having run
+    'E': 'COMPLETED',  # Exiting after having run
+    'H': 'HELD',  # Held
+    'Q': 'PENDING',  # Queued, and eligible to run
+    'W': 'PENDING',  # Job is waiting for it's execution time (-a option) to be reached
+    'S': 'HELD'
+}  # Suspended
+
 
 class Torque(ExecutionProvider):
     ''' Torque Execution Provider
@@ -105,10 +106,10 @@ class Torque(ExecutionProvider):
 
     '''
 
-    def __repr__ (self):
+    def __repr__(self):
         return "<Torque Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
 
-    def __init__ (self, config, channel=None):
+    def __init__(self, config, channel=None):
         ''' Initialize the Torque class
 
         Args:
@@ -119,10 +120,9 @@ class Torque(ExecutionProvider):
         '''
 
         self.channel = channel
-        if self.channel == None:
+        if self.channel is None:
             logger.error("Provider:Torque cannot be initialized without a channel")
-            raise(ep_error.ChannelRequired(self.__class__.__name__,
-                                           "Missing a channel to execute commands"))
+            raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
@@ -140,9 +140,6 @@ class Torque(ExecutionProvider):
         '''
         return True
 
-    ###########################################################################################################
-    # Status
-    ###########################################################################################################
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
 
@@ -153,7 +150,7 @@ class Torque(ExecutionProvider):
               [status...] : Status list of all jobs
         '''
 
-        job_id_list  = ' '.join(self.resources.keys())
+        job_id_list = ' '.join(self.resources.keys())
 
         jobs_missing = list(self.resources.keys())
 
@@ -174,7 +171,7 @@ class Torque(ExecutionProvider):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = translate_table['E']
 
-    def status (self, job_ids):
+    def status(self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
 
         Args:
@@ -187,10 +184,6 @@ class Torque(ExecutionProvider):
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
-
-    ###########################################################################################################
-    # Submit
-    ###########################################################################################################
     def _write_submit_script(self, template_string, script_filename, job_name, configs):
         '''
         Load the template string with config values and write the generated submit script to
@@ -211,21 +204,21 @@ class Torque(ExecutionProvider):
         '''
 
         try:
-            submit_script = Template(template_string).substitute( jobname=job_name, **configs)
+            submit_script = Template(template_string).substitute(jobname=job_name, **configs)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            raise (ep_error.SchedulerMissingArgs(e.args, self.sitename))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
-            raise(ep_error.ScriptPathError(script_filename, e))
+            raise (ep_error.ScriptPathError(script_filename, e))
 
         return True
 
-    def submit (self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
         ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -257,20 +250,18 @@ class Torque(ExecutionProvider):
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
         if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes",1)
+            blocksize = self.config["execution"]["block"].get("nodes", 1)
 
         # Set job name
-        job_name = "parsl.{0}.{1}".format(job_name,time.time())
+        job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir,
-                                              job_name)
+        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
         script_path = os.path.abspath(script_path)
 
         # Calculate nodes
         nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
-                     nodes,
+        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, nodes,
                      self.config["execution"]["block"].get("taskBlocks", 1))
 
         job_config = self.config["execution"]["block"]["options"]
@@ -285,35 +276,30 @@ class Torque(ExecutionProvider):
         job_config["user_script"] = cmd_string
 
         logger.debug("Writing submit script")
-        ret = self._write_submit_script(template_string, script_path, job_name, job_config)
+        self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         submit_options = ''
-        if job_config["queue"] :
+        if job_config["queue"]:
             submit_options = '{0} -q {1}'.format(submit_options, job_config["queue"])
-        if job_config["account"] :
+        if job_config["account"]:
             submit_options = '{0} -A {1}'.format(submit_options, job_config["account"])
 
         launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
         retcode, stdout, stderr = self.channel.execute_wait(launch_cmd, 3)
 
         job_id = None
-        if retcode == 0 :
+        if retcode == 0:
             for line in stdout.split('\n'):
-                if line.strip() :
+                if line.strip():
                     job_id = line.strip()
-                    self.resources[job_id] = {'job_id' : job_id,
-                                              'status' : 'PENDING',
-                                              'blocksize' : blocksize }
+                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
         else:
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         return job_id
 
-    ###########################################################################################################
-    # Cancel
-    ###########################################################################################################
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
 
@@ -327,9 +313,9 @@ class Torque(ExecutionProvider):
         job_id_list = ' '.join(job_ids)
         retcode, stdout, stderr = self.channel.execute_wait("qdel {0}".format(job_id_list), 3)
         rets = None
-        if retcode == 0 :
+        if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['E'] # Setting state to exiting
+                self.resources[jid]['status'] = translate_table['E']  # Setting state to exiting
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
@@ -348,12 +334,11 @@ class Torque(ExecutionProvider):
         '''
         return self.current_blocksize
 
-    def _test_add_resource (self, job_id):
-        self.resources.extend([{'job_id' : job_id,
-                                'status' : 'PENDING',
-                                'size'   : 1 }])
+    def _test_add_resource(self, job_id):
+        self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])
         return True
 
-if __name__ == "__main__" :
+
+if __name__ == "__main__":
 
     print("None")

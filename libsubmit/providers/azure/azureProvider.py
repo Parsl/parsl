@@ -1,11 +1,10 @@
+import logging
 import os
 import pprint
-import json
 import time
-import logging
-import atexit
-from libsubmit.providers.provider_base import ExecutionProvider
+
 from libsubmit.error import *
+from libsubmit.providers.provider_base import ExecutionProvider
 
 try:
     from azure.common.credentials import UserPassCredentials
@@ -16,17 +15,19 @@ except ImportError:
 else:
     _azure_enabled = True
 
-translate_table = {'PD': 'PENDING',
-                   'R': 'RUNNING',
-                   'CA': 'CANCELLED',
-                   'CF': 'PENDING',  # (configuring),
-                   'CG': 'RUNNING',  # (completing),
-                   'CD': 'COMPLETED',
-                   'F': 'FAILED',  # (failed),
-                   'TO': 'TIMEOUT',  # (timeout),
-                   'NF': 'FAILED',  # (node failure),
-                   'RV': 'FAILED',  # (revoked) and
-                   'SE': 'FAILED'}  # (special exit state
+translate_table = {
+    'PD': 'PENDING',
+    'R': 'RUNNING',
+    'CA': 'CANCELLED',
+    'CF': 'PENDING',  # (configuring),
+    'CG': 'RUNNING',  # (completing),
+    'CD': 'COMPLETED',
+    'F': 'FAILED',  # (failed),
+    'TO': 'TIMEOUT',  # (timeout),
+    'NF': 'FAILED',  # (node failure),
+    'RV': 'FAILED',  # (revoked) and
+    'SE': 'FAILED'
+}  # (special exit state
 
 template_string = """
 cd ~
@@ -136,23 +137,16 @@ class AzureProvider(ExecutionProvider):
         self.config_logger()
 
         if not _azure_enabled:
-            raise OptionalModuleMissing(
-                ['azure'], "Azure Provider requires the azure module.")
+            raise OptionalModuleMissing(['azure'], "Azure Provider requires the azure module.")
 
-        credentials = UserPassCredentials(
-            self.config['username'], self.config['pass'])
+        credentials = UserPassCredentials(self.config['username'], self.config['pass'])
         subscription_id = self.config['subscriptionId']
 
-        self.resource_client = ResourceManagementClient(
-            credentials, subscription_id)
-        self.storage_client = StorageManagementClient(credentials,
-                                                      subscription_id)
+        self.resource_client = ResourceManagementClient(credentials, subscription_id)
+        self.storage_client = StorageManagementClient(credentials, subscription_id)
 
         self.resource_group_name = 'my_resource_group'
-        self.deployer = Deployer(
-            subscription_id,
-            self.resource_group_name,
-            self.read_configs(config))
+        self.deployer = Deployer(subscription_id, self.resource_group_name, self.read_configs(config))
 
         self.channel = channel
         self.config = config
@@ -164,13 +158,12 @@ class AzureProvider(ExecutionProvider):
         self.config = config
         options = self.config["execution"]["block"]["options"]
         logger.warn("Options %s", options)
-        self.instance_type = options.get(
-            "azure_template_file", "template.json")
+        self.instance_type = options.get("azure_template_file", "template.json")
         self.image_id = options["imageId"]
         self.key_name = options["keyName"]
         self.region = options.get("region", 'us-east-2')
-        self.max_nodes = (self.config["execution"]["block"].get("maxBlocks", 1) *
-                          self.config["execution"]["block"].get("nodes", 1))
+        self.max_nodes = (
+            self.config["execution"]["block"].get("maxBlocks", 1) * self.config["execution"]["block"].get("nodes", 1))
 
         try:
             self.initialize_boto_client()
@@ -179,17 +172,16 @@ class AzureProvider(ExecutionProvider):
             raise e
 
         try:
-            self.statefile = self.config["execution"]["block"]["options"].get("stateFile",
-                                                                              '.ec2site_{0}.json'.format(self.sitename))
+            self.statefile = self.config["execution"]["block"]["options"].get("stateFile", '.ec2site_{0}.json'.format(
+                self.sitename))
             self.read_state_file(self.statefile)
 
         except Exception as e:
             self.create_vpc().id
-            logger.info(
-                "No State File. Cannot load previous options. Creating new infrastructure")
+            logger.info("No State File. Cannot load previous options. Creating new infrastructure")
             self.write_state_file()
 
-    def __repr__(self)->str:
+    def __repr__(self) -> str:
         return "<Azure Execution Provider for site:{0}>".format(self.sitename)
 
     @property
@@ -208,8 +200,7 @@ class AzureProvider(ExecutionProvider):
                 temp_log.write("Creating new log file.\n")
         fh = logging.FileHandler(self.config['logFile'])
         fh.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
         logger.addHandler(fh)
         self.logger = logger
@@ -226,13 +217,11 @@ class AzureProvider(ExecutionProvider):
                 config = f.read().strip()
         except Exception as e:
             self.logger.error(e)
-            self.logger.info(
-                "Couldn't find user iPyParallel config file. Trying default location.")
+            self.logger.info("Couldn't find user iPyParallel config file. Trying default location.")
             with open(os.path.expanduser("~/.ipython/profile_parallel/security/ipcontroller-engine.json")) as f:
                 config = f.read().strip()
         else:
-            self.logger.error(
-                "Cannot find iPyParallel config file. Cannot proceed.")
+            self.logger.error("Cannot find iPyParallel config file. Cannot proceed.")
             return -1
         ipptemplate = """
 cat <<EOF> ipengine.json
@@ -244,9 +233,6 @@ sleep 5
 ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return ipptemplate
 
-    ########################################################
-    # Submit
-    ########################################################
     def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
         '''Submits the cmd_string onto a freshly instantiated AWS EC2 instance.
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -265,8 +251,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         '''
 
         job_name = "parsl.auto.{0}".format(time.time())
-        [instance, *rest] = self.deployer.deploy(cmd_string=cmd_string,
-                                                 job_name=job_name, blocksize=1)
+        [instance, *rest] = self.deployer.deploy(cmd_string=cmd_string, job_name=job_name, blocksize=1)
 
         if not instance:
             logger.error("Failed to submit request to Azure")
@@ -276,15 +261,10 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
 
         state = translate_table.get(instance.state['Name'], "PENDING")
 
-        self.resources[instance.instance_id] = {"job_id": instance.instance_id,
-                                                "instance": instance,
-                                                "status": state}
+        self.resources[instance.instance_id] = {"job_id": instance.instance_id, "instance": instance, "status": state}
 
         return instance.instance_id
 
-    ########################################################
-    # Status
-    ########################################################
     def status(self):
         '''  Get the status of a list of jobs identified by their ids.
 
@@ -295,16 +275,11 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
             - List of status codes.
         '''
         states = []
-        statuses = self.deployer.get_vm_status(
-            [self.resources.get(job_id) for job_id in job_ids])
+        statuses = self.deployer.get_vm_status([self.resources.get(job_id) for job_id in job_ids])
         for status in statuses:
-            states.append(translate_table.get(
-                status.state['Name'], "PENDING"))
+            states.append(translate_table.get(status.state['Name'], "PENDING"))
         return states
 
-        ########################################################
-        # Cancel
-        ########################################################
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
 
