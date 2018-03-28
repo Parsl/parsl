@@ -9,6 +9,7 @@ from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
+
 class ClusterProvider(ExecutionProvider):
     """ This class defines behavior common to all cluster/supercompute sytle scheduler systems.
 
@@ -30,9 +31,8 @@ class ClusterProvider(ExecutionProvider):
                                 +-------------------
     """
 
-    def __repr__ (self):
-        return "<{0} Execution Provider for site:{0} with channel:{1}>".format(self.__class__,
-                                                                               self.sitename,
+    def __repr__(self):
+        return "<{0} Execution Provider for site:{0} with channel:{1}>".format(self.__class__, self.sitename,
                                                                                self.channel)
 
     def __init__(self, config, channel=None):
@@ -47,15 +47,13 @@ class ClusterProvider(ExecutionProvider):
         self._scaling_enabled = True
         self._channels_required = True
         self.channel = channel
-        if self.channel == None:
+        if self.channel is None:
             logger.error("Provider: Cannot be initialized without a channel")
-            raise(ep_error.ChannelRequired(self.__class__.__name__,
-                                           "Missing a channel to execute commands"))
+            raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
-        launcher_name = self.config["execution"]["block"].get("launcher",
-                                                              "singleNode")
+        launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
         self.launcher = Launchers.get(launcher_name, None)
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
@@ -75,13 +73,12 @@ class ClusterProvider(ExecutionProvider):
     def execute_wait(self, cmd, timeout=10):
         return self.channel.execute_wait(cmd, timeout)
 
-    def get_configs (self, cmd_string, blocksize):
+    def get_configs(self, cmd_string, blocksize):
         ''' Compose a flat dict job_config with all necessary configs
         for writing the submit script
         '''
         nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize,
-                     nodes,
+        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, nodes,
                      self.config["execution"]["block"].get("taskBlocks", 1))
 
         job_config = self.config["execution"]["block"]["options"]
@@ -92,10 +89,8 @@ class ClusterProvider(ExecutionProvider):
         job_config["overrides"] = job_config.get("overrides", '')
         job_config["user_script"] = cmd_string
 
-        job_config["user_script"] = self.launcher(cmd_string,
-                                                  taskBlocks=job_config["taskBlocks"])
+        job_config["user_script"] = self.launcher(cmd_string, taskBlocks=job_config["taskBlocks"])
         return job_config
-
 
     def _write_submit_script(self, template_string, script_filename, job_name, configs):
         '''
@@ -118,23 +113,23 @@ class ClusterProvider(ExecutionProvider):
 
         try:
             submit_script = Template(template_string).substitute(jobname=job_name, **configs)
-            #submit_script = Template(template_string).safe_substitute(jobname=job_name, **configs)
+            # submit_script = Template(template_string).safe_substitute(jobname=job_name, **configs)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            raise (ep_error.SchedulerMissingArgs(e.args, self.sitename))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
-            raise(ep_error.ScriptPathError(script_filename, e))
+            raise (ep_error.ScriptPathError(script_filename, e))
         except Exception as e:
             print("Template : ", template_string)
             print("Args : ", job_name)
             print("Kwargs : ", configs)
-            logger.error("Uncategorized error: %s",e)
-            raise(e)
+            logger.error("Uncategorized error: %s", e)
+            raise (e)
 
         return True
 
@@ -158,10 +153,8 @@ class ClusterProvider(ExecutionProvider):
         '''
         raise NotImplementedError
 
-
     def _status(self):
         raise NotImplementedError
-
 
     def status(self, job_ids):
         ''' Get the status of a list of jobs identified by the job identifiers

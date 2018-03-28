@@ -8,45 +8,48 @@ def connect_and_list(hostname, username):
     conn.close()
     return out
 
-def test_error_1 ( ):
-    try :
+
+def test_error_1():
+    try:
         connect_and_list("bad.url.gov", "ubuntu")
     except Exception as e:
         assert type(e) == SSHException, "Excpected SSException, got :{0}".format(e)
 
 
-def test_error_2 ( ):
-    try :
+def test_error_2():
+    try:
         connect_and_list("swift.rcc.uchicago.edu", "mango")
     except SSHException as e:
         print("Caught the right exception")
-    else :
+    else:
         raise Exception("Expected SSException, got :{0}".format(e))
 
-def test_error_3 ( ):
+
+def test_error_3():
     ''' This should work
     '''
-    try :
+    try:
         connect_and_list("login.mcs.anl.gov", "yadunand")
     except AuthException as e:
-        print("Caught exception : ",e)
+        print("Caught exception : ", e)
     else:
         assert type(e) == BadHostKeyException, "Expected SSException, got :{0}".format(e)
 
-def test_error_3 ( ):
+
+def test_error_3():
     ''' This should work
     '''
-    try :
+    try:
         connect_and_list("edison.nersc.gov", "yadunand")
     except BadHostKeyException as e:
-        print("Caught exception BadHostKeyException: ",e)
+        print("Caught exception BadHostKeyException: ", e)
     else:
         assert False, "Expected SSException, got :{0}".format(e)
 
 
-if __name__ == "__main__" :
+if __name__ == "__main__":
 
-    tests = [ test_error_1, test_error_2, test_error_3 ]
+    tests = [test_error_1, test_error_2, test_error_3]
 
     for test in tests:
         print("---------Running : {0}---------------".format(test))

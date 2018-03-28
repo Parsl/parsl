@@ -1,26 +1,25 @@
 import logging
-import math
 import os
 import re
-import subprocess
 import time
 from string import Template
 
 import libsubmit.error as ep_error
 from libsubmit.exec_utils import wtime_to_minutes
-from libsubmit.launchers import Launchers
 from libsubmit.providers.condor.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
 # See http://pages.cs.wisc.edu/~adesmet/status.html
-translate_table = { '1'  : 'PENDING',
-                    '2'  : 'RUNNING',
-                    '3'  : 'CANCELLED',
-                    '4'  : 'COMPLETED',
-                    '5'  : 'FAILED',
-                    '6'  : 'FAILED', }
+translate_table = {
+    '1': 'PENDING',
+    '2': 'RUNNING',
+    '3': 'CANCELLED',
+    '4': 'COMPLETED',
+    '5': 'FAILED',
+    '6': 'FAILED',
+}
 
 
 class Condor(ExecutionProvider):
@@ -112,13 +111,12 @@ class Condor(ExecutionProvider):
               }
             }
          }
-
     '''
 
-    def __repr__ (self):
+    def __repr__(self):
         return "<Condor Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
 
-    def __init__ (self, config, channel=None):
+    def __init__(self, config, channel=None):
         ''' Initialize the Condor class
 
         Args:
@@ -129,10 +127,9 @@ class Condor(ExecutionProvider):
         '''
 
         self.channel = channel
-        if self.channel == None:
+        if self.channel is None:
             logger.error("Provider:Condor cannot be initialized without a channel")
-            raise(ep_error.ChannelRequired(self.__class__.__name__,
-                                            "Missing a channel to execute commands"))
+            raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
 
         self.config = config
         self.sitename = config['site']
@@ -169,18 +166,16 @@ class Condor(ExecutionProvider):
               [status...] : Status list of all jobs
         '''
 
-        job_id_list  = ' '.join(self.resources.keys())
+        job_id_list = ' '.join(self.resources.keys())
         cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
         retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
-
         '''
-        Example output: 
+        Example output:
 
         $ condor_q 34524642.0 34524643.0 -af:jr JobStatus
         34524642.0 2
         34524643.0 1
         '''
-
 
         for line in stdout.strip().split('\n'):
             parts = line.split()
@@ -188,7 +183,7 @@ class Condor(ExecutionProvider):
             status = translate_table.get(parts[1], 'UNKNOWN')
             self.resources[job_id]['status'] = status
 
-    def status (self, job_ids):
+    def status(self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
 
         Args:
@@ -200,7 +195,6 @@ class Condor(ExecutionProvider):
         '''
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
-
 
     ###########################################################################################################
     # Submit
@@ -225,22 +219,21 @@ class Condor(ExecutionProvider):
 
         # This section needs to be brought upto par with the condor provider.
         try:
-            submit_script = Template(template_string).substitute(jobname=job_name,
-                                                                 **configs)
+            submit_script = Template(template_string).substitute(jobname=job_name, **configs)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            #raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            # raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
-            raise(ep_error.ScriptPathError(script_filename, e))
+            raise (ep_error.ScriptPathError(script_filename, e))
 
         return True
 
-    def submit (self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
         ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
 
         example file with the complex case of multiple submits per job:
@@ -280,20 +273,17 @@ class Condor(ExecutionProvider):
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
         if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes",1)
+            blocksize = self.config["execution"]["block"].get("nodes", 1)
 
         # Set job name
-        job_name = "parsl.{0}.{1}".format(job_name,time.time())
+        job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir,
-                                              job_name)
+        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
         script_path = os.path.abspath(script_path)
         # Set executable script
-        userscript_path = "{0}/{1}.script".format(self.scriptDir,
-                                                  job_name)
+        userscript_path = "{0}/{1}.script".format(self.scriptDir, job_name)
         userscript_path = os.path.abspath(userscript_path)
-
 
         # Calculate nodes
         nodes = self.config["execution"]["block"].get("nodes", 1)
@@ -316,7 +306,7 @@ class Condor(ExecutionProvider):
         job_config["condor_overrides"] = self.config["execution"]["block"]["options"].get("overrides", '')
         job_config["worker_setup"] = self.config["execution"]["block"]["options"].get("workerSetup", '')
         job_config["user_script"] = cmd_string
-        job_config["tasks_per_node"] =  1
+        job_config["tasks_per_node"] = 1
         job_config["requirements"] = self.config["execution"]["block"]["options"].get("requirements", "")
         job_config["environment"] = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
 
@@ -330,17 +320,16 @@ class Condor(ExecutionProvider):
         job_config["job_script"] = os.path.basename(user_script_path)
 
         # Construct and move the submit script
-        ret = self._write_submit_script(template_string, script_path, job_name, job_config)
+        self._write_submit_script(template_string, script_path, job_name, job_config)
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
         retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
-        logger.debug ("Retcode:%s STDOUT:%s STDERR:%s", retcode,
-                      stdout.strip(), stderr.strip())
+        logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         job_id = []
 
-        if retcode == 0 :
+        if retcode == 0:
             for line in stdout.split('\n'):
                 if re.match('^[0-9]', line) is not None:
                     cluster = line.split(" ")[5]
@@ -349,7 +338,7 @@ class Condor(ExecutionProvider):
                     # condor_submit, so we use some list comprehensions to expand
                     # the condor_submit output into job IDs
                     # e.g., ['118907.0', '118907.1', '118907.2', '118907.3', '118907.4', '118908.0']
-                    processes = [str(x) for x in range(0,int(line[0]))]
+                    processes = [str(x) for x in range(0, int(line[0]))]
                     job_id += [cluster + process for process in processes]
 
             self._add_resource(job_id)
@@ -373,7 +362,7 @@ class Condor(ExecutionProvider):
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
         retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
         rets = None
-        if retcode == 0 :
+        if retcode == 0:
             for jid in job_ids:
                 self.resources[jid]['status'] = 'CANCELLED'
             rets = [True for i in job_ids]
@@ -392,12 +381,10 @@ class Condor(ExecutionProvider):
 
     def _add_resource(self, job_id):
         for jid in job_id:
-            self.resources[jid] = {
-                'status': 'PENDING',
-                'size': 1
-            }
+            self.resources[jid] = {'status': 'PENDING', 'size': 1}
         return True
 
-if __name__ == "__main__" :
+
+if __name__ == "__main__":
 
     print("None")

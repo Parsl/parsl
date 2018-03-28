@@ -10,16 +10,16 @@ from libsubmit.channels.errors import *
 
 logger = logging.getLogger(__name__)
 
-class LocalChannel (Channel):
 
+class LocalChannel(Channel):
     ''' This is not even really a channel, since opening a local shell is not heavy
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __repr__ (self):
+    def __repr__(self):
         return "Local:{0}".format(self.hostname)
 
-    def __init__ (self, userhome=".", envs={}, scriptDir="./.scripts", **kwargs):
+    def __init__(self, userhome=".", envs={}, scriptDir="./.scripts", **kwargs):
         ''' Initialize the local channel. scriptDir is required by set to a default.
 
         KwArgs:
@@ -27,14 +27,10 @@ class LocalChannel (Channel):
             - envs (dict) : A dictionary of env variables to be set when launching the shell
             - channel_script_dir (string): (default="./.scripts") Directory to place scripts
         '''
-        import pprint 
-        pp = pprint.PrettyPrinter(indent=4)
-
-
         self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
-        local_env     = os.environ.copy()
-        self.envs     = copy.deepcopy(local_env)
+        local_env = os.environ.copy()
+        self.envs = copy.deepcopy(local_env)
         self.envs.update(envs)
         self.channel_script_dir = os.path.abspath(scriptDir)
         try:
@@ -48,7 +44,7 @@ class LocalChannel (Channel):
     def script_dir(self):
         return self.channel_script_dir
 
-    def execute_wait (self, cmd, walltime, envs={}):
+    def execute_wait(self, cmd, walltime, envs={}):
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
@@ -74,13 +70,15 @@ class LocalChannel (Channel):
         current_env = copy.deepcopy(self.envs)
         current_env.update(envs)
 
-        try :
-            proc = subprocess.Popen(cmd,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    cwd=self.userhome,
-                                    env=current_env,
-                                    shell=True)
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.userhome,
+                env=current_env,
+                shell=True
+            )
             proc.wait(timeout=walltime)
             stdout = proc.stdout.read()
             stderr = proc.stderr.read()
@@ -96,7 +94,7 @@ class LocalChannel (Channel):
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
-    def execute_no_wait (self, cmd, walltime, envs={}):
+    def execute_no_wait(self, cmd, walltime, envs={}):
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
@@ -112,28 +110,26 @@ class LocalChannel (Channel):
         Raises:
          None.
         '''
-        retcode = -1
-        stdout = None
-        stderr = None
-
-        if self.envs :
+        if self.envs:
             current_env = copy.copy(self.envs)
-        else :
+        else:
             current_env = {}
             current_env.update(envs)
 
-        try :
-            proc = subprocess.Popen(cmd,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    cwd=self.userhome,
-                                    env=current_env,
-                                    shell=True)
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.userhome,
+                env=current_env,
+                shell=True
+            )
             pid = proc.pid
 
         except Exception as e:
             print("Caught exception : {0}".format(e))
-            logger.warn("Execution of command [%s] failed due to \n %s ",  (cmd, e))
+            logger.warn("Execution of command [%s] failed due to \n %s ", (cmd, e))
 
         return pid, proc
 
@@ -165,8 +161,7 @@ class LocalChannel (Channel):
 
         return local_dest
 
-
-    def close(self ):
+    def close(self):
         ''' There's nothing to close here, and this really doesn't do anything
 
         Returns:

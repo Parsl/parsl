@@ -1,5 +1,3 @@
-import os
-
 import libsubmit
 from libsubmit.channels.ssh.ssh import SshChannel as Ssh
 
@@ -10,6 +8,7 @@ def connect_and_list(hostname, username):
     conn.close()
     return out
 
+
 def test_push(conn, fname="test001.txt"):
 
     with open(fname, 'w') as f:
@@ -19,6 +18,7 @@ def test_push(conn, fname="test001.txt"):
     ec, out, err = conn.execute_wait("ls /tmp/{0}".format(fname))
     print(ec, out, err)
 
+
 def test_pull(conn, fname="test001.txt"):
 
     local = "foo"
@@ -27,7 +27,8 @@ def test_pull(conn, fname="test001.txt"):
     with open("{0}/{1}".format(local, fname), 'r') as f:
         print(f.readlines())
 
-if __name__ == "__main__" :
+
+if __name__ == "__main__":
 
     libsubmit.set_stream_logger()
 
