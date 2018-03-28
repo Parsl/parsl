@@ -90,7 +90,7 @@ class DataManager(ParslExecutor):
                 if not 'globus' in s['data'] or not 'working_dir' in s['data']:
                     continue
                 globus_ep = data['globus']
-                if not 'endpoint_name' in globus_ep
+                if not 'endpoint_name' in globus_ep:
                     continue
                 working_dir = data['working_dir']
                 endpoint_name = data['globus']['endpoint_name']
