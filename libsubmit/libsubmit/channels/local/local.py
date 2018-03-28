@@ -1,10 +1,11 @@
-from libsubmit.channels.channel_base import Channel
-import subprocess
-import os
-import errno
-import shutil
-import logging
 import copy
+import errno
+import logging
+import os
+import shutil
+import subprocess
+
+from libsubmit.channels.channel_base import Channel
 from libsubmit.channels.errors import *
 
 logger = logging.getLogger(__name__)

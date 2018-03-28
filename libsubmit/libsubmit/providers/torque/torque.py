@@ -1,13 +1,13 @@
-import os
 import logging
-import subprocess
 import math
+import os
+import subprocess
 import time
 from string import Template
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.providers.torque.template import template_string
 
 import libsubmit.error as ep_error
+from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.providers.torque.template import template_string
 
 logger = logging.getLogger(__name__)
 

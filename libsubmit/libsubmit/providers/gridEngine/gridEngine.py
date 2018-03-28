@@ -1,16 +1,17 @@
+import atexit
+import json
+import logging
+import math
 import os
 import pprint
-import math
-import json
 import time
-import logging
-import atexit
 from datetime import datetime, timedelta
 from string import Template
-from libsubmit.providers.gridEngine.template import template_string
-from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.launchers import Launchers
+
 from libsubmit.error import *
+from libsubmit.launchers import Launchers
+from libsubmit.providers.cluster_provider import ClusterProvider
+from libsubmit.providers.gridEngine.template import template_string
 
 logger = logging.getLogger(__name__)
 
@@ -240,5 +241,3 @@ class GridEngine(ClusterProvider):
             rets = [False for i in job_ids]
 
         return rets
-
-

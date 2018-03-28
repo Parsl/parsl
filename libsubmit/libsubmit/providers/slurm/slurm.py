@@ -1,14 +1,14 @@
-import os
 import logging
-import subprocess
 import math
+import os
+import subprocess
 import time
 
+import libsubmit.error as ep_error
+from libsubmit.launchers import Launchers
+from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.providers.slurm.template import template_string
-from libsubmit.launchers import Launchers
-import libsubmit.error as ep_error
-from libsubmit.providers.cluster_provider import ClusterProvider
 
 logger = logging.getLogger(__name__)
 
