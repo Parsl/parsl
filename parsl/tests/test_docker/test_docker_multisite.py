@@ -39,7 +39,7 @@ def test_simple(n=10):
 
     rands = list(range(1, 100))
     app1_rtts = []
-    for i in range(0, 100):
+    for i in range(0, n):
         start = time.time()
         random.shuffle(rands)
         x = app_1(rands[0:3])
@@ -49,7 +49,7 @@ def test_simple(n=10):
 
     rands = list(range(1, 100))
     app2_rtts = []
-    for i in range(0, 100):
+    for i in range(0, n):
         start = time.time()
         random.shuffle(rands)
         x = app_2(rands[0:3])
