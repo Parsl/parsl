@@ -1,14 +1,15 @@
-import os
 import logging
-import subprocess
 import math
-import time
+import os
 import signal
+import subprocess
+import time
 from string import Template
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.launchers import Launchers
-from libsubmit.exec_utils import execute_no_wait
+
 import libsubmit.error as ep_error
+from libsubmit.channels.local.local import LocalChannel
+from libsubmit.launchers import Launchers
+from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
@@ -88,11 +89,26 @@ class Local(ExecutionProvider):
     def __init__ (self, config, channel_script_dir=None, channel=None):
         ''' Initialize the local provider class
 
+        This provider is unique because the `LocalChannel` is simple enough
+        that a default can be provided. For this reason users can pass `channel=None`,
+        and a default `LocalChannel` will be created.
+
         Args:
              - Config (dict): Dictionary with all the config options.
+             - channel_script_dir (str): Script directory which will be
+                   passed to the default `LocalChannel` (this will have
+                   no effect if a `channel` is not None)
+             - channel (Channel): Channel to use; if none is provided, a
+                   default one will be created
         '''
 
-        self.channel = channel
+        if channel is None:
+            if channel_script_dir is None:
+                self.channel = LocalChannel()
+            else:
+                self.channel = LocalChannel(scriptDir=channel_script_dir)
+        else:
+            self.channel = channel
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
@@ -218,7 +234,7 @@ class Local(ExecutionProvider):
 
         ret = self._write_submit_script(wrap_cmd_string, script_path)
 
-        job_id, proc = execute_no_wait('bash {0}'.format(script_path),
+        job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path),
                                        3)
         self.resources[job_id] = {'job_id' : job_id,
                                   'status' : 'RUNNING',
