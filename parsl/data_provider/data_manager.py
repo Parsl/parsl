@@ -96,7 +96,7 @@ class DataManager(ParslExecutor):
                 endpoint_name = data['globus']['endpoint_name']
                 if 'endpoint_path' in globus_ep:
                     endpoint_path = globus_ep['endpoint_path']
-                else
+                else:
                     endpoint_path = working_dir
                 return {'site_name': s['site'],
                         'endpoint_name': endpoint_name,
