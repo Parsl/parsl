@@ -84,10 +84,25 @@ class DataManager(ParslExecutor):
     def _get_globus_site(self, site_name=None):
         for s in self.config['sites']:
             if site_name is None or s['site'] == site_name:
-                if 'data' in s:
-                    if 'globus' in s['data']:
-                        return (s['site'], s['data']['globus'])
-        raise Exception('No site with a Globus endpoint defined')
+                if not 'data' in s:
+                    continue
+                data = s['data']
+                if not 'globus' in s['data'] or not 'working_dir' in s['data']:
+                    continue
+                globus_ep = data['globus']
+                if not 'endpoint_name' in globus_ep
+                    continue
+                working_dir = data['working_dir']
+                endpoint_name = data['globus']['endpoint_name']
+                if 'endpoint_path' in globus_ep:
+                    endpoint_path = globus_ep['endpoint_path']
+                else
+                    endpoint_path = working_dir
+                return {'site_name': s['site'],
+                        'endpoint_name': endpoint_name,
+                        'endpoint_path': endpoint_path,
+                        'working_dir': working_dir}
+        raise Exception('No site with a Globus endpoint and working_dir defined')
 
     def stage_in(self, file, site_name=None):
         """Transport the file from the site of origin to the site.
@@ -106,9 +121,9 @@ class DataManager(ParslExecutor):
         if file.scheme == 'file':
             site_name = None
         elif file.scheme == 'globus':
-            site_name, globus_ep = self._get_globus_site(site_name)
+            globus_ep = self._get_globus_site(site_name)
 
-        df = file.get_data_future(site_name)
+        df = file.get_data_future(globus_ep['site_name'])
         if df:
             return df
 
@@ -120,7 +135,7 @@ class DataManager(ParslExecutor):
         from parsl.app.futures import DataFuture
 
         df = DataFuture(f, file)
-        file.set_data_future(df, site_name)
+        file.set_data_future(df, globus_ep['site_name'])
         return df
 
     def stage_out(self, file, site_name=None):
@@ -142,7 +157,7 @@ class DataManager(ParslExecutor):
             f = self.submit(self._file_transfer_out)
             return f
         if file.scheme == 'globus':
-            site_name, globus_ep = self._get_globus_site(site_name)
+            globus_ep = self._get_globus_site(site_name)
             f = self.submit(self._globus_transfer_out, file, globus_ep)
             return f
 
@@ -151,7 +166,7 @@ class DataManager(ParslExecutor):
 
     def _globus_transfer_in(self, file, globus_ep):
         file.local_path = os.path.join(
-                globus_ep['local_directory'], file.filename)
+                globus_ep['working_dir'], file.filename)
         dst_path = os.path.join(
                 globus_ep['endpoint_path'], file.filename)
         self.globus.transfer_file(
