@@ -91,8 +91,8 @@ specific system. Such cases will be noted explicitly.
    are made. Each of these `appN.py` scripts contain the definition of a ``predict(List)``
    function.
 
-Gluing the piece together
--------------------------
+Gluing the pieces together
+--------------------------
 
 The following diagram illustrates the various components and how the interact with
 each other to act as a fast model serving system.
