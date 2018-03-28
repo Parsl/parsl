@@ -86,10 +86,52 @@ specific system. Such cases will be noted explicitly.
    * ``parsl/docker/app1``
    * ``parsl/docker/app2``
 
-   These container scripts are setup such that, when they have a copy of the application
-   python code copied over to ``/home``, which will be the ``cwd`` when app invocations
+   These container scripts are setup such that, when they are built they copy the application
+   python code over to ``/home``, which will be the ``cwd`` when app invocations
    are made. Each of these `appN.py` scripts contain the definition of a ``predict(List)``
    function.
+
+7. Build the test applications as docker images:
+   We assume you are in the top level of the parsl repository.
+
+   .. code-block:: bash
+
+      # Docker build app1
+      cd docker/app1
+      docker build -t app1_v0.1 .
+
+      # Docker build the next app
+      cd ../app2
+      docker build -t app2_v0.1 .
+
+      # Check the new images:
+      docker images list
+
+8. Update the parsl config for each pool with the appropriate docker images:
+   Here's an example :
+
+   .. code-block:: python
+
+       localDockerIPP = {
+            "sites": [
+                {"site": "Local_IPP",
+                 "auth": {"channel": None},
+                 "execution": {
+                     "executor": "ipp",
+                     "container": {
+                         "type": "docker",     # <----- Specify Docker
+                         "image": "app1_v0.1", # <------Specify docker image
+                     },
+                     "provider": "local",
+                     "block": {
+                         "initBlocks": 2,  # Start with 4 workers
+                     },
+                 }
+                 }],
+            "globals": {"lazyErrors": True}
+        }
+
+
 
 Gluing the pieces together
 --------------------------
@@ -118,6 +160,3 @@ each other to act as a fast model serving system.
    +-------------------+   |    +--------------------------------+
                            |
                            +------------------- -- -
-
-
-
