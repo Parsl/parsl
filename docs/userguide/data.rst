@@ -36,6 +36,11 @@ The `file` scheme refers to local files. Here is an example which runs `cat` on 
 Globus
 ^^^^^^
 
+.. caution::
+   This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
+   We request feedback and feature enhancement requests via `github <https://github.com/Parsl/parsl/issues>`_.
+
+
 The `globus` scheme represents files that can be accessed using the `Globus Transfer Service
 <https://docs.globus.org/how-to/get-started/>`_. A file using the Globus scheme must specify the UUID of the Globus
 endpoint and a path to the file on the endpoint, for example:
