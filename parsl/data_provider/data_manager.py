@@ -92,10 +92,16 @@ class DataManager(ParslExecutor):
                 globus_ep = data['globus']
                 if 'endpoint_name' not in globus_ep:
                     continue
-                working_dir = data['working_dir']
                 endpoint_name = data['globus']['endpoint_name']
-                if 'endpoint_path' in globus_ep:
-                    endpoint_path = globus_ep['endpoint_path']
+                working_dir = os.path.normpath(data['working_dir'])
+                if 'endpoint_path' in globus_ep and 'local_path' in globus_ep:
+                    endpoint_path = os.path.normpath(globus_ep['endpoint_path'])
+                    local_path = os.path.normpath(globus_ep['local_path'])
+                    common_path = os.path.commonpath((local_path, working_dir))
+                    if local_path != common_path:
+                        raise Exception('"local_path" must be equal or an absolute subpath of "working_dir"')
+                    relative_path = os.path.relpath(working_dir, common_path)
+                    endpoint_path = os.path.join(endpoint_path, relative_path)
                 else:
                     endpoint_path = working_dir
                 return {'site_name': s['site'],

@@ -115,9 +115,16 @@ class Globus(object):
         td = globus_sdk.TransferData(tc, src_ep, dst_ep)
         td.add_item(src_path, dst_path)
         task = tc.submit_transfer(td)
-        while not tc.task_wait(task['task_id'], 600, 10):
+        last_event_time = None
+        while not tc.task_wait(task['task_id'], 600, 20):
             task = tc.get_task(task['task_id'])
-            # TO DO: log eventual error events from Globus Transfer
+            events = tc.task_event_list(task['task_id'], num_results=1, filter='is_error:1')
+            for e in events:
+                if e['time'] == last_event_time:
+                    break
+                last_event_time = e['time']
+                log.info('Non-critical Globus Transfer error event: {} at {}'.format(e['description'], e['time']))
+                log.debug('{}'.format(e['details']))
 
         task = tc.get_task(task['task_id'])
         if task['status'] != 'SUCCEEDED':
