@@ -42,7 +42,7 @@ The file may then be passed as input or output to an app. Here is an example Par
 Globus
 ^^^^^^
 
-The `globus` scheme is used to reference files that can be accessed using Globus (a guide to using Globus is avaialble `here
+The `globus` scheme is used to reference files that can be accessed using Globus (a guide to using Globus is available `here
 <https://docs.globus.org/how-to/get-started/>`_). A file using the Globus scheme must specify the UUID of the Globus
 endpoint and a path to the file on the endpoint, for example:
 
