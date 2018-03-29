@@ -59,6 +59,9 @@ class File(object):
     def __repr__(self):
         return self.__str__()
 
+    def __fspath__(self):
+        return self.filepath
+
     @property
     def filepath(self):
         """Returns the resolved filepath on the side where it is called from.
