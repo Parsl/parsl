@@ -1,15 +1,16 @@
 from enum import IntEnum
 
+
 class States(IntEnum):
-    ''' Map states for tasks to an Int
-    '''
-    unsched  = -1
-    pending  = 0
+    """Map states for tasks to an int."""
+    unsched = -1
+    pending = 0
     runnable = 1
-    running  = 2
-    done     = 3
-    failed   = 4
+    running = 2
+    done = 3
+    failed = 4
     dep_fail = 5
+    retry = 6
 
 
 if __name__ == "__main__":

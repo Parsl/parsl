@@ -1,15 +1,14 @@
-""" AppFuture
+"""This module implements the AppFutures.
 
     We have two basic types of futures:
     1. DataFutures which represent data objects
     2. AppFutures which represent the futures on App/Leaf tasks.
-    This module implements the AppFutures
 
 """
 
 from concurrent.futures import Future
 import logging
-from parsl.dataflow.error import *
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +29,17 @@ _STATE_TO_DESCRIPTION_MAP = {
     FINISHED: "finished"
 }
 
+
 class AppFuture(Future):
-    """ An AppFuture points at a Future returned from an Executor
+    """An AppFuture points at a Future returned from an Executor.
 
     We are simply wrapping a AppFuture, and adding the specific case where, if the future
     is resolved i.e file exists, then the DataFuture is assumed to be resolved.
 
-    It is possible that result might be called on the AppFuture before it has even been
-    scheduled. THat is a case we need to cover.
-
     """
+
     def parent_callback(self, executor_fu):
-        ''' Callback from executor future to update the parent.
+        """Callback from executor future to update the parent.
 
         Args:
             - executor_fu (Future): Future returned by the executor along with callback
@@ -50,42 +48,84 @@ class AppFuture(Future):
             - None
 
         Updates the super() with the result() or exception()
-        '''
+        """
+        # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
+        if executor_fu.done() is True:
+            try:
+                super().set_result(executor_fu.result())
+            except Exception as e:
+                super().set_exception(e)
 
-        if executor_fu.done() == True:
-            super().set_result(executor_fu.result())
+    def __init__(self, parent, tid=None, stdout=None, stderr=None):
+        """Initialize the AppFuture.
 
-        e = executor_fu.exception()
-        if e:
-            super().set_exception(e)
+        Args:
+             - parent (Future) : The parent future if one exists
+               A default value of None should be passed in if app is not launched
 
-
-    def __init__ (self, parent):
+        KWargs:
+             - tid (Int) : Task id should be any unique identifier. Now Int.
+             - stdout (str) : Stdout file of the app.
+                   Default: None
+             - stderr (str) : Stderr file of the app.
+                   Default: None
+        """
+        self._tid = tid
         super().__init__()
-        self.parent   = parent
-        #if self.parent:
-        #    parent.add_done_callback(self.parent_callback)
+        self.prev_parent = None
+        self.parent = parent
+        self._parent_update_lock = threading.Lock()
+        self._parent_update_event = threading.Event()
         self._outputs = []
+        self._stdout = stdout
+        self._stderr = stderr
 
+    @property
+    def stdout(self):
+        return self._stdout
 
+    @property
+    def stderr(self):
+        return self._stderr
+
+    @property
+    def tid(self):
+        return self._tid
 
     def update_parent(self, fut):
-        ''' Handle the case where the user has called result on the AppFuture
-        before the parent exists. Add a callback to the parent to update the
-        state
-        '''
+        """Add a callback to the parent to update the state.
+
+        This handles the case where the user has called result on the AppFuture
+        before the parent exists.
+        """
+        # with self._parent_update_lock:
         self.parent = fut
         fut.add_done_callback(self.parent_callback)
+        self._parent_update_event.set()
 
     def result(self, timeout=None):
+        """Result.
 
-        if self.parent :
-            x = self.parent._exception
-            if x :
-                raise x
-            return self.parent.result(timeout=timeout)
-        else:
-            return super().result(timeout=timeout)
+        Waits for the result of the AppFuture
+        KWargs:
+              timeout (int): Timeout in seconds
+        """
+        try:
+            if self.parent:
+                return self.parent.result(timeout=timeout)
+            else:
+                return super().result(timeout=timeout)
+
+        except Exception as e:
+            # logger.debug("[TODO] {} Retries:{}".format(self.parent,
+            #                                           self.parent.retries_left))
+
+            if self.parent.retries_left > 0:
+                self._parent_update_event.wait()
+                self._parent_update_event.clear()
+                return self.result(timeout=timeout)
+            else:
+                raise
 
     def cancel(self):
         if self.parent:
@@ -106,15 +146,15 @@ class AppFuture(Future):
             return False
 
     def done(self):
-        ''' Check if the future is done.
+        """Check if the future is done.
+
         If a parent is set, we return the status of the parent.
         else, there is no parent assigned, meaning the status is False.
 
         Returns:
               - True : If the future has successfully resolved.
               - False : Pending resolution
-        '''
-
+        """
         if self.parent:
             return self.parent.done()
         else:
@@ -151,7 +191,7 @@ class AppFuture(Future):
                             self.__class__.__name__,
                             id(self),
                             _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.parent._result.__class__.__name__ )
+                            self.parent._result.__class__.__name__)
                 return '<%s at %#x state=%s>' % (
                     self.__class__.__name__,
                     id(self),

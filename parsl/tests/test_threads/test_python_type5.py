@@ -1,44 +1,43 @@
-''' Testing bash apps
-'''
+"""Testing python type5
+"""
 import parsl
 from parsl import *
 
-import os
-import time
-import shutil
 import argparse
 import random
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
+
 
 @App('python', dfk)
 def map_one(x, dur):
     import time
     time.sleep(dur)
-    return x*2
+    return x * 2
 
 
 @App('python', dfk)
 def map_two(x, dur):
     import time
     time.sleep(dur)
-    return x*5
+    return x * 5
+
 
 @App('python', dfk)
 def add_two(x, y, dur):
     import time
     time.sleep(dur)
-    return x+y
+    return x + y
 
 
-def test_func_1 (width=10):
+def test_func_1(width=10):
 
     fu_1 = []
-    for i in range(1, width+1):
-        fu = map_one(i, random.randint(0,5)/10)
+    for i in range(1, width + 1):
+        fu = map_one(i, random.randint(0, 5) / 10)
         fu_1.extend([fu])
 
     fu_2 = []
@@ -46,39 +45,42 @@ def test_func_1 (width=10):
         fu = map_two(fu, 0)
         fu_2.extend([fu])
 
-    assert sum([i.result() for i in fu_2]) == sum(range(1,width+1))*10, "Sums do not match"
+    assert sum([i.result() for i in fu_2]) == sum(
+        range(1, width + 1)) * 10, "Sums do not match"
     return fu_2
 
 
-def test_func_2 (width=10):
+def test_func_2(width=10):
 
     fu_1 = []
-    for i in range(1, width+1):
-        fu = map_one(i, random.randint(0,5))
+    for i in range(1, width + 1):
+        fu = map_one(i, random.randint(0, 5))
         fu_1.extend([fu])
 
     fu_2 = []
-    for i in range(0, width+1, 2)[0:-1]:
-        fu = add_two(fu_1[i], fu_1[i+1], 0)
+    for i in range(0, width + 1, 2)[0:-1]:
+        fu = add_two(fu_1[i], fu_1[i + 1], 0)
         fu_2.extend([fu])
 
-    assert sum([i.result() for i in fu_2]) == sum(range(1,width+1))*2, "Sums do not match"
+    assert sum([i.result() for i in fu_2]) == sum(
+        range(1, width + 1)) * 2, "Sums do not match"
     return fu_2
 
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
-    parser   = argparse.ArgumentParser()
-    parser.add_argument("-w", "--width", default="10", help="width of the pipeline")
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-w", "--width", default="10",
+                        help="width of the pipeline")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
+    args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()
 
-
     tests = [test_func_1, test_func_2]
-    for test in tests :
+    for test in tests:
         print("*" * 50)
         try:
 
@@ -90,7 +92,3 @@ if __name__ == '__main__' :
             print("[TEST]  %s type [SUCCESS]" % test.__name__)
 
         print("*" * 50)
-
-
-
-

@@ -1,1 +1,10 @@
-rm -rf *txt *out *err outputs
+rm -rf *~ *txt *out *err outputs data runinfo
+
+for dir in */
+    do
+        echo "Cleaning dir: $dir"
+        cd $dir
+        rm -rf *txt *out *err outputs *~ runinfo ipengine.json
+        cd ..
+    done
+

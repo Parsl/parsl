@@ -1,32 +1,27 @@
-from setuptools import setup
-from parsl.version import VERSION
+from setuptools import setup, find_packages
 
-install_requires = [
-    'ipyparallel'
-    ]
+with open('parsl/version.py') as f:
+    exec(f.read())
 
-tests_require = [
-    'ipyparallel',
-    'mock>=1.0.0',
-    'nose',
-    'pytest'
-    ]
+with open('requirements.txt') as f:
+    install_requires = f.readlines()
+
+# tests_require = parse_requirements('test-requirements.txt')
 
 setup(
     name='parsl',
     version=VERSION,
     description='Simple data dependent workflows in Python',
     long_description='Simple and easy parallel workflows system for Python',
-    url='https://github.com/swift-lang/swift-e-lab',
+    url='https://github.com/Parsl/parsl',
     author='Yadu Nand Babuji',
     author_email='yadu@uchicago.edu',
     license='Apache 2.0',
-    download_url = 'https://github.com/swift-lang/swift-e-lab/archive/0.1.tar.gz',
-
+    download_url='https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
     package_data={'': ['LICENSE']},
-    packages=['parsl', 'parsl.app', 'parsl.dataflow', 'parsl.executors', 'parsl.execution_provider'],
+    packages=find_packages(),
     install_requires=install_requires,
-    classifiers = [
+    classifiers=[
         # Maturity
         'Development Status :: 3 - Alpha',
         # Intended audience
@@ -37,6 +32,5 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
-    keywords = ['Workflows', 'Scientific computing'],
-    #tests_require=tests_reequire
+    keywords=['Workflows', 'Scientific computing'],
 )

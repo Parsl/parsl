@@ -6,10 +6,17 @@ python:
 # command to install dependencies
 install:
     - pip install -r requirements.txt
+    - pip install flake8
     - python setup.py install
+
+# Os tests
+os:
+    - linux
 
 # command to run tests
 script:
+    - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
-    - nosetests -v parsl/tests/test_threads
- 
+    - nosetests -vx parsl/tests/test_threads parsl/tests/test_data
+    - (for test in parsl/tests/test_checkpointing/test*; do nosetests -vx $test || exit; done ) ;
+    - flake8 parsl/

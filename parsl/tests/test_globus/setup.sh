@@ -1,0 +1,2 @@
+export GLOBUS_ENDPOINT=
+export GLOBUS_EP_PATH=

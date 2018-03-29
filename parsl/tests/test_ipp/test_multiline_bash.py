@@ -1,5 +1,4 @@
 from parsl import *
-import parsl
 
 import os
 import time
@@ -9,20 +8,22 @@ import argparse
 workers = IPyParallelExecutor()
 dfk = DataFlowKernel(workers)
 
+
 @App('bash', dfk)
 def multi_line(inputs=[], outputs=[],
                stderr=os.path.abspath('std.err'),
-               stdout=os.path.abspath('std.out') ):
-    cmd_line = '''echo {inputs[0]} &> {outputs[0]}
+               stdout=os.path.abspath('std.out')):
+    return """echo {inputs[0]} &> {outputs[0]}
     echo {inputs[1]} &> {outputs[1]}
     echo {inputs[2]} &> {outputs[2]}
     echo "Testing STDOUT"
     echo "Testing STDERR" 1>&2
-    '''
+    """
+
 
 def run_test():
 
-    outdir=os.path.abspath('outputs')
+    outdir = os.path.abspath('outputs')
 
     if not os.path.exists(outdir):
         os.makedirs(outdir)
@@ -41,11 +42,11 @@ def run_test():
     assert 'this.txt' in os.listdir(outdir), "this.txt is missing"
     assert 'cat.txt' in os.listdir(outdir), "cat.txt is missing"
 
-    with  open('std.out', 'r') as o:
+    with open('std.out', 'r') as o:
         out = o.read()
         assert out != "Testing STDOUT", "Stdout is bad"
 
-    with  open('std.err', 'r') as o:
+    with open('std.err', 'r') as o:
         err = o.read()
         assert err != "Testing STDERR", "Stderr is bad"
 
@@ -53,13 +54,15 @@ def run_test():
     os.remove('std.out')
     return True
 
-if __name__ == '__main__' :
 
-    parser   = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true', help="Count of apps to launch")
-    args   = parser.parse_args()
+if __name__ == '__main__':
 
-    #if args.debug:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
+    args = parser.parse_args()
+
+    # if args.debug:
     #    parsl.set_stream_logger()
 
     run_test()
