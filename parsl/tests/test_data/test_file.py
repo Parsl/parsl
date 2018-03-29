@@ -17,7 +17,8 @@ def test_files():
         assert x.filepath == test['path'], "[TEST] Path error. Expected {0} Got {1}".format(
             test['path'], x.path)
 
-def test_open(): 
+
+def test_open():
     with open('test-open.txt', 'w') as tfile:
         tfile.write('Hello')
 
