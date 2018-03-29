@@ -143,7 +143,7 @@ Configuration
 ^^^^^^^^^^^^^
 
 The example below shows how elasticity and parallelism can be configured. Here, a local IPythonParallel
-envorinment is used with a minimum of 1 block and a maximum of 2 blocks, where each block may host
+environment is used with a minimum of 1 block and a maximum of 2 blocks, where each block may host
 up to 4 taskBlocks. Parallism of 0.5 means that when more than 2 tasks are queue per taskBlock a new
 block will be requested (up to two possible blocks).
 
