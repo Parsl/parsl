@@ -15,3 +15,4 @@ User guide
    checkpoints
    configuring
    usage_tracking
+   containers
