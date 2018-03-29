@@ -123,8 +123,8 @@ class Globus(object):
                 if e['time'] == last_event_time:
                     break
                 last_event_time = e['time']
-                log.info('Non-critical Globus Transfer error event: {} at {}'.format(e['description'], e['time']))
-                log.debug('{}'.format(e['details']))
+                logger.info('Non-critical Globus Transfer error event: {} at {}'.format(e['description'], e['time']))
+                logger.debug('{}'.format(e['details']))
 
         task = tc.get_task(task['task_id'])
         if task['status'] != 'SUCCEEDED':
