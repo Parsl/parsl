@@ -50,7 +50,7 @@ Development Process
 Parsl development follows a common pull request-based workflow similar to `GitHub flow <http://scottchacon.com/2011/08/31/github-flow.html>`_. That is:
 
 * every development activity (except very minor changes, which can be discussed in the PR) should have a related GitHub issue
-* all development occurs in branches
+* all development occurs in branches (named with a short descriptive name which includes the associated issue number, for example, `add-globus-transfer-#1`)
 * the master branch is always stable
 * development branches should include tests for added features
 * development branches should be tested after being brought up-to-date with the master (in this way, what is being tested is what is actually going into the code; otherwise unexpected issues from merging may come up)

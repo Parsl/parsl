@@ -3,8 +3,7 @@
 Checkpointing
 -------------
 
-Checkpointing extends AppCaching a step further and allows you to re-use
-results from and across multiple workflows.
+Large scale workflows are prone to errors due to node failures, application or environment errors, and myriad other issues. Parsl's support for checkpointing provides workflow resilence and fault tolerance. 
 
 .. note::
    Checkpointing is *only* possible for apps which have AppCaching enabled.
@@ -13,68 +12,68 @@ results from and across multiple workflows.
    If AppCaching is disabled in the ``config['globals']``, checkpointing will
    **not** work
 
-Parsl follows an incremental checkpointing model, where each call to checkpoint
-will checkpoint all results that have updated since the last checkpoint. When loading
-checkpoints, if entries with results from multiple functions (with identical hashes)
-are encountered, only the last entry read will be considered.
+Parsl follows an incremental checkpointing model, where each checkpoint contains
+all results that have been updated since the last checkpoint. 
+
+When loading a checkpoint the Parsl script will use checkpointed results for 
+any apps that have been previously executed. Like AppCaching, checkpoints
+use the app name, hash, and input parameters to locate previously computed
+results. If multiple checkpoints exist for an app (with the same hash and 
+input parameters) the most recent entry will be used. 
 
 Checkpointing works in the following modes:
 
-1. ``task_exit``: In this mode, each app is checkpointed when it has completed or
-   failed (after retries if enabled). This mode reduces the risk of losing information
+1. ``task_exit``: In this mode, a checkpoint is created each time an app completes or fails
+   (after retries if enabled). This mode reduces the risk of losing information
    from completed tasks to a minimum.
 
    >>> config["globals"]["checkpointMode"] = 'task_exit'
 
 
 2. ``periodic``: The periodic mode allows the user to specify the interval at which
-   all task information pending checkpointing should be checkpointed.
+   all tasks are checkpointed.
 
    >>> config["globals"]["checkpointMode"] = 'periodic'
    >>> config["globals"]["checkpointPeriod"] = "01:00:00"
 
-3. ``dfk_exit``: In this mode, task checkpointing is done when the DataFlowKernel is
-   about to exit. This reduces the risk of losing task information and results from
-   premature workflow termination from exceptions, terminate signals etc. However
+3. ``dfk_exit``: In this mode, checkpoints are created when the DataFlowKernel is
+   about to exit. This reduces the risk of losing results due to
+   premature workflow termination from exceptions, terminate signals, etc. However
    there's still some likelihood that information might be lost if the workflow is
    terminated abruptly (machine failure, SIGKILL etc)
 
    >>> config["globals"]["checkpointMode"] = 'dfk_exit'
 
-4. Manual: Apart from these modes, it is also possible to manually initiate a checkpoint
+4. Manual: In addition to these automated checkpointing modes, it is also possible to manually initiate a checkpoint
    by calling ``DataFlowKernel.checkpoint()`` in the workflow code.
 
-In all of the above methods the checkpoint is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
+In all cases the checkpoint is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 
-Example code for setting the checkpoint methods:
+The desired checkpoint mode is specified in the Parsl configuration:
 
 .. code-block:: python
 
     config = {
-        "sites": [
-            {"site": "Local_Threads",
-             "auth": {"channel": None},
-             "execution": {
-                 "executor": "threads",
-                 "provider": None,
-                 "maxThreads": 2,
-             }
-            }],
-        "globals": {"lazyErrors": True,
-                    "memoize": True,
-                    "checkpointMode": "dfk_exit"
+        "globals": {
+            "lazyErrors": True,
+            "memoize": True,
+            "checkpointMode": "dfk_exit"
         }
     }
-    dfk = DataFlowKernel(config=config)
 
 
+Creating a checkpoint
+^^^^^^^^^^^^^^^^^^^^^
 
-Example code of manually invoking checkpoint:
+When using automated checkpointing there is no need for users to modify their
+Parsl script in anyway: checkpointing will be conducted completely automatically. 
+The following example shows how manual checkpointing can be invoked in a Parsl script. 
 
 .. code-block:: python
 
     from parsl import *
     from parsl.configs.local import localThreads as config
+    
     dfk = DataFlowKernel(config=config)
 
     @App('python', dfk, cache=True)
@@ -94,7 +93,13 @@ Example code of manually invoking checkpoint:
     cpt_dir = dfk.checkpoint()
     print(cpt_dir)  # Prints the checkpoint dir
 
-To load the checkpoint from a previous run specify the runinfo/RUNID/checkpoint directory:
+
+Loading a checkpoint
+^^^^^^^^^^^^^^^^^^^^
+
+To load a checkpoint the user must select which checkpoint file to resume from. 
+As mentioned above, checkpoint files are stored in the ``runinfo/RUNID/checkpoint`` directory.
+The example below shows how to resume from the most recent checkpoint:
 
 .. code-block:: python
 
