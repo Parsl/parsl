@@ -1,24 +1,23 @@
 Execution
 =========
 
-Parsl is designed to support arbitrary execution providers (e.g., PCs, clusters, supercomputers) and execution models (e.g., threads, pilot jobs, etc.).
-Parsl scripts are independent of execution provider or executor. Instead, the configuration used to run the script tells Parsl how to execute apps on the desired environment.
-Parsl provides a high level abstraction, called a *Block*, for describing the resource configuration for a particular app or script.
+Parsl is designed to support arbitrary execution providers (e.g., PCs, clusters, supercomputers) as well as arbitrary execution models (e.g., threads, pilot jobs, etc.). That is, Parsl scripts are independent of execution provider or executor. Instead, the configuration used to run the script tells Parsl how to execute apps on the desired environment.
+Parsl provides a high level abstraction, called a *Block*, for providing a uniform description of a resource configuration for a particular app or script.
 
 
 Execution Providers
 -------------------
 
-Execution providers are responsible for managing execution resources. In the simplest case the local computer is used and parallel workload can be forked to individual threads. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, Condor and Cobalt. Clouds, on the other hand, provide API interfaces that allow much more fine-graind composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
+Execution providers are responsible for managing execution resources. In the simplest case the local computer is used and parallel tasks are forked to individual threads. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, Condor and Cobalt. Clouds, on the other hand, provide APIs that allow more fine-graind composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
 
-Parsl's execution interface is called ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_.)--a Python library that abstracts execution environments and provides a common access interface to resources.
-Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobolt, Slurm, Torque, and HTCondor LRMs. New execution providers can be easily added by implementing libsubmit's execution provider interface.
+Parsl's execution interface is called ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_.)--a Python library that provides a common interface to execution providers.
+Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor LRMs. New execution providers can be easily added by implementing libsubmit's execution provider interface.
 
 Executors
 ---------
 
-Depending on the execution provider there are a number of ways to then submit workload to that resource. For example, for local execution you could fork threads or use a pilot job manager, for supercomputing resources you may use pilot jobs, various launchers, or even a distributed execution model such as that provided by Swift/T. Parsl supports these models via an *executor*.
-Executors represent available compute resources to which tasks can be submitted. An executor initialized with an Execution Provider can dynamically scale with the resources requirements of the workflow.
+Depending on the execution provider there are a number of ways to then submit workload to that resource. For example, for local execution threads or pilot jobs may be used, for supercomputing resources pilot jobs, various launchers, or even a distributed execution model such as that provided by Swift/T may be used. Parsl supports these models via an *executor* model.
+Executors represent a particular method via which tasks can be executed. As described below, an executor initialized with an execution provider can dynamically scale with the resources requirements of the workflow.
 
 Parsl currently supports the following executors:
 
@@ -26,21 +25,21 @@ Parsl currently supports the following executors:
 
 2. **IPyParallelExecutor**: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
 
-3. **Swift/TurbineExecutor**: This executor uses the extreme-scale Turbine model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
+3. **Swift/TurbineExecutor**: This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
 
 These executors cover a broad range of execution requirements. As with other Parsl components there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
 
 Blocks
 ------
 
-Configuring non-homogeneous resources in a uniform fashion is a challenging aspect of parallel workflow
-execution. Parsl uses an abstraction based on resource units called blocks.
-
-A *Block* is a single unit of resources that is obtained from a execution provider.
-Within this block are a number of *Nodes*--individual slices of a computing resource.
-Parsl can then create *TaskBlocks* within and across (e.g., for MPI jobs) nodes.  A TaskBlock is a
-virtual suballocation in which tasks can be launched. Three different examples of block configurations
-are shown in the following figures.
+Providing a uniform representation of heterogeneous resources 
+is one of the most difficult challenges for parallel execution. 
+Parsl provides an abstraction based on resource units called *blocks*.
+A block is a single unit of resources that is obtained from an execution provider.
+Within a block are a number of nodes. Parsl can then create *TaskBlocks* 
+within and across (e.g., for MPI jobs) nodes. 
+A TaskBlock is a virtual suballocation in which individual tasks can be launched. 
+Three different examples of block configurations are shown below.
 
 1. A single Block comprised of a Node with one TaskBlock :
 
@@ -48,16 +47,16 @@ are shown in the following figures.
       :scale: 75%
 
 2. A single Block comprised on a Node with several TaskBlocks. This configuration is
-   most suitable for single threaded python/bash applications running with multicore target systems.
-   With taskBlocks proportional to the cores available on the system, several apps could execute
+   most suitable for single threaded python/bash applications running on multicore target systems.
+   With taskBlocks proportional to the cores available on the system, apps can execute
    in parallel.
 
    .. image:: ../images/N1_T4.png
        :scale: 75%
 
 3. A Block comprised of several Nodes and several TaskBlocks. This configuration
-   is generally used only by MPI applications and require support from specific
-   MPI launchers supported by the target system such as aprun, srun, mpirun, mpiexec etc.
+   is generally used by MPI applications and requires support from specific
+   MPI launchers supported by the target system (e.g., aprun, srun, mpirun, mpiexec).
 
    .. image:: ../images/N4_T2.png
 
@@ -69,76 +68,84 @@ Elasticity
 
 
 .. note::
-   This feature has been available since Parsl ``v0.4.0``
+   This feature is available from Parsl ``v0.4.0``
 
-As a workflow dag is processed by Parsl, new tasks are added and completed
-asynchronously. Parsl interfaces executors with execution providers to construct
-scalable execution sites to handle the variable work-load generated by the
-workflow. This component is responsible for periodically checking outstanding
-tasks and available compute capacity and trigger scaling events to match
+Parsl implements a dynamic dependency graph in which the 
+graph is extended as new tasks are enqueued and completed. 
+As the Parsl script executes the workflow, new tasks are added
+to a queue for execution, tasks are then executed asynchronously
+when their dependencies are met. 
+Parsl uses the selected executor(s) to manage task
+execution on the execution provider(s).
+The execution resources, like the workflow, are not static: 
+they can be elastically scaled to handle the variable workload generated by the
+workflow. 
+
+As Parsl manages a dynamic dependency graph it does not
+know the full ``width'' of a particular workflow a priori. 
+Further, as a workflow executes, the needs of the tasks
+may change, as too might the capacity available
+on execution providers. Thus, Parsl must
+elastically scale the resources it is using. 
+To do so, Parsl includes an extensible flow control system that 
+monitors outstanding tasks and available compute capacity. 
+This flow control monitor, which can be extended or implemented by users, 
+determines when to trigger scaling (in or out) events to match
 workflow needs.
 
-Here's a diagram of a site. A site consists of blocks, which are usually
-created by single requests to a Local Resource Manager (LRM) such as slurm,
-condor, torque, or even AWS API. The blocks could contain several task blocks
-which are separate instances on workers.
+The animated diagram below shows how blocks are elastically 
+managed within a site. The script configuration for a site
+defines the minimum, maximum, and initial number of blocks to be used. 
+Depending on workload, Parsl provisions or deprovisions blocks. 
 
 .. image:: parsl_scaling.gif
 
-The general shape and bounds of a site are user specified through:
+The configuration options for specifying elasticity bounds are:
 
-1. ``minBlocks``: Minimum # of blocks to maintain per site
-2. ``initBlocks``: # of blocks to provision at initialization of workflow
-3. ``maxBlocks``: Maximum # of blocks that can be active at a site from one workflow.
+1. ``minBlocks``: Minimum number of blocks to maintain per site.
+2. ``initBlocks``: Initial number of blocks to provision at initialization of workflow.
+3. ``maxBlocks``: Maximum number of blocks that can be active at a site from one workflow.
 
 
 Parallelism
 ^^^^^^^^^^^
 
-In the context of execution in parsl, the level of parallelism is expressed in terms
-of the ratio of taskBlocks to all active tasks. Each taskBlock is capable of executing
-a single task at any given time. If there are N taskBlocks for N active tasks, the
-full parallelism is expressed (Ratio of 1). If there is one taskBlock for N active tasks,
-the least parallelism is expressed and all active tasks are executed sequentially.
+Parsl provides a simple user-managed model for controlling elasticity. 
+It allows users to prescribe the minimum
+and maximum number of blocks to be used on a given site as well as 
+a parameter (*p*) to control the level of parallelism.  Parallelism
+is expressed as the ratio of TaskBlocks to active tasks. 
+Recall that each TaskBlock is capable of executing a single task at any given time. 
+A parallelism value of 1 represents aggressive scaling where as many resources 
+as possible are used; parallelism close to 0 represents the opposite situation in which
+as few resources as possible (i.e., minBlocks) are used.
+
+For example:
+
+- When p = 0: Use the least resources possible. Infinite tasks are stacked per taskBlock.
 
 .. code:: python
 
-   total_taskBlocks = # of blocks * taskBlocks
-
-   active_tasks = pending_tasks + running_tasks
-
-   Parallelism = total_taskBlocks / active_tasks
-               = [0, 1] (i.e,  0 <= p <= 1)
-
-For eg:
-
-| When p = 0,
-|         => compute with the least resources possible.
-|         infinite tasks are stacked per slot.
-
-.. code:: python
     blocks =  minBlocks           { if active_tasks = 0
               max(minBlocks, 1)   {  else
 
-| When p = 1,
-|        => compute with the most resources.
-|           one task is stacked per slot.
+- When p = 1: Use the most resources possible. One task is stacked per taskBlock.
 
 .. code-block:: python
 
-     blocks = min ( maxBlocks,
-                   ceil( active_tasks / slots ) )
+     blocks = min (maxBlocks,
+                   ceil( active_tasks / taskBlocks ))
 
-| When p = 1/2,
-|        => We stack upto 2 tasks per slot before we overflow
-|           and request a new block
+- When p = 1/2: Stack up to 2 tasks per taskBlock before we overflowing and requesting a new block
 
 
-| let's say min:init:max = 0:0:4 and taskBlocks=2
-|
+Configuration
+^^^^^^^^^^^^^
 
-
-Here is a typical configuration :
+The example below shows how elasticity and parallelism can be configured. Here, a local IPythonParallel
+environment is used with a minimum of 1 block and a maximum of 2 blocks, where each block may host
+up to 4 taskBlocks. Parallism of 0.5 means that when more than 2 tasks are queue per taskBlock a new
+block will be requested (up to two possible blocks).
 
 .. code:: python
 
@@ -162,10 +169,11 @@ Here is a typical configuration :
             }]
     }
 
-A diagram that describes the behavior of such a site is below:
-In the diagram, X <- task
-at 2 tasks :
-at 5 tasks, we overflow as the capacity of a single block is fully used.
+The animated diagram below illustrates the behavior of this site. 
+In the diagram, the tasks are allocated to the first block, until 
+5 tasks are submitted. At this stage, as more than 2 tasks are waiting
+per taskBlock, Parsl provisions a new block for executing the remaining
+tasks. 
 
 .. image:: parsl_parallelism.gif
 
@@ -174,7 +182,7 @@ Multi-Site
 ----------
 
 .. note::
-   This feature has been available since Parsl 0.4.0
+   This feature is available from Parsl 0.4.0
 
 Parsl supports the definition of any number of execution sites in the config,
 as well as specifying which of these sites could execute specific apps.
@@ -183,16 +191,18 @@ The common scenarios for this feature are:
 
 * The workflow has an initial simulation stage that runs on the compute heavy
   nodes of an HPC system followed by an analysis and visualization stage that
-  is suited for the GPU nodes.
+  is better suited for the GPU nodes.
 * The workflow follows a repeated fan-out, fan-in model where the long running
   fan-out tasks are computed on a cluster and the quick fan-in computation is
-  suited for the running on threads on the login node.
+  better suited for execution using threads on the login node.
 * The workflow includes apps that wait and evaluate the results of a
   computation to determine whether the app should be relaunched.
   Only apps running on threads may launch apps. Often, science simulations
-  have stochastic behavior and   terminate early with a checkpoint.
-  In such cases, having a wrapper app that checks for the exit conditions
-  and determines success is ideal.
+  have stochastic behavior and may terminate before completion.
+  In such cases, having a wrapper app that checks the exit code
+  and determines whether or not the app has completed succesfully can 
+  be used to automatically re-execute the app (possibly from a 
+  checkpoint) until succesful completion.
 
 
 Here's a code snippet that shows how sites can be specified in the ``App`` decorator.

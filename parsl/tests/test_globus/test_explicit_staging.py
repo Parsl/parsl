@@ -1,5 +1,4 @@
 from parsl import *
-# from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 import os
 
@@ -18,9 +17,9 @@ config = {
             "data": {
                 "globus": {
                     "endpoint_name": os.environ["GLOBUS_ENDPOINT"],
-                    "endpoint_path": os.environ["GLOBUS_EP_PATH"],
-                    "local_directory": os.environ["GLOBUS_EP_PATH"],
-                }
+                    "endpoint_path": os.environ["GLOBUS_EP_PATH"]
+                },
+                "working_dir": os.environ["GLOBUS_EP_PATH"],
             }
         }
     ],
@@ -43,7 +42,7 @@ def sort_strings(inputs=[], outputs=[]):
 
 
 def test_explicit_staging():
-    """Test explicit staging via globus.
+    """Test explicit staging via Globus.
 
     Create a remote input file that points to unsorted.txt on a publicly shared
     endpoint.
