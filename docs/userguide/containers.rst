@@ -156,6 +156,15 @@ created for each of the images that will be used. In the parsl workflow definiti
 decorator can then be tagged with the ``sites`` keyword argument to ensure that apps execute
 on the specific sites with the right container image.
 
+.. caution::
+   If you have specific modules or python packages that are imported from relative paths,
+   the workers in the container will not have these available unless explicitly copied in.
+
+   .. code-block:: bash
+
+       $ DOCKER_CWD=$(docker image inspect --format='{{{{.Config.WorkingDir}}}}' {2})
+       $ docker cp -a . $DOCKER_ID:$DOCKER_CWD
+
 How this works
 ^^^^^^^^^^^^^^
 
