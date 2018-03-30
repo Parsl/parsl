@@ -15,7 +15,7 @@ from parsl.data_provider.data_manager import DataManager
 logger = logging.getLogger(__name__)
 
 
-class File(object):
+class File(str):
     """The Parsl File Class.
 
     This is planned to be a very simple class that simply
@@ -54,6 +54,9 @@ class File(object):
 
     def __repr__(self):
         return self.__str__()
+
+    def __fspath__(self):
+        return self.filepath
 
     @property
     def filepath(self):

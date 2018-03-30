@@ -18,6 +18,16 @@ def test_files():
             test['path'], x.path)
 
 
+def test_open():
+    with open('test-open.txt', 'w') as tfile:
+        tfile.write('Hello')
+
+    pfile = File('test-open.txt')
+
+    with open(pfile, 'r') as opfile:
+        assert (opfile.readlines()[0] == 'Hello')
+
+
 if __name__ == '__main__':
 
     test_files()
