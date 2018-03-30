@@ -56,6 +56,8 @@ ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
     def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):
         """Reads the json contents from filepath and uses that to compose the engine launch command.
 
+        Notes: Add this to the ipengine launch for debug logs :
+                          --log-to-file --debug
         Args:
             filepath (str): Path to the engine file
             engine_dir (str): CWD for the engines .
@@ -79,6 +81,10 @@ EOF
 
 DOCKER_ID=$(docker create --network host {2} ipengine --file=/tmp/ipengine.json)
 docker cp ipengine.json $DOCKER_ID:/tmp/ipengine.json
+
+# Copy current dir to the working directory
+DOCKER_CWD=$(docker image inspect --format='{{{{.Config.WorkingDir}}}}' {2})
+docker cp -a . $DOCKER_ID:$DOCKER_CWD
 docker start $DOCKER_ID
 
 at_exit() {{
