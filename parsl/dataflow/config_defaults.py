@@ -83,6 +83,10 @@ def update_config(config, rundir):
             "auth": {},
             "execution": {
                 "scriptDir": rundir,
+                "container": {
+                    "type": None,
+                    "image": None
+                },
                 "block": {
                     "nodes": 1,
                     "taskBlocks": 1,

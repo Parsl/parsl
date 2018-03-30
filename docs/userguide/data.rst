@@ -42,6 +42,11 @@ The file may then be passed as input or output to an app. Here is an example Par
 Globus
 ^^^^^^
 
+.. caution::
+   This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
+   We request feedback and feature enhancement requests via `github <https://github.com/Parsl/parsl/issues>`_.
+
+
 The `globus` scheme is used to reference files that can be accessed using Globus (a guide to using Globus is available `here
 <https://docs.globus.org/how-to/get-started/>`_). A file using the Globus scheme must specify the UUID of the Globus
 endpoint and a path to the file on the endpoint, for example:
