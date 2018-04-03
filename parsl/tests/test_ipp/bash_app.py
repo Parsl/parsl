@@ -12,12 +12,16 @@ import argparse
 # parsl.set_stream_logger()
 
 workers = IPyParallelExecutor()
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('bash', dfk)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
-    pass
+    res = ""
+    for i in inputs:
+        for o in outputs:
+            res += "echo {} >& {}".format(i, o)
+    return res
 
 
 @App('bash', dfk)
@@ -64,12 +68,12 @@ def test_parallel_for(n=10):
 
     start = time.time()
     for i in range(0, n):
-        d[i], _ = echo_to_file(inputs=['Hello World {0}'.format(i)],
-                               outputs=['{0}/out.{1}.txt'.format(outdir, i)],
-                               stdout='{0}/std.{1}.out'.format(outdir, i),
-                               stderr='{0}/std.{1}.err'.format(outdir, i),
-                               )
-        # time.sleep(0.01)
+        d[i] = echo_to_file(
+            inputs=['Hello World {0}'.format(i)],
+            outputs=['{0}/out.{1}.txt'.format(outdir, i)],
+            stdout='{0}/std.{1}.out'.format(outdir, i),
+            stderr='{0}/std.{1}.err'.format(outdir, i),
+        )
 
     assert len(
         d.keys()) == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
@@ -96,6 +100,6 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    # x = test_parallel_for(int(args.count))
+    x = test_parallel_for(int(args.count))
     y = test_command_format_1()
     # raise_error(0)
