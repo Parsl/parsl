@@ -19,8 +19,9 @@ dfk = DataFlowKernel(executors=[workers])
 @App('bash', dfk)
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     res = ""
-    for i, o in zip(inputs, outputs):
-        res += "echo {} >& {}".format(i, o)
+    for i in inputs:
+        for o in outputs:
+            res += "echo {} >& {}".format(i, o)
     return res
 
 
