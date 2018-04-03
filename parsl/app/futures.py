@@ -74,7 +74,7 @@ class DataFuture(Future):
         """
         super().__init__()
         self._tid = tid
-        if isinstance(file_obj, str):
+        if isinstance(file_obj, str) and not isinstance(file_obj, File):
             self.file_obj = File(file_obj)
         else:
             self.file_obj = file_obj
