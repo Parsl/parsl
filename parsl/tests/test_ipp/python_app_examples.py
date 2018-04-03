@@ -1,7 +1,6 @@
 """Testing python apps."""
 import parsl
 from parsl import *
-import os
 import time
 import argparse
 
@@ -45,11 +44,11 @@ def test_simple(n=10):
 def test_imports(n=10):
 
     start = time.time()
-    x = import_echo(n)
+    x = import_echo(n, 'foobar')
     print("Result : ", x.result())
     assert x.result() == n * \
-        2, "Expected double to return:{0} instead got:{1}".format(
-            n * 2, x.result())
+        5, "Expected double to return:{0} instead got:{1}".format(
+            n * 5, x.result())
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True

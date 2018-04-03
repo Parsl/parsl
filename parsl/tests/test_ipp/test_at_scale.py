@@ -73,8 +73,5 @@ if __name__ == '__main__':
         parsl.set_stream_logger()
 
     x = test_plain(int(args.count))
-    # x = test_parallel(int(args.count))
+    x = test_parallel(int(args.count))
     x = test_parallel2(int(args.count))
-
-    # x = test_stdout()
-    # raise_error(0)
