@@ -6,7 +6,7 @@ import shutil
 import argparse
 
 workers = IPyParallelExecutor()
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('bash', dfk)
