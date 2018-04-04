@@ -1,4 +1,5 @@
 """Testing python apps."""
+import os
 import parsl
 from parsl import *
 import time
