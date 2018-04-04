@@ -102,4 +102,3 @@ if __name__ == '__main__':
 
     x = test_parallel_for(int(args.count))
     y = test_command_format_1()
-    # raise_error(0)
