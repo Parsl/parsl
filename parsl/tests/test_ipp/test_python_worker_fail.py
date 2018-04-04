@@ -24,7 +24,7 @@ def test_parallel_for(n=10):
     d = {}
     start = time.time()
     for i in range(0, n):
-        d[i] = import_echo(2, "hello", sleep=20)
+        d[i] = import_echo(2, "hello", sleep=2)
         # time.sleep(0.01)
 
     assert len(
