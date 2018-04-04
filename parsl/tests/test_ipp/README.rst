@@ -13,7 +13,7 @@ Ipcluster
 
 Start the cluster with ipcluster and 4 ipengines :
 
->>> ipcluster start -4
+>>> ipcluster start -n 4
 
 
 Manual

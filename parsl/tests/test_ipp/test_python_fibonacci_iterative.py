@@ -3,7 +3,7 @@ from parsl import *
 import argparse
 
 workers = IPyParallelExecutor()
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('python', dfk)

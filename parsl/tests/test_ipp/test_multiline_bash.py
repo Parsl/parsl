@@ -6,7 +6,7 @@ import shutil
 import argparse
 
 workers = IPyParallelExecutor()
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('bash', dfk)
@@ -35,7 +35,7 @@ def run_test():
                    outputs=['{0}/hello.txt'.format(outdir),
                             '{0}/this.txt'.format(outdir),
                             '{0}/cat.txt'.format(outdir)])
-    print(f[0].result())
+    print(f.result())
 
     time.sleep(0.1)
     assert 'hello.txt' in os.listdir(outdir), "hello.txt is missing"
