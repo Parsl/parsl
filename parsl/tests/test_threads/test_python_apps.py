@@ -7,6 +7,8 @@ import os
 import time
 import argparse
 
+from nose.tools import assert_raises
+
 # parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
@@ -21,6 +23,12 @@ def double(x):
 def echo(x, string, stdout=None):
     print(string)
     return x * 5
+
+
+@App('python', dfk)
+def custom_exception():
+    from globus_sdk import GlobusError
+    raise GlobusError('foobar')
 
 
 def test_parallel_for(n=2):
@@ -53,6 +61,15 @@ def test_stdout():
     with open('std.out', 'r') as f:
         assert f.read() == string, "String did not match output file"
     print("[TEST STATUS] test_stdout [SUCCESS]")
+
+
+def test_custom_exception():
+    from globus_sdk import GlobusError
+
+    def wrapper():
+        x = custom_exception()
+        return x.result()
+    assert_raises(GlobusError, wrapper)
 
 
 if __name__ == '__main__':

@@ -10,6 +10,8 @@ from concurrent.futures import Future
 import logging
 import threading
 
+from parsl.app.errors import RemoteException
+
 logger = logging.getLogger(__name__)
 
 # Possible future states (for internal use by the futures package).
@@ -112,9 +114,12 @@ class AppFuture(Future):
         """
         try:
             if self.parent:
-                return self.parent.result(timeout=timeout)
+                res = self.parent.result(timeout=timeout)
             else:
-                return super().result(timeout=timeout)
+                res = super().result(timeout=timeout)
+            if isinstance(res, RemoteException):
+                res.reraise()
+            return res
 
         except Exception as e:
             if self.parent.retries_left > 0:
@@ -122,6 +127,8 @@ class AppFuture(Future):
                 self._parent_update_event.clear()
                 return self.result(timeout=timeout)
             else:
+                if isinstance(e, RemoteException):
+                    e.reraise()
                 raise
 
     def cancel(self):

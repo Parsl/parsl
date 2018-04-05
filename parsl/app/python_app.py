@@ -1,7 +1,12 @@
 import logging
 
+import tblib.pickling_support
+tblib.pickling_support.install()
+
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
+from parsl.app.errors import RemoteException, wrap_error
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +20,7 @@ class PythonApp(AppBase):
 
         This bit is the same for both bash & python apps.
         """
-        super().__init__(func, executor, walltime=walltime, sites=sites, exec_type="python")
+        super().__init__(wrap_error(func), executor, walltime=walltime, sites=sites, exec_type="python")
         self.fn_hash = fn_hash
         self.cache = cache
 

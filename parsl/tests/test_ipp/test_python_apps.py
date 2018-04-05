@@ -1,12 +1,13 @@
 """Testing bash apps
 """
-import parsl
-from parsl import *
-
 import os
 import time
 import argparse
-from nose.tools import nottest
+
+from nose.tools import nottest, assert_raises
+
+import parsl
+from parsl import *
 
 # parsl.set_stream_logger()
 workers = IPyParallelExecutor()
@@ -32,8 +33,13 @@ def import_echo(x, string, stdout=None):
     return x * 5
 
 
-def test_simple(n=10):
+@App('python', dfk)
+def custom_exception():
+    from globus_sdk import GlobusError
+    raise GlobusError('foobar')
 
+
+def test_simple(n=10):
     start = time.time()
     x = double(n)
     print("Result : ", x.result())
@@ -88,6 +94,21 @@ def test_stdout():
     print("[TEST STATUS] test_stdout [SUCCESS]")
 
 
+def test_custom_exception():
+    from globus_sdk import GlobusError
+
+    def wrapper():
+        x = custom_exception()
+        return x.result()
+    assert_raises(GlobusError, wrapper)
+
+
+@nottest
+def demonstrate_custom_exception():
+    x = custom_exception()
+    print(x.result())
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -100,8 +121,9 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
+    demonstrate_custom_exception()
     x = test_simple(int(args.count))
     x = test_imports()
     x = test_parallel_for()
-    # x = test_parallel_for(int(args.count))
-    # x = test_stdout()
+    x = test_parallel_for(int(args.count))
+    x = test_stdout()
