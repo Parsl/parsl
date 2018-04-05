@@ -117,9 +117,6 @@ class AppFuture(Future):
                 return super().result(timeout=timeout)
 
         except Exception as e:
-            # logger.debug("[TODO] {} Retries:{}".format(self.parent,
-            #                                           self.parent.retries_left))
-
             if self.parent.retries_left > 0:
                 self._parent_update_event.wait()
                 self._parent_update_event.clear()

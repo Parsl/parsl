@@ -46,7 +46,6 @@ def test_simple(n=10):
 
 
 def test_imports(n=10):
-
     start = time.time()
     x = import_echo(n, "hello world")
     print("Result : ", x.result())
@@ -59,7 +58,6 @@ def test_imports(n=10):
 
 
 def test_parallel_for(n=10):
-
     d = {}
     start = time.time()
     for i in range(0, n):
@@ -106,6 +104,4 @@ if __name__ == '__main__':
     x = test_imports()
     x = test_parallel_for()
     # x = test_parallel_for(int(args.count))
-
     # x = test_stdout()
-    # raise_error(0)
