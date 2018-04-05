@@ -25,13 +25,6 @@ class AppException(ParslError):
     What this exception contains depends entirely on context
     """
 
-    def __repr__(self):
-        return "{0} Reason:{1}".format(self.__class__, self.reason)
-
-    def __str__(self):
-        return self.__repr__()
-
-
 class AppBadFormatting(ParslError):
     """An error raised during formatting of a bash function.
 
