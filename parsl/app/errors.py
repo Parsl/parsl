@@ -2,10 +2,8 @@
 from functools import wraps
 
 from six import reraise
-from tblib import Traceback
-
-import tblib.pickling_support
-tblib.pickling_support.install()
+from tblib import pickling_support, Traceback
+pickling_support.install()
 
 
 class ParslError(Exception):
