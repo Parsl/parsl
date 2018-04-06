@@ -1,5 +1,5 @@
 ipyparallel
 libsubmit>=0.3.2a0
 globus-sdk
-dill
+cloudpickle
 tblib
