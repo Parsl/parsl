@@ -1,6 +1,5 @@
 """Exceptions raise by Apps."""
 from functools import wraps
-import sys
 
 import dill
 from six import reraise
@@ -29,6 +28,7 @@ class AppException(ParslError):
 
     What this exception contains depends entirely on context
     """
+
 
 class AppBadFormatting(ParslError):
     """An error raised during formatting of a bash function.

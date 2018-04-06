@@ -5,7 +5,7 @@ tblib.pickling_support.install()
 
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
-from parsl.app.errors import RemoteException, wrap_error
+from parsl.app.errors import wrap_error
 
 
 logger = logging.getLogger(__name__)
