@@ -8,9 +8,7 @@ import argparse
 # parsl.set_stream_logger()
 workers = IPyParallelExecutor()
 print("Using ipyparallel workers")
-# workers = ThreadPoolExecutor(max_workers=4)
-print("Using threads pool 4")
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('python', dfk)
@@ -75,8 +73,5 @@ if __name__ == '__main__':
         parsl.set_stream_logger()
 
     x = test_plain(int(args.count))
-    # x = test_parallel(int(args.count))
+    x = test_parallel(int(args.count))
     x = test_parallel2(int(args.count))
-
-    # x = test_stdout()
-    # raise_error(0)

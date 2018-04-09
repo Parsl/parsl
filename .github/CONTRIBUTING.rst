@@ -83,3 +83,15 @@ Project documentation
 ---------------------
 
 All project documentation is written in reStructuredText. `Sphinx <http://sphinx-doc.org/>`_ is used to generate the HTML documentation from the rst documentation and structured docstrings in Parsl code.  Project documentation is built automatically and added to the `Parsl documentation <https://parsl.readthedocs.io>`_.
+
+Where to start
+--------------
+
+We welcome contributions of any type (e.g., bug fixes, new features, reporting issues, documentation, etc).  If you're looking for a good place to get started you might like to peruse our current Git issues (those marked with `help wanted <https://github.com/Parsl/parsl/labels/help%20wanted>`_ are a good place to start).  
+
+Discussion and Support
+----------------------
+
+The best way to discuss development activities is via Git issues.
+
+To get involved in community discussion please `join <https://join.slack.com/t/parsl-project/shared_invite/enQtMzQyNjM2Njk4NTk1LTE2YTY3NjkyZThjZmE5ODk5ZDc1NTQzNTVmYmEyMjVkZTI5MjlhNzljMDQ0Yjg4MTcwMjg2NjBmYjAwOTQxYjE>`_ the Parsl Slack channel. 

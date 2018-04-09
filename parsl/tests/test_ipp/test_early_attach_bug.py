@@ -24,7 +24,7 @@ import time
 # parsl.set_stream_logger()
 
 workers = IPyParallelExecutor()
-dfk = DataFlowKernel(workers)
+dfk = DataFlowKernel(executors=[workers])
 
 
 @App('python', dfk)

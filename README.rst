@@ -70,6 +70,11 @@ For testing:
 * nose
 * coverage
 
+Contributing
+============
+
+We welcome contributions from the community. Please see our `contributing guide <.github/CONTRIBUTING.rst>`_. 
+
 Citation
 ========
 
