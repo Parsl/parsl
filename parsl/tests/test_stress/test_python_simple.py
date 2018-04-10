@@ -28,8 +28,13 @@ if __name__ == '__main__':
         parsl.set_stream_logger()
 
     start = time.time()
-    x = {}
+    x = []
     for i in range(int(args.count)):
-        x[i] = increment(i)
+        fu = increment(i)
+        x.append(fu)
     end = time.time()
     print("Launched {0} tasks in {1} s".format(args.count, end - start))
+
+    [fu.result() for fu in x]
+    end = time.time()
+    print("Completed {0} tasks in {1} s".format(args.count, end - start))
