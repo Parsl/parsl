@@ -1,14 +1,9 @@
 from parsl import *
-import parsl
-import libsubmit
 import time
-
-print(parsl.__version__)
-print(libsubmit.__version__)
-
-# parsl.set_stream_logger()
-
 from .local import localIPP
+localIPP["sites"][0]["execution"]["block"]["initBlocks"] = 0
+localIPP["sites"][0]["execution"]["block"]["minBlocks"] = 0
+localIPP["sites"][0]["execution"]["block"]["maxBlocks"] = 4
 dfk = DataFlowKernel(config=localIPP)
 
 
