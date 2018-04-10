@@ -90,10 +90,39 @@ class File(str):
         return self.dman.stage_out(self)
 
     def set_data_future(self, df, site=None):
+        print("Setting datafuture")
         self.data_future[site] = df
 
     def get_data_future(self, site):
         return self.data_future.get(site)
+
+    def __getstate__(self):
+        """ Overriding the default pickling method.
+
+        The File object get's pickled and transmitted to remote sites during app
+        execution. This enables pickling while retaining the lockable resources
+        to the DFK/Client side.
+        """
+
+        state = self.__dict__.copy()
+
+        # We have already made a copy of the future objects, they are now no longer
+        # reliable as means to wait for the staging events
+        for site in state["data_future"]:
+            # This is assumed to be safe, since the data_future represents staging to a specific site
+            # and a site will only have one filepath.
+            state["data_future"][site] = state["data_future"][site].filepath
+
+        state["dman"] = None
+
+        return state
+
+    def __setstate__(self, state):
+        """ Overloading the default pickle method to reconstruct a File from serialized form
+
+        This might require knowledge of whethere a DataManager is already present in the context.
+        """
+        self.__dict__.update(state)
 
 
 if __name__ == '__main__':
