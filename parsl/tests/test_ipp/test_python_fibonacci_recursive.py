@@ -1,8 +1,8 @@
 from parsl import *
 import argparse
 
-workers = IPyParallelExecutor()
-dfk = DataFlowKernel(executors=[workers])
+from parsl.configs.local import localIPP as config
+dfk = DataFlowKernel(config=config)
 
 
 @App('python', dfk)

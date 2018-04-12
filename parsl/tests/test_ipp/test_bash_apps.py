@@ -1,19 +1,14 @@
 """Testing bash apps
 """
-import parsl
 from parsl import *
-
-print("Parsl version: ", parsl.__version__)
 
 import os
 import time
 import shutil
 import argparse
 
-# parsl.set_stream_logger()
-
-workers = IPyParallelExecutor()
-dfk = DataFlowKernel(executors=[workers])
+from parsl.configs.local import localIPP as config
+dfk = DataFlowKernel(config=config)
 
 
 @App('bash', dfk)
@@ -90,6 +85,10 @@ def test_parallel_for(n=10):
                                                                          n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
+
+
+def test_z_cleanup():
+    dfk.cleanup()
 
 
 if __name__ == '__main__':

@@ -15,6 +15,22 @@ def increment(x):
     return x + 1
 
 
+def test_stress(count=1000):
+    """Threaded app RTT stress test"""
+
+    start = time.time()
+    x = []
+    for i in range(int(count)):
+        fu = increment(i)
+        x.append(fu)
+    end = time.time()
+    print("Launched {0} tasks in {1} s".format(count, end - start))
+
+    [fu.result() for fu in x]
+    end = time.time()
+    print("Completed {0} tasks in {1} s".format(count, end - start))
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -27,14 +43,4 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    start = time.time()
-    x = []
-    for i in range(int(args.count)):
-        fu = increment(i)
-        x.append(fu)
-    end = time.time()
-    print("Launched {0} tasks in {1} s".format(args.count, end - start))
-
-    [fu.result() for fu in x]
-    end = time.time()
-    print("Completed {0} tasks in {1} s".format(args.count, end - start))
+    test_stress(count=int(args.count))

@@ -8,9 +8,8 @@ import time
 import argparse
 from nose.tools import nottest
 
-# parsl.set_stream_logger()
-workers = IPyParallelExecutor()
-dfk = DataFlowKernel(executors=[workers])
+from parsl.configs.local import localIPP as config
+dfk = DataFlowKernel(config=config)
 
 
 @App('python', dfk)

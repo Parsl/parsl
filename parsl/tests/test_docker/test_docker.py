@@ -1,8 +1,8 @@
 """Testing dockerized apps
 """
-import parsl
+# import parsl
 from parsl import *
-parsl.set_stream_logger()
+# parsl.set_stream_logger()
 import time
 import argparse
 
