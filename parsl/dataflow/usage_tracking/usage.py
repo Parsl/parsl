@@ -6,8 +6,10 @@ import getpass
 import json
 import logging
 import socket
+import sys
 
 from parsl.dataflow.states import States
+from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,10 @@ class UsageTracker (object):
         self.dfk = dfk
         self.config = self.dfk.config
         self.uuid = str(uuid.uuid4())
+        self.parsl_version = PARSL_VERSION
+        self.python_version = "{}.{}.{}".format(sys.version_info.major,
+                                                sys.version_info.minor,
+                                                sys.version_info.micro)
         self.test_mode, self.tracking_enabled = self.check_tracking_enabled()
         logger.debug("Tracking status: {}".format(self.tracking_enabled))
         logger.debug("Testing mode   : {}".format(self.test_mode))
@@ -93,6 +99,8 @@ class UsageTracker (object):
                    'uname': hashed_username,
                    'hname': hashed_hostname,
                    'test': self.test_mode,
+                   'parsl_v': self.parsl_version,
+                   'python_v': self.python_version,
                    'start': time.time()}
 
         return json.dumps(message)
