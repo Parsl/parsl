@@ -60,7 +60,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
         format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
@@ -84,7 +84,7 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
         format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(logging.DEBUG)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
