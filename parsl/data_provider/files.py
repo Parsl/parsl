@@ -90,7 +90,6 @@ class File(str):
         return self.dman.stage_out(self)
 
     def set_data_future(self, df, site=None):
-        print("Setting datafuture")
         self.data_future[site] = df
 
     def get_data_future(self, site):
