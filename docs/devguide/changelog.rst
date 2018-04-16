@@ -10,6 +10,10 @@ New functionality
 ^^^^^^^^^^^^^^^^^
 
 * Support for Globus file transfers `issue#71 <https://github.com/Parsl/parsl/issues/71>`_
+
+  .. caution::
+     This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
+
 * PathLike behavior for Files `issue#174 <https://github.com/Parsl/parsl/issues/174>`_
   Files behave like strings here :
 
@@ -52,6 +56,9 @@ New functionality
                  }
                  }],
             "globals": {"lazyErrors": True}        }
+
+  .. caution::
+     This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
 
 * Cleaner logging `issue#85 <https://github.com/Parsl/parsl/issues/85>`.
   * Logs are now written by default to `runinfo/RUN_ID/parsl.log`.
