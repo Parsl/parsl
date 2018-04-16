@@ -1,6 +1,93 @@
 Changelog
 =========
 
+Parsl 0.5.0
+-----------
+
+Released. Apr 16th, 2018.
+
+New functionality
+^^^^^^^^^^^^^^^^^
+
+* Support for Globus file transfers `issue#71 <https://github.com/Parsl/parsl/issues/71>`_
+* PathLike behavior for Files `issue#174 <https://github.com/Parsl/parsl/issues/174>`_
+  Files behave like strings here :
+  .. code-block:: python
+
+      myfile = File("hello.txt")
+      f = open(myfile, 'r')
+
+
+* Automatic checkpointing modes `issue#106 <https://github.com/Parsl/parsl/issues/106>`_
+
+  .. code-block:: python
+
+        config = {
+            "globals": {
+                "lazyErrors": True,
+                "memoize": True,
+                "checkpointMode": "dfk_exit"
+            }
+        }
+
+* Support for Containers with docker `issue#45 <https://github.com/Parsl/parsl/issues/45>`_
+
+  .. code-block:: python
+
+       localDockerIPP = {
+            "sites": [
+                {"site": "Local_IPP",
+                 "auth": {"channel": None},
+                 "execution": {
+                     "executor": "ipp",
+                     "container": {
+                         "type": "docker",     # <----- Specify Docker
+                         "image": "app1_v0.1", # <------Specify docker image
+                     },
+                     "provider": "local",
+                     "block": {
+                         "initBlocks": 2,  # Start with 4 workers
+                     },
+                 }
+                 }],
+            "globals": {"lazyErrors": True}        }
+
+* Cleaner logging `issue#85 <https://github.com/Parsl/parsl/issues/85>`.
+  * Logs are now written by default to `runinfo/RUN_ID/parsl.log`.
+  * `INFO` log lines are more readable and compact
+
+* Local configs are now packaged  `issue#96 <https://github.com/Parsl/parsl/issues/96>`_
+
+  .. code-block:: python
+
+     from parsl.configs.local import localThreads
+     from parsl.configs.local import localIPP
+
+
+
+    Bug Fixes
+^^^^^^^^^
+* Passing Files over IPP broken `issue#200 <https://github.com/Parsl/parsl/issues/200>`_
+
+* Fix `DataFuture.__repr__` for default instantiation `issue#164 <https://github.com/Parsl/parsl/issues/164>`_
+
+* Results added to appCache before retries exhausted `issue#130 <https://github.com/Parsl/parsl/issues/130>`_
+
+* Missing documentation added for Multisite and Error handling `issue#116 <https://github.com/Parsl/parsl/issues/116>`_
+
+* TypeError raised when a bad stdout/stderr path is provided. `issue#104 <https://github.com/Parsl/parsl/issues/104>`_
+
+* Race condition in DFK `issue#102 <https://github.com/Parsl/parsl/issues/102>`_
+
+* Cobalt provider broken on Cooley.alfc `issue#101 <https://github.com/Parsl/parsl/issues/101>`_
+
+* No blocks provisioned if parallelism/blocks = 0 `issue#97 <https://github.com/Parsl/parsl/issues/97>`_
+
+* Checkpoint restart assumes rundir `issue#95 <https://github.com/Parsl/parsl/issues/95>`_
+
+* Logger continues after cleanup is called `issue#93 <https://github.com/Parsl/parsl/issues/93>`_
+
+
 Parsl 0.4.1
 -----------
 
