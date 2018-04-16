@@ -15,7 +15,7 @@ New functionality
      This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
 
 * PathLike behavior for Files `issue#174 <https://github.com/Parsl/parsl/issues/174>`_
-  Files behave like strings here :
+    * Files behave like strings here :
 
   .. code-block:: python
 
@@ -57,12 +57,12 @@ New functionality
                  }],
             "globals": {"lazyErrors": True}        }
 
-  .. caution::
+   .. caution::
      This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
 
-* Cleaner logging `issue#85 <https://github.com/Parsl/parsl/issues/85>`.
-  * Logs are now written by default to `runinfo/RUN_ID/parsl.log`.
-  * `INFO` log lines are more readable and compact
+* Cleaner logging `issue#85 <https://github.com/Parsl/parsl/issues/85>`_
+    * Logs are now written by default to `runinfo/RUN_ID/parsl.log`.
+    * `INFO` log lines are more readable and compact
 
 * Local configs are now packaged  `issue#96 <https://github.com/Parsl/parsl/issues/96>`_
 
@@ -110,12 +110,12 @@ New functionality
 
 Bug Fixes
 ^^^^^^^^^
-* Cobalt provider issues with job state #101
-* Parsl updates config inadvertently #98
-* No blocks provisioned if parallelism/blocks = 0 #97
-* Checkpoint restart assumes rundir bug #95
-* Logger continues after cleanup called enhancement #93
-* Error checkpointing when no cache enabled  #92
+* Cobalt provider issues with job state `issue#101 <https://github.com/Parsl/parsl/issues/101>`_
+* Parsl updates config inadvertently `issue#98 <https://github.com/Parsl/parsl/issues/98>`_
+* No blocks provisioned if parallelism/blocks = 0 `issue#97 <https://github.com/Parsl/parsl/issues/97>`_
+* Checkpoint restart assumes rundir bug `issue#95 <https://github.com/Parsl/parsl/issues/95>`_
+* Logger continues after cleanup called enhancement `issue#93 <https://github.com/Parsl/parsl/issues/93>`_
+* Error checkpointing when no cache enabled `issue#92 <https://github.com/Parsl/parsl/issues/92>`_
 * Several fixes to libsubmit.
 
 
@@ -175,7 +175,7 @@ Bug Fixes
   `issue#41 <https://github.com/Parsl/parsl/issues/41>`_
 
 * Fixes for `script_dir` | `scriptDir` inconsistencies `issue#64 <https://github.com/Parsl/parsl/issues/64>`_
-  We now use `scriptDir` exclusively.
+    * We now use `scriptDir` exclusively.
 
 * Fix for caching not working on jupyter notebooks `issue#90 <https://github.com/Parsl/parsl/issues/90>`_
 
