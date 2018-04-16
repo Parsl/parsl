@@ -4,7 +4,7 @@ Roadmap
 
 Sufficient capabilities to use Parsl in many common situations already exist.  This document indicates where Parsl is going; it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold, with the release in which they were added marked for releases since 0.3.0. Help in providing any of the yet-to-be-developed capabilities is welcome.
 
-The upcoming release is Parsl-0.4.0 and features in preparation are documented via Github `issues <https://github.com/Parsl/parsl/issues>`_ and `milestones <https://github.com/Parsl/parsl/milestone/2>`_.
+The upcoming release is Parsl-0.6.0 and features in preparation are documented via Github `issues <https://github.com/Parsl/parsl/issues>`_ and `milestones <https://github.com/Parsl/parsl/milestone/4>`_.
 
 Core Functionality
 ---------------------
@@ -24,7 +24,7 @@ Data management
 ---------------
 
 * **File abstraction to support representation of local and remote files.**
-* Support for a variety of common data access protocols (e.g., **local**, HTTP, Globus).
+* Support for a variety of common data access protocols (e.g., **local**, HTTP, **Globus(v0.5.0)**).
 * Input/output staging models that support transparent movement of data from source to a location on which it is accessible for compute. This includes staging to/from the client (script execution location), service (pilot job controller location), and worker node.
 * Support for creation of a sandbox and execution within this environment for systems without a shared file system, to isolate data and simplify script code. Sandbox execution can optionally be turned off in extreme scale environments.
 * Support for data caching at multiple levels and across sites.
@@ -41,10 +41,10 @@ Execution core and parallelism (DFK)
 * Well defined state transition model for task lifecycle
 * More efficient algorithms for managing dependency resolution.
 * Scheduling and allocation algorithms that determine job placement based on **job** and data requirements (including deadlines) as well as **site capabilities**
-* **Logic to manage (provision, resize) execution resource block based on job requirements, and fitting tasks into the resource blocks (0.4.0)**
-* Retry logic to support recovery and fault tolerance
+* **Logic to manage (provision, resize) execution resource block based on job requirements, and fitting tasks into the resource blocks (v0.4.0)**
+* **Retry logic to support recovery and fault tolerance**
     - **This can be done by the user now with Exception handling**
-* **Workflow level checkpointing and restart (0.4.0)**
+* **Workflow level checkpointing and restart (v0.4.0)**
 
 Resource provisioning and execution
 -----------------------------------
@@ -67,7 +67,7 @@ Resource provisioning and execution
 * Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
 * API/method for {adding entries to, viewing entries} in repository
 * IPP workers to support multiple threads of execution per node.
-* Support for user-defined containers as Parsl apps and orchestration of workflows comprised of containers
+* **Support for user-defined containers as Parsl apps and orchestration of workflows comprised of containers (v0.5.0)**
 
 
 Visualization, debugging, fault tolerance
@@ -78,8 +78,8 @@ Visualization, debugging, fault tolerance
 * Visualization library that enables users to introspect graph, task, and data dependencies, as well as observe state of executed/executing tasks
 * Integration of visualization into jupyter
 * Support for visualizing dead/dying parts of the task graph and retrying with updates to the task.
-* Retry model to selectively re-execute only the failed branches of a workflow graph
-* Fault tolerance support for individual task execution
+* **Retry model to selectively re-execute only the failed branches of a workflow graph**
+* **Fault tolerance support for individual task execution**
 
 Authentication and authorization
 --------------------------------
@@ -95,7 +95,7 @@ Ecosystem
 * Creation of library of Parsl apps and workflows
 * Provenance capture/export in standard formats
 * Automatic metrics capture and reporting to understand Parsl usage
-* **Anonymous Usage Tracking (0.4.0)**
+* **Anonymous Usage Tracking (v0.4.0)**
 
 Documentation / Tutorials:
 --------------------------
