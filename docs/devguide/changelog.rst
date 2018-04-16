@@ -12,6 +12,7 @@ New functionality
 * Support for Globus file transfers `issue#71 <https://github.com/Parsl/parsl/issues/71>`_
 * PathLike behavior for Files `issue#174 <https://github.com/Parsl/parsl/issues/174>`_
   Files behave like strings here :
+
   .. code-block:: python
 
       myfile = File("hello.txt")
@@ -64,8 +65,7 @@ New functionality
      from parsl.configs.local import localIPP
 
 
-
-    Bug Fixes
+Bug Fixes
 ^^^^^^^^^
 * Passing Files over IPP broken `issue#200 <https://github.com/Parsl/parsl/issues/200>`_
 
