@@ -61,8 +61,8 @@ New functionality
      This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
 
 * Cleaner logging `issue#85 <https://github.com/Parsl/parsl/issues/85>`_
-    * Logs are now written by default to `runinfo/RUN_ID/parsl.log`.
-    * `INFO` log lines are more readable and compact
+    * Logs are now written by default to ``runinfo/RUN_ID/parsl.log``.
+    * ``INFO`` log lines are more readable and compact
 
 * Local configs are now packaged  `issue#96 <https://github.com/Parsl/parsl/issues/96>`_
 
