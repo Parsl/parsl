@@ -63,7 +63,7 @@ Resource provisioning and execution
     * **aprun (Partial support on Crays and Theta as of 0.4.0)**
     * Various MPI launch mechanisms (Mpiexec, mpirun..)
 * Support for remote execution using **SSH** and OAuth-based authentication (SSH execution support added in 0.3.0)
-* **Utilizing multiple sites for a single script’s execution (0.4.0)**
+* **Utilizing multiple sites for a single script’s execution (v0.4.0)**
 * Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
 * API/method for {adding entries to, viewing entries} in repository
 * IPP workers to support multiple threads of execution per node.
