@@ -70,6 +70,11 @@ For testing:
 * nose
 * coverage
 
+For building documentation:
+
+* sphinx
+* sphinx_rtd_theme
+
 Contributing
 ============
 
