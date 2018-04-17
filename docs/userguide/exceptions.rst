@@ -93,7 +93,7 @@ not halt as soon as it encounters a failure, but continues execution of every
 app that is unaffected. Lazy failures is the default behavior in parsl, with the
 expectation that when running production workflows, individual app failures can be
 deferred until the end of the workflow. During the development and testing of
-workflows, failing immediately on any failure is oftern preferred and this behavior
+workflows, failing immediately on any failure is often preferred and this behavior
 is possible by setting ``lazy_fail=False``.
 
 
@@ -118,7 +118,7 @@ For eg:
       time ----->
 
 
-There are two way to disable lazy failures, via setting the ``config['globals']['lazyErrors']=False``
+There are two ways to disable lazy failures: via setting the ``config['globals']['lazyErrors']=False``
 or by setting ``lazy_fail=False`` as keyword argument to the DataFlowKernel at initialization.
 
 Here is an example of disabling lazy failures via the config passed to the DFK

@@ -8,7 +8,7 @@ Parsl provides a high level abstraction, called a *Block*, for providing a unifo
 Execution Providers
 -------------------
 
-Execution providers are responsible for managing execution resources. In the simplest case the local computer is used and parallel tasks are forked to individual threads. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, Condor and Cobalt. Clouds, on the other hand, provide APIs that allow more fine-graind composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
+Execution providers are responsible for managing execution resources. In the simplest case the local computer is used and parallel tasks are forked to individual threads. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, Condor and Cobalt. Clouds, on the other hand, provide APIs that allow more fine-grained composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
 
 Parsl's execution interface is called ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_.)--a Python library that provides a common interface to execution providers.
 Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor LRMs. New execution providers can be easily added by implementing libsubmit's execution provider interface.
@@ -73,7 +73,7 @@ Elasticity
 Parsl implements a dynamic dependency graph in which the 
 graph is extended as new tasks are enqueued and completed. 
 As the Parsl script executes the workflow, new tasks are added
-to a queue for execution, tasks are then executed asynchronously
+to a queue for execution. Tasks are then executed asynchronously
 when their dependencies are met. 
 Parsl uses the selected executor(s) to manage task
 execution on the execution provider(s).
@@ -136,7 +136,7 @@ For example:
      blocks = min (maxBlocks,
                    ceil( active_tasks / taskBlocks ))
 
-- When p = 1/2: Stack up to 2 tasks per taskBlock before we overflowing and requesting a new block
+- When p = 1/2: Stack up to 2 tasks per taskBlock before overflowing and requesting a new block
 
 
 Configuration

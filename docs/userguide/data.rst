@@ -43,7 +43,7 @@ Globus
 ^^^^^^
 
 .. caution::
-   This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
+   This feature is available from Parsl ``v0.5.0`` in an ``experimental`` state.
    We request feedback and feature enhancement requests via `github <https://github.com/Parsl/parsl/issues>`_.
 
 
