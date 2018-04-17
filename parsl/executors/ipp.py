@@ -50,7 +50,7 @@ cat <<EOF > ipengine.json
 EOF
 
 mkdir -p '.ipengine_logs'
-ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
+ipengine --file=ipengine.json >> .ipengine_logs/$JOBNAME.log 2>&1
 """.format(engine_dir, engine_json)
 
     def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):
