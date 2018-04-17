@@ -13,7 +13,7 @@ def singleNodeLauncher(cmd_string, taskBlocks, walltime=None):
         - walltime (int) : This is not used by this launcher.
     '''
 
-    x = '''export CORES=$(grep -c ^processor /proc/cpuinfo)
+    x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={1}
 
