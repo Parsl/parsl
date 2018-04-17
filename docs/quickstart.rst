@@ -56,7 +56,7 @@ For Developers
 
 1. Download Parsl::
 
-    $ git clone https://github.com/Parsl/parsl.git
+    $ git clone https://github.com/Parsl/parsl
 
 2. Install::
 
