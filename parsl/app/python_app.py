@@ -1,5 +1,8 @@
 import logging
 
+import tblib.pickling_support
+tblib.pickling_support.install()
+
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.app.errors import wrap_error

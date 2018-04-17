@@ -1,9 +1,8 @@
 """Exceptions raise by Apps."""
 from functools import wraps
 
+import dill
 from six import reraise
-from tblib import pickling_support, Traceback
-pickling_support.install()
 
 
 class ParslError(Exception):
@@ -162,21 +161,19 @@ class DependencyError(ParslError):
 
 class RemoteException(ParslError):
     def __init__(self, e_type, e_value, traceback):
-        self.e_type = e_type
-        self.e_value = e_value
-        self.traceback = Traceback(traceback).to_dict()
+        self.e_type = dill.dumps(e_type)
+        self.e_value = dill.dumps(e_value)
+        self.traceback = dill.dumps(traceback)
 
     def reraise(self):
-        tb = Traceback.from_dict(self.traceback)
-        reraise(self.e_type, self.e_value, tb.as_traceback())
+        reraise(dill.loads(self.e_type), dill.loads(self.e_value), dill.loads(self.traceback))
 
 
 def wrap_error(func):
-    import sys
-    from parsl.app.errors import RemoteException
-
     @wraps(func)
     def wrapper(*args, **kwargs):
+        import sys
+        from parsl.app.errors import RemoteException
         try:
             return func(*args, **kwargs)
         except Exception as e:

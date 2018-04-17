@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from ipyparallel import serialize, Client
+from ipyparallel import Client
 
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import *
@@ -192,8 +192,6 @@ sleep infinity
             logger.debug("Starting IpyParallelExecutor with no provider")
 
         self.lb_view = self.executor.load_balanced_view()
-        serialize.use_cloudpickle()
-        self.lb_view.apply(serialize.use_cloudpickle)
         logger.debug("Starting executor")
 
     @property
