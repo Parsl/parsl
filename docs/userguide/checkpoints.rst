@@ -66,7 +66,7 @@ Creating a checkpoint
 ^^^^^^^^^^^^^^^^^^^^^
 
 When using automated checkpointing there is no need for users to modify their
-Parsl script in anyway: checkpointing will be conducted completely automatically. 
+Parsl script in any way: checkpointing will be conducted completely automatically. 
 The following example shows how manual checkpointing can be invoked in a Parsl script. 
 
 .. code-block:: python

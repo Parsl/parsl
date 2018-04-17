@@ -14,14 +14,14 @@ Apps
 ====
 
 Apps are parallelized functions that execute independent of the control flow of the main python
-interpretor. We have two main types of Apps : PythonApps and BashApps. These are subclassed from
+interpreter. We have two main types of Apps : PythonApps and BashApps. These are subclassed from
 AppBase.
 
 AppBase
 -------
 
 This is the base class that defines the two external facing functions that an App must define.
-The  __init__ () which is called when the interpretor sees the definition of the decorated
+The  __init__ () which is called when the interpreter sees the definition of the decorated
 function, and the __call__ () which is invoked when a decorated function is called by the user.
 
 .. autoclass:: parsl.app.app.AppBase
@@ -148,7 +148,7 @@ Execution Providers
 Execution providers are responsible for managing execution resources that have a Local
 Resource Manager (LRM). For instance, campus clusters and supercomputers generally have
 LRMs (schedulers) such as Slurm, Torque/PBS, Condor and Cobalt. Clouds, on the other hand, have API interfaces
-that allow much more fine-graind composition of an execution environment. An execution
+that allow much more fine-grained composition of an execution environment. An execution
 provider abstracts these types of resources and provides a single uniform interface to them.
 
 

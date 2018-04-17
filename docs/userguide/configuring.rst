@@ -77,7 +77,7 @@ The most important part of this configuration is the `sites` key. Parsl allows m
                 "initBlocks" : <int: blocks to provision at the execution start>,
                 "minBlocks"  : <int: min blocks to maintain during execution>,
                 "maxBlocks"  : <int: max blocks that can be provisioned>,
-                "walltime"   : <str: Walltime allowed for the block in HH:MM:SS format>,
+                "walltime"   : <str: walltime allowed for the block in HH:MM:SS format>,
 
                 # The "options" block contains attributes that are provider specific
                 # such as scheduler options
@@ -90,7 +90,7 @@ The most important part of this configuration is the `sites` key. Parsl allows m
     }
 
 
-The following shows an example configuration for accessing NERSC's Cori supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the scripts submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
+The following shows an example configuration for accessing NERSC's Cori supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
 .. code-block :: python
 

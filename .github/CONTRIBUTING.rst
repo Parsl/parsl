@@ -3,7 +3,7 @@ Coding conventions
 
 Parsl code should adhere to Python pep-8.  Install `flake8` and run the following code to identify non-compliant code::
 
-  $ flake8 --exclude=.git,docs .
+  $ flake8 parsl/
 
 Note: the continuous integration environment will validate all pull requests using this command.
 

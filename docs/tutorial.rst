@@ -6,8 +6,8 @@ them together with dependencies to create workflows in python. Parsl
 wraps python functions into Apps with the **@App** decorator. Decorated
 function can run in parallel when all their inputs are ready.
 
-For a deeper dive into examples and documentation, please refer our
-documentation `here <parsl.readthedocs.io>`__
+For a deeper dive into examples and documentation, please refer to our
+documentation `here <parsl.readthedocs.io>`__.
 
 .. code:: ipython3
 
@@ -17,7 +17,7 @@ documentation `here <parsl.readthedocs.io>`__
 
 Parsl's DataFlowKernel acts as a layer over any pool of execution
 resources, in our case a pool of
-[threads](https://en.wikipedia.org/wiki/Thread\_(computing).
+`threads <https://en.wikipedia.org/wiki/Thread\_(computing)>`__.
 
 .. code:: ipython3
 
@@ -67,7 +67,7 @@ complete and the result is available.
 Data Dependencies
 ~~~~~~~~~~~~~~~~~
 
-When a future created by an App is passed as inputs to another, a data
+When a future created by an App is passed as input to another, a data
 dependency is created. Parsl ensures that Apps are executed as their
 dependencies are resolved.
 

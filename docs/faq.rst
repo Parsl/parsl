@@ -173,7 +173,7 @@ How do I run code that uses Python2.X?
 Modules or code that require Python2.X cannot be run as python apps,
 however they may be run via bash apps. The primary limitation with
 python apps is that all the inputs and outputs including the function
-would be mangled when being transmitted between python interpretors with
+would be mangled when being transmitted between python interpreters with
 different version numbers (also see :ref:`pyversion`)
 
 Here's an example of running a python2.7 code as a bash application:

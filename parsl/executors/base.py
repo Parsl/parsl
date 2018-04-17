@@ -36,7 +36,7 @@ class ParslExecutor(metaclass=ABCMeta):
         """Scale in method.
 
         We should have the scale in method simply take resource object
-        which will have the scaling methods, scale_in itself should be a corinine, since
+        which will have the scaling methods, scale_in itself should be a coroutine, since
         scaling tasks can be slow.
         """
         pass

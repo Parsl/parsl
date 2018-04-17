@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class AppBase (object):
     """This is the base class that defines the two external facing functions that an App must define.
 
-    The  __init__ () which is called when the interpretor sees the definition of the decorated
+    The  __init__ () which is called when the interpreter sees the definition of the decorated
     function, and the __call__ () which is invoked when a decorated function is called by the user.
 
     """

@@ -13,15 +13,15 @@ to supported other container systems such as `Singularity <http://singularity.lb
 `Shifter <https://www.nersc.gov/research-and-development/user-defined-images/>`_ etc.
 
 .. caution::
-   This feature is available since Parsl ``v0.5.0`` in an ``experimental`` state.
+   This feature is available from Parsl ``v0.5.0`` in an ``experimental`` state.
    We request feedback and feature enhancement requests via `github <https://github.com/Parsl/parsl/issues>`_.
 
 Docker
 ------
 
-The following section describes creating a pool of containers each with a worker,
+The following section describes creating a pool of containers, each with a worker
 that executes specific ``Apps``. Most of the immediately following sections can be skimmed
-if you are have experience working with containers.
+if you have experience working with containers.
 
 Installing Docker
 ^^^^^^^^^^^^^^^^^

@@ -47,7 +47,7 @@ For Developers
 
 1. Download Parsl::
 
-    $ git clone https://github.com/Parsl/parsl.git parsl
+    $ git clone https://github.com/Parsl/parsl
 
 2. Install::
 
@@ -69,6 +69,11 @@ For testing:
 
 * nose
 * coverage
+
+For building documentation:
+
+* sphinx
+* sphinx_rtd_theme
 
 Contributing
 ============
