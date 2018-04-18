@@ -123,7 +123,8 @@ class LocalChannel(Channel):
                 stderr=subprocess.PIPE,
                 cwd=self.userhome,
                 env=current_env,
-                shell=True
+                shell=True,
+                preexec_fn=os.setpgrp
             )
             pid = proc.pid
 
