@@ -1,4 +1,8 @@
 """Exceptions raise by Apps."""
+from functools import wraps
+
+import dill
+from six import reraise
 
 
 class ParslError(Exception):
@@ -24,12 +28,6 @@ class AppException(ParslError):
 
     What this exception contains depends entirely on context
     """
-
-    def __repr__(self):
-        return "{0} Reason:{1}".format(self.__class__, self.reason)
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class AppBadFormatting(ParslError):
@@ -159,3 +157,25 @@ class DependencyError(ParslError):
 
     def __str__(self):
         return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
+
+
+class RemoteException(ParslError):
+    def __init__(self, e_type, e_value, traceback):
+        self.e_type = dill.dumps(e_type)
+        self.e_value = dill.dumps(e_value)
+        self.traceback = dill.dumps(traceback)
+
+    def reraise(self):
+        reraise(dill.loads(self.e_type), dill.loads(self.e_value), dill.loads(self.traceback))
+
+
+def wrap_error(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        import sys
+        from parsl.app.errors import RemoteException
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return RemoteException(*sys.exc_info())
+    return wrapper
