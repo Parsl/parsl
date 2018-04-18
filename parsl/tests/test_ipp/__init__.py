@@ -3,7 +3,7 @@ import os
 if str(os.environ.get('PARSL_TESTING', False)).lower() != 'true':
     raise RuntimeError("must first run 'export PARSL_TESTING=True'")
 
-
+"""
 def setup_package():
     import subprocess
     import time
@@ -20,3 +20,4 @@ def teardown_package():
     print("Stopping ipcluster")
     time.sleep(2)
     return proc
+"""

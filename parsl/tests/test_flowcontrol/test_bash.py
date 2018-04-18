@@ -7,7 +7,7 @@ print(libsubmit.__version__)
 
 # parsl.set_stream_logger()
 
-from .local import localIPP
+from parsl.configs.local import localIPP
 dfk = DataFlowKernel(config=localIPP)
 
 
@@ -25,3 +25,7 @@ def test_bash():
     x = bash_app(stdout="{0}.out".format(fname))
     print("Waiting ....")
     print(x.result())
+
+
+if __name__ == "__main__":
+    test_bash()

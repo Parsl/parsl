@@ -1,6 +1,7 @@
 from parsl import *
 import time
-from .local import localIPP
+
+from parsl.configs.local import localIPP
 localIPP["sites"][0]["execution"]["block"]["initBlocks"] = 0
 localIPP["sites"][0]["execution"]["block"]["minBlocks"] = 0
 localIPP["sites"][0]["execution"]["block"]["maxBlocks"] = 4
@@ -32,5 +33,4 @@ def test_python(width=10):
 
 
 if __name__ == "__main__":
-    parsl.set_stream_logger()
     test_python()

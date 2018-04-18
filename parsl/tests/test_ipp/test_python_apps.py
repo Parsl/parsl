@@ -9,9 +9,8 @@ from nose.tools import nottest, assert_raises
 import parsl
 from parsl import *
 
-# parsl.set_stream_logger()
-workers = IPyParallelExecutor()
-dfk = DataFlowKernel(executors=[workers])
+from parsl.configs.local import localIPP as config
+dfk = DataFlowKernel(config=config)
 
 
 @App('python', dfk)

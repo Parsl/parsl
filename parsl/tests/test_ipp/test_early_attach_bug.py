@@ -14,17 +14,11 @@ among the engine once it has been sent to the the engine's queue.
 
 
 """
-import parsl
 from parsl import *
-
-print("Parsl version: ", parsl.__version__)
-
 import time
 
-# parsl.set_stream_logger()
-
-workers = IPyParallelExecutor()
-dfk = DataFlowKernel(executors=[workers])
+from parsl.configs.local import localIPP as config
+dfk = DataFlowKernel(config=config)
 
 
 @App('python', dfk)
@@ -32,6 +26,10 @@ def sleep_double(x):
     import time
     time.sleep(1)
     return x * 2
+
+
+def test_z_cleanup():
+    dfk.cleanup()
 
 
 if __name__ == "__main__":

@@ -1,18 +1,28 @@
-"""Testing bash apps
-"""
-import parsl
+''' Testing bash apps
+'''
 from parsl import *
 
 import time
 import argparse
 
-workers = IPyParallelExecutor()
-dfk = DataFlowKernel(executors=[workers])
+from parsl.configs.local import localIPP as config
+dfk = DataFlowKernel(config=config)
 
 
 @App('python', dfk)
 def increment(x):
     return x + 1
+
+
+def test_stress(count=1000):
+    """IPP app launch stress test"""
+    start = time.time()
+    x = {}
+    for i in range(count):
+        x[i] = increment(i)
+    end = time.time()
+    print("Launched {0} tasks in {1} s".format(count, end - start))
+    dfk.cleanup()
 
 
 if __name__ == '__main__':
@@ -27,9 +37,4 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    start = time.time()
-    x = {}
-    for i in range(int(args.count)):
-        x[i] = increment(i)
-    end = time.time()
-    print("Launched {0} tasks in {1} s".format(args.count, end - start))
+    test_stress(count=int(args.count))

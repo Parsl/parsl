@@ -1,14 +1,11 @@
 """Testing bash apps
 """
-import parsl
 from parsl import *
 import time
 import argparse
 
-# parsl.set_stream_logger()
-workers = IPyParallelExecutor()
-print("Using ipyparallel workers")
-dfk = DataFlowKernel(executors=[workers])
+from parsl.configs.local import localIPP as config
+dfk = DataFlowKernel(config=config)
 
 
 @App('python', dfk)
@@ -58,6 +55,10 @@ def test_parallel2(n=10):
     print("Total time : ", ttc)
 
     return ttc
+
+
+def test_z_cleanup():
+    dfk.cleanup()
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 from parsl import *
 
-from .local import localIPP
+from parsl.configs.local import localIPP
 localIPP["sites"][0]["execution"]["block"]["initBlocks"] = 0
 dfk = DataFlowKernel(config=localIPP)
 
@@ -25,5 +25,4 @@ def test_python(N=2):
 
 if __name__ == '__main__':
 
-    # parsl.set_stream_logger()
     test_python()
