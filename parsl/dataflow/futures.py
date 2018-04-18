@@ -129,7 +129,8 @@ class AppFuture(Future):
             else:
                 if isinstance(e, RemoteException):
                     e.reraise()
-                raise
+                else:
+                    raise
 
     def cancel(self):
         if self.parent:
