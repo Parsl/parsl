@@ -227,25 +227,47 @@ sleep infinity
         return r
 
     def scale_in(self, blocks, *args, **kwargs):
-        """Scale in the number of active workers by 1.
+        """Scale in the number of active workers by ``blocks``.
 
         This method is notImplemented for threads and will raise the error if called.
 
         Raises:
              NotImplemented exception
         """
+        if not self.execution_provider:
+            logger.error('No execution provider available')
+            return None
+
+        # Scale in, starting with idle blocks
+        logger.debug('Scaling in by {}'.format(blocks))
+
+        # Get engine status and Client queue status
         status = dict(zip(self.engines, self.execution_provider.status(self.engines)))
+        queue_status = self.executor.queue_status()
 
-        # This works for blocks=0
-        to_kill = [engine for engine in status if status[engine] == "RUNNING"][:blocks]
+        # Get block status, and those blocks with no tasks
+        all_blocks = [engine for engine in status if status[engine] == "RUNNING"]
+        blocks_with_no_tasks = [
+            self.engines[id_]
+            for id_ in self.executor.ids
+            if queue_status[id_]['tasks'] == 0 and
+            status[self.engines[id_]] == 'RUNNING'
+        ]
 
-        if self.execution_provider:
-            r = self.execution_provider.cancel(to_kill, *args, **kwargs)
-        else:
-            logger.error("No execution provider available")
-            r = None
+        # Calculate how many to kill from idle blocks, and any spill over into active blocks
+        # TODO Issue a warning if there's spill over
+        spill_over = max(0, blocks - len(blocks_with_no_tasks))
+        to_kill = blocks_with_no_tasks[:blocks] + all_blocks[:spill_over]
 
-        return r
+        # Lots of logging, remove after development
+        logger.debug('Queue status: {}'.format(queue_status))
+        logger.debug('Blocks with no tasks: {}'.format(blocks_with_no_tasks))
+        logger.debug('All blocks: {}'.format(all_blocks))
+        logger.debug('Spill over: {}'.format(spill_over))
+        logger.debug('Killing: {}'.format(to_kill))
+
+        # Kill the blocks
+        return self.execution_provider.cancel(to_kill, *args, **kwargs)
 
     def status(self):
         """Returns the status of the executor via probing the execution providers."""

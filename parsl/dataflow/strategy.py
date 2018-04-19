@@ -5,7 +5,7 @@ import math
 logger = logging.getLogger(__name__)
 
 
-class Strategy (object):
+class Strategy(object):
     """FlowControl Strategy.
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
@@ -104,19 +104,23 @@ class Strategy (object):
         self.config = dfk.config
         self.sites = {}
         self.max_idletime = 60 * 2  # 2 minutes
+        # self.max_idletime = 2  # 2 seconds for development
 
-        for site in self.dfk.config["sites"]:
-            self.sites[site['site']] = {'idle_since': None,
-                                        'config': site}
+        for site in self.dfk.config['sites']:
+            self.sites[site['site']] = {
+                'idle_since': None,
+                'config': site
+            }
 
-        self.strategies = {None: self._strategy_noop,
-                           'simple': self._strategy_simple}
+        self.strategies = {
+            None: self._strategy_noop,
+            'simple': self._strategy_simple
+        }
 
         strtgy_name = self.config['globals'].get('strategy', None)
-        self.strategize = self.strategies.get(strtgy_name,
-                                              self._strategy_noop)
+        self.strategize = self.strategies.get(strtgy_name, self._strategy_noop)
 
-        logger.debug("Scaling strategy: {0}".format(strtgy_name))
+        logger.debug('Scaling strategy: {0}'.format(strtgy_name))
 
     def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
         """Do nothing.
@@ -152,43 +156,51 @@ class Strategy (object):
             site_config = self.sites[sitename]['config']
 
             if not exc.scaling_enabled:
-                logger.debug("Site:{0} Status:STATIC".format(sitename))
+                logger.debug('Site:{0} Status:STATIC'.format(sitename))
                 continue
 
             # Tasks that are either pending completion
+            # Active tasks are tasks that are submitted, but not yet completed
             active_tasks = exc.executor.outstanding
 
             # Get the status of the taskBlocks
+            # A list of status' per block: ex ['RUNNING', 'RUNNING', 'RUNNING']
             status = exc.status()
 
             # Get the shape and bounds for the site
-            minBlocks = site_config["execution"]["block"]["minBlocks"]
-            maxBlocks = site_config["execution"]["block"]["maxBlocks"]
-            initBlocks = site_config["execution"]["block"]["initBlocks"]
-            taskBlocks = site_config["execution"]["block"]["taskBlocks"]
-            parallelism = site_config["execution"]["block"]["parallelism"]
+            min_blocks = site_config['execution']['block']['minBlocks']
+            max_blocks = site_config['execution']['block']['maxBlocks']
+            init_blocks = site_config['execution']['block']['initBlocks']
+            task_blocks = site_config['execution']['block']['taskBlocks']
+            parallelism = site_config['execution']['block']['parallelism']
 
-            active_blocks = sum([1 for x in status if x in ('RUNNING',
-                                                            'SUBMITTING',
-                                                            'PENDING')])
-            active_slots = active_blocks * taskBlocks
+            active_blocks = sum([
+                1 for block_state in status
+                if block_state in ('RUNNING', 'SUBMITTING', 'PENDING')
+            ])
+            active_slots = active_blocks * task_blocks
 
-            logger.debug("Min:{} initBlocks:{} Max:{}".format(minBlocks,
-                                                              initBlocks,
-                                                              maxBlocks))
+            logger.debug('Min:{} initBlocks:{} Max:{}'.format(
+                min_blocks,
+                init_blocks,
+                max_blocks
+            ))
             # import pdb; pdb.set_trace()
-            logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
-                                                                   active_slots,
-                                                                   parallelism))
+            logger.debug('Tasks:{} Slots:{} Parallelism:{}'.format(
+                len(active_tasks),
+                active_slots,
+                parallelism
+            ))
 
             # Case 1
             # No tasks.
             if len(active_tasks) == 0:
+                logger.debug('Case 1: No active tasks')
                 # Case 1a
                 # Fewer blocks that minBlocks
-                if active_blocks <= minBlocks:
+                if active_blocks <= min_blocks:
                     # Ignore
-                    # logger.debug("Strategy: Case.1a")
+                    logger.debug('Strategy: Case.1a')
                     pass
 
                 # Case 1b
@@ -197,50 +209,64 @@ class Strategy (object):
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
                     if not self.sites[sitename]['idle_since']:
-                        logger.debug("Strategy: Scale_in, tasks=0 starting kill timer")
+                        logger.debug('Strategy: Scale_in, tasks=0 starting kill timer')
                         self.sites[sitename]['idle_since'] = time.time()
 
                     idle_since = self.sites[sitename]['idle_since']
                     if (time.time() - idle_since) > self.max_idletime:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
-                        logger.debug("Strategy: Scale_in, tasks=0")
-                        exc.scale_in(active_blocks - minBlocks)
+                        logger.debug('Strategy: Scale_in, tasks=0')
+                        exc.scale_in(active_blocks - min_blocks)
 
                     else:
                         pass
-                        # logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
+                        logger.debug('Strategy: Case.1b. Waiting for timer : {0}'.format(idle_since))
 
             # Case 2
             # More tasks than the available slots.
             elif (float(active_slots) / len(active_tasks)) < parallelism:
+                logger.debug('Case 2: We need more blocks!')
                 # Case 2a
                 # We have the max blocks possible
-                if active_blocks >= maxBlocks:
+                if active_blocks >= max_blocks:
                     # Ignore since we already have the max nodes
-                    # logger.debug("Strategy: Case.2a")
+                    logger.debug('But we already hit the max, so we won\'t ask for more')
                     pass
 
                 # Case 2b
                 else:
-                    # logger.debug("Strategy: Case.2b")
+                    # logger.debug('Strategy: Case.2b')
                     excess = math.ceil((len(active_tasks) * parallelism) - active_slots)
-                    excess_blocks = math.ceil(float(excess) / taskBlocks)
-                    logger.debug("Requesting {} more blocks".format(excess_blocks))
+                    excess_blocks = math.ceil(float(excess) / task_blocks)
+                    logger.debug('Requesting {} more blocks'.format(excess_blocks))
                     exc.scale_out(excess_blocks)
 
             elif active_slots == 0 and len(active_tasks) > 0:
                 # Case 4
                 # Check if slots are being lost quickly ?
-                logger.debug("Requesting single slot")
+                logger.debug('Case 3: We still have active tasks but no slots')
+                logger.debug('Requesting single slot')
                 exc.scale_out(1)
             # Case 3
             # tasks ~ slots
+
+            elif len(active_tasks) < active_blocks:
+                logger.debug('Case 4: We have too many blocks!')
+                logger.debug('We have {} extra blocks'.format(active_blocks - len(active_tasks)))
+                extra_blocks = active_blocks - len(active_tasks)
+                largest_scale_in = active_blocks - min_blocks
+
+                logger.debug('The largest scale in we can do is {} blocks'.format(largest_scale_in))
+                logger.debug('Asking to scale in {} blocks'.format(min(extra_blocks, largest_scale_in)))
+
+                # Scale back as much as we can, but don't violate min_blocks
+                exc.scale_in(min(extra_blocks, largest_scale_in))
+
             else:
-                # logger.debug("Strategy: Case 3")
+                logger.debug('Case 5: We have an equilibrium between tasks and blocks')
                 pass
 
 
 if __name__ == '__main__':
-
     pass
