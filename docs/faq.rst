@@ -194,12 +194,16 @@ There are a few common situations in which a Parsl script might hang:
 1. Circular Dependency in code
    If an `app` takes a list as an `input` argument and the future returned
    is added to that list, it creates a circular dependency that cannot be resolved.
-   This situation is described `here <https://github.com/Parsl/parsl/issues/59>`_ in more detail
+   This situation is described `here <https://github.com/Parsl/parsl/issues/59>`_ in more detail.
 
 2. Workers requested are unable to contact the Parsl client due to one or
-   more issues listed below :
+   more issues listed below:
 
    * Parsl client does not have a public IP (e.g. laptop on wifi)
+     If your network does not provide public IPs, the simple solution is to
+     ssh over to a machine that is public facing. Machines provisioned from
+     cloud-vendors setup with public IPs are another option.
+
    * Parsl hasn't autodetected the public IP.
      This can be resolved by manually specifying the public IP via the config:
 
