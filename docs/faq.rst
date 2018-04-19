@@ -185,3 +185,33 @@ Here's an example of running a python2.7 code as a bash application:
        return '''conda activate py2.7_env  # Use conda to ensure right env
        python2.7 my_python_app.py -arg {0} -d {1}
        '''.format(arg1, arg2)
+
+Parsl hangs
+^^^^^^^^^^^
+
+There are a few common situations in which a Parsl script might hang:
+
+1. Circular Dependency in code
+   If an `app` takes a list as an `input` argument and the future returned
+   is added to that list, it creates a circular dependency that cannot be resolved.
+   This situation is described `here <https://github.com/Parsl/parsl/issues/59>`_ in more detail
+
+2. Workers requested are unable to contact the Parsl client due to one or
+   more issues listed below :
+
+   * Parsl client does not have a public IP (e.g. laptop on wifi)
+   * Parsl hasn't autodetected the public IP.
+     This can be resolved by manually specifying the public IP via the config:
+
+     .. code-block:: python
+
+        config["controller"]["publicIp"] = 8.8.8.8
+
+   * Firewall restrictions that block certain port ranges.
+     If there is a certain port range that is **not** blocked, you may specify
+     that via the config:
+
+     .. code-block:: python
+
+        # Assuming ports 50000 to 55000 are open
+        config["controller"]["portRange"] = "50000,55000"
