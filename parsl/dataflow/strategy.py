@@ -196,11 +196,12 @@ class Strategy(object):
             # Case 1
             # No tasks.
             if len(active_tasks) == 0:
+                logger.debug('Case 1: No active tasks')
                 # Case 1a
-                # Fewer blocks that min_blocks
+                # Fewer blocks than min_blocks
                 if active_blocks <= min_blocks:
                     # Ignore
-                    # logger.debug("Strategy: Case.1a")
+                    logger.debug('Strategy: Case.1a')
                     pass
 
                 # Case 1b
@@ -225,38 +226,52 @@ class Strategy(object):
 
                     else:
                         pass
-                        # logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
+                        logger.debug('Strategy: Case.1b. Waiting for timer : {0}'.format(idle_since))
 
             # Case 2
             # More tasks than the available slots.
             elif (float(active_slots) / len(active_tasks)) < parallelism:
+                logger.debug('Case 2: We need more blocks!')
                 # Case 2a
                 # We have the max blocks possible
                 if active_blocks >= max_blocks:
                     # Ignore since we already have the max nodes
-                    # logger.debug("Strategy: Case.2a")
+                    logger.debug('But we already hit the max, so we won\'t ask for more')
                     pass
 
                 # Case 2b
                 else:
-                    # logger.debug("Strategy: Case.2b")
+                    # logger.debug('Strategy: Case.2b')
                     excess = math.ceil((len(active_tasks) * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
-                    logger.debug("Requesting {} more blocks".format(excess_blocks))
+                    logger.debug('Requesting {} more blocks'.format(excess_blocks))
                     executor.scale_out(excess_blocks)
 
             elif active_slots == 0 and len(active_tasks) > 0:
                 # Case 4
                 # Check if slots are being lost quickly ?
-                logger.debug("Requesting single slot")
+                logger.debug('Case 3: We still have active tasks but no slots')
+                logger.debug('Requesting single slot')
                 executor.scale_out(1)
             # Case 3
             # tasks ~ slots
+
+            elif len(active_tasks) < active_blocks:
+                logger.debug('Case 4: We have too many blocks!')
+                logger.debug('We have {} extra blocks'.format(active_blocks - len(active_tasks)))
+                extra_blocks = active_blocks - len(active_tasks)
+                largest_scale_in = active_blocks - min_blocks
+
+                logger.debug('The largest scale in we can do is {} blocks'.format(largest_scale_in))
+                logger.debug('Asking to scale in {} blocks'.format(min(extra_blocks, largest_scale_in)))
+
+                # Scale back as much as we can, but don't violate min_blocks
+                executor.scale_in(min(extra_blocks, largest_scale_in))
+
             else:
-                # logger.debug("Strategy: Case 3")
+                logger.debug('Case 5: We have an equilibrium between tasks and blocks')
                 pass
 
 
 if __name__ == '__main__':
-
     pass
