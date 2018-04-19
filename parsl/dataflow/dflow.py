@@ -749,6 +749,11 @@ class DataFlowKernelLoader(object):
     _dfk = None
 
     @classmethod
+    def clear(cls):
+        """Clear the active DataFlowKernel so that a new one can be loaded."""
+        cls._dfk = None
+
+    @classmethod
     def load(cls, config):
         """Load a DataFlowKernel.
 

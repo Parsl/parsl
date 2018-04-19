@@ -43,6 +43,7 @@ __all__ = [
     'IPyParallelExecutor', 'set_stream_logger', 'set_file_logger'
 ]
 
+clear = DataFlowKernelLoader.clear
 load = DataFlowKernelLoader.load
 dfk = DataFlowKernelLoader.dfk
 

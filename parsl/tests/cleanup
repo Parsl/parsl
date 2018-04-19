@@ -1,10 +1,10 @@
-rm -rf *~ *txt *out *err outputs data runinfo
+rm -rf *~ *txt *out *err outputs* data runinfo __pycache__
 
 for dir in */
     do
         echo "Cleaning dir: $dir"
         cd $dir
-        rm -rf *txt *out *err outputs *~ runinfo ipengine.json
+        rm -rf *txt *out *err outputs* *~ runinfo* ipengine.json __pycache__
         cd ..
     done
 

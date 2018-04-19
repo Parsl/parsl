@@ -30,19 +30,30 @@ Style. User and developer documentation is auto-generated and made available on
 Testing
 ==================
 
-Parsl uses ``nose`` to run unit tests. All tests should be included in the ``parsl/parsl/tests``
+Parsl uses ``pytest`` to run unit tests. All tests should be included in the ``parsl/parsl/tests``
 directory. Before running tests usage tracking should be disabled using the PARSL_TESTING environment variable::
 
   $ export PARSL_TESTING="true"
 
-Tests can be run with the following command::
+Testing configurations are collected in ``parsl/parsl/tests/configs``. Each file in that directory should contain a single config
+dictionary ``config``. Configurations for remote sites which rely on user-specific options are skipped unless they have been specified in
+``parsl/parsl/tests/user_opts.py``. To run the tests::
 
-  $ nosetests tests
+  $ pytest tests --basic
 
-Or to run a specific test::
+This will run the tests on a basic selection of configs (which is what Travis CI will test). Omitting the ``--basic`` will run all of the configs. Running, for example::
 
-  $ nosetests tests/test_scaling/test_python_apps.py:test_stdout
+  $ pytest tests --config config.py
 
+Will run all of the tests for config ``config.py``. To run a specific test, for example:::
+
+  $ pytest test_python_apps/test_basic.py::test_simple --basic
+
+To run tests with a timeout limit of one minute, run::
+
+  $ pytest tests --basic --timeout=60
+
+Several parsl-specific decorators are available for specifying certain configurations to test with; see ``pytest --markers`` for more details.
 
 Development Process
 -------------------
