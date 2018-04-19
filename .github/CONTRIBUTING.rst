@@ -60,7 +60,7 @@ Parsl development follows a common pull request-based workflow similar to `GitHu
 * PRs should be used for review and discussion (except hot fixes, which can be pushed to master)
 * PRs should be reviewed in a timely manner, to reduce effort keeping them synced with other changes happening on the master branch
 
-Git commit messages should include a single summary sentence followed by a more explanatory paragraph. Note: all commit messages should reference the GitHub issue to which they relate.
+Git commit messages should include a single summary sentence followed by a more explanatory paragraph. Note: all commit messages should reference the GitHub issue to which they relate. A nice discussion on the topic can be found `here <https://chris.beams.io/posts/git-commit/>`_.
 ::
     Implemented Globus data staging support
 
