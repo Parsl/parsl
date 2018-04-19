@@ -199,7 +199,7 @@ There are a few common situations in which a Parsl script might hang:
 2. Workers requested are unable to contact the Parsl client due to one or
    more issues listed below:
 
-   * Parsl client does not have a public IP (e.g. laptop on wifi)
+   * Parsl client does not have a public IP (e.g. laptop on wifi).
      If your network does not provide public IPs, the simple solution is to
      ssh over to a machine that is public facing. Machines provisioned from
      cloud-vendors setup with public IPs are another option.
