@@ -127,6 +127,12 @@ class EC2Provider(ExecutionProvider):
                                        # the max Bid price.
                                        # Type: Float,
                                        # Required: False },
+                      "overrides"    : #{"Description : String to append to the Userdata script executed
+                                       # in the cloudinit phase of instance initialization
+                                       # Type : String,
+                                       # Default : ''
+                                       # Required : False },
+
                   }
               }
             }
@@ -159,6 +165,7 @@ class EC2Provider(ExecutionProvider):
         self.config = config
         options = self.config["execution"]["block"]["options"]
         logger.warn("Options %s", options)
+        self.overrides = options.get("overrides", '')
         self.instance_type = options.get("instanceType", "t2.small")
         self.image_id = options["imageId"]
         self.key_name = options["keyName"]
@@ -483,7 +490,9 @@ class EC2Provider(ExecutionProvider):
 
         '''
 
-        command = Template(template_string).substitute(jobname=job_name, user_script=cmd_string)
+        command = Template(template_string).substitute(jobname=job_name,
+                                                       user_script=cmd_string,
+                                                       overrides=self.overrides)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
         ami_id = self.image_id
