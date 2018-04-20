@@ -183,16 +183,26 @@ class EC2Provider(ExecutionProvider):
             logger.error("Site:[{0}] Failed to initialize".format(self))
             raise e
 
+        state_file_exists = False
         try:
             self.statefile = self.config["execution"]["block"]["options"].get(
                 "stateFile", '.ec2site_{0}.json'.format(self.sitename)
             )
             self.read_state_file(self.statefile)
-
+            state_file_exists = True
         except Exception as e:
-            self.create_vpc().id
             logger.info("No State File. Cannot load previous options. Creating new infrastructure")
-            self.write_state_file()
+
+        if not state_file_exists:
+            try :
+                self.create_vpc().id
+            except Exception as e:
+                logger.info("Failed to create ec2 infrastructure : {0}".format(e))
+                raise
+            else:
+                # If infrastructure creation worked write state file
+                self.write_state_file()
+
 
     @property
     def channels_required(self):
