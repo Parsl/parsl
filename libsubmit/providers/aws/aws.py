@@ -127,6 +127,12 @@ class EC2Provider(ExecutionProvider):
                                        # the max Bid price.
                                        # Type: Float,
                                        # Required: False },
+
+                      "IamInstanceProfileArn" : #{"Description: IamInstanceProfile Arn to use inorder to
+                                                # launch instance with a specific Role.
+                                                # Type: string,
+                                                # Required: False },
+
                       "overrides"    : #{"Description : String to append to the Userdata script executed
                                        # in the cloudinit phase of instance initialization
                                        # Type : String,
@@ -169,6 +175,7 @@ class EC2Provider(ExecutionProvider):
         self.instance_type = options.get("instanceType", "t2.small")
         self.image_id = options["imageId"]
         self.key_name = options["keyName"]
+        self.iam_instance_profile_arn = options.get("IamInstanceProfileArn", '')
         self.region = options.get("region", 'us-east-2')
         self.max_nodes = (
             self.config["execution"]["block"].get("maxBlocks", 1) *
@@ -537,6 +544,7 @@ class EC2Provider(ExecutionProvider):
                 TagSpecifications=tag_spec,
                 InstanceMarketOptions=spot_options,
                 InstanceInitiatedShutdownBehavior='terminate',
+                IamInstanceProfile={'Arn': self.iam_instance_profile_arn}
                 UserData=command
             )
         except ClientError as e:
