@@ -4,7 +4,7 @@ import os
 import time
 import argparse
 
-from nose.tools import nottest, assert_raises
+import pytest
 
 import parsl
 from parsl import *
@@ -78,7 +78,7 @@ def test_parallel_for(n=10):
     return d
 
 
-@nottest
+@pytest.mark.skip('broken')
 def test_stdout():
     """This one does not work as we don't catch stdout and stderr for python apps.
     """
@@ -96,13 +96,11 @@ def test_stdout():
 def test_custom_exception():
     from globus_sdk import GlobusError
 
-    def wrapper():
+    with pytest.raises(GlobusError) as e:
         x = custom_exception()
-        return x.result()
-    assert_raises(GlobusError, wrapper)
+        x.result()
 
 
-@nottest
 def demonstrate_custom_exception():
     x = custom_exception()
     print(x.result())

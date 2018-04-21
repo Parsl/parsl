@@ -7,7 +7,7 @@ import os
 import time
 import argparse
 
-from nose.tools import assert_raises
+import pytest
 
 # parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=4)
@@ -49,7 +49,7 @@ def test_parallel_for(n=2):
     return d
 
 
-@nottest
+@pytest.mark.skip('broken')
 def test_stdout():
 
     string = "Hello World!"
@@ -66,11 +66,9 @@ def test_stdout():
 def test_custom_exception():
     from globus_sdk import GlobusError
 
-    def wrapper():
+    with pytest.raises(GlobusError) as e:
         x = custom_exception()
-        return x.result()
-    assert_raises(GlobusError, wrapper)
-
+        x.result()
 
 if __name__ == '__main__':
 
