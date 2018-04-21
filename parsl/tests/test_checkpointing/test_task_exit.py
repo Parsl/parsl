@@ -59,7 +59,7 @@ def test_at_task_exit(n=4):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
+    parser.add_argument("-c", "--count", default=10,
                         help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
@@ -68,4 +68,4 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    x = test_at_task_exit(n=4)
+    x = test_at_task_exit(args.count)
