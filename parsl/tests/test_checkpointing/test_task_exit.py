@@ -35,7 +35,7 @@ def test_at_task_exit(n=4):
 
     d = {}
 
-    print("Launching : ", n)
+    print("Launching: ", n)
     for i in range(0, n):
         d[i] = slow_double(i)
     print("Done launching")

@@ -30,12 +30,12 @@ def slow_double(x, sleep_dur=1):
 
 
 def test_initial_checkpoint_write(n=4):
-    """1. Launch a few apps and write the checkpoint once a few have completed
+    """1. Launch a few apps and write the checkpoint once they have completed
     """
 
     d = {}
     time.time()
-    print("Launching : ", n)
+    print("Launching: ", n)
     for i in range(0, n):
         d[i] = slow_double(i)
     print("Done launching")
@@ -46,12 +46,12 @@ def test_initial_checkpoint_write(n=4):
     cpt_dir = dfk.checkpoint()
 
     cptpath = cpt_dir + '/dfk.pkl'
-    print("Path exists : ", os.path.exists(cptpath))
+    print("Path exists: ", os.path.exists(cptpath))
     assert os.path.exists(
         cptpath), "DFK checkpoint missing: {0}".format(cptpath)
 
     cptpath = cpt_dir + '/tasks.pkl'
-    print("Path exists : ", os.path.exists(cptpath))
+    print("Path exists: ", os.path.exists(cptpath))
     assert os.path.exists(
         cptpath), "Tasks checkpoint missing: {0}".format(cptpath)
 
