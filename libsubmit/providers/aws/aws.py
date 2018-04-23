@@ -544,7 +544,7 @@ class EC2Provider(ExecutionProvider):
                 TagSpecifications=tag_spec,
                 InstanceMarketOptions=spot_options,
                 InstanceInitiatedShutdownBehavior='terminate',
-                IamInstanceProfile={'Arn': self.iam_instance_profile_arn}
+                IamInstanceProfile={'Arn': self.iam_instance_profile_arn},
                 UserData=command
             )
         except ClientError as e:
