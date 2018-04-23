@@ -8,7 +8,7 @@ with incremental changes over and over. Often large fragments of
 a workflow will not have changed, yet apps will be executed again, wasting
 valuable developer time and computation resources. ``AppCaching``
 solves this problem by storing results from apps that have completed
-so that they can be re-used. By default caching is ``not`` enabled. 
+so that they can be re-used. By default caching is **not** enabled.
 It must be explicitly enabled, either globally via the configuration, 
 or on each app for which caching is desired. 
 
