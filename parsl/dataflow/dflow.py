@@ -63,7 +63,7 @@ class DataFlowKernel(object):
             - appCache (bool) :Enable caching of apps
             - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
             - retries(int): Default=0, Set the number of retry attempts in case of failure
-            - checkpointFiles (list of str): List of filepaths to checkpoint files
+            - checkpointFiles (list of str): List of filepaths to read checkpoint files from
             - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
             - data_manager (DataManager): User created DataManager
         Returns:
@@ -706,7 +706,7 @@ class DataFlowKernel(object):
                 logger.error(reason)
                 raise BadCheckpoint(reason)
             except Exception as e:
-                reason = "Failed to load Checkpoint: {}".format(
+                reason = "Failed to load checkpoint: {}".format(
                     checkpoint_file)
                 logger.error(reason)
                 raise BadCheckpoint(reason)

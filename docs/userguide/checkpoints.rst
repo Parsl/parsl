@@ -7,7 +7,7 @@ Large scale workflows are prone to errors due to node failures, application or e
 
 .. note::
    Checkpointing is *only* possible for apps which have AppCaching enabled.
-   If AppCaching is disabled in the ``config['globals']``, checkpointing will
+   If AppCaching is disabled in ``config['globals']``, checkpointing will
    **not** work.
 
 Parsl follows an incremental checkpointing model, where each checkpoint contains
@@ -16,8 +16,8 @@ all results that have been updated since the last checkpoint.
 When loading a checkpoint the Parsl script will use checkpointed results for 
 any apps that have been previously executed. Like AppCaching, checkpoints
 use the app name, hash, and input parameters to locate previously computed
-results. If multiple checkpoints exist for an app (with the same hash and 
-input parameters) the most recent entry will be used. 
+results. If multiple checkpoints exist for an app (with the same hash)
+the most recent entry will be used.
 
 Checkpointing works in the following modes:
 
