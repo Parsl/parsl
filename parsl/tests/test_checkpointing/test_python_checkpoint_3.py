@@ -1,33 +1,22 @@
-# import parsl
-from parsl import *
 import os
 
+import pytest
 
-# parsl.set_stream_logger()
-config = {
-    "sites": [
-        {"site": "Local_Threads",
-         "auth": {"channel": None},
-         "execution": {
-             "executor": "threads",
-             "provider": None,
-             "maxThreads": 2,
-         }
-         }],
-    "globals": {"lazyErrors": True,
-                }
-}
+import parsl
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
 
-dfk = DataFlowKernel(config=config)
+parsl.clear()
+dfk = parsl.load(config)
 
 
-@App('python', dfk)
+@App('python')
 def slow_double(x, sleep_dur=1, cache=True):
     import time
     time.sleep(sleep_dur)
     return x * 2
 
-
+@pytest.mark.local
 def test_checkpointing():
     """Testing code snippet from documentation
     """

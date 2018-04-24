@@ -8,4 +8,4 @@ for dir in */
         cd ..
     done
 
-find . -path '*/runinfo' -type d | xargs rm -rf
+find . -path '*/runinfo*' -type d | xargs rm -rf
