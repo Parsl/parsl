@@ -106,10 +106,9 @@ class EC2Provider(ExecutionProvider):
                                        # Required: False
                                        # Default: t2.small },
 
-                      "imageId"      : #{"Description: String to append to the #SBATCH blocks
-                                       # in the submit script to the scheduler
+                      "imageId"      : #{"Description: The ID of the AMI
                                        # Type: String,
-                                       # Required: False },
+                                       # Required: True },
 
                       "region"       : #{"Description: AWS region to launch machines in
                                        # in the submit script to the scheduler
@@ -377,7 +376,10 @@ class EC2Provider(ExecutionProvider):
         return vpc
 
     def security_group(self, vpc):
-        ''' Create and configure security group.
+        """Create and configure a new security group.
+
+
+
         Allows all ICMP in, all TCP and UDP in within VPC
 
         This security group is very open. It allows all
@@ -386,13 +388,13 @@ class EC2Provider(ExecutionProvider):
         by changing the allowed port ranges.
 
         :param vpc - VPC in which to set up security group
-        '''
+        """
 
         sg = vpc.create_security_group(
             GroupName="private-subnet", Description="security group for remote executors"
         )
 
-        ip_ranges = [{'CidrIp': '172.32.0.0/16'}]
+        ip_ranges = [{'CidrIp': '10.0.0.0/16'}]
 
         # Allows all ICMP in, all TCP and UDP in within VPC
 
@@ -414,8 +416,16 @@ class EC2Provider(ExecutionProvider):
                 'IpRanges': [{
                     'CidrIp': '0.0.0.0/0'
                 }],
+            }, {
+                'IpProtocol': 'TCP',
+                'FromPort': 22,
+                'ToPort': 22,
+                'IpRanges': [{
+                    'CidrIp': '0.0.0.0/0'
+                }],
             }
         ]
+
         # Allows all TCP out, all TCP and UDP out within VPC
         outPerms = [
             {
