@@ -1,5 +1,3 @@
-"""Testing python apps
-"""
 from parsl import *
 
 workers = ThreadPoolExecutor(max_workers=4)

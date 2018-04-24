@@ -1,6 +1,6 @@
+import pytest
 
 from parsl import *
-
 from parsl.app.app_factory import AppFactoryFactory, AppFactory
 
 workers = ThreadPoolExecutor(max_workers=4)

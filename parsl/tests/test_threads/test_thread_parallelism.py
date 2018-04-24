@@ -1,6 +1,3 @@
-"""Testing python apps
-"""
-from parsl import *
 import time
 
 # parsl.set_stream_logger()

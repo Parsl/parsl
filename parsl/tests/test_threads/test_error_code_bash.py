@@ -1,10 +1,11 @@
 import os
 import argparse
 
-from nose.tools import nottest
+import pytest
 
-from parsl import *
 import parsl
+from parsl import *
+
 # parsl.set_stream_logger()
 
 workers = ThreadPoolExecutor(max_workers=4)

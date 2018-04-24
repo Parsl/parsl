@@ -1,14 +1,11 @@
-"""Testing bash apps
-"""
 import parsl
 from parsl import *
 
 import time
 import argparse
 
-# parsl.set_stream_logger()
-workers = IPyParallelExecutor()
-dfk = DataFlowKernel(executors=[workers])
+DataFlowKernelLoader.set_default('configs/local_threads.py')
+dfk = DataFlowKernelLoader.dfk()
 
 
 @App('python', dfk)

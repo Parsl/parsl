@@ -1,9 +1,11 @@
 """Testing python apps
 """
+import argparse
+
+import pytest
 
 import parsl
 from parsl import *
-import argparse
 
 # parsl.set_stream_logger()
 config = {

@@ -1,9 +1,13 @@
-"""Testing python apps
-"""
-import parsl
-from parsl import *
+'''
+Regression test for issue #98
+'''
 import argparse
 import json
+
+import pytest
+
+import parsl
+from parsl import *
 
 
 def test_immutable_config(n=2):

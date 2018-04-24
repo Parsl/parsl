@@ -1,9 +1,8 @@
-"""Testing python outputs
-"""
-from parsl import *
+import argparse
 import os
 import shutil
-import argparse
+
+from parsl import *
 
 # parsl.set_stream_logger()
 workers = ThreadPoolExecutor(max_workers=4)

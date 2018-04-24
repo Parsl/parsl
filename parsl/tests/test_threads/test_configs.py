@@ -1,5 +1,4 @@
-''' Testing python apps
-'''
+import pytest
 
 from parsl import *
 from parsl.configs.local import localThreads

@@ -1,5 +1,3 @@
-''' Testing python apps
-'''
 from parsl import *
 
 from parsl.configs.local import localThreads as config

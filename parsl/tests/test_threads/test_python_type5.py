@@ -1,8 +1,3 @@
-"""Testing python type5
-"""
-import parsl
-from parsl import *
-
 import argparse
 import random
 

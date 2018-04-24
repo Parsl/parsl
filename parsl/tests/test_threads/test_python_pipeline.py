@@ -1,6 +1,3 @@
-"""Testing python pipeline
-"""
-
 import parsl
 from parsl import *
 

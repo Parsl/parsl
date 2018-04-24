@@ -1,5 +1,6 @@
-"""Testing python apps
-"""
+'''
+Regression tests for issue #69.
+'''
 from parsl import *
 import time
 

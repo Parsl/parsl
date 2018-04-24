@@ -1,8 +1,5 @@
-# Import Parsl
 import parsl
 from parsl import *
-
-# from nose.tools import nottest
 
 import argparse
 

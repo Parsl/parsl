@@ -1,3 +1,6 @@
+'''
+Regression tests for issue #69
+'''
 from parsl import *
 
 # parsl.set_stream_logger()

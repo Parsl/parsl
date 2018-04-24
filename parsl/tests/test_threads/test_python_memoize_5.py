@@ -1,10 +1,7 @@
-"""Testing python apps
-"""
+import argparse
 
 import parsl
 from parsl import *
-import argparse
-
 
 workers = ThreadPoolExecutor(max_workers=4)
 dfk = DataFlowKernel(executors=[workers])
