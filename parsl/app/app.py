@@ -4,7 +4,7 @@ The APP class encapsulates a generic leaf task that can be executed asynchronous
 
 """
 import logging
-from inspect import signature, Parameter
+from inspect import signature
 
 # Logging moved here in the PEP8 conformance fixes.
 logger = logging.getLogger(__name__)
@@ -44,10 +44,6 @@ class AppBase (object):
         self.cache = cache
 
         sig = signature(func)
-        self.kwargs = {}
-        for s in sig.parameters:
-            if sig.parameters[s].default != Parameter.empty:
-                self.kwargs[s] = sig.parameters[s].default
 
         self.stdout = sig.parameters['stdout'].default if 'stdout' in sig.parameters else None
         self.stderr = sig.parameters['stderr'].default if 'stderr' in sig.parameters else None
