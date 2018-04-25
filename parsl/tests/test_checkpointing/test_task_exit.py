@@ -1,4 +1,5 @@
 import parsl
+import pickle
 import time
 from parsl import *
 import argparse
@@ -42,12 +43,17 @@ def test_at_task_exit(n=4):
     for i in range(0, n):
         d[i].result()
 
-    time.sleep(1)
+    time.sleep(0.3)
+    print("Loading results")
+    with open("{}/checkpoint/tasks.pkl".format(dfk.rundir), 'rb') as f:
+        tasks = []
+        try:
+            while f:
+                tasks.append(pickle.load(f))
+        except EOFError:
+            pass
 
-    print("Rundir : ", dfk.rundir)
-    with open("{}/parsl.log".format(dfk.rundir), 'r') as f:
-        lines = [line for line in f.readlines() if "Checkpointing.." in line]
-        assert len(lines) == n, "Expected {} checkpoint events, got {}".format(n, len(lines))
+        assert len(tasks) == n, "Expected {} checkpoint events, got {}".format(n, len(tasks))
 
 
 if __name__ == '__main__':
