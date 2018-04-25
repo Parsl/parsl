@@ -216,7 +216,7 @@ class DataFlowKernel(object):
             self.memoizer.update_memo(task_id, self.tasks[task_id], future)
 
             if self.checkpoint_mode is 'task_exit':
-                self.checkpoint()
+                self.checkpoint(tasks=[task_id])
                 logger.debug("Task {} checkpoint created at task exit".format(task_id))
 
         # Identify tasks that have resolved dependencies and launch
@@ -573,12 +573,14 @@ class DataFlowKernel(object):
 
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self):
+    def checkpoint(self, tasks=None):
         """Checkpoint the dfk incrementally to a checkpoint file.
 
         When called, every task that has been completed yet not
         checkpointed is checkpointed to a file.
 
+        Kwargs:
+            - tasks (List of task ids) : List of task ids to checkpoint. Default=None
         .. note::
             Checkpointing only works if memoization is enabled
 
@@ -587,7 +589,14 @@ class DataFlowKernel(object):
             By default the checkpoints are written to the RUNDIR of the current
             run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
         """
-        logger.info("Checkpointing.. ")
+
+        checkpoint_queue = None
+        if tasks:
+            logger.info("Checkpointing tasks: {}".format(tasks))
+            checkpoint_queue = tasks
+        else:
+            logger.info("Checkpointing tasks")
+            checkpoint_queue = self.tasks
 
         checkpoint_dir = '{0}/checkpoint'.format(self.rundir)
         checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
@@ -607,10 +616,13 @@ class DataFlowKernel(object):
             pickle.dump(state, f)
 
         count = 0
+
         with open(checkpoint_tasks, 'ab') as f:
-            for task_id in self.tasks:
-                if self.tasks[task_id]['app_fu'].done() and \
-                   not self.tasks[task_id]['checkpoint']:
+            for task_id in checkpoint_queue:
+
+                if not self.tasks[task_id]['checkpoint'] and \
+                   self.tasks[task_id]['status'] in (States.done, States.failed, States.dep_fail):
+
                     hashsum = self.tasks[task_id]['hashsum']
                     if not hashsum:
                         continue
