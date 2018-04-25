@@ -118,7 +118,7 @@ For eg:
       time ----->
 
 
-There are two ways to disable lazy failures: via setting the ``config['globals']['lazyErrors']=False``
+There are two ways to disable lazy failures: via setting ``config['globals']['lazyErrors']=False``
 or by setting ``lazy_fail=False`` as keyword argument to the DataFlowKernel at initialization.
 
 Here is an example of disabling lazy failures via the config passed to the DFK

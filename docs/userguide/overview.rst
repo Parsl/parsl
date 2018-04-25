@@ -6,7 +6,7 @@ Parsl is designed to enable the straightforward orchestration of asynchronous ta
 Developing a workflow is a two-step process: 
 
 1. Annotate functions that can be executed in parallel as Parsl ``Apps``.
-2. Specification of dependencies between functions using standard Python code.
+2. Specify dependencies between functions using standard Python code.
 
 In Parsl, the execution of an ``App`` yields `futures <https://en.wikipedia.org/wiki/Futures_and_promises>`_.
 These futures can be passed to other ``Apps`` as inputs, establishing a dependency. These dependencies are assembled  implicitly into `directed acyclic graphs <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_,
