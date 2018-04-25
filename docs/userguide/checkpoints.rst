@@ -103,12 +103,9 @@ The example below shows how to resume from the most recent checkpoint:
 
 .. code-block:: python
 
-    import os
     from parsl import *
     from parsl.configs.local import localThreads as config
-
-    last_runid = sorted(os.listdir('runinfo/'))[-1]
-    last_checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(last_runid))
+    from parsl.utils import get_last_checkpoint
 
     dfk = DataFlowKernel(config=config,
-                         checkpointFiles=[last_checkpoint])
+                         checkpointFiles=parsl.get_last_checkpoint())
