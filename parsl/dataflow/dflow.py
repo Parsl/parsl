@@ -606,7 +606,7 @@ class DataFlowKernel(object):
             pickle.dump(state, f)
 
         count = 0
-        with open(checkpoint_tasks, 'wb+') as f:
+        with open(checkpoint_tasks, 'ab') as f:
             for task_id in self.tasks:
                 if self.tasks[task_id]['app_fu'].done() and \
                    not self.tasks[task_id]['checkpoint']:
@@ -626,7 +626,7 @@ class DataFlowKernel(object):
                     else:
                         t['result'] = r
 
-                    # We are using pickle here since pickle dumps to a file in 'w+'
+                    # We are using pickle here since pickle dumps to a file in 'ab'
                     # mode behave like a incremental log.
                     pickle.dump(t, f)
                     count += 1
