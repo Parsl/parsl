@@ -89,8 +89,14 @@ class DataFlowKernel(object):
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
 
+        if self._config and self._config["globals"]["checkpointFiles"]:
+            checkpoint_src = self._config["globals"]["checkpointFiles"]
+        else:
+            checkpoint_src = checkpointFiles
+
         # Load checkpoints if any
-        cpts = self.load_checkpoints(checkpointFiles)
+        cpts = self.load_checkpoints(checkpoint_src)
+
         # Initialize the memoizer
         self.memoizer = Memoizer(self, memoize=appCache, checkpoint=cpts)
         self.checkpointed_tasks = 0
@@ -677,6 +683,7 @@ class DataFlowKernel(object):
         memo_lookup_table = {}
 
         for checkpoint_dir in checkpointDirs:
+            logger.info("Loading checkpoints from {}".format(checkpoint_dir))
             checkpoint_file = os.path.join(checkpoint_dir, 'tasks.pkl')
             try:
                 with open(checkpoint_file, 'rb') as f:
