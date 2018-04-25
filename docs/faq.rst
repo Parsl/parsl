@@ -116,8 +116,8 @@ on the client side matches that on the side of the workers. If there's a mismatc
 the apps sent to the workers will fail with the following error:
 ``ipyparallel.error.RemoteError: SystemError(unknown opcode)``
 
-.. note::
-   It is recommended that both the parsl script and all workers are set to use python
+.. caution::
+   It is **required** that both the parsl script and all workers are set to use python
    with the same Major.Minor version numbers. For eg. use Python3.5.X on both local
    and worker side.
 
