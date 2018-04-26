@@ -1,16 +1,14 @@
-"""Definitions for the @App decorator and the APP classes.
+"""Definitions for the @App decorator and the App classes.
 
-The APP class encapsulates a generic leaf task that can be executed asynchronously.
-
+The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
 import logging
-from inspect import signature, Parameter
+from inspect import signature
 
-# Logging moved here in the PEP8 conformance fixes.
 logger = logging.getLogger(__name__)
 
 
-class AppBase (object):
+class AppBase(object):
     """This is the base class that defines the two external facing functions that an App must define.
 
     The  __init__ () which is called when the interpreter sees the definition of the decorated

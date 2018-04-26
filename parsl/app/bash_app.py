@@ -47,11 +47,11 @@ def remote_side_bash_executor(func, *args, **kwargs):
         raise e
 
     # Updating stdout, stderr if values passed at call time.
-    stdout = kwargs.get('stdout', None)
-    stderr = kwargs.get('stderr', None)
-    timeout = kwargs.get('walltime', None)
-    logging.debug("Stdout  : %s", stdout)
-    logging.debug("Stderr  : %s", stderr)
+    stdout = kwargs.get('stdout')
+    stderr = kwargs.get('stderr')
+    timeout = kwargs.get('walltime')
+    logging.debug("Stdout: %s", stdout)
+    logging.debug("Stderr: %s", stderr)
 
     try:
         std_out = open(stdout, 'w') if stdout else None
