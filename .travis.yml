@@ -18,5 +18,6 @@ script:
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - nosetests -vx parsl/tests/test_threads parsl/tests/test_data
+    - nosetests -vx parsl/tests/test_regression
     - (for test in parsl/tests/test_checkpointing/test*; do nosetests -vx $test || exit; done ) ;
     - flake8 parsl/

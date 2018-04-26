@@ -43,16 +43,15 @@ class AppBase (object):
         self.sites = sites
         self.cache = cache
 
-        sig = signature(func)
-        self.kwargs = {}
-        for s in sig.parameters:
-            if sig.parameters[s].default != Parameter.empty:
-                self.kwargs[s] = sig.parameters[s].default
+        params = signature(func).parameters
 
-        self.stdout = sig.parameters['stdout'].default if 'stdout' in sig.parameters else None
-        self.stderr = sig.parameters['stderr'].default if 'stderr' in sig.parameters else None
-        self.inputs = sig.parameters['inputs'].default if 'inputs' in sig.parameters else []
-        self.outputs = sig.parameters['outputs'].default if 'outputs' in sig.parameters else []
+        self.kwargs = {}
+        if 'stdout' in params:
+            self.kwargs['stdout'] = params['stdout'].default
+        if 'stderr' in params:
+            self.kwargs['stderr'] = params['stderr'].default
+        self.outputs = params['outputs'].default if 'outputs' in params else []
+        self.inputs = params['inputs'].default if 'inputs' in params else []
 
     def __call__(self, *args, **kwargs):
         """The __call__ function must be implemented in the subclasses."""
