@@ -587,6 +587,8 @@ class DataFlowKernel(object):
 
         Kwargs:
             - tasks (List of task ids) : List of task ids to checkpoint. Default=None
+                                         if set to None, we iterate over all tasks held by the DFK.
+
         .. note::
             Checkpointing only works if memoization is enabled
 
@@ -598,10 +600,8 @@ class DataFlowKernel(object):
 
         checkpoint_queue = None
         if tasks:
-            logger.info("Checkpointing tasks: {}".format(tasks))
             checkpoint_queue = tasks
         else:
-            logger.info("Checkpointing tasks")
             checkpoint_queue = self.tasks
 
         checkpoint_dir = '{0}/checkpoint'.format(self.rundir)
@@ -625,9 +625,8 @@ class DataFlowKernel(object):
 
         with open(checkpoint_tasks, 'ab') as f:
             for task_id in checkpoint_queue:
-
                 if not self.tasks[task_id]['checkpoint'] and \
-                   self.tasks[task_id]['status'] in (States.done, States.failed, States.dep_fail):
+                   self.tasks[task_id]['status'] == States.done:
 
                     hashsum = self.tasks[task_id]['hashsum']
                     if not hashsum:
