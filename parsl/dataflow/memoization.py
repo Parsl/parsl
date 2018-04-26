@@ -151,7 +151,7 @@ class Memoizer(object):
 
         if task['hashsum'] in self.memo_lookup_table:
             logger.info('Updating appCache entry with latest %s:%s call' %
-                        task[task_id]['func_name'], task_id)
+                        (task['func_name'], task_id))
             self.memo_lookup_table[task['hashsum']] = r
         else:
             self.memo_lookup_table[task['hashsum']] = r
