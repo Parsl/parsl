@@ -20,6 +20,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.config_defaults import update_config
 from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
+from parsl.utils import get_version
 
 # from parsl.dataflow.start_controller import Controller
 # Exceptions
@@ -72,7 +73,7 @@ class DataFlowKernel(object):
         parsl.set_file_logger("{}/parsl.log".format(self.rundir),
                               level=logging.DEBUG)
 
-        logger.info("Parsl version: {}".format(parsl.__version__))
+        logger.info("Parsl version: {}".format(get_version()))
         logger.info("Libsubmit version: {}".format(libsubmit.__version__))
 
         # Update config with defaults
