@@ -9,15 +9,11 @@ def get_version():
     if 'site-packages' in __file__:
         version = parsl.__version__
     else:
-        start = os.getcwd()
-        os.chdir(os.path.dirname(__file__))
-        try:
-            head = subprocess.check_output(shlex.split('git rev-parse --short HEAD')).strip().decode('utf-8')
-            diff = subprocess.check_output(shlex.split('git diff'))
-            status = 'dirty' if diff else 'clean'
             version = '{major}-{head}-{status}'.format(major=VERSION, head=head, status=status)
-        except subprocess.CalledProcessError:
-            version = VERSION
-        finally:
-            os.chdir(start)
+        git_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.git')
+        env = {'GIT_DIR': git_dir}
+        cmd = shlex.split('git rev-parse --short HEAD')
+        head = subprocess.check_output(cmd, env=env).strip().decode('utf-8')
+        diff = subprocess.check_output(shlex.split('git diff HEAD'), env=env)
+        status = 'dirty' if diff else 'clean'
     return version
