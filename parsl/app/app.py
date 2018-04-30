@@ -1,16 +1,14 @@
-"""Definitions for the @App decorator and the APP classes.
+"""Definitions for the @App decorator and the App classes.
 
-The APP class encapsulates a generic leaf task that can be executed asynchronously.
-
+The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
 import logging
-from inspect import signature, Parameter
+from inspect import signature
 
-# Logging moved here in the PEP8 conformance fixes.
 logger = logging.getLogger(__name__)
 
 
-class AppBase (object):
+class AppBase(object):
     """This is the base class that defines the two external facing functions that an App must define.
 
     The  __init__ () which is called when the interpreter sees the definition of the decorated
@@ -43,16 +41,15 @@ class AppBase (object):
         self.sites = sites
         self.cache = cache
 
-        sig = signature(func)
-        self.kwargs = {}
-        for s in sig.parameters:
-            if sig.parameters[s].default != Parameter.empty:
-                self.kwargs[s] = sig.parameters[s].default
+        params = signature(func).parameters
 
-        self.stdout = sig.parameters['stdout'].default if 'stdout' in sig.parameters else None
-        self.stderr = sig.parameters['stderr'].default if 'stderr' in sig.parameters else None
-        self.inputs = sig.parameters['inputs'].default if 'inputs' in sig.parameters else []
-        self.outputs = sig.parameters['outputs'].default if 'outputs' in sig.parameters else []
+        self.kwargs = {}
+        if 'stdout' in params:
+            self.kwargs['stdout'] = params['stdout'].default
+        if 'stderr' in params:
+            self.kwargs['stderr'] = params['stderr'].default
+        self.outputs = params['outputs'].default if 'outputs' in params else []
+        self.inputs = params['inputs'].default if 'inputs' in params else []
 
     def __call__(self, *args, **kwargs):
         """The __call__ function must be implemented in the subclasses."""

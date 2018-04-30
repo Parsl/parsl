@@ -4,3 +4,4 @@ nose
 pytest
 coverage
 mock>=1.0.0
+pandas
