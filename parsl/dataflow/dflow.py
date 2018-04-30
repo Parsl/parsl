@@ -21,6 +21,7 @@ from parsl.dataflow.config_defaults import update_config
 from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 from parsl.utils import get_version
+from parsl.app.errors import RemoteException
 
 # from parsl.dataflow.start_controller import Controller
 # Exceptions
@@ -187,7 +188,9 @@ class DataFlowKernel(object):
         if future.done():
 
             try:
-                future.result()
+                res = future.result()
+                if isinstance(res, RemoteException):
+                    res.reraise()
 
             except Exception as e:
                 logger.exception("Task {} failed".format(task_id))
@@ -223,7 +226,6 @@ class DataFlowKernel(object):
 
             if self.checkpoint_mode is 'task_exit':
                 self.checkpoint(tasks=[task_id])
-                logger.debug("Task {} checkpoint created at task exit".format(task_id))
 
         # Identify tasks that have resolved dependencies and launch
         for tid in list(self.tasks):
