@@ -1,4 +1,4 @@
-from parsl import App, DataFlowKernel, set_stream_logger
+from parsl import App, DataFlowKernel
 import pickle
 import time
 
@@ -8,7 +8,6 @@ def run_checkpointed(n=5, mode="task_exit"):
     followed by 1 app that will succeed. THe checkpoint should only have 1 task
     """
 
-    set_stream_logger()
     from parsl.configs.local import localThreads as config
     config["globals"]["checkpointMode"] = mode
     dfk = DataFlowKernel(config=config)
@@ -36,11 +35,15 @@ def run_checkpointed(n=5, mode="task_exit"):
     x = cached_rand(1)
     print(x.result())
     rundir = dfk.rundir
+    # Call cleanup *only* for dfk_exit to ensure that a checkpoint is written
+    # at all
+    if mode == "dfk_exit":
+        dfk.cleanup()
     return rundir
 
 
 def test_regress_239():
-    """Testing to ensure failed tasks are not cached. Tests #239
+    """Ensure failed tasks are not cached with task_exit mode. Tests #239
     Also tests task_exit behavior.
     """
 
@@ -59,8 +62,7 @@ def test_regress_239():
 
 
 def test_checkpointing_at_dfk_exit():
-    """Testing to ensure failed tasks are not cached. Tests #239
-    Also tests task_exit behavior.
+    """Ensure failed tasks are not cached with dfk_exit mode. Tests #239
     """
 
     rundir = run_checkpointed(mode="dfk_exit")
