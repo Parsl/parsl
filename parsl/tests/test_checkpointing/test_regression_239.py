@@ -3,7 +3,7 @@ import pickle
 import time
 
 
-def run_checkpointed(n=5, mode="task_exit"):
+def run_checkpointed(n=2, mode="task_exit"):
     """ This test runs n apps that will fail with Division by zero error,
     followed by 1 app that will succeed. THe checkpoint should only have 1 task
     """
