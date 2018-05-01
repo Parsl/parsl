@@ -2,6 +2,7 @@ import logging
 
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
+from parsl.dataflow.dflow import DataFlowKernelLoader
 
 logger = logging.getLogger(__name__)
 
@@ -100,13 +101,13 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, executor, walltime=60, cache=False,
+    def __init__(self, func, executor=None, walltime=60, cache=False,
                  sites='all', fn_hash=None):
         """Initialize the super.
 
         This bit is the same for both bash & python apps.
         """
-        super().__init__(func, executor, walltime=60, sites=sites, exec_type="bash")
+        super().__init__(func, executor=executor, walltime=60, sites=sites, exec_type="bash")
         self.fn_hash = fn_hash
         self.cache = cache
 
@@ -128,6 +129,9 @@ class BashApp(AppBase):
         """
         # Update kwargs in the app definition with one's passed in at calltime
         self.kwargs.update(kwargs)
+
+        if self.executor is None:
+            self.executor = DataFlowKernelLoader.dfk()
 
         app_fut = self.executor.submit(remote_side_bash_executor, self.func, *args,
                                        parsl_sites=self.sites,

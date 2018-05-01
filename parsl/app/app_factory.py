@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 class AppFactory(object):
     """AppFactory streamlines creation of apps."""
 
-    def __init__(self, app_class, executor, func, cache=False, sites='all', walltime=60):
+    def __init__(self, app_class, func, executor=None, cache=False, sites='all', walltime=60):
         """Construct an AppFactory for a particular app_class.
 
         Args:
             - app_class(Class) : An app class
-            - executor(Executor) : An executor object which will handle app execution
             - func(Function) : The function to execute
 
         Kwargs:
+            - executor(Executor) : An executor object which will handle app execution
             - walltime(int) : Walltime in seconds, default=60
             - sites (str|list) : List of site names that this app could execute over. default is 'all'
             - cache (Bool) : Enable caching of app.
@@ -68,7 +68,7 @@ class AppFactory(object):
         """
         # Create and call the new App object
         app_obj = self.app_class(self.func,
-                                 self.executor,
+                                 executor=self.executor,
                                  sites=self.sites,
                                  walltime=self.walltime,
                                  cache=self.cache,
@@ -106,7 +106,7 @@ class AppFactoryFactory(object):
         self.apps = {'bash': BashApp,
                      'python': PythonApp}
 
-    def make(self, kind, executor, func, **kwargs):
+    def make(self, kind, func, executor=None, **kwargs):
         """Creates a new App of the kind specified.
 
         Args:
@@ -127,8 +127,8 @@ class AppFactoryFactory(object):
         """
         if kind in self.apps:
             return AppFactory(self.apps[kind],
-                              executor,
                               func,
+                              executor=executor,
                               **kwargs)
 
         else:

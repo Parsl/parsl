@@ -736,3 +736,36 @@ class DataFlowKernel(object):
             raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
 
         return self._load_checkpoints(checkpointDirs)
+
+
+class DataFlowKernelLoader(object):
+    """Manage which DataFlowKernel is active.
+
+    This is a singleton class containing only class methods. You should not
+    need to instantiate this class.
+    """
+
+    _dfk = None
+
+    @classmethod
+    def load(cls, config):
+        """Load a DataFlowKernel.
+
+        Args:
+            - config (dict) : Configuration to load. This config will be passed to a
+              new DataFlowKernel instantiation which will be set as the active DataFlowKernel.
+        Returns:
+            - DataFlowKernel : The loaded DataFlowKernel object.
+        """
+        if cls._dfk is not None:
+            raise RuntimeError('Config has already been loaded')
+        cls._dfk = DataFlowKernel(config=config)
+
+        return cls._dfk
+
+    @classmethod
+    def dfk(cls):
+        """Return the currently-loaded DataFlowKernel."""
+        if cls._dfk is None:
+            raise RuntimeError('Must first load config')
+        return cls._dfk
