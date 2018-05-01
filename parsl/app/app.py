@@ -30,7 +30,7 @@ class AppBase(object):
              - cache (Bool) : Enable caching of this app ?
 
         Returns:
-             - APP object.
+             - App object.
 
         """
         self.__name__ = func.__name__
