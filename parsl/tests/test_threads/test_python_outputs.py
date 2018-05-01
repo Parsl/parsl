@@ -16,7 +16,7 @@ def double(x, outputs=[]):
     return x * 5
 
 
-def launch_apps(n, dirpath):
+def test_launch_apps(n=2, dirpath='outputs'):
 
     outdir = dirpath
     if not os.path.exists(outdir):
@@ -28,7 +28,7 @@ def launch_apps(n, dirpath):
     all_futs = {}
     for i in range(n):
 
-        fus, _ = double(i, outputs=['{0}/{1}.txt'.format(dirpath, i)])
+        fus = double(i, outputs=['{0}/{1}.txt'.format(dirpath, i)])
         print(fus.outputs)
         all_futs[fus] = fus
 
