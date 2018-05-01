@@ -87,10 +87,11 @@ def App(apptype, executor, walltime=60, cache=False, sites='all'):
     """
     from parsl import APP_FACTORY_FACTORY
 
-    def Exec(f):
-        return APP_FACTORY_FACTORY.make(apptype, executor, f,
+    def wrapper(f):
+        return APP_FACTORY_FACTORY.make(apptype, f,
+                                        executor=executor,
                                         sites=sites,
                                         cache=cache,
                                         walltime=walltime)
 
-    return Exec
+    return wrapper
