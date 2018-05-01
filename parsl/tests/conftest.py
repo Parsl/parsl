@@ -166,3 +166,14 @@ def apply_masks(request):
             else:
                 pytest.skip(m.args[0])
 
+
+@pytest.fixture()
+def setup_data():
+    import os
+    if not os.path.isdir('data'):
+        os.mkdir('data')
+
+    with open("data/test1.txt", 'w') as f:
+        f.write("1\n")
+    with open("data/test2.txt", 'w') as f:
+        f.write("2\n")

@@ -1,14 +1,16 @@
 from parsl import *
 import os
 
+import parsl
+from parsl.app.app import App
 from parsl.data_provider.files import File
+from parsl.tests.configs.local_threads import config
 
-# parsl.set_stream_logger()
-from parsl.configs.local import localIPP as config
-dfk = DataFlowKernel(config=config)
+parsl.clear()
+parsl.load(config)
 
 
-@App('bash', dfk)
+@App('bash')
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
     return """echo %s
@@ -26,7 +28,7 @@ def test_files():
     print(d_x, type(d_x))
 
 
-@App('bash', dfk)
+@App('bash')
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
     return """
