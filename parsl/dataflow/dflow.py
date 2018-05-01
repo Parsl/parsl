@@ -182,42 +182,39 @@ class DataFlowKernel(object):
              memo_cbk(Bool) : Indicates that the call is coming from a memo update,
              that does not require additional memo updates.
         """
-        # TODO : Remove, this check is redundant
         final_state_flag = False
 
-        if future.done():
+        try:
+            res = future.result()
+            if isinstance(res, RemoteException):
+                res.reraise()
 
-            try:
-                res = future.result()
-                if isinstance(res, RemoteException):
-                    res.reraise()
+        except Exception as e:
+            logger.exception("Task {} failed".format(task_id))
 
-            except Exception as e:
-                logger.exception("Task {} failed".format(task_id))
+            # We keep the history separately, since the future itself could be
+            # tossed.
+            self.tasks[task_id]['fail_history'].append(future._exception)
+            self.tasks[task_id]['fail_count'] += 1
 
-                # We keep the history separately, since the future itself could be
-                # tossed.
-                self.tasks[task_id]['fail_history'].append(future._exception)
-                self.tasks[task_id]['fail_count'] += 1
+            if not self.lazy_fail:
+                logger.debug("Eager fail, skipping retry logic")
+                raise e
 
-                if not self.lazy_fail:
-                    logger.debug("Eager fail, skipping retry logic")
-                    raise e
-
-                if self.tasks[task_id]['fail_count'] <= self.fail_retries:
-                    logger.debug("Task {} marked for retry".format(task_id))
-                    self.tasks[task_id]['status'] = States.pending
-
-                else:
-                    logger.info("Task {} failed after {} retry attempts".format(task_id,
-                                                                                self.fail_retries))
-                    self.tasks[task_id]['status'] = States.failed
-                    final_state_flag = True
+            if self.tasks[task_id]['fail_count'] <= self.fail_retries:
+                logger.debug("Task {} marked for retry".format(task_id))
+                self.tasks[task_id]['status'] = States.pending
 
             else:
-                logger.info("Task {} completed".format(task_id))
-                self.tasks[task_id]['status'] = States.done
+                logger.info("Task {} failed after {} retry attempts".format(task_id,
+                                                                            self.fail_retries))
+                self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
+
+        else:
+            logger.info("Task {} completed".format(task_id))
+            self.tasks[task_id]['status'] = States.done
+            final_state_flag = True
 
         if not memo_cbk and final_state_flag is True:
             # Update the memoizer with the new result if this is not a
@@ -326,6 +323,7 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['func'].__name__))
 
         exec_fu = executor.submit(executable, *args, **kwargs)
+        self.tasks[task_id]['status'] = States.running
         exec_fu.retries_left = self.fail_retries - \
             self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
@@ -510,7 +508,6 @@ class DataFlowKernel(object):
                                                           tid=task_id,
                                                           stdout=task_stdout,
                                                           stderr=task_stderr)
-                self.tasks[task_id]['status'] = States.running
                 logger.debug("Task {} launched with AppFut:{}".format(task_id,
                                                                       task_def['app_fu']))
 
