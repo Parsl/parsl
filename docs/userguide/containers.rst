@@ -135,7 +135,7 @@ Here is a parsl config using one of the docker images created in the previous se
 
        localDockerIPP = {
             "sites": [
-                {"site": "Local_IPP",
+                {"site": "pool_app1",
                  "auth": {"channel": None},
                  "execution": {
                      "executor": "ipp",
