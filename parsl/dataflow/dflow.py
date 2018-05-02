@@ -483,8 +483,8 @@ class DataFlowKernel(object):
             self.tasks[task_id] = task_def
 
         # Extract stdout and stderr to pass to AppFuture:
-        task_stdout = kwargs.get('stdout', None)
-        task_stderr = kwargs.get('stderr', None)
+        task_stdout = kwargs.get('stdout')
+        task_stderr = kwargs.get('stderr')
 
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
                                                                                task_def['func_name'],
