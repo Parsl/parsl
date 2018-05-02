@@ -1,6 +1,6 @@
+import argparse
 import os
 import time
-import argparse
 
 import pytest
 
@@ -37,7 +37,7 @@ def custom_exception():
     raise GlobusError('foobar')
 
 
-def test_simple(n=10):
+def test_simple(n=2):
     start = time.time()
     x = double(n)
     print("Result : ", x.result())
@@ -49,7 +49,7 @@ def test_simple(n=10):
     return True
 
 
-def test_imports(n=10):
+def test_imports(n=2):
     start = time.time()
     x = import_echo(n, "hello world")
     print("Result : ", x.result())

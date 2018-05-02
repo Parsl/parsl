@@ -1,6 +1,5 @@
-from parsl import *
-import time
 import argparse
+import time
 
 import pytest
 
@@ -19,8 +18,8 @@ def double(x):
 def plain_double(x):
     return x * 2
 
-
-def test_plain(n=10):
+@pytest.mark.skip('not asserting anything')
+def test_plain(n=2):
     start = time.time()
     x = []
     for i in range(0, n):
@@ -34,7 +33,8 @@ def test_plain(n=10):
     return ttc
 
 
-def test_parallel(n=10):
+@pytest.mark.skip('not asserting anything')
+def test_parallel(n=2):
     start = time.time()
     x = []
     for i in range(0, n):
@@ -48,7 +48,8 @@ def test_parallel(n=10):
     return ttc
 
 
-def test_parallel2(n=10):
+@pytest.mark.skip('not asserting anything')
+def test_parallel2(n=2):
     start = time.time()
     x = []
     for i in range(0, n):

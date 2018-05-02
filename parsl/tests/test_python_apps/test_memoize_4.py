@@ -7,7 +7,8 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 parsl.load(config)
 
-def test_python_memoization(n=4):
+
+def test_python_memoization(n=2):
     """Testing python memoization when func bodies differ
     """
     @App('python')

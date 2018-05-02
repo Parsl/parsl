@@ -5,6 +5,7 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 parsl.load(config)
 
+
 @App('python')
 def platform_name():
     return platform.platform()

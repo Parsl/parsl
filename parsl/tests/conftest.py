@@ -11,7 +11,7 @@ from glob import glob
 import pytest
 
 import parsl
-from parsl.tests.util import get_rundir
+from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger('parsl')
 

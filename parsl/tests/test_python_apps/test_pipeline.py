@@ -7,6 +7,7 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 parsl.load(config)
 
+
 @App('python')
 def increment(x):
     return x + 1
@@ -19,7 +20,7 @@ def slow_increment(x, dur):
     return x + 1
 
 
-def test_increment(depth=3):
+def test_increment(depth=2):
     """Test simple pipeline A->B...->N
     """
     futs = {0: 0}
@@ -29,7 +30,7 @@ def test_increment(depth=3):
     print([futs[i].result() for i in futs if not isinstance(futs[i], int)])
 
 
-def test_increment_slow(depth=3):
+def test_increment_slow(depth=2):
     """Test simple pipeline A->B...->N with delay
     """
     futs = {0: 0}

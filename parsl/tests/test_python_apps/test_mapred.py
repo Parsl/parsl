@@ -1,5 +1,3 @@
-"""Testing python map_reduce
-"""
 import argparse
 
 import parsl
@@ -8,6 +6,7 @@ from parsl.tests.configs.local_threads import config
 
 parsl.clear()
 parsl.load(config)
+
 
 @App('python')
 def fan_out(x, dur):
@@ -26,7 +25,7 @@ def accumulate_t(*args):
     return sum(args)
 
 
-def test_mapred_type1(width=5):
+def test_mapred_type1(width=2):
     """MapReduce test with the reduce stage taking futures in inputs=[]
     """
 
@@ -44,7 +43,7 @@ def test_mapred_type1(width=5):
         r, red.result())
 
 
-def test_mapred_type2(width=5):
+def test_mapred_type2(width=2):
     """MapReduce test with the reduce stage taking futures on the args
     """
 

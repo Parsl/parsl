@@ -40,7 +40,7 @@ def random_uuid(x):
 
 
 @pytest.mark.local
-def test_python_memoization(n=4):
+def test_python_memoization(n=2):
     """Testing python memoization disable via DFK call
     """
     x = random_uuid(0)

@@ -24,7 +24,7 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
         # print("Succeed")
 
 
-def test_no_deps(numtasks=10):
+def test_no_deps(numtasks=2):
     """Test basic error handling, with no dependent failures
     """
 
@@ -47,7 +47,7 @@ def test_no_deps(numtasks=10):
     print("Caught failures of  {0}/{1}".format(count, len(fus)))
 
 
-def test_fail_sequence(numtasks=10):
+def test_fail_sequence(numtasks=2):
     """Test failure in a sequence of dependencies
 
     App1 -> App2 ... -> AppN
@@ -72,7 +72,7 @@ def test_fail_sequence(numtasks=10):
     return
 
 
-def test_deps(numtasks=10):
+def test_deps(numtasks=2):
     """Random failures in branches of Map -> Map -> reduce
 
     App1   App2  ... AppN

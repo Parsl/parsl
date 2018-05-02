@@ -1,4 +1,3 @@
-from parsl import *
 import argparse
 import os
 

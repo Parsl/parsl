@@ -1,7 +1,5 @@
-import parsl
-from parsl import *
-import time
 import argparse
+import time
 
 import parsl
 from parsl.app.app import App
@@ -34,7 +32,7 @@ def slow_echo_to_file(msg, outputs=[], stderr='std.err', stdout='std.out'):
     return 'sleep 1; echo {0} > {outputs[0]}'
 
 
-def test_bash_memoization(n=4):
+def test_bash_memoization(n=2):
     """Testing bash memoization
     """
 

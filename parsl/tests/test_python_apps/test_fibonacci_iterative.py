@@ -1,4 +1,3 @@
-from parsl import *
 import argparse
 
 import parsl
@@ -8,12 +7,13 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 parsl.load(config)
 
+
 @App('python')
 def get_num(first, second):
     return first + second
 
 
-def test_fibonacci(num=5):
+def test_fibonacci(num=3):
     x1 = 0
     x2 = 1
     counter = 0

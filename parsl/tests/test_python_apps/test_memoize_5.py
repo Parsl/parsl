@@ -8,7 +8,7 @@ parsl.clear()
 dfk = parsl.load(config)
 
 
-def test_python_memoization(n=4):
+def test_python_memoization(n=2):
     """Testing python memoization when func bodies differ
     This is the canonical use case.
     """

@@ -1,3 +1,5 @@
+import pytest
+
 from parsl import *
 import parsl
 import libsubmit
@@ -34,6 +36,7 @@ def python_app():
     return "Hello from {0}".format(platform.uname())
 
 
+@pytest.mark.skip('This test needs to be fixed or removed: it appears we do not expect it to complete')
 def test_python(N=2):
     """No blocks provisioned if parallelism==0
 
