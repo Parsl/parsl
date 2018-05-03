@@ -1,13 +1,12 @@
 Container Support
 =================
 
-There are two broad models for app execution with containers :
+There are two broad models for app execution with containers:
 
-1. Workers launched inside containers: A single container re-used for several ``Apps``.
-2. Each ``App`` launched inside a fresh container
+1. Workers are launched inside containers; a single container can be re-used for several ``Apps``.
+2. Each ``App`` is launched inside a fresh container.
 
-This document describes the first case of where workers are launched within containers.
-In the model described here, the ``Apps`` are executed on a worker that is launched within a container.
+This document describes the first case. In this model, the ``Apps`` are executed on a worker that is launched within a container.
 For simplicity we focus on `Docker <https://docs.docker.com/>`_ although the same methods can be extended
 to supported other container systems such as `Singularity <http://singularity.lbl.gov/>`_,
 `Shifter <https://www.nersc.gov/research-and-development/user-defined-images/>`_ etc.
@@ -26,17 +25,17 @@ if you have experience working with containers.
 Installing Docker
 ^^^^^^^^^^^^^^^^^
 
-To install docker please ensure you have sudo privileges and follow instructions
+To install Docker please ensure you have sudo privileges and follow instructions
 `here <https://docs.docker.com/install/>`_.
 
-Once installed make sure that docker is installed :
+Once installed make sure that Docker is installed:
 
 .. code-block:: bash
 
-   # Get the docker version
+   # Get the Docker version
    docker --version
 
-   # Get docker info/stats :
+   # Get Docker info/stats
    docker info
 
    # Do a quick check with hello-world
@@ -47,18 +46,18 @@ Creating an Image
 ^^^^^^^^^^^^^^^^^
 
 Please note that the following instructions are tested on Ubuntu 16.04. If you are on a different
-operating system, every command that is not a docker command might need to be tweaked for your
+operating system, every command that is not a Docker command might need to be tweaked for your
 specific system. Such cases will be noted explicitly.
 
-1. First pull an image with the latest python
+1. Pull an image with the latest python.
 
    .. code-block:: bash
 
       # Get a basic python image
       docker pull python
 
-2. Construct a new python image with your modifications from this Dockerfile:
-   Every command in the container definition is assumed to be running in Ubuntu.
+2. Construct a new python image with your modifications by creating a file called ``Dockerfile`` with
+   the following contents. Every command in the container definition is assumed to be running in Ubuntu.
 
    .. code-block:: bash
 
@@ -72,12 +71,11 @@ specific system. Such cases will be noted explicitly.
       RUN pip3 install parsl
 
 
-3. Once your updates are made, create a Docker image from the Dockerfile:
+3. Once your updates are made, create a Docker image from the Dockerfile.
 
    .. code-block:: bash
 
-      # Use an official Python runtime as a parent image
-      FROM python:3.6
+      docker build -t parslbase_v0.1 .
 
 4. Make sure your user has privileges to launch and manage Docker by adding yourself
    to the ``docker`` group. The following command assumes an Ubuntu machine.
@@ -96,7 +94,7 @@ specific system. Such cases will be noted explicitly.
       # This command should return Python 3.6 or higher.
       python3 -V
 
-6. Setting up apps. Please check the following directories for two simple apps :
+6. Set up apps. Check the following directories for two simple apps:
 
    * ``parsl/docker/app1``
    * ``parsl/docker/app2``
@@ -106,8 +104,8 @@ specific system. Such cases will be noted explicitly.
    are made. Each of these `appN.py` scripts contain the definition of a ``predict(List)``
    function.
 
-7. Build the test applications as docker images:
-   We assume you are in the top level of the parsl repository.
+7. Build the test applications as Docker images:
+   We assume you are in the top level of the Parsl repository.
 
    .. code-block:: bash
 
@@ -126,33 +124,40 @@ specific system. Such cases will be noted explicitly.
 Parsl Config
 ^^^^^^^^^^^^
 
-Now that we have a docker image available locally, we will create a ``site`` that
+Now that we have a Docker image available locally, we will create a ``site`` that
 uses such an image to launch containers. ``Apps`` will execute in this environment.
 
-Here is a parsl config using one of the docker images created in the previous section.
+Here is a Parsl configuration using one of the Docker images created in the previous section.
 
 .. code-block:: python
 
-       localDockerIPP = {
+        local_docker_IPP = {
             "sites": [
-                {"site": "pool_app1",
-                 "auth": {"channel": None},
-                 "execution": {
-                     "executor": "ipp",
-                     "container": {
-                         "type": "docker",     # <----- Specify Docker
-                         "image": "app1_v0.1", # <------Specify docker image
-                     },
-                     "provider": "local",
-                     "block": {
-                         "initBlocks": 2,  # Start with 4 workers
-                     },
-                 }
-                 }],
-            "globals": {"lazyErrors": True}        }
+                {
+                    "site": "pool_app1",
+                    "auth": {
+                        "channel": None
+                    },
+                    "execution": {
+                        "executor": "ipp",
+                        "container": {
+                            "type": "docker",  # Specify Docker
+                            "image": "app1_v0.1",  # Specify docker image
+                        },
+                        "provider": "local",
+                        "block": {
+                            "initBlocks": 2,  # Start with 4 workers
+                        },
+                    }
+                }
+            ],
+            "globals": {
+                "lazyErrors": True
+            }
+        }
 
 For workflows with multiple apps which require different docker images, a new site should be
-created for each of the images that will be used. In the parsl workflow definition the ``App``
+created for each of the images that will be used. In the Parsl workflow definition the ``App``
 decorator can then be tagged with the ``sites`` keyword argument to ensure that apps execute
 on the specific sites with the right container image.
 
@@ -198,7 +203,7 @@ matching the definition of the site, and each block will contain one container i
 with a worker running inside. In the examples given above, the worker is launched in the
 working directory which also contains some application code:``app1.py``.
 
-The application codes ``app1.py`` and ``app2.py`` in our example docker images, both
+The application codes ``app1.py`` and ``app2.py`` in our example Docker images, both
 contain a simple python function ``predict()`` that takes a list of numbers (floats/ints) applies
 a simple arithmetic operation and returns a corresponding list.
 
