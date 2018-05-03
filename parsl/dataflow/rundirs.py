@@ -22,7 +22,7 @@ def make_rundir(config=None, path=None):
     try:
         if not path:
             path = None
-        elif config["globals"].get('runDir', None):
+        elif config.get("globals", {}).get('runDir'):
             path = config["globals"]['runDir']
 
         if not path:
