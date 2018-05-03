@@ -90,14 +90,13 @@ class DataFlowKernel(object):
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
 
-        if self._config and self._config["globals"]["checkpointFiles"]:
-            checkpoint_src = self._config["globals"]["checkpointFiles"]
-        else:
+        # Load Memoizer with checkpoints before we start the run.
+        if checkpointFiles:
             checkpoint_src = checkpointFiles
+        elif self._config and self._config["globals"]["checkpointFiles"]:
+            checkpoint_src = self._config["globals"]["checkpointFiles"]
 
-        # Load checkpoints if any
         cpts = self.load_checkpoints(checkpoint_src)
-
         # Initialize the memoizer
         self.memoizer = Memoizer(self, memoize=appCache, checkpoint=cpts)
         self.checkpointed_tasks = 0
