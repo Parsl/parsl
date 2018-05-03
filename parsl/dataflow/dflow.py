@@ -95,6 +95,8 @@ class DataFlowKernel(object):
             checkpoint_src = checkpointFiles
         elif self._config and self._config["globals"]["checkpointFiles"]:
             checkpoint_src = self._config["globals"]["checkpointFiles"]
+        else:
+            checkpoint_src = None
 
         cpts = self.load_checkpoints(checkpoint_src)
         # Initialize the memoizer
