@@ -1,14 +1,50 @@
 """Testing dockerized apps
 """
-# import parsl
-from parsl import *
-# parsl.set_stream_logger()
 import argparse
 import random
+import shutil
 import time
 
-# Import and launch the MultiSite config
-from localDockerIPP import localDockerMulti as config
+import pytest
+
+import parsl
+from parsl.app.app import App
+from parsl.dataflow.dflow import DataFlowKernel
+from parsl.tests.utils import get_config
+
+config = {
+    "sites": [
+        {"site": "pool_app1",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "ipp",
+             "container": {
+                 "type": "docker",
+                 "image": "app1_v0.1",
+             },
+             "provider": "local",
+             "block": {
+                 "initBlocks": 1,
+             },
+         }
+         },
+        {"site": "pool_app2",
+         "auth": {"channel": None},
+         "execution": {
+             "executor": "ipp",
+             "container": {
+                 "type": "docker",
+                 "image": "app2_v0.1",
+             },
+             "provider": "local",
+             "block": {
+                 "initBlocks": 1,
+             },
+         }
+         }
+    ],
+    "globals": {"lazyErrors": True}
+}
 dfk = DataFlowKernel(config=config)
 
 
@@ -28,14 +64,18 @@ def average(l):
     return sum(l) / len(l)
 
 
-def test_simple(n=10):
+@pytest.mark.skip('broken')
+@pytest.mark.skipif(shutil.which('docker') is None, reason='docker not installed')
+@pytest.mark.local
+@pytest.mark.usefixtures('setup_docker')
+def test_simple(n=2):
 
     a1 = app_1([1, 2, 3])
     a2 = app_2([1, 2, 3])
 
     print("Priming")
-    print("App1 results : ", a1.result())
-    print("App2 results : ", a2.result())
+    print("App1 results: ", a1.result())
+    print("App2 results: ", a2.result())
 
     rands = list(range(1, 100))
     app1_rtts = []
@@ -87,7 +127,3 @@ if __name__ == '__main__':
     #    parsl.set_stream_logger()
 
     x = test_simple(int(args.count))
-    # x = test_parallel_for(int(args.count))
-
-    # x = test_stdout()
-    # raise_error(0)

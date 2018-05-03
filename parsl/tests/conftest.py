@@ -4,6 +4,7 @@ from itertools import chain
 import logging
 import os
 import pickle
+import shutil
 import subprocess
 import sys
 from glob import glob
@@ -80,7 +81,7 @@ def pytest_generate_tests(metafunc):
     metafunc.parametrize('config', configs, scope='session')
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope='session')
 def setup_docker():
     """Set up containers for docker tests.
 
