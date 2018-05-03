@@ -21,6 +21,7 @@ from parsl.dataflow.config_defaults import update_config
 from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 from parsl.utils import get_version
+from parsl.app.errors import RemoteException
 
 # from parsl.dataflow.start_controller import Controller
 # Exceptions
@@ -89,8 +90,15 @@ class DataFlowKernel(object):
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
 
-        # Load checkpoints if any
-        cpts = self.load_checkpoints(checkpointFiles)
+        # Load Memoizer with checkpoints before we start the run.
+        if checkpointFiles:
+            checkpoint_src = checkpointFiles
+        elif self._config and self._config["globals"]["checkpointFiles"]:
+            checkpoint_src = self._config["globals"]["checkpointFiles"]
+        else:
+            checkpoint_src = None
+
+        cpts = self.load_checkpoints(checkpoint_src)
         # Initialize the memoizer
         self.memoizer = Memoizer(self, memoize=appCache, checkpoint=cpts)
         self.checkpointed_tasks = 0
@@ -175,40 +183,39 @@ class DataFlowKernel(object):
              memo_cbk(Bool) : Indicates that the call is coming from a memo update,
              that does not require additional memo updates.
         """
-        # TODO : Remove, this check is redundant
         final_state_flag = False
 
-        if future.done():
+        try:
+            res = future.result()
+            if isinstance(res, RemoteException):
+                res.reraise()
 
-            try:
-                future.result()
+        except Exception as e:
+            logger.exception("Task {} failed".format(task_id))
 
-            except Exception as e:
-                logger.exception("Task {} failed".format(task_id))
+            # We keep the history separately, since the future itself could be
+            # tossed.
+            self.tasks[task_id]['fail_history'].append(future._exception)
+            self.tasks[task_id]['fail_count'] += 1
 
-                # We keep the history separately, since the future itself could be
-                # tossed.
-                self.tasks[task_id]['fail_history'].append(future._exception)
-                self.tasks[task_id]['fail_count'] += 1
+            if not self.lazy_fail:
+                logger.debug("Eager fail, skipping retry logic")
+                raise e
 
-                if not self.lazy_fail:
-                    logger.debug("Eager fail, skipping retry logic")
-                    raise e
-
-                if self.tasks[task_id]['fail_count'] <= self.fail_retries:
-                    logger.debug("Task {} marked for retry".format(task_id))
-                    self.tasks[task_id]['status'] = States.pending
-
-                else:
-                    logger.info("Task {} failed after {} retry attempts".format(task_id,
-                                                                                self.fail_retries))
-                    self.tasks[task_id]['status'] = States.failed
-                    final_state_flag = True
+            if self.tasks[task_id]['fail_count'] <= self.fail_retries:
+                logger.debug("Task {} marked for retry".format(task_id))
+                self.tasks[task_id]['status'] = States.pending
 
             else:
-                logger.info("Task {} completed".format(task_id))
-                self.tasks[task_id]['status'] = States.done
+                logger.info("Task {} failed after {} retry attempts".format(task_id,
+                                                                            self.fail_retries))
+                self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
+
+        else:
+            logger.info("Task {} completed".format(task_id))
+            self.tasks[task_id]['status'] = States.done
+            final_state_flag = True
 
         if not memo_cbk and final_state_flag is True:
             # Update the memoizer with the new result if this is not a
@@ -216,8 +223,7 @@ class DataFlowKernel(object):
             self.memoizer.update_memo(task_id, self.tasks[task_id], future)
 
             if self.checkpoint_mode is 'task_exit':
-                self.checkpoint()
-                logger.debug("Task {} checkpoint created at task exit".format(task_id))
+                self.checkpoint(tasks=[task_id])
 
         # Identify tasks that have resolved dependencies and launch
         for tid in list(self.tasks):
@@ -318,6 +324,7 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['func'].__name__))
 
         exec_fu = executor.submit(executable, *args, **kwargs)
+        self.tasks[task_id]['status'] = States.running
         exec_fu.retries_left = self.fail_retries - \
             self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
@@ -502,7 +509,6 @@ class DataFlowKernel(object):
                                                           tid=task_id,
                                                           stdout=task_stdout,
                                                           stderr=task_stderr)
-                self.tasks[task_id]['status'] = States.running
                 logger.debug("Task {} launched with AppFut:{}".format(task_id,
                                                                       task_def['app_fu']))
 
@@ -573,11 +579,15 @@ class DataFlowKernel(object):
 
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self):
+    def checkpoint(self, tasks=None):
         """Checkpoint the dfk incrementally to a checkpoint file.
 
         When called, every task that has been completed yet not
         checkpointed is checkpointed to a file.
+
+        Kwargs:
+            - tasks (List of task ids) : List of task ids to checkpoint. Default=None
+                                         if set to None, we iterate over all tasks held by the DFK.
 
         .. note::
             Checkpointing only works if memoization is enabled
@@ -587,7 +597,12 @@ class DataFlowKernel(object):
             By default the checkpoints are written to the RUNDIR of the current
             run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
         """
-        logger.info("Checkpointing.. ")
+
+        checkpoint_queue = None
+        if tasks:
+            checkpoint_queue = tasks
+        else:
+            checkpoint_queue = self.tasks
 
         checkpoint_dir = '{0}/checkpoint'.format(self.rundir)
         checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
@@ -607,10 +622,12 @@ class DataFlowKernel(object):
             pickle.dump(state, f)
 
         count = 0
+
         with open(checkpoint_tasks, 'ab') as f:
-            for task_id in self.tasks:
-                if self.tasks[task_id]['app_fu'].done() and \
-                   not self.tasks[task_id]['checkpoint']:
+            for task_id in checkpoint_queue:
+                if not self.tasks[task_id]['checkpoint'] and \
+                   self.tasks[task_id]['status'] == States.done:
+
                     hashsum = self.tasks[task_id]['hashsum']
                     if not hashsum:
                         continue
@@ -665,6 +682,7 @@ class DataFlowKernel(object):
         memo_lookup_table = {}
 
         for checkpoint_dir in checkpointDirs:
+            logger.info("Loading checkpoints from {}".format(checkpoint_dir))
             checkpoint_file = os.path.join(checkpoint_dir, 'tasks.pkl')
             try:
                 with open(checkpoint_file, 'rb') as f:
