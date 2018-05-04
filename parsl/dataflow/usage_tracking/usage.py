@@ -137,8 +137,12 @@ class UsageTracker (object):
         if self.tracking_enabled:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
+                sock.settimeout(1.0)
                 x = sock.sendto(bytes(message, "utf-8"), (self.UDP_IP, self.UDP_PORT))
                 sock.close()
+            except socket.timeout:
+                logger.debug("Sending usage-tracking info timed-out")
+                x = 0
             except OSError:
                 logger.debug("Unable to reach the network to send usage data")
                 x = 0
