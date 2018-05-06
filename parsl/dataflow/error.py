@@ -1,4 +1,4 @@
-class DataFlowExceptions(Exception):
+class DataFlowException(Exception):
     """Base class for all exceptions.
 
     Only to be invoked when only a more specific error is not available.
@@ -6,19 +6,24 @@ class DataFlowExceptions(Exception):
     """
 
 
-class DuplicateTaskError(DataFlowExceptions):
+class ConfigurationError(DataFlowException):
+    """Raised when the DataFlowKernel receives an invalid configuration.
+    """
+
+
+class DuplicateTaskError(DataFlowException):
     """Raised by the DataFlowKernel when it finds that a job with the same task-id has been launched before.
     """
 
 
-class MissingFutError(DataFlowExceptions):
+class MissingFutError(DataFlowException):
     """Raised when a particular future is not found within the dataflowkernel's datastructures.
 
     Deprecated.
     """
 
 
-class BadCheckpoint(DataFlowExceptions):
+class BadCheckpoint(DataFlowException):
     """Error raised at the end of app execution due to missing output files.
 
     Args:
@@ -39,7 +44,7 @@ class BadCheckpoint(DataFlowExceptions):
         return self.__repr__()
 
 
-class DependencyError(DataFlowExceptions):
+class DependencyError(DataFlowException):
     """Error raised at the end of app execution due to missing output files.
 
     Args:

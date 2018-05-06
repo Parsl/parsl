@@ -6,6 +6,7 @@ tblib.pickling_support.install()
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.app.errors import wrap_error
+from parsl.dataflow.dflow import DataFlowKernelLoader
 
 
 logger = logging.getLogger(__name__)
@@ -14,13 +15,13 @@ logger = logging.getLogger(__name__)
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, executor, walltime=60, cache=False,
+    def __init__(self, func, executor=None, walltime=60, cache=False,
                  sites='all', fn_hash=None):
         """Initialize the super.
 
         This bit is the same for both bash & python apps.
         """
-        super().__init__(wrap_error(func), executor, walltime=walltime, sites=sites, exec_type="python")
+        super().__init__(wrap_error(func), executor=executor, walltime=walltime, sites=sites, exec_type="python")
         self.fn_hash = fn_hash
         self.cache = cache
 
@@ -39,6 +40,8 @@ class PythonApp(AppBase):
                    App_fut
 
         """
+        if self.executor is None:
+            self.executor = DataFlowKernelLoader.dfk()
         app_fut = self.executor.submit(self.func, *args,
                                        parsl_sites=self.sites,
                                        fn_hash=self.fn_hash,

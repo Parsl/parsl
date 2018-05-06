@@ -14,5 +14,6 @@ User guide
    app_caching
    checkpoints
    configuring
+   importing
    usage_tracking
    containers

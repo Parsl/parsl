@@ -31,7 +31,7 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.data_provider.files import File
 
-from parsl.dataflow.dflow import DataFlowKernel
+from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
 from parsl.app.app_factory import AppFactoryFactory
 APP_FACTORY_FACTORY = AppFactoryFactory('central')
 
@@ -42,6 +42,9 @@ __all__ = [
     'App', 'DataFlowKernel', 'File', 'ThreadPoolExecutor',
     'IPyParallelExecutor', 'set_stream_logger', 'set_file_logger'
 ]
+
+load = DataFlowKernelLoader.load
+dfk = DataFlowKernelLoader.dfk
 
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
