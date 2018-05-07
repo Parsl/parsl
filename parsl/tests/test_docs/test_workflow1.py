@@ -1,29 +1,27 @@
-"""Testing bash apps
-"""
 import parsl
-from parsl import *
 
-print("Parsl version: ", parsl.__version__)
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
 
+parsl.clear()
+parsl.load(config)
 
 # parsl.set_stream_logger()
-DataFlowKernelLoader.set_default('configs/local_threads.py')
-dfk = DataFlowKernelLoader.dfk()
 
 
-@App('python', dfk)
+@App('python')
 def generate(limit):
     from random import randint
     """Generate a random integer and return it"""
     return randint(1, limit)
 
 
-@App('bash', dfk)
+@App('bash')
 def save(message, outputs=[]):
     return 'echo %s &> {outputs[0]}' % (message)
 
 
-def test_procedural(N=4):
+def test_procedural(N=2):
     """Procedural workflow example from docs on
     Composing a workflow
     """

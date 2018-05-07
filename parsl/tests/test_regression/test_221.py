@@ -1,10 +1,11 @@
+import parsl
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
 
-from parsl import *
-from parsl.configs.local import localThreads as config
-dfk = DataFlowKernel(config=config)
+parsl.clear()
+dfk = parsl.load(config)
 
-
-@App('python', dfk)
+@App('python')
 def slow_double(x, dur=0.1):
     import time
     time.sleep(dur)

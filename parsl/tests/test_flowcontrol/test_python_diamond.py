@@ -1,12 +1,15 @@
-from parsl import *
 import time
 
-from parsl.configs.local import localIPP
-localIPP["sites"][0]["execution"]["block"]["initBlocks"] = 0
-localIPP["sites"][0]["execution"]["block"]["minBlocks"] = 0
-localIPP["sites"][0]["execution"]["block"]["maxBlocks"] = 4
-dfk = DataFlowKernel(config=localIPP)
+import pytest
 
+from parsl.app.app import App
+from parsl.dataflow.dflow import DataFlowKernel
+from parsl.tests.configs.local_ipp import config
+
+config["sites"][0]["execution"]["block"]["initBlocks"] = 0
+config["sites"][0]["execution"]["block"]["minBlocks"] = 0
+config["sites"][0]["execution"]["block"]["maxBlocks"] = 4
+dfk = DataFlowKernel(config=config)
 
 @App("python", dfk)
 def diamond(sleep=0, inputs=[]):
@@ -14,7 +17,8 @@ def diamond(sleep=0, inputs=[]):
     time.sleep(sleep)
     return sum(inputs)
 
-
+@pytest.mark.local
+@pytest.mark.skip('slow and does not assert anything')
 def test_python(width=10):
     """Diamond pattern to scale from 0 -> 1 -> N -> 1 -> 0 """
 

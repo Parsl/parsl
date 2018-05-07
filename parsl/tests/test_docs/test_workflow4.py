@@ -1,25 +1,26 @@
 import parsl
-from parsl import *
 
-print("Parsl version: ", parsl.__version__)
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
+
+parsl.clear()
+parsl.load(config)
 
 
 # parsl.set_stream_logger()
-DataFlowKernelLoader.set_default('configs/local_threads.py')
-dfk = DataFlowKernelLoader.dfk()
 
 
-@App('bash', dfk)
+@App('bash')
 def generate(outputs=[]):
     return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}"
 
 
-@App('bash', dfk)
+@App('bash')
 def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
     return "cat {0} >> {1}".format(" ".join(map(lambda x: x.filepath, inputs)), outputs[0])
 
 
-@App('python', dfk)
+@App('python')
 def total(inputs=[]):
     total = 0
     with open(inputs[0].filepath, 'r') as f:

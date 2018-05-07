@@ -1,22 +1,20 @@
 import parsl
-from parsl import *
 
-print("Parsl version: ", parsl.__version__)
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
+
+parsl.clear()
+parsl.load(config)
 
 
-# parsl.set_stream_logger()
-
-DataFlowKernelLoader.set_default('configs/local_threads.py')
-dfk = DataFlowKernelLoader.dfk()
-
-@App('python', dfk)
+@App('python')
 def generate(limit):
     from random import randint
     """Generate a random integer and return it"""
     return randint(1, limit)
 
 
-def test_parallel_for(N=5):
+def test_parallel_for(N=2):
     """Test parallel workflows from docs on Composing workflows
     """
     rand_nums = []

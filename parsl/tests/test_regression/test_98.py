@@ -7,30 +7,19 @@ import json
 import pytest
 
 import parsl
-from parsl import *
 
+from parsl.app.app import App
+from parsl.dataflow.dflow import DataFlowKernel
+from parsl.tests.configs.local_threads import config
 
 @pytest.mark.local
 def test_immutable_config(n=2):
     """Regression test for immutable config #98
     """
 
-    localThreads = {
-        "sites": [
-            {"site": "Local_Threads",
-             "auth": {"channel": None},
-             "execution": {
-                 "executor": "threads",
-                 "provider": None,
-                 "maxThreads": 4
-             }
-             }],
-        "globals": {"lazyErrors": True}
-    }
-
-    original = json.dumps(localThreads, sort_keys=True)
-    dfk = DataFlowKernel(config=localThreads)
-    after = json.dumps(localThreads, sort_keys=True)
+    original = json.dumps(config, sort_keys=True)
+    dfk = DataFlowKernel(config=config)
+    after = json.dumps(config, sort_keys=True)
 
     dfk.cleanup()
     assert original == after, "Config modified"

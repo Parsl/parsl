@@ -1,17 +1,12 @@
-from parsl import *
 import parsl
-import libsubmit
+from parsl.app.app import App
+from parsl.tests.configs.local_ipp import config
 
-print(parsl.__version__)
-print(libsubmit.__version__)
-
-# parsl.set_stream_logger()
-
-from parsl.configs.local import localIPP
-dfk = DataFlowKernel(config=localIPP)
+parsl.clear()
+parsl.load(config)
 
 
-@App("bash", dfk)
+@App("bash")
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 

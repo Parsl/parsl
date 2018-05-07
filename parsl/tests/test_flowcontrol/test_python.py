@@ -1,8 +1,11 @@
-from parsl import *
+import pytest
 
-from parsl.configs.local import localIPP
-localIPP["sites"][0]["execution"]["block"]["initBlocks"] = 0
-dfk = DataFlowKernel(config=localIPP)
+from parsl.app.app import App
+from parsl.dataflow.dflow import DataFlowKernel
+from parsl.tests.configs.local_ipp import config
+
+config["sites"][0]["execution"]["block"]["initBlocks"] = 0
+dfk = DataFlowKernel(config=config)
 
 
 @App("python", dfk)
@@ -11,6 +14,7 @@ def python_app():
     return "Hello from {0}".format(platform.uname())
 
 
+@pytest.mark.local
 def test_python(N=2):
     """Testing basic scaling|Python 0 -> 1 block """
 

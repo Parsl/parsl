@@ -1,42 +1,29 @@
 import pytest
 
-from parsl import *
 import parsl
-import libsubmit
 
-print(parsl.__version__)
-print(libsubmit.__version__)
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
 
-localIPP = {
-    "sites": [
-        {"site": "Local_IPP",
-         "auth": {
-             "channel": None,
-         },
-         "execution": {
-             "executor": "ipp",
-             "provider": "local",  # LIKELY SHOULD BE BOUND TO SITE
-             "block": {  # Definition of a block
-                 "taskBlocks": 4,       # total tasks in a block
-                 "initBlocks": 0,
-                 "minBlocks": 0,
-                 "maxBlocks": 10,
-                 "parallelism": 0,
-             }
-         }
-         }]
+config['sites'][0]['execution']['block'] = {
+    "taskBlocks": 4,
+    "initBlocks": 0,
+    "minBlocks": 0,
+    "maxBlocks": 10,
+    "parallelism": 0,
 }
 
-dfk = DataFlowKernel(config=localIPP)
+parsl.clear()
+parsl.load(config)
 
 
-@App("python", dfk)
+@App("python")
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())
 
 
-@pytest.mark.skip('This test needs to be fixed or removed: it appears we do not expect it to complete')
+@pytest.mark.skip('this test needs to be fixed or removed; it appears we do not expect it to complete')
 def test_python(N=2):
     """No blocks provisioned if parallelism==0
 

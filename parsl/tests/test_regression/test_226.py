@@ -1,11 +1,14 @@
 '''
 Regression test for #226.
 '''
-from parsl import *
-
-from parsl.configs.local import localThreads as config
-dfk = DataFlowKernel(config=config)
 import pandas as pd
+
+import parsl
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
+
+parsl.clear()
+parsl.load(config)
 
 
 class Foo(object):
@@ -19,7 +22,7 @@ class Foo(object):
 bar = Foo(1)
 
 
-@App('python', dfk)
+@App('python')
 def get_foo_x(a, b=bar, c=None):
     return b.x
 
@@ -27,12 +30,12 @@ def get_foo_x(a, b=bar, c=None):
 data = pd.DataFrame({'x': [None, 2, [3]]})
 
 
-@App('python', dfk)
+@App('python')
 def get_dataframe(d=data):
     return d
 
 
-@App('bash', dfk)
+@App('bash')
 def echo(msg, postfix='there', stdout='std.out'):
     return 'echo {} {}'.format(msg, postfix)
 
