@@ -1,4 +1,4 @@
-Reference Guide
+Reference guide
 ***************
 
 .. autosummary::
