@@ -171,7 +171,8 @@ class ClusterProvider(ExecutionProvider):
              - ExecutionProviderExceptions or its subclasses
 
         '''
-        self._status()
+        if job_ids:
+            self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
     def cancel(self, job_ids):
