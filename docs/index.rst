@@ -25,7 +25,7 @@ Parsl can be used to realize a variety of workflows:
 .. toctree::
 
    quickstart
-   tutorial
+   parsl-introduction.ipynb
    userguide/index
    faq
    reference
