@@ -81,4 +81,8 @@ user_opts = {
     #         source activate parsl_env_3.5"""
     #     }
     # },
+    # 'globus': {
+    #     'endpoint': 'fixme',
+    #     'path': 'fixme'
+    # }
 }

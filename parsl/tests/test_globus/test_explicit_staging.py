@@ -1,37 +1,12 @@
-from parsl import *
-from parsl.data_provider.files import File
 import os
 
-config = {
-    "sites": [
-        {
-            "site": "Local_Threads",
-            "auth": {
-                "channel": None
-            },
-            "execution": {
-                "executor": "threads",
-                "provider": None,
-                "maxThreads": 4
-            },
-            "data": {
-                "globus": {
-                    "endpoint_name": os.environ["GLOBUS_ENDPOINT"],
-                    "endpoint_path": os.environ["GLOBUS_EP_PATH"]
-                },
-                "working_dir": os.environ["GLOBUS_EP_PATH"],
-            }
-        }
-    ],
-    "globals": {
-        "lazyErrors": True
-    }
-}
+from parsl.app.app import App
+from parsl.data_provider.files import File
+from parsl.tests.configs.local_threads_globus import config
 
-dfk = DataFlowKernel(config=config)
+parsl.load(config)
 
-
-@App('python', dfk)
+@App('python')
 def sort_strings(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
@@ -41,6 +16,7 @@ def sort_strings(inputs=[], outputs=[]):
                 s.write(e)
 
 
+@pytest.mark.local
 def test_explicit_staging():
     """Test explicit staging via Globus.
 
