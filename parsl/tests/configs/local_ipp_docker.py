@@ -4,7 +4,7 @@ import shutil
 from parsl.tests.utils import get_rundir
 
 if shutil.which('docker') is None:
-    pytest.skip('docker not installed')
+    pytest.skip('docker not installed', allow_module_level=True)
 
 config = {
     "sites": [

@@ -1,16 +1,3 @@
-"""Config for EC2.
-
-Block {Min:0, init:1, Max:1}
-==================
-| ++++++++++++++ |
-| |    Node    | |
-| |            | |
-| | Task  Task | |
-| |            | |
-| ++++++++++++++ |
-==================
-
-"""
 import pytest
 
 from parsl.tests.utils import get_rundir
@@ -21,23 +8,28 @@ if 'ec2' in user_opts:
 else:
     pytest.skip('ec2 user_opts not configured', allow_module_level=True)
 
+info["spotMaxBid"] = 0.001  # Price too low
+
 config = {
     "sites": [
         {
-            "site": "ec2_single_node",
+            "site": "ec2_bad_spot",
             "auth": {
                 "channel": None,
-                "profile": "default",
+                "profile": "default"
             },
             "execution": {
                 "executor": "ipp",
                 "provider": "aws",
+                "channel": None,
                 "block": {
-                    "nodes": 1,  # number of nodes per block
-                    "taskBlocks": 2,  # total tasks in a block
-                    "walltime": "01:00:00",
                     "initBlocks": 1,
-                    "options": info['options']
+                    "maxBlocks": 1,
+                    "minBlocks": 0,
+                    "taskBlocks": 1,
+                    "nodes": 1,
+                    "walltime": "00:25:00",
+                    "options": info["options"]
                 }
             }
         }
@@ -45,8 +37,5 @@ config = {
     "globals": {
         "lazyErrors": True,
         "runDir": get_rundir()
-    },
-    "controller": {
-        "publicIp": '*'
     }
 }

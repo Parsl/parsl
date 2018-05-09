@@ -1,10 +1,11 @@
 import pytest
-from parsl.tests.runtime import runtime
+from parsl.tests.utils import get_rundir
+from parsl.tests.user_opts import user_opts
 
-if 'osg' not in runtime:
-    pytest.skip('osg runtime not configured')
+if 'osg' not in user_opts:
+    info = user_opts['osg']
 else:
-    info = runtime['osg']
+    pytest.skip('osg user_opts not configured', allow_module_level=True)
 
 config = {
     "sites": [
@@ -44,6 +45,7 @@ config = {
         "publicIp": '192.170.227.195'
     },
     "globals": {
-        "lazyErrors": True
+        "lazyErrors": True,
+        "runDir": get_rundir()
     }
 }
