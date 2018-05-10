@@ -113,7 +113,7 @@ class Memoizer(object):
         if hashsum in self.memo_lookup_table:
             present = True
             result = self.memo_lookup_table[hashsum]
-            logger.info("Task[%s]: Using result from cache", task_id)
+            logger.info("Task %s using result from cache", task_id)
 
         task['hashsum'] = hashsum
         return present, result

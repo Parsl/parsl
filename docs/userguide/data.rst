@@ -135,8 +135,8 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
                     "data": {
                         "globus": {
                             "endpoint_name": "7d2dc622-2edb-11e8-b8be-0ac6873fc732",
-                             "endpoint_path": "/",
-                             "local_path" : "/home/user"
+                            "endpoint_path": "/",
+                            "local_path" : "/home/user"
                          }
                      }
                 }
