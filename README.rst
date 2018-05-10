@@ -72,6 +72,7 @@ For testing:
 
 For building documentation:
 
+* nbsphinx
 * sphinx
 * sphinx_rtd_theme
 
