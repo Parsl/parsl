@@ -1,5 +1,4 @@
 import pickle
-import time
 
 import pytest
 

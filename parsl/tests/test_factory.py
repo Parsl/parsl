@@ -22,7 +22,7 @@ def app_3(x):
     return x * 2
 
 
-pytest.mark.local
+@pytest.mark.local
 def test_factory():
     appff = AppFactoryFactory('main')
     app_f = appff.make('bash', app_2, workers, walltime=60)
@@ -34,7 +34,7 @@ def test_factory():
         app_f_2, AppFactory), "AppFactoryFactory made the wrong type"
 
 
-pytest.mark.local
+@pytest.mark.local
 def test_factory_names():
     appff = AppFactoryFactory('main')
     print(appff)

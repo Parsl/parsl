@@ -12,6 +12,7 @@ parsl.clear()
 parsl.load(config)
 parsl.set_stream_logger()
 
+
 @App('python')
 def double(x):
     return x * 2
@@ -95,7 +96,7 @@ def test_stdout():
 def test_custom_exception():
     from globus_sdk import GlobusError
 
-    with pytest.raises(GlobusError) as e:
+    with pytest.raises(GlobusError):
         x = custom_exception()
         x.result()
 

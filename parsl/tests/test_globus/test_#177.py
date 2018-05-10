@@ -1,14 +1,12 @@
-import os
-
 import pytest
 
-from parsl.app.app import App
-from parsl.dataflow.dflow import DataFlowKernel
+import parsl
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads_globus import config
 
 parsl.clear()
 parsl.load(config)
+
 
 @pytest.mark.local
 def test_explicit_staging():
@@ -35,6 +33,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.debug:
-        set_stream_logger()
+        parsl.set_stream_logger()
 
     test_explicit_staging()

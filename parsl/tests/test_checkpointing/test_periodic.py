@@ -10,7 +10,8 @@ from parsl.app.app import App
 from parsl.tests.configs.local_threads_checkpoint_periodic import config
 
 parsl.clear()
-parsl.load(config)
+dfk = parsl.load(config)
+
 
 @App('python', cache=True)
 def slow_double(x, sleep_dur=1):

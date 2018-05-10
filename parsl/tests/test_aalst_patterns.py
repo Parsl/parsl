@@ -5,7 +5,6 @@ import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.tests.configs.local_threads import config
 
 parsl.clear()

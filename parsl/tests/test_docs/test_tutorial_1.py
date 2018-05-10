@@ -9,6 +9,7 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 parsl.load(config)
 
+
 @App('bash')
 def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
     # The bash app function, requires that the bash script is assigned to the special variable

@@ -7,6 +7,7 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 parsl.load(config)
 
+
 @App('python')
 def worker_identify(x, sleep_dur=0.2):
     import time
@@ -15,6 +16,7 @@ def worker_identify(x, sleep_dur=0.2):
     time.sleep(sleep_dur)
     return {"pid": os.getpid(),
             "tid": threading.current_thread()}
+
 
 @pytest.mark.local
 @pytest.mark.skip('fails intermittently')

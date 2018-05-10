@@ -24,6 +24,7 @@ def slow_app_double(x, sleep_dur=0.05):
     time.sleep(sleep_dur)
     return x * 2
 
+
 def test_1(N=10):
     """Testing code snippet from the documentation
     """

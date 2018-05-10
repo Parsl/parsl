@@ -36,10 +36,12 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.conftest import load_dfk
 
+
 @App("python")
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())
+
 
 @App("python")
 def python_app_slow(duration):
@@ -52,6 +54,7 @@ def python_app_slow(duration):
 @App("python")
 def python_noop():
     return
+
 
 @App("bash")
 def bash_app(stdout=None, stderr=None):
@@ -133,6 +136,7 @@ def test_python(count):
     print("Roundtrip |   Min:{0:0.3}ms Max:{1:0.3}ms Average:{2:0.3}ms".format(min_rtt,
                                                                                max_rtt,
                                                                                avg_rtt))
+
 
 def test_bash():
     import os

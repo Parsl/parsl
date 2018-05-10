@@ -11,6 +11,7 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 dfk = parsl.load(config)
 
+
 @App('python', cache=True)
 def slow_double(x, sleep_dur=1):
     import time

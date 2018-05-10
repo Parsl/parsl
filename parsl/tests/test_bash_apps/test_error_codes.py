@@ -67,6 +67,8 @@ test_matrix = {
 }
 
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
+
+
 @pytest.mark.whitelist(whitelist, reason='broken in IPP')
 def test_bash_formatting():
 

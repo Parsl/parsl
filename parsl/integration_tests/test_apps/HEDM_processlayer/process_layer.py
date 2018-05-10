@@ -25,6 +25,7 @@ import argparse
 workers = ThreadPoolExecutor(max_workers=8)
 dfk = DataFlowKernel(executors=[workers])
 
+
 def create_dirs(cwd):
 
     for dir in ['relax.01', 'relax.02', 'relax.03']:

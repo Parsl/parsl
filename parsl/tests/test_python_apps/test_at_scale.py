@@ -10,6 +10,7 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 parsl.load(config)
 
+
 @App('python')
 def double(x):
     return x * 2
@@ -17,6 +18,7 @@ def double(x):
 
 def plain_double(x):
     return x * 2
+
 
 @pytest.mark.skip('not asserting anything')
 def test_plain(n=2):

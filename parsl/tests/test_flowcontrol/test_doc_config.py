@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 import parsl
@@ -9,6 +7,7 @@ from parsl.tests.configs.midway_ipp import config
 
 parsl.clear()
 parsl.load(config)
+
 
 @App("python")
 def python_app():

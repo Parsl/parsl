@@ -38,4 +38,3 @@ config = {
         'runDir': get_rundir()
     }
 }
-

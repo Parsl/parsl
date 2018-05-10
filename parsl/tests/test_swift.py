@@ -44,6 +44,7 @@ def test_slow():
     total = sum([futs[i].result(timeout=10) for i in futs])
     assert total == 6, "expected 6, got {}".format(total)
 
+
 @pytest.mark.local
 def test_except():
     with pytest.raises(NameError):

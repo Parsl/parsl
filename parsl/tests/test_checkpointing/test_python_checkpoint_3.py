@@ -16,6 +16,7 @@ def slow_double(x, sleep_dur=1, cache=True):
     time.sleep(sleep_dur)
     return x * 2
 
+
 @pytest.mark.local
 def test_checkpointing():
     """Testing code snippet from documentation

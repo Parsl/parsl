@@ -1,15 +1,13 @@
-import os
+import argparse
 import time
 
-import pytest
-
 import parsl
-
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
 parsl.clear()
 parsl.load(config)
+
 
 @App('python')
 def import_echo(x, string, sleep=0, stdout=None):

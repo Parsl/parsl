@@ -10,10 +10,13 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 dfk = parsl.load(config)
 
+
 @App('bash')
-def multiline(inputs=[], outputs=[],
-               stderr=os.path.abspath('std.err'),
-               stdout=os.path.abspath('std.out')):
+def multiline(
+        inputs=[],
+        outputs=[],
+        stderr=os.path.abspath('std.err'),
+        stdout=os.path.abspath('std.out')):
     return """echo {inputs[0]} &> {outputs[0]}
     echo {inputs[1]} &> {outputs[1]}
     echo {inputs[2]} &> {outputs[2]}
@@ -32,10 +35,14 @@ def test_multiline():
         shutil.rmtree(outdir)
         os.makedirs(outdir)
 
-    f = multiline(inputs=["Hello", "This is", "Cat!"],
-                   outputs=['{0}/hello.txt'.format(outdir),
-                            '{0}/this.txt'.format(outdir),
-                            '{0}/cat.txt'.format(outdir)])
+    f = multiline(
+            inputs=["Hello", "This is", "Cat!"],
+            outputs=[
+                '{0}/hello.txt'.format(outdir),
+                '{0}/this.txt'.format(outdir),
+                '{0}/cat.txt'.format(outdir)
+            ]
+    )
     print(f.result())
 
     time.sleep(0.1)
@@ -65,5 +72,4 @@ if __name__ == '__main__':
 
     # if args.debug:
     #    parsl.set_stream_logger()
-
-    run_test()
+    test_multiline()

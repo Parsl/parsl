@@ -7,6 +7,7 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 dfk = parsl.load(config)
 
+
 @App('bash')
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}

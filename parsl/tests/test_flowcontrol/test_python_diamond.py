@@ -11,11 +11,13 @@ config["sites"][0]["execution"]["block"]["minBlocks"] = 0
 config["sites"][0]["execution"]["block"]["maxBlocks"] = 4
 dfk = DataFlowKernel(config=config)
 
+
 @App("python", dfk)
 def diamond(sleep=0, inputs=[]):
     import time
     time.sleep(sleep)
     return sum(inputs)
+
 
 @pytest.mark.local
 @pytest.mark.skip('slow and does not assert anything')

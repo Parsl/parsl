@@ -12,6 +12,7 @@ parsl.load(config)
 
 parsl.set_stream_logger()
 
+
 @App("python", sites=['local_threads'])
 def python_app_2():
     import os

@@ -18,6 +18,8 @@ def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
 
 
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
+
+
 @pytest.mark.whitelist(whitelist, reason='broken in IPP')
 def test_bad_stdout():
     """Testing bad stdout file

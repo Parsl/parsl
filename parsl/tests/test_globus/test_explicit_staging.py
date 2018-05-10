@@ -1,10 +1,12 @@
-import os
+import pytest
 
+import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads_globus import config
 
 parsl.load(config)
+
 
 @App('python')
 def sort_strings(inputs=[], outputs=[]):
@@ -51,6 +53,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.debug:
-        set_stream_logger()
+        parsl.set_stream_logger()
 
     test_explicit_staging()

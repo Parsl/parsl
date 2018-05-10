@@ -28,9 +28,11 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
         pass
         # print("Succeed")
 
+
 @App('python')
 def double(x):
     return x * 2
+
 
 @pytest.mark.local
 def test_simple(n=10):
@@ -44,6 +46,7 @@ def test_simple(n=10):
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
+
 
 @pytest.mark.skip('broken')
 def test_no_deps(numtasks=10):
@@ -180,7 +183,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.debug:
-        set_stream_logger()
+        parsl.set_stream_logger()
 
     test_simple()
     # test_fail_nowait(numtasks=int(args.count))

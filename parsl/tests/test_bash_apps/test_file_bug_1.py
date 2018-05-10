@@ -27,7 +27,9 @@ def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
 
 
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
-pytest.mark.whitelist(whitelist, reason='broken in IPP')
+
+
+@pytest.mark.whitelist(whitelist, reason='broken in IPP')
 def test_behavior():
     app1_future = app1(inputs=[],
                        outputs=["simple-out.txt"])

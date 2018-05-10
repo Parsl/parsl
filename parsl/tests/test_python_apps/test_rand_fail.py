@@ -7,6 +7,7 @@ from parsl.tests.configs.local_threads import config
 parsl.clear()
 parsl.load(config)
 
+
 @App('python')
 def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     import time
@@ -131,4 +132,3 @@ if __name__ == "__main__":
 
     test_no_deps(numtasks=int(args.count))
     test_fail_sequence(numtasks=int(args.count))
-    test_simple_deps(numtasks=int(args.count))

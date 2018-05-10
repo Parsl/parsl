@@ -1,6 +1,5 @@
 import argparse
 import pickle
-import time
 
 import pytest
 
@@ -11,6 +10,7 @@ from parsl.tests.configs.local_threads_checkpoint_task_exit import config
 
 parsl.clear()
 dfk = parsl.load(config)
+
 
 @App('python', cache=True)
 def slow_double(x, sleep_dur=1):

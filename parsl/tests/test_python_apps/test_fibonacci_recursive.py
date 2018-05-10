@@ -1,7 +1,4 @@
 import argparse
-import os
-
-import pytest
 
 import parsl
 from parsl.app.app import App

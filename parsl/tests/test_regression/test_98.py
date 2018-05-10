@@ -8,9 +8,9 @@ import pytest
 
 import parsl
 
-from parsl.app.app import App
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_threads import config
+
 
 @pytest.mark.local
 def test_immutable_config(n=2):

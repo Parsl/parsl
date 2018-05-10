@@ -11,6 +11,7 @@ parsl.set_stream_logger()
 parsl.clear()
 parsl.load(config)
 
+
 @App('python')
 def sleep_python(x):
     import time
@@ -21,6 +22,7 @@ def sleep_python(x):
 @App('bash')
 def sleep_bash(x):
     return 'sleep {0}'
+
 
 @pytest.mark.local
 @pytest.mark.skip('fails intermittently in pytest')

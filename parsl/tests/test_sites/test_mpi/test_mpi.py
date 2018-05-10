@@ -1,7 +1,5 @@
 import argparse
 import os
-import subprocess
-import random
 
 import pytest
 
@@ -27,7 +25,10 @@ def mpi_test(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False)
     mpirun -np 6 pmemd.MPI -O -i config_files/min.in -o min.out -c prot.rst7 -p prot.parm7 -r min.rst7 -ref prot.rst7
     """
 
+
 whitelist = os.path.join(os.path.dirname(parsl.__file__), 'tests', 'configs', '*MPI.py')
+
+
 @pytest.mark.whitelist(whitelist)
 def test_mpi():
     x = mpi_test(4, stdout="hello.out", stderr="hello.err")

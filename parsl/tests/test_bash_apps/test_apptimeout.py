@@ -1,11 +1,10 @@
-import pytest
-
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
 parsl.clear()
 parsl.load(config)
+
 
 @App('bash')
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out', walltime=0.5):

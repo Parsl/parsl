@@ -1,12 +1,9 @@
-import hashlib
 import importlib.util
 from itertools import chain
 import logging
 import os
-import pickle
 import shutil
 import subprocess
-import sys
 from glob import glob
 
 import pytest
@@ -131,7 +128,7 @@ def load_dfk(config):
         spec.loader.exec_module(module)
         if 'globals' not in module.config:
             module.config['globals'] = {}
-        module.config['globals']['runDir'] = get_rundir() # Give unique rundir; needed running with -n=X where X > 1.
+        module.config['globals']['runDir'] = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
         parsl.clear()
         parsl.load(module.config)
 
