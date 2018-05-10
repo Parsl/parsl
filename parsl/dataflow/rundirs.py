@@ -20,13 +20,12 @@ def make_rundir(config=None, path=None):
                Default : None.
     """
     try:
-        if not path:
-            path = None
-        elif config.get("globals", {}).get('runDir'):
-            path = config["globals"]['runDir']
-
-        if not path:
+        logger.debug('config is ')
+        logger.debug(config)
+        if not path or (path is None):
             path = "./runinfo"
+            if config.get("globals", {}).get('runDir'):
+                path = config["globals"]['runDir']
 
         if not os.path.exists(path):
             os.makedirs(path)
