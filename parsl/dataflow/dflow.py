@@ -57,13 +57,13 @@ class DataFlowKernel(object):
         options passed in via the config.
 
         KWargs:
-            - config (dict) : A single data object encapsulating all config attributes
+            - config (dict): A single data object encapsulating all config attributes
             - executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
-            - lazyErrors(bool) : Default=True, allow workflow to continue on app failures.
-            - appCache (bool) :Enable caching of apps
-            - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
+            - lazyErrors(bool): Default=True, allow workflow to continue on app failures.
+            - appCache (bool): Enable caching of apps
+            - rundir (str): Path to run directory. Defaults to ./runinfo/runNNN
             - retries(int): Default=0, Set the number of retry attempts in case of failure
-            - checkpointFiles (list of str): List of filepaths to read checkpoint files from
+            - checkpointFiles (list of str): List of filepaths to checkpoint files
             - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
             - data_manager (DataManager): User created DataManager
         Returns:
