@@ -100,12 +100,6 @@ class UsageTracker (object):
         self.sock_timeout = 5
         self.UDP_PORT = port
         self.UDP_IP = None
-
-        self._to_send = mp.Queue()
-        self._done = mp.Queue()
-        # self.proc = mp.Process(target=udp_messenger, args=(self.domain_name, self.UDP_IP, self.UDP_PORT,
-        #                                                    self.sock_timeout, self._to_send, self._done,))
-        # self.proc.start()
         self.procs = []
         self.dfk = dfk
         self.config = self.dfk.config
@@ -196,15 +190,6 @@ class UsageTracker (object):
         """Send UDP message."""
         x = 0
         if self.tracking_enabled:
-            """
-            self._to_send.put_nowait([message])
-            try:
-                msg = self._done.get(False, 1)
-                if not msg[0] :
-                    logger.debug(msg[1])
-            except queue.Empty:
-                pass
-            """
             try:
                 proc = udp_messenger(self.domain_name, self.UDP_IP, self.UDP_PORT, self.sock_timeout, message)
                 self.procs.append(proc)

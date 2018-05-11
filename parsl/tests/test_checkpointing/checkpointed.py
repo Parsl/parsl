@@ -5,7 +5,7 @@ import argparse
 
 def run_checkpointed(n=2, mode="task_exit", sleep_dur=0):
     """ This test runs n apps that will fail with Division by zero error,
-    followed by 1 app that will succeed. THe checkpoint should only have 1 task
+    followed by 1 app that will succeed. The checkpoint should only have 1 task
     """
 
     from parsl.configs.local import localThreads as config

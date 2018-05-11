@@ -27,12 +27,6 @@ def test_regress_232_task_exit(count=2):
         'runinfo/{0}/checkpoint'.format(sorted(os.listdir('runinfo/'))[-1]))
     checkpoint_file = "{}/tasks.pkl".format(last)
 
-    for i in range(0, 5):
-        if os.path.exists(checkpoint_file):
-            break
-        else:
-            time.sleep(0.2)
-
     with open(checkpoint_file, 'rb') as f:
         tasks = []
         try:
@@ -62,14 +56,6 @@ def test_regress_232_dfk_exit(count=2):
     last = os.path.abspath(
         'runinfo/{0}/checkpoint'.format(sorted(os.listdir('runinfo/'))[-1]))
     checkpoint_file = "{}/tasks.pkl".format(last)
-
-    for i in range(0, 10):
-        try:
-            with open(checkpoint_file, 'rb') as f:
-                f.readline()
-                break
-        except FileNotFoundError:
-            time.sleep(2)
 
     print(checkpoint_file, "now exists")
     with open(checkpoint_file, 'rb') as f:
