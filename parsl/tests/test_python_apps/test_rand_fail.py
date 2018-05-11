@@ -1,11 +1,15 @@
 import argparse
 
+import pytest
+
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
 parsl.clear()
 parsl.load(config)
+
+pytestmark = pytest.mark.skip('not asserting anything; hanging in Travis')
 
 
 @App('python')

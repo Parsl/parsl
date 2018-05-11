@@ -1,7 +1,10 @@
 '''
 Regression test for #226.
 '''
+import os
+
 import pandas as pd
+import pytest
 
 import parsl
 from parsl.app.app import App
@@ -40,16 +43,22 @@ def echo(msg, postfix='there', stdout='std.out'):
     return 'echo {} {}'.format(msg, postfix)
 
 
+blacklist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*ipp*')
+
+
+@pytest.mark.blacklist(blacklist, reason='hangs on Travis')
 def test_no_eq():
     res = get_foo_x('foo').result()
     assert res == 1, 'Expected 1, returned {}'.format(res)
 
 
+@pytest.mark.blacklist(blacklist, reason='hangs on Travis')
 def test_get_dataframe():
     res = get_dataframe().result()
     assert res.equals(data), 'Unexpected dataframe'
 
 
+@pytest.mark.blacklist(blacklist, reason='hangs on Travis')
 def test_bash_default_arg():
     echo('hello').result()
     with open('std.out', 'r') as f:

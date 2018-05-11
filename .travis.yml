@@ -17,7 +17,6 @@ os:
 script:
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
-    - pytest parsl/tests --basic
     - flake8 parsl/
     - pytest parsl/tests --config local
     # - pytest parsl/tests --config parsl/tests/configs/local_threads.py

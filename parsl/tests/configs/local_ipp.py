@@ -18,7 +18,7 @@ config = {
     ],
     "globals": {
         "lazyErrors": True,
-        "retries": 2,
+        'retries': 2,
         'runDir': get_rundir()
     }
 }
