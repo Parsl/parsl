@@ -37,10 +37,8 @@ def get_all_checkpoints():
        constructor
    
   """
-  print("BENC: get last checkpoint")
 
   if(not(os.path.isdir('runinfo/'))):
-    print("BENC: rundir does not exists")
     return []
 
   dirs = sorted(os.listdir('runinfo/'))
@@ -55,7 +53,6 @@ def get_all_checkpoints():
       checkpoints.append(checkpoint)
 
 
-  print("BENC: returning checkpoints", checkpoints)
   return checkpoints
 
 def get_last_checkpoint():
@@ -70,16 +67,13 @@ def get_last_checkpoint():
        constructor, with 0 or 1 elements
    
   """
-  print("BENC: get last checkpoint")
 
   if(not(os.path.isdir('runinfo/'))):
-    print("BENC: rundir does not exists")
     return []
 
   dirs = sorted(os.listdir('runinfo/'))
 
   if(len(dirs) == 0):
-    print("BENC: no run directories in runinfo")
     return []
 
   last_runid = dirs[-1]
@@ -88,6 +82,5 @@ def get_last_checkpoint():
   if(not(os.path.isdir(last_checkpoint))):
     return []
 
-  print("BENC: returning checkpoint", last_checkpoint)
   return [last_checkpoint]
 
