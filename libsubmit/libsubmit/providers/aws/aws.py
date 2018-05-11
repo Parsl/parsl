@@ -201,7 +201,7 @@ class EC2Provider(ExecutionProvider):
             logger.info("No State File. Cannot load previous options. Creating new infrastructure")
 
         if not state_file_exists:
-            try :
+            try:
                 self.create_vpc().id
             except Exception as e:
                 logger.info("Failed to create ec2 infrastructure : {0}".format(e))
@@ -209,7 +209,6 @@ class EC2Provider(ExecutionProvider):
             else:
                 # If infrastructure creation worked write state file
                 self.write_state_file()
-
 
     @property
     def channels_required(self):
