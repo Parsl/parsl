@@ -561,6 +561,7 @@ class DataFlowKernel(object):
 
         # Send final stats
         self.usage_tracker.send_message()
+        self.usage_tracker.close()
         # We do not need to cleanup if the executors are managed outside
         # the DFK
         if not self._executors_managed:
