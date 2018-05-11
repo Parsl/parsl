@@ -25,62 +25,62 @@ def get_version():
 
     return version
 
+
 def get_all_checkpoints():
-  """Finds the checkpoints from all last runs.
+    """Finds the checkpoints from all last runs.
 
-  Note that checkpoints are incremental, and this helper will not find
-  previous checkpoints from earlier than the most recent run. It probably
-  should be made to do so.
+    Note that checkpoints are incremental, and this helper will not find
+    previous checkpoints from earlier than the most recent run. It probably
+    should be made to do so.
 
-  Returns:
-     - a list suitable for the checkpointFiles parameter of DataFlowKernel
-       constructor
-   
-  """
+    Returns:
+       - a list suitable for the checkpointFiles parameter of DataFlowKernel
+         constructor
 
-  if(not(os.path.isdir('runinfo/'))):
-    return []
+    """
 
-  dirs = sorted(os.listdir('runinfo/'))
+    if(not(os.path.isdir('runinfo/'))):
+        return []
 
-  checkpoints = []
+    dirs = sorted(os.listdir('runinfo/'))
 
-  for runid in dirs:
-  
-    checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(runid))
+    checkpoints = []
 
-    if(os.path.isdir(checkpoint)):
-      checkpoints.append(checkpoint)
+    for runid in dirs:
 
+        checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(runid))
 
-  return checkpoints
+        if(os.path.isdir(checkpoint)):
+            checkpoints.append(checkpoint)
+
+    return checkpoints
+
 
 def get_last_checkpoint():
-  """Finds the checkpoint from the last run, if one exists.
+    """Finds the checkpoint from the last run, if one exists.
 
-  Note that checkpoints are incremental, and this helper will not find
-  previous checkpoints from earlier than the most recent run. It probably
-  should be made to do so.
+    Note that checkpoints are incremental, and this helper will not find
+    previous checkpoints from earlier than the most recent run. It probably
+    should be made to do so.
 
-  Returns:
+    Returns:
      - a list suitable for checkpointFiles parameter of DataFlowKernel
        constructor, with 0 or 1 elements
-   
-  """
 
-  if(not(os.path.isdir('runinfo/'))):
-    return []
+    """
 
-  dirs = sorted(os.listdir('runinfo/'))
+    if(not(os.path.isdir('runinfo/'))):
+        return []
 
-  if(len(dirs) == 0):
-    return []
+    dirs = sorted(os.listdir('runinfo/'))
 
-  last_runid = dirs[-1]
-  last_checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(last_runid))
+    if(len(dirs) == 0):
+        return []
 
-  if(not(os.path.isdir(last_checkpoint))):
-    return []
+    last_runid = dirs[-1]
+    last_checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(last_runid))
 
-  return [last_checkpoint]
+    if(not(os.path.isdir(last_checkpoint))):
+        return []
 
+    return [last_checkpoint]
