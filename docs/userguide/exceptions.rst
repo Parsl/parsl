@@ -94,7 +94,7 @@ app that is unaffected. Lazy failures is the default behavior in parsl, with the
 expectation that when running production workflows, individual app failures can be
 deferred until the end of the workflow. During the development and testing of
 workflows, failing immediately on any failure is often preferred and this behavior
-is possible by setting ``lazy_fail=False``.
+is possible by setting ``lazyErrors=False``.
 
 
 For eg:
@@ -118,8 +118,8 @@ For eg:
       time ----->
 
 
-There are two ways to disable lazy failures: via setting the ``config['globals']['lazyErrors']=False``
-or by setting ``lazy_fail=False`` as keyword argument to the DataFlowKernel at initialization.
+There are two ways to disable lazy failures: via setting ``config['globals']['lazyErrors']=False``
+or by setting ``lazyErrors=False`` as keyword argument to the DataFlowKernel at initialization.
 
 Here is an example of disabling lazy failures via the config passed to the DFK
 
@@ -140,7 +140,7 @@ Here is an example of disabling lazy failures via keyword argument to the DFK:
    from parsl import DataFlowKernel, App
    from parsl.configs.local import localIPP as config
 
-   dfk = DataFlowKernel(config=config, lazy_fail=False)
+   dfk = DataFlowKernel(config=config, lazyErrors=False)
 
 .. note:: The naming inconsistency in the config option and kwargs to dfk will be fixed
           in 0.5.0 release

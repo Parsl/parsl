@@ -19,6 +19,7 @@
 #
 import os
 import sys
+import requests
 sys.path.insert(0, os.path.abspath('../'))
 sys.path.insert(0, os.path.abspath('../parsl/libsubmit'))
 import parsl
@@ -32,11 +33,19 @@ import parsl
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode'
 ]
+
+url = 'https://raw.githubusercontent.com/Parsl/parsl-tutorial/master/parsl-introduction.ipynb'
+r = requests.get(url)
+with open(os.path.join(os.path.dirname(__file__), 'parsl-introduction.ipynb'), 'wb') as f:
+    f.write(r.content)
+
+nbsphinx_execute = 'never'
 
 def linkcode_resolve(domain, info):
     if domain != 'py':

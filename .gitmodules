@@ -1,7 +1,3 @@
-[submodule "parsl_demos"]
-	path = parsl_demos
-	url = https://github.com/Parsl/parsl_demos.git
-	branch = master
 [submodule "parsl/libsubmit"]
 	path = parsl/libsubmit
 	url = https://github.com/Parsl/libsubmit

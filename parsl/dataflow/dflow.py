@@ -57,11 +57,11 @@ class DataFlowKernel(object):
         options passed in via the config.
 
         KWargs:
-            - config (dict) : A single data object encapsulating all config attributes
+            - config (dict): A single data object encapsulating all config attributes
             - executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
-            - lazyErrors(bool) : Default=True, allow workflow to continue on app failures.
-            - appCache (bool) :Enable caching of apps
-            - rundir (str) : Path to run directory. Defaults to ./runinfo/runNNN
+            - lazyErrors(bool): Default=True, allow workflow to continue on app failures.
+            - appCache (bool): Enable caching of apps
+            - rundir (str): Path to run directory. Defaults to ./runinfo/runNNN
             - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
             - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
@@ -431,7 +431,7 @@ class DataFlowKernel(object):
     def submit(self, func, *args, parsl_sites='all', fn_hash=None, cache=False, **kwargs):
         """Add task to the dataflow system.
 
-        >>> IF all deps are met :
+        >>> IF all deps are met:
         >>>   send to the runnable queue and launch the task
         >>> ELSE:
         >>>   post the task in the pending queue
@@ -706,7 +706,7 @@ class DataFlowKernel(object):
                 logger.error(reason)
                 raise BadCheckpoint(reason)
             except Exception as e:
-                reason = "Failed to load Checkpoint: {}".format(
+                reason = "Failed to load checkpoint: {}".format(
                     checkpoint_file)
                 logger.error(reason)
                 raise BadCheckpoint(reason)
@@ -736,3 +736,36 @@ class DataFlowKernel(object):
             raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
 
         return self._load_checkpoints(checkpointDirs)
+
+
+class DataFlowKernelLoader(object):
+    """Manage which DataFlowKernel is active.
+
+    This is a singleton class containing only class methods. You should not
+    need to instantiate this class.
+    """
+
+    _dfk = None
+
+    @classmethod
+    def load(cls, config):
+        """Load a DataFlowKernel.
+
+        Args:
+            - config (dict) : Configuration to load. This config will be passed to a
+              new DataFlowKernel instantiation which will be set as the active DataFlowKernel.
+        Returns:
+            - DataFlowKernel : The loaded DataFlowKernel object.
+        """
+        if cls._dfk is not None:
+            raise RuntimeError('Config has already been loaded')
+        cls._dfk = DataFlowKernel(config=config)
+
+        return cls._dfk
+
+    @classmethod
+    def dfk(cls):
+        """Return the currently-loaded DataFlowKernel."""
+        if cls._dfk is None:
+            raise RuntimeError('Must first load config')
+        return cls._dfk

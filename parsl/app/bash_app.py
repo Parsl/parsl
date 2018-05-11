@@ -2,6 +2,7 @@ import logging
 
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
+from parsl.dataflow.dflow import DataFlowKernelLoader
 
 logger = logging.getLogger(__name__)
 
@@ -33,17 +34,14 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     except AttributeError as e:
         if partial_cmdline:
-            raise pe.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
-                                                                                                       e), None)
+            raise pe.AppBadFormatting("[{}] App formatting failed during cmd_line resolution: {}".format(func_name, e), None)
         else:
             raise pe.BashAppNoReturn("[{}] Bash App returned NoneType, must return str object".format(func_name), None)
 
     except IndexError as e:
-        raise pe.AppBadFormatting("[{}] AppFormatting failed during cmd_line resolution {}".format(func_name,
-                                                                                                   e), None)
+        raise pe.AppBadFormatting("[{}] App formatting failed during cmd_line resolution: {}".format(func_name, e), None)
     except Exception as e:
-        logging.error("[{}] Caught exception during cmd_line resolution : {}".format(func_name,
-                                                                                     e))
+        logging.error("[{}] Caught exception during cmd_line resolution: {}".format(func_name, e))
         raise e
 
     # Updating stdout, stderr if values passed at call time.
@@ -74,11 +72,11 @@ def remote_side_bash_executor(func, *args, **kwargs):
         raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout), e)
 
     except Exception as e:
-        print("Caught exception : ", e)
-        raise pe.AppException("[{}] App caught exception : {}".format(func_name, proc.returncode), e)
+        print("Caught exception: ", e)
+        raise pe.AppException("[{}] App caught exception: {}".format(func_name, proc.returncode), e)
 
     if returncode != 0:
-        raise pe.AppFailure("[{}] App Failed exit code: {}".format(func_name, proc.returncode), proc.returncode)
+        raise pe.AppFailure("[{}] App failed with exit code: {}".format(func_name, proc.returncode), proc.returncode)
 
     # TODO : Add support for globs here
 
@@ -100,13 +98,13 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, executor, walltime=60, cache=False,
+    def __init__(self, func, executor=None, walltime=60, cache=False,
                  sites='all', fn_hash=None):
         """Initialize the super.
 
         This bit is the same for both bash & python apps.
         """
-        super().__init__(func, executor, walltime=60, sites=sites, exec_type="bash")
+        super().__init__(func, executor=executor, walltime=60, sites=sites, exec_type="bash")
         self.fn_hash = fn_hash
         self.cache = cache
 
@@ -126,8 +124,11 @@ class BashApp(AppBase):
                    App_fut
 
         """
-        # Update kwargs in the app definition with one's passed in at calltime
+        # Update kwargs in the app definition with ones passed in at calltime
         self.kwargs.update(kwargs)
+
+        if self.executor is None:
+            self.executor = DataFlowKernelLoader.dfk()
 
         app_fut = self.executor.submit(remote_side_bash_executor, self.func, *args,
                                        parsl_sites=self.sites,

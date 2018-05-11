@@ -1,4 +1,4 @@
-Reference Guide
+Reference guide
 ***************
 
 .. autosummary::
@@ -10,6 +10,7 @@ Reference Guide
     parsl.app.app.App
     parsl.app.futures.DataFuture
     parsl.dataflow.futures.AppFuture
+    parsl.dataflow.dflow.DataFlowKernelLoader
     parsl.data_provider.files.File
 
 .. autosummary::

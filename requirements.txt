@@ -3,3 +3,6 @@ libsubmit>=0.3.2a0
 globus-sdk
 dill
 tblib
+nbsphinx
+ipykernel
+requests

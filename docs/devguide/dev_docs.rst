@@ -88,7 +88,7 @@ Exceptions
 
 .. autoclass:: parsl.app.errors.DependencyError
 
-.. autoclass:: parsl.dataflow.error.DataFlowExceptions
+.. autoclass:: parsl.dataflow.error.DataFlowException
 
 .. autoclass:: parsl.dataflow.error.DuplicateTaskError
 
