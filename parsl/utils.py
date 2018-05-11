@@ -25,6 +25,39 @@ def get_version():
 
     return version
 
+def get_all_checkpoints():
+  """Finds the checkpoints from all last runs.
+
+  Note that checkpoints are incremental, and this helper will not find
+  previous checkpoints from earlier than the most recent run. It probably
+  should be made to do so.
+
+  Returns:
+     - a list suitable for the checkpointFiles parameter of DataFlowKernel
+       constructor
+   
+  """
+  print("BENC: get last checkpoint")
+
+  if(not(os.path.isdir('runinfo/'))):
+    print("BENC: rundir does not exists")
+    return []
+
+  dirs = sorted(os.listdir('runinfo/'))
+
+  checkpoints = []
+
+  for runid in dirs:
+  
+    checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(runid))
+
+    if(os.path.isdir(checkpoint)):
+      checkpoints.append(checkpoint)
+
+
+  print("BENC: returning checkpoints", checkpoints)
+  return checkpoints
+
 def get_last_checkpoint():
   """Finds the checkpoint from the last run, if one exists.
 
