@@ -1,6 +1,8 @@
 import argparse
 import time
 
+import pytest
+
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
@@ -32,6 +34,7 @@ def slow_echo_to_file(msg, outputs=[], stderr='std.err', stdout='std.out'):
     return 'sleep 1; echo {0} > {outputs[0]}'
 
 
+@pytest.mark.skip('fails intermittently depending on machine load')
 def test_bash_memoization(n=2):
     """Testing bash memoization
     """

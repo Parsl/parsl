@@ -46,7 +46,7 @@ def run_checkpointed(n=2, mode="task_exit"):
 
 
 @pytest.mark.local
-@pytest.mark.skip('fails intermittently in pytest')
+@pytest.mark.skip('hangs intermittently in pytest')
 def test_regression_239():
     """Ensure failed tasks are not cached with task_exit mode. Tests #239
     Also tests task_exit behavior.
@@ -66,7 +66,7 @@ def test_regression_239():
 
 
 @pytest.mark.local
-@pytest.mark.skip('fails intermittently in pytest')
+@pytest.mark.skip('hangs intermittently in pytest')
 def test_checkpointing_at_dfk_exit():
     """Ensure failed tasks are not cached with dfk_exit mode. Tests #239
     """

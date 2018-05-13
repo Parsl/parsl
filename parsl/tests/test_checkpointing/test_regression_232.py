@@ -1,8 +1,10 @@
-import pickle
-import time
-import subprocess
-import signal
 import os
+import pickle
+import signal
+import subprocess
+import time
+
+import pytest
 
 
 def kill():
@@ -11,6 +13,7 @@ def kill():
     print("Killing self")
 
 
+@pytest.mark.local
 def test_regress_232_task_exit(count=2):
     """Recovering from a run that was SIGINT'ed with task_exit checkpointing
     """
@@ -50,6 +53,7 @@ def test_regress_232_task_exit(count=2):
             1, len(tasks))
 
 
+@pytest.mark.local
 def test_regress_232_dfk_exit(count=2):
     """Recovering from a run that was SIGINT'ed with dfk_exit checkpointing
     """

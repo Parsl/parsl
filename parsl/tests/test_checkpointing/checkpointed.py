@@ -8,7 +8,8 @@ def run_checkpointed(n=2, mode="task_exit", sleep_dur=0):
     followed by 1 app that will succeed. The checkpoint should only have 1 task
     """
 
-    from parsl.configs.local import localThreads as config
+    from parsl.tests.configs.local_threads import config
+    config['globals']['runDir'] = 'runinfo'
     config["globals"]["checkpointMode"] = mode
     dfk = DataFlowKernel(config=config)
 
