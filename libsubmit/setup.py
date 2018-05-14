@@ -4,12 +4,10 @@ with open('libsubmit/version.py') as f:
     exec(f.read())
 
 install_requires = [
-    'ipyparallel',
     'paramiko'
     ]
 
 tests_require = [
-    'ipyparallel',
     'paramiko',
     'mock>=1.0.0',
     'nose',
@@ -31,7 +29,7 @@ setup(
     install_requires=install_requires,
     extras_require = {
         'aws' : ['boto3'],
-        'azure' : ['azure', 'haikunator'],
+        'azure' : ['azure-mgmt>=2.0.0', 'haikunator'],
         'jetstream' : ['python-novaclient']
         },
     classifiers = [
