@@ -24,6 +24,11 @@ def run_checkpointed(n=2, mode="task_exit", sleep_dur=0):
         x = cached_rand(i, sleep_dur=sleep_dur)
         items.append(x)
 
+    # Barrier
+    [i.result() for i in items]
+    with open("test.txt", 'w') as f:
+        f.write("done")
+
     time.sleep(10)
 
 

@@ -17,9 +17,18 @@ def test_regress_232_task_exit(count=2):
     cwd = os.path.dirname(os.path.realpath(__file__))
     checkpoint_file = os.path.join(cwd, 'checkpointed.py')
 
+    if os.path.exists("test.txt"):
+        os.remove("test.txt")
+
     proc = subprocess.Popen("python3 {} -n {} -m task_exit".format(checkpoint_file, count),
                             shell=True)
-    time.sleep(0.3)
+
+    # Poll for 3 seconds
+    for i in range(30):
+        if os.path.exists("test.txt"):
+            break
+        time.sleep(0.1)
+
     proc.send_signal(signal.SIGINT)
     proc.wait()
     # We need to wait after the signal to make sure files were closed and such
