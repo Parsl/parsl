@@ -44,6 +44,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
         logging.error("[{}] Caught exception during cmd_line resolution: {}".format(func_name, e))
         raise e
 
+    logging.debug("Executable: %s", executable)
+
     # Updating stdout, stderr if values passed at call time.
     stdout = kwargs.get('stdout')
     stderr = kwargs.get('stderr')
