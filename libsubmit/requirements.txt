@@ -1,7 +1,6 @@
-ipyparallel
 paramiko
 boto3
-azure
+azure-mgmt>=2.0.0
 python-novaclient
 google-api-python-client
 google-auth
