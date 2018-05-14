@@ -79,7 +79,7 @@ For building documentation:
 Contributing
 ============
 
-We welcome contributions from the community. Please see our `contributing guide <.github/CONTRIBUTING.rst>`_. 
+We welcome contributions from the community. Please see our `contributing guide <CONTRIBUTING.rst>`_. 
 
 Citation
 ========
