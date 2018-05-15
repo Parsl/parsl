@@ -26,12 +26,15 @@ def get_version():
     return version
 
 
-def get_all_checkpoints():
+def get_all_checkpoints(rundir="runinfo"):
     """Finds the checkpoints from all last runs.
 
     Note that checkpoints are incremental, and this helper will not find
     previous checkpoints from earlier than the most recent run. It probably
     should be made to do so.
+
+    Kwargs:
+       - rundir(str) : Path to the runinfo directory
 
     Returns:
        - a list suitable for the checkpointFiles parameter of DataFlowKernel
@@ -39,16 +42,16 @@ def get_all_checkpoints():
 
     """
 
-    if(not(os.path.isdir('runinfo/'))):
+    if(not(os.path.isdir(rundir))):
         return []
 
-    dirs = sorted(os.listdir('runinfo/'))
+    dirs = sorted(os.listdir(rundir))
 
     checkpoints = []
 
     for runid in dirs:
 
-        checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(runid))
+        checkpoint = os.path.abspath('{}/{}/checkpoint'.format(rundir, runid))
 
         if(os.path.isdir(checkpoint)):
             checkpoints.append(checkpoint)
@@ -56,12 +59,15 @@ def get_all_checkpoints():
     return checkpoints
 
 
-def get_last_checkpoint():
+def get_last_checkpoint(rundir="runinfo"):
     """Finds the checkpoint from the last run, if one exists.
 
     Note that checkpoints are incremental, and this helper will not find
     previous checkpoints from earlier than the most recent run. It probably
     should be made to do so.
+
+    Kwargs:
+       - rundir(str) : Path to the runinfo directory
 
     Returns:
      - a list suitable for checkpointFiles parameter of DataFlowKernel
@@ -69,16 +75,16 @@ def get_last_checkpoint():
 
     """
 
-    if(not(os.path.isdir('runinfo/'))):
+    if(not(os.path.isdir(rundir))):
         return []
 
-    dirs = sorted(os.listdir('runinfo/'))
+    dirs = sorted(os.listdir(rundir))
 
     if(len(dirs) == 0):
         return []
 
     last_runid = dirs[-1]
-    last_checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(last_runid))
+    last_checkpoint = os.path.abspath('{}/{}/checkpoint'.format(rundir, last_runid))
 
     if(not(os.path.isdir(last_checkpoint))):
         return []
