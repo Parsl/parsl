@@ -19,6 +19,8 @@ from libsubmit.providers.condor.condor import Condor
 from libsubmit.providers.torque.torque import Torque
 from libsubmit.providers.local.local import Local
 from libsubmit.providers.cobalt.cobalt import Cobalt
+from libsubmit.providers.kubernetes.kube import Kubernetes
+
 from libsubmit.channels.ssh.ssh import SSHChannel
 from libsubmit.channels.ssh_il.ssh_il import SSHInteractiveLoginChannel
 from libsubmit.channels.local.local import LocalChannel
@@ -27,7 +29,7 @@ __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
 __all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'GoogleCloud', 'Jetstream',
-           'Local', 'Cobalt', 'Condor', 'Torque', 'GridEngine',
+           'Local', 'Cobalt', 'Condor', 'Torque', 'GridEngine', 'KubernetesProvider',
            'LocalChannel', 'SSHChannel', 'SSHInteractiveLoginChannel']
 
 
