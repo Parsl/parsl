@@ -127,6 +127,18 @@ class EC2Provider(ExecutionProvider):
                                        # the max Bid price.
                                        # Type: Float,
                                        # Required: False },
+
+                      "IamInstanceProfileArn" : #{"Description: IamInstanceProfile Arn to use inorder to
+                                                # launch instance with a specific Role.
+                                                # Type: string,
+                                                # Required: False },
+
+                      "overrides"    : #{"Description : String to append to the Userdata script executed
+                                       # in the cloudinit phase of instance initialization
+                                       # Type : String,
+                                       # Default : ''
+                                       # Required : False },
+
                   }
               }
             }
@@ -159,9 +171,11 @@ class EC2Provider(ExecutionProvider):
         self.config = config
         options = self.config["execution"]["block"]["options"]
         logger.warn("Options %s", options)
+        self.overrides = options.get("overrides", '')
         self.instance_type = options.get("instanceType", "t2.small")
         self.image_id = options["imageId"]
         self.key_name = options["keyName"]
+        self.iam_instance_profile_arn = options.get("IamInstanceProfileArn", '')
         self.region = options.get("region", 'us-east-2')
         self.max_nodes = (
             self.config["execution"]["block"].get("maxBlocks", 1) *
@@ -176,16 +190,25 @@ class EC2Provider(ExecutionProvider):
             logger.error("Site:[{0}] Failed to initialize".format(self))
             raise e
 
+        state_file_exists = False
         try:
             self.statefile = self.config["execution"]["block"]["options"].get(
                 "stateFile", '.ec2site_{0}.json'.format(self.sitename)
             )
             self.read_state_file(self.statefile)
-
+            state_file_exists = True
         except Exception as e:
-            self.create_vpc().id
             logger.info("No State File. Cannot load previous options. Creating new infrastructure")
-            self.write_state_file()
+
+        if not state_file_exists:
+            try:
+                self.create_vpc().id
+            except Exception as e:
+                logger.info("Failed to create ec2 infrastructure : {0}".format(e))
+                raise
+            else:
+                # If infrastructure creation worked write state file
+                self.write_state_file()
 
     @property
     def channels_required(self):
@@ -483,7 +506,9 @@ class EC2Provider(ExecutionProvider):
 
         '''
 
-        command = Template(template_string).substitute(jobname=job_name, user_script=cmd_string)
+        command = Template(template_string).substitute(jobname=job_name,
+                                                       user_script=cmd_string,
+                                                       overrides=self.overrides)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
         ami_id = self.image_id
@@ -518,6 +543,7 @@ class EC2Provider(ExecutionProvider):
                 TagSpecifications=tag_spec,
                 InstanceMarketOptions=spot_options,
                 InstanceInitiatedShutdownBehavior='terminate',
+                IamInstanceProfile={'Arn': self.iam_instance_profile_arn},
                 UserData=command
             )
         except ClientError as e:
