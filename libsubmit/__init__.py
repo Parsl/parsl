@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 from libsubmit.version import VERSION
 from libsubmit.providers import LocalProvider
 
-
 from libsubmit.providers import CobaltProvider
 from libsubmit.providers import CondorProvider
 from libsubmit.providers import GridEngineProvider
@@ -23,12 +22,15 @@ from libsubmit.providers import AzureProvider
 from libsubmit.providers import GoogleCloudProvider
 from libsubmit.providers import JetstreamProvider
 
+from libsubmit.providers import KubernetesProvider
+
 from libsubmit.channels import SSHChannel
 from libsubmit.channels import SSHInteractiveLoginChannel
 from libsubmit.channels import LocalChannel
 
 from libsubmit.launchers import SimpleLauncher, SingleNodeLauncher, SrunLauncher, \
     AprunLauncher, SrunMPILauncher, AprunLauncher
+
 
 __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
@@ -43,6 +45,7 @@ __all__ = ['LocalProvider',
            'AzureProvider',
            'GoogleCloudProvider',
            'JetstreamProvider',
+           'KubernetesProvider',
            'LocalChannel',
            'SSHChannel',
            'SSHInteractiveLoginChannel',
