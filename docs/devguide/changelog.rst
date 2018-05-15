@@ -1,6 +1,48 @@
 Changelog
 =========
 
+Parsl 0.5.1
+-----------
+
+Released. May 15th, 2018.
+
+New functionality
+^^^^^^^^^^^^^^^^^
+
+
+* Better code state description in logging `issue#242 <https://github.com/Parsl/parsl/issues/242>`_
+
+* String like behavior for Files `issue#174 <https://github.com/Parsl/parsl/issues/174>`_
+
+* Globus path mapping in config `issue#165 <https://github.com/Parsl/parsl/issues/165>`_
+
+
+Bug Fixes
+^^^^^^^^^
+
+* Usage tracking with certain missing network causes 20s startup delay. `issue#220 <https://github.com/Parsl/parsl/issues/220>`_
+
+* Checkpoints will not reload from a run that was Ctrl-C'ed `issue#232 <https://github.com/Parsl/parsl/issues/232>`_
+
+* Checkpoints will not reload from a run that was Ctrl-C'ed `issue#220 <https://github.com/Parsl/parsl/issues/220>`_
+
+* Race condition in task checkpointing `issue#234 <https://github.com/Parsl/parsl/issues/234>`_
+
+* `task_exit` checkpointing repeatedly truncates checkpoint file during run `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
+
+* Make `dfk.cleanup()` not cause kernel to restart with Jupyter on Mac `issue#212 <https://github.com/Parsl/parsl/issues/212>`_
+
+* Fix automatic IPP controller creation on OS X `issue#206 <https://github.com/Parsl/parsl/issues/206>`_
+
+* Passing Files breaks over IPP `issue#200 <https://github.com/Parsl/parsl/issues/200>`_
+
+* `repr` call after `AppException` instantiation raises `AttributeError` `issue#197 <https://github.com/Parsl/parsl/issues/197>`_
+
+* Allow `DataFuture` to be initialized with a `str` file object `issue#185 <https://github.com/Parsl/parsl/issues/185>`_
+
+* Error for globus transfer failure `issue#162 <https://github.com/Parsl/parsl/issues/162>`_
+
+
 Parsl 0.5.0
 -----------
 
