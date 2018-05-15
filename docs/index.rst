@@ -26,6 +26,7 @@ This module provides the following functionality:
    quick/quickstart
    userguide/index
    reference
+   devguide/changelog
    devguide/dev_docs
    devguide/packaging
 
