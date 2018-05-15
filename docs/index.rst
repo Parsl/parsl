@@ -21,34 +21,13 @@ This module provides the following functionality:
    4. Support for pushing files from client side to resources.
 
 
-Contents:
-
 .. toctree::
-   :maxdepth: 3
-   :caption: Quickstart
 
-   quick/quickstart.rst
-
-
-.. toctree::
-   :maxdepth: 3
-   :caption: User Guide
-
-   userguide/overview
-   userguide/configuring
-
-.. toctree::
-   :maxdepth: 4
-   :caption: Developer Documentation
-
-   devguide/design
+   quick/quickstart
+   userguide/index
+   reference
    devguide/dev_docs
    devguide/packaging
-
-.. toctree::
-   :maxdepth: 4
-   :caption: Contents:
-
 
 
 Indices and tables
