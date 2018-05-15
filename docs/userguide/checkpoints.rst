@@ -97,16 +97,13 @@ Loading a checkpoint
 
 To load a checkpoint the user must select which checkpoint file to resume from. 
 As mentioned above, checkpoint files are stored in the ``runinfo/RUNID/checkpoint`` directory.
-The example below shows how to resume from the most recent checkpoint:
+The example below shows how to resume using from all available checkpoints:
 
 .. code-block:: python
 
-    import os
     from parsl import *
     from parsl.configs.local import localThreads as config
-
-    last_runid = sorted(os.listdir('runinfo/'))[-1]
-    last_checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(last_runid))
+    from parsl.utils import get_all_checkpoints
 
     dfk = DataFlowKernel(config=config,
-                         checkpointFiles=[last_checkpoint])
+                         checkpointFiles=parsl.get_all_checkpoints())
