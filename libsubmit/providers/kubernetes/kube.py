@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from libsubmit.providers.kubernetes.template import template_string
 
@@ -91,8 +90,8 @@ class Kubernetes(ExecutionProvider):
                                                                  replicas=self.init_blocks)
             logger.debug("Deployment name :{}".format(self.deployment_name))
             self._create_deployment(self.deployment_obj)
-            self.resources[self.deployment_name] = {'status' : 'RUNNING',
-                                                    'pods' : self.init_blocks}
+            self.resources[self.deployment_name] = {'status': 'RUNNING',
+                                                    'pods': self.init_blocks}
 
         return self.deployment_name
 
@@ -114,7 +113,6 @@ class Kubernetes(ExecutionProvider):
         self._status()
         # This is a hack
         return ['RUNNING' for jid in job_ids]
-        #return [self.resources[jid]['status'] for jid in job_ids]
 
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
@@ -235,6 +233,7 @@ class Kubernetes(ExecutionProvider):
     @property
     def channels_required(self):
         return False
+
 
 if __name__ == "__main__":
     # print("None")
