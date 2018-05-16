@@ -2,6 +2,10 @@ import logging
 import os
 import shlex
 import subprocess
+import threading
+import time
+from contextlib import contextmanager
+from functools import wraps
 
 import parsl
 from parsl.version import VERSION
@@ -90,3 +94,29 @@ def get_last_checkpoint(rundir="runinfo"):
         return []
 
     return [last_checkpoint]
+
+
+def timeout(seconds=None):
+    def decorator(func, *args, **kwargs):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            t = threading.Thread(target=func, args=args, kwargs=kwargs)
+            t.start()
+            result = t.join(seconds)
+            if t.is_alive():
+                raise RuntimeError('timed out in {}'.format(func))
+            return result
+        return wrapper
+    return decorator
+
+
+@contextmanager
+def time_limited_open(path, mode, seconds=1):
+    @timeout(seconds)
+    def check_path(path):
+        while not os.path.exists(path):
+            time.sleep(0.1)
+    check_path(path)
+    f = open(path, mode)
+    yield f
+    f.close()

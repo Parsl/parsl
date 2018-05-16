@@ -1,15 +1,17 @@
-from parsl import *
 import os
 
+import pytest
+
+import parsl
+from parsl.app.app import App
 from parsl.data_provider.files import File
+from parsl.tests.configs.local_threads import config
 
-# parsl.set_stream_logger()
-
-workers = ThreadPoolExecutor(max_workers=8)
-dfk = DataFlowKernel(executors=[workers])
+parsl.clear()
+parsl.load(config)
 
 
-@App('bash', dfk)
+@App('bash')
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
     return """echo %s
@@ -17,6 +19,7 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     """ % (infiles, infiles)
 
 
+@pytest.mark.usefixtures('setup_data')
 def test_files():
 
     fs = [File('data/' + f) for f in os.listdir('data')]
@@ -27,7 +30,7 @@ def test_files():
     print(d_x, type(d_x))
 
 
-@App('bash', dfk)
+@App('bash')
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
     return """
@@ -36,6 +39,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     """
 
 
+@pytest.mark.usefixtures('setup_data')
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """

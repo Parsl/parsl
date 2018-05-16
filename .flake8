@@ -11,4 +11,4 @@
 # E402: module level import not at top of file
 ignore = D203, E124, E126, F403, F405, F811, E402
 max-line-length = 160
-exclude = parsl/executors/serialize/, parsl/libsubmit/
+exclude = parsl/executors/serialize/, parsl/libsubmit/, test_import_fail.py

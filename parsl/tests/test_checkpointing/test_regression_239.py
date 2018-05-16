@@ -1,14 +1,17 @@
-from parsl import App, DataFlowKernel
 import pickle
-import time
+
+import pytest
+
+from parsl import App, DataFlowKernel
+from parsl.utils import time_limited_open
 
 
 def run_checkpointed(n=2, mode="task_exit"):
     """ This test runs n apps that will fail with Division by zero error,
-    followed by 1 app that will succeed. THe checkpoint should only have 1 task
+    followed by 1 app that will succeed. The checkpoint should only have 1 task.
     """
 
-    from parsl.configs.local import localThreads as config
+    from parsl.tests.configs.local_threads import config
     config["globals"]["checkpointMode"] = mode
     dfk = DataFlowKernel(config=config)
 
@@ -42,14 +45,15 @@ def run_checkpointed(n=2, mode="task_exit"):
     return rundir
 
 
-def test_regress_239():
+@pytest.mark.local
+@pytest.mark.skip('hangs intermittently in pytest')
+def test_regression_239():
     """Ensure failed tasks are not cached with task_exit mode. Tests #239
     Also tests task_exit behavior.
     """
 
     rundir = run_checkpointed()
-    time.sleep(0.5)
-    with open("{}/checkpoint/tasks.pkl".format(rundir), 'rb') as f:
+    with time_limited_open("{}/checkpoint/tasks.pkl".format(rundir), 'rb', seconds=2) as f:
         tasks = []
         try:
             while f:
@@ -61,14 +65,14 @@ def test_regress_239():
         assert len(tasks) == 1, "Expected {} checkpoint events, got {}".format(1, len(tasks))
 
 
+@pytest.mark.local
+@pytest.mark.skip('hangs intermittently in pytest')
 def test_checkpointing_at_dfk_exit():
     """Ensure failed tasks are not cached with dfk_exit mode. Tests #239
     """
 
     rundir = run_checkpointed(mode="dfk_exit")
-    print("Back in test fn")
-    time.sleep(0.5)
-    with open("{}/checkpoint/tasks.pkl".format(rundir), 'rb') as f:
+    with time_limited_open("{}/checkpoint/tasks.pkl".format(rundir), 'rb', seconds=2) as f:
         tasks = []
         try:
             while f:
@@ -81,5 +85,5 @@ def test_checkpointing_at_dfk_exit():
 
 
 if __name__ == "__main__":
-    test_regress_239()
+    test_regression_239()
     test_checkpointing_at_dfk_exit()

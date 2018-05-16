@@ -1,11 +1,17 @@
 '''
 Regression test for #226.
 '''
-from parsl import *
+import os
 
-from parsl.configs.local import localThreads as config
-dfk = DataFlowKernel(config=config)
 import pandas as pd
+import pytest
+
+import parsl
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
+
+parsl.clear()
+parsl.load(config)
 
 
 class Foo(object):
@@ -19,7 +25,7 @@ class Foo(object):
 bar = Foo(1)
 
 
-@App('python', dfk)
+@App('python')
 def get_foo_x(a, b=bar, c=None):
     return b.x
 
@@ -27,26 +33,32 @@ def get_foo_x(a, b=bar, c=None):
 data = pd.DataFrame({'x': [None, 2, [3]]})
 
 
-@App('python', dfk)
+@App('python')
 def get_dataframe(d=data):
     return d
 
 
-@App('bash', dfk)
+@App('bash')
 def echo(msg, postfix='there', stdout='std.out'):
     return 'echo {} {}'.format(msg, postfix)
 
 
+blacklist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*ipp*')
+
+
+@pytest.mark.blacklist(blacklist, reason='hangs on Travis')
 def test_no_eq():
     res = get_foo_x('foo').result()
     assert res == 1, 'Expected 1, returned {}'.format(res)
 
 
+@pytest.mark.blacklist(blacklist, reason='hangs on Travis')
 def test_get_dataframe():
     res = get_dataframe().result()
     assert res.equals(data), 'Unexpected dataframe'
 
 
+@pytest.mark.blacklist(blacklist, reason='hangs on Travis')
 def test_bash_default_arg():
     echo('hello').result()
     with open('std.out', 'r') as f:

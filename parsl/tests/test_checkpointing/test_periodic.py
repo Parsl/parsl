@@ -1,32 +1,19 @@
-import parsl
-from parsl import *
-import time
 import argparse
-from dateutil.parser import parse
 import datetime
-from nose.tools import nottest
-# parsl.set_stream_logger()
+import time
 
-config = {
-    "sites": [
-        {"site": "Local_Threads",
-         "auth": {"channel": None},
-         "execution": {
-             "executor": "threads",
-             "provider": None,
-             "maxThreads": 2,
-         }
-        }],
-    "globals": {"lazyErrors": True,
-                "memoize": True,
-                "checkpointMode": "periodic",
-                "checkpointPeriod": "00:00:05",
-    }
-}
-dfk = DataFlowKernel(config=config)
+import pytest
+from dateutil.parser import parse
+
+import parsl
+from parsl.app.app import App
+from parsl.tests.configs.local_threads_checkpoint_periodic import config
+
+parsl.clear()
+dfk = parsl.load(config)
 
 
-@App('python', dfk, cache=True)
+@App('python', cache=True)
 def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)
@@ -41,7 +28,7 @@ def tstamp_to_seconds(line):
     return f
 
 
-@nottest
+@pytest.mark.skip('fails intermittently')
 def test_periodic(n=4):
     """Test checkpointing with task_periodic behavior
     """

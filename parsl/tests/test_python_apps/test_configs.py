@@ -1,0 +1,39 @@
+import pytest
+
+import parsl
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
+
+parsl.clear()
+parsl.load(config)
+
+
+@App('python')
+def worker_identify(x, sleep_dur=0.2):
+    import time
+    import os
+    import threading
+    time.sleep(sleep_dur)
+    return {"pid": os.getpid(),
+            "tid": threading.current_thread()}
+
+
+@pytest.mark.local
+@pytest.mark.skip('fails intermittently')
+def test_parallel_for():
+    d = []
+    for i in range(0, config["sites"][0]["execution"]["maxThreads"]):
+        d.extend([worker_identify(i)])
+
+    [item.result() for item in d]
+
+    thread_count = len(set([item.result()['tid'] for item in d]))
+    process_count = len(set([item.result()['pid'] for item in d]))
+    assert thread_count == config["sites"][0]["execution"]["maxThreads"], "Wrong number of threads"
+    assert process_count == 1, "More processes than allowed"
+    return d
+
+
+if __name__ == "__main__":
+
+    test_parallel_for()

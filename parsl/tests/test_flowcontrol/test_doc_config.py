@@ -1,38 +1,15 @@
-from parsl import *
-import os
-USERNAME = os.environ["MIDWAY_USERNAME"]
+import pytest
 
-localIPP = {
-    "sites": [
-        {"site": "Midway_RCC_Slurm",
-         "auth": {
-             "channel": "ssh",
-             "hostname": "midway.rcc.uchicago.edu",
-             "username": USERNAME,
-             "scriptDir": "/scratch/midway2/{0}/parsl_scripts".format(USERNAME)
-         },
-         "execution": {
-             "executor": "ipp",
-             "provider": "slurm",  # Slurm scheduler
-             "block": {  # Definition of a block
-                 "nodes": 1,  # }
-                 "minBlocks": 1,  # |
-                 "maxBlocks": 2,  # |<---- Shape of the blocks
-                 "initBlocks": 1,  # }
-                 "taskBlocks": 4,  # <----- No. of workers in a block
-                 "parallelism": 0.5,  # <- Parallelism
-                 "options": {
-                     "partition": "westmere",
-                     "overrides": '''module load python/3.5.2+gcc-4.8; source /scratch/midway2/yadunand/parsl_env_3.5.2_gcc/bin/activate'''
-                 }
-             }
-         }
-         }]
-}
-dfk = DataFlowKernel(config=localIPP)
+import parsl
+from parsl.app.app import App
+
+from parsl.tests.configs.midway_ipp import config
+
+parsl.clear()
+parsl.load(config)
 
 
-@App("python", dfk)
+@App("python")
 def python_app():
     import os
     import time
@@ -41,7 +18,8 @@ def python_app():
     return "Hello from {0}:{1}".format(os.getpid(), platform.uname())
 
 
-def test_python(N=20):
+@pytest.mark.local
+def test_python(N=5):
     ''' Testing basic scaling|Python 0 -> 1 block on SSH.Midway  '''
 
     results = {}

@@ -1,8 +1,11 @@
 import os
 
+import pytest
+
 from parsl.data_provider.files import File
 
 
+@pytest.mark.local
 def test_files():
     fp = os.path.abspath('test_file.py')
     strings = [{'f': 'file:///test_file.py', 'scheme': 'file', 'path': '/test_file.py'},
@@ -18,6 +21,7 @@ def test_files():
             test['path'], x.path)
 
 
+@pytest.mark.local
 def test_open():
     with open('test-open.txt', 'w') as tfile:
         tfile.write('Hello')

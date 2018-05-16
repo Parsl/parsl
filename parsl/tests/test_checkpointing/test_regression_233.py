@@ -1,11 +1,12 @@
-from parsl import *
-# set_stream_logger()
+import pytest
+
+from parsl.app.app import App
+from parsl.dataflow.dflow import DataFlowKernel
 
 
 def run_checkpointed(cpts):
     # set_stream_logger()
-    from parsl.configs.local import localThreads as config
-    config["globals"]["checkpointMode"] = "task_exit"
+    from parsl.tests.configs.local_threads_checkpoint_task_exit import config
     config["globals"]["checkpointFiles"] = cpts
     dfk = DataFlowKernel(config=config)
 
@@ -20,13 +21,12 @@ def run_checkpointed(cpts):
         items.append(x)
 
     dfk.cleanup()
-    return [i.result() for i in items]
+    return [i.result() for i in items], dfk.rundir
 
 
 def run_race(sleep_dur):
 
-    from parsl.configs.local import localThreads as config
-    config["globals"]["checkpointMode"] = "task_exit"
+    from parsl.tests.configs.local_threads_checkpoint_dfk_exit import config
     dfk = DataFlowKernel(config=config)
 
     @App('python', dfk, cache=True)
@@ -45,23 +45,26 @@ def run_race(sleep_dur):
     return [i.result for i in items]
 
 
+@pytest.mark.local
 def test_regress_234():
     """Test task_exit checkpointing with fast tasks"""
     run_race(0)
 
 
+@pytest.mark.local
 def test_slower_apps():
     """Test task_exit tests with slow apps"""
     run_race(0.5)
 
 
+@pytest.mark.local
 def test_checkpoint_availability():
     import os
 
-    original = run_checkpointed([])
-    last_checkpoint = os.path.abspath('runinfo/{0}/checkpoint'.format(sorted(os.listdir('runinfo/'))[-1]))
+    original, rundir = run_checkpointed([])
+    last_checkpoint = os.path.join(rundir, 'checkpoint')
     print(last_checkpoint)
-    cached = run_checkpointed([last_checkpoint])
+    cached, _ = run_checkpointed([last_checkpoint])
 
     print(cached)
     print(original)

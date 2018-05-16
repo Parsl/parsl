@@ -1,35 +1,26 @@
-import parsl
-from parsl import *
+import argparse
 import os
 import time
-import argparse
 
-# parsl.set_stream_logger()
-config = {
-    "sites": [
-        {"site": "Local_Threads",
-         "auth": {"channel": None},
-         "execution": {
-             "executor": "threads",
-             "provider": None,
-             "maxThreads": 2,
-         }
-         }],
-    "globals": {"lazyErrors": True,
-                }
-}
+import pytest
 
-dfk = DataFlowKernel(config=config)
+import parsl
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
+
+parsl.clear()
+dfk = parsl.load(config)
 
 
-@App('python', dfk, cache=True)
+@App('python', cache=True)
 def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)
     return x * 2
 
 
-def test_initial_checkpoint_write(n=4):
+@pytest.mark.local
+def test_initial_checkpoint_write(n=2):
     """1. Launch a few apps and write the checkpoint once a few have completed
     """
 
@@ -55,7 +46,7 @@ def test_initial_checkpoint_write(n=4):
     assert os.path.exists(
         cptpath), "Tasks checkpoint missing: {0}".format(cptpath)
 
-    return
+    return dfk.rundir
 
 
 if __name__ == '__main__':

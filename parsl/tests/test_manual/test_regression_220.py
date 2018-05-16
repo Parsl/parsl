@@ -1,8 +1,11 @@
+import pytest
+
 from parsl import DataFlowKernel, set_stream_logger
 import time
-from parsl.configs.local import localThreads as config
+from parsl.tests.configs.local_threads import config
 
 
+@pytest.mark.skip('meant to be tested by hand')
 def test_220():
     """Test async usage_tracking behavior for issue #220 """
 

@@ -1,0 +1,74 @@
+import time
+
+import pytest
+
+import parsl
+from parsl.app.app import App
+from parsl.tests.configs.local_threads import config
+
+
+parsl.set_stream_logger()
+parsl.clear()
+parsl.load(config)
+
+
+@App('python')
+def sleep_python(x):
+    import time
+    time.sleep(x)
+    return x
+
+
+@App('bash')
+def sleep_bash(x):
+    return 'sleep {0}'
+
+
+@pytest.mark.local
+@pytest.mark.skip('fails intermittently in pytest')
+def test_parallel_sleep_bash(n=3, sleep_dur=2, tolerance=0.3):
+    """Indirect test to ensure that 10 threads are live using bash apps
+    """
+
+    start = time.time()
+
+    d = []
+    for i in range(0, n):
+        d.extend([sleep_bash(sleep_dur)])
+
+    for i in d:
+        i.result()
+    end = time.time()
+    delta = end - start
+    print("Sleep time : {0}, expected ~{1}+/- 0.3s".format(delta, sleep_dur))
+    assert delta > sleep_dur - tolerance, "Slept too little"
+    assert delta < sleep_dur + tolerance, "Slept too much"
+
+
+@pytest.mark.local
+@pytest.mark.skip('fails intermittently in pytest')
+def test_parallel_sleep_python(n=3, sleep_dur=2, tolerance=0.3):
+    """Indirect test to ensure that 10 threads are live using python sleep apps
+    This works only because the 10 threads are essentially sleeping and not
+    doing manipulation of python objects and causing serialization via GIL.
+    """
+
+    start = time.time()
+
+    d = []
+    for i in range(0, n):
+        d.extend([sleep_python(sleep_dur)])
+
+    for i in d:
+        i.result()
+    end = time.time()
+    delta = end - start
+    print("Sleep time : {0}, expected ~{1}+/- 0.3s".format(delta, sleep_dur))
+    assert delta > sleep_dur - tolerance, "Slept too little"
+    assert delta < sleep_dur + tolerance, "Slept too much"
+
+
+if __name__ == "__main__":
+
+    test_parallel_sleep_bash()
+    test_parallel_sleep_python()

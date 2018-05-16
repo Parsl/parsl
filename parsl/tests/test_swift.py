@@ -1,5 +1,4 @@
-#!/usr/bin/env python3.5
-from nose.tools import assert_raises
+import pytest
 
 import parsl
 from parsl import *
@@ -24,6 +23,7 @@ def bad_foo(x, y):
     return x * y
 
 
+@pytest.mark.local
 def test_simple():
     print("Start")
     tex = TurbineExecutor()
@@ -34,6 +34,7 @@ def test_simple():
     print("done")
 
 
+@pytest.mark.local
 def test_slow():
     futs = {}
     tex = TurbineExecutor()
@@ -44,14 +45,12 @@ def test_slow():
     assert total == 6, "expected 6, got {}".format(total)
 
 
+@pytest.mark.local
 def test_except():
-    def get_bad_result():
+    with pytest.raises(NameError):
         tex = TurbineExecutor()
         x = tex.submit(bad_foo, 5, 10)
-
-        return x.result()
-
-    assert_raises(NameError, get_bad_result)
+        x.result()
 
 
 if __name__ == "__main__":
