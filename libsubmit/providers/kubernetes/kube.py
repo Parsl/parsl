@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from libsubmit.providers.kubernetes.template import template_string
 
 logger = logging.getLogger(__name__)
 
@@ -46,25 +47,17 @@ class Kubernetes(ExecutionProvider):
         self.sitename = self.config['site']
         self.namespace = self.config['execution']['namespace']
         self.image = self.config['execution']['image']
-        self.blocksize = self.config['execution']['block']['initParallelism']
+
+        self.init_blocks = self.config["execution"]["block"]["initBlocks"]
+        self.min_blocks = self.config["execution"]["block"]["minBlocks"]
+        self.max_blocks = self.config["execution"]["block"]["maxBlocks"]
+
         self.secret = None
         if 'secret' in self.config['execution']:
             self.secret = self.config['execution']['secret']
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
-
-        job_name = "{0}-{1}".format("parsl-auto", time.time()).split(".")[0]
-
-        job_image = self.image
-        deployment_name = '{0}-deployment'.format(job_name)
-
-        deployment = self._create_deployment_object(job_name, job_image, deployment_name,
-                                                    replicas=self.blocksize)
-
-        self._create_deployment(deployment)
-
-        self.resources[deployment_name] = {'status': 'RUNNING'}
 
     def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
         """ Submit a job
@@ -81,7 +74,27 @@ class Kubernetes(ExecutionProvider):
              - job_id: (string) Identifier for the job
 
         """
-        pass
+        if not self.resources:
+            job_name = "{0}-{1}".format(job_name, time.time()).split(".")[0]
+
+            self.deployment_name = '{}-{}-deployment'.format(job_name,
+                                                             str(time.time()).split('.')[0])
+
+            formatted_cmd = template_string.format(command=cmd_string,
+                                                   overrides=self.config["execution"]["block"]["options"].get("overrides", ''))
+
+            print("Creating replicas :", self.init_blocks)
+            self.deployment_obj = self._create_deployment_object(job_name,
+                                                                 self.image,
+                                                                 self.deployment_name,
+                                                                 cmd_string=formatted_cmd,
+                                                                 replicas=self.init_blocks)
+            logger.debug("Deployment name :{}".format(self.deployment_name))
+            self._create_deployment(self.deployment_obj)
+            self.resources[self.deployment_name] = {'status' : 'RUNNING',
+                                                    'pods' : self.init_blocks}
+
+        return self.deployment_name
 
     def status(self, job_ids):
         """ Get the status of a list of jobs identified by the job identifiers
@@ -99,7 +112,9 @@ class Kubernetes(ExecutionProvider):
 
         """
         self._status()
-        return [self.resources[jid]['status'] for jid in job_ids]
+        # This is a hack
+        return ['RUNNING' for jid in job_ids]
+        #return [self.resources[jid]['status'] for jid in job_ids]
 
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
@@ -110,11 +125,10 @@ class Kubernetes(ExecutionProvider):
         Returns :
         [True/False...] : If the cancel operation fails the entire list will be False.
         """
-
         for job in job_ids:
             logger.debug("Terminating job/proc_id : {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
-            _delete_deployment(job)
+            self._delete_deployment(job)
 
             self.resources[job]['status'] = 'CANCELLED'
         rets = [True for i in job_ids]
@@ -139,6 +153,7 @@ class Kubernetes(ExecutionProvider):
     def _create_deployment_object(self, job_name, job_image,
                                   deployment_name, port=80,
                                   replicas=1,
+                                  cmd_string=None,
                                   engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                                   engine_dir='.'):
         """ Create a kubernetes deployment for the job.
@@ -155,12 +170,10 @@ class Kubernetes(ExecutionProvider):
               - True: The deployment object to launch
         """
 
-        ipp_launch_cmd = self._compose_launch_cmd(engine_json_file, engine_dir)
-
         # Create the enviornment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
-        launch_args = ["-c", "{0}; /app/deploy.sh;".format(ipp_launch_cmd)]
+        launch_args = ["-c", "{0}; /app/deploy.sh;".format(cmd_string)]
         print(launch_args)
         # Configureate Pod template container
         container = client.V1Container(
@@ -182,9 +195,8 @@ class Kubernetes(ExecutionProvider):
             spec=client.V1PodSpec(containers=[container], image_pull_secrets=[secret]))
 
         # Create the specification of deployment
-        spec = client.ExtensionsV1beta1DeploymentSpec(
-            replicas=replicas,
-            template=template)
+        spec = client.ExtensionsV1beta1DeploymentSpec(replicas=replicas,
+                                                      template=template)
 
         # Instantiate the deployment object
         deployment = client.ExtensionsV1beta1Deployment(
@@ -223,35 +235,6 @@ class Kubernetes(ExecutionProvider):
     @property
     def channels_required(self):
         return False
-
-    def _compose_launch_cmd(self, filepath, engine_dir):
-        """Reads the json contents from filepath and uses that to compose the engine launch command.
-
-        Args:
-            filepath: Path to the engine file
-            engine_dir : CWD for the engines .
-
-        """
-        self.engine_file = os.path.expanduser(filepath)
-
-        engine_json = None
-        try:
-            with open(self.engine_file, 'r') as f:
-                engine_json = f.read()
-
-        except OSError as e:
-            logger.error("Could not open engine_json : ", self.engine_file)
-            raise e
-
-        return """cd {0}
-cat <<EOF > ipengine.json
-{1}
-EOF
-
-mkdir -p '.ipengine_logs'
-ipengine --file=ipengine.json &>> .ipengine_logs/$JOBNAME.log
-""".format(engine_dir, engine_json)
-
 
 if __name__ == "__main__":
     # print("None")
