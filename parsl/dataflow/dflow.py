@@ -69,6 +69,10 @@ class DataFlowKernel(object):
         Returns:
             DataFlowKernel object
         """
+
+        # this will be used to check cleanup only happens once
+        self.cleanup_called = False
+
         # Create run dirs for this run
         self.rundir = make_rundir(config=config, path=rundir)
         parsl.set_file_logger("{}/parsl.log".format(self.rundir),
@@ -141,7 +145,7 @@ class DataFlowKernel(object):
         self.task_launch_lock = threading.Lock()
 
         logger.debug("Using executors: {0}".format(self.executors))
-        atexit.register(self.cleanup)
+        atexit.register(self.atexit_cleanup)
 
     @staticmethod
     def _count_deps(depends, task_id):
@@ -538,6 +542,10 @@ class DataFlowKernel(object):
 
         return task_def['app_fu']
 
+    def atexit_cleanup(self):
+        if not self.cleanup_called:
+            self.cleanup()
+
     def cleanup(self):
         """DataFlowKernel cleanup.
 
@@ -549,6 +557,13 @@ class DataFlowKernel(object):
 
         """
         logger.info("DFK cleanup initiated")
+
+        # this check won't detect two DFK cleanups happening from
+        # different threads extremely close in time because of
+        # non-atomic read/modify of self.cleanup_called
+        if self.cleanup_called:
+            raise Exception("attempt to clean up DFK when it has already been cleaned-up")
+        self.cleanup_called = True
 
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
