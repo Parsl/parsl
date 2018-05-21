@@ -16,7 +16,6 @@ config = {
     ],
     "globals": {
         "lazyErrors": True,
-        "memoize": True,
         "checkpointMode": "task_exit",
         "runDir": get_rundir()
     }

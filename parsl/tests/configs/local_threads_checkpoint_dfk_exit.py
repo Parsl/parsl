@@ -16,7 +16,6 @@ config = {
     ],
     "globals": {
         "lazyErrors": True,
-        "memoize": True,
         "checkpointMode": "dfk_exit",
         'runDir': get_rundir()
     }

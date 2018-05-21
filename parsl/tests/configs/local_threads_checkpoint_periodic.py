@@ -16,7 +16,6 @@ config = {
     ],
     "globals": {
         "lazyErrors": True,
-        "memoize": True,
         "runDir": get_rundir(),
         "checkpointMode": "periodic",
         "checkpointPeriod": "00:00:05",
