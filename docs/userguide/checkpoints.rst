@@ -47,19 +47,6 @@ Checkpointing works in the following modes:
 
 In all cases the checkpoint is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 
-The desired checkpoint mode is specified in the Parsl configuration:
-
-.. code-block:: python
-
-    config = {
-        "globals": {
-            "lazyErrors": True,
-            "memoize": True,
-            "checkpointMode": "dfk_exit"
-        }
-    }
-
-
 Creating a checkpoint
 ^^^^^^^^^^^^^^^^^^^^^
 
