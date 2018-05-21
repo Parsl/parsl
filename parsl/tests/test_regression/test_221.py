@@ -2,9 +2,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-dfk = parsl.load(config)
-
 
 @App('python')
 def slow_double(x, dur=0.1):
@@ -18,6 +15,9 @@ def test_cleanup_behavior_221():
         B1 B2 B3
 
     """
+    parsl.clear()
+    dfk = parsl.load(config)
+
     round_1 = []
     for i in range(0, 10):
         f = slow_double(i)
