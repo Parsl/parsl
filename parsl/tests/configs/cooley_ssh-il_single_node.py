@@ -3,9 +3,9 @@ from parsl.tests.utils import get_rundir
 from parsl.tests.user_opts import user_opts
 
 if 'cooley' not in user_opts:
-    info = user_opts['cooley']
-else:
     pytest.skip('cooley user_opts not configured', allow_module_level=True)
+else:
+    info = user_opts['cooley']
 
 config = {
     "sites": [{
