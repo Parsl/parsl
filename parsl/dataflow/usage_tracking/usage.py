@@ -33,8 +33,7 @@ def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
     This multiprocessing based messenger was written to overcome the limitations
     of signalling/terminating a thread that is blocked on a system call. This
     messenger is created as a separate process, and initialized with 2 queues,
-    to_send to receive messages to be sent to the internet, and done to let the
-    main thread know return status.
+    to_send to receive messages to be sent to the internet.
 
     Args:
           - domain_name (str) : Domain name string
@@ -42,26 +41,40 @@ def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
           - UDP_PORT (int) : UDP port to send out on
           - sock_timeout (int) : Socket timeout
           - to_send (multiprocessing.Queue) : Queue of outgoing messages to internet
-          - done (multiprocessing.Queue) : Queue of status to be received by main process
     """
-
-    if domain_name:
-        try:
-            UDP_IP = socket.gethostbyname(domain_name)
-        except Exception:
-            # (False, "Domain lookup failed, defaulting to {0}".format(UDP_IP))
-            pass
-
     try:
+        if message is None:
+            raise ValueError("message was none")
+
+        encoded_message = bytes(message, "utf-8")
+
+        if encoded_message is None:
+            raise ValueError("utf-8 encoding of message failed")
+
+        if domain_name:
+            try:
+                UDP_IP = socket.gethostbyname(domain_name)
+            except Exception:
+                # (False, "Domain lookup failed, defaulting to {0}".format(UDP_IP))
+                pass
+
+        if UDP_IP is None:
+            raise Exception("UDP_IP is None")
+
+        if UDP_PORT is None:
+            raise Exception("UDP_PORT is None")
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         sock.settimeout(sock_timeout)
         sock.sendto(bytes(message, "utf-8"), (UDP_IP, UDP_PORT))
         sock.close()
 
     except socket.timeout:
-        done.put_nowait((False, "Sending usage-tracking info timed-out"))
+        logger.debug("Failed to send usage tracking data: socket timeout")
     except OSError as e:
-        done.put_nowait((False, "Unable to reach the network to send usage data {}".format(e)))
+        logger.debug("Failed to send usage tracking data: OSError: {}".format(e))
+    except Exception as e:
+        logger.debug("Failed to send usage tracking data: Exception: {}".format(e))
 
 
 class UsageTracker (object):
