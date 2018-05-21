@@ -534,7 +534,7 @@ class DataFlowKernel(object):
                                                           tid=task_id,
                                                           stdout=task_stdout,
                                                           stderr=task_stderr)
-                logger.debug("Task {} launched with AppFut:{}".format(task_id,
+                logger.debug("Task {} launched with AppFuture: {}".format(task_id,
                                                                       task_def['app_fu']))
 
             else:
@@ -560,7 +560,7 @@ class DataFlowKernel(object):
                                                       stdout=task_stdout,
                                                       stderr=task_stderr)
             self.tasks[task_id]['status'] = States.pending
-            logger.debug("Task {} launched with AppFut:{}".format(task_id,
+            logger.debug("Task {} launched with AppFuture: {}".format(task_id,
                                                                   task_def['app_fu']))
 
         return task_def['app_fu']
