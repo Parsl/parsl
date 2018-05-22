@@ -3,8 +3,6 @@ import os
 import shutil
 import time
 
-import pytest
-
 import parsl
 from parsl.app.app import App
 
@@ -88,11 +86,6 @@ def test_parallel_for(n=3):
                                                                          n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
-
-
-@pytest.mark.last
-def test_z_cleanup():
-    dfk.cleanup()
 
 
 if __name__ == '__main__':
