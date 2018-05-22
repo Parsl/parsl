@@ -14,6 +14,7 @@ def slow_double(x, dur=0.1):
     time.sleep(dur)
     return x * 5
 
+
 @pytest.mark.local
 def test_cleanup_behavior_221():
     """ A1 A2 A3   -> cleanup
