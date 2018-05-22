@@ -1,5 +1,3 @@
-from parsl.tests.utils import get_rundir
-
 config = {
     "sites": [
         {
@@ -15,7 +13,6 @@ config = {
         }
     ],
     "globals": {
-        "lazyErrors": True,
-        'runDir': get_rundir()
+        "lazyErrors": True
     }
 }
