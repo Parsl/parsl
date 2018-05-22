@@ -3,9 +3,9 @@ from parsl.tests.utils import get_rundir
 from parsl.tests.user_opts import user_opts
 
 if 'theta' not in user_opts:
-    info = user_opts['theta']
-else:
     pytest.skip('theta user_opts not configured', allow_module_level=True)
+else:
+    info = user_opts['theta']
 
 config = {
     "sites": [
