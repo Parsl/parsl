@@ -51,6 +51,14 @@ class Kubernetes(ExecutionProvider):
         self.min_blocks = self.config["execution"]["block"]["minBlocks"]
         self.max_blocks = self.config["execution"]["block"]["maxBlocks"]
 
+        self.user_id = None
+        self.group_id = None
+        self.run_as_non_root = None
+        if 'security' in self.config['execution']:
+            self.user_id = self.config["execution"]['security']["user_id"]
+            self.group_id = self.config["execution"]['security']["group_id"]
+            self.run_as_non_root = self.config["execution"]['security']["run_as_non_root"]
+
         self.secret = None
         if 'secret' in self.config['execution']:
             self.secret = self.config['execution']['secret']
@@ -168,20 +176,44 @@ class Kubernetes(ExecutionProvider):
               - True: The deployment object to launch
         """
 
+        # sorry, quick hack that doesn't pass this stuff through to test it works.
+        # TODO it also doesn't only add what is set :(
+        security_context = None
+        if 'security' in self.config['execution']:
+            security_context = client.V1SecurityContext(run_as_group=self.group_id,
+                                                        run_as_user=self.user_id,
+                                                        run_as_non_root=self.run_as_non_root)
+#                    self.user_id = None
+#                    self.group_id = None
+#                    self.run_as_non_root = None
+
+
         # Create the enviornment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
         launch_args = ["-c", "{0}; /app/deploy.sh;".format(cmd_string)]
         print(launch_args)
-        # Configureate Pod template container
-        container = client.V1Container(
-            name=job_name,
-            image=job_image,
-            ports=[client.V1ContainerPort(container_port=port)],
-            command=['/bin/bash'],
-            args=launch_args,
-            env=[environment_vars])
 
+
+        # Configureate Pod template container
+        container = None
+        if security_context:
+            container = client.V1Container(
+                name=job_name,
+                image=job_image,
+                ports=[client.V1ContainerPort(container_port=port)],
+                command=['/bin/bash'],
+                args=launch_args,
+                env=[environment_vars],
+                security_context=security_context)
+        else:
+            container = client.V1Container(
+                name=job_name,
+                image=job_image,
+                ports=[client.V1ContainerPort(container_port=port)],
+                command=['/bin/bash'],
+                args=launch_args,
+                env=[environment_vars])
         # Create a secret to enable pulling images from secure repositories
         secret = None
         if self.secret:
