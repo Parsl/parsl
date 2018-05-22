@@ -70,8 +70,8 @@ The following example shows how manual checkpointing can be invoked in a Parsl s
 .. code-block:: python
 
     from parsl import *
-    from parsl.configs.local import localThreads as config
-    
+    from parsl.tests.configs.local_threads import config
+
     dfk = DataFlowKernel(config=config)
 
     @App('python', dfk, cache=True)
@@ -102,7 +102,7 @@ The example below shows how to resume using from all available checkpoints:
 .. code-block:: python
 
     from parsl import *
-    from parsl.configs.local import localThreads as config
+    from parsl.tests.configs.local_threads import config
     from parsl.utils import get_all_checkpoints
 
     dfk = DataFlowKernel(config=config,

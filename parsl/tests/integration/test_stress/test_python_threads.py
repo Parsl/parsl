@@ -6,7 +6,7 @@ from parsl import *
 import time
 import argparse
 
-from parsl.configs.local import localThreads as config
+from parsl.tests.configs.local_threads import config
 dfk = DataFlowKernel(config=config)
 
 

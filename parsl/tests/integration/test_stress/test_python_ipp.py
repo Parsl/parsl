@@ -5,7 +5,7 @@ from parsl import *
 import time
 import argparse
 
-from parsl.configs.local import localIPP as config
+from parsl.tests.configs.local_ipp import config
 dfk = DataFlowKernel(config=config)
 
 
