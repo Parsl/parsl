@@ -22,7 +22,7 @@ def test_cleanup_behavior_221():
     """
 
     round_1 = []
-    for i in range(0, 10):
+    for i in range(0, 2):
         f = slow_double(i)
         round_1.append(f)
 
