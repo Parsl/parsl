@@ -130,7 +130,9 @@ def load_dfk(config):
             module.config['globals'] = {}
         module.config['globals']['runDir'] = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
         parsl.clear()
-        parsl.load(module.config)
+        dfk = parsl.load(module.config)
+    yield
+    parsl.dfk().cleanup()
 
 
 @pytest.fixture(autouse=True)
