@@ -88,7 +88,7 @@ docker cp -a . $DOCKER_ID:$DOCKER_CWD
 docker start $DOCKER_ID
 
 at_exit() {{
-  echo "Caught SIGTERM/SIGKILL signal!"
+  echo "Caught SIGTERM/SIGINT signal!"
   docker stop $DOCKER_ID
 }}
 
