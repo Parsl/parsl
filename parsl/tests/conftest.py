@@ -25,7 +25,7 @@ def pytest_addoption(parser):
         help="only run parsl CONFIG; use 'local' to run locally-defined config"
     )
     parser.addoption(
-        '--basic', action='store_true', default=False, help='only run basic configs (local_ipp and local_threads)'
+        '--basic', action='store_true', default=False, help='only run basic configs (local, local_ipp and local_threads)'
     )
 
 
@@ -66,7 +66,7 @@ def pytest_generate_tests(metafunc):
     configs = metafunc.config.getoption('configs')
     basic = metafunc.config.getoption('basic')
     if basic:
-        configs = [os.path.join(config_dir, x) for x in ['local_threads.py', 'local_ipp.py']]
+        configs = ['local'] + [os.path.join(config_dir, x) for x in ['local_threads.py', 'local_ipp.py']]
     elif configs is None:
         configs = ['local']
         for dirpath, _, filenames in os.walk(config_dir):

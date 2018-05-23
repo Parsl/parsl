@@ -3,8 +3,6 @@ import os
 import shutil
 import time
 
-import pytest
-
 import parsl
 from parsl.app.app import App
 
@@ -90,11 +88,6 @@ def test_parallel_for(n=3):
     return d
 
 
-@pytest.mark.last
-def test_z_cleanup():
-    dfk.cleanup()
-
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -109,5 +102,4 @@ if __name__ == '__main__':
 
     x = test_parallel_for(int(args.count))
     y = test_command_format_1()
-    test_z_cleanup()
     # raise_error(0)
