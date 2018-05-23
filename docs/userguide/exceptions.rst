@@ -67,7 +67,7 @@ Here is an example of setting retries via the config:
 .. code-block:: python
 
    from parsl import DataFlowKernel, App
-   from parsl.configs.local import localIPP as config
+   from parsl.tests.configs.local_threads import config
    config["globals"]["retries"] = 2
 
    dfk = DataFlowKernel(config=config)
@@ -79,7 +79,7 @@ Here is an example of setting retries via keyword argument to the DFK:
 .. code-block:: python
 
    from parsl import DataFlowKernel, App
-   from parsl.configs.local import localIPP as config
+   from parsl.tests.configs.local_ipp import config
 
    dfk = DataFlowKernel(config=config, retries=2)
 
@@ -126,7 +126,7 @@ Here is an example of disabling lazy failures via the config passed to the DFK
 .. code-block:: python
 
    from parsl import DataFlowKernel, App
-   from parsl.configs.local import localIPP as config
+   from parsl.tests.configs.local_ipp import config
    config["globals"]["lazyErrors"] = False
 
    dfk = DataFlowKernel(config=config)
@@ -138,7 +138,7 @@ Here is an example of disabling lazy failures via keyword argument to the DFK:
 .. code-block:: python
 
    from parsl import DataFlowKernel, App
-   from parsl.configs.local import localIPP as config
+   from parsl.tests.configs.local_ipp import config
 
    dfk = DataFlowKernel(config=config, lazyErrors=False)
 

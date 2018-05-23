@@ -17,7 +17,7 @@ among the engine once it has been sent to the the engine's queue.
 from parsl import *
 import time
 
-from parsl.configs.local import localIPP as config
+from parsl.tests.configs.local_ipp import config
 dfk = DataFlowKernel(config=config)
 
 
