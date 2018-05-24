@@ -8,7 +8,7 @@ def test_1():
     config = {
         "site": "T3_US_NotreDame",
         "execution": {
-            "scriptDir": ".scripts",
+            "script_dir": ".scripts",
             "environment": {
                 'CONDOR_CONFIG': '/opt/condor/RedHat6/etc/condor_config',
                 'CONDOR_LOCATION': '/opt/condor/RedHat6',

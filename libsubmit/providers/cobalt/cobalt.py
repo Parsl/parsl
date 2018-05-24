@@ -5,7 +5,7 @@ from string import Template
 
 import libsubmit.error as ep_error
 from libsubmit.exec_utils import wtime_to_minutes
-from libsubmit.launchers import Launchers
+from libsubmit.launchers import launchers
 from libsubmit.providers.cobalt.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
 
@@ -53,7 +53,7 @@ class Cobalt(ExecutionProvider):
                              # Type : String,
                              # Default : "singleNode" },
 
-              "scriptDir"  : #{Description : Relative or absolute path to a
+              "script_dir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
                              # Default : "./.scripts"},
@@ -135,9 +135,9 @@ class Cobalt(ExecutionProvider):
 
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
-        self.scriptDir = self.config["execution"].get("scriptDir", '.scripts')
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        self.script_dir = self.config["execution"].get("script_dir", '.scripts')
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -253,8 +253,8 @@ class Cobalt(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
-        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, blocksize, job_name="parsl.auto"):
+        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
@@ -266,7 +266,7 @@ class Cobalt(ExecutionProvider):
              tasks_per_node * blocksize number of nodes are provisioned.
 
         Args:
-             - cmd_string  :(String) Commandline invocation to be made on the remote side.
+             - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float)
 
         Kwargs:
@@ -296,7 +296,7 @@ class Cobalt(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
         # Calculate nodes
@@ -310,10 +310,10 @@ class Cobalt(ExecutionProvider):
         logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, job_config["nodes"],
                      job_config["taskBlocks"])
 
-        # Wrap the cmd_string
+        # Wrap the command
         lname = self.config["execution"]["block"].get("launcher", "singleNode")
-        launcher = Launchers.get(lname, None)
-        job_config["user_script"] = launcher(cmd_string, job_config["taskBlocks"])
+        launcher = launchers.get(lname, None)
+        job_config["user_script"] = launcher(command, job_config["taskBlocks"])
 
         # Get queue request if requested
         self.queue = ''
@@ -328,14 +328,14 @@ class Cobalt(ExecutionProvider):
         logger.debug("Executing : qsub -n {0} {1} -t {2} {3} {4}".format(nodes, self.queue, self.max_walltime,
                                                                          account_opt, channel_script_path))
 
-        cmd_string = "qsub -n {0} {1} -t {2} {3} {4}".format(nodes, self.queue, self.max_walltime, account_opt,
+        command = "qsub -n {0} {1} -t {2} {3} {4}".format(nodes, self.queue, self.max_walltime, account_opt,
                                                              channel_script_path)
 
-        retcode, stdout, stderr = self.channel.execute_wait(cmd_string, 10)
+        retcode, stdout, stderr = self.channel.execute_wait(command, 10)
 
         # TODO : FIX this block
         if retcode != 0:
-            logger.error("Failed command  : {0}".format(cmd_string))
+            logger.error("Failed command  : {0}".format(command))
             logger.error("Launch failed stdout:\n{0} \nstderr:{1}\n".format(stdout, stderr))
 
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())

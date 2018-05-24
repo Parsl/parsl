@@ -2,7 +2,7 @@ import atexit
 import logging
 import os
 
-from libsubmit.launchers import Launchers
+from libsubmit.launchers import launchers
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +80,11 @@ class GoogleCloud():  # ExcecutionProvider):
         self.project_id = self.config["execution"]["block"]["options"]["projectID"]
         self.zone = self.get_correct_zone(self.config["execution"]["block"]["options"]["region"])
         launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
-        self.launcher = Launchers.get(launcher_name, None)
-        self.scriptDir = self.config["execution"].get("scriptDir", ".scripts")
+        self.launcher = launchers.get(launcher_name, None)
+        self.script_dir = self.config["execution"].get("script_dir", ".scripts")
         self.name_int = 0
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -94,12 +94,12 @@ class GoogleCloud():  # ExcecutionProvider):
     def __repr__(self):
         return "<Google Cloud Platform Execution Provider for site:{0}>".format(self.sitename, self.channel)
 
-    def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
+    def submit(self, command="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot.
 
         Args :
-             - cmd_string (str) : The bash command string to be executed.
+             - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
 
         KWargs:
@@ -111,7 +111,7 @@ class GoogleCloud():  # ExcecutionProvider):
         Raises:
              - ExecutionProviderExceptions or its subclasses
         '''
-        instance, name = self.create_instance(cmd_string=cmd_string)
+        instance, name = self.create_instance(command=command)
         self.current_blocksize += 1
         self.resources[name] = {"job_id": name, "status": translate_table[instance['status']]}
         return name
@@ -189,7 +189,7 @@ class GoogleCloud():  # ExcecutionProvider):
     def bye(self):
         self.cancel([i for i in list(self.resources)])
 
-    def create_instance(self, cmd_string=""):
+    def create_instance(self, command=""):
         name = "parslauto{}".format(self.name_int)
         self.name_int += 1
         compute = self.client
@@ -201,7 +201,7 @@ class GoogleCloud():  # ExcecutionProvider):
 
         # Configure the machine
         machine_type = "zones/{}/machineTypes/{}".format(zone, self.options.get("instanceType", "n1-standard-1"))
-        startup_script = cmd_string
+        startup_script = command
 
         config = {
             'name':

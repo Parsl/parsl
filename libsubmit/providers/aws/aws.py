@@ -230,14 +230,8 @@ class EC2Provider(ExecutionProvider):
         self.sg_id = 0
         self.sn_ids = []
 
-    def read_state_file(self, statefile):
-        """If this script has been run previously, it will be persistent
-           by writing resource ids to state file. On run,
-           the script looks for a state file
-           before creating new infrastructure
-
-           Information on VPCs, security groups, and subnets are saved,
-           as well as running instances and their states.
+    def read_state_file(self, state_file):
+        """Read the state file, if it exists.
 
            AWS has a maximum number of VPCs per region per account, so we don't
            want to clutter users' AWS accounts with security groups and VPCs that
@@ -245,7 +239,7 @@ class EC2Provider(ExecutionProvider):
 
         """
         try:
-            fh = open(statefile, 'r')
+            fh = open(state_file, 'r')
             state = json.load(fh)
             self.vpc_id = state['vpcID']
             self.sg_id = state['sgID']
@@ -420,8 +414,7 @@ class EC2Provider(ExecutionProvider):
         ip_ranges = [{'CidrIp': '10.0.0.0/16'}]
 
         # Allows all ICMP in, all TCP and UDP in within VPC
-
-        inPerms = [
+        in_permissions = [
             {
                 'IpProtocol': 'TCP',
                 'FromPort': 0,
@@ -450,7 +443,7 @@ class EC2Provider(ExecutionProvider):
         ]
 
         # Allows all TCP out, all TCP and UDP out within VPC
-        outPerms = [
+        out_permissions = [
             {
                 'IpProtocol': 'TCP',
                 'FromPort': 0,
@@ -473,8 +466,8 @@ class EC2Provider(ExecutionProvider):
             },
         ]
 
-        sg.authorize_ingress(IpPermissions=inPerms)
-        sg.authorize_egress(IpPermissions=outPerms)
+        sg.authorize_ingress(IpPermissions=in_permissions)
+        sg.authorize_egress(IpPermissions=out_permissions)
         self.sg_id = sg.id
         return sg
 
@@ -495,19 +488,19 @@ class EC2Provider(ExecutionProvider):
     def xstr(self, s):
         return '' if s is None else s
 
-    def spin_up_instance(self, cmd_string, job_name):
+    def spin_up_instance(self, command, job_name):
         ''' Starts an instance in the VPC in first available
         subnet. Starts up n instances if nodes per block > 1
         Not supported. We only do 1 node per block
 
         Args:
-            - cmd_string (str): Command string to execute on the node
+            - command (str): Command string to execute on the node
             - job_name (str): Name associated with the instances
 
         '''
 
         command = Template(template_string).substitute(jobname=job_name,
-                                                       user_script=cmd_string,
+                                                       user_script=command,
                                                        overrides=self.overrides)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
@@ -652,12 +645,12 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
 
         return all_states
 
-    def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
-        '''Submits the cmd_string onto a freshly instantiated AWS EC2 instance.
+    def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
+        '''Submits the command onto a freshly instantiated AWS EC2 instance.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         Args:
-             - cmd_string (str): Commandline invocation to be made on the remote side.
+             - command (str): Commandline invocation to be made on the remote side.
              - blocksize (int): Number of blocks requested
 
         Kwargs:
@@ -670,7 +663,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         '''
 
         job_name = "parsl.auto.{0}".format(time.time())
-        [instance, *rest] = self.spin_up_instance(cmd_string=cmd_string, job_name=job_name)
+        [instance, *rest] = self.spin_up_instance(command=command, job_name=job_name)
 
         if not instance:
             logger.error("Failed to submit request to EC2")
@@ -760,7 +753,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
             logger.error("{}".format(e))
             raise e
         self.show_summary()
-        os.remove(self.config['stateFilePath'])
+        os.remove(self.config['state_file_path'])
 
     @property
     def scaling_enabled():

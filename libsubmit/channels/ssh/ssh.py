@@ -22,7 +22,7 @@ class SSHChannel():
     def __repr__(self):
         return "SSH:{0}".format(self.hostname)
 
-    def __init__(self, hostname, username=None, password=None, scriptDir=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -47,8 +47,8 @@ class SSHChannel():
         self.ssh_client.load_system_host_keys()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        if scriptDir:
-            self.channel_script_dir = scriptDir
+        if script_dir:
+            self.channel_script_dir = script_dir
         else:
             self.channel_script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
 
@@ -202,7 +202,7 @@ class SSHChannel():
             os.makedirs(local_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.error("Failed to create scriptDir: {0}".format(scriptDir))
+                logger.error("Failed to create script_dir: {0}".format(script_dir))
                 raise BadScriptPath(e, self.hostname)
 
         # Easier to check this than to waste time trying to pull file and

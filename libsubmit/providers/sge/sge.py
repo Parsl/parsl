@@ -2,7 +2,7 @@ import atexit
 import logging
 import os
 
-from libsubmit.launchers import Launchers
+from libsubmit.launchers import launchers
 from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
@@ -61,10 +61,10 @@ class GridEngine(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
         launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
-        self.launcher = Launchers.get(launcher_name, None)
-        self.scriptDir = self.config["execution"]["scriptDir"]
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        self.launcher = launchers.get(launcher_name, None)
+        self.script_dir = self.config["execution"]["script_dir"]
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
         atexit.register(self.bye)
@@ -72,7 +72,7 @@ class GridEngine(ExecutionProvider):
     def __repr__(self):
         return "<Grid Engine Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
 
-    def create_cmd_string(self, path="/local/cluster/bin/:$PATH", lib_path="/local/cluster/lib/"):
+    def create_command(self, path="/local/cluster/bin/:$PATH", lib_path="/local/cluster/lib/"):
         return """qsub -e /dev/null -o /dev/null -terse << EOF
 PATH={}
 export PATH
@@ -82,13 +82,13 @@ ipengine
 EOF
 """.format(path, lib_path)
 
-    def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
+    def submit(self, command="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
-             - cmd_string (str) : The bash command string to be executed.
+             - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
 
         KWargs:
@@ -109,7 +109,7 @@ LD_LIBRARY_PATH=/local/cluster/lib/
 export LD_LIBRARY_PATH
 {}
 EFO
-""".format(cmd_string)
+""".format(command)
             job_id = os.popen(qsub_pilot).read().strip()
             logger.debug("Provisioned a slot")
             new_slot = {

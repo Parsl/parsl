@@ -12,8 +12,8 @@ from libsubmit.version import VERSION
 from libsubmit.providers.slurm.slurm import Slurm
 from libsubmit.providers.aws.aws import EC2Provider
 from libsubmit.providers.googlecloud.googlecloud import GoogleCloud
-from libsubmit.providers.gridEngine.gridEngine import GridEngine
-from libsubmit.providers.azure.azureProvider import AzureProvider
+from libsubmit.providers.grid_engine.grid_engine import GridEngine
+from libsubmit.providers.azure.azure import AzureProvider
 from libsubmit.providers.jetstream.jetstream import Jetstream
 from libsubmit.providers.condor.condor import Condor
 from libsubmit.providers.torque.torque import Torque
