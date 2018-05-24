@@ -1,8 +1,8 @@
-from libsubmit.channels.ssh.ssh import SshChannel as Ssh
+from libsubmit.channels.ssh.ssh import SSHChannel as SSH
 
 
 def connect_and_list(hostname, username):
-    conn = Ssh(hostname, username=username)
+    conn = SSH(hostname, username=username)
     ec, out, err = conn.execute_wait("echo $HOSTNAME")
     conn.close()
     return out

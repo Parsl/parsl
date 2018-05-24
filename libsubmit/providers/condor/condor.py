@@ -153,18 +153,8 @@ class Condor(ExecutionProvider):
         '''
         return True
 
-    ###########################################################################################################
-    # Status
-    ###########################################################################################################
     def _status(self):
-        ''' Internal: Do not call. Returns the status list for a list of job_ids
-
-        Args:
-              self
-
-        Returns:
-              [status...] : Status list of all jobs
-        '''
+        """Update the resource dictionary with job statuses."""
 
         job_id_list = ' '.join(self.resources.keys())
         cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
@@ -344,18 +334,19 @@ class Condor(ExecutionProvider):
             self._add_resource(job_id)
         return job_id[0]
 
-    ###########################################################################################################
-    # Cancel
-    ###########################################################################################################
     def cancel(self, job_ids):
-        ''' Cancels the jobs specified by a list of job ids
+        """Cancels the jobs specified by a list of job IDs.
 
-        Args:
-        job_ids : [<job_id> ...]
+        Parameters
+        ----------
+        job_ids : list of str
+            The job IDs to cancel.
 
-        Returns :
-        [True/False...] : If the cancel operation fails the entire list will be False.
-        '''
+        Returns
+        -------
+        list of bool
+            Each entry in the list will be True if the job is cancelled succesfully, otherwise False.
+        """
 
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)

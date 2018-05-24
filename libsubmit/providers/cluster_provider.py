@@ -66,8 +66,7 @@ class ClusterProvider(ExecutionProvider):
 
     @property
     def channels_required(self):
-        ''' Returns Bool on whether a channel is required
-        '''
+        """Returns True if a channel is required, False otherwise."""
         return self._channels_required
 
     def execute_wait(self, cmd, timeout=10):
@@ -93,8 +92,7 @@ class ClusterProvider(ExecutionProvider):
         return job_config
 
     def _write_submit_script(self, template_string, script_filename, job_name, configs):
-        '''
-        Load the template string with config values and write the generated submit script to
+        """Load the template string with config values and write the generated submit script to
         a submit script file.
 
         Args:
@@ -157,7 +155,7 @@ class ClusterProvider(ExecutionProvider):
         raise NotImplementedError
 
     def status(self, job_ids):
-        ''' Get the status of a list of jobs identified by the job identifiers
+        """ Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
         Args:
@@ -170,13 +168,13 @@ class ClusterProvider(ExecutionProvider):
         Raises:
              - ExecutionProviderExceptions or its subclasses
 
-        '''
+        """
         if job_ids:
             self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
     def cancel(self, job_ids):
-        ''' Cancels the resources identified by the job_ids provided by the user.
+        """ Cancels the resources identified by the job_ids provided by the user.
 
         Args:
              - job_ids (list): A list of job identifiers
@@ -186,18 +184,18 @@ class ClusterProvider(ExecutionProvider):
 
         Raises:
              - ExecutionProviderExceptions or its subclasses
-        '''
+        """
 
         raise NotImplementedError
 
     @property
     def scaling_enabled(self):
-        ''' The callers of ParslExecutors need to differentiate between Executors
+        """ The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
 
         Returns:
               - Status (Bool)
-        '''
+        """
         return self._scaling_enabled
 
     @property
