@@ -1,22 +1,13 @@
+from parsl.config import Config
+from parsl.executors.threads import ThreadPoolExecutor
 from parsl.tests.utils import get_rundir
 
-config = {
-    "sites": [
-        {
-            "site": "local_threads",
-            "auth": {
-                "channel": None
-            },
-            "execution": {
-                "executor": "threads",
-                "provider": None,
-                "maxThreads": 2,
-            }
-        }
+config = Config(
+    executors=[
+        ThreadPoolExecutor(
+            label='local_threads_checkpoint_dfk_exit',
+        )
     ],
-    "globals": {
-        "lazyErrors": True,
-        "checkpointMode": "dfk_exit",
-        'runDir': get_rundir()
-    }
-}
+    checkpoint_mode='dfk_exit',
+    run_dir=get_rundir(),
+)

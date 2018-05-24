@@ -2,19 +2,19 @@ import parsl
 import pytest
 from parsl import App
 from parsl.tests.configs.local_threads import config
-config['globals']['lazyErrors'] = True
-parsl.clear()
-parsl.load(config)
-
-
-@App('python')
-def divide(a, b):
-    return a / b
 
 
 @pytest.mark.local
 def test_lazy_behavior():
-    """Testing non lazy errors to work"""
+    """Testing lazy errors to work"""
+
+    parsl.clear()
+    config.lazy_errors = True
+    parsl.load(config)
+
+    @App('python')
+    def divide(a, b):
+        return a / b
 
     items = []
     for i in range(0, 1):

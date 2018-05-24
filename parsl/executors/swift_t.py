@@ -171,6 +171,34 @@ class TurbineExecutor(ParslExecutor):
 
     """
 
+    def __init__(self, label='turbine', storage_access=None, working_dir=None, managed=True):
+        """Initialize the thread pool.
+
+        Trying to implement the emews model.
+
+        """
+        logger.debug("Initializing TurbineExecutor")
+        self.label = label
+        self.storage_access = storage_access
+        self.working_dir = working_dir
+        self.managed = managed
+
+    def start(self):
+        self.mp_manager = mp.Manager()
+        self.outgoing_q = self.mp_manager.Queue()
+        self.incoming_q = self.mp_manager.Queue()
+        self.is_alive = True
+
+        self._queue_management_thread = None
+        self._start_queue_management_thread()
+        logger.debug("Created management thread : %s", self._queue_management_thread)
+
+        self.worker = mp.Process(target=runner, args=(self.outgoing_q, self.incoming_q))
+        self.worker.start()
+        logger.debug("Created worker : %s", self.worker)
+        self.tasks = {}
+        self._scaling_enabled = False
+
     def _queue_management_worker(self):
         """Listen to the queue for task status messages and handle them.
 
@@ -271,32 +299,6 @@ class TurbineExecutor(ParslExecutor):
         logging.debug("Exiting thread")
         self.worker.join()
         return True
-
-    def __init__(self, swift_attribs=None, config=None, **kwargs):
-        """Initialize the thread pool.
-
-        Trying to implement the emews model.
-
-        Kwargs:
-            - swift_attribs : Takes a dict of swift attribs. Fot future.
-
-        """
-        self.config = config
-        logger.debug("Initializing TurbineExecutor")
-        self.mp_manager = mp.Manager()
-        self.outgoing_q = self.mp_manager.Queue()
-        self.incoming_q = self.mp_manager.Queue()
-        self.is_alive = True
-
-        self._queue_management_thread = None
-        self._start_queue_management_thread()
-        logger.debug("Created management thread : %s", self._queue_management_thread)
-
-        self.worker = mp.Process(target=runner, args=(self.outgoing_q, self.incoming_q))
-        self.worker.start()
-        logger.debug("Created worker : %s", self.worker)
-        self.tasks = {}
-        self._scaling_enabled = False
 
     def submit(self, func, *args, **kwargs):
         """Submits work to the the outgoing_q.

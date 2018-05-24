@@ -9,9 +9,16 @@ Reference guide
     parsl.set_file_logger
     parsl.app.app.App
     parsl.app.futures.DataFuture
+    parsl.config.Config
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
+    parsl.data_provider.data_manager.DataManager
     parsl.data_provider.files.File
+    parsl.executors.base.ParslExecutor
+    parsl.executors.threads.ThreadPoolExecutor
+    parsl.executors.ipp.IPyParallelExecutor
+    parsl.executors.ipp_controller.Controller
+    parsl.executors.swift_t.TurbineExecutor
 
 .. autosummary::
     :toctree: stubs

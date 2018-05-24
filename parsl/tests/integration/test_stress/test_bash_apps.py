@@ -8,7 +8,7 @@ print("Parsl version: ", parsl.__version__)
 import time
 import argparse
 
-workers = ThreadPoolExecutor(max_workers=10)
+workers = ThreadPoolExecutor(max_threads=10)
 dfk = DataFlowKernel(executors=[workers])
 
 
