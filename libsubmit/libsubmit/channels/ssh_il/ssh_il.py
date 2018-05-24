@@ -2,20 +2,16 @@ import getpass
 import logging
 
 import paramiko
-from libsubmit.channels.ssh.ssh import SshChannel
+from libsubmit.channels.ssh.ssh import SSHChannel
 
 logger = logging.getLogger(__name__)
 
 
-class SshILChannel(SshChannel):
-    ''' Ssh persistent channel. This enables remote execution on sites
-    accessible via ssh. It is assumed that the user has setup host keys
-    so as to ssh to the remote host. Which goes to say that the following
-    test on the commandline should work :
-
-    >>> ssh <username>@<hostname>
-
-    '''
+class SSHInteractiveLoginChannel(SSHChannel):
+    """SSH persistent channel. This enables remote execution on sites
+    accessible via ssh. This channel supports interactive login and is appropriate when
+    keys are not set up.
+    """
 
     def __init__(self, hostname, username=None, password=None, scriptDir=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
@@ -53,7 +49,7 @@ class SshILChannel(SshChannel):
             )
 
         except Exception as e:
-            logger.debug("Caught the SSHException in SshInteractive")
+            logger.debug("Caught the SSHException in SSHInteractive")
             pass
         '''
         except paramiko.BadHostKeyException as e:
@@ -63,7 +59,7 @@ class SshILChannel(SshChannel):
             raise AuthException(e, self.hostname)
 
         except paramiko.SSHException as e:
-            logger.debug("Caught the SSHException in SshInteractive")
+            logger.debug("Caught the SSHException in SSHInteractive")
             pass
 
         except Exception as e:

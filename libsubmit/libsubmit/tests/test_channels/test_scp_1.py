@@ -1,11 +1,11 @@
 import os
 
-from libsubmit.channels.ssh.ssh import SshChannel as Ssh
+from libsubmit.channels.ssh.ssh import SSHChannel as SSH
 
 
 def connect_and_list(hostname, username):
     out = ''
-    conn = Ssh(hostname, username=username)
+    conn = SSH(hostname, username=username)
     conn.push_file(os.path.abspath('remote_run.sh'), '/home/davidk/')
     # ec, out, err = conn.execute_wait("ls /tmp/remote_run.sh; bash /tmp/remote_run.sh")
     conn.close()

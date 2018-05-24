@@ -1,6 +1,6 @@
 import os
 import libsubmit
-from libsubmit import SshChannel, Condor
+from libsubmit import SSHChannel, Condor
 import time
 
 
@@ -30,7 +30,7 @@ def test_1():
             }
         }
     }
-    channel = SshChannel("earth.crc.nd.edu", os.environ['USER'])
+    channel = SSHChannel("earth.crc.nd.edu", os.environ['USER'])
 
     ec, out, err = channel.execute_wait("printenv", envs=config['execution']['environment'])
     print("current env:", out)

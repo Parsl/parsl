@@ -1,5 +1,5 @@
 import libsubmit
-from libsubmit import SshChannel
+from libsubmit import SSHChannel
 from libsubmit import Torque
 import time
 
@@ -27,7 +27,7 @@ def test_1():
         }
     }
 
-    channel = SshChannel("swan.cray.com", "p01953", scriptDir="parsl_scripts")
+    channel = SSHChannel("swan.cray.com", "p01953", scriptDir="parsl_scripts")
     ec, out, err = channel.execute_wait("which qsub; echo $HOSTNAME; pwd")
     print("Stdout: ", out)
 
