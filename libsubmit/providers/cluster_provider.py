@@ -35,7 +35,7 @@ class ClusterProvider(ExecutionProvider):
         return "<{0} Execution Provider for site:{0} with channel:{1}>".format(self.__class__, self.sitename,
                                                                                self.channel)
 
-    def __init__(self, config, channel=None):
+    def __init__(self, config, channel):
         ''' Here we do initialization that is common across all cluster-style providers
 
         Args:
@@ -47,9 +47,6 @@ class ClusterProvider(ExecutionProvider):
         self._scaling_enabled = True
         self._channels_required = True
         self.channel = channel
-        if self.channel is None:
-            logger.error("Provider: Cannot be initialized without a channel")
-            raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
