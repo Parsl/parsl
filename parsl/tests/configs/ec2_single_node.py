@@ -34,9 +34,9 @@ config = {
                 "provider": "aws",
                 "block": {
                     "nodes": 1,  # number of nodes per block
-                    "taskBlocks": 2,  # total tasks in a block
+                    "task_blocks": 2,  # total tasks in a block
                     "walltime": "01:00:00",
-                    "initBlocks": 1,
+                    "init_blocks": 1,
                     "options": info['options']
                 }
             }

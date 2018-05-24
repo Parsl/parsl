@@ -6,9 +6,9 @@ from parsl.app.app import App
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_ipp import config
 
-config["sites"][0]["execution"]["block"]["initBlocks"] = 0
-config["sites"][0]["execution"]["block"]["minBlocks"] = 0
-config["sites"][0]["execution"]["block"]["maxBlocks"] = 4
+config["sites"][0]["execution"]["block"]["init_blocks"] = 0
+config["sites"][0]["execution"]["block"]["min_blocks"] = 0
+config["sites"][0]["execution"]["block"]["max_blocks"] = 4
 dfk = DataFlowKernel(config=config)
 
 

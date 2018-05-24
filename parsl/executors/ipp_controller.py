@@ -121,7 +121,7 @@ class Controller(object):
         Returns :
               - str, File path to engine file
         """
-        return os.path.join(self.ipythonDir,
+        return os.path.join(self.ipython_dir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-engine.json')
 
@@ -134,7 +134,7 @@ class Controller(object):
         Returns :
               - str, File path to client file
         """
-        return os.path.join(self.ipythonDir,
+        return os.path.join(self.ipython_dir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-client.json')
 
@@ -165,5 +165,4 @@ class Controller(object):
                 logger.warn("Ipcontroller process:{0} cleanup failed. May require manual cleanup".format(self.proc.pid))
 
         except Exception as e:
-            logger.warn("Failed to kill the ipcontroller process[{0}]: {1}".format(self.proc.pid,
-                                                                                   e))
+            logger.warn("Failed to kill the ipcontroller process[{0}]: {1}".format(self.proc.pid, e))

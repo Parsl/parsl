@@ -15,17 +15,17 @@ config = {
                 "channel": "ssh",
                 "hostname": "swift.rcc.uchicago.edu",
                 "username": info['username'],
-                "scriptDir": info['script_dir']
+                "script_dir": info['script_dir']
             },
             "execution": {
                 "executor": "ipp",
                 "provider": "slurm",
                 "block": {
                     "nodes": 1,
-                    "minBlocks": 1,
-                    "maxBlocks": 2,
-                    "initBlocks": 1,
-                    "taskBlocks": 4,
+                    "min_blocks": 1,
+                    "max_blocks": 2,
+                    "init_blocks": 1,
+                    "task_blocks": 4,
                     "parallelism": 0.5,
                     "options": info['options']
                 }

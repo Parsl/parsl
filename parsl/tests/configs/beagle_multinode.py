@@ -27,7 +27,7 @@ config = {
                 "channel": "ssh",
                 "hostname": "beagle.nersc.gov",
                 "username": info['username'],
-                "scriptDir": info['script_dir'],
+                "script_dir": info['script_dir'],
             },
             "execution": {
                 "executor": "ipp",
@@ -35,10 +35,10 @@ config = {
                 "block": {
                     "launcher": "srun",
                     "nodes": 4,
-                    "taskBlocks": 8,
+                    "task_blocks": 8,
                     "walltime": "00:10:00",
-                    "initBlocks": 1,
-                    "maxBlocks": 1,
+                    "init_blocks": 1,
+                    "max_blocks": 1,
                     "options": info["options"]
                 }
             }

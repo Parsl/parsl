@@ -9,7 +9,7 @@ config = {
                 "executor": "ipp",
                 "provider": "local",
                 "block": {
-                    "initBlocks": 4,
+                    "init_blocks": 4,
                 }
             }
         }

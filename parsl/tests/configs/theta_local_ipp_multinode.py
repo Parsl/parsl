@@ -13,18 +13,18 @@ config = {
             "site": "theta_local_ipp_multinode",
             "auth": {
                 "channel": "local",
-                "scriptDir": info['script_dir']
+                "script_dir": info['script_dir']
             },
             "execution": {
                 "executor": "ipp",
                 "provider": "cobalt",
-                "scriptDir": "./scripts",
+                "script_dir": "./scripts",
                 "block": {
-                    "initBlocks": 1,
-                    "maxBlocks": 1,  # Limiting to just one block
+                    "init_blocks": 1,
+                    "max_blocks": 1,  # Limiting to just one block
                     "launcher": 'aprun',
                     "nodes": 8,  # of nodes in that block
-                    "taskBlocks": 8,  # total tasks in a block
+                    "task_blocks": 8,  # total tasks in a block
                     "walltime": "00:30:00",
                     "options": info['options']
                 }

@@ -23,10 +23,10 @@ config = {
                 "provider": "aws",
                 "channel": None,
                 "block": {
-                    "initBlocks": 1,
-                    "maxBlocks": 1,
-                    "minBlocks": 0,
-                    "taskBlocks": 1,
+                    "init_blocks": 1,
+                    "max_blocks": 1,
+                    "min_blocks": 0,
+                    "task_blocks": 1,
                     "nodes": 1,
                     "walltime": "00:25:00",
                     "options": info["options"]

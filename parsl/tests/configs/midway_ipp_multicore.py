@@ -15,17 +15,17 @@ config = {
                 "channel": "ssh",
                 "hostname": "swift.rcc.uchicago.edu",
                 "username": info['username'],
-                "scriptDir": "/scratch/midway2/{0}/parsl_scripts".format(info['username'])
+                "script_dir": "/scratch/midway2/{0}/parsl_scripts".format(info['username'])
             },
             "execution": {
                 "executor": "ipp",
                 "provider": "slurm",
                 "block": {
                     "nodes": 1,
-                    "taskBlocks": "$CORES",
+                    "task_blocks": "$CORES",
                     "walltime": "00:05:00",
-                    "initBlocks": 1,
-                    "maxBlocks": 1,
+                    "init_blocks": 1,
+                    "max_blocks": 1,
                     "options": info['options']
                 }
             }

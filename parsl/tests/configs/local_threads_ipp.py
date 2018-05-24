@@ -28,9 +28,9 @@ config = {
                 "provider": "local",
                 "block": {
                     "nodes": 1,
-                    "taskBlocks": 1,
+                    "task_blocks": 1,
                     "walltime": "00:05:00",
-                    "initBlocks": 4,
+                    "init_blocks": 4,
                 }
             }
         }

@@ -14,16 +14,16 @@ config = {
             "auth": {
                 "channel": "local",
                 "username": info['username'],
-                "scriptDir": info['script_dir']
+                "script_dir": info['script_dir']
             },
             "execution": {
                 "executor": "ipp",
                 "provider": "condor",
                 "block": {
                     "nodes": 1,  # of nodes in block
-                    "taskBlocks": 1,  # total tasks in a block
-                    "initBlocks": 4,
-                    "maxBlocks": 1,
+                    "task_blocks": 1,  # total tasks in a block
+                    "init_blocks": 4,
+                    "max_blocks": 1,
                     "options": {
                         "partition":
                         "debug",

@@ -18,9 +18,9 @@ config = {
                 "script_dir": ".scripts",
                 "block": {
                     "nodes": 1,
-                    "taskBlocks": 1,
-                    "initBlocks": 1,
-                    "maxBlocks": 1,
+                    "task_blocks": 1,
+                    "init_blocks": 1,
+                    "max_blocks": 1,
                 }
             }
         }

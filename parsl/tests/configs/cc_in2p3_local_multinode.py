@@ -26,15 +26,15 @@ config = {
             "auth": {
                 "channel": "local",
                 "username": info['username'],
-                "scriptDir": info['script_dir']
+                "script_dir": info['script_dir']
             },
             "execution": {
                 "executor": "ipp",
                 "provider": "gridEngine",
                 "block": {
-                    "taskBlocks": 2,
-                    "initBlocks": 1,
-                    "maxBlocks": 4,
+                    "task_blocks": 2,
+                    "init_blocks": 1,
+                    "max_blocks": 4,
                     "options": info['options']
                 }
             }

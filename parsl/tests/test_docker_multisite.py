@@ -22,7 +22,7 @@ config = {
              },
              "provider": "local",
              "block": {
-                 "initBlocks": 1,
+                 "init_blocks": 1,
              },
          }
          },
@@ -36,7 +36,7 @@ config = {
              },
              "provider": "local",
              "block": {
-                 "initBlocks": 1,
+                 "init_blocks": 1,
              },
          }
          }

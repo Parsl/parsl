@@ -13,9 +13,9 @@ config = {
              "provider": "local",
              "block": {
                  "nodes": 1,
-                 "taskBlocks": 1,
+                 "task_blocks": 1,
                  "walltime": "00:15:00",
-                 "initBlocks": 4,
+                 "init_blocks": 4,
              }
          }
          },
@@ -26,9 +26,9 @@ config = {
              "provider": "local",
              "block": {
                  "nodes": 1,
-                 "taskBlocks": 1,
+                 "task_blocks": 1,
                  "walltime": "00:15:00",
-                 "initBlocks": 2,
+                 "init_blocks": 2,
              }
          }
          }],

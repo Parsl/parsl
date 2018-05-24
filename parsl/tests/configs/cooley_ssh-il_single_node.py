@@ -14,17 +14,17 @@ config = {
             "channel": "ssh-il",
             "hostname": "cooleylogin1.alcf.anl.gov",
             "username": info['username'],
-            "scriptDir": "/home/{}/parsl_scripts/".format(info['username'])
+            "script_dir": "/home/{}/parsl_scripts/".format(info['username'])
         },
         "execution": {
             "executor": "ipp",
             "provider": "cobalt",
             "block": {
                 "nodes": 1,
-                "taskBlocks": 1,
+                "task_blocks": 1,
                 "walltime": "00:05:00",
-                "initBlocks": 1,
-                "maxBlocks": 1,
+                "init_blocks": 1,
+                "max_blocks": 1,
                 "options": {
                     "partition": "debug",
                     "overrides": "source /home/yadunand/setup_cooley_env.sh"

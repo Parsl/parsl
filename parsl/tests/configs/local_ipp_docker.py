@@ -21,7 +21,7 @@ config = {
                 },
                 "provider": "local",
                 "block": {
-                    "initBlocks": 2,
+                    "init_blocks": 2,
                 },
             }
         }

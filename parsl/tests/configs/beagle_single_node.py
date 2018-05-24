@@ -24,7 +24,7 @@ singleNode = {
                 "channel": "ssh",
                 "hostname": "login4.beagle.ci.uchicago.edu",
                 "username": info['username'],
-                "scriptDir": "/lustre/beagle2/{}/parsl_scripts".format(info['username'])
+                "script_dir": "/lustre/beagle2/{}/parsl_scripts".format(info['username'])
             },
             "execution": {
                 "executor": "ipp",
@@ -32,9 +32,9 @@ singleNode = {
                 "block": {
                     "nodes": 1,  # number of nodes in a block
                     "launcher": 'aprun',
-                    "taskBlocks": 1,  # total tasks in a block
-                    "initBlocks": 1,
-                    "maxBlocks": 1,
+                    "task_blocks": 1,  # total tasks in a block
+                    "init_blocks": 1,
+                    "max_blocks": 1,
                     "options": info['options']
                 }
             }

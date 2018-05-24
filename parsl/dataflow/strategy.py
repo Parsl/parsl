@@ -5,7 +5,7 @@ import math
 logger = logging.getLogger(__name__)
 
 
-class Strategy (object):
+class Strategy(object):
     """FlowControl Strategy.
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
@@ -23,23 +23,23 @@ class Strategy (object):
 
     .. code:: python
 
-                |<--minBlocks     |<-initBlocks              maxBlocks-->|
-                +--------------------------------------------------------+
-                |  +--------Block--------+       +--------Block--------+ |
-         Site = |  | TaskBlock TaskBlock | ...   | TaskBlock TaskBlock | |
-                |  +---------------------+       +---------------------+ |
-                +--------------------------------------------------------+
+                |<--min_blocks     |<-init_blocks              max_blocks-->|
+                +----------------------------------------------------------+
+                |  +--------Block----------+       +--------Block--------+ |
+         Site = |  | task_block task_block | ...   | task_block task_block |
+                |  +-----------------------+       +---------------------+ |
+                +----------------------------------------------------------+
 
     The general shape and bounds of a site are user specified through:
 
-       1. minBlocks: Minimum number of blocks to maintain per site
-       2. initBlocks: number of blocks to provision at initialization of workflow
-       3. maxBlocks: Maximum number of blocks that can be active at a site from one workflow.
+       1. min_blocks: Minimum number of blocks to maintain per site
+       2. init_blocks: number of blocks to provision at initialization of workflow
+       3. max_blocks: Maximum number of blocks that can be active at a site from one workflow.
 
 
     .. code:: python
 
-          slots = current_capacity * taskBlocks
+          slots = current_capacity * task_blocks
 
           active_tasks = pending_tasks + running_tasks
 
@@ -54,8 +54,8 @@ class Strategy (object):
 
          .. code:: python
 
-               blocks =  minBlocks           { if active_tasks = 0
-                         max(minBlocks, 1)   {  else
+               blocks =  min_blocks           { if active_tasks = 0
+                         max(min_blocks, 1)   {  else
 
     When p = 1,
          => compute with the most resources.
@@ -63,7 +63,7 @@ class Strategy (object):
 
          .. code:: python
 
-               blocks = min ( maxBlocks,
+               blocks = min ( max_blocks,
                         ceil( active_tasks / slots ) )
 
 
@@ -72,7 +72,7 @@ class Strategy (object):
          and request a new block
 
 
-    let's say min:init:max = 0:0:4 and taskBlocks=2
+    let's say min:init:max = 0:0:4 and task_blocks=2
 
     In the diagram, X <- task
 
@@ -158,24 +158,24 @@ class Strategy (object):
             # Tasks that are either pending completion
             active_tasks = exc.executor.outstanding
 
-            # Get the status of the taskBlocks
+            # Get the status of the task_blocks
             status = exc.status()
 
             # Get the shape and bounds for the site
-            minBlocks = site_config["execution"]["block"]["minBlocks"]
-            maxBlocks = site_config["execution"]["block"]["maxBlocks"]
-            initBlocks = site_config["execution"]["block"]["initBlocks"]
-            taskBlocks = site_config["execution"]["block"]["taskBlocks"]
+            min_blocks = site_config["execution"]["block"]["min_blocks"]
+            max_blocks = site_config["execution"]["block"]["max_blocks"]
+            init_blocks = site_config["execution"]["block"]["init_blocks"]
+            task_blocks = site_config["execution"]["block"]["task_blocks"]
             parallelism = site_config["execution"]["block"]["parallelism"]
 
             active_blocks = sum([1 for x in status if x in ('RUNNING',
                                                             'SUBMITTING',
                                                             'PENDING')])
-            active_slots = active_blocks * taskBlocks
+            active_slots = active_blocks * task_blocks
 
-            logger.debug("Min:{} initBlocks:{} Max:{}".format(minBlocks,
-                                                              initBlocks,
-                                                              maxBlocks))
+            logger.debug("Min:{} init_blocks:{} Max:{}".format(min_blocks,
+                                                              init_blocks,
+                                                              max_blocks))
             # import pdb; pdb.set_trace()
             logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
                                                                    active_slots,
@@ -185,14 +185,14 @@ class Strategy (object):
             # No tasks.
             if len(active_tasks) == 0:
                 # Case 1a
-                # Fewer blocks that minBlocks
-                if active_blocks <= minBlocks:
+                # Fewer blocks that min_blocks
+                if active_blocks <= min_blocks:
                     # Ignore
                     # logger.debug("Strategy: Case.1a")
                     pass
 
                 # Case 1b
-                # More blocks than minBlocks. Scale down
+                # More blocks than min_blocks. Scale down
                 else:
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
@@ -205,7 +205,7 @@ class Strategy (object):
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
                         logger.debug("Strategy: Scale_in, tasks=0")
-                        exc.scale_in(active_blocks - minBlocks)
+                        exc.scale_in(active_blocks - min_blocks)
 
                     else:
                         pass
@@ -216,7 +216,7 @@ class Strategy (object):
             elif (float(active_slots) / len(active_tasks)) < parallelism:
                 # Case 2a
                 # We have the max blocks possible
-                if active_blocks >= maxBlocks:
+                if active_blocks >= max_blocks:
                     # Ignore since we already have the max nodes
                     # logger.debug("Strategy: Case.2a")
                     pass
@@ -225,7 +225,7 @@ class Strategy (object):
                 else:
                     # logger.debug("Strategy: Case.2b")
                     excess = math.ceil((len(active_tasks) * parallelism) - active_slots)
-                    excess_blocks = math.ceil(float(excess) / taskBlocks)
+                    excess_blocks = math.ceil(float(excess) / task_blocks)
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
                     exc.scale_out(excess_blocks)
 
