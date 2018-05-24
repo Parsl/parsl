@@ -8,7 +8,7 @@ from libsubmit.providers.provider_base import ExecutionProvider
 
 try:
     from azure.common.credentials import UserPassCredentials
-    from libsubmit.azure.azureDeployer import Deployer
+    from libsubmit.azure.azure_deployer import Deployer
 
 except ImportError:
     _azure_enabled = False
@@ -233,12 +233,12 @@ sleep 5
 ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return ipptemplate
 
-    def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
-        '''Submits the cmd_string onto a freshly instantiated AWS EC2 instance.
+    def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
+        '''Submits the command onto a freshly instantiated AWS EC2 instance.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         Args:
-             - cmd_string (str): Commandline invocation to be made on the remote side.
+             - command (str): Commandline invocation to be made on the remote side.
              - blocksize (int) : Number of blocks requested
 
         Kwargs:
@@ -251,7 +251,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         '''
 
         job_name = "parsl.auto.{0}".format(time.time())
-        [instance, *rest] = self.deployer.deploy(cmd_string=cmd_string, job_name=job_name, blocksize=1)
+        [instance, *rest] = self.deployer.deploy(command=command, job_name=job_name, blocksize=1)
 
         if not instance:
             logger.error("Failed to submit request to Azure")

@@ -49,7 +49,7 @@ class Slurm(ClusterProvider):
                              # Expected : "slurm",
                              # Required :  True },
 
-              "scriptDir"  : #{Description : Relative or absolute path to a
+              "script_dir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
                              # Default : "./.scripts"},
@@ -147,8 +147,8 @@ class Slurm(ClusterProvider):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
-        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, blocksize, job_name="parsl.auto"):
+        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
@@ -160,7 +160,7 @@ class Slurm(ClusterProvider):
              tasks_per_node * blocksize number of nodes are provisioned.
 
         Args:
-             - cmd_string  :(String) Commandline invocation to be made on the remote side.
+             - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float)
 
         Kwargs:
@@ -185,7 +185,7 @@ class Slurm(ClusterProvider):
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
         # Calculate nodes
@@ -200,10 +200,10 @@ class Slurm(ClusterProvider):
         job_config["taskBlocks"] = self.config["execution"]["block"].get("taskBlocks", 1)
         job_config["walltime"] = self.config["execution"]["block"].get("walltime", "00:20:00")
         job_config["overrides"] = job_config.get("overrides", '')
-        job_config["user_script"] = cmd_string
+        job_config["user_script"] = command
 
-        # Wrap the cmd_string
-        job_config["user_script"] = self.launcher(cmd_string, taskBlocks=job_config["taskBlocks"])
+        # Wrap the command
+        job_config["user_script"] = self.launcher(command, taskBlocks=job_config["taskBlocks"])
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)

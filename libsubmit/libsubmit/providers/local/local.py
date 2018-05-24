@@ -5,7 +5,7 @@ import time
 
 import libsubmit.error as ep_error
 from libsubmit.channels.local.local import LocalChannel
-from libsubmit.launchers import Launchers
+from libsubmit.launchers import launchers
 from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class Local(ExecutionProvider):
                              # Expected : "local",
                              # Required :  True },
 
-              "scriptDir"  : #{Description : Relative or absolute path to a
+              "script_dir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
                              # Default : "./.scripts"},
@@ -105,16 +105,16 @@ class Local(ExecutionProvider):
             if channel_script_dir is None:
                 self.channel = LocalChannel()
             else:
-                self.channel = LocalChannel(scriptDir=channel_script_dir)
+                self.channel = LocalChannel(script_dir=channel_script_dir)
         else:
             self.channel = channel
         self.config = config
         self.sitename = config['site']
         self.current_blocksize = 0
-        self.scriptDir = self.config["execution"]["scriptDir"]
+        self.script_dir = self.config["execution"]["script_dir"]
         self.taskBlocks = self.config["execution"]["block"].get("taskBlocks", 1)
         launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
-        self.launcher = Launchers.get(launcher_name, None)
+        self.launcher = launchers.get(launcher_name, None)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -182,8 +182,8 @@ class Local(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
-        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, blocksize, job_name="parsl.auto"):
+        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1:
@@ -196,7 +196,7 @@ class Local(ExecutionProvider):
              tasks_per_node * blocksize number of nodes are provisioned.
 
         Args:
-             - cmd_string  :(String) Commandline invocation to be made on the remote side.
+             - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float) - Not really used for local
 
         Kwargs:
@@ -211,12 +211,12 @@ class Local(ExecutionProvider):
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.sh".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_cmd_string = self.launcher(cmd_string, taskBlocks=self.taskBlocks)
+        wrap_command = self.launcher(command, taskBlocks=self.taskBlocks)
 
-        self._write_submit_script(wrap_cmd_string, script_path)
+        self._write_submit_script(wrap_command, script_path)
 
         job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), 3)
         self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING', 'blocksize': blocksize, 'proc': proc}

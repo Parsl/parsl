@@ -48,7 +48,7 @@ class Torque(ExecutionProvider):
                              # Expected : "torque",
                              # Required :  True },
 
-              "scriptDir"  : #{Description : Relative or absolute path to a
+              "script_dir"  : #{Description : Relative or absolute path to a
                              # directory in which intermediate scripts are placed
                              # Type : String,
                              # Default : "./scripts"},
@@ -127,9 +127,9 @@ class Torque(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
 
-        self.scriptDir = self.config["execution"]["scriptDir"]
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        self.script_dir = self.config["execution"]["script_dir"]
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -218,8 +218,8 @@ class Torque(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
-        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, blocksize, job_name="parsl.auto"):
+        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
@@ -231,7 +231,7 @@ class Torque(ExecutionProvider):
              tasks_per_node * blocksize number of nodes are provisioned.
 
         Args:
-             - cmd_string  :(String) Commandline invocation to be made on the remote side.
+             - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float)
 
         Kwargs:
@@ -256,7 +256,7 @@ class Torque(ExecutionProvider):
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
         # Calculate nodes
@@ -273,7 +273,7 @@ class Torque(ExecutionProvider):
         job_config["queue"] = self.config["execution"]["block"]["options"].get("queue", '')
         job_config["walltime"] = self.config["execution"]["block"].get("walltime", "00:20:00")
         job_config["overrides"] = job_config.get("overrides", '')
-        job_config["user_script"] = cmd_string
+        job_config["user_script"] = command
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)

@@ -4,7 +4,7 @@ from string import Template
 
 import libsubmit.error as ep_error
 from libsubmit.exec_utils import wtime_to_minutes
-from libsubmit.launchers import Launchers
+from libsubmit.launchers import launchers
 from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
@@ -54,12 +54,12 @@ class ClusterProvider(ExecutionProvider):
         self.sitename = config['site']
         self.current_blocksize = 0
         launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
-        self.launcher = Launchers.get(launcher_name, None)
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
+        self.launcher = launchers.get(launcher, None)
 
-        self.scriptDir = self.config["execution"]["scriptDir"]
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        self.script_dir = self.config["execution"]["script_dir"]
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -91,12 +91,12 @@ class ClusterProvider(ExecutionProvider):
         job_config["user_script"] = self.launcher(cmd_string, taskBlocks=job_config["taskBlocks"])
         return job_config
 
-    def _write_submit_script(self, template_string, script_filename, job_name, configs):
+    def _write_submit_script(self, template, script_filename, job_name, configs):
         """Load the template string with config values and write the generated submit script to
         a submit script file.
 
         Args:
-              - template_string (string) : The template string to be used for the writing submit script
+              - template (string) : The template string to be used for the writing submit script
               - script_filename (string) : Name of the submit script
               - job_name (string) : job name
               - configs (dict) : configs that get pushed into the template
@@ -107,11 +107,11 @@ class ClusterProvider(ExecutionProvider):
         Raises:
               SchedulerMissingArgs : If template is missing args
               ScriptPathError : Unable to write submit script out
-        '''
+        """
 
         try:
-            submit_script = Template(template_string).substitute(jobname=job_name, **configs)
-            # submit_script = Template(template_string).safe_substitute(jobname=job_name, **configs)
+            submit_script = Template(template).substitute(jobname=job_name, **configs)
+            # submit_script = Template(template).safe_substitute(jobname=job_name, **configs)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
@@ -123,7 +123,7 @@ class ClusterProvider(ExecutionProvider):
             logger.error("Failed writing to submit script: %s", script_filename)
             raise (ep_error.ScriptPathError(script_filename, e))
         except Exception as e:
-            print("Template : ", template_string)
+            print("Template : ", template)
             print("Args : ", job_name)
             print("Kwargs : ", configs)
             logger.error("Uncategorized error: %s", e)
@@ -131,13 +131,13 @@ class ClusterProvider(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
-             - cmd_string (str) : The bash command string to be executed.
+             - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
 
         KWargs:

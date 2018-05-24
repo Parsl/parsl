@@ -19,8 +19,8 @@ class LocalChannel(Channel):
     def __repr__(self):
         return "Local:{0}".format(self.hostname)
 
-    def __init__(self, userhome=".", envs={}, scriptDir="./.scripts", **kwargs):
-        ''' Initialize the local channel. scriptDir is required by set to a default.
+    def __init__(self, userhome=".", envs={}, script_dir="./.scripts", **kwargs):
+        ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
             - userhome (string): (default='.') This is provided as a way to override and set a specific userhome
@@ -32,12 +32,12 @@ class LocalChannel(Channel):
         local_env = os.environ.copy()
         self.envs = copy.deepcopy(local_env)
         self.envs.update(envs)
-        self.channel_script_dir = os.path.abspath(scriptDir)
+        self.channel_script_dir = os.path.abspath(script_dir)
         try:
             os.makedirs(self.channel_script_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.error("Failed to create scriptDir : {0}".format(scriptDir))
+                logger.error("Failed to create script_dir : {0}".format(script_dir))
                 raise BadScriptPath(e, self.hostname)
 
     @property

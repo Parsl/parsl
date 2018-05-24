@@ -3,7 +3,7 @@ import os
 import time
 
 from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.providers.gridEngine.template import template_string
+from libsubmit.providers.grid_engine.template import template_string
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class GridEngine(ClusterProvider):
                           # Expected : "gridEngine",
                           # Required :  True },
 
-              "scriptDir": #{Description : Relative or absolute path to a
+              "script_dir": #{Description : Relative or absolute path to a
                            # directory in which intermediate scripts are placed
                            # Type : String,
                            # Default : "./.scripts"},
@@ -109,13 +109,13 @@ class GridEngine(ClusterProvider):
         '''
         super().__init__(config, channel=channel)
 
-    def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
+    def submit(self, command="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
-             - cmd_string (str) : The bash command string to be executed.
+             - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
 
         KWargs:
@@ -137,10 +137,10 @@ class GridEngine(ClusterProvider):
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        job_config = self.get_configs(cmd_string, blocksize)
+        job_config = self.get_configs(command, blocksize)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)

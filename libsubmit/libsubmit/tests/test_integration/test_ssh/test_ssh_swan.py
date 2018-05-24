@@ -27,7 +27,7 @@ def test_1():
         }
     }
 
-    channel = SSHChannel("swan.cray.com", "p01953", scriptDir="parsl_scripts")
+    channel = SSHChannel("swan.cray.com", "p01953", script_dir="parsl_scripts")
     ec, out, err = channel.execute_wait("which qsub; echo $HOSTNAME; pwd")
     print("Stdout: ", out)
 
