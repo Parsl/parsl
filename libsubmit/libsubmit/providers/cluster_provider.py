@@ -31,10 +31,6 @@ class ClusterProvider(ExecutionProvider):
                                 +-------------------
     """
 
-    def __repr__(self):
-        return "<{0} Execution Provider for site:{0} with channel:{1}>".format(self.__class__, self.sitename,
-                                                                               self.channel)
-
     def __init__(self, config, channel):
         ''' Here we do initialization that is common across all cluster-style providers
 

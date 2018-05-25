@@ -7,6 +7,7 @@ from string import Template
 from libsubmit.error import *
 from libsubmit.providers.aws.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
