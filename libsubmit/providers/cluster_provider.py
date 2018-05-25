@@ -45,9 +45,9 @@ class ClusterProvider(ExecutionProvider):
         self.channel = channel
         self.config = config
         self.sitename = config['site']
-        self.current_blocksize = 0
         launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
+        self.provisioned_blocks = 0
         self.launcher = launchers.get(launcher, None)
 
         self.script_dir = self.config["execution"]["script_dir"]
@@ -173,8 +173,8 @@ class ClusterProvider(ExecutionProvider):
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
+        """ Returns the currently provisioned blocks.
         This may need to return more information in the futures :
         { minsize, maxsize, current_requested }
-        '''
-        return self.current_blocksize
+        """
+        return self.provisioned_blocks

@@ -59,7 +59,7 @@ class GridEngine(ExecutionProvider):
         self.channel = channel
         self.config = config
         self.sitename = config['site']
-        self.current_blocksize = 0
+        self.provisioned_blocks = 0
         launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
         self.launcher = launchers.get(launcher_name, None)
         self.script_dir = self.config["execution"]["script_dir"]
@@ -125,7 +125,7 @@ EFO
             logger.error(e)
             raise e
         logger.debug("Provisioned {} slots. Started ipengines.")
-        self.current_blocksize += 1
+        self.provisioned_blocks += 1
         return job_id
 
     def status(self, job_ids):
@@ -202,7 +202,7 @@ EFO
                 outp = "False"
             status = True if "has registered the job" in outp else False
             stati.append(status)
-            self.current_blocksize -= 1
+            self.provisioned_blocks -= 1
         return stati
 
     @property
@@ -216,11 +216,11 @@ EFO
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
+        ''' Returns the number of currently provisioned blocks.
         This may need to return more information in the futures :
         { minsize, maxsize, current_requested }
         '''
-        return self.current_blocksize
+        return self.provisioned_blocks
 
     @property
     def channels_required(self):

@@ -166,7 +166,6 @@ class EC2Provider(ExecutionProvider):
 
         self.config = config
         self.sitename = config['site']
-        self.current_blocksize = 0
         self.resources = {}
         # atexit.register(self.goodbye)
         self.config = config

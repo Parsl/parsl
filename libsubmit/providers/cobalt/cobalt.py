@@ -131,7 +131,7 @@ class Cobalt(ExecutionProvider):
 
         self.config = config
         self.sitename = config['site']
-        self.current_blocksize = 0
+        self.provisioned_blocks = 0
 
         self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
 
@@ -278,7 +278,7 @@ class Cobalt(ExecutionProvider):
 
         '''
 
-        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
+        if self.provisioned_blocks >= self.config["execution"]["block"].get("maxBlocks", 2):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
             return None
 

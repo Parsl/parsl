@@ -151,7 +151,7 @@ class AzureProvider(ExecutionProvider):
         self.channel = channel
         self.config = config
         self.sitename = config['site']
-        self.current_blocksize = 0
+        self.provisioned_blocks = 0
         self.resources = {}
         self.instances = []
 

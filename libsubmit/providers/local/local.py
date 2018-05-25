@@ -110,7 +110,7 @@ class Local(ExecutionProvider):
             self.channel = channel
         self.config = config
         self.sitename = config['site']
-        self.current_blocksize = 0
+        self.provisioned_blocks = 0
         self.script_dir = self.config["execution"]["script_dir"]
         self.taskBlocks = self.config["execution"]["block"].get("taskBlocks", 1)
         launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")

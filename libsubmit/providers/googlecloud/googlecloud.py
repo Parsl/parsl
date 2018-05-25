@@ -88,7 +88,7 @@ class GoogleCloud():  # ExcecutionProvider):
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
-        self.current_blocksize = 0
+        self.provisioned_blocks = 0
         atexit.register(self.bye)
 
     def __repr__(self):
@@ -112,7 +112,7 @@ class GoogleCloud():  # ExcecutionProvider):
              - ExecutionProviderException or its subclasses
         '''
         instance, name = self.create_instance(command=command)
-        self.current_blocksize += 1
+        self.provisioned_blocks += 1
         self.resources[name] = {"job_id": name, "status": translate_table[instance['status']]}
         return name
 
@@ -155,7 +155,7 @@ class GoogleCloud():  # ExcecutionProvider):
             try:
                 self.delete_instance(job_id)
                 statuses.append(True)
-                self.current_blocksize -= 1
+                self.provisioned_blocks -= 1
             except Exception as e:
                 statuses.append(False)
         return statuses
@@ -171,11 +171,8 @@ class GoogleCloud():  # ExcecutionProvider):
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
-        This may need to return more information in the futures :
-        { minsize, maxsize, current_requested }
-        '''
-        return self.current_blocksize
+        """Returns the number of currently provisioned blocks."""
+        return self.provisioned_blocks
 
     @property
     def channels_required(self):
