@@ -125,7 +125,7 @@ class Torque(ExecutionProvider):
             raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
         self.config = config
         self.sitename = config['site']
-        self.current_blocksize = 0
+        self.provisioned_blocks = 0
 
         self.script_dir = self.config["execution"]["script_dir"]
         if not os.path.exists(self.script_dir):
@@ -243,7 +243,7 @@ class Torque(ExecutionProvider):
 
         '''
 
-        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
+        if self.provisioned_blocks >= self.config["execution"]["block"].get("maxBlocks", 2):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
             return None
 
@@ -328,11 +328,11 @@ class Torque(ExecutionProvider):
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
+        ''' Returns the number of currently provisioned blocks.
         This may need to return more information in the futures :
         { minsize, maxsize, current_requested }
         '''
-        return self.current_blocksize
+        return self.provisioned_blocks
 
     def _test_add_resource(self, job_id):
         self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])

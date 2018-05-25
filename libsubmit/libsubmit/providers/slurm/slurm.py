@@ -173,8 +173,8 @@ class Slurm(ClusterProvider):
 
         '''
 
-        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
+        if self.provisioned_blocks >= self.config["execution"]["block"].get("maxBlocks", 2):
             return None
 
         # Note: Fix this later to avoid confusing behavior.
