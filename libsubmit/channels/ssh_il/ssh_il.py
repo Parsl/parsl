@@ -28,6 +28,7 @@ class SSHInteractiveLoginChannel(SSHChannel):
 
         Raises:
         '''
+        self.setup_representation(locals())
 
         self.hostname = hostname
         self.username = username

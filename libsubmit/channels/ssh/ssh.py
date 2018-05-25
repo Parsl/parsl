@@ -5,11 +5,12 @@ import os
 
 import paramiko
 from libsubmit.channels.errors import *
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class SSHChannel():
+class SSHChannel(RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
@@ -18,9 +19,6 @@ class SSHChannel():
     >>> ssh <username>@<hostname>
 
     '''
-
-    def __repr__(self):
-        return "SSH:{0}".format(self.hostname)
 
     def __init__(self, hostname, username=None, password=None, script_dir=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
@@ -37,6 +35,7 @@ class SSHChannel():
 
         Raises:
         '''
+        self.setup_representation(locals())
 
         self.hostname = hostname
         self.username = username

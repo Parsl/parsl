@@ -4,6 +4,7 @@ import time
 
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.slurm.template import template_string
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

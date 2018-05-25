@@ -7,17 +7,15 @@ import subprocess
 
 from libsubmit.channels.channel_base import Channel
 from libsubmit.channels.errors import *
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class LocalChannel(Channel):
+class LocalChannel(Channel, RepresentationMixin):
     ''' This is not even really a channel, since opening a local shell is not heavy
     and done so infrequently that they do not need a persistent channel
     '''
-
-    def __repr__(self):
-        return "Local:{0}".format(self.hostname)
 
     def __init__(self, userhome=".", envs={}, script_dir="./.scripts", **kwargs):
         ''' Initialize the local channel. script_dir is required by set to a default.
@@ -27,6 +25,7 @@ class LocalChannel(Channel):
             - envs (dict) : A dictionary of env variables to be set when launching the shell
             - channel_script_dir (string): (default="./.scripts") Directory to place scripts
         '''
+        self.setup_representation(locals())
         self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
         local_env = os.environ.copy()
