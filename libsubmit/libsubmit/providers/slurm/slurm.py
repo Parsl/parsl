@@ -149,32 +149,25 @@ class Slurm(ClusterProvider):
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
     def submit(self, command, blocksize, job_name="parsl.auto"):
-        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
-        Submit returns an ID that corresponds to the task that was just submitted.
+        """Submit the command as a slurm job of blocksize parallel elements.
 
-        If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
+        Parameters
+        ----------
+        command : str
+            Command to be made on the remote side.
+        blocksize : int
+            Not implemented.
+        job_name : str
+            Name for the job (must be unique).
 
-        If tasks_per_node == 1:
-             A single node is provisioned
+        Returns
+        -------
+        None or str
+            If at capacity, returns None; otherwise, a string identifier for the job
+        """
 
-        If tasks_per_node >  1 :
-             tasks_per_node * blocksize number of nodes are provisioned.
-
-        Args:
-             - command  :(String) Commandline invocation to be made on the remote side.
-             - blocksize   :(float)
-
-        Kwargs:
-             - job_name (String): Name for job, must be unique
-
-        Returns:
-             - None: At capacity, cannot provision more
-             - job_id: (string) Identifier for the job
-
-        '''
-
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
-        if self.provisioned_blocks >= self.config["execution"]["block"].get("maxBlocks", 2):
+        if self.provisioned_blocks >= self.max_blocks:
+            logger.warn("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
             return None
 
         # Note: Fix this later to avoid confusing behavior.
