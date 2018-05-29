@@ -1,10 +1,11 @@
 import logging
-import os
 import time
 
 from libsubmit.error import *
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.utils import RepresentationMixin
+
+logger = logging.getLogger(__name__)
 
 try:
     from azure.common.credentials import UserPassCredentials
@@ -44,50 +45,30 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     ----------
     profile : str
         Profile to be used if different from the standard Azure config file ~/.azure/config.
+    template_file : str
+        Location of template file for Azure instance. Default is 'templates/template.json'.
+    walltime : str
+        Walltime requested per block in HH:MM:SS.
+    azure_template_file : str
+        Path to the template file for the Azure instance.
+    init_blocks : int
+        Number of blocks to provision at the start of the run. Default is 1.
+    min_blocks : int
+        Minimum number of blocks to maintain. Default is 0.
+    max_blocks : int
+        Maximum number of blocks to maintain. Default is 10.
     nodes_per_block : int
         Nodes to provision per block. Default is 1.
-    template_file_location : str
-        Location of template file for Azure instance. Default is 'templates/template.json'.
-                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
-                                 # Type : String,
-                                 # Default : "00:20:00" },
-                  "initBlocks" : #{Description : # of blocks to provision at the start of
-                                 # the DFK
-                                 # Type : Integer
-                                 # Default : ?
-                                 # Required :    },
-
-
-                      "templateFileLocation" : #{Description : location of template file for azure instance
-                                       # Type : String,
-                                       # Required : False
-                                       # Default : templates/template.json },
-
-                      "region"       : #{"Description : AWS region to launch machines in
-                                       # in the submit script to the scheduler
-                                       # Type : String,
-                                       # Default : 'us-east-2',
-                                       # Required : False },
-
-                      "keyName"      : #{"Description : Name of the azure private key (.pem file)
-                                       # that is usually generated on the console to allow ssh access
-                                       # to the EC2 instances, mostly for debugging.
-                                       # in the submit script to the scheduler
-                                       # Type : String,
-                                       # Required : True },
-
-                  }
-              }
-            }
-         }
     """
 
     def __init__(self,
-                 image_id,
-                 key_name,
+                 subscription_id,
+                 username,
+                 password,
                  label='azure',
-                 region='us-east-2',
-                 azure_template_file='template.json',
+                 template_file='template.json',
+                 init_blocks=1,
+                 min_blocks=0,
                  max_blocks=1,
                  nodes_per_block=1,
                  state_file=None):
@@ -96,8 +77,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         if not _azure_enabled:
             raise OptionalModuleMissing(['azure'], "Azure Provider requires the azure module.")
 
-        credentials = UserPassCredentials(self.config['username'], self.config['pass'])
-        subscription_id = self.config['subscriptionId']
+        credentials = UserPassCredentials(username, password)
 
         self.resource_client = ResourceManagementClient(credentials, subscription_id)
         self.storage_client = StorageManagementClient(credentials, subscription_id)
@@ -111,10 +91,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         self.resources = {}
         self.instances = []
 
-        self.instance_type = azure_template_file
-        self.image_id = image_id
-        self.key_name = key_name
-        self.region = region
         self.max_nodes = max_blocks * nodes_per_block
 
         try:
@@ -132,20 +108,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             self.create_vpc().id
             logger.info("No State File. Cannot load previous options. Creating new infrastructure.")
             self.write_state_file()
-
-    def configure_logger(self):
-        """Configure logger."""
-        logger = logging.getLogger("AzureProvider")
-        logger.setLevel(logging.INFO)
-        if not os.path.isfile(self.config['logFile']):
-            with open(self.config['logFile'], 'w') as temp_log:
-                temp_log.write("Creating new log file.\n")
-        fh = logging.FileHandler(self.config['logFile'])
-        fh.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        logger.addHandler(fh)
-        self.logger = logger
 
     def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
         """Submit command to an Azure instance.
@@ -175,7 +137,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             logger.error("Failed to submit request to Azure")
             return None
 
-        logger.debug("Started instance_id : {0}".format(instance.instance_id))
+        logger.debug("Started instance_id: {0}".format(instance.instance_id))
 
         state = translate_table.get(instance.state['Name'], "PENDING")
 
@@ -203,7 +165,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         return states
 
     def cancel(self, job_ids):
-        """ Cancels the jobs specified by a list of job ids
+        """Cancel jobs specified by a list of job ids.
 
         Parameters
         ----------
