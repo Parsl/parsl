@@ -4,8 +4,6 @@ from parsl import App
 import time
 from parsl.tests.configs.local_threads import config
 config['globals']['lazyErrors'] = False
-parsl.load(config)
-
 
 @App('python')
 def divide(a, b):
@@ -18,9 +16,13 @@ def test_non_lazy_behavior():
 
     try:
         items = []
-        for i in range(0, 10):
+        for i in range(0, 1):
             items.append(divide(10, i))
-        time.sleep(1)
+
+        while True:
+            if items[0].done:
+                break
+
     except Exception as e:
         assert isinstance(e, ZeroDivisionError), "Expected ZeroDivisionError, got : {}".format(e)
     else:

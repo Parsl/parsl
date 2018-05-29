@@ -3,7 +3,6 @@ import pytest
 from parsl import App
 from parsl.tests.configs.local_threads import config
 config['globals']['lazyErrors'] = True
-parsl.load(config)
 
 
 @App('python')
@@ -16,7 +15,7 @@ def test_lazy_behavior():
     """Testing non lazy errors to work"""
 
     items = []
-    for i in range(0, 10):
+    for i in range(0, 1):
         items.append(divide(10, i))
 
     while True:
