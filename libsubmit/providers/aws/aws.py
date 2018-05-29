@@ -207,18 +207,14 @@ class EC2Provider(ExecutionProvider):
                 logger.info("Failed to create ec2 infrastructure : {0}".format(e))
                 raise
             else:
-                # If infrastructure creation worked write state file
                 self.write_state_file()
 
     @property
     def channels_required(self):
-        ''' No channel required for EC2
-        '''
         return False
 
     def initialize_boto_client(self):
-        ''' Use auth configs to initialize the boto client
-        '''
+        """Initialize the boto client."""
 
         self.sitename = self.config['site']
         self.session = self.create_session()
@@ -233,10 +229,14 @@ class EC2Provider(ExecutionProvider):
     def read_state_file(self, state_file):
         """Read the state file, if it exists.
 
-           AWS has a maximum number of VPCs per region per account, so we don't
-           want to clutter users' AWS accounts with security groups and VPCs that
-           will be used only once.
+        If this script has been run previously, resource IDs will have been written to a
+        state file On starting a run, a state file will be looked for before creating new
+        infrastructure. Information on VPCs, security groups, and subnets are saved, as
+        well as running instances and their states.
 
+        AWS has a maximum number of VPCs per region per account, so we do not want to
+        clutter users' AWS accounts with security groups and VPCs that will be used only
+        once.
         """
         try:
             fh = open(state_file, 'r')
@@ -248,14 +248,14 @@ class EC2Provider(ExecutionProvider):
         except Exception as e:
             logger.debug("Caught exception while reading state file: {0}".format(e))
             raise e
-        logger.debug("Done reading state from the local state file")
+        logger.debug("Done reading state from the local state file.")
 
     def write_state_file(self):
-        ''' Save information that must persist to a file.
-            We don't want to create a new VPC and new identical
-            security groups, so we save information about them
-            in a file between runs
-        '''
+        """Save information that must persist to a file.
+
+        We do not want to create a new VPC and new identical security groups, so we save
+        information about them in a file between runs.
+        """
         fh = open('awsproviderstate.json', 'w')
         state = {}
         state['vpcID'] = self.vpc_id
@@ -266,7 +266,7 @@ class EC2Provider(ExecutionProvider):
         fh.write(json.dumps(state, indent=4))
 
     def create_session(self):
-        ''' Here we will first look in the ~/.aws/config file.
+        """Create a session.
 
         First we look in config["auth"]["keyfile"] for a path to a json file
         with the credentials.
@@ -276,7 +276,7 @@ class EC2Provider(ExecutionProvider):
         to use the Session call to auto pick up the keys for the profile from
         the user default keys file ~/.aws/config.
 
-        Lastly boto3 will look for the keys in env variables:
+        Finally, boto3 will look for the keys in environment variables:
         AWS_ACCESS_KEY_ID: The access key for your AWS account.
         AWS_SECRET_ACCESS_KEY: The secret key for your AWS account.
         AWS_SESSION_TOKEN: The session key for your AWS account.
@@ -284,7 +284,7 @@ class EC2Provider(ExecutionProvider):
         The AWS_SECURITY_TOKEN environment variable can also be used,
         but is only supported for backwards compatibility purposes.
         AWS_SESSION_TOKEN is supported by multiple AWS SDKs besides python.
-        '''
+        """
 
         session = None
 
@@ -331,19 +331,16 @@ class EC2Provider(ExecutionProvider):
         return session
 
     def create_vpc(self):
-        ''' Create and configure VPC
+        """Create and configure VPC
 
-            We create a VPC with CIDR 10.0.0.0/16, which provides
-            up to 64,000 instances.
+        We create a VPC with CIDR 10.0.0.0/16, which provides up to 64,000 instances.
 
-            We attach a subnet for each availability zone within the
-            region specified in the config. We give each subnet an
-            ip range like 10.0.X.0/20, which is large enough for
-            approx. 4000 instances.
+        We attach a subnet for each availability zone within the region specified in the
+        config. We give each subnet an ip range like 10.0.X.0/20, which is large enough
+        for approx. 4000 instances.
 
-            Security groups are configured in function security_group.
-            More information is there
-        '''
+        Security groups are configured in function security_group.
+        """
 
         try:
             # We use a large VPC so that the cluster can get large
@@ -395,16 +392,16 @@ class EC2Provider(ExecutionProvider):
     def security_group(self, vpc):
         """Create and configure a new security group.
 
+        Allows all ICMP in, all TCP and UDP in within VPC.
 
+        This security group is very open. It allows all incoming ping requests on all
+        ports. It also allows all outgoing traffic on all ports. This can be limited by
+        changing the allowed port ranges.
 
-        Allows all ICMP in, all TCP and UDP in within VPC
-
-        This security group is very open. It allows all
-        incoming ping requests on all ports. It also allows
-        all outgoing traffic on all ports. This can be limited
-        by changing the allowed port ranges.
-
-        :param vpc - VPC in which to set up security group
+        Parameters
+        ----------
+        vpc : VPC instance
+            VPC in which to set up security group.
         """
 
         sg = vpc.create_security_group(
@@ -472,13 +469,15 @@ class EC2Provider(ExecutionProvider):
         return sg
 
     def config_route_table(self, vpc, internet_gateway):
-        ''' Configure route table for vpc
-        Args:
-            :param vpc (dict): dictionary representing the vpc
-                                created by create_vpc()
-            :param internet_gateway (dict): dictionary representing igw
-                                             created by create_vpc()
-        '''
+        """Configure route table for Virtual Private Cloud (VPC).
+
+        Parameters
+        ----------
+        vpc : dict
+            Representation of the VPC (created by create_vpc()).
+        internet_gateway : dict
+            Representation of the internet gateway (created by create_vpc()).
+        """
         route_table = vpc.create_route_table()
         route_table.create_route(
             DestinationCidrBlock='0.0.0.0/0', GatewayId=internet_gateway.internet_gateway_id
@@ -489,15 +488,18 @@ class EC2Provider(ExecutionProvider):
         return '' if s is None else s
 
     def spin_up_instance(self, command, job_name):
-        ''' Starts an instance in the VPC in first available
-        subnet. Starts up n instances if nodes per block > 1
-        Not supported. We only do 1 node per block
+        """Start an instance in the VPC in the first available subnet.
 
-        Args:
-            - command (str): Command string to execute on the node
-            - job_name (str): Name associated with the instances
+        N instances will be started if nodes_per_block > 1.
+        Not supported. We only do 1 node per block.
 
-        '''
+        Parameters
+        ----------
+        command : str
+            Command string to execute on the node.
+        job_name : str
+            Name associated with the instances.
+        """
 
         command = Template(template_string).substitute(jobname=job_name,
                                                        user_script=command,
@@ -555,11 +557,10 @@ class EC2Provider(ExecutionProvider):
         return instance
 
     def shut_down_instance(self, instances=None):
-        ''' Shuts down a list of instances, if provided, or the last
-        instance started up, if none provided
+        """Shut down a list of instances, if provided.
 
-        [TODO] ...
-        '''
+        If no instance is provided, the last instance started up will be shut down.
+        """
 
         if instances and len(self.instances) > 0:
             print(instances)
@@ -580,8 +581,7 @@ class EC2Provider(ExecutionProvider):
         return term
 
     def get_instance_state(self, instances=None):
-        """Get states of all instances on EC2 which were started by this
-        file"""
+        """Get states of all instances on EC2 which were started by this file."""
         if instances:
             desc = self.client.describe_instances(InstanceIds=instances)
         else:
@@ -617,14 +617,18 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return ipptemplate
 
     def status(self, job_ids):
-        '''  Get the status of a list of jobs identified by their ids.
+        """Get the status of a list of jobs identified by their ids.
 
-        Args:
-            - job_ids (List of ids) : List of identifiers for the jobs
+        Parameters
+        ----------
+        job_ids : list of str
+            Identifiers for the jobs.
 
-        Returns:
-            - List of status codes.
-        '''
+        Returns
+        -------
+        list of int
+            The status codes of the requsted jobs.
+        """
 
         all_states = []
         for job_id in job_ids:
@@ -646,21 +650,24 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return all_states
 
     def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
-        '''Submits the command onto a freshly instantiated AWS EC2 instance.
+        """Submit the command onto a freshly instantiated AWS EC2 instance.
+
         Submit returns an ID that corresponds to the task that was just submitted.
 
-        Args:
-             - command (str): Commandline invocation to be made on the remote side.
-             - blocksize (int): Number of blocks requested
+        Parameters
+        ----------
+        command : str
+            Command to be invoked on the remote side.
+        blocksize : int
+            Number of blocks requested.
+        job_name : str
+            Prefix for the job name.
 
-        Kwargs:
-             - job_name (String): Prefix for job name
-
-        Returns:
-             - None: At capacity, cannot provision more
-             - job_id: (string) Identifier for the job
-
-        '''
+        Returns
+        -------
+        None or str
+            If at capacity, None will be returned. Otherwise, the job identifier will be returned.
+        """
 
         job_name = "parsl.auto.{0}".format(time.time())
         [instance, *rest] = self.spin_up_instance(command=command, job_name=job_name)
@@ -682,14 +689,18 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return instance.instance_id
 
     def cancel(self, job_ids):
-        ''' Cancels the jobs specified by a list of job ids
+        """Cancel the jobs specified by a list of job ids.
 
-        Args:
-             job_ids (list): List of of job identifiers
+        Parameters
+        ----------
+        job_ids : list of str
+            List of of job identifiers
 
-        Returns :
-             [True/False...]: If the cancel operation fails the entire list will be False.
-        '''
+        Returns
+        -------
+        list of bool
+            Each entry in the list will contain False if the operation fails. Otherwise, the entry will be True.
+        """
 
         try:
             self.client.terminate_instances(InstanceIds=list(job_ids))
@@ -708,9 +719,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return [True for x in job_ids]
 
     def show_summary(self):
-        """Print human readable summary of current
-           AWS state to log and to console
-        """
+        """Print human readable summary of current AWS state to log and to console."""
         self.get_instance_state()
         status_string = "EC2 Summary:\n\tVPC IDs: {}\n\tSubnet IDs: \
 {}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n"                                                          .format(
@@ -727,9 +736,10 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return status_string
 
     def teardown(self):
-        """Terminate all EC2 instances, delete all subnets,
-           delete security group, delete VPC,
-           and reset all instance variables
+        """Teardown the EC2 infastructure.
+
+        Terminate all EC2 instances, delete all subnets, delete security group, delete VPC,
+        and reset all instance variables.
         """
 
         self.shut_down_instance(self.instances)
@@ -761,10 +771,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
-        This may need to return more information in the futures:
-        { minsize, maxsize, current_requested }
-        '''
+        """Returns the current blocksize."""
         return len(self.instances)
 
     def goodbye(self):
