@@ -125,7 +125,7 @@ class GridEngine(ClusterProvider):
              - A job identifier, this could be an integer, string etc
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
 
         # Note: Fix this later to avoid confusing behavior.
@@ -169,7 +169,7 @@ class GridEngine(ClusterProvider):
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
 
         '''
 
@@ -208,7 +208,7 @@ class GridEngine(ClusterProvider):
              - A list of status from cancelling the job which can be True, False
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
 
         job_id_list = ' '.join(job_ids)

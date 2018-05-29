@@ -39,7 +39,7 @@ class ExecutionProvider(metaclass=ABCMeta):
              - A job identifier, this could be an integer, string etc
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
 
         pass
@@ -57,7 +57,7 @@ class ExecutionProvider(metaclass=ABCMeta):
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
 
         '''
 
@@ -74,7 +74,7 @@ class ExecutionProvider(metaclass=ABCMeta):
              - A list of status from cancelling the job which can be True, False
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
 
         pass

@@ -166,7 +166,7 @@ class ClusterProvider(ExecutionProvider):
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
 
         """
         if job_ids:
@@ -183,7 +183,7 @@ class ClusterProvider(ExecutionProvider):
              - A list of status from cancelling the job which can be True, False
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         """
 
         raise NotImplementedError
