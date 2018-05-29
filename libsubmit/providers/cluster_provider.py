@@ -3,7 +3,7 @@ import os
 from string import Template
 
 import libsubmit.error as ep_error
-from libsubmit.exec_utils import wtime_to_minutes
+from libsubmit.utils import wtime_to_minutes
 from libsubmit.launchers import launchers
 from libsubmit.providers.provider_base import ExecutionProvider
 
