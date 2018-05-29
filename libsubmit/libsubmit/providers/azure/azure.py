@@ -234,21 +234,25 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return ipptemplate
 
     def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
-        '''Submits the command onto a freshly instantiated AWS EC2 instance.
+        """Submit command to an Azure instance.
+
         Submit returns an ID that corresponds to the task that was just submitted.
 
-        Args:
-             - command (str): Commandline invocation to be made on the remote side.
-             - blocksize (int) : Number of blocks requested
+        Parameters
+        ----------
+        command : str
+            Command to be invoked on the remote side.
+        blocksize : int
+            Number of blocks requested.
+        job_name : str
+             Prefix for job name.
 
-        Kwargs:
-             - job_name (String): Prefix for job name
-
-        Returns:
-             - None: At capacity, cannot provision more
-             - job_id: (string) Identifier for the job
-
-        '''
+        Returns
+        -------
+        None or str
+            If at capacity (no more can be provisioned), None is returned. Otherwise,
+            an identifier for the job is returned.
+        """
 
         job_name = "parsl.auto.{0}".format(time.time())
         [instance, *rest] = self.deployer.deploy(command=command, job_name=job_name, blocksize=1)
@@ -265,15 +269,19 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
 
         return instance.instance_id
 
-    def status(self):
-        '''  Get the status of a list of jobs identified by their ids.
+    def status(self, job_ids):
+        """Get the status of a list of jobs identified by their ids.
 
-        Args:
-            - job_ids (List of ids) : List of identifiers for the jobs
+        Parameters
+        ----------
+        job_ids : list of str
+            Identifiers for the jobs.
 
-        Returns:
-            - List of status codes.
-        '''
+        Returns
+        -------
+        list of int
+            Status codes for each requested job.
+        """
         states = []
         statuses = self.deployer.get_vm_status([self.resources.get(job_id) for job_id in job_ids])
         for status in statuses:
@@ -281,15 +289,18 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
         return states
 
     def cancel(self, job_ids):
-        ''' Cancels the jobs specified by a list of job ids
+        """ Cancels the jobs specified by a list of job ids
 
-        Args:
-             job_ids (list) : List of of job identifiers
+        Parameters
+        ----------
+        list of str
+            List of identifiers of jobs which should be canceled.
 
-        Returns :
-             [True/False...] : If the cancel operation fails the entire list will be False.
-        TODO: Make this change statuses
-        '''
+        Returns
+        -------
+        list of bool
+            For each entry, True if the cancel operation is successful, otherwise False.
+        """
         for job_id in job_ids:
             try:
                 self.deployer.destroy(self.resources.get(job_id))
@@ -305,10 +316,7 @@ ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
-        This may need to return more information in the futures :
-        { minsize, maxsize, current_requested }
-        '''
+        """Returns the current blocksize."""
         return len(self.instances)
 
 
