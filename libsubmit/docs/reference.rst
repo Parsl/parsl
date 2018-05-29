@@ -5,6 +5,8 @@ Reference guide
     :toctree: stubs
     :nosignatures:
 
+    libsubmit.channels.local.local.LocalChannel
+    libsubmit.channels.ssh.ssh.SshChannel
     libsubmit.providers.aws.aws.EC2Provider
     libsubmit.providers.azureProvider.azureProvider.AzureProvider
     libsubmit.providers.cobalt.cobalt.Cobalt

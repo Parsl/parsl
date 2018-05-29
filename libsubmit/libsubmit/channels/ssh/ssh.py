@@ -30,12 +30,11 @@ class SSHChannel(RepresentationMixin):
         KWargs:
             - username (string) : Username on remote system
             - password (string) : Password for remote system
-            - channel_script_dir (string) : Full path to a script dir where
+            - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
 
         Raises:
         '''
-        self.setup_representation(locals())
 
         self.hostname = hostname
         self.username = username
@@ -47,9 +46,9 @@ class SSHChannel(RepresentationMixin):
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         if script_dir:
-            self.channel_script_dir = script_dir
+            self._script_dir = script_dir
         else:
-            self.channel_script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+            self._script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
 
         try:
             self.ssh_client.connect(
@@ -75,7 +74,7 @@ class SSHChannel(RepresentationMixin):
 
     @property
     def script_dir(self):
-        return self.channel_script_dir
+        return self._script_dir
 
     def prepend_envs(self, cmd, env={}):
         if len(env.keys()) > 0:

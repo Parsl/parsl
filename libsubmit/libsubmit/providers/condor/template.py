@@ -14,7 +14,7 @@ requirements            = ${requirements}
 leave_in_queue          = TRUE
 environment             = "${environment}"
 
-${condor_overrides}
+${overrides}
 
 queue
 

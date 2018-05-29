@@ -11,7 +11,24 @@ logger = logging.getLogger(__name__)
 
 
 class ClusterProvider(ExecutionProvider):
-    """ This class defines behavior common to all cluster/supercompute sytle scheduler systems.
+    """ This class defines behavior common to all cluster/supercompute-style scheduler systems.
+
+    Parameters
+    ----------
+    label : str
+        Label for this provider.
+    channel : Channel
+        Channel for accessing this provider. Possible channels include
+        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
+        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
+        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+    script_dir : str
+        Relative or absolute path to a directory where intermediate scripts are placed.
+    walltime : str
+        Walltime requested per block in HH:MM:SS.
+    launcher : str
+        FIXME
+
 
     .. code:: python
 
@@ -31,62 +48,48 @@ class ClusterProvider(ExecutionProvider):
                                 +-------------------
     """
 
-    def __init__(self, config, channel):
-        ''' Here we do initialization that is common across all cluster-style providers
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs:
-             - Channel (None): A channel is required for all cluster-style providers
-        '''
+    def __init__(self,
+                 label,
+                 channel,
+                 script_dir,
+                 nodes_per_block,
+                 tasks_per_node,
+                 init_blocks,
+                 min_blocks,
+                 max_blocks,
+                 parallelism,
+                 walltime,
+                 launcher):
         self._scaling_enabled = True
-        self._channels_required = True
+        self.label = label
         self.channel = channel
-        self.config = config
-        self.sitename = config['site']
-        launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
-        self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
+        self.tasks_per_block = nodes_per_block * tasks_per_node
+        self.nodes_per_block = nodes_per_block
+        self.tasks_per_node = tasks_per_node
+        self.init_blocks = init_blocks
+        self.min_blocks = min_blocks
+        self.max_blocks = max_blocks
+        self.parallelism = parallelism
         self.provisioned_blocks = 0
         self.launcher = launchers.get(launcher, None)
+        self.walltime = wtime_to_minutes(walltime)
 
-        self.script_dir = self.config["execution"]["script_dir"]
+        self.script_dir = script_dir
         if not os.path.exists(self.script_dir):
             os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    @property
-    def channels_required(self):
-        """Returns True if a channel is required, False otherwise."""
-        return self._channels_required
+        if launcher in ['srun', 'srun_mpi']:
+            logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
+                           "Recommended options include 'single_node' or 'aprun'.".format(launcher))
 
     def execute_wait(self, cmd, timeout=10):
         return self.channel.execute_wait(cmd, timeout)
 
-    def get_configs(self, cmd_string, blocksize):
-        ''' Compose a flat dict job_config with all necessary configs
-        for writing the submit script
-        '''
-        nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, nodes,
-                     self.config["execution"]["block"].get("taskBlocks", 1))
-
-        job_config = self.config["execution"]["block"]["options"]
-        job_config["submit_script_dir"] = self.channel.script_dir
-        job_config["nodes"] = nodes
-        job_config["taskBlocks"] = self.config["execution"]["block"]["taskBlocks"]
-        job_config["walltime"] = self.config["execution"]["block"]["walltime"]
-        job_config["overrides"] = job_config.get("overrides", '')
-        job_config["user_script"] = cmd_string
-
-        job_config["user_script"] = self.launcher(cmd_string, taskBlocks=job_config["taskBlocks"])
-        return job_config
-
     def _write_submit_script(self, template, script_filename, job_name, configs):
-        """Load the template string with config values and write the generated submit script to
-        a submit script file.
+        """Generate submit script and write it to a file.
 
         Args:
               - template (string) : The template string to be used for the writing submit script

@@ -5,7 +5,6 @@ import time
 from string import Template
 
 import libsubmit.error as ep_error
-from libsubmit.exec_utils import wtime_to_minutes
 from libsubmit.utils import RepresentationMixin
 from libsubmit.providers.condor.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
@@ -23,150 +22,90 @@ translate_table = {
 }
 
 
-class Condor(ExecutionProvider):
-    ''' Condor Execution Provider
+class Condor(RepresentationMixin, ExecutionProvider):
+    """HTCondor Execution Provider.
 
-    .. warning::
-        Please note that in the config documented below, description and values
-        are placed inside a schema that is delimited by #{ schema.. }
-
-    Here's the schema for the Condor provider:
-
-    .. code-block:: python
-
-         { "execution" : { # Definition of all execution aspects of a site
-
-              "executor"   : #{Description: Define the executor used as task executor,
-                             # Type : String,
-                             # Expected : "ipp",
-                             # Required : True},
-
-              "provider"   : #{Description : The provider name, in this case condor
-                             # Type : String,
-                             # Expected : "condor",
-                             # Required :  True },
-
-              "launcher"   : #{Description : Launcher to use for launching workers
-                             # Since condor doesn't generally do multi-node, "singleNode" is the
-                             # only meaningful launcher.
-                             # Type : String,
-                             # Default : "singleNode" },
-
-              "scriptDir"  : #{Description : Relative or absolute path to a
-                             # directory in which intermediate scripts are placed
-                             # Type : String,
-                             # Required : True},
-
-              "block" : { # Definition of a block
-
-                  "nodes"      : #{Description : # of nodes to provision per block
-                                 # Type : Integer,
-                                 # Default: 1},
-
-                  "taskBlocks" : #{Description : # of workers to launch per block
-                                 # as either an number or as a bash expression.
-                                 # for eg, "1" , "$(($CORES / 2))"
-                                 # Type : String,
-                                 #  Default: "1" },
-
-                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
-                                 # Type : String,
-                                 # Default : "01:00:00" },
-
-                  "initBlocks" : #{Description : # of blocks to provision at the start of
-                                 # the DFK
-                                 # Type : Integer
-                                 # Default : ?
-                                 # Required :    },
-
-                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : 0 },
-
-                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : ? },
-
-                  "options"   : {  # Scheduler specific options
-
-                      "project"    : #{Description : Project to which the job will be charged against
-                                     # Type : String,
-                                     # Required : True },
-
-                      "overrides"  : #{"Description : String to add specific condor attributes to the
-                                     # Condor submit script
-                                     # Type : String,
-                                     # Required : False },
-
-                      "workerSetup": #{"Description : String that sets up the env for the workers as well
-                                     # apps to run
-                                     # Type : String,
-                                     # Required : False },
-
-                      "requirements": #{"Description : Condor requirements
-                                      # Type : String,
-                                      # Required : True },
-                  }
-              }
-            }
-         }
-    '''
-
-    def __repr__(self):
-        return "<Condor Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
-
-    def __init__(self, config, channel=None):
-        ''' Initialize the Condor class
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs:
-             - Channel (none): A channel is required for htcondor.
-        '''
+    Parameters
+    ----------
+    channel : Channel
+        Channel for accessing this provider. Possible channels include
+        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
+        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
+        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+    label : str
+        Label for this provider.
+    nodes_per_block : int
+        Nodes to provision per block.
+    max_blocks : int
+        Maximum number of blocks to maintain.
+    environment : dict of str
+        A dictionary of environmant variable name and value pairs which will be set before
+        running a task.
+    script_dir : str
+        Relative or absolute path to a directory where intermediate scripts are placed.
+    project : str
+        Project which the job will be charged against
+    overrides : str
+        String to add specific condor attributes to the HTCondor submit script.
+    worker_setup : str
+        Command to be run before running a task.
+    requirements : str
+        Condor requirements.
+    """
+    def __init__(self,
+                 channel=None,
+                 label='condor',
+                 nodes_per_block=1,
+                 max_blocks=10,
+                 environment=None,
+                 script_dir='parsl_scripts',
+                 project='',
+                 overrides='',
+                 worker_setup='',
+                 requirements=''):
 
         self.channel = channel
         if self.channel is None:
-            logger.error("Provider:Condor cannot be initialized without a channel")
-            raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
+            logger.error("Condor provider cannot be initialized without a channel")
+            raise(ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
 
-        self.config = config
-        self.sitename = config['site']
+        self.label = label
+        self.nodes_per_block = nodes_per_block
         self.provisioned_blocks = 0
+        self.max_blocks = max_blocks
 
-        self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
+        self.environment = environment if environment is not None else {}
+        for key, value in self.environment.items():
+            # To escape literal quote marks, double them
+            # See: http://research.cs.wisc.edu/htcondor/manual/v8.6/condor_submit.html
+            try:
+                self.environment[key] = "'{}'".format(value.replace("'", '"').replace('"', '""'))
+            except AttributeError:
+                pass
 
-        self.scriptDir = self.config["execution"]["scriptDir"]
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        self.script_dir = script_dir
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
+        self.project = project
+        self.overrides = overrides
+        self.worker_setup = worker_setup
+        self.requirements = requirements
 
-        self.config['execution']['environment'] = self.config['execution'].get('environment', {})
-        self.config['execution']['block']['environment'] = self.config['execution']['block'].get('environment', {})
-
-        # Dictionary that keeps track of jobs, keyed on job_id
-        self.resources = {}
-
-    @property
-    def channels_required(self):
-        ''' Returns Bool on whether a channel is required
-        '''
-        return True
+        self.resources = {}  # Dictionary that keeps track of jobs, keyed on job_id
 
     def _status(self):
         """Update the resource dictionary with job statuses."""
 
         job_id_list = ' '.join(self.resources.keys())
         cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
-        '''
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
+        """
         Example output:
 
         $ condor_q 34524642.0 34524643.0 -af:jr JobStatus
         34524642.0 2
         34524643.0 1
-        '''
+        """
 
         for line in stdout.strip().split('\n'):
             parts = line.split()
@@ -175,38 +114,49 @@ class Condor(ExecutionProvider):
             self.resources[job_id]['status'] = status
 
     def status(self, job_ids):
-        '''  Get the status of a list of jobs identified by their ids.
+        """Get the status of a list of jobs identified by their ids.
 
-        Args:
-            - job_ids (List of ids) : List of identifiers for the jobs
+        Parameters
+        ----------
+        job_ids : list of int
+            Identifiers of jobs for which the status will be returned.
 
-        Returns:
-            - List of status codes.
+        Returns
+        -------
+        List of int
+            Status codes for the requested jobs.
 
-        '''
+        """
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    ###########################################################################################################
-    # Submit
-    ###########################################################################################################
     def _write_submit_script(self, template_string, script_filename, job_name, configs):
-        '''
-        Load the template string with config values and write the generated submit script to
+        """Load the template string with config values and write the generated submit script to
         a submit script file.
 
-        Args:
-              - template_string (string) : The template string to be used for the writing submit script script_filename (string) : Name of the submit script
-              - job_name (string) : job name
-              - configs (dict) : configs that get pushed into the template
+        Parameters
+        ----------
+        template_string : str
+            The template string to be used for the writing submit script
+        script_filename : str
+            Name of the submit script
+        job_name : str
+            The job name.
+        configs : dict of str
+             Configs that get pushed into the template.
 
-        Returns:
-              - True: on success
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
 
-        Raises:
-              - SchedulerMissingArgs : If template is missing args
-              - ScriptPathError : Unable to write submit script out
-        '''
+        Raises
+        ------
+        SchedulerMissingArgs
+            If template is missing arguments.
+        ScriptPathError
+            If a problem is encountered writing out the submit script.
+        """
 
         # This section needs to be brought upto par with the condor provider.
         try:
@@ -216,7 +166,6 @@ class Condor(ExecutionProvider):
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            # raise(ep_error.SchedulerMissingArgs(e.args, self.sitename))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
@@ -243,63 +192,51 @@ class Condor(ExecutionProvider):
         5 job(s) submitted to cluster 118907.
         1 job(s) submitted to cluster 118908.
 
-        Args:
-             - cmd_string (str) : Command string to execute
-             - blocksize (int) : Number of blocks to get
+        Parameters
+        ----------
+        command : str
+            Command to execute
+        blocksize : int
+            Number of blocks to request.
+        job_name : str
+            Job name prefix.
 
-        KWargs:
-             - job_name (str) : Job name prefix
+        Returns
+        -------
+        None or str
+            None if at capacity and cannot provision more; otherwise the identifier for the job.
+        """
 
-        Returns:
-             - None: At capacity, cannot provision more
-             - job_id: (string) Identifier for the job
-
-        '''
-
-        logger.debug("Attempting to launch at blocksize : %s" % blocksize)
-        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
+        logger.debug("Attempting to launch with blocksize: {}".format(blocksize))
+        if self.provisioned_blocks >= self.max_blocks:
+            template = "Provider {} is currently using {} blocks while max_blocks is {}; no blocks will be added"
+            logger.warn(template.format(self.label, self.provisioned_blocks, self.max_blocks))
             return None
 
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes", 1)
+        blocksize = max(self.nodes_per_block, blocksize)
 
-        # Set job name
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
-        # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
-        # Set executable script
-        userscript_path = "{0}/{1}.script".format(self.scriptDir, job_name)
+        userscript_path = "{0}/{1}.script".format(self.script_dir, job_name)
         userscript_path = os.path.abspath(userscript_path)
 
-        # Calculate nodes
-        nodes = self.config["execution"]["block"].get("nodes", 1)
-
-        env = self.config["execution"]["block"].get('environment', {})
-        env["JOBNAME"] = job_name
-        for key, value in env.items():
-            # To escape literal quote marks, double them
-            # See: http://research.cs.wisc.edu/htcondor/manual/v8.6/condor_submit.html
-            try:
-                env[key] = "'{}'".format(value.replace("'", '"').replace('"', '""'))
-            except AttributeError:
-                pass
+        self.environment["JOBNAME"] = "'{}'".format(job_name)
 
         job_config = {}
         job_config["job_name"] = job_name
         job_config["submit_script_dir"] = self.channel.script_dir
-        job_config["project"] = self.config["execution"]["block"]["options"].get("project", "")
-        job_config["nodes"] = nodes
-        job_config["condor_overrides"] = self.config["execution"]["block"]["options"].get("overrides", '')
-        job_config["worker_setup"] = self.config["execution"]["block"]["options"].get("workerSetup", '')
+        job_config["project"] = self.project
+        job_config["nodes"] = self.nodes_per_block
+        job_config["overrides"] = self.overrides
+        job_config["worker_setup"] = self.worker_setup
         job_config["user_script"] = command
         job_config["tasks_per_node"] = 1
-        job_config["requirements"] = self.config["execution"]["block"]["options"].get("requirements", "")
-        job_config["environment"] = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
+        job_config["requirements"] = self.requirements
+        job_config["environment"] = ' '.join(['{}={}'.format(key, value) for key, value in self.environment.items()])
 
         # Move the user script
         # This is where the command should be wrapped by the launchers.
@@ -315,7 +252,7 @@ class Condor(ExecutionProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         job_id = []
@@ -352,7 +289,7 @@ class Condor(ExecutionProvider):
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3, envs=self.config['execution']['environment'])
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
         rets = None
         if retcode == 0:
             for jid in job_ids:

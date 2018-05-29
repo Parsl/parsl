@@ -23,13 +23,11 @@ class SSHInteractiveLoginChannel(SSHChannel):
         KWargs:
             - username (string) : Username on remote system
             - password (string) : Password for remote system
-            - channel_script_dir (string) : Full path to a script dir where
+            - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
 
         Raises:
         '''
-        self.setup_representation(locals())
-
         self.hostname = hostname
         self.username = username
         self.password = password
@@ -40,9 +38,9 @@ class SSHInteractiveLoginChannel(SSHChannel):
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         if script_dir:
-            self.channel_script_dir = script_dir
+            self.script_dir = script_dir
         else:
-            self.channel_script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+            self.script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
 
         try:
             self.ssh_client.connect(

@@ -1,10 +1,10 @@
 import logging
 import os
-import pprint
 import time
 
 from libsubmit.error import *
 from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.utils import RepresentationMixin
 
 try:
     from azure.common.credentials import UserPassCredentials
@@ -37,66 +37,25 @@ sudo pip3 install ipyparallel parsl
 """
 
 
-class AzureProvider(ExecutionProvider):
-    '''
-    Here's a sample config for the Azure provider:
+class AzureProvider(ExecutionProvider, RepresentationMixin):
+    """A provider for using Azure resources.
 
-    .. code-block:: python
-
-         { "auth" : {
-              "profile"    : #{Description: Specify the profile to be used from the standard Azure config file
-                             # ~/.azure/config.
-                             # Type : String,
-                             # Expected : "default", # Use the 'default' aws profile
-                             # Required : False},
-
-            },
-
-           "execution" : { # Definition of all execution aspects of a site
-
-              "executor"   : #{Description: Define the executor used as task executor,
-                             # Type : String,
-                             # Expected : "ipp",
-                             # Required : True},
-
-              "provider"   : #{Description : The provider name, in this case ec2
-                             # Type : String,
-                             # Expected : "aws",
-                             # Required :  True },
-
-              "block" : { # Definition of a block
-
-                  "nodes"      : #{Description : # of nodes to provision per block
-                                 # Type : Integer,
-                                 # Default: 1},
-
-                  "taskBlocks" : #{Description : # of workers to launch per block
-                                 # as either an number or as a bash expression.
-                                 # for eg, "1" , "$(($CORES / 2))"
-                                 # Type : String,
-                                 #  Default: "1" },
-
+    Parameters
+    ----------
+    profile : str
+        Profile to be used if different from the standard Azure config file ~/.azure/config.
+    nodes_per_block : int
+        Nodes to provision per block. Default is 1.
+    template_file_location : str
+        Location of template file for Azure instance. Default is 'templates/template.json'.
                   "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
                                  # Type : String,
                                  # Default : "00:20:00" },
-
                   "initBlocks" : #{Description : # of blocks to provision at the start of
                                  # the DFK
                                  # Type : Integer
                                  # Default : ?
                                  # Required :    },
-
-                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : 0 },
-
-                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : ? },
-
-                  "options"   : {  # Scheduler specific options
 
 
                       "templateFileLocation" : #{Description : location of template file for azure instance
@@ -121,20 +80,18 @@ class AzureProvider(ExecutionProvider):
               }
             }
          }
-    '''
+    """
 
-    def __init__(self, config: dict, channel=None):
-        """INITIALIZE AZURE PROVIDER. USES AZURE PYTHON SDK TO PROVIDE EXECUTION RESOURCES
-            ARGS:
-             - :parm config (dict): Dictionary with all the config options.
-
-            KWargs:
-             - :param channel (None): A channel is not required for Azure.
-
-
-        """
-        self.config = self.read_configs(config)
-        self.config_logger()
+    def __init__(self,
+                 image_id,
+                 key_name,
+                 label='azure',
+                 region='us-east-2',
+                 azure_template_file='template.json',
+                 max_blocks=1,
+                 nodes_per_block=1,
+                 state_file=None):
+        self.configure_logger()
 
         if not _azure_enabled:
             raise OptionalModuleMissing(['azure'], "Azure Provider requires the azure module.")
@@ -150,49 +107,34 @@ class AzureProvider(ExecutionProvider):
 
         self.channel = channel
         self.config = config
-        self.sitename = config['site']
         self.provisioned_blocks = 0
         self.resources = {}
         self.instances = []
 
-        self.config = config
-        options = self.config["execution"]["block"]["options"]
-        logger.warn("Options %s", options)
-        self.instance_type = options.get("azure_template_file", "template.json")
-        self.image_id = options["imageId"]
-        self.key_name = options["keyName"]
-        self.region = options.get("region", 'us-east-2')
-        self.max_nodes = (
-            self.config["execution"]["block"].get("maxBlocks", 1) * self.config["execution"]["block"].get("nodes", 1))
+        self.instance_type = azure_template_file
+        self.image_id = image_id
+        self.key_name = key_name
+        self.region = region
+        self.max_nodes = max_blocks * nodes_per_block
 
         try:
             self.initialize_boto_client()
         except Exception as e:
-            logger.error("Site:[{0}] Failed to initialize".format(self))
+            logger.error("Azure '{}' failed to initialize.".format(self.label))
             raise e
 
         try:
-            self.statefile = self.config["execution"]["block"]["options"].get("stateFile", '.ec2site_{0}.json'.format(
-                self.sitename))
-            self.read_state_file(self.statefile)
+            if state_file is None:
+                state_file = '.azure_{}.json'.format(self.label)
+            self.read_state_file(state_file)
 
         except Exception as e:
             self.create_vpc().id
-            logger.info("No State File. Cannot load previous options. Creating new infrastructure")
+            logger.info("No State File. Cannot load previous options. Creating new infrastructure.")
             self.write_state_file()
 
-    def __repr__(self) -> str:
-        return "<Azure Execution Provider for site:{0}>".format(self.sitename)
-
-    @property
-    def channels_required(self):
-        ''' No channel required for Azure
-        '''
-        return False
-
-    def config_logger(self):
-        """Configure Logger
-        """
+    def configure_logger(self):
+        """Configure logger."""
         logger = logging.getLogger("AzureProvider")
         logger.setLevel(logging.INFO)
         if not os.path.isfile(self.config['logFile']):
@@ -204,11 +146,6 @@ class AzureProvider(ExecutionProvider):
         fh.setFormatter(formatter)
         logger.addHandler(fh)
         self.logger = logger
-
-    def pretty_configs(self, configs):
-        """prettyprint config"""
-        printer = pprint.PrettyPrinter(indent=4)
-        printer.pprint(configs)
 
     def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
         """Submit command to an Azure instance.
