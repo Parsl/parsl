@@ -3,6 +3,8 @@ import pytest
 from parsl import App
 from parsl.tests.configs.local_threads import config
 config['globals']['lazyErrors'] = True
+parsl.clear()
+parsl.load(config)
 
 
 @App('python')

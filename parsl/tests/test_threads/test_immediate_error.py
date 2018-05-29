@@ -1,9 +1,11 @@
 import parsl
 import pytest
 from parsl import App
-import time
 from parsl.tests.configs.local_threads import config
 config['globals']['lazyErrors'] = False
+parsl.clear()
+parsl.load(config)
+
 
 @App('python')
 def divide(a, b):
@@ -24,9 +26,9 @@ def test_non_lazy_behavior():
                 break
 
     except Exception as e:
-        assert isinstance(e, ZeroDivisionError), "Expected ZeroDivisionError, got : {}".format(e)
+        assert isinstance(e, ZeroDivisionError), "Expected ZeroDivisionError, got: {}".format(e)
     else:
-        raise("Expected ZeroDivisionError, got Nothing")
+        raise("Expected ZeroDivisionError, got nothing")
 
     return
 
