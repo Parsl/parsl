@@ -8,6 +8,7 @@ from libsubmit.utils import wtime_to_minutes
 from libsubmit.launchers import launchers
 from libsubmit.providers.cobalt.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -17,155 +18,101 @@ translate_table = {
     'RUNNING': 'RUNNING',
     'EXITING': 'COMPLETED',
     'KILLING': 'COMPLETED'
-}  # (special exit state
+}
 
 
-class Cobalt(ExecutionProvider):
-    ''' Cobalt Execution Provider
+class Cobalt(ExecutionProvider, RepresentationMixin):
+    """ Cobalt Execution Provider
 
     This provider uses cobalt to submit (qsub), obtain the status of (qstat), and cancel (qdel)
     jobs. Theo script to be used is created from a template file in this
     same module.
 
-    .. warning::
-        Please note that in the config documented below, description and values
-        are placed inside a schema that is delimited by #{ schema.. }
-
-    Here's the scheme for the Cobalt provider:
-
-    .. code-block:: python
-
-         { "execution" : { # Definition of all execution aspects of a site
-
-              "executor"   : #{Description: Define the executor used as task executor,
-                             # Type : String,
-                             # Expected : "ipp",
-                             # Required : True},
-
-              "provider"   : #{Description : The provider name, in this case cobalt
-                             # Type : String,
-                             # Expected : "cobalt",
-                             # Required :  True },
-
-              "launcher"   : #{Description : Launcher to use for launching workers
-                             # it is often necessary to use a launcher that the scheduler supports to
-                             # launch workers on multi-node jobs, or to partition MPI jobs
-                             # Type : String,
-                             # Default : "singleNode" },
-
-              "script_dir"  : #{Description : Relative or absolute path to a
-                             # directory in which intermediate scripts are placed
-                             # Type : String,
-                             # Default : "./.scripts"},
-
-              "block" : { # Definition of a block
-
-                  "nodes"      : #{Description : # of nodes to provision per block
-                                 # Type : Integer,
-                                 # Default: 1},
-
-                  "taskBlocks" : #{Description : # of workers to launch per block
-                                 # as either an number or as a bash expression.
-                                 # for eg, "1" , "$(($CORES / 2))"
-                                 # Type : String,
-                                 #  Default: "1" },
-
-                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
-                                 # Type : String,
-                                 # Default : "01:00:00" },
-
-                  "initBlocks" : #{Description : # of blocks to provision at the start of
-                                 # the DFK
-                                 # Type : Integer
-                                 # Default : ?
-                                 # Required :    },
-
-                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : 0 },
-
-                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : ? },
-
-                  "options"   : {  # Scheduler specific options
-
-                      "account"   : #{Description : Account that the job will be charged against
-                                    # Type : String,
-                                    # Required : True },
-
-                      "queue"     : #{Description : Torque queue to request blocks from
-                                    # Type : String,
-                                    # Required : False },
-
-                      "overrides" : #{"Description : String to append to the Torque submit script
-                                    # in the submit script to the scheduler
-                                    # Type : String,
-                                    # Required : False },
-                  }
-              }
-            }
-         }
-
-    '''
-
-    def __repr__(self):
-        return "<Cobalt Execution Provider for site:{0}>".format(self.sitename)
-
-    def __init__(self, config, channel=None):
-        ''' Initialize the Cobalt execution provider class
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs :
-             - channel (channel object) : default=None A channel object
-        '''
-
-        self.channel = channel
-        if self.channel is None:
-            logger.error("Provider:Cobalt cannot be initialized without a channel")
+    Parameters
+    ----------
+    channel : Channel
+        Channel for accessing this provider. Possible channels include
+        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
+        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
+        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+    label : str
+        Label for this provider.
+    script_dir : str
+        Relative or absolute path to a directory where intermediate scripts are placed.
+    launcher : str
+        Launcher to use for launching workers. Can be 'single_node', 'srun', 'aprun', or 'srun_mpi'.
+    nodes_per_block : int
+        Nodes to provision per block.
+    tasks_per_node : int
+        Tasks to run per node.
+    min_blocks : int
+        Minimum number of blocks to maintain.
+    max_blocks : int
+        Maximum number of blocks to maintain.
+    walltime : str
+        Walltime requested per block in HH:MM:SS.
+    account : str
+        Account that the job will be charged against.
+    queue : str
+        Torque queue to request blocks from.
+    overrides : str
+        String to append to the Torque submit script on the scheduler.
+    """
+    def __init__(self,
+                 channel,
+                 label='cobalt',
+                 script_dir='parsl_scripts',
+                 launcher='single_node',
+                 nodes_per_block=1,
+                 tasks_per_node=1,
+                 min_blocks=0,
+                 max_blocks=10,
+                 walltime="00:10:00",
+                 account=None,
+                 queue=None,
+                 overrides=''):
+        if channel is None:
+            logger.error("Cobalt cannot be initialized without a channel")
             raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
+        self.channel = channel
+        self.label = label
 
-        self.config = config
-        self.sitename = config['site']
         self.provisioned_blocks = 0
+        self.nodes_per_block = nodes_per_block
+        self.launcher = launcher
+        self.tasks_per_node = tasks_per_node
+        self.min_blocks = min_blocks
+        self.max_blocks = max_blocks
+        self.walltime = wtime_to_minutes(walltime)
+        self.account = account
+        self.overrides = overrides
 
-        self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
-
-        self.script_dir = self.config["execution"].get("script_dir", '.scripts')
+        self.script_dir = script_dir
         if not os.path.exists(self.script_dir):
             os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    @property
-    def channels_required(self):
-        ''' Returns Bool on whether a channel is required
-        '''
-
-        return True
+        if launcher in ['srun', 'srun_mpi']:
+            logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
+                           "Recommended options include 'single_node' or 'aprun'.".format(launcher))
 
     def _status(self):
-        ''' Internal: Do not call. Returns the status list for a list of job_ids
+        """ Internal: Do not call. Returns the status list for a list of job_ids
 
         Args:
               self
 
         Returns:
               [status...] : Status list of all jobs
-        '''
-
-        # job_id_list  = ','.join(self.resources.keys())
+        """
 
         jobs_missing = list(self.resources.keys())
 
         retcode, stdout, stderr = self.channel.execute_wait("qstat -u $USER", 3)
 
-        # Execute_wait failed. Do no update
+        # Execute_wait failed. Do no update.
         if retcode != 0:
             return
 
@@ -192,21 +139,24 @@ class Cobalt(ExecutionProvider):
                 self.resources[missing_job]['status'] = translate_table['EXITING']
 
     def status(self, job_ids):
-        '''  Get the status of a list of jobs identified by their ids.
+        """Get the status of a list of jobs identified by their ids.
 
-        Args:
-            - job_ids (List of ids) : List of identifiers for the jobs
+        Parameters
+        ----------
+        job_ids : list of str
+            Identifiers for the jobs.
 
-        Returns:
-            - List of status codes.
-
-        '''
+        Returns
+        -------
+        list of int
+            Status codes of the requested jobs.
+        """
 
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
     def _write_submit_script(self, template_string, script_filename, job_name, configs):
-        '''
+        """
         Load the template string with config values and write the generated submit script to
         a submit script file.
 
@@ -222,7 +172,7 @@ class Cobalt(ExecutionProvider):
         Raises:
               SchedulerMissingArgs : If template is missing args
               ScriptPathError : Unable to write submit script out
-        '''
+        """
 
         try:
             script_dir = os.path.dirname(script_filename)
@@ -245,7 +195,7 @@ class Cobalt(ExecutionProvider):
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise (ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            raise (ep_error.SchedulerMissingArgs(e.args, self.label))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
@@ -254,7 +204,7 @@ class Cobalt(ExecutionProvider):
         return True
 
     def submit(self, command, blocksize, job_name="parsl.auto"):
-        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
+        """ Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
@@ -276,66 +226,50 @@ class Cobalt(ExecutionProvider):
              - None: At capacity, cannot provision more
              - job_id: (string) Identifier for the job
 
-        '''
+        """
 
-        if self.provisioned_blocks >= self.config["execution"]["block"].get("maxBlocks", 2):
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
+        if self.provisioned_blocks >= self.max_blocks:
+            logger.warn("[%s] at capacity, cannot add more blocks now", self.label)
             return None
 
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes", 1)
+        if blocksize < self.nodes_per_block:
+            blocksize = self.nodes_per_block
 
-        # Set account options
-        account_opt = ''
-        if self.config["execution"]["block"]["options"].get("account", None):
-            account_opt = "-A {0}".format(self.config["execution"]["block"]["options"]["account"])
+        account_opt = '-A {}'.format(self.account) if self.account is not None else ''
 
-        # Set job name
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
-        # Set script path
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        # Calculate nodes
-        nodes = self.config["execution"]["block"].get("nodes", 1)
-        job_config = self.config["execution"]["block"]["options"]
-        job_config["nodes"] = nodes
-        job_config["overrides"] = job_config.get("overrides", '')
-        job_config["jobname"] = job_name
-        job_config["taskBlocks"] = self.config["execution"]["block"].get("taskBlocks", 1)
+        job_config = {}
+        job_config["overrides"] = self.overrides
 
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, job_config["nodes"],
-                     job_config["taskBlocks"])
+        logger.debug("Requesting blocksize:%s nodes_per_block:%s tasks_per_node:%s",
+                     blocksize, self.nodes_per_block, self.tasks_per_node)
 
         # Wrap the command
-        lname = self.config["execution"]["block"].get("launcher", "singleNode")
-        launcher = launchers.get(lname, None)
-        job_config["user_script"] = launcher(command, job_config["taskBlocks"])
+        launcher = launchers.get(self.launcher, None)
+        job_config["user_script"] = launcher(command, self.tasks_per_node * self.nodes_per_block)
 
-        # Get queue request if requested
-        self.queue = ''
-        if job_config.get("queue", None):
-            self.queue = "-q {0}".format(job_config["queue"])
+        queue_opt = '-q {}'.format(self.queue) if self.queue is not None else ''
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        logger.debug("Executing : qsub -n {0} {1} -t {2} {3} {4}".format(nodes, self.queue, self.max_walltime,
-                                                                         account_opt, channel_script_path))
-
-        command = "qsub -n {0} {1} -t {2} {3} {4}".format(nodes, self.queue, self.max_walltime, account_opt,
-                                                             channel_script_path)
+        command = 'qsub -n {0} {1} -t {2} {3} {4}'.format(
+            self.nodes_per_block, queue_opt, self.walltime, account_opt, channel_script_path)
+        logger.debug("Executing {}".format(command))
 
         retcode, stdout, stderr = self.channel.execute_wait(command, 10)
 
         # TODO : FIX this block
         if retcode != 0:
-            logger.error("Failed command  : {0}".format(command))
+            logger.error("Failed command: {0}".format(command))
             logger.error("Launch failed stdout:\n{0} \nstderr:{1}\n".format(stdout, stderr))
 
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
@@ -354,14 +288,14 @@ class Cobalt(ExecutionProvider):
         return job_id
 
     def cancel(self, job_ids):
-        ''' Cancels the jobs specified by a list of job ids
+        """ Cancels the jobs specified by a list of job ids
 
         Args:
         job_ids : [<job_id> ...]
 
         Returns :
         [True/False...] : If the cancel operation fails the entire list will be False.
-        '''
+        """
 
         job_id_list = ' '.join(job_ids)
         retcode, stdout, stderr = self.channel.execute_wait("qdel {0}".format(job_id_list), 3)

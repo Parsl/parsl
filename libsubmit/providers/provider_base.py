@@ -89,16 +89,3 @@ class ExecutionProvider(metaclass=ABCMeta):
         '''
 
         pass
-
-    @abstractproperty
-    def channels_required(self):
-        ''' Does the execution provider require a channel to function. Generally
-        all Cloud api's require no channels while all bash script based systems
-        such as schedulers for campus clusters (slurm, torque, cobalt, condor..)
-        need channels
-
-        Returns:
-              - Status (Bool)
-        '''
-
-        pass
