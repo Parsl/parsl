@@ -592,30 +592,6 @@ class EC2Provider(ExecutionProvider):
             self.instance_states[instance['InstanceId']] = instance['State']['Name']
         return self.instance_states
 
-    def ipyparallel_configuration(self):
-        config = ''
-        try:
-            with open(os.path.expanduser(self.config['iPyParallelConfigFile'])) as f:
-                config = f.read().strip()
-        except Exception as e:
-            logger.error(e)
-            logger.info("Couldn't find user iPyParallel config file. Trying default location.")
-            with open(os.path.expanduser("~/.ipython/profile_default/security/ipcontroller-engine.json")) as f:
-                config = f.read().strip()
-        else:
-            logger.error("Cannot find iPyParallel config file. Cannot proceed.")
-            return -1
-        ipptemplate = """
-cat <<EOF > ipengine.json
-{}
-EOF
-
-mkdir -p '.ipengine_logs'
-sleep 5
-ipengine --file=ipengine.json &> ipengine.log &
-ipengine --file=ipengine.json &> ipengine.log &""".format(config)
-        return ipptemplate
-
     def status(self, job_ids):
         """Get the status of a list of jobs identified by their ids.
 

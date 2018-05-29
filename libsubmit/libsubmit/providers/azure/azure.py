@@ -210,29 +210,6 @@ class AzureProvider(ExecutionProvider):
         printer = pprint.PrettyPrinter(indent=4)
         printer.pprint(configs)
 
-    def ipyparallel_configuration(self):
-        config = ''
-        try:
-            with open(os.path.expanduser(self.config['iPyParallelConfigFile'])) as f:
-                config = f.read().strip()
-        except Exception as e:
-            self.logger.error(e)
-            self.logger.info("Couldn't find user iPyParallel config file. Trying default location.")
-            with open(os.path.expanduser("~/.ipython/profile_parallel/security/ipcontroller-engine.json")) as f:
-                config = f.read().strip()
-        else:
-            self.logger.error("Cannot find iPyParallel config file. Cannot proceed.")
-            return -1
-        ipptemplate = """
-cat <<EOF> ipengine.json
-{}
-EOF
-
-mkdir -p '.ipengine_logs'
-sleep 5
-ipengine --file=ipengine.json &> .ipengine_logs/ipengine.log""".format(config)
-        return ipptemplate
-
     def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
         """Submit command to an Azure instance.
 
