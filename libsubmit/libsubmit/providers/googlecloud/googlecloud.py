@@ -109,7 +109,7 @@ class GoogleCloud():  # ExcecutionProvider):
              - A job identifier, this could be an integer, string etc
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
         instance, name = self.create_instance(command=command)
         self.current_blocksize += 1
@@ -128,7 +128,7 @@ class GoogleCloud():  # ExcecutionProvider):
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
 
         '''
         statuses = []
@@ -148,7 +148,7 @@ class GoogleCloud():  # ExcecutionProvider):
              - A list of status from cancelling the job which can be True, False
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
         statuses = []
         for job_id in job_ids:
