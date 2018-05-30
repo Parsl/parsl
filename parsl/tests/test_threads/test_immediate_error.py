@@ -1,13 +1,14 @@
 import parsl
 import pytest
 from parsl import App
+from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_threads import config
 config['globals']['lazyErrors'] = False
 parsl.clear()
-parsl.load(config)
+dfk = DataFlowKernel(config=config)
 
 
-@App('python')
+@App('python', dfk)
 def divide(a, b):
     return a / b
 

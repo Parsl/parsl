@@ -3,17 +3,20 @@ import argparse
 import pytest
 
 import parsl
+from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app import App
 from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.local_threads_ipp import config
 
 parsl.clear()
-parsl.load(config)
-
+dfk = DataFlowKernel(config=config)
 parsl.set_stream_logger()
 
+import logging
+logger = logging.getLogger(__name__)
 
-@App("python", sites=['local_threads'])
+
+@App("python", dfk, sites=['local_threads'])
 def python_app_2():
     import os
     import threading
@@ -22,7 +25,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", sites=['local_ipp'])
+@App("python", dfk, sites=['local_ipp'])
 def python_app_1():
     import os
     import threading
