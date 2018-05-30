@@ -29,7 +29,7 @@ def test_non_lazy_behavior():
     except Exception as e:
         assert isinstance(e, ZeroDivisionError), "Expected ZeroDivisionError, got: {}".format(e)
     else:
-        raise("Expected ZeroDivisionError, got nothing")
+        raise Exception("Expected ZeroDivisionError, got nothing")
 
     return
 
