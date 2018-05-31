@@ -85,6 +85,7 @@ class GoogleCloud():  # ExcecutionProvider):
         self.name_int = 0
         if not os.path.exists(self.script_dir):
             os.makedirs(self.script_dir)
+        self.num_instances = 0
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -187,8 +188,8 @@ class GoogleCloud():  # ExcecutionProvider):
         self.cancel([i for i in list(self.resources)])
 
     def create_instance(self, command=""):
-        name = "parslauto{}".format(self.name_int)
-        self.name_int += 1
+        name = "parslauto{}".format(self.num_instances)
+        self.num_instances += 1
         compute = self.client
         project = self.project_id
         zone = self.zone
