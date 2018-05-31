@@ -140,4 +140,3 @@ class Globus(object):
         else:
             logger.debug('Globus transfer {}, from {}{} to {}{} succeeded'.format(
                 task['task_id'], src_ep, src_path, dst_ep, dst_path))
-
