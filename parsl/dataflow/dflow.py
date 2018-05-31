@@ -85,7 +85,7 @@ class DataFlowKernel(object):
         # Update config with defaults
         self._config = update_config(config, self.rundir)
 
-        # Initializa the data manager
+        # Initialize the data manager
         self.data_manager = DataManager(self, config=self._config)
 
         # Start the anonymized usage tracker and send init msg
@@ -431,7 +431,7 @@ class DataFlowKernel(object):
 
         If the app task has the sites attributes not set (default=='all')
         the task will be launched on a randomly selected executor from the
-        list of executors. This behavior could later be updates to support
+        list of executors. This behavior could later be updated to support
         binding to sites based on user specified criteria.
 
         If the app task specifies a particular set of sites, it will be
