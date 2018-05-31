@@ -28,7 +28,7 @@ translate_table = {
 class Local(ExecutionProvider):
     ''' Local Execution Provider
 
-    This provider is used to launch IPP engines on the localhost.
+    This provider is used to provide execution resources from the localhost.
 
     .. warning::
         Please note that in the config documented below, description and values
