@@ -59,10 +59,7 @@ class File(str):
         return self.filepath
 
     def is_remote(self):
-        if (self.scheme == 'ftp' or
-                self.scheme == 'http' or
-                self.scheme == 'https' or
-                self.scheme == 'globus'):
+        if self.scheme in ['ftp', 'http', 'https', 'globus']:
             return True
         return False
 
@@ -78,10 +75,7 @@ class File(str):
         Returns:
              - filepath (string)
         """
-        if (self.scheme == 'ftp' or
-                self.scheme == 'http' or
-                self.scheme == 'https' or
-                self.scheme == 'globus'):
+        if self.scheme in ['ftp', 'http', 'https', 'globus']:
             if hasattr(self, 'local_path'):
                 return self.local_path
 

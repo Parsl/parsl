@@ -5,7 +5,7 @@ from parsl.app.app import App
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads_globus import config
 
-parsl.local(config)
+parsl.load(config)
 
 
 @App('python')
