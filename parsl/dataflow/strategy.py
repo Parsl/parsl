@@ -268,5 +268,13 @@ class Strategy(object):
                 pass
 
 
+            """
+            Test 2 things:
+                - Using a no-op strategy, manually scaling in and making sure it kills the right job
+                - Use the normal strategy, make sure it behaves as expected
+            Use local IPP
+            """
+
+
 if __name__ == '__main__':
     pass
