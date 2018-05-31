@@ -1,6 +1,4 @@
-import parsl
 from parsl import *
-from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 
 config = {
