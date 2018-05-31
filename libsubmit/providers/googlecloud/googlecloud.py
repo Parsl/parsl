@@ -78,7 +78,7 @@ class GoogleCloud():  # ExcecutionProvider):
         self.client = googleapiclient.discovery.build('compute', version)
         self.channel = None
         self.project_id = self.config["execution"]["block"]["options"]["projectID"]
-        self.zone = self.get_correct_zone(self.config["execution"]["block"]["options"]["region"])
+        self.zone = self.get_zone(self.config["execution"]["block"]["options"]["region"])
         launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
         self.launcher = launchers.get(launcher_name, None)
         self.script_dir = self.config["execution"].get("script_dir", ".scripts")
@@ -241,7 +241,7 @@ class GoogleCloud():  # ExcecutionProvider):
 
         return compute.instances().insert(project=project, zone=zone, body=config).execute(), name
 
-    def get_correct_zone(self, region):
+    def get_zone(self, region):
         res = self.client.zones().list(project=self.project_id).execute()
         for zone in res['items']:
             if region in zone['name'] and zone['status'] == "UP":
