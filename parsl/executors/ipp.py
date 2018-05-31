@@ -254,23 +254,39 @@ sleep infinity
 
         # Scale in, starting with idle blocks
         logger.debug('Scaling in by {}'.format(blocks))
+        logger.debug('IDs: {}'.format(self.executor.ids))
 
         # Get engine status and Client queue status
         status = dict(zip(self.engines, self.provider.status(self.engines)))
         queue_status = self.executor.queue_status()
 
         # Get block status, and those blocks with no tasks
-        all_blocks = [engine for engine in status if status[engine] == "RUNNING"]
+        # all_blocks = [engine for engine in status if status[engine] == "RUNNING"]
+        all_blocks = {k for k in queue_status.keys() if k != 'unassigned' and k not in self.killed_blocks}
         blocks_with_no_tasks = [
-            self.engines[id_]
-            for id_ in self.executor.ids
-            if queue_status[id_]['tasks'] == 0 and
-            status[self.engines[id_]] == 'RUNNING'
+            id_
+            for id_ in all_blocks
+            if queue_status[id_]['tasks'] == 0
         ]
+        running_blocks = list(all_blocks - set(blocks_with_no_tasks))
+        logger.debug('Blocks with no tasks: {}'.format(blocks_with_no_tasks))
+        spill_over = max(0, blocks - len(blocks_with_no_tasks))
+        if spill_over:
+            logger.warning('Requested to scale in more blocks than there are idle blocks: '
+                           '{} idle blocks, killing {}'.format(blocks, blocks + spill_over))
+        to_kill = blocks_with_no_tasks[:blocks] + running_blocks[:spill_over]
+        logger.debug('Killing: {}'.format(to_kill))
+        self.executor.shutdown(targets=to_kill)
+        self.killed_blocks |= set(to_kill)
+        return self.executor.shutdown(targets=to_kill)
+
 
         # Calculate how many to kill from idle blocks, and any spill over into active blocks
         # TODO Issue a warning if there's spill over
         spill_over = max(0, blocks - len(blocks_with_no_tasks))
+        if spill_over:
+            logger.warning('Requested to kill more blocks than there are idle blocks: '
+                           '{} requested, killing {}'.format(blocks, blocks + spill_over))
         to_kill = blocks_with_no_tasks[:blocks] + all_blocks[:spill_over]
 
         # Lots of logging, remove after development
