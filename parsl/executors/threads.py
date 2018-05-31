@@ -82,9 +82,6 @@ class ThreadPoolExecutor(ParslExecutor):
     def shutdown(self, block=False):
         """Shutdown the ThreadPool.
 
-        This method is notImplemented for threads and will raise the error if called.
-        The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
-
         Kwargs:
             - block (Bool): To block for confirmations or not
 
