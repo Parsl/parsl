@@ -3,7 +3,7 @@ import pytest
 import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
-from parsl.tests.configs.local_threads_globus import config
+from parsl.tests.configs.local_threads import config
 
 parsl.load(config)
 
@@ -19,13 +19,13 @@ def sort_strings(inputs=[], outputs=[]):
 
 
 @pytest.mark.local
-def test_implicit_staging_https():
+def test_implicit_staging_ftp():
     """Test implicit staging for an ftp file
 
-    Create a remote input file (https) that points to unsorted.txt.
+    Create a remote input file (ftp) that points to file_test_cpt.txt.
     """
 
-    unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+    unsorted_file = File('ftp://ftp.uconn.edu/48_hour/file_test_cpt.txt')
 
     # Create a local file for output data
     sorted_file = File('sorted.txt')
@@ -46,4 +46,4 @@ if __name__ == "__main__":
     if args.debug:
         parsl.set_stream_logger()
 
-    test_implicit_staging_https()
+    test_implicit_staging_ftp()
