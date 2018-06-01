@@ -26,7 +26,7 @@ def test_implicit_staging_ftp():
     Create a remote input file (ftp) that points to file_test_cpt.txt.
     """
 
-    unsorted_file = File('ftp://ftp.uconn.edu/48_hour/file_test_cpt.txt')
+    unsorted_file = File('ftp://ftp.cs.brown.edu/pub/info/README')
 
     # Create a local file for output data
     sorted_file = File('sorted.txt')
