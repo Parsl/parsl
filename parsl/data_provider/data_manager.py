@@ -126,7 +126,7 @@ class DataManager(ParslExecutor):
 
     def _get_working_dir(self, site_name):
         for s in self.config['sites']:
-            if s['site_name'] == site_name:
+            if s['site'] == site_name:
                 if 'data' not in s:
                     break
                 data = s['data']

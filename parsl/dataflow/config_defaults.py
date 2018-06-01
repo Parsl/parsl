@@ -83,7 +83,7 @@ def update_config(config, rundir):
             "maxThreads": 8
         }
     }
-    config["sites"].append(data_manager_site)
+    config_base["sites"].append(data_manager_site)
 
     # Update the config datastructure
     _config = copy.deepcopy(config)
