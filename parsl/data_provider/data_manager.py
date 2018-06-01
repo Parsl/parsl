@@ -176,7 +176,7 @@ class DataManager(ParslExecutor):
         pass
 
     def _ftp_stage_in_app(self, site_name):
-        return App("python", self.dfk, sites=[site_name])(self._ftp_stage_in)
+        return App("python", self.dfk, sites=site_name)(self._ftp_stage_in)
 
     def _ftp_stage_in(self, working_dir, outputs=[]):
         file = outputs[0]
