@@ -31,7 +31,9 @@ class DataManager(ParslExecutor):
     default_data_manager = None
 
     @classmethod
-    def get_data_manager(cls):
+    def get_data_manager(cls, dfk=None, config=None):
+        if not cls.default_data_manager or dfk:
+            cls.default_data_manager = DataManager(dfk, config=config)
         return cls.default_data_manager
 
     def __init__(self, dfk, max_workers=10, config=None):
@@ -51,9 +53,6 @@ class DataManager(ParslExecutor):
             self.config = {"sites": []}
         self.files = []
         self.globus = None
-
-        if not DataManager.get_data_manager():
-            DataManager.default_data_manager = self
 
     def submit(self, *args, **kwargs):
         """Submit a staging app. All optimization should be here."""

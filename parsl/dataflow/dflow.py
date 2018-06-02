@@ -86,7 +86,7 @@ class DataFlowKernel(object):
         self._config = update_config(config, self.rundir)
 
         # Initialize the data manager
-        self.data_manager = DataManager(self, config=self._config)
+        self.data_manager = DataManager.get_data_manager(self, config=self._config)
 
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)
