@@ -7,6 +7,7 @@ import subprocess
 from glob import glob
 
 import pytest
+from pytest_forked import forked_run_report
 
 import parsl
 from parsl.tests.utils import get_rundir
@@ -54,7 +55,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'isolate: mark test to only run locally-defined config in a subprocess'
+        'forked: mark test to only run in a subprocess'
     )
 
 
@@ -179,3 +180,12 @@ def setup_data():
         f.write("1\n")
     with open("data/test2.txt", 'w') as f:
         f.write("2\n")
+
+
+@pytest.mark.tryfirst
+def pytest_runtest_protocol(item):
+    if 'forked' in item.keywords:
+        reports = forked_run_report(item)
+        for rep in reports:
+            item.ihook.pytest_runtest_logreport(report=rep)
+        return True
