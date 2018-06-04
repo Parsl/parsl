@@ -71,6 +71,21 @@ def update_config(config, rundir):
                    }
     }
 
+    # Add DataManager thread pool
+    data_manager_site = {
+        "site": "data_manager",
+        "auth": {
+            "channel": None
+        },
+        "execution": {
+            "executor": "threads",
+            "provider": None,
+            "maxThreads": 8
+        }
+    }
+    config_base["sites"].append(data_manager_site)
+
+    # Update the config datastructure
     _config = copy.deepcopy(config)
     sites = copy.deepcopy(_config["sites"])
     del _config["sites"]

@@ -18,6 +18,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.config_defaults import update_config
+from parsl.data_provider.files import File
 from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 from parsl.utils import get_version
@@ -49,8 +50,7 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
-                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None,
-                 data_manager=None):
+                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None):
         """ Initialize the DataFlowKernel.
 
         Please note that keyword args passed to the DFK here will always override
@@ -65,7 +65,6 @@ class DataFlowKernel(object):
             - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
             - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
-            - data_manager (DataManager): User created DataManager
         Returns:
             DataFlowKernel object
         """
@@ -86,11 +85,8 @@ class DataFlowKernel(object):
         # Update config with defaults
         self._config = update_config(config, self.rundir)
 
-        # Set the data manager
-        if data_manager:
-            self.data_manager = data_manager
-        else:
-            self.data_manager = DataManager(config=self._config)
+        # Initialize the data manager
+        self.data_manager = DataManager.get_data_manager(self, config=self._config)
 
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)
@@ -287,14 +283,6 @@ class DataFlowKernel(object):
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
 
-        If the app task has the sites attributes not set (default=='all')
-        the task is launched on a randomly selected executor from the
-        list of executors. This behavior could later be updates to support
-        binding to sites based on user specified criteria.
-
-        If the app task specifies a particular set of sites, it will be
-        targetted at those specific sites.
-
         Args:
             task_id (uuid string) : A uuid string that uniquely identifies the task
             executable (callable) : A callable object
@@ -310,25 +298,13 @@ class DataFlowKernel(object):
             self.handle_update(task_id, memo_fu, memo_cbk=True)
             return memo_fu
 
-        target_sites = self.tasks[task_id]["sites"]
+        site = self.tasks[task_id]["site"]
         executor = None
-        if isinstance(target_sites, str) and target_sites.lower() == 'all':
-            # Pick a random site from the list
-            site, executor = random.choice(list(self.executors.items()))
-
-        elif isinstance(target_sites, list):
-            # Pick a random site from user specified list
-            try:
-                site = random.choice(target_sites)
-                executor = self.executors[site]
-
-            except Exception as e:
-                logger.error("Task {}: requests invalid site [{}]".format(task_id,
-                                                                          target_sites))
-        else:
-            logger.error("App {} specifies invalid site option, expects str|list".format(
-                self.tasks[task_id]['func'].__name__))
-
+        try:
+            executor = self.executors[site]
+        except Exception as e:
+            logger.error("Task {}: requests invalid site {}".format(task_id,
+                                                                    site))
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
         exec_fu.retries_left = self.fail_retries - \
@@ -336,6 +312,22 @@ class DataFlowKernel(object):
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
         logger.info("Task {} launched on site {}".format(task_id, site))
         return exec_fu
+
+    def _add_input_deps(self, site, args, kwargs):
+        """Look for inputs of the app that are remote files. Submit stage_in
+        apps for such files and replace the file objects in the inputs list with
+        corresponding DataFuture objects.
+
+        Args:
+            - site (str) : site where the app is going to be launched
+            - args (List) : Positional args to app function
+            - kwargs (Dict) : Kwargs to app function
+        """
+
+        inputs = kwargs.get('inputs', [])
+        for idx, f in enumerate(inputs):
+            if isinstance(f, File) and f.is_remote():
+                inputs[idx] = f.stage_in([site])
 
     @staticmethod
     def _count_all_deps(task_id, args, kwargs):
@@ -437,6 +429,14 @@ class DataFlowKernel(object):
     def submit(self, func, *args, parsl_sites='all', fn_hash=None, cache=False, **kwargs):
         """Add task to the dataflow system.
 
+        If the app task has the sites attributes not set (default=='all')
+        the task will be launched on a randomly selected executor from the
+        list of executors. This behavior could later be updated to support
+        binding to sites based on user specified criteria.
+
+        If the app task specifies a particular set of sites, it will be
+        targetted at those specific sites.
+
         >>> IF all deps are met:
         >>>   send to the runnable queue and launch the task
         >>> ELSE:
@@ -460,12 +460,23 @@ class DataFlowKernel(object):
         """
         task_id = self.task_count
         self.task_count += 1
+        # Determine an execution site
+        site = None
+        if isinstance(parsl_sites, str) and parsl_sites.lower() == 'all':
+            # Pick a random site from the list
+            while True:
+                site, executor = random.choice(list(self.executors.items()))
+                if site != 'data_manager':
+                    break
+        elif isinstance(parsl_sites, list):
+            # Pick a random site from user specified list
+            site = random.choice(parsl_sites)
+        else:
+            logger.error("App {} specifies invalid site option, expects str|list".format(
+                func.__name__))
 
-        # Get the dep count and a list of dependencies for the task
-        dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
-
-        task_def = {'depends': depends,
-                    'sites': parsl_sites,
+        task_def = {'depends': None,
+                    'site': site,
                     'func': func,
                     'func_name': func.__name__,
                     'args': args,
@@ -473,7 +484,7 @@ class DataFlowKernel(object):
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'callback': None,
-                    'dep_cnt': dep_cnt,
+                    'dep_cnt': None,
                     'exec_fu': None,
                     'checkpoint': None,
                     'fail_count': 0,
@@ -487,6 +498,14 @@ class DataFlowKernel(object):
                 "Task {0} in pending list".format(task_id))
         else:
             self.tasks[task_id] = task_def
+
+        # Transform remote input files to data futures
+        self._add_input_deps(site, args, kwargs)
+
+        # Get the dep count and a list of dependencies for the task
+        dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
+        self.tasks[task_id]['dep_cnt'] = dep_cnt
+        self.tasks[task_id]['depends'] = depends
 
         # Extract stdout and stderr to pass to AppFuture:
         task_stdout = kwargs.get('stdout')

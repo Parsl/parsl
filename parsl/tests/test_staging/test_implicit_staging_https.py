@@ -3,8 +3,9 @@ import pytest
 import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
-from parsl.tests.configs.local_threads_globus import config
+from parsl.tests.configs.local_threads import config
 
+parsl.clear()
 parsl.load(config)
 
 
@@ -19,28 +20,19 @@ def sort_strings(inputs=[], outputs=[]):
 
 
 @pytest.mark.local
-def test_explicit_staging():
-    """Test explicit staging via Globus.
+def test_implicit_staging_https():
+    """Test implicit staging for an ftp file
 
-    Create a remote input file that points to unsorted.txt on a publicly shared
-    endpoint.
+    Create a remote input file (https) that points to unsorted.txt.
     """
-    unsorted_file = File(
-        "globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt")
 
-    # Create a remote output file that points to sorted.txt on the go#ep1 Globus endpoint
+    unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
 
-    sorted_file = File(
-        "globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/~/sorted.txt")
+    # Create a local file for output data
+    sorted_file = File('sorted.txt')
 
-    dfu = unsorted_file.stage_in()
-    dfu.result()
-
-    f = sort_strings(inputs=[dfu], outputs=[sorted_file])
+    f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
     f.result()
-
-    fs = sorted_file.stage_out()
-    fs.result()
 
 
 if __name__ == "__main__":
@@ -55,4 +47,4 @@ if __name__ == "__main__":
     if args.debug:
         parsl.set_stream_logger()
 
-    test_explicit_staging()
+    test_implicit_staging_https()

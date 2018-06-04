@@ -1,8 +1,11 @@
 import os
 import logging
+import requests
+import ftplib
 import concurrent.futures as cf
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
+from parsl.app.app import App
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +31,12 @@ class DataManager(ParslExecutor):
     default_data_manager = None
 
     @classmethod
-    def get_data_manager(cls):
+    def get_data_manager(cls, dfk=None, config=None):
+        if not cls.default_data_manager or dfk:
+            cls.default_data_manager = DataManager(dfk, config=config)
         return cls.default_data_manager
 
-    def __init__(self, max_workers=10, config=None):
+    def __init__(self, dfk, max_workers=10, config=None):
         """Initialize the DataManager.
 
         Kwargs:
@@ -42,17 +47,15 @@ class DataManager(ParslExecutor):
         self._scaling_enabled = False
         self.executor = cf.ThreadPoolExecutor(max_workers=max_workers)
 
+        self.dfk = dfk
         self.config = config
         if not self.config:
             self.config = {"sites": []}
         self.files = []
         self.globus = None
 
-        if not DataManager.get_data_manager():
-            DataManager.default_data_manager = self
-
     def submit(self, *args, **kwargs):
-        """Submit a staging request."""
+        """Submit a staging app. All optimization should be here."""
         return self.executor.submit(*args, **kwargs)
 
     def scale_in(self, blocks, *args, **kwargs):
@@ -62,7 +65,15 @@ class DataManager(ParslExecutor):
         pass
 
     def shutdown(self, block=False):
-        return self.executor.shutdown(wait=block)
+        """Shutdown the ThreadPool.
+
+        Kwargs:
+            - block (Bool): To block for confirmations or not
+
+        """
+        x = self.executor.shutdown(wait=block)
+        logger.debug("Done with executor shutdown")
+        return x
 
     def scaling_enabled(self):
         return self._scaling_enabled
@@ -81,13 +92,15 @@ class DataManager(ParslExecutor):
                 globus_ep['working_dir'],
                 file.filename)
 
-    def _get_globus_site(self, site_name=None):
+    def _get_globus_site(self, site_name='all'):
+        if isinstance(site_name, list):
+            site_name = site_name[0]
         for s in self.config['sites']:
-            if site_name is None or s['site'] == site_name:
+            if site_name is 'all' or s['site'] == site_name:
                 if 'data' not in s:
                     continue
                 data = s['data']
-                if 'globus' not in s['data'] or 'working_dir' not in s['data']:
+                if 'globus' not in data or 'working_dir' not in data:
                     continue
                 globus_ep = data['globus']
                 if 'endpoint_name' not in globus_ep:
@@ -110,39 +123,102 @@ class DataManager(ParslExecutor):
                         'working_dir': working_dir}
         raise Exception('No site with a Globus endpoint and working_dir defined')
 
-    def stage_in(self, file, site_name=None):
+    def _get_working_dir(self, site_name):
+        for s in self.config['sites']:
+            if s['site'] == site_name:
+                if 'data' not in s:
+                    break
+                data = s['data']
+                if 'working_dir' not in data:
+                    break
+                return os.path.normpath(data['working_dir'])
+        return None
+
+    def stage_in(self, file, site_name):
         """Transport the file from the site of origin to the site.
 
         This function returns a DataFuture.
 
         Args:
             - self
-            - file (File) - file to stage in
-            - site_name (str) - a name of a site the file is going to be staged in to.
+            - file (File) : file to stage in
+            - site_name (str) : a site the file is going to be staged in to.
                                 If the site argument is not specified for a file
                                 with 'globus' scheme, the file will be staged in to
                                 the first site with the "globus" key in a config.
         """
 
         if file.scheme == 'file':
-            site_name = None
+            stage_in_app = self._file_stage_in_app()
+            app_fut = stage_in_app(outputs=[file])
+            return app_fut._outputs[0]
+        elif file.scheme == 'ftp':
+            working_dir = self._get_working_dir(site_name)
+            stage_in_app = self._ftp_stage_in_app(site_name=site_name)
+            app_fut = stage_in_app(working_dir, outputs=[file])
+            return app_fut._outputs[0]
+        elif file.scheme == 'http' or file.scheme == 'https':
+            working_dir = self._get_working_dir(site_name)
+            stage_in_app = self._http_stage_in_app(site_name=site_name)
+            app_fut = stage_in_app(working_dir, outputs=[file])
+            return app_fut._outputs[0]
         elif file.scheme == 'globus':
             globus_ep = self._get_globus_site(site_name)
+            stage_in_app = self._globus_stage_in_app()
+            app_fut = stage_in_app(globus_ep, outputs=[file])
+            return app_fut._outputs[0]
 
-        df = file.get_data_future(globus_ep['site_name'])
-        if df:
-            return df
+    def _file_stage_in_app(self):
+        return App("python", self.dfk, sites=['data_manager'])(self._file_stage_in)
 
-        if file.scheme == 'file':
-            f = self.submit(self._file_transfer_in, file)
-        elif file.scheme == 'globus':
-            f = self.submit(self._globus_transfer_in, file, globus_ep)
+    def _file_stage_in(self, outputs=[]):
+        pass
 
-        from parsl.app.futures import DataFuture
+    def _ftp_stage_in_app(self, site_name):
+        return App("python", self.dfk, sites=site_name)(self._ftp_stage_in)
 
-        df = DataFuture(f, file)
-        file.set_data_future(df, globus_ep['site_name'])
-        return df
+    def _ftp_stage_in(self, working_dir, outputs=[]):
+        file = outputs[0]
+        if working_dir:
+            os.makedirs(working_dir, exist_ok=True)
+            file.local_path = os.path.join(working_dir, file.filename)
+        else:
+            file.local_path = file.filename
+        with open(file.local_path, 'wb') as f:
+            ftp = ftplib.FTP(file.netloc)
+            ftp.login()
+            ftp.cwd(os.path.dirname(file.path))
+            ftp.retrbinary('RETR {}'.format(file.filename), f.write)
+            ftp.quit()
+
+    def _http_stage_in_app(self, site_name):
+        return App("python", self.dfk, sites=site_name)(self._http_stage_in)
+
+    def _http_stage_in(self, working_dir, outputs=[]):
+        file = outputs[0]
+        if working_dir:
+            os.makedirs(working_dir, exist_ok=True)
+            file.local_path = os.path.join(working_dir, file.filename)
+        else:
+            file.local_path = file.filename
+        resp = requests.get(file.url, stream=True)
+        with open(file.local_path, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+
+    def _globus_stage_in_app(self):
+        return App("python", self.dfk, sites=['data_manager'])(self._globus_stage_in)
+
+    def _globus_stage_in(self, globus_ep, outputs=[]):
+        file = outputs[0]
+        file.local_path = os.path.join(
+                globus_ep['working_dir'], file.filename)
+        dst_path = os.path.join(
+                globus_ep['endpoint_path'], file.filename)
+        self.globus.transfer_file(
+                file.netloc, globus_ep['endpoint_name'],
+                file.path, dst_path)
 
     def stage_out(self, file, site_name=None):
         """Transport the file from the local filesystem to the remote Globus endpoint.
@@ -159,30 +235,28 @@ class DataManager(ParslExecutor):
         """
 
         if file.scheme == 'file':
-            site_name = None
-            f = self.submit(self._file_transfer_out)
-            return f
-        if file.scheme == 'globus':
+            stage_out_app = self._file_stage_out_app()
+            return stage_out_app()
+        elif file.scheme == 'http' or file.scheme == 'https':
+            raise Exception('FTP file staging out is not supported')
+        elif file.scheme == 'ftp':
+            raise Exception('HTTP/HTTPS file staging out is not supported')
+        elif file.scheme == 'globus':
             globus_ep = self._get_globus_site(site_name)
-            f = self.submit(self._globus_transfer_out, file, globus_ep)
-            return f
+            stage_out_app = self._globus_stage_out_app()
+            return stage_out_app(globus_ep, inputs=[file])
 
-    def _file_transfer_in(self, file):
+    def _file_stage_out_app(self):
+        return App("python", self.dfk, sites=['data_manager'])(self._file_stage_out)
+
+    def _file_stage_out(self):
         pass
 
-    def _globus_transfer_in(self, file, globus_ep):
-        file.local_path = os.path.join(
-                globus_ep['working_dir'], file.filename)
-        dst_path = os.path.join(
-                globus_ep['endpoint_path'], file.filename)
-        self.globus.transfer_file(
-                file.netloc, globus_ep['endpoint_name'],
-                file.path, dst_path)
+    def _globus_stage_out_app(self):
+        return App("python", self.dfk, sites=['data_manager'])(self._globus_stage_out)
 
-    def _file_transfer_out(self, file):
-        pass
-
-    def _globus_transfer_out(self, file, globus_ep):
+    def _globus_stage_out(self, globus_ep, inputs=[]):
+        file = inputs[0]
         src_path = os.path.join(
                 globus_ep['endpoint_path'], file.filename)
         self.globus.transfer_file(

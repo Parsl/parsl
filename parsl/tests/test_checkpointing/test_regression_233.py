@@ -46,18 +46,21 @@ def run_race(sleep_dur):
 
 
 @pytest.mark.local
+@pytest.mark.forked
 def test_regress_234():
     """Test task_exit checkpointing with fast tasks"""
     run_race(0)
 
 
 @pytest.mark.local
+@pytest.mark.forked
 def test_slower_apps():
     """Test task_exit tests with slow apps"""
     run_race(0.5)
 
 
 @pytest.mark.local
+@pytest.mark.forked
 def test_checkpoint_availability():
     import os
 

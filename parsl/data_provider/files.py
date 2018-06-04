@@ -42,7 +42,7 @@ class File(str):
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {}
-        if self.scheme != 'file':
+        if self.scheme == 'globus':
             self.dman.add_file(self)
 
         self.cache = cache
@@ -58,6 +58,11 @@ class File(str):
     def __fspath__(self):
         return self.filepath
 
+    def is_remote(self):
+        if self.scheme in ['ftp', 'http', 'https', 'globus']:
+            return True
+        return False
+
     @property
     def filepath(self):
         """Return the resolved filepath on the side where it is called from.
@@ -70,7 +75,7 @@ class File(str):
         Returns:
              - filepath (string)
         """
-        if self.scheme == 'globus':
+        if self.scheme in ['ftp', 'http', 'https', 'globus']:
             if hasattr(self, 'local_path'):
                 return self.local_path
 
@@ -81,19 +86,25 @@ class File(str):
             # Return self.path for now
             return self.path
 
-    def stage_in(self, site=None):
-        """Transport file from the site of origin to local site."""
-        return self.dman.stage_in(self, site)
+    def stage_in(self, site_name):
+        """Transport file from the site of origin to local site.
+
+        Args:
+            - site_name (str) - site the file is staged in to.
+
+        """
+
+        return self.dman.stage_in(self, site_name)
 
     def stage_out(self):
         """Transport file from local filesystem to origin site."""
         return self.dman.stage_out(self)
 
-    def set_data_future(self, df, site=None):
-        self.data_future[site] = df
+    def set_data_future(self, df, site_name=None):
+        self.data_future[site_name] = df
 
-    def get_data_future(self, site):
-        return self.data_future.get(site)
+    def get_data_future(self, site_name):
+        return self.data_future.get(site_name)
 
     def __getstate__(self):
         """ Overriding the default pickling method.
