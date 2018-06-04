@@ -142,7 +142,7 @@ class DataManager(ParslExecutor):
         Args:
             - self
             - file (File) : file to stage in
-            - site_name (str|List) : a site the file is going to be staged in to.
+            - site_name (str) : a site the file is going to be staged in to.
                                 If the site argument is not specified for a file
                                 with 'globus' scheme, the file will be staged in to
                                 the first site with the "globus" key in a config.
