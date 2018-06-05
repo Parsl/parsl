@@ -46,4 +46,4 @@ def make_rundir(config=None, path=None):
     except Exception as e:
         logger.error("Failed to create a run directory")
         logger.error("Error: {0}".format(e))
-        exit(-1)
+        raise
