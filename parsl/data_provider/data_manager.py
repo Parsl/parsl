@@ -36,16 +36,16 @@ class DataManager(ParslExecutor):
             cls.default_data_manager = DataManager(dfk, config=config)
         return cls.default_data_manager
 
-    def __init__(self, dfk, max_workers=10, config=None):
+    def __init__(self, dfk, max_threads=10, config=None):
         """Initialize the DataManager.
 
         Kwargs:
-           - max_workers (int) : Number of threads (Default=10)
+           - max_threads (int) : Number of threads (Default=10)
            - config (dict): The config dict object for the site:
 
         """
         self._scaling_enabled = False
-        self.executor = cf.ThreadPoolExecutor(max_workers=max_workers)
+        self.executor = cf.ThreadPoolExecutor(max_workers=max_threads)
 
         self.dfk = dfk
         self.config = config
