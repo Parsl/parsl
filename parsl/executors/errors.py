@@ -22,7 +22,7 @@ class ScalingFailed(ExecutorError):
         self.reason = reason
 
 
-class ControllerErr(ExecutorError):
+class ControllerError(ExecutorError):
     """Error raise by IPP controller."""
 
     def __init__(self, reason):

@@ -103,12 +103,12 @@ class Controller(object):
         except FileNotFoundError as e:
             msg = "Could not find ipcontroller. Please make sure that ipyparallel is installed and available in your env"
             logger.error(msg)
-            raise ControllerErr(msg)
+            raise ControllerError(msg)
 
         except Exception as e:
             msg = "IPPController failed to start: {0}".format(e)
             logger.error(msg)
-            raise ControllerErr(msg)
+            raise ControllerError(msg)
 
         return
 
