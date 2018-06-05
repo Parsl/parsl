@@ -563,6 +563,17 @@ class DataFlowKernel(object):
 
         return task_def['app_fu']
 
+    # it might also be interesting to assert that all DFK
+    # tasks are in a "final" state (3,4,5) when the DFK
+    # is closed down, and report some kind of warning.
+    # although really I'd like this to drain properly...
+    # and a drain function might look like this.
+    def log_task_states(self):
+        logger.debug("List of tasks in DFK: (0=Pending, 2=Running, 3=Done, 4=Failed, 5=Dep failed)")
+        for tid in list(self.tasks):
+           logger.debug("Task tid {} status {}".format(tid, self.tasks[tid]['status']))
+        logger.debug("End of list of tasks in DFK")
+
     def atexit_cleanup(self):
         if not self.cleanup_called:
             self.cleanup()
@@ -585,6 +596,8 @@ class DataFlowKernel(object):
         if self.cleanup_called:
             raise Exception("attempt to clean up DFK when it has already been cleaned-up")
         self.cleanup_called = True
+
+        self.log_task_states()
 
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
