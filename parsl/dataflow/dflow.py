@@ -172,6 +172,9 @@ class DataFlowKernel(object):
 
     def handle_update(self, task_id, future, memo_cbk=False):
         """This function is called only as a callback from a task being done.
+        As such, it cannot ever meaningfully raise an exception that will be
+        caught anywhere else - exceptions raised here will be sent to the
+        concurrent.futures logger but not otherwise processed.
 
         Move done task from runnable -> done
         Move newly doable tasks from pending -> runnable , and launch
@@ -200,11 +203,11 @@ class DataFlowKernel(object):
             self.tasks[task_id]['fail_history'].append(future._exception)
             self.tasks[task_id]['fail_count'] += 1
 
-            if not self.lazy_fail:
-                logger.debug("Eager fail, skipping retry logic")
-                raise e
+            #if not self.lazy_fail:
+            #    logger.debug("Eager fail, skipping retry logic")
+            #    raise e # this doesn't make sense because it will only be logged by futures engine, not acted upon.
 
-            if self.tasks[task_id]['fail_count'] <= self.fail_retries:
+            if self.lazy_fail and self.tasks[task_id]['fail_count'] <= self.fail_retries:
                 logger.debug("Task {} marked for retry".format(task_id))
                 self.tasks[task_id]['status'] = States.pending
 
@@ -261,7 +264,7 @@ class DataFlowKernel(object):
                             raise e
                 else:
                     logger.info(
-                        "Task {} deferred due to dependency failure".format(tid))
+                        "Task {} marked as dep_fail due to dependency failure".format(tid))
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
                     try:
