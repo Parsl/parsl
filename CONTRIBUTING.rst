@@ -24,7 +24,7 @@ Documentation
 ==================
 
 Classes should be documented following the `NumPy/SciPy <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_
-Style. User and developer documentation is auto-generated and made available on
+style. A concise summary is available `here <http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html>`_. User and developer documentation is auto-generated and made available on
 `ReadTheDocs <https://parsl.readthedocs.io>`_.
 
 Testing
