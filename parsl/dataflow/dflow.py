@@ -23,6 +23,7 @@ from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 from parsl.utils import get_version
 from parsl.app.errors import RemoteException
+from parsl.db_logger import get_db_logger
 
 # from parsl.dataflow.start_controller import Controller
 # Exceptions
@@ -50,7 +51,8 @@ class DataFlowKernel(object):
     """
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
-                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None):
+                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None,
+                 db_logger=get_db_logger(level=logging.CRITICAL)):
         """ Initialize the DataFlowKernel.
 
         Please note that keyword args passed to the DFK here will always override
@@ -65,6 +67,8 @@ class DataFlowKernel(object):
             - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
             - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
+            - db_logger (logger object): Default is set to CRITICAL
+
         Returns:
             DataFlowKernel object
         """
@@ -91,6 +95,7 @@ class DataFlowKernel(object):
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
+        self.db_logger = db_logger
 
         # Load Memoizer with checkpoints before we start the run.
         if checkpointFiles:
@@ -113,7 +118,8 @@ class DataFlowKernel(object):
             self.executors = epf.make(self.rundir, self._config)
 
             # set global vars from config
-            self.lazy_fail = self._config["globals"].get("lazyErrors", lazyErrors)
+            self.lazy_fail = self._config["globals"].get(
+                "lazyErrors", lazyErrors)
             self.fail_retries = self._config["globals"].get("retries", retries)
             self.flowcontrol = FlowControl(self, self._config)
             self.checkpoint_mode = self._config["globals"].get("checkpointMode",
@@ -124,10 +130,13 @@ class DataFlowKernel(object):
                 try:
                     h, m, s = map(int, period.split(':'))
                     checkpoint_period = (h * 3600) + (m * 60) + s
-                    self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
+                    self._checkpoint_timer = Timer(
+                        self.checkpoint, interval=checkpoint_period)
                 except Exception as e:
-                    logger.error("invalid checkpointPeriod provided:{0} expected HH:MM:SS".format(period))
-                    self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
+                    logger.error(
+                        "invalid checkpointPeriod provided:{0} expected HH:MM:SS".format(period))
+                    self._checkpoint_timer = Timer(
+                        self.checkpoint, interval=(30 * 60))
 
         else:
             self._executors_managed = False
@@ -202,20 +211,37 @@ class DataFlowKernel(object):
 
             if not self.lazy_fail:
                 logger.debug("Eager fail, skipping retry logic")
+                self.db_logger.info("Task Fail", extra={'task': task_id,
+                                                        'task_name': self.tasks[task_id]['func_name'],
+                                                        'status': 'failed',
+                                                        'fail_mode': 'eager'})
                 raise e
 
             if self.tasks[task_id]['fail_count'] <= self.fail_retries:
                 logger.debug("Task {} marked for retry".format(task_id))
+                self.db_logger.info("Task Retry", extra={'task': task_id,
+                                                         'task_name': self.tasks[task_id]['func_name'],
+                                                         'status': 'retry_set',
+                                                         'fail_mode': 'lazy'})
                 self.tasks[task_id]['status'] = States.pending
 
             else:
                 logger.info("Task {} failed after {} retry attempts".format(task_id,
                                                                             self.fail_retries))
+                self.db_logger.info("Task Retry Failed", extra={'task': task_id,
+                                                                'task_name': self.tasks[task_id]['func_name'],
+                                                                'status': 'retry_failed',
+                                                                'fail_mode': 'lazy'})
+
                 self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
 
         else:
             logger.info("Task {} completed".format(task_id))
+            self.db_logger.info("Task Done", extra={'task': task_id,
+                                                    'task_name': self.tasks[task_id]['func_name'],
+                                                    'status': 'done'})
+
             self.tasks[task_id]['status'] = States.done
             final_state_flag = True
 
@@ -264,6 +290,11 @@ class DataFlowKernel(object):
                         "Task {} deferred due to dependency failure".format(tid))
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
+                    self.db_logger.info("Task Dep Fail", extra={'task': task_id,
+                                                                'task_name': self.tasks[task_id]['func_name'],
+                                                                'status': 'dep_fail',
+                                                                'fail_mode': 'lazy'})
+
                     try:
                         fu = Future()
                         fu.retries_left = 0
@@ -306,6 +337,12 @@ class DataFlowKernel(object):
             logger.error("Task {}: requests invalid site {}".format(task_id,
                                                                     site))
         exec_fu = executor.submit(executable, *args, **kwargs)
+        self.db_logger.info("Task Launch", extra={'task': task_id,
+                                                  'task_name': self.tasks[task_id]['func_name'],
+                                                  'depends': [fu.tid for fu in self.tasks[task_id]['depends']],
+                                                  'status': 'launched',
+                                                  'site': site,
+                                                  })
         self.tasks[task_id]['status'] = States.running
         exec_fu.retries_left = self.fail_retries - \
             self.tasks[task_id]['fail_count']
