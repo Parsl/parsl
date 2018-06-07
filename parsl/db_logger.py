@@ -17,7 +17,7 @@ class OptionalModuleMissing(Exception):
         self.reason = reason
 
     def __repr__(self):
-        return "Unable to Initialize logger.Missing:{0},  Reason:{1}".format(
+        return "Unable to initialize logger.Missing:{0},  Reason:{1}".format(
             self.module_names, self.reason
         )
 
@@ -51,9 +51,10 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
 
     Raises
     ------
+    OptionalModuleMissing
 
     """
-    logger = logging.getLogger("ParslElasticsearch")
+    logger = logging.getLogger(__file__)
     if level > logging.INFO:
         logger.addHandler(NullHandler())
     else:
@@ -66,7 +67,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                                use_ssl=True,
                                auth_type=CMRESHandler.AuthType.NO_AUTH,
                                es_index_name="my_python_index",
-                               es_additional_fields={'Campaign': "test", 'Username': "yadu"})
+                               es_additional_fields={'Campaign': "test"})
         logger = logging.getLogger("ParslElasticsearch")
         logger.setLevel(level)
         logger.addHandler(handler)
