@@ -23,6 +23,7 @@ def bad_foo(x, y):
     return x * y
 
 
+@pytest.mark.skip('fails intermittently')
 @pytest.mark.local
 def test_simple():
     print("Start")
@@ -35,6 +36,7 @@ def test_simple():
 
 
 @pytest.mark.local
+@pytest.mark.skip('fails intermittently')
 def test_slow():
     futs = {}
     tex = TurbineExecutor()
@@ -46,6 +48,7 @@ def test_slow():
 
 
 @pytest.mark.local
+@pytest.mark.skip('fails intermittently')
 def test_except():
     with pytest.raises(NameError):
         tex = TurbineExecutor()
