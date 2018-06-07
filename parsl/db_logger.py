@@ -31,7 +31,7 @@ class NullHandler(logging.Handler):
 
 def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
                   port=443,
-                  level=logging.CRITICAL,
+                  enable_es_logging=False,
                   index_name="parsl.campaign"):
     """
     Parameters
@@ -40,8 +40,8 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
         URL to the elasticsearch cluster. Skip the http(s)://
     port : int, optional
         Port to use to access the elasticsearch cluster
-    level : logging.LEVEL, optional
-        This module will log *only* if logging.INFO or lower is provided.
+    enable_es_logging : Bool, optional
+        Set to True to enable logging to elasticsearch
     index_name : str, optional
         Index name to use for elasticsearch
 
@@ -55,9 +55,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
 
     """
     logger = logging.getLogger(__file__)
-    if level > logging.INFO:
-        logger.addHandler(NullHandler())
-    else:
+    if enable_es_logging is True:
         if not _es_logging_enabled:
             raise OptionalModuleMissing(
                 ['cmreslogging'], "Logging to ElasticSearch requires the cmreslogging module")
@@ -71,5 +69,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
         logger = logging.getLogger("ParslElasticsearch")
         logger.setLevel(level)
         logger.addHandler(handler)
+    else:
+        logger.addHandler(NullHandler())
 
     return logger
