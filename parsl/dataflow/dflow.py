@@ -52,7 +52,7 @@ class DataFlowKernel(object):
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
                  rundir=None, retries=0, checkpointFiles=None, checkpointMode=None,
-                 db_logger=get_db_logger(level=logging.CRITICAL)):
+                 db_logger=get_db_logger(enable_es_logging=False)):
         """ Initialize the DataFlowKernel.
 
         Please note that keyword args passed to the DFK here will always override
