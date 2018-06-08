@@ -538,14 +538,16 @@ class DataFlowKernel(object):
                                                                       task_def['app_fu']))
 
             else:
-                self.tasks[task_id]['exec_fu'] = None
+                fu = Future()
+                fu.set_exception(DependencyError(exceptions,
+                                                 "Failures in input dependencies",
+                                                 None))
+                fu.retries_left = 0
+                self.tasks[task_id]['exec_fu'] = fu
                 app_fu = AppFuture(self.tasks[task_id]['exec_fu'],
                                    tid=task_id,
                                    stdout=task_stdout,
                                    stderr=task_stderr)
-                app_fu.set_exception(DependencyError(exceptions,
-                                                     "Failures in input dependencies",
-                                                     None))
                 self.tasks[task_id]['app_fu'] = app_fu
                 self.tasks[task_id]['status'] = States.dep_fail
                 logger.debug("Task {} failed due to failure in parent task(s):{}".format(task_id,
