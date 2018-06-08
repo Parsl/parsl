@@ -18,6 +18,6 @@ script:
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - flake8 parsl/
-    - pytest parsl/tests --config local
+    - (for test in parsl/tests/test*; do pytest $test --config local || exit; done ) ;
     # - pytest parsl/tests --config parsl/tests/configs/local_threads.py
     # - pytest parsl/tests --config parsl/tests/configs/local_ipp.py
