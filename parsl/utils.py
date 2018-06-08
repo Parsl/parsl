@@ -25,7 +25,7 @@ def get_version():
         status = 'dirty' if diff else 'clean'
         version = '{v}-{head}-{status}'.format(v=VERSION, head=head, status=status)
     except Exception as e:
-        logger.exception("Unable to determine code state")
+        pass
 
     return version
 
