@@ -38,7 +38,7 @@ class Memoizer(object):
     def __init__(self, dfk, memoize=True, checkpoint={}):
         """Initialize the memoizer.
 
-        If either the global config or the kwarg memoize is set to false,
+        If either the appCache global config or the memoize kwarg is set to false,
         memoization is disabled.
 
         Args:
