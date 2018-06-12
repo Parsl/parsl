@@ -7,7 +7,6 @@ import os
 
 simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
 
-
 def monitor(pid):
     host = 'search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com'
     port = 443
@@ -22,6 +21,7 @@ def monitor(pid):
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
+    logger.info("starting monitoring for {} on {}".format(pid, os.getpid()))
     pm = psutil.Process(pid)
     pm.cpu_percent()
     while True:

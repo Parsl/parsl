@@ -88,10 +88,10 @@ def App(apptype, executor=None, walltime=60, cache=False, sites='all'):
          An AppFactory object, which when called runs the apps through the executor.
     """
     from parsl import APP_FACTORY_FACTORY
-    from parsl.monitoring.exploring_monitoring_script import monitor_wrapper
+    from parsl.monitoring import exploring_monitoring_script
 
     def wrapper(f):
-        return APP_FACTORY_FACTORY.make(apptype, monitor_wrapper(f),
+        return APP_FACTORY_FACTORY.make(apptype, exploring_monitoring_script.monitor_wrapper(f),
                                         executor=executor,
                                         sites=sites,
                                         cache=cache,
