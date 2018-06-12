@@ -73,7 +73,7 @@ class ExecProviderFactory (object):
 
         for site in config.get("sites"):
 
-            logger.debug("Constructing site : %s ", site.get('site', 'Unnamed_site'))
+            logger.debug("Constructing site: %s ", site.get('site', 'Unnamed_site'))
             channel_name = site["auth"]["channel"]
 
             if channel_name in self.channels:
@@ -88,7 +88,7 @@ class ExecProviderFactory (object):
                 raise BadConfig(site["site"],
                                 "invalid channel:{0} requested".format(channel_name))
 
-            logger.debug("Created channel : {0}".format(channel))
+            logger.debug("Created channel: {0}".format(channel))
 
             provider_name = site["execution"]["provider"]
             if provider_name in self.execution_providers:
@@ -101,7 +101,7 @@ class ExecProviderFactory (object):
                 raise BadConfig(site["site"],
                                 "invalid provider:{0} requested".format(provider_name))
 
-            logger.debug("Created execution_provider : {0}".format(provider))
+            logger.debug("Created execution_provider: {0}".format(provider))
 
             executor_name = site["execution"]["executor"]
 
@@ -119,8 +119,8 @@ class ExecProviderFactory (object):
                     site["controller"]['profile'] = config["controller"].get('profile', site["site"])
 
                     controller = Controller(**site["controller"])
-                    logger.debug("Controller engine file : %s", controller.engine_file)
-                    logger.debug("Controller client file : %s", controller.client_file)
+                    logger.debug("Controller engine file: %s", controller.engine_file)
+                    logger.debug("Controller client file: %s", controller.client_file)
 
                 executor = self.executors[executor_name](execution_provider=provider,
                                                          controller=controller,
@@ -132,7 +132,7 @@ class ExecProviderFactory (object):
                 raise BadConfig(site["site"],
                                 "invalid executor:{0} requested".format(executor_name))
 
-            logger.debug("Created executor : {0}".format(executor))
+            logger.debug("Created executor: {0}".format(executor))
 
             sites[site["site"]] = executor
 

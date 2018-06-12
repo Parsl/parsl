@@ -534,8 +534,7 @@ class DataFlowKernel(object):
                                                           tid=task_id,
                                                           stdout=task_stdout,
                                                           stderr=task_stderr)
-                logger.debug("Task {} launched with AppFut:{}".format(task_id,
-                                                                      task_def['app_fu']))
+                logger.debug("Task {} launched with AppFuture: {}".format(task_id, task_def['app_fu']))
 
             else:
                 fu = Future()
@@ -560,8 +559,7 @@ class DataFlowKernel(object):
                                                       stdout=task_stdout,
                                                       stderr=task_stderr)
             self.tasks[task_id]['status'] = States.pending
-            logger.debug("Task {} launched with AppFut:{}".format(task_id,
-                                                                  task_def['app_fu']))
+            logger.debug("Task {} launched with AppFuture: {}".format(task_id, task_def['app_fu']))
 
         return task_def['app_fu']
 
@@ -693,9 +691,9 @@ class DataFlowKernel(object):
 
             if count == 0:
                 if self.checkpointed_tasks == 0:
-                    logger.warn("No tasks checkpointed, please ensure caching is enabled")
+                    logger.warn("No tasks checkpointed so far in this run. Please ensure caching is enabled")
                 else:
-                    logger.debug("No tasks checkpointed")
+                    logger.debug("No tasks checkpointed in this pass.")
             else:
                 logger.info("Done checkpointing {} tasks".format(count))
 
