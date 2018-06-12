@@ -1,3 +1,4 @@
+import itertools
 import os
 import logging
 import atexit
@@ -563,6 +564,54 @@ class DataFlowKernel(object):
 
         return task_def['app_fu']
 
+    # it might also be interesting to assert that all DFK
+    # tasks are in a "final" state (3,4,5) when the DFK
+    # is closed down, and report some kind of warning.
+    # although really I'd like this to drain properly...
+    # and a drain function might look like this.
+    # If tasks have their states changed, this won't work properly
+    # but we can validate that...
+    def log_task_states(self):
+        logger.info("Summary of tasks in DFK:")
+
+        total_summarised = 0
+
+        keytasks = []
+        for tid in self.tasks:
+            keytasks.append((self.tasks[tid]['status'], tid))
+
+        def first(t):
+            return t[0]
+
+        sorted_keytasks = sorted(keytasks, key=first)
+
+        grouped_sorted_keytasks = itertools.groupby(sorted_keytasks, key=first)
+
+        # caution: g is an iterator that also advances the
+        # grouped_sorted_tasks iterator, so looping over
+        # both grouped_sorted_keytasks and g can only be done
+        # in certain patterns
+
+        for k, g in grouped_sorted_keytasks:
+
+            ts = []
+
+            for t in g:
+                tid = t[1]
+                ts.append(str(tid))
+                total_summarised = total_summarised + 1
+
+            tids_string = ", ".join(ts)
+
+            logger.info("Tasks in state {}: {}".format(str(k), tids_string))
+
+        total_in_tasks = len(self.tasks)
+        if total_summarised != total_in_tasks:
+            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but tasks list contains {} tasks".format(
+                total_summarised, total_in_tasks))
+
+        logger.info("End of summary")
+
     def atexit_cleanup(self):
         if not self.cleanup_called:
             self.cleanup()
@@ -585,6 +634,8 @@ class DataFlowKernel(object):
         if self.cleanup_called:
             raise Exception("attempt to clean up DFK when it has already been cleaned-up")
         self.cleanup_called = True
+
+        self.log_task_states()
 
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
