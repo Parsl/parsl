@@ -4,7 +4,6 @@ from string import Template
 
 import libsubmit.error as ep_error
 from libsubmit.utils import wtime_to_minutes
-from libsubmit.launchers import launchers
 from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
@@ -71,7 +70,7 @@ class ClusterProvider(ExecutionProvider):
         self.max_blocks = max_blocks
         self.parallelism = parallelism
         self.provisioned_blocks = 0
-        self.launcher = launchers.get(launcher, None)
+        self.launcher = launcher
         self.walltime = wtime_to_minutes(walltime)
 
         self.script_dir = script_dir
@@ -80,10 +79,6 @@ class ClusterProvider(ExecutionProvider):
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
-
-        if launcher in ['srun', 'srun_mpi']:
-            logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
-                           "Recommended options include 'single_node' or 'aprun'.".format(launcher))
 
     def execute_wait(self, cmd, timeout=10):
         return self.channel.execute_wait(cmd, timeout)
