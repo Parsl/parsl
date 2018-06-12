@@ -3,11 +3,12 @@ import logging
 from multiprocessing import Process
 import psutil
 from cmreslogging.handlers import CMRESHandler
+import os
 
 simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
 
 
-def monitor(p):
+def monitor(pid):
     host = 'search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com'
     port = 443
     handler = CMRESHandler(hosts=[{'host': host,
@@ -21,21 +22,22 @@ def monitor(p):
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
-    p.start()
-    pm = psutil.Process(p.pid)
+    pm = psutil.Process(pid)
     pm.cpu_percent()
-    while p.is_alive():
+    while True:
         d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
         d["psutil_cpu"] = psutil.cpu_count()
         logger.info("test", extra=d)
-        time.sleep(1)
-    return p.result()
+        time.sleep(2)
 
 
 def monitor_wrapper(f):
     def wrapped(*args, **kwargs):
-        p = Process(target=f, args=args, kwargs=kwargs)
-        return monitor(p)
+        p = Process(target=monitor, args=(os.getpid(),))
+        p.start()
+        result = f(*args, **kwargs)
+        p.terminate()
+        return result
     return wrapped
 
 
