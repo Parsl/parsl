@@ -2,9 +2,10 @@ import logging
 import os
 import time
 
+from libsubmit.channels.local.local import LocalChannel
+from libsubmit.launchers import launchers
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.slurm.template import template_string
-from libsubmit.channels.local.local import LocalChannel
 from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -163,7 +164,7 @@ class Slurm(ClusterProvider, RepresentationMixin):
         job_config["user_script"] = command
 
         # Wrap the command
-        job_config["user_script"] = self.launcher(command, self.tasks_per_block)
+        job_config["user_script"] = launchers[self.launcher](command, self.tasks_per_block)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)

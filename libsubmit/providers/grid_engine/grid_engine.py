@@ -2,9 +2,10 @@ import logging
 import os
 import time
 
+from libsubmit.channels.local.local import LocalChannel
+from libsubmit.launchers import launchers
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.grid_engine.template import template_string
-from libsubmit.channels.local.local import LocalChannel
 from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,10 @@ class GridEngine(ClusterProvider, RepresentationMixin):
                          launcher)
         self.overrides = overrides
 
+        if launcher in ['srun', 'srun_mpi']:
+            logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
+                           "Recommended options include 'single_node' or 'aprun'.".format(launcher))
+
     def get_configs(self, command):
         """Compose a dictionary with information for writing the submit script."""
 
@@ -102,7 +107,7 @@ class GridEngine(ClusterProvider, RepresentationMixin):
         job_config["overrides"] = self.overrides
         job_config["user_script"] = command
 
-        job_config["user_script"] = self.launcher(command, task_blocks=self.tasks_per_block)
+        job_config["user_script"] = launchers[self.launcher](command, task_blocks=self.tasks_per_block)
         return job_config
 
     def submit(self, command="", blocksize=1, job_name="parsl.auto"):

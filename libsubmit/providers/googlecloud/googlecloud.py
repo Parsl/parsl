@@ -2,8 +2,6 @@ import atexit
 import logging
 import os
 
-from libsubmit.launchers import launchers
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -50,8 +48,6 @@ class GoogleCloud():
         Google compute engine version to use. Possibilies include 'v1' (default) or 'beta'.
     instance_type: str
         'n1-standard-1',
-    launcher : str
-        Launcher to use for launching workers. Can be 'single_node', 'srun', 'aprun', or 'srun_mpi'.
     script_dir : str
         Relative or absolute path to a directory where intermediate scripts are placed.
     init_blocks : int
@@ -92,7 +88,6 @@ class GoogleCloud():
                  label='google_cloud',
                  google_version='v1',
                  instance_type='n1-standard-1',
-                 launcher='single_node',
                  script_dir='parsl_scripts',
                  init_blocks=1,
                  min_blocks=0,
@@ -106,7 +101,6 @@ class GoogleCloud():
         self.label = label
         self.client = googleapiclient.discovery.build('compute', google_version)
         self.instance_type = instance_type
-        self.launcher = launchers.get(launcher, None)
         self.script_dir = script_dir
         if not os.path.exists(self.script_dir):
             os.makedirs(self.script_dir)
