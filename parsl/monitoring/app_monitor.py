@@ -4,8 +4,11 @@ from multiprocessing import Process
 import psutil
 from cmreslogging.handlers import CMRESHandler
 import os
+from datetime import datetime
 
 simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
+
+run_name = str(datetime.now().minute) + "-" + str(datetime.now().hour) + "-" + str(datetime.now().day)
 
 
 def monitor(pid):
@@ -28,6 +31,9 @@ def monitor(pid):
     while True:
         d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
         d["psutil_cpu"] = psutil.cpu_count()
+        d["run_id"] = run_name
+        for n in ["user","system","children_user","children_system"]:
+            d["psutil_process_" + n] = getattr(pm.cpu_times(), n)
         logger.info("test", extra=d)
         time.sleep(2)
 
