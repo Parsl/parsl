@@ -48,6 +48,25 @@ def monitor_wrapper(f):
     return wrapped
 
 
+def log_task_info(task_id, task):
+    host = 'search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com'
+    port = 443
+    handler = CMRESHandler(hosts=[{'host': host,
+                                   'port': port}],
+                           use_ssl=True,
+                           auth_type=CMRESHandler.AuthType.NO_AUTH,
+                           es_index_name="my_python_index",
+                           es_additional_fields={'Campaign': "test", 'Username': "yadu"})
+
+    logger = logging.getLogger("ParslElasticsearch")
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+
+    d = {"task_" + str(k): v for k, v in task.items()}
+    d["run_id"] = run_name
+    logger.info("Tast info for task {}".format(task_id), extra=d)
+
+
 if __name__ == "__main__":
     def f(x):
         for i in range(10**x):

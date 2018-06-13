@@ -23,6 +23,7 @@ from parsl.data_provider.data_manager import DataManager
 from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
 from parsl.utils import get_version
 from parsl.app.errors import RemoteException
+from parsl.monitoring import app_monitor
 
 # from parsl.dataflow.start_controller import Controller
 # Exceptions
@@ -311,6 +312,10 @@ class DataFlowKernel(object):
             self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
         logger.info("Task {} launched on site {}".format(task_id, site))
+
+        #log to db
+        app_monitor.log_task_info(task_id, self.tasks[task_id])
+
         return exec_fu
 
     def _add_input_deps(self, site, args, kwargs):
@@ -560,6 +565,9 @@ class DataFlowKernel(object):
             self.tasks[task_id]['status'] = States.pending
             logger.debug("Task {} launched with AppFut:{}".format(task_id,
                                                                   task_def['app_fu']))
+
+        #log to db
+        app_monitor.log_task_info(task_id, self.tasks[task_id])
 
         return task_def['app_fu']
 
