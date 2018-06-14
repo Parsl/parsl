@@ -591,6 +591,7 @@ class DataFlowKernel(object):
             self.tasks[task_id]['status'] = States.pending
             logger.debug("Task {} launched with AppFut:{}".format(task_id,
                                                                   task_def['app_fu']))
+        return task_def['app_fu']
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
