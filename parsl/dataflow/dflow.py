@@ -636,31 +636,6 @@ class DataFlowKernel(object):
 
         grouped_sorted_keytasks = itertools.groupby(sorted_keytasks, key=first)
 
-        # caution: g is an iterator that also advances the
-        # grouped_sorted_tasks iterator, so looping over
-        # both grouped_sorted_keytasks and g can only be done
-        # in certain patterns
-
-        for k, g in grouped_sorted_keytasks:
-
-            ts = []
-
-            for t in g:
-                tid = t[1]
-                ts.append(str(tid))
-                total_summarised = total_summarised + 1
-
-            tids_string = ", ".join(ts)
-
-            logger.info("Tasks in state {}: {}".format(str(k), tids_string))
-
-        total_in_tasks = len(self.tasks)
-        if total_summarised != total_in_tasks:
-            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but tasks list contains {} tasks".format(
-                total_summarised, total_in_tasks))
-
-        logger.info("End of summary")
-
     def atexit_cleanup(self):
         if not self.cleanup_called:
             self.cleanup()
