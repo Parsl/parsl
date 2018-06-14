@@ -359,10 +359,6 @@ class DataFlowKernel(object):
             self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
         logger.info("Task {} launched on site {}".format(task_id, site))
-
-        #log to db
-        app_monitor.log_task_info(task_id, self.tasks[task_id])
-
         return exec_fu
 
     def _add_input_deps(self, site, args, kwargs):
