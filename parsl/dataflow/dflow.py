@@ -613,29 +613,6 @@ class DataFlowKernel(object):
                                                                   task_def['app_fu']))
         return task_def['app_fu']
 
-    # it might also be interesting to assert that all DFK
-    # tasks are in a "final" state (3,4,5) when the DFK
-    # is closed down, and report some kind of warning.
-    # although really I'd like this to drain properly...
-    # and a drain function might look like this.
-    # If tasks have their states changed, this won't work properly
-    # but we can validate that...
-    def log_task_states(self):
-        logger.info("Summary of tasks in DFK:")
-
-        total_summarised = 0
-
-        keytasks = []
-        for tid in self.tasks:
-            keytasks.append((self.tasks[tid]['status'], tid))
-
-        def first(t):
-            return t[0]
-
-        sorted_keytasks = sorted(keytasks, key=first)
-
-        grouped_sorted_keytasks = itertools.groupby(sorted_keytasks, key=first)
-
     def atexit_cleanup(self):
         if not self.cleanup_called:
             self.cleanup()
