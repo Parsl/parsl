@@ -11,7 +11,7 @@ simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent
 run_name = str(datetime.now().minute) + "-" + str(datetime.now().hour) + "-" + str(datetime.now().day)
 
 
-def monitor(pid):
+def monitor(pid, task_id):
     host = 'search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com'
     port = 443
     handler = CMRESHandler(hosts=[{'host': host,
@@ -32,39 +32,21 @@ def monitor(pid):
         d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
         d["psutil_cpu"] = psutil.cpu_count()
         d["run_id"] = run_name
+        d["task_id"] = task_id
         for n in ["user","system","children_user","children_system"]:
             d["psutil_process_" + n] = getattr(pm.cpu_times(), n)
         logger.info("test", extra=d)
         time.sleep(2)
 
 
-def monitor_wrapper(f):
+def monitor_wrapper(f, task_id):
     def wrapped(*args, **kwargs):
-        p = Process(target=monitor, args=(os.getpid(),))
+        p = Process(target=monitor, args=(os.getpid(), task_id))
         p.start()
         result = f(*args, **kwargs)
         p.terminate()
         return result
     return wrapped
-
-
-def log_task_info(task_id, task):
-    host = 'search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com'
-    port = 443
-    handler = CMRESHandler(hosts=[{'host': host,
-                                   'port': port}],
-                           use_ssl=True,
-                           auth_type=CMRESHandler.AuthType.NO_AUTH,
-                           es_index_name="my_python_index",
-                           es_additional_fields={'Campaign': "test", 'Username': "yadu"})
-
-    logger = logging.getLogger("ParslElasticsearch")
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
-
-    d = {"task_" + str(k): v for k, v in task.items()}
-    d["run_id"] = run_name
-    logger.info("Tast info for task {}".format(task_id), extra=d)
 
 
 if __name__ == "__main__":

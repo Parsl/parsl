@@ -55,7 +55,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
 
     """
     logger = logging.getLogger(__file__)
-    if enable_es_logging is True:
+    if enable_es_logging:
         if not _es_logging_enabled:
             raise OptionalModuleMissing(
                 ['cmreslogging'], "Logging to ElasticSearch requires the cmreslogging module")
@@ -67,7 +67,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                                es_index_name="my_python_index",
                                es_additional_fields={'Campaign': "test"})
         logger = logging.getLogger("ParslElasticsearch")
-        logger.setLevel(level)
+        logger.setLevel(logging.INFO)
         logger.addHandler(handler)
     else:
         logger.addHandler(NullHandler())

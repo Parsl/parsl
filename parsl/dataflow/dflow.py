@@ -212,39 +212,36 @@ class DataFlowKernel(object):
 
             if not self.lazy_fail:
                 logger.debug("Eager fail, skipping retry logic")
-                self.db_logger.info("Task Fail", extra={'task': task_id,
-                                                        'task_name': self.tasks[task_id]['func_name'],
-                                                        'status': 'failed',
-                                                        'fail_mode': 'eager'})
+                self.tasks[task_id]['status'] = States.failed
+                task_log_info = {k: v for k, v in self.tasks[task_id].items()}
+                task_log_info['fail_mode'] = 'eager'
+                self.db_logger.info("Task Fail", extra=task_log_info)
                 raise e
 
             if self.tasks[task_id]['fail_count'] <= self.fail_retries:
-                logger.debug("Task {} marked for retry".format(task_id))
-                self.db_logger.info("Task Retry", extra={'task': task_id,
-                                                         'task_name': self.tasks[task_id]['func_name'],
-                                                         'status': 'retry_set',
-                                                         'fail_mode': 'lazy'})
                 self.tasks[task_id]['status'] = States.pending
+                logger.debug("Task {} marked for retry".format(task_id))
+                task_log_info = {k: v for k, v in self.tasks[task_id].items()}
+                task_log_info['fail_mode'] = 'lazy'
+                self.db_logger.info("Task Retry", extra=task_log_info)
 
             else:
-                logger.info("Task {} failed after {} retry attempts".format(task_id,
-                                                                            self.fail_retries))
-                self.db_logger.info("Task Retry Failed", extra={'task': task_id,
-                                                                'task_name': self.tasks[task_id]['func_name'],
-                                                                'status': 'retry_failed',
-                                                                'fail_mode': 'lazy'})
-
                 self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
 
-        else:
-            logger.info("Task {} completed".format(task_id))
-            self.db_logger.info("Task Done", extra={'task': task_id,
-                                                    'task_name': self.tasks[task_id]['func_name'],
-                                                    'status': 'done'})
+                logger.info("Task {} failed after {} retry attempts".format(task_id,
+                                                                            self.fail_retries))
+                task_log_info = {k: v for k, v in self.tasks[task_id].items()}
+                task_log_info['fail_mode'] = 'lazy'
+                self.db_logger.info("Task Retry Failed", extra=task_log_info)
 
+        else:
             self.tasks[task_id]['status'] = States.done
             final_state_flag = True
+
+            logger.info("Task {} completed".format(task_id))
+            task_log_info = {k: v for k, v in self.tasks[task_id].items()}
+            self.db_logger.info("Task Done", extra=task_log_info)
 
         if not memo_cbk and final_state_flag is True:
             # Update the memoizer with the new result if this is not a
@@ -291,10 +288,9 @@ class DataFlowKernel(object):
                         "Task {} deferred due to dependency failure".format(tid))
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
-                    self.db_logger.info("Task Dep Fail", extra={'task': task_id,
-                                                                'task_name': self.tasks[task_id]['func_name'],
-                                                                'status': 'dep_fail',
-                                                                'fail_mode': 'lazy'})
+                    task_log_info = {k: v for k, v in self.tasks[task_id].items()}
+                    task_log_info['fail_mode'] = 'lazy'
+                    self.db_logger.info("Task Dep Fail", extra=task_log_info)
 
                     try:
                         fu = Future()
@@ -337,22 +333,15 @@ class DataFlowKernel(object):
         except Exception as e:
             logger.error("Task {}: requests invalid site {}".format(task_id,
                                                                     site))
+        executable = app_monitor.monitor_wrapper(executable, task_id) if True else executable
         exec_fu = executor.submit(executable, *args, **kwargs)
-        self.db_logger.info("Task Launch", extra={'task': task_id,
-                                                  'task_name': self.tasks[task_id]['func_name'],
-                                                  'depends': [fu.tid for fu in self.tasks[task_id]['depends']],
-                                                  'status': 'launched',
-                                                  'site': site,
-                                                  })
         self.tasks[task_id]['status'] = States.running
+        task_log_info = {k: v for k, v in self.tasks[task_id].items()}
+        self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self.fail_retries - \
             self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
         logger.info("Task {} launched on site {}".format(task_id, site))
-
-        #log to db
-        app_monitor.log_task_info(task_id, self.tasks[task_id])
-
         return exec_fu
 
     def _add_input_deps(self, site, args, kwargs):
@@ -603,10 +592,6 @@ class DataFlowKernel(object):
             logger.debug("Task {} launched with AppFut:{}".format(task_id,
                                                                   task_def['app_fu']))
 
-        #log to db
-        app_monitor.log_task_info(task_id, self.tasks[task_id])
-
-        return task_def['app_fu']
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
