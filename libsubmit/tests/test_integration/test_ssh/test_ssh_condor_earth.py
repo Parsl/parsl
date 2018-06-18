@@ -1,6 +1,6 @@
 import os
 import libsubmit
-from libsubmit import SshChannel, Condor
+from libsubmit import SSHChannel, Condor
 import time
 
 
@@ -8,7 +8,7 @@ def test_1():
     config = {
         "site": "T3_US_NotreDame",
         "execution": {
-            "scriptDir": ".scripts",
+            "script_dir": ".scripts",
             "environment": {
                 'CONDOR_CONFIG': '/opt/condor/RedHat6/etc/condor_config',
                 'CONDOR_LOCATION': '/opt/condor/RedHat6',
@@ -30,7 +30,7 @@ def test_1():
             }
         }
     }
-    channel = SshChannel("earth.crc.nd.edu", os.environ['USER'])
+    channel = SSHChannel("earth.crc.nd.edu", os.environ['USER'])
 
     ec, out, err = channel.execute_wait("printenv", envs=config['execution']['environment'])
     print("current env:", out)

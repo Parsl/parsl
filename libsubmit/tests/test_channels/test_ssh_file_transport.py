@@ -1,9 +1,9 @@
 import libsubmit
-from libsubmit.channels.ssh.ssh import SshChannel as Ssh
+from libsubmit.channels.ssh.ssh import SSHChannel as SSH
 
 
 def connect_and_list(hostname, username):
-    conn = Ssh(hostname, username=username)
+    conn = SSH(hostname, username=username)
     ec, out, err = conn.execute_wait("echo $HOSTNAME")
     conn.close()
     return out
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     libsubmit.set_stream_logger()
 
     # This is for testing
-    conn = Ssh("midway.rcc.uchicago.edu", username="yadunand")
+    conn = SSH("midway.rcc.uchicago.edu", username="yadunand")
 
     test_push(conn)
     test_pull(conn)

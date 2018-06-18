@@ -5,8 +5,9 @@ import time
 
 import libsubmit.error as ep_error
 from libsubmit.channels.local.local import LocalChannel
-from libsubmit.launchers import Launchers
+from libsubmit.launchers import launchers
 from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -17,113 +18,61 @@ translate_table = {
     'CF': 'PENDING',  # (configuring),
     'CG': 'RUNNING',  # (completing),
     'CD': 'COMPLETED',
-    'F': 'FAILED',  # (failed),
-    'TO': 'TIMEOUT',  # (timeout),
+    'F': 'FAILED',
+    'TO': 'TIMEOUT',
     'NF': 'FAILED',  # (node failure),
     'RV': 'FAILED',  # (revoked) and
     'SE': 'FAILED'
 }  # (special exit state
 
 
-class Local(ExecutionProvider):
-    ''' Local Execution Provider
+class Local(ExecutionProvider, RepresentationMixin):
+    """ Local Execution Provider
 
-    This provider is used to launch IPP engines on the localhost.
+    This provider is used to provide execution resources from the localhost.
 
-    .. warning::
-        Please note that in the config documented below, description and values
-        are placed inside a schema that is delimited by #{ schema.. }
+    Parameters
+    ----------
 
-    Here's the scheme for the Local provider:
+    min_blocks : int
+        Minimum number of blocks to maintain.
+    max_blocks : int
+        Maximum number of blocks to maintain.
+    parallelism : float
+        Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
+        scaling where as many resources as possible are used; parallelism close to 0 represents
+        the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
+    """
 
-    .. code-block:: python
-
-         { "execution" : { # Definition of all execution aspects of a site
-
-              "executor"   : #{Description: Define the executor used as task executor,
-                             # Type : String,
-                             # Expected : "ipp",
-                             # Required : True},
-
-              "provider"   : #{Description : The provider name, in this case local
-                             # Type : String,
-                             # Expected : "local",
-                             # Required :  True },
-
-              "scriptDir"  : #{Description : Relative or absolute path to a
-                             # directory in which intermediate scripts are placed
-                             # Type : String,
-                             # Default : "./.scripts"},
-
-              "block" : { # Definition of a block
-
-                  "initBlocks" : #{Description : # of blocks to provision at the start of
-                                 # the DFK
-                                 # Type : Integer
-                                 # Default : ?
-                                 # Required :    },
-
-                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : 0 },
-
-                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : ? },
-
-                  "taskBlocks": #{Description : workers to launch per request
-                                # Type : Integer
-                                # Default : 1 },
-              }
-            }
-         }
-
-    '''
-
-    def __repr__(self):
-        return "<Local Execution Provider for site:{0}>".format(self.sitename)
-
-    def __init__(self, config, channel_script_dir=None, channel=None):
-        ''' Initialize the local provider class
-
-        This provider is unique because the `LocalChannel` is simple enough
-        that a default can be provided. For this reason users can pass `channel=None`,
-        and a default `LocalChannel` will be created.
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-             - channel_script_dir (str): Script directory which will be
-                   passed to the default `LocalChannel` (this will have
-                   no effect if a `channel` is not None)
-             - channel (Channel): Channel to use; if none is provided, a
-                   default one will be created
-        '''
-
-        if channel is None:
-            if channel_script_dir is None:
-                self.channel = LocalChannel()
-            else:
-                self.channel = LocalChannel(scriptDir=channel_script_dir)
-        else:
-            self.channel = channel
-        self.config = config
-        self.sitename = config['site']
-        self.current_blocksize = 0
-        self.scriptDir = self.config["execution"]["scriptDir"]
-        self.taskBlocks = self.config["execution"]["block"].get("taskBlocks", 1)
-        launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
-        self.launcher = Launchers.get(launcher_name, None)
+    def __init__(self,
+                 channel=LocalChannel(),
+                 label='local',
+                 script_dir='parsl_scripts',
+                 tasks_per_node=1,
+                 nodes_per_block=1,
+                 launcher='single_node',
+                 init_blocks=4,
+                 min_blocks=0,
+                 max_blocks=10,
+                 walltime="00:15:00",
+                 parallelism=1):
+        self.channel = channel
+        self.label = label
+        if not os.path.exists(script_dir):
+            os.makedirs(script_dir)
+        self.script_dir = script_dir
+        self.provisioned_blocks = 0
+        self.nodes_per_block = nodes_per_block
+        self.tasks_per_node = tasks_per_node
+        self.launcher = launcher
+        self.init_blocks = init_blocks
+        self.min_blocks = min_blocks
+        self.max_blocks = max_blocks
+        self.parallelism = parallelism
+        self.walltime = walltime
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
-
-    @property
-    def channels_required(self):
-        ''' Returns Bool on whether a channel is required
-        '''
-        return False
 
     def status(self, job_ids):
         '''  Get the status of a list of jobs identified by their ids.
@@ -174,7 +123,7 @@ class Local(ExecutionProvider):
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise (ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            raise (ep_error.SchedulerMissingArgs(e.args, self.label))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
@@ -182,8 +131,8 @@ class Local(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
-        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, blocksize, job_name="parsl.auto"):
+        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1:
@@ -196,7 +145,7 @@ class Local(ExecutionProvider):
              tasks_per_node * blocksize number of nodes are provisioned.
 
         Args:
-             - cmd_string  :(String) Commandline invocation to be made on the remote side.
+             - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float) - Not really used for local
 
         Kwargs:
@@ -211,12 +160,12 @@ class Local(ExecutionProvider):
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.sh".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_cmd_string = self.launcher(cmd_string, taskBlocks=self.taskBlocks)
+        wrap_command = launchers.get(self.launcher, None)(command, self.tasks_per_node * self.nodes_per_block)
 
-        self._write_submit_script(wrap_cmd_string, script_path)
+        self._write_submit_script(wrap_command, script_path)
 
         job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), 3)
         self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING', 'blocksize': blocksize, 'proc': proc}
@@ -250,10 +199,6 @@ class Local(ExecutionProvider):
     @property
     def current_capacity(self):
         return len(self.resources)
-
-    @property
-    def channels_required(self):
-        return False
 
 
 if __name__ == "__main__":

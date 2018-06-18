@@ -5,12 +5,13 @@ import os
 
 import paramiko
 from libsubmit.channels.errors import *
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class SshChannel():
-    ''' Ssh persistent channel. This enables remote execution on sites
+class SSHChannel(RepresentationMixin):
+    ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
     test on the commandline should work :
@@ -19,10 +20,7 @@ class SshChannel():
 
     '''
 
-    def __repr__(self):
-        return "SSH:{0}".format(self.hostname)
-
-    def __init__(self, hostname, username=None, password=None, scriptDir=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -32,8 +30,9 @@ class SshChannel():
         KWargs:
             - username (string) : Username on remote system
             - password (string) : Password for remote system
-            - channel_script_dir (string) : Full path to a script dir where
+            - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
+            - envs (dict) : A dictionary of environment variables to be set when executing commands
 
         Raises:
         '''
@@ -47,10 +46,14 @@ class SshChannel():
         self.ssh_client.load_system_host_keys()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        if scriptDir:
-            self.channel_script_dir = scriptDir
+        if script_dir:
+            self._script_dir = script_dir
         else:
-            self.channel_script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+            self._script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+
+        self.envs = {}
+        if envs is not None:
+            self.envs = envs
 
         try:
             self.ssh_client.connect(
@@ -76,9 +79,11 @@ class SshChannel():
 
     @property
     def script_dir(self):
-        return self.channel_script_dir
+        return self._script_dir
 
     def prepend_envs(self, cmd, env={}):
+        env.update(self.envs)
+
         if len(env.keys()) > 0:
             env_vars = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
             return 'env {0} {1}'.format(env_vars, cmd)
@@ -202,7 +207,7 @@ class SshChannel():
             os.makedirs(local_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.error("Failed to create scriptDir: {0}".format(scriptDir))
+                logger.error("Failed to create script_dir: {0}".format(script_dir))
                 raise BadScriptPath(e, self.hostname)
 
         # Easier to check this than to waste time trying to pull file and

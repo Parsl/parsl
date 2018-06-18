@@ -1,5 +1,5 @@
 import libsubmit
-from libsubmit import SshChannel
+from libsubmit import SSHChannel
 from libsubmit import Torque
 import time
 
@@ -27,10 +27,10 @@ def test_1():
         }
     }
 
-    channel = SshChannel(
+    channel = SSHChannel(
         "login4.beagle.ci.uchicago.edu",
         "yadunandb",
-        scriptDir="/lustre/beagle2/yadunand/parsl_scripts")
+        script_dir="/lustre/beagle2/yadunand/parsl_scripts")
     ec, out, err = channel.execute_wait("which qsub; echo $HOSTNAME; pwd")
     print("Stdout : ", out)
 

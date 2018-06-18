@@ -7,6 +7,7 @@ from string import Template
 from libsubmit.error import *
 from libsubmit.providers.aws.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -29,198 +30,117 @@ translate_table = {
 }
 
 
-class EC2Provider(ExecutionProvider):
-    '''
-    Here's a sample config for the EC2 provider:
+class EC2Provider(ExecutionProvider, RepresentationMixin):
+    """A provider for using Amazon Elastic Compute Cloud (EC2) resources.
 
-    .. code-block:: python
+    One of 3 methods are required to authenticate: keyfile, profile or environment
+    variables. If neither keyfile or profile are set, the following environment
+    variables must be set: `AWS_ACCESS_KEY_ID` (the access key for your AWS account),
+    `AWS_SECRET_ACCESS_KEY` (the secret key for your AWS account), and (optionaly) the
+    `AWS_SESSION_TOKEN` (the session key for your AWS account).
 
-         { "auth" : { # Definition of authentication method for AWS. One of 3 methods are required to authenticate
-                      # with AWS: keyfile, profile or env_variables. If keyfile or profile is not set, Boto3 will
-                      # look for the following env variables:
-                      # AWS_ACCESS_KEY_ID : The access key for your AWS account.
-                      # AWS_SECRET_ACCESS_KEY : The secret key for your AWS account.
-                      # AWS_SESSION_TOKEN : The session key for your AWS account.
+    Parameters
+    ----------
+    image_id : str
+        Identification of the Amazon Machine Image (AMI).
+    label : str
+        Label for this provider.
+    overrides : str
+        String to append to the Userdata script executed in the cloudinit phase of
+        instance initialization.
+    walltime : str
+        Walltime requested per block in HH:MM:SS.
+    key_file : str
+        Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'.
+    profile : str
+        Profile to be used from the standard aws config file ~/.aws/config.
+    nodes_per_block : int
+        Nodes to provision per block. Default is 1.
+    init_blocks : int
+        Number of blocks to provision at the start of the run. Default is 1.
+    min_blocks : int
+        Minimum number of blocks to maintain. Default is 0.
+    max_blocks : int
+        Maximum number of blocks to maintain. Default is 10.
+    instance_type : str
+        EC2 instance type. Instance types comprise varying combinations of CPU, memory,  .
+        storage, and networking capacity For more information on possible instance types,.
+        see `here <https://aws.amazon.com/ec2/instance-types/>`_ Default is 't2.small'.
+    region : str
+        Amazon Web Service (AWS) region to launch machines. Default is 'us-east-2'.
+    key_name : str
+        Name of the AWS private key (.pem file) that is usually generated on the console
+        to allow SSH access to the EC2 instances. This is mostly used for debugging.
+    spot_max_bid : float
+        Maximum bid price (if requesting spot market machines).
+    iam_instance_profile_arn : str
+        Launch instance with a specific role.
+    state_file : str
+        Path to the state file from a previous run to re-use.
+    """
 
-              "keyfile"    : #{Description: Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'
-                             # Type: String,
-                             # Required: False},
-
-              "profile"    : #{Description: Specify the profile to be used from the standard aws config file
-                             # ~/.aws/config.
-                             # Type: String,
-                             # Expected: "default", # Use the 'default' aws profile
-                             # Required: False},
-
-            },
-
-           "execution" : { # Definition of all execution aspects of a site
-
-              "executor"   : #{Description: Define the executor used as task executor,
-                             # Type: String,
-                             # Expected: "ipp",
-                             # Required: True},
-
-              "provider"   : #{Description: The provider name, in this case ec2
-                             # Type: String,
-                             # Expected: "aws",
-                             # Required:  True },
-
-              "block" : { # Definition of a block
-
-                  "nodes"      : #{Description: # of nodes to provision per block
-                                 # Type: Integer,
-                                 # Default: 1},
-
-                  "taskBlocks" : #{Description: # of workers to launch per block
-                                 # as either an number or as a bash expression.
-                                 # for eg, "1" , "$(($CORES / 2))"
-                                 # Type: String,
-                                 # Default: "1" },
-
-                  "walltime"  :  #{Description: Walltime requested per block in HH:MM:SS
-                                 # Type: String,
-                                 # Default: "00:20:00" },
-
-                  "initBlocks" : #{Description: # of blocks to provision at the start of
-                                 # the DFK
-                                 # Type: Integer
-                                 # Default: ?
-                                 # Required:    },
-
-                  "minBlocks" :  #{Description: Minimum # of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type: Integer
-                                 # Default: 0 },
-
-                  "maxBlocks" :  #{Description: Maximum # Of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type: Integer
-                                 # Default: ? },
-
-                  "options"   : {  # Scheduler specific options
-
-
-                      "instanceType" : #{Description: Instance type t2.small|t2...
-                                       # Type: String,
-                                       # Required: False
-                                       # Default: t2.small },
-
-                      "imageId"      : #{"Description: The ID of the AMI
-                                       # Type: String,
-                                       # Required: True },
-
-                      "region"       : #{"Description: AWS region to launch machines in
-                                       # in the submit script to the scheduler
-                                       # Type: String,
-                                       # Default: 'us-east-2',
-                                       # Required: False },
-
-                      "keyName"      : #{"Description: Name of the AWS private key (.pem file)
-                                       # that is usually generated on the console to allow ssh access
-                                       # to the EC2 instances, mostly for debugging.
-                                       # in the submit script to the scheduler
-                                       # Type: String,
-                                       # Required: True },
-
-                      "spotMaxBid"   : #{"Description: If requesting spot market machines, specify
-                                       # the max Bid price.
-                                       # Type: Float,
-                                       # Required: False },
-
-                      "IamInstanceProfileArn" : #{"Description: IamInstanceProfile Arn to use inorder to
-                                                # launch instance with a specific Role.
-                                                # Type: string,
-                                                # Required: False },
-
-                      "overrides"    : #{"Description : String to append to the Userdata script executed
-                                       # in the cloudinit phase of instance initialization
-                                       # Type : String,
-                                       # Default : ''
-                                       # Required : False },
-
-                  }
-              }
-            }
-         }
-    '''
-
-    def __repr__(self):
-        return "<EC2 Execution Provider for site:{0}>".format(self.sitename)
-
-    def __init__(self, config, channel=None):
-        ''' Initialize the EC2Provider class
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs:
-             - Channel (None): A channel is not required for EC2.
-
-        '''
-
-        self.channel = channel
+    def __init__(self,
+                 image_id,
+                 label='ec2',
+                 overrides='',
+                 key_file=None,
+                 profile=None,
+                 nodes_per_block='1',
+                 init_blocks=1,
+                 min_blocks=0,
+                 max_blocks=10,
+                 instance_type='t2.small',
+                 region='us-east-2',
+                 key_name=None,
+                 spot_max_bid=0,
+                 iam_instance_profile_arn='',
+                 state_file=None):
         if not _boto_enabled:
-            raise OptionalModuleMissing(['boto3'], "AWS Provider requires boto3 module.")
+            raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
 
-        self.config = config
-        self.sitename = config['site']
-        self.current_blocksize = 0
+        self.label = label
         self.resources = {}
-        # atexit.register(self.goodbye)
-        self.config = config
-        options = self.config["execution"]["block"]["options"]
-        logger.warn("Options %s", options)
-        self.overrides = options.get("overrides", '')
-        self.instance_type = options.get("instanceType", "t2.small")
-        self.image_id = options["imageId"]
-        self.key_name = options["keyName"]
-        self.iam_instance_profile_arn = options.get("IamInstanceProfileArn", '')
-        self.region = options.get("region", 'us-east-2')
-        self.max_nodes = (
-            self.config["execution"]["block"].get("maxBlocks", 1) *
-            self.config["execution"]["block"].get("nodes", 1)
-        )
+        self.overrides = overrides
+        self.image_id = image_id
+        self.key_name = key_name
+        self.iam_instance_profile_arn = iam_instance_profile_arn
+        self.region = region
+        self.max_nodes = max_blocks * nodes_per_block
+        self.max_blocks = max_blocks
+        self.nodes_per_block = nodes_per_block
+        self.spot_max_bid = spot_max_bid
 
-        self.spot_max_bid = options.get("spotMaxBid", 0)
+        env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
+        if profile is None and key_file is None and not env_specified:
+            raise ConfigurationError("Must specify either profile', 'key_file', or "
+                                     "'AWS_ACCESS_KEY_ID' and 'AWS_SECRET_ACCESS_KEY' environment variables.")
 
         try:
             self.initialize_boto_client()
         except Exception as e:
-            logger.error("Site:[{0}] Failed to initialize".format(self))
+            logger.error("{} failed to initialize.".format(self))
             raise e
 
         state_file_exists = False
         try:
-            self.statefile = self.config["execution"]["block"]["options"].get(
-                "stateFile", '.ec2site_{0}.json'.format(self.sitename)
-            )
-            self.read_state_file(self.statefile)
+            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(label)
+            self.read_state_file(self.state_file)
             state_file_exists = True
         except Exception as e:
-            logger.info("No State File. Cannot load previous options. Creating new infrastructure")
+            logger.info("No state file found. Cannot load previous options. Creating new infrastructure.")
 
         if not state_file_exists:
             try:
                 self.create_vpc().id
             except Exception as e:
-                logger.info("Failed to create ec2 infrastructure : {0}".format(e))
+                logger.info("Failed to create ec2 infrastructure: {0}".format(e))
                 raise
             else:
-                # If infrastructure creation worked write state file
                 self.write_state_file()
 
-    @property
-    def channels_required(self):
-        ''' No channel required for EC2
-        '''
-        return False
-
     def initialize_boto_client(self):
-        ''' Use auth configs to initialize the boto client
-        '''
+        """Initialize the boto client."""
 
-        self.sitename = self.config['site']
         self.session = self.create_session()
         self.client = self.session.client('ec2')
         self.ec2 = self.session.resource('ec2')
@@ -230,22 +150,20 @@ class EC2Provider(ExecutionProvider):
         self.sg_id = 0
         self.sn_ids = []
 
-    def read_state_file(self, statefile):
-        """If this script has been run previously, it will be persistent
-           by writing resource ids to state file. On run,
-           the script looks for a state file
-           before creating new infrastructure
+    def read_state_file(self, state_file):
+        """Read the state file, if it exists.
 
-           Information on VPCs, security groups, and subnets are saved,
-           as well as running instances and their states.
+        If this script has been run previously, resource IDs will have been written to a
+        state file On starting a run, a state file will be looked for before creating new
+        infrastructure. Information on VPCs, security groups, and subnets are saved, as
+        well as running instances and their states.
 
-           AWS has a maximum number of VPCs per region per account, so we don't
-           want to clutter users' AWS accounts with security groups and VPCs that
-           will be used only once.
-
+        AWS has a maximum number of VPCs per region per account, so we do not want to
+        clutter users' AWS accounts with security groups and VPCs that will be used only
+        once.
         """
         try:
-            fh = open(statefile, 'r')
+            fh = open(state_file, 'r')
             state = json.load(fh)
             self.vpc_id = state['vpcID']
             self.sg_id = state['sgID']
@@ -254,14 +172,14 @@ class EC2Provider(ExecutionProvider):
         except Exception as e:
             logger.debug("Caught exception while reading state file: {0}".format(e))
             raise e
-        logger.debug("Done reading state from the local state file")
+        logger.debug("Done reading state from the local state file.")
 
     def write_state_file(self):
-        ''' Save information that must persist to a file.
-            We don't want to create a new VPC and new identical
-            security groups, so we save information about them
-            in a file between runs
-        '''
+        """Save information that must persist to a file.
+
+        We do not want to create a new VPC and new identical security groups, so we save
+        information about them in a file between runs.
+        """
         fh = open('awsproviderstate.json', 'w')
         state = {}
         state['vpcID'] = self.vpc_id
@@ -272,17 +190,16 @@ class EC2Provider(ExecutionProvider):
         fh.write(json.dumps(state, indent=4))
 
     def create_session(self):
-        ''' Here we will first look in the ~/.aws/config file.
+        """Create a session.
 
-        First we look in config["auth"]["keyfile"] for a path to a json file
-        with the credentials.
-        the keyfile should have 'AWSAccessKeyId' and 'AWSSecretKey'
+        First we look in self.key_file for a path to a json file with the
+        credentials. The key file should have 'AWSAccessKeyId' and 'AWSSecretKey'.
 
-        Next we look for config["auth"]["profile"] for a profile name and try
-        to use the Session call to auto pick up the keys for the profile from
+        Next we look at self.profile for a profile name and try
+        to use the Session call to automatically pick up the keys for the profile from
         the user default keys file ~/.aws/config.
 
-        Lastly boto3 will look for the keys in env variables:
+        Finally, boto3 will look for the keys in environment variables:
         AWS_ACCESS_KEY_ID: The access key for your AWS account.
         AWS_SECRET_ACCESS_KEY: The secret key for your AWS account.
         AWS_SESSION_TOKEN: The session key for your AWS account.
@@ -290,66 +207,54 @@ class EC2Provider(ExecutionProvider):
         The AWS_SECURITY_TOKEN environment variable can also be used,
         but is only supported for backwards compatibility purposes.
         AWS_SESSION_TOKEN is supported by multiple AWS SDKs besides python.
-        '''
+        """
 
         session = None
 
-        if "keyfile" in self.config["auth"]:
-            c = self.config["auth"]["keyfile"]
-            credfile = os.path.expandvars(os.path.expanduser(c))
+        if self.key_file is not None:
+            credfile = os.path.expandvars(os.path.expanduser(self.key_file))
 
             try:
                 with open(credfile, 'r') as f:
                     creds = json.load(f)
             except json.JSONDecodeError as e:
                 logger.error(
-                    "Site[{0}]: Json decode error in credential file {1}".format(self, credfile)
+                    "EC2Provider '{}': json decode error in credential file {}".format(self.label, credfile)
                 )
                 raise e
 
             except Exception as e:
                 logger.debug(
-                    "Caught exception: {0} while reading credential file: {1}".format(
-                        self, credfile
+                    "EC2Provider '{0}' caught exception while reading credential file: {1}".format(
+                        self.label, credfile
                     )
                 )
                 raise e
 
-            logger.debug("Site[{0}]: Using credential file to create session".format(self))
+            logger.debug("EC2Provider '{}': Using credential file to create session".format(self.label))
             session = boto3.session.Session(region_name=self.region, **creds)
-
-        elif "profile" in self.config["auth"]:
-
-            logger.debug("Site[{0}]: Using profile name to create session".format(self))
+        elif self.profile is not None:
+            logger.debug("EC2Provider '{}': Using profile name to create session".format(self.label))
             session = boto3.session.Session(
-                profile_name=self.config["auth"]["profile"], region_name=self.region
+                profile_name=self.profile, region_name=self.region
             )
-
-        elif (os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None):
-            logger.debug("Site[{0}]: Using env variables to create session".format(self))
-            session = boto3.session.Session(region_name=self.region)
-
         else:
-            logger.error("Site[{0}]: Credentials not available to create session".format(self))
+            logger.debug("EC2Provider '{}': Using environment variables to create session".format(self.label))
             session = boto3.session.Session(region_name=self.region)
-            print(session)
 
         return session
 
     def create_vpc(self):
-        ''' Create and configure VPC
+        """Create and configure VPC
 
-            We create a VPC with CIDR 10.0.0.0/16, which provides
-            up to 64,000 instances.
+        We create a VPC with CIDR 10.0.0.0/16, which provides up to 64,000 instances.
 
-            We attach a subnet for each availability zone within the
-            region specified in the config. We give each subnet an
-            ip range like 10.0.X.0/20, which is large enough for
-            approx. 4000 instances.
+        We attach a subnet for each availability zone within the region specified in the
+        config. We give each subnet an ip range like 10.0.X.0/20, which is large enough
+        for approx. 4000 instances.
 
-            Security groups are configured in function security_group.
-            More information is there
-        '''
+        Security groups are configured in function security_group.
+        """
 
         try:
             # We use a large VPC so that the cluster can get large
@@ -401,16 +306,16 @@ class EC2Provider(ExecutionProvider):
     def security_group(self, vpc):
         """Create and configure a new security group.
 
+        Allows all ICMP in, all TCP and UDP in within VPC.
 
+        This security group is very open. It allows all incoming ping requests on all
+        ports. It also allows all outgoing traffic on all ports. This can be limited by
+        changing the allowed port ranges.
 
-        Allows all ICMP in, all TCP and UDP in within VPC
-
-        This security group is very open. It allows all
-        incoming ping requests on all ports. It also allows
-        all outgoing traffic on all ports. This can be limited
-        by changing the allowed port ranges.
-
-        :param vpc - VPC in which to set up security group
+        Parameters
+        ----------
+        vpc : VPC instance
+            VPC in which to set up security group.
         """
 
         sg = vpc.create_security_group(
@@ -420,8 +325,7 @@ class EC2Provider(ExecutionProvider):
         ip_ranges = [{'CidrIp': '10.0.0.0/16'}]
 
         # Allows all ICMP in, all TCP and UDP in within VPC
-
-        inPerms = [
+        in_permissions = [
             {
                 'IpProtocol': 'TCP',
                 'FromPort': 0,
@@ -450,7 +354,7 @@ class EC2Provider(ExecutionProvider):
         ]
 
         # Allows all TCP out, all TCP and UDP out within VPC
-        outPerms = [
+        out_permissions = [
             {
                 'IpProtocol': 'TCP',
                 'FromPort': 0,
@@ -473,19 +377,21 @@ class EC2Provider(ExecutionProvider):
             },
         ]
 
-        sg.authorize_ingress(IpPermissions=inPerms)
-        sg.authorize_egress(IpPermissions=outPerms)
+        sg.authorize_ingress(IpPermissions=in_permissions)
+        sg.authorize_egress(IpPermissions=out_permissions)
         self.sg_id = sg.id
         return sg
 
     def config_route_table(self, vpc, internet_gateway):
-        ''' Configure route table for vpc
-        Args:
-            :param vpc (dict): dictionary representing the vpc
-                                created by create_vpc()
-            :param internet_gateway (dict): dictionary representing igw
-                                             created by create_vpc()
-        '''
+        """Configure route table for Virtual Private Cloud (VPC).
+
+        Parameters
+        ----------
+        vpc : dict
+            Representation of the VPC (created by create_vpc()).
+        internet_gateway : dict
+            Representation of the internet gateway (created by create_vpc()).
+        """
         route_table = vpc.create_route_table()
         route_table.create_route(
             DestinationCidrBlock='0.0.0.0/0', GatewayId=internet_gateway.internet_gateway_id
@@ -495,19 +401,22 @@ class EC2Provider(ExecutionProvider):
     def xstr(self, s):
         return '' if s is None else s
 
-    def spin_up_instance(self, cmd_string, job_name):
-        ''' Starts an instance in the VPC in first available
-        subnet. Starts up n instances if nodes per block > 1
-        Not supported. We only do 1 node per block
+    def spin_up_instance(self, command, job_name):
+        """Start an instance in the VPC in the first available subnet.
 
-        Args:
-            - cmd_string (str): Command string to execute on the node
-            - job_name (str): Name associated with the instances
+        N instances will be started if nodes_per_block > 1.
+        Not supported. We only do 1 node per block.
 
-        '''
+        Parameters
+        ----------
+        command : str
+            Command string to execute on the node.
+        job_name : str
+            Name associated with the instances.
+        """
 
         command = Template(template_string).substitute(jobname=job_name,
-                                                       user_script=cmd_string,
+                                                       user_script=command,
                                                        overrides=self.overrides)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
@@ -527,7 +436,7 @@ class EC2Provider(ExecutionProvider):
             spot_options = {}
 
         if total_instances > self.max_nodes:
-            logger.warn("Exceeded instance limit ({}). Cannot Continue\n".format(self.max_nodes))
+            logger.warn("Exceeded instance limit ({}). Cannot continue\n".format(self.max_nodes))
             return [None]
         try:
             tag_spec = [{"ResourceType": "instance", "Tags": [{'Key': 'Name', 'Value': job_name}]}]
@@ -562,11 +471,10 @@ class EC2Provider(ExecutionProvider):
         return instance
 
     def shut_down_instance(self, instances=None):
-        ''' Shuts down a list of instances, if provided, or the last
-        instance started up, if none provided
+        """Shut down a list of instances, if provided.
 
-        [TODO] ...
-        '''
+        If no instance is provided, the last instance started up will be shut down.
+        """
 
         if instances and len(self.instances) > 0:
             print(instances)
@@ -587,8 +495,7 @@ class EC2Provider(ExecutionProvider):
         return term
 
     def get_instance_state(self, instances=None):
-        """Get states of all instances on EC2 which were started by this
-        file"""
+        """Get states of all instances on EC2 which were started by this file."""
         if instances:
             desc = self.client.describe_instances(InstanceIds=instances)
         else:
@@ -599,39 +506,19 @@ class EC2Provider(ExecutionProvider):
             self.instance_states[instance['InstanceId']] = instance['State']['Name']
         return self.instance_states
 
-    def ipyparallel_configuration(self):
-        config = ''
-        try:
-            with open(os.path.expanduser(self.config['iPyParallelConfigFile'])) as f:
-                config = f.read().strip()
-        except Exception as e:
-            logger.error(e)
-            logger.info("Couldn't find user iPyParallel config file. Trying default location.")
-            with open(os.path.expanduser("~/.ipython/profile_default/security/ipcontroller-engine.json")) as f:
-                config = f.read().strip()
-        else:
-            logger.error("Cannot find iPyParallel config file. Cannot proceed.")
-            return -1
-        ipptemplate = """
-cat <<EOF > ipengine.json
-{}
-EOF
-
-mkdir -p '.ipengine_logs'
-sleep 5
-ipengine --file=ipengine.json &> ipengine.log &
-ipengine --file=ipengine.json &> ipengine.log &""".format(config)
-        return ipptemplate
-
     def status(self, job_ids):
-        '''  Get the status of a list of jobs identified by their ids.
+        """Get the status of a list of jobs identified by their ids.
 
-        Args:
-            - job_ids (List of ids) : List of identifiers for the jobs
+        Parameters
+        ----------
+        job_ids : list of str
+            Identifiers for the jobs.
 
-        Returns:
-            - List of status codes.
-        '''
+        Returns
+        -------
+        list of int
+            The status codes of the requsted jobs.
+        """
 
         all_states = []
         for job_id in job_ids:
@@ -652,25 +539,28 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
 
         return all_states
 
-    def submit(self, cmd_string='sleep 1', blocksize=1, job_name="parsl.auto"):
-        '''Submits the cmd_string onto a freshly instantiated AWS EC2 instance.
+    def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
+        """Submit the command onto a freshly instantiated AWS EC2 instance.
+
         Submit returns an ID that corresponds to the task that was just submitted.
 
-        Args:
-             - cmd_string (str): Commandline invocation to be made on the remote side.
-             - blocksize (int): Number of blocks requested
+        Parameters
+        ----------
+        command : str
+            Command to be invoked on the remote side.
+        blocksize : int
+            Number of blocks requested.
+        job_name : str
+            Prefix for the job name.
 
-        Kwargs:
-             - job_name (String): Prefix for job name
-
-        Returns:
-             - None: At capacity, cannot provision more
-             - job_id: (string) Identifier for the job
-
-        '''
+        Returns
+        -------
+        None or str
+            If at capacity, None will be returned. Otherwise, the job identifier will be returned.
+        """
 
         job_name = "parsl.auto.{0}".format(time.time())
-        [instance, *rest] = self.spin_up_instance(cmd_string=cmd_string, job_name=job_name)
+        [instance, *rest] = self.spin_up_instance(command=command, job_name=job_name)
 
         if not instance:
             logger.error("Failed to submit request to EC2")
@@ -689,14 +579,18 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return instance.instance_id
 
     def cancel(self, job_ids):
-        ''' Cancels the jobs specified by a list of job ids
+        """Cancel the jobs specified by a list of job ids.
 
-        Args:
-             job_ids (list): List of of job identifiers
+        Parameters
+        ----------
+        job_ids : list of str
+            List of of job identifiers
 
-        Returns :
-             [True/False...]: If the cancel operation fails the entire list will be False.
-        '''
+        Returns
+        -------
+        list of bool
+            Each entry in the list will contain False if the operation fails. Otherwise, the entry will be True.
+        """
 
         try:
             self.client.terminate_instances(InstanceIds=list(job_ids))
@@ -715,9 +609,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return [True for x in job_ids]
 
     def show_summary(self):
-        """Print human readable summary of current
-           AWS state to log and to console
-        """
+        """Print human readable summary of current AWS state to log and to console."""
         self.get_instance_state()
         status_string = "EC2 Summary:\n\tVPC IDs: {}\n\tSubnet IDs: \
 {}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n"                                                          .format(
@@ -734,9 +626,10 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
         return status_string
 
     def teardown(self):
-        """Terminate all EC2 instances, delete all subnets,
-           delete security group, delete VPC,
-           and reset all instance variables
+        """Teardown the EC2 infastructure.
+
+        Terminate all EC2 instances, delete all subnets, delete security group, delete VPC,
+        and reset all instance variables.
         """
 
         self.shut_down_instance(self.instances)
@@ -760,7 +653,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
             logger.error("{}".format(e))
             raise e
         self.show_summary()
-        os.remove(self.config['stateFilePath'])
+        os.remove(self.config['state_file_path'])
 
     @property
     def scaling_enabled():
@@ -768,10 +661,7 @@ ipengine --file=ipengine.json &> ipengine.log &""".format(config)
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
-        This may need to return more information in the futures:
-        { minsize, maxsize, current_requested }
-        '''
+        """Returns the current blocksize."""
         return len(self.instances)
 
     def goodbye(self):

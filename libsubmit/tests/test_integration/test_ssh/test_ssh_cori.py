@@ -1,5 +1,5 @@
 import libsubmit
-from libsubmit import SshChannel, Slurm
+from libsubmit import SSHChannel, Slurm
 import time
 
 
@@ -25,7 +25,7 @@ def test_1():
         }
     }
 
-    channel = SshChannel(
+    channel = SSHChannel(
         "cori.nersc.gov",
         "yadunand",
         channel_script_dir="/global/homes/y/yadunand/parsl_scripts")

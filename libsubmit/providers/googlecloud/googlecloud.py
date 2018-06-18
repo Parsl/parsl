@@ -2,8 +2,6 @@ import atexit
 import logging
 import os
 
-from libsubmit.launchers import Launchers
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -28,8 +26,40 @@ translate_table = {
 }
 
 
-class GoogleCloud():  # ExcecutionProvider):
-    """ Define the Google Cloud provider
+class GoogleCloud():
+    """A provider for using resources from the Google Compute Engine.
+
+    Parameters
+    ----------
+    project_id : str
+        Project ID from Google compute engine.
+    key_file : str
+        Path to authorization private key json file. This is required for auth.
+        A new one can be generated here: https://console.cloud.google.com/apis/credentials
+    region : str
+        Region in which to start instances
+    os_project : str
+        OS project code for Google compute engine.
+    os_family : str
+        OS family to request.
+    label : str
+        A label for this executor. Default is 'google_cloud'.
+    google_version : str
+        Google compute engine version to use. Possibilies include 'v1' (default) or 'beta'.
+    instance_type: str
+        'n1-standard-1',
+    script_dir : str
+        Relative or absolute path to a directory where intermediate scripts are placed.
+    init_blocks : int
+        Number of blocks to provision immediately. Default is 1.
+    min_blocks : int
+        Minimum number of blocks to maintain. Default is 0.
+    max_blocks : int
+        Maximum number of blocks to maintain. Default is 10.
+    parallelism : float
+        Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
+        scaling where as many resources as possible are used; parallelism close to 0 represents
+        the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
 
     .. code:: python
 
@@ -49,57 +79,48 @@ class GoogleCloud():  # ExcecutionProvider):
                                 +-------------------
      """
 
-    def __init__(self, config, channel=None):
-        ''' Initialize the GoogleCompute class
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs:
-             - Channel (None): A channel is not required for google cloud.
-
-        Google compute instances require a few specific configuration options:
-            - auth['keyfile'](string): Path to authorization private key json file.
-                                       This is required for auth. A new one can be
-                                       generated here:
-                                       https://console.cloud.google.com/apis/credentials
-            - options['projectID'](string): Project ID from google compute engine
-            - options['region'](string): Region in which to start instances
-            - options['instanceType'](string): google instance type. Default:"n1-standard-1"
-            - options['osProject'](string): OS project code for google compute engine
-            - options['osFamily'](string): OS family to request
-            - options['googleVersion'](string): Google compute engine version to use ('v1' or 'beta')
-        '''
-        self.config = config
-        self.sitename = config['site']
-        self.options = self.config["execution"]["block"]["options"]
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.config["auth"]["keyfile"]
-        version = self.options.get('googleVersion', 'v1')
-        self.client = googleapiclient.discovery.build('compute', version)
-        self.channel = None
-        self.project_id = self.config["execution"]["block"]["options"]["projectID"]
-        self.zone = self.get_correct_zone(self.config["execution"]["block"]["options"]["region"])
-        launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
-        self.launcher = Launchers.get(launcher_name, None)
-        self.scriptDir = self.config["execution"].get("scriptDir", ".scripts")
-        self.name_int = 0
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+    def __init__(self,
+                 project_id,
+                 key_file,
+                 region,
+                 os_project,
+                 os_family,
+                 label='google_cloud',
+                 google_version='v1',
+                 instance_type='n1-standard-1',
+                 script_dir='parsl_scripts',
+                 init_blocks=1,
+                 min_blocks=0,
+                 max_blocks=10,
+                 parallelism=1):
+        self.project_id = project_id
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_file
+        self.zone = self.get_zone(region)
+        self.os_project = os_project
+        self.os_family = os_family
+        self.label = label
+        self.client = googleapiclient.discovery.build('compute', google_version)
+        self.instance_type = instance_type
+        self.script_dir = script_dir
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
+        self.init_blocks = init_blocks
+        self.min_blocks = min_blocks
+        self.max_blocks = max_blocks
+        self.parallelism = parallelism
+        self.num_instances = 0
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
-        self.current_blocksize = 0
+        self.provisioned_blocks = 0
         atexit.register(self.bye)
 
-    def __repr__(self):
-        return "<Google Cloud Platform Execution Provider for site:{0}>".format(self.sitename, self.channel)
-
-    def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
+    def submit(self, command="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot.
 
         Args :
-             - cmd_string (str) : The bash command string to be executed.
+             - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
 
         KWargs:
@@ -109,10 +130,10 @@ class GoogleCloud():  # ExcecutionProvider):
              - A job identifier, this could be an integer, string etc
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
-        instance, name = self.create_instance(cmd_string=cmd_string)
-        self.current_blocksize += 1
+        instance, name = self.create_instance(command=command)
+        self.provisioned_blocks += 1
         self.resources[name] = {"job_id": name, "status": translate_table[instance['status']]}
         return name
 
@@ -128,7 +149,7 @@ class GoogleCloud():  # ExcecutionProvider):
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
 
         '''
         statuses = []
@@ -148,14 +169,14 @@ class GoogleCloud():  # ExcecutionProvider):
              - A list of status from cancelling the job which can be True, False
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
         statuses = []
         for job_id in job_ids:
             try:
                 self.delete_instance(job_id)
                 statuses.append(True)
-                self.current_blocksize -= 1
+                self.provisioned_blocks -= 1
             except Exception as e:
                 statuses.append(False)
         return statuses
@@ -171,43 +192,28 @@ class GoogleCloud():  # ExcecutionProvider):
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
-        This may need to return more information in the futures :
-        { minsize, maxsize, current_requested }
-        '''
-        return self.current_blocksize
-
-    @property
-    def channels_required(self):
-        '''Google Compute does not require a channel
-
-        Returns:
-              - Status (Bool)
-        '''
-        return False
+        """Returns the number of currently provisioned blocks."""
+        return self.provisioned_blocks
 
     def bye(self):
         self.cancel([i for i in list(self.resources)])
 
-    def create_instance(self, cmd_string=""):
-        name = "parslauto{}".format(self.name_int)
-        self.name_int += 1
+    def create_instance(self, command=""):
+        name = "parslauto{}".format(self.num_instances)
+        self.num_instances += 1
         compute = self.client
         project = self.project_id
-        zone = self.zone
         image_response = compute.images().getFromFamily(
-            project=self.options["osProject"], family=self.options["osFamily"]).execute()
+            project=self.os_project, family=self.os_family).execute()
         source_disk_image = image_response['selfLink']
 
         # Configure the machine
-        machine_type = "zones/{}/machineTypes/{}".format(zone, self.options.get("instanceType", "n1-standard-1"))
-        startup_script = cmd_string
+        machine_type = "zones/{}/machineTypes/{}".format(self.zone, self.instance_type)
+        startup_script = command
 
         config = {
-            'name':
-            name,
-            'machineType':
-            machine_type,
+            'name': name,
+            'machineType': machine_type,
 
             # Specify the boot disk and the image to use as a source.
             'disks': [{
@@ -242,9 +248,9 @@ class GoogleCloud():  # ExcecutionProvider):
             }
         }
 
-        return compute.instances().insert(project=project, zone=zone, body=config).execute(), name
+        return compute.instances().insert(project=project, zone=self.zone, body=config).execute(), name
 
-    def get_correct_zone(self, region):
+    def get_zone(self, region):
         res = self.client.zones().list(project=self.project_id).execute()
         for zone in res['items']:
             if region in zone['name'] and zone['status'] == "UP":

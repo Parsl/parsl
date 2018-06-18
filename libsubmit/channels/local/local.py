@@ -7,42 +7,41 @@ import subprocess
 
 from libsubmit.channels.channel_base import Channel
 from libsubmit.channels.errors import *
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class LocalChannel(Channel):
+class LocalChannel(Channel, RepresentationMixin):
     ''' This is not even really a channel, since opening a local shell is not heavy
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __repr__(self):
-        return "Local:{0}".format(self.hostname)
-
-    def __init__(self, userhome=".", envs={}, scriptDir="./.scripts", **kwargs):
-        ''' Initialize the local channel. scriptDir is required by set to a default.
+    def __init__(self, userhome=".", envs={}, script_dir="./.scripts", **kwargs):
+        ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
             - userhome (string): (default='.') This is provided as a way to override and set a specific userhome
             - envs (dict) : A dictionary of env variables to be set when launching the shell
-            - channel_script_dir (string): (default="./.scripts") Directory to place scripts
+            - script_dir (string): (default="./.scripts") Directory to place scripts
         '''
         self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
+        self.envs = envs
         local_env = os.environ.copy()
-        self.envs = copy.deepcopy(local_env)
-        self.envs.update(envs)
-        self.channel_script_dir = os.path.abspath(scriptDir)
+        self._envs = copy.deepcopy(local_env)
+        self._envs.update(envs)
+        self._script_dir = os.path.abspath(script_dir)
         try:
-            os.makedirs(self.channel_script_dir)
+            os.makedirs(self._script_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.error("Failed to create scriptDir : {0}".format(scriptDir))
+                logger.error("Failed to create script_dir : {0}".format(script_dir))
                 raise BadScriptPath(e, self.hostname)
 
     @property
     def script_dir(self):
-        return self.channel_script_dir
+        return self._script_dir
 
     def execute_wait(self, cmd, walltime, envs={}):
         ''' Synchronously execute a commandline string on the shell.
@@ -67,7 +66,7 @@ class LocalChannel(Channel):
         stdout = None
         stderr = None
 
-        current_env = copy.deepcopy(self.envs)
+        current_env = copy.deepcopy(self._envs)
         current_env.update(envs)
 
         try:
@@ -110,11 +109,8 @@ class LocalChannel(Channel):
         Raises:
          None.
         '''
-        if self.envs:
-            current_env = copy.copy(self.envs)
-        else:
-            current_env = {}
-            current_env.update(envs)
+        current_env = copy.deepcopy(self._envs)
+        current_env.update(envs)
 
         try:
             proc = subprocess.Popen(

@@ -2,8 +2,11 @@ import logging
 import os
 import time
 
+from libsubmit.channels.local.local import LocalChannel
+from libsubmit.launchers import launchers
 from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.providers.gridEngine.template import template_string
+from libsubmit.providers.grid_engine.template import template_string
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -27,95 +30,93 @@ translate_table = {
 }
 
 
-class GridEngine(ClusterProvider):
-    """ Define the Grid Engine provider
+class GridEngine(ClusterProvider, RepresentationMixin):
+    """A provider for the Grid Engine scheduler.
 
-    .. warning::
-        Please note that in the config documented below, description and values
-        are placed inside a schema that is delimited by <{ schema.. }>
+    Parameters
+    ----------
+    channel : Channel
+        Channel for accessing this provider. Possible channels include
+        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
+        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
+        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+    label : str
+        Label for this provider.
+    script_dir : str
+        Relative or absolute path to a directory where intermediate scripts are placed.
+    nodes_per_block : int
+        Nodes to provision per block.
+    tasks_per_node : int
+        Tasks to run per node.
+    min_blocks : int
+        Minimum number of blocks to maintain.
+    max_blocks : int
+        Maximum number of blocks to maintain.
+    parallelism : float
+        Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
+        scaling where as many resources as possible are used; parallelism close to 0 represents
+        the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
+    walltime : str
+        Walltime requested per block in HH:MM:SS.
+    overrides : str
+        String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+    launcher : str
+        FIXME. Can be one of 'single_node', 'srun', 'aprun', or 'srun_mpi'.
+    """
 
-    Here's the config schema for the GridEngine provider:
+    def __init__(self,
+                 channel=LocalChannel(),
+                 label='grid_engine',
+                 script_dir='parsl_scripts',
+                 nodes_per_block=1,
+                 tasks_per_node=1,
+                 init_blocks=1,
+                 min_blocks=0,
+                 max_blocks=10,
+                 parallelism=1,
+                 walltime="00:10:00",
+                 overrides='',
+                 launcher='single_node'):
+        super().__init__(label,
+                         channel,
+                         script_dir,
+                         nodes_per_block,
+                         tasks_per_node,
+                         init_blocks,
+                         min_blocks,
+                         max_blocks,
+                         parallelism,
+                         walltime,
+                         launcher)
+        self.overrides = overrides
 
-    .. code-block:: python
+        if launcher in ['srun', 'srun_mpi']:
+            logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
+                           "Recommended options include 'single_node' or 'aprun'.".format(launcher))
 
-         { "execution": { # Definition of all execution aspects of a site
+    def get_configs(self, command):
+        """Compose a dictionary with information for writing the submit script."""
 
-              "executor": # {Description: Define the executor used as task executor,
-                          # Type : String,
-                          # Expected : "ipp",
-                          # Required : True},
+        logger.debug("Requesting one block with {} nodes per block and {} tasks per node".format(
+            self.nodes_per_block, self.tasks_per_node))
 
-              "provider": # {Description : The provider name, in this case slurm
-                          # Type : String,
-                          # Expected : "gridEngine",
-                          # Required :  True },
+        job_config = {}
+        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["nodes"] = self.nodes_per_block
+        job_config["walltime"] = self.walltime
+        job_config["overrides"] = self.overrides
+        job_config["user_script"] = command
 
-              "scriptDir": #{Description : Relative or absolute path to a
-                           # directory in which intermediate scripts are placed
-                           # Type : String,
-                           # Default : "./.scripts"},
+        job_config["user_script"] = launchers[self.launcher](command, task_blocks=self.tasks_per_block)
+        return job_config
 
-              "block": { # Definition of a block
-
-                  "nodes": #{Description : # of nodes to provision per block
-                           # Type : Integer,
-                           # Default: 1},
-
-                  "taskBlocks" : #{Description : # of workers to launch per block
-                                 # as either an number or as a bash expression.
-                                 # for eg, "1" , "$(($CORES / 2))"
-                                 # Type : String,
-                                 #  Default: "1" },
-
-                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
-                                 # Type : String,
-                                 # Default : "00:20:00" },
-
-                  "initBlocks" : #{Description : # of blocks to provision at the start of
-                                 # the DFK
-                                 # Type : Integer
-                                 # Default : ?
-                                 # Required :    },
-
-                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
-                                 # Type : Integer
-                                 # Default : 0 },
-
-                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
-                                 # Type : Integer
-                                 # Default : ? },
-
-                  "options"   : {  # Scheduler specific options
-
-                      "overrides" : #{"Description : String to append to the submit_scipt block
-                                    # in the submit script to the scheduler
-                                    # Type : String,
-                                    # Required : False },
-                  }
-              }
-            }
-         }
-
-     """
-
-    def __init__(self, config, channel=None):
-        ''' Initialize the GridEngine class
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs:
-             - Channel (None): A channel is required for GridEngine.
-        '''
-        super().__init__(config, channel=channel)
-
-    def submit(self, cmd_string="", blocksize=1, job_name="parsl.auto"):
+    def submit(self, command="", blocksize=1, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
-             - cmd_string (str) : The bash command string to be executed.
+             - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
 
         KWargs:
@@ -125,22 +126,22 @@ class GridEngine(ClusterProvider):
              - A job identifier, this could be an integer, string etc
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
 
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes", 1)
+        if blocksize < self.nodes_per_block:
+            blocksize = self.nodes_per_block
 
         # Set job name
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        job_config = self.get_configs(cmd_string, blocksize)
+        job_config = self.get_configs(command, blocksize)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
@@ -169,7 +170,7 @@ class GridEngine(ClusterProvider):
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
 
         '''
 
@@ -208,7 +209,7 @@ class GridEngine(ClusterProvider):
              - A list of status from cancelling the job which can be True, False
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
 
         job_id_list = ' '.join(job_ids)
