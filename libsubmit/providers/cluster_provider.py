@@ -122,6 +122,26 @@ class ClusterProvider(ExecutionProvider):
 
         return True
 
+    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
+        ''' The submit method takes the command string to be executed upon
+        instantiation of a resource most often to start a pilot (such as IPP engine
+        or even Swift-T engines).
+
+        Args :
+             - cmd_string (str) : The bash command string to be executed.
+             - blocksize (int) : Blocksize to be requested
+
+        KWargs:
+             - job_name (str) : Human friendly name to be assigned to the job request
+
+        Returns:
+             - A job identifier, this could be an integer, string etc
+
+        Raises:
+             - ExecutionProviderExceptions or its subclasses
+        '''
+        raise NotImplementedError
+
     def _status(self):
         raise NotImplementedError
 
