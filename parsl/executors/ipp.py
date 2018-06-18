@@ -1,13 +1,15 @@
-import os
 import logging
-from ipyparallel import Client
+import os
 
+from ipyparallel import Client
+from libsubmit.providers.local.local import Local
+from libsubmit.utils import RepresentationMixin
+
+from parsl.config import ConfigurationError
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import *
-from parsl.utils import wait_for_file
 from parsl.executors.ipp_controller import Controller
-from libsubmit.utils import RepresentationMixin
-from libsubmit.providers.local.local import Local
+from parsl.utils import wait_for_file
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +48,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Alternative to above, specify the engine_dir
     working_dir : str
         Directory where input data should be staged to.
-    storage_access : :class:`~parsl.data_provider.scheme.Scheme`
-        Specification for accessing data this executor remotely.
+    storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
+        Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
         this is managed by the user.
@@ -79,7 +81,9 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.controller = controller
         self.container_image = container_image
-        self.storage_access = storage_access
+        if len(storage_access) > 1:
+            raise ConfigurationError('Multiple storage access schemes are not yet supported')
+        self.storage_access = storage_access if storage_access is not None else []
         self.managed = managed
 
     def start(self):

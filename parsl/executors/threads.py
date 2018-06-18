@@ -3,6 +3,7 @@ import sys
 import concurrent.futures as cf
 
 from parsl.executors.base import ParslExecutor
+from parsl.config import ConfigurationError
 from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -17,8 +18,8 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         Number of threads. Default is 2.
     thread_name_prefix : string
         Thread name prefix (only supported in python v3.6+).
-    storage_access : :class:`~parsl.data_provider.scheme.Scheme`
-        Specification for accessing data this executor remotely.
+    storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
+        Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
         this is managed by the user.
@@ -30,7 +31,9 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         self.max_threads = max_threads
         self.thread_name_prefix = thread_name_prefix
 
-        self.storage_access = storage_access
+        if len(storage_access) > 1:
+            raise ConfigurationError('Multiple storage access schemes are not yet supported')
+        self.storage_access = storage_access if storage_access is not None else []
         self.working_dir = working_dir
         self.managed = managed
 

@@ -85,19 +85,20 @@ class DataManager(ParslExecutor):
     def _get_globus_endpoint(self, executor_label=None):
         for executor in self.executors.values():
             if executor_label is None or executor.label == executor_label:
-                if isinstance(executor.storage_access, GlobusScheme):
-                    working_dir = os.path.normpath(executor.working_dir)
-                    if executor.storage_access.endpoint_path and executor.storage_access.local_path:
-                        endpoint_path = os.path.normpath(executor.endpoint.endpoint_path)
-                        local_path = os.path.normpath(executor.endpoint.local_path)
-                        common_path = os.path.commonpath((local_path, working_dir))
-                        if local_path != common_path:
-                            raise Exception('"local_path" must be equal or an absolute subpath of "working_dir"')
-                        relative_path = os.path.relpath(working_dir, common_path)
-                        executor.storage_access.endpoint_path = os.path.join(endpoint_path, relative_path)
-                    else:
-                        executor.storage_access.endpoint_path = working_dir
-                    return executor.storage_access
+                for scheme in executor.storage_access:
+                    if isinstance(scheme, GlobusScheme):
+                        working_dir = os.path.normpath(executor.working_dir)
+                        if scheme.endpoint_path and scheme.local_path:
+                            endpoint_path = os.path.normpath(scheme.endpoint_path)
+                            local_path = os.path.normpath(scheme.local_path)
+                            common_path = os.path.commonpath((local_path, working_dir))
+                            if local_path != common_path:
+                                raise Exception('"local_path" must be equal or an absolute subpath of "working_dir"')
+                            relative_path = os.path.relpath(working_dir, common_path)
+                            scheme.endpoint_path = os.path.join(endpoint_path, relative_path)
+                        else:
+                            scheme.endpoint_path = working_dir
+                        return scheme
         raise Exception('No executor with a Globus endpoint and working_dir defined')
 
     def stage_in(self, file, executor):

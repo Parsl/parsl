@@ -15,6 +15,7 @@ from ipyparallel.serialize import pack_apply_message, unpack_apply_message
 from ipyparallel.serialize import serialize_object, deserialize_object
 
 from parsl.executors.base import ParslExecutor
+from parsl.config import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +180,9 @@ class TurbineExecutor(ParslExecutor):
         """
         logger.debug("Initializing TurbineExecutor")
         self.label = label
-        self.storage_access = storage_access
+        if len(storage_access) > 1:
+            raise ConfigurationError('Multiple storage access schemes are not yet supported')
+        self.storage_access = storage_access if storage_access is not None else []
         self.working_dir = working_dir
         self.managed = managed
 
