@@ -3,7 +3,7 @@ import sys
 import concurrent.futures as cf
 
 from parsl.executors.base import ParslExecutor
-from parsl.config import ConfigurationError
+from parsl.dataflow.error import ConfigurationError
 from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -31,9 +31,9 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         self.max_threads = max_threads
         self.thread_name_prefix = thread_name_prefix
 
-        if len(storage_access) > 1:
-            raise ConfigurationError('Multiple storage access schemes are not yet supported')
         self.storage_access = storage_access if storage_access is not None else []
+        if len(self.storage_access) > 1:
+            raise ConfigurationError('Multiple storage access schemes are not yet supported')
         self.working_dir = working_dir
         self.managed = managed
 

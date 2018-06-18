@@ -10,7 +10,7 @@ from functools import partial
 import libsubmit
 import parsl
 from parsl.app.errors import RemoteException
-from parsl.config import Config, ConfigurationError
+from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.error import *

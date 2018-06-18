@@ -5,7 +5,7 @@ from ipyparallel import Client
 from libsubmit.providers.local.local import Local
 from libsubmit.utils import RepresentationMixin
 
-from parsl.config import ConfigurationError
+from parsl.dataflow.error import ConfigurationError
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import *
 from parsl.executors.ipp_controller import Controller
@@ -81,9 +81,9 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.controller = controller
         self.container_image = container_image
-        if len(storage_access) > 1:
-            raise ConfigurationError('Multiple storage access schemes are not yet supported')
         self.storage_access = storage_access if storage_access is not None else []
+        if len(self.storage_access) > 1:
+            raise ConfigurationError('Multiple storage access schemes are not yet supported')
         self.managed = managed
 
     def start(self):

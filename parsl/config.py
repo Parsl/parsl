@@ -2,12 +2,9 @@ import logging
 
 from libsubmit.utils import RepresentationMixin
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.dataflow.error import ConfigurationError
 
 logger = logging.getLogger(__name__)
-
-
-class ConfigurationError(Exception):
-    """Raised if there is a problem with the configuration."""
 
 
 class Config(RepresentationMixin):
