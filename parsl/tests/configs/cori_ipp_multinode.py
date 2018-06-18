@@ -26,6 +26,7 @@ config = Config(
                 init_blocks=1,
                 max_blocks=1,
                 overrides=user_opts['cori']['overrides'],
+                launcher='srun'
             )
         )
 

@@ -69,8 +69,6 @@ class File(str):
         The appropriate filepath will be returned when called from within
         an app running remotely as well as regular python on the client side.
 
-        FIXME this docstring does not make sense
-
         Args:
             - self
         Returns:
@@ -93,10 +91,7 @@ class File(str):
         return self.dman.stage_in(self, executor)
 
     def stage_out(self):
-        """Transport file from local filesystem to origin site.
-        Transport file from executor to final output destination.
-        FIXME check
-        """
+        """Transport file from executor to final output destination."""
         return self.dman.stage_out(self)
 
     def set_data_future(self, df, executor=None):

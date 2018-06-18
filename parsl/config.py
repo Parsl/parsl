@@ -51,7 +51,7 @@ class Config(RepresentationMixin):
                  app_cache=True,
                  checkpoint_files=None,
                  checkpoint_mode=None,
-                 checkpoint_period=None,
+                 checkpoint_period="00:30:00",
                  data_management_max_threads=10,
                  lazy_errors=True,
                  retries=0,

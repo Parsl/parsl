@@ -61,8 +61,7 @@ templates_path = ['_templates']
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    # 'libsubmit': ('https://libsubmit.readthedocs.io/en/latest', None)
-    'libsubmit': ('/Users/awoodard/ci/libsubmit/docs/_build/html', None)
+    'libsubmit': ('https://libsubmit.readthedocs.io/en/stable', None)
 }
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:

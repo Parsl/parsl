@@ -12,7 +12,6 @@ Block {Min:0, init:1, Max:1}
 
 """
 from libsubmit.providers.aws.aws.EC2Provider import EC2Provider
-from parsl.executors.ipp_controller import Controller
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.user_opts import user_opts
@@ -36,6 +35,5 @@ config = Config(
             )
         )
     ],
-    controller=Controller(public_ip='*'),
     run_dir=get_rundir(),
 )

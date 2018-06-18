@@ -21,7 +21,8 @@ config = Config(
                 max_blocks=1,
                 walltime="00:05:00",
                 overrides=user_opts['cooley']['overrides'],
-                queue='debug'
+                queue='debug',
+                account=user_opts['cooley']['account']
             )
         )
 

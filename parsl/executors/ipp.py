@@ -93,7 +93,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
 
         self.engine_file = self.controller.engine_file
 
-        with wait_for_file(self.controller.client_file, seconds=20):
+        with wait_for_file(self.controller.client_file, seconds=120):
             logger.debug("Waiting for {0}".format(self.controller.client_file))
 
         if not os.path.exists(self.controller.client_file):

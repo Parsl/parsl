@@ -29,7 +29,6 @@ config = Config(
                 tasks_per_node=2,
                 init_blocks=1,
                 max_blocks=1,
-                launcher='srun',
                 overrides=user_opts['cc_in2p3']['overrides'],
             )
         )

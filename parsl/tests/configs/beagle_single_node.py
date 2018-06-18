@@ -29,7 +29,7 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                launcher='srun',
+                launcher='aprun',
                 overrides=user_opts['beagle']['overrides'],
             )
         )

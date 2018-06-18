@@ -9,8 +9,10 @@ from functools import partial
 
 import libsubmit
 import parsl
-from parsl.config import Config
 from parsl.app.errors import RemoteException
+from parsl.config import Config, ConfigurationError
+from parsl.data_provider.data_manager import DataManager
+from parsl.data_provider.files import File
 from parsl.dataflow.error import *
 from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
@@ -18,8 +20,6 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
-from parsl.data_provider.files import File
-from parsl.data_provider.data_manager import DataManager
 from parsl.utils import get_version
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,10 @@ class DataFlowKernel(object):
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
+        if isinstance(config, dict):
+            raise ConfigurationError(
+                    'Expected `Config` class, received dictionary. For help, '
+                    'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         self.run_dir = make_rundir(config.run_dir)
@@ -88,8 +92,6 @@ class DataFlowKernel(object):
 
         if self.checkpoint_mode == "periodic":
             try:
-                if not config.checkpoint_period:
-                    config.checkpoint_period = "00:30:00"
                 h, m, s = map(int, config.checkpoint_period.split(':'))
                 checkpoint_period = (h * 3600) + (m * 60) + s
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
@@ -98,9 +100,9 @@ class DataFlowKernel(object):
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
         if any([x.managed for x in config.executors]):
-            self.flowcontrol = FlowControl(self, self._config)
+            self.flowcontrol = FlowControl(self)
         else:
-            self.flowcontrol = FlowNoControl(self, None)
+            self.flowcontrol = FlowNoControl(self)
 
         self.task_count = 0
         self.fut_task_lookup = {}
@@ -563,11 +565,11 @@ class DataFlowKernel(object):
         self.flowcontrol.close()
 
         for executor in self.executors.values():
-            if executor.scaling_enabled and executor.managed:
-                job_ids = executor.provider.resources.keys()
-                executor.scale_in(len(job_ids))
-
-            executor.shutdown()
+            if executor.managed:
+                if executor.scaling_enabled:
+                    job_ids = executor.provider.resources.keys()
+                    executor.scale_in(len(job_ids))
+                executor.shutdown()
 
         logger.info("DFK cleanup complete")
 

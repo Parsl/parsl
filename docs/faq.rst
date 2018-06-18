@@ -78,7 +78,9 @@ the workers can connect back. While our pilot job system, ipyparallel,
 can identify the IP address automatically on certain systems,
 it is safer to specify the address explicitly.
 
-To specify the address in the :class:`~parsl.config.Config`:
+To specify the address in the :class:`~parsl.config.Config` (note this is an example
+using the :class:`libsubmit.providers.cobalt.cobalt.Cobalt`; any other provider could
+be substituted below):
 
 .. code-block:: python
 

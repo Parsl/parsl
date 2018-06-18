@@ -31,7 +31,6 @@ user_opts = {
     # },
     # 'cooley': {
     #     'username': 'fixme',
-    #     "queue": "debug",
     #     "account": 'CSC249ADCD01',
     #     "overrides": "source /home/fixme/setup_cooley_env.sh"
     # },
