@@ -73,7 +73,7 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
         to allow SSH access to the EC2 instances. This is mostly used for debugging.
     spot_max_bid : float
         Maximum bid price (if requesting spot market machines).
-    i_am_instance_profile_arn : str
+    iam_instance_profile_arn : str
         Launch instance with a specific role.
     state_file : str
         Path to the state file from a previous run to re-use.
@@ -93,7 +93,7 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
                  region='us-east-2',
                  key_name=None,
                  spot_max_bid=0,
-                 i_am_instance_profile_arn='',
+                 iam_instance_profile_arn='',
                  state_file=None):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
@@ -103,7 +103,7 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
         self.overrides = overrides
         self.image_id = image_id
         self.key_name = key_name
-        self.i_am_instance_profile_arn = i_am_instance_profile_arn
+        self.iam_instance_profile_arn = iam_instance_profile_arn
         self.region = region
         self.max_nodes = max_blocks * nodes_per_block
         self.max_blocks = max_blocks
@@ -452,7 +452,7 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
                 TagSpecifications=tag_spec,
                 InstanceMarketOptions=spot_options,
                 InstanceInitiatedShutdownBehavior='terminate',
-                IamInstanceProfile={'Arn': self.i_am_instance_profile_arn},
+                IamInstanceProfile={'Arn': self.iam_instance_profile_arn},
                 UserData=command
             )
         except ClientError as e:

@@ -20,7 +20,7 @@ class SSHChannel(RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -32,6 +32,7 @@ class SSHChannel(RepresentationMixin):
             - password (string) : Password for remote system
             - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
+            - envs (dict) : A dictionary of environment variables to be set when executing commands
 
         Raises:
         '''
@@ -49,6 +50,10 @@ class SSHChannel(RepresentationMixin):
             self._script_dir = script_dir
         else:
             self._script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+
+        self.envs = {}
+        if envs is not None:
+            self.envs = envs
 
         try:
             self.ssh_client.connect(
@@ -77,6 +82,8 @@ class SSHChannel(RepresentationMixin):
         return self._script_dir
 
     def prepend_envs(self, cmd, env={}):
+        env.update(self.envs)
+
         if len(env.keys()) > 0:
             env_vars = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
             return 'env {0} {1}'.format(env_vars, cmd)

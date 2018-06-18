@@ -13,7 +13,7 @@ class SSHInteractiveLoginChannel(SSHChannel):
     keys are not set up.
     """
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -25,6 +25,7 @@ class SSHInteractiveLoginChannel(SSHChannel):
             - password (string) : Password for remote system
             - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
+            - envs (dict) : A dictionary of env variables to be set when executing commands
 
         Raises:
         '''
@@ -41,6 +42,10 @@ class SSHInteractiveLoginChannel(SSHChannel):
             self.script_dir = script_dir
         else:
             self.script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+
+        self.envs = {}
+        if envs is not None:
+            self.envs = envs
 
         try:
             self.ssh_client.connect(
