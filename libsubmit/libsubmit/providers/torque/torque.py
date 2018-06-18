@@ -6,6 +6,7 @@ from string import Template
 import libsubmit.error as ep_error
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.providers.torque.template import template_string
+# from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -22,123 +23,83 @@ translate_table = {
 
 
 class Torque(ExecutionProvider):
-    ''' Torque Execution Provider
+    """Torque Execution Provider
 
     This provider uses sbatch to submit, squeue for status, and scancel to cancel
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
-    .. warning::
-        Please note that in the config documented below, description and values
-        are placed inside a schema that is delimited by #{ schema.. }
-
-    Here's the scheme for the Torque provider:
-
-    .. code-block:: python
-
-         { "execution" : { # Definition of all execution aspects of a site
-
-              "executor"   : #{Description: Define the executor used as task executor,
-                             # Type : String,
-                             # Expected : "ipp",
-                             # Required : True},
-
-              "provider"   : #{Description : The provider name, in this case torque
-                             # Type : String,
-                             # Expected : "torque",
-                             # Required :  True },
-
-              "scriptDir"  : #{Description : Relative or absolute path to a
-                             # directory in which intermediate scripts are placed
-                             # Type : String,
-                             # Default : "./scripts"},
-
-              "block" : { # Definition of a block
-
-                  "nodes"      : #{Description : # of nodes to provision per block
-                                 # Type : Integer,
-                                 # Default: 1},
-
-                  "taskBlocks" : #{Description : # of workers to launch per block
-                                 # as either an number or as a bash expression.
-                                 # for eg, "1" , "$(($CORES / 2))"
-                                 # Type : String,
-                                 #  Default: "1" },
-
-                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
-                                 # Type : String,
-                                 # Default : "00:20:00" },
-
-                  "initBlocks" : #{Description : # of blocks to provision at the start of
-                                 # the DFK
-                                 # Type : Integer
-                                 # Default : ?
-                                 # Required :    },
-
-                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : 0 },
-
-                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : ? },
-
-                  "options"   : {  # Scheduler specific options
-
-                      "account"   : #{Description : Account the job will be charged against
-                                    # Type : String,
-                                    # Required : True },
-
-                      "queue"     : #{Description : Torque queue to request blocks from
-                                    # Type : String,
-                                    # Required : False },
-
-                      "overrides" : #{"Description : String to append to the Torque submit script
-                                    # in the submit script to the scheduler
-                                    # Type : String,
-                                    # Required : False },
-                  }
-              }
-            }
-         }
-
-    '''
-
-    def __repr__(self):
-        return "<Torque Execution Provider for site:{0} with channel:{1}>".format(self.sitename, self.channel)
-
-    def __init__(self, config, channel=None):
-        ''' Initialize the Torque class
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs:
-             - Channel (None): A channel is required for torque.
-        '''
-
+    Parameters
+    ----------
+    channel : Channel
+        Channel for accessing this provider. Possible channels include
+        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
+        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
+        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+    account : str
+        Account the job will be charged against.
+    queue : str
+        Torque queue to request blocks from.
+    label : str
+        Label for this provider.
+    script_dir : str
+        Relative or absolute path to a directory where intermediate scripts are placed.
+    nodes_per_block : int
+        Nodes to provision per block.
+    tasks_per_node : int
+        Tasks to run per node.
+    init_blocks : int
+        Number of blocks to provision at the start of the run. Default is 1.
+    min_blocks : int
+        Minimum number of blocks to maintain. Default is 0.
+    max_blocks : int
+        Maximum number of blocks to maintain.
+    parallelism : float
+        Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
+        scaling where as many resources as possible are used; parallelism close to 0 represents
+        the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
+    walltime : str
+        Walltime requested per block in HH:MM:SS.
+    overrides : str
+        String to prepend to the Torque submit script.
+    """
+    def __init__(self,
+                 channel,
+                 account,
+                 queue=None,
+                 overrides='',
+                 label='torque',
+                 script_dir='parsl_scripts',
+                 nodes_per_block=1,
+                 tasks_per_node=1,
+                 init_blocks=1,
+                 min_blocks=0,
+                 max_blocks=100,
+                 parallelism=1,
+                 walltime="00:20:00"):
         self.channel = channel
         if self.channel is None:
             logger.error("Provider:Torque cannot be initialized without a channel")
             raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
-        self.config = config
-        self.sitename = config['site']
-        self.current_blocksize = 0
+        self.account = account
+        self.queue = queue
+        self.overrides = overrides
+        self.label = label
+        self.nodes_per_block = nodes_per_block
+        self.tasks_per_node = tasks_per_node
+        self.init_blocks = init_blocks
+        self.min_blocks = min_blocks
+        self.max_blocks = max_blocks
+        self.parallelism = parallelism
+        self.walltime = walltime
+        self.provisioned_blocks = 0
 
-        self.scriptDir = self.config["execution"]["scriptDir"]
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        self.script_dir = script_dir
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
-
-    @property
-    def channels_required(self):
-        ''' Returns Bool on whether a channel is required
-        '''
-        return True
 
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
@@ -210,7 +171,7 @@ class Torque(ExecutionProvider):
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise (ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            raise (ep_error.SchedulerMissingArgs(e.args, self.label))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
@@ -218,8 +179,8 @@ class Torque(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
-        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, blocksize, job_name="parsl.auto"):
+        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
@@ -231,7 +192,7 @@ class Torque(ExecutionProvider):
              tasks_per_node * blocksize number of nodes are provisioned.
 
         Args:
-             - cmd_string  :(String) Commandline invocation to be made on the remote side.
+             - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float)
 
         Kwargs:
@@ -243,37 +204,33 @@ class Torque(ExecutionProvider):
 
         '''
 
-        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
+        if self.provisioned_blocks >= self.max_blocks:
+            logger.warn("[%s] at capacity, cannot add more blocks now", self.label)
             return None
 
         # Note: Fix this later to avoid confusing behavior.
         # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes", 1)
+        if blocksize < self.nodes_per_block:
+            blocksize = self.nodes_per_block
 
         # Set job name
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        # Calculate nodes
-        nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, nodes,
-                     self.config["execution"]["block"].get("taskBlocks", 1))
+        logger.debug("Requesting blocksize:%s nodes_per_block:%s tasks_per_node:%s", blocksize, self.nodes_per_block,
+                     self.tasks_per_node)
 
         job_config = self.config["execution"]["block"]["options"]
         # TODO : script_path might need to change to accommodate script dir set via channels
         job_config["submit_script_dir"] = self.channel.script_dir
-        job_config["nodes"] = nodes
-        job_config["taskBlocks"] = self.config["execution"]["block"].get("taskBlocks", 1)
-        job_config["account"] = self.config["execution"]["block"]["options"].get("account", '')
-        job_config["queue"] = self.config["execution"]["block"]["options"].get("queue", '')
-        job_config["walltime"] = self.config["execution"]["block"].get("walltime", "00:20:00")
-        job_config["overrides"] = job_config.get("overrides", '')
-        job_config["user_script"] = cmd_string
+        job_config["nodes"] = self.nodes_per_block
+        job_config["task_blocks"] = self.nodes_per_block * self.tasks_per_node
+        job_config["walltime"] = self.walltime
+        job_config["overrides"] = self.overrides
+        job_config["user_script"] = command
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
@@ -281,10 +238,10 @@ class Torque(ExecutionProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         submit_options = ''
-        if job_config["queue"]:
-            submit_options = '{0} -q {1}'.format(submit_options, job_config["queue"])
-        if job_config["account"]:
-            submit_options = '{0} -A {1}'.format(submit_options, job_config["account"])
+        if self.queue is not None:
+            submit_options = '{0} -q {1}'.format(submit_options, self.queue)
+        if self.account is not None:
+            submit_options = '{0} -A {1}'.format(submit_options, self.account)
 
         launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
         retcode, stdout, stderr = self.channel.execute_wait(launch_cmd, 3)
@@ -328,11 +285,11 @@ class Torque(ExecutionProvider):
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
+        ''' Returns the number of currently provisioned blocks.
         This may need to return more information in the futures :
         { minsize, maxsize, current_requested }
         '''
-        return self.current_blocksize
+        return self.provisioned_blocks
 
     def _test_add_resource(self, job_id):
         self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])

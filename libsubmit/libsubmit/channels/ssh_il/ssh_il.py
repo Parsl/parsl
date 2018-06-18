@@ -2,22 +2,18 @@ import getpass
 import logging
 
 import paramiko
-from libsubmit.channels.ssh.ssh import SshChannel
+from libsubmit.channels.ssh.ssh import SSHChannel
 
 logger = logging.getLogger(__name__)
 
 
-class SshILChannel(SshChannel):
-    ''' Ssh persistent channel. This enables remote execution on sites
-    accessible via ssh. It is assumed that the user has setup host keys
-    so as to ssh to the remote host. Which goes to say that the following
-    test on the commandline should work :
+class SSHInteractiveLoginChannel(SSHChannel):
+    """SSH persistent channel. This enables remote execution on sites
+    accessible via ssh. This channel supports interactive login and is appropriate when
+    keys are not set up.
+    """
 
-    >>> ssh <username>@<hostname>
-
-    '''
-
-    def __init__(self, hostname, username=None, password=None, scriptDir=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -27,12 +23,12 @@ class SshILChannel(SshChannel):
         KWargs:
             - username (string) : Username on remote system
             - password (string) : Password for remote system
-            - channel_script_dir (string) : Full path to a script dir where
+            - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
+            - envs (dict) : A dictionary of env variables to be set when executing commands
 
         Raises:
         '''
-
         self.hostname = hostname
         self.username = username
         self.password = password
@@ -42,10 +38,14 @@ class SshILChannel(SshChannel):
         self.ssh_client.load_system_host_keys()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        if scriptDir:
-            self.channel_script_dir = scriptDir
+        if script_dir:
+            self.script_dir = script_dir
         else:
-            self.channel_script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+            self.script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+
+        self.envs = {}
+        if envs is not None:
+            self.envs = envs
 
         try:
             self.ssh_client.connect(
@@ -53,7 +53,7 @@ class SshILChannel(SshChannel):
             )
 
         except Exception as e:
-            logger.debug("Caught the SSHException in SshInteractive")
+            logger.debug("Caught the SSHException in SSHInteractive")
             pass
         '''
         except paramiko.BadHostKeyException as e:
@@ -63,7 +63,7 @@ class SshILChannel(SshChannel):
             raise AuthException(e, self.hostname)
 
         except paramiko.SSHException as e:
-            logger.debug("Caught the SSHException in SshInteractive")
+            logger.debug("Caught the SSHException in SSHInteractive")
             pass
 
         except Exception as e:

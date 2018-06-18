@@ -23,13 +23,13 @@ class ExecutionProvider(metaclass=ABCMeta):
      """
 
     @abstractmethod
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
-             - cmd_string (str) : The bash command string to be executed.
+             - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
 
         KWargs:
@@ -39,7 +39,7 @@ class ExecutionProvider(metaclass=ABCMeta):
              - A job identifier, this could be an integer, string etc
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
 
         pass
@@ -57,7 +57,7 @@ class ExecutionProvider(metaclass=ABCMeta):
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
 
         '''
 
@@ -74,7 +74,7 @@ class ExecutionProvider(metaclass=ABCMeta):
              - A list of status from cancelling the job which can be True, False
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
         '''
 
         pass
@@ -83,19 +83,6 @@ class ExecutionProvider(metaclass=ABCMeta):
     def scaling_enabled(self):
         ''' The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
-
-        Returns:
-              - Status (Bool)
-        '''
-
-        pass
-
-    @abstractproperty
-    def channels_required(self):
-        ''' Does the execution provider require a channel to function. Generally
-        all Cloud api's require no channels while all bash script based systems
-        such as schedulers for campus clusters (slurm, torque, cobalt, condor..)
-        need channels
 
         Returns:
               - Status (Bool)

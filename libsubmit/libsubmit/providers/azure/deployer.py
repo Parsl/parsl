@@ -36,7 +36,7 @@ class Deployer(object):
         self.client = ResourceManagementClient(
             self.credentials, self.subscription_id)
 
-    def deploy(self, job_name, cmd_string='', blocksize=1):
+    def deploy(self, job_name, command='', blocksize=1):
         instances = []
         """Deploy the template to a resource group."""
         self.client.resource_groups.create_or_update(

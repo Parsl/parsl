@@ -1,4 +1,9 @@
-class ExecutionProviderExceptions(Exception):
+class ConfigurationError(Exception):
+    """Error raised when a class constructor has not been initialized correctly."""
+    pass
+
+
+class ExecutionProviderException(Exception):
     """ Base class for all exceptions
     Only to be invoked when only a more specific error is not available.
 
@@ -6,7 +11,7 @@ class ExecutionProviderExceptions(Exception):
     pass
 
 
-class SchedulerMissingArgs(ExecutionProviderExceptions):
+class SchedulerMissingArgs(ExecutionProviderException):
     ''' Error raised when the template used to compose the submit script to the local resource manager is missing required arguments
     '''
 
@@ -18,7 +23,7 @@ class SchedulerMissingArgs(ExecutionProviderExceptions):
         return "SchedulerMissingArgs: Pool:{0} Arg:{1}".format(self.sitename, self.missing_keywords)
 
 
-class ScriptPathError(ExecutionProviderExceptions):
+class ScriptPathError(ExecutionProviderException):
     ''' Error raised when the template used to compose the submit script to the local resource manager is missing required arguments
     '''
 
@@ -30,7 +35,7 @@ class ScriptPathError(ExecutionProviderExceptions):
         return "Unable to write submit script:{0} Reason:{1}".format(self.script_path, self.reason)
 
 
-class OptionalModuleMissing(ExecutionProviderExceptions):
+class OptionalModuleMissing(ExecutionProviderException):
     ''' Error raised a required module is missing for a optional/extra provider
     '''
 
@@ -44,7 +49,7 @@ class OptionalModuleMissing(ExecutionProviderExceptions):
         )
 
 
-class ChannelRequired(ExecutionProviderExceptions):
+class ChannelRequired(ExecutionProviderException):
     ''' Execution provider requires a channel.
     '''
 
@@ -58,7 +63,7 @@ class ChannelRequired(ExecutionProviderExceptions):
         )
 
 
-class ScaleOutFailed(ExecutionProviderExceptions):
+class ScaleOutFailed(ExecutionProviderException):
     ''' Generic catch. Scale out failed in the submit phase on the provider side
     '''
 

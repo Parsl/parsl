@@ -3,15 +3,31 @@ import os
 from string import Template
 
 import libsubmit.error as ep_error
-from libsubmit.exec_utils import wtime_to_minutes
-from libsubmit.launchers import Launchers
+from libsubmit.utils import wtime_to_minutes
 from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
 
 class ClusterProvider(ExecutionProvider):
-    """ This class defines behavior common to all cluster/supercompute sytle scheduler systems.
+    """ This class defines behavior common to all cluster/supercompute-style scheduler systems.
+
+    Parameters
+    ----------
+    label : str
+        Label for this provider.
+    channel : Channel
+        Channel for accessing this provider. Possible channels include
+        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
+        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
+        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+    script_dir : str
+        Relative or absolute path to a directory where intermediate scripts are placed.
+    walltime : str
+        Walltime requested per block in HH:MM:SS.
+    launcher : str
+        FIXME
+
 
     .. code:: python
 
@@ -31,74 +47,47 @@ class ClusterProvider(ExecutionProvider):
                                 +-------------------
     """
 
-    def __repr__(self):
-        return "<{0} Execution Provider for site:{0} with channel:{1}>".format(self.__class__, self.sitename,
-                                                                               self.channel)
-
-    def __init__(self, config, channel=None):
-        ''' Here we do initialization that is common across all cluster-style providers
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs:
-             - Channel (None): A channel is required for all cluster-style providers
-        '''
+    def __init__(self,
+                 label,
+                 channel,
+                 script_dir,
+                 nodes_per_block,
+                 tasks_per_node,
+                 init_blocks,
+                 min_blocks,
+                 max_blocks,
+                 parallelism,
+                 walltime,
+                 launcher):
         self._scaling_enabled = True
-        self._channels_required = True
+        self.label = label
         self.channel = channel
-        if self.channel is None:
-            logger.error("Provider: Cannot be initialized without a channel")
-            raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
-        self.config = config
-        self.sitename = config['site']
-        self.current_blocksize = 0
-        launcher_name = self.config["execution"]["block"].get("launcher", "singleNode")
-        self.launcher = Launchers.get(launcher_name, None)
-        self.max_walltime = wtime_to_minutes(self.config["execution"]["block"].get("walltime", '01:00:00'))
+        self.tasks_per_block = nodes_per_block * tasks_per_node
+        self.nodes_per_block = nodes_per_block
+        self.tasks_per_node = tasks_per_node
+        self.init_blocks = init_blocks
+        self.min_blocks = min_blocks
+        self.max_blocks = max_blocks
+        self.parallelism = parallelism
+        self.provisioned_blocks = 0
+        self.launcher = launcher
+        self.walltime = wtime_to_minutes(walltime)
 
-        self.scriptDir = self.config["execution"]["scriptDir"]
-        if not os.path.exists(self.scriptDir):
-            os.makedirs(self.scriptDir)
+        self.script_dir = script_dir
+        if not os.path.exists(self.script_dir):
+            os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    @property
-    def channels_required(self):
-        ''' Returns Bool on whether a channel is required
-        '''
-        return self._channels_required
-
     def execute_wait(self, cmd, timeout=10):
         return self.channel.execute_wait(cmd, timeout)
 
-    def get_configs(self, cmd_string, blocksize):
-        ''' Compose a flat dict job_config with all necessary configs
-        for writing the submit script
-        '''
-        nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, nodes,
-                     self.config["execution"]["block"].get("taskBlocks", 1))
-
-        job_config = self.config["execution"]["block"]["options"]
-        job_config["submit_script_dir"] = self.channel.script_dir
-        job_config["nodes"] = nodes
-        job_config["taskBlocks"] = self.config["execution"]["block"]["taskBlocks"]
-        job_config["walltime"] = self.config["execution"]["block"]["walltime"]
-        job_config["overrides"] = job_config.get("overrides", '')
-        job_config["user_script"] = cmd_string
-
-        job_config["user_script"] = self.launcher(cmd_string, taskBlocks=job_config["taskBlocks"])
-        return job_config
-
-    def _write_submit_script(self, template_string, script_filename, job_name, configs):
-        '''
-        Load the template string with config values and write the generated submit script to
-        a submit script file.
+    def _write_submit_script(self, template, script_filename, job_name, configs):
+        """Generate submit script and write it to a file.
 
         Args:
-              - template_string (string) : The template string to be used for the writing submit script
+              - template (string) : The template string to be used for the writing submit script
               - script_filename (string) : Name of the submit script
               - job_name (string) : job name
               - configs (dict) : configs that get pushed into the template
@@ -109,11 +98,11 @@ class ClusterProvider(ExecutionProvider):
         Raises:
               SchedulerMissingArgs : If template is missing args
               ScriptPathError : Unable to write submit script out
-        '''
+        """
 
         try:
-            submit_script = Template(template_string).substitute(jobname=job_name, **configs)
-            # submit_script = Template(template_string).safe_substitute(jobname=job_name, **configs)
+            submit_script = Template(template).substitute(jobname=job_name, **configs)
+            # submit_script = Template(template).safe_substitute(jobname=job_name, **configs)
             with open(script_filename, 'w') as f:
                 f.write(submit_script)
 
@@ -125,7 +114,7 @@ class ClusterProvider(ExecutionProvider):
             logger.error("Failed writing to submit script: %s", script_filename)
             raise (ep_error.ScriptPathError(script_filename, e))
         except Exception as e:
-            print("Template : ", template_string)
+            print("Template : ", template)
             print("Args : ", job_name)
             print("Kwargs : ", configs)
             logger.error("Uncategorized error: %s", e)
@@ -157,7 +146,7 @@ class ClusterProvider(ExecutionProvider):
         raise NotImplementedError
 
     def status(self, job_ids):
-        ''' Get the status of a list of jobs identified by the job identifiers
+        """ Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
         Args:
@@ -168,15 +157,15 @@ class ClusterProvider(ExecutionProvider):
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
+             - ExecutionProviderException or its subclasses
 
-        '''
+        """
         if job_ids:
             self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
     def cancel(self, job_ids):
-        ''' Cancels the resources identified by the job_ids provided by the user.
+        """ Cancels the resources identified by the job_ids provided by the user.
 
         Args:
              - job_ids (list): A list of job identifiers
@@ -185,25 +174,25 @@ class ClusterProvider(ExecutionProvider):
              - A list of status from cancelling the job which can be True, False
 
         Raises:
-             - ExecutionProviderExceptions or its subclasses
-        '''
+             - ExecutionProviderException or its subclasses
+        """
 
         raise NotImplementedError
 
     @property
     def scaling_enabled(self):
-        ''' The callers of ParslExecutors need to differentiate between Executors
+        """ The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
 
         Returns:
               - Status (Bool)
-        '''
+        """
         return self._scaling_enabled
 
     @property
     def current_capacity(self):
-        ''' Returns the current blocksize.
+        """ Returns the currently provisioned blocks.
         This may need to return more information in the futures :
         { minsize, maxsize, current_requested }
-        '''
-        return self.current_blocksize
+        """
+        return self.provisioned_blocks

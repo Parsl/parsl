@@ -2,8 +2,11 @@ import logging
 import os
 import time
 
+from libsubmit.channels.local.local import LocalChannel
+from libsubmit.launchers import launchers
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.slurm.template import template_string
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -22,97 +25,73 @@ translate_table = {
 }  # (special exit state
 
 
-class Slurm(ClusterProvider):
-    ''' Slurm Execution Provider
+class Slurm(ClusterProvider, RepresentationMixin):
+    """Slurm Execution Provider
 
     This provider uses sbatch to submit, squeue for status and scancel to cancel
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
-    .. warning::
-        Please note that in the config documented below, description and values
-        are placed inside a schema that is delimited by <{ schema.. }>
+    Parameters
+    ----------
+    partition : str
+        Slurm partition to request blocks from.
+    label : str
+        Label for this provider.
+    channel : Channel
+        Channel for accessing this provider. Possible channels include
+        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
+        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
+        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+    script_dir : str
+        Relative or absolute path to a directory where intermediate scripts are placed.
+    nodes_per_block : int
+        Nodes to provision per block.
+    tasks_per_node : int
+        Tasks to run per node.
+    min_blocks : int
+        Minimum number of blocks to maintain.
+    max_blocks : int
+        Maximum number of blocks to maintain.
+    parallelism : float
+        Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
+        scaling where as many resources as possible are used; parallelism close to 0 represents
+        the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
+    walltime : str
+        Walltime requested per block in HH:MM:SS.
+    overrides : str
+        String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+    launcher : str
+        FIXME. Can be one of 'single_node', 'srun', 'aprun', or 'srun_mpi'.
+    """
 
-    Here's a sample config for the Slurm provider:
-
-    .. code-block:: python
-
-         { "execution" : { # Definition of all execution aspects of a site
-
-              "executor"   : #{Description: Define the executor used as task executor,
-                             # Type : String,
-                             # Expected : "ipp",
-                             # Required : True},
-
-              "provider"   : #{Description : The provider name, in this case slurm
-                             # Type : String,
-                             # Expected : "slurm",
-                             # Required :  True },
-
-              "scriptDir"  : #{Description : Relative or absolute path to a
-                             # directory in which intermediate scripts are placed
-                             # Type : String,
-                             # Default : "./.scripts"},
-
-              "block" : { # Definition of a block
-
-                  "nodes"      : #{Description : # of nodes to provision per block
-                                 # Type : Integer,
-                                 # Default: 1},
-
-                  "taskBlocks" : #{Description : # of workers to launch per block
-                                 # as either an number or as a bash expression.
-                                 # for eg, "1" , "$(($CORES / 2))"
-                                 # Type : String,
-                                 #  Default: "1" },
-
-                  "walltime"  :  #{Description : Walltime requested per block in HH:MM:SS
-                                 # Type : String,
-                                 # Default : "00:20:00" },
-
-                  "initBlocks" : #{Description : # of blocks to provision at the start of
-                                 # the DFK
-                                 # Type : Integer
-                                 # Default : ?
-                                 # Required :    },
-
-                  "minBlocks" :  #{Description : Minimum # of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : 0 },
-
-                  "maxBlocks" :  #{Description : Maximum # Of blocks outstanding at any time
-                                 # WARNING :: Not Implemented
-                                 # Type : Integer
-                                 # Default : ? },
-
-                  "options"   : {  # Scheduler specific options
-
-                      "partition" : #{Description : Slurm partition to request blocks from
-                                    # Type : String,
-                                    # Required : True },
-
-                      "overrides" : #{"Description : String to append to the #SBATCH blocks
-                                    # in the submit script to the scheduler
-                                    # Type : String,
-                                    # Required : False },
-                  }
-              }
-            }
-         }
-    '''
-
-    def __init__(self, config, channel=None):
-        ''' Initialize the Slurm class
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs:
-             - Channel (None): A channel is required for slurm.
-        '''
-
-        super().__init__(config, channel=channel)
+    def __init__(self,
+                 partition,
+                 label='slurm',
+                 channel=LocalChannel(),
+                 script_dir='parsl_scripts',
+                 nodes_per_block=1,
+                 tasks_per_node=1,
+                 init_blocks=1,
+                 min_blocks=0,
+                 max_blocks=10,
+                 parallelism=1,
+                 walltime="00:10:00",
+                 overrides='',
+                 launcher='single_node'):
+        super().__init__(label,
+                         channel,
+                         script_dir,
+                         nodes_per_block,
+                         tasks_per_node,
+                         init_blocks,
+                         min_blocks,
+                         max_blocks,
+                         parallelism,
+                         walltime,
+                         launcher)
+        self.partition = partition
+        self.overrides = overrides
 
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
@@ -147,63 +126,45 @@ class Slurm(ClusterProvider):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
-        ''' Submits the cmd_string onto an Local Resource Manager job of blocksize parallel elements.
-        Submit returns an ID that corresponds to the task that was just submitted.
+    def submit(self, command, blocksize, job_name="parsl.auto"):
+        """Submit the command as a slurm job of blocksize parallel elements.
 
-        If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
+        Parameters
+        ----------
+        command : str
+            Command to be made on the remote side.
+        blocksize : int
+            Not implemented.
+        job_name : str
+            Name for the job (must be unique).
 
-        If tasks_per_node == 1:
-             A single node is provisioned
+        Returns
+        -------
+        None or str
+            If at capacity, returns None; otherwise, a string identifier for the job
+        """
 
-        If tasks_per_node >  1 :
-             tasks_per_node * blocksize number of nodes are provisioned.
-
-        Args:
-             - cmd_string  :(String) Commandline invocation to be made on the remote side.
-             - blocksize   :(float)
-
-        Kwargs:
-             - job_name (String): Name for job, must be unique
-
-        Returns:
-             - None: At capacity, cannot provision more
-             - job_id: (string) Identifier for the job
-
-        '''
-
-        if self.current_blocksize >= self.config["execution"]["block"].get("maxBlocks", 2):
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.sitename)
+        if self.provisioned_blocks >= self.max_blocks:
+            logger.warn("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
             return None
 
-        # Note: Fix this later to avoid confusing behavior.
-        # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.config["execution"]["block"].get("nodes", 1):
-            blocksize = self.config["execution"]["block"].get("nodes", 1)
-
-        # Set job name
         job_name = "{0}.{1}".format(job_name, time.time())
 
-        # Set script path
-        script_path = "{0}/{1}.submit".format(self.scriptDir, job_name)
+        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        # Calculate nodes
-        nodes = self.config["execution"]["block"].get("nodes", 1)
-        logger.debug("Requesting blocksize:%s nodes:%s taskBlocks:%s", blocksize, nodes,
-                     self.config["execution"]["block"].get("taskBlocks", 1))
+        logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
-        job_config = self.config["execution"]["block"]["options"]
-        # TODO : script_path might need to change to accommodate script dir set via channels
+        job_config = {}
         job_config["submit_script_dir"] = self.channel.script_dir
-        job_config["nodes"] = nodes
-        job_config["taskBlocks"] = self.config["execution"]["block"].get("taskBlocks", 1)
-        job_config["walltime"] = self.config["execution"]["block"].get("walltime", "00:20:00")
-        job_config["overrides"] = job_config.get("overrides", '')
-        job_config["user_script"] = cmd_string
+        job_config["nodes"] = self.nodes_per_block
+        job_config["walltime"] = self.walltime
+        job_config["overrides"] = self.overrides
+        job_config["partition"] = self.partition
+        job_config["user_script"] = command
 
-        # Wrap the cmd_string
-        job_config["user_script"] = self.launcher(cmd_string, taskBlocks=job_config["taskBlocks"])
+        # Wrap the command
+        job_config["user_script"] = launchers[self.launcher](command, self.tasks_per_block)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
