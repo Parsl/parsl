@@ -522,6 +522,7 @@ class DataFlowKernel(object):
                     'fail_history': [],
                     'env': None,
                     'status': States.unsched,
+                    'id': task_id,
                     'app_fu': None}
 
         if task_id in self.tasks:
