@@ -1,6 +1,21 @@
 Changelog
 =========
 
+Libsubmit 0.4.1
+---------------
+
+Released. June 18th, 2018.
+This release folds in massive contributions from @annawoodard.
+
+New functionality
+^^^^^^^^^^^^^^^^^
+
+* Several code cleanups, doc improvements, and consistent naming
+
+* All providers have the initialization and actual start of resources decoupled.
+
+
+
 Libsubmit 0.4.0
 ---------------
 
