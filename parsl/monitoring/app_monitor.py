@@ -1,29 +1,17 @@
 import time
-import logging
 from multiprocessing import Process
 import psutil
-from cmreslogging.handlers import CMRESHandler
 import os
 from datetime import datetime
+from parsl.db_logger import get_db_logger
 
 simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
 
 run_name = str(datetime.now().minute) + "-" + str(datetime.now().hour) + "-" + str(datetime.now().day)
 
 
-def monitor(pid, task_id):
-    host = 'search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com'
-    port = 443
-    handler = CMRESHandler(hosts=[{'host': host,
-                                   'port': port}],
-                           use_ssl=True,
-                           auth_type=CMRESHandler.AuthType.NO_AUTH,
-                           es_index_name="my_python_index",
-                           es_additional_fields={'Campaign': "test", 'Username': "yadu"})
-
-    logger = logging.getLogger("ParslElasticsearch")
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
+def monitor(pid, task_id, db_logger_config):
+    logger = get_db_logger(enable_es_logging=False) if db_logger_config is None else get_db_logger(**db_logger_config)
 
     logger.info("starting monitoring for {} on {}".format(pid, os.getpid()))
     pm = psutil.Process(pid)
@@ -33,15 +21,15 @@ def monitor(pid, task_id):
         d["psutil_cpu"] = psutil.cpu_count()
         d["run_id"] = run_name
         d["task_id"] = task_id
-        for n in ["user","system","children_user","children_system"]:
+        for n in ["user", "system", "children_user", "children_system"]:
             d["psutil_process_" + n] = getattr(pm.cpu_times(), n)
         logger.info("test", extra=d)
         time.sleep(2)
 
 
-def monitor_wrapper(f, task_id):
+def monitor_wrapper(f, task_id, db_logger_config):
     def wrapped(*args, **kwargs):
-        p = Process(target=monitor, args=(os.getpid(), task_id))
+        p = Process(target=monitor, args=(os.getpid(), task_id, db_logger_config))
         p.start()
         result = f(*args, **kwargs)
         p.terminate()
@@ -54,5 +42,5 @@ if __name__ == "__main__":
         for i in range(10**x):
             continue
 
-    wrapped_f = monitor_wrapper(f)
+    wrapped_f = monitor_wrapper(f, 0)
     wrapped_f(9)

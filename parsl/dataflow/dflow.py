@@ -53,7 +53,7 @@ class DataFlowKernel(object):
 
     def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
                  rundir=None, retries=0, checkpointFiles=None, checkpointMode=None,
-                 db_logger=get_db_logger(enable_es_logging=False)):
+                 db_logger_config=None):
         """ Initialize the DataFlowKernel.
 
         Please note that keyword args passed to the DFK here will always override
@@ -68,7 +68,7 @@ class DataFlowKernel(object):
             - retries(int): Default=0, Set the number of retry attempts in case of failure
             - checkpointFiles (list of str): List of filepaths to checkpoint files
             - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
-            - db_logger (logger object): Default is set to CRITICAL
+            - db_logger_config (dict): A single data object encapsulating all config attributes of the logger
 
         Returns:
             DataFlowKernel object
@@ -96,7 +96,8 @@ class DataFlowKernel(object):
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
-        self.db_logger = db_logger
+        self.db_logger_config = db_logger_config
+        self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(**self.db_logger_config)
 
         # Load Memoizer with checkpoints before we start the run.
         if checkpointFiles:
@@ -333,7 +334,8 @@ class DataFlowKernel(object):
         except Exception as e:
             logger.error("Task {}: requests invalid site {}".format(task_id,
                                                                     site))
-        executable = app_monitor.monitor_wrapper(executable, task_id) if True else executable
+        if self.db_logger_config['enable_es_logging']:
+            executable = app_monitor.monitor_wrapper(executable, task_id, self.db_logger_config)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
         task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
