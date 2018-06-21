@@ -1,6 +1,18 @@
 Changelog
 =========
 
+Parsl 0.5.2
+-----------
+
+Released. June 21st, 2018.
+This is an emergency release addressing `issue#347 <https://github.com/Parsl/parsl/issues/347>`_
+
+Bug Fixes
+^^^^^^^^^
+
+* Parsl version conflict with libsubmit 0.4.1 `issue#347 <https://github.com/Parsl/parsl/issues/347>`_
+
+
 Parsl 0.5.1
 -----------
 
