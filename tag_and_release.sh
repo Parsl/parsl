@@ -38,7 +38,7 @@ release () {
     echo "======================================================================="
     sleep 1
     echo "======================================================================="
-    echo "Push to PyPi, This will require your username and password"
+    echo "Push to PyPi. This will require your username and password"
     echo "======================================================================="
     twine upload dist/*
 }
