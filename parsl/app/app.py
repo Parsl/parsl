@@ -135,6 +135,7 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, e
         return decorator(function)
     return decorator
 
+
 def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
     """Decorator function for making python apps.
 
