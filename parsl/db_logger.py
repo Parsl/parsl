@@ -32,7 +32,8 @@ class NullHandler(logging.Handler):
 def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
                   port=443,
                   enable_es_logging=False,
-                  index_name="parsl.campaign"):
+                  index_name="parsl.campaign",
+                  **kwargs):
     """
     Parameters
     ----------

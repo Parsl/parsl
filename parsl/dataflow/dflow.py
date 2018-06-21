@@ -4,6 +4,7 @@ import atexit
 import random
 import pickle
 import threading
+from datetime import datetime
 
 from concurrent.futures import Future
 from functools import partial
@@ -98,6 +99,7 @@ class DataFlowKernel(object):
         self.usage_tracker.send_message()
         self.db_logger_config = db_logger_config
         self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(**self.db_logger_config)
+        self.run_id = str(datetime.now().day) + '-' + str(datetime.now().hour) + '-' + str(datetime.now().minute)
 
         # Load Memoizer with checkpoints before we start the run.
         if checkpointFiles:
@@ -334,8 +336,8 @@ class DataFlowKernel(object):
         except Exception as e:
             logger.error("Task {}: requests invalid site {}".format(task_id,
                                                                     site))
-        if self.db_logger_config['enable_es_logging']:
-            executable = app_monitor.monitor_wrapper(executable, task_id, self.db_logger_config)
+        if self.db_logger_config.get('enable_remote_monitoring', False):
+            executable = app_monitor.monitor_wrapper(executable, task_id, self.db_logger_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
         task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
@@ -525,6 +527,7 @@ class DataFlowKernel(object):
                     'env': None,
                     'status': States.unsched,
                     'id': task_id,
+                    'run_id': self.run_id,
                     'app_fu': None}
 
         if task_id in self.tasks:
