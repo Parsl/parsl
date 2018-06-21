@@ -4,6 +4,7 @@ import atexit
 import random
 import pickle
 import threading
+import inspect
 from datetime import datetime
 
 from concurrent.futures import Future
@@ -105,6 +106,7 @@ class DataFlowKernel(object):
         self.db_logger.info("Parsl version: {}".format(get_version()))
         self.db_logger.info("Libsubmit version: {}".format(libsubmit.__version__))
         self.db_logger.info("DFK initialization", extra={"time_started": str(datetime.now())})
+        self.db_logger.info("Name of script/workflow: " + str(inspect.stack()[1][1]))
 
         # Load Memoizer with checkpoints before we start the run.
         if checkpointFiles:
