@@ -107,6 +107,8 @@ class DataFlowKernel(object):
         self.db_logger.info("Libsubmit version: {}".format(libsubmit.__version__))
         self.db_logger.info("DFK initialization", extra={"time_started": str(datetime.now())})
         self.db_logger.info("Name of script/workflow: " + str(inspect.stack()[1][1]))
+        for site in self._config['sites']:
+            self.db_logger.info("Listed site: " + site['site'])
 
         # Load Memoizer with checkpoints before we start the run.
         if checkpointFiles:
