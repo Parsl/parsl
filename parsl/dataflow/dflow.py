@@ -97,9 +97,14 @@ class DataFlowKernel(object):
         # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
+
+        # ES logging
         self.db_logger_config = db_logger_config
         self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(**self.db_logger_config)
         self.run_id = str(datetime.now().day) + '-' + str(datetime.now().hour) + '-' + str(datetime.now().minute)
+        self.db_logger.info("Parsl version: {}".format(get_version()))
+        self.db_logger.info("Libsubmit version: {}".format(libsubmit.__version__))
+        self.db_logger.info("DFK initialization", extra={"time_started": str(datetime.now())})
 
         # Load Memoizer with checkpoints before we start the run.
         if checkpointFiles:
@@ -244,6 +249,7 @@ class DataFlowKernel(object):
 
             logger.info("Task {} completed".format(task_id))
             task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+            task_log_info['time_completed'] = str(datetime.now())
             self.db_logger.info("Task Done", extra=task_log_info)
 
         if not memo_cbk and final_state_flag is True:
@@ -341,6 +347,7 @@ class DataFlowKernel(object):
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
         task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+        task_log_info['time_started'] = str(datetime.now())
         self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self.fail_retries - \
             self.tasks[task_id]['fail_count']
@@ -650,6 +657,7 @@ class DataFlowKernel(object):
             # We are not doing shutdown here because even with block=False this blocks.
             executor.shutdown()
 
+        self.db_logger.info("DFK shutdown", extra={"time_completed": str(datetime.now())})
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):

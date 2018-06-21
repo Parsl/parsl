@@ -21,11 +21,13 @@ def monitor(pid, task_id, db_logger_config, run_id):
         d["task_id"] = task_id
         for n in ["user", "system", "children_user", "children_system"]:
             d["psutil_process_" + n] = getattr(pm.cpu_times(), n)
-        #for child in children:
-        if children[0] is not None:
-            c = {"psutil_process_child_" + str(k): v for k, v in children[0].as_dict().items() if k in simple}
-            #c = {"psutil_process_child_" + str(k): v if d["psutil_process_child_" + str(k)] is not None else v + d["psutil_process_child_" + str(k)] for k, v in child.as_dict().items() if k in simple}
-        d.update(c)
+        for child in children:
+            try:
+                c = {"psutil_process_child_" + str(k): v for k, v in child.as_dict().items() if (k in simple and v > d.get("psutil_process_child_" + str(k), 0))}
+            except TypeError:
+            # ignore an error that occurs if compare the comparison is comparing against a bad or non existant value by simply replacing it with the newer child's info
+                c = {"psutil_process_child_" + str(k): v for k, v in child.as_dict().items() if k in simple}
+            d.update(c)
         logger.info("test", extra=d)
         time.sleep(4)
 
