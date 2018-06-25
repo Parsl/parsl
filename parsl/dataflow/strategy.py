@@ -149,7 +149,6 @@ class Strategy(object):
 
         for label, executor in self.dfk.executors.items():
             if not executor.scaling_enabled:
-                logger.debug("Executor {0} status: STATIC".format(label))
                 continue
 
             # Tasks that are either pending completion
@@ -171,9 +170,6 @@ class Strategy(object):
                                                             'PENDING')])
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            logger.debug("Min:{} init_blocks:{} Max:{}".format(min_blocks,
-                                                               init_blocks,
-                                                               max_blocks))
             # import pdb; pdb.set_trace()
             logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
                                                                    active_slots,
