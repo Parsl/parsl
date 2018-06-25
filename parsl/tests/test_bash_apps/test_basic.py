@@ -22,8 +22,8 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
 
 
 @App('bash')
-def foo(x, y, stdout=None):
-    return """echo {0} {1}
+def foo(x, y, z=10, stdout=None):
+    return """echo {0} {1} {z}
     """
 
 
@@ -49,7 +49,7 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '1 4\n', 'Output does not match expected string "1 4", Got: "{0}"'.format(
+    assert contents == '1 4 10\n', 'Output does not match expected string "1 4", Got: "{0}"'.format(
         contents)
     return True
 
