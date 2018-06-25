@@ -121,7 +121,6 @@ class BashApp(AppBase):
             if sig.parameters[s].default != Parameter.empty:
                 self.kwargs[s] = sig.parameters[s].default
 
-
     def __call__(self, *args, **kwargs):
         """Handle the call to a Bash app.
 
