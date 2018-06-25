@@ -299,7 +299,7 @@ class DataFlowKernel(object):
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            if isinstance(f, File) and f.is_remote():
+            if isinstance(f, File):
                 inputs[idx] = f.stage_in(executor)
 
     @staticmethod

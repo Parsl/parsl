@@ -3,8 +3,10 @@ import logging
 import requests
 import ftplib
 import concurrent.futures as cf
+
 from parsl.data_provider.scheme import GlobusScheme
 from parsl.executors.base import ParslExecutor
+from parsl.executors.ipp import IPyParallelExecutor
 from parsl.data_provider.globus import get_globus
 from parsl.app.app import App
 
@@ -119,7 +121,7 @@ class DataManager(ParslExecutor):
 
         if file.scheme == 'file':
             stage_in_app = self._file_stage_in_app()
-            app_fut = stage_in_app(outputs=[file])
+            app_fut = stage_in_app(executor, outputs=[file])
             return app_fut._outputs[0]
         elif file.scheme == 'ftp':
             working_dir = self.executors[executor].working_dir
@@ -140,8 +142,12 @@ class DataManager(ParslExecutor):
     def _file_stage_in_app(self):
         return App("python", executors=['data_manager'])(self._file_stage_in)
 
-    def _file_stage_in(self, outputs=[]):
-        pass
+    def _file_stage_in(self, executor_label, outputs=[]):
+        file = outputs[0]
+        executor = self.executors[executor_label]
+        if isinstance(executor, IPyParallelExecutor):
+            executor.provider.channel.push_file(file.filepath, executor.working_dir)
+            file.local_path = os.path.join(executor.working_dir, file.filename)
 
     def _ftp_stage_in_app(self, executor):
         return App("python", executors=[executor])(self._ftp_stage_in)
@@ -204,7 +210,7 @@ class DataManager(ParslExecutor):
         """
 
         if file.scheme == 'file':
-            stage_out_app = self._file_stage_out_app()
+            stage_out_app = self._file_stage_out_app(executor, inputs=[file])
             return stage_out_app()
         elif file.scheme == 'http' or file.scheme == 'https':
             raise Exception('FTP file staging out is not supported')
@@ -218,8 +224,11 @@ class DataManager(ParslExecutor):
     def _file_stage_out_app(self):
         return App("python", executors=['data_manager'])(self._file_stage_out)
 
-    def _file_stage_out(self):
-        pass
+    def _file_stage_out(self, executor_label, inputs=[]):
+        file = inputs[0]
+        executor = self.executors[executor_label]
+        remote_path = os.path.join(file.filename, executor.working_dir)
+        executor.provider.channel.pull_file(remote_path, os.path.dirname(file.path))
 
     def _globus_stage_out_app(self):
         return App("python", executors=['data_manager'])(self._globus_stage_out)

@@ -57,11 +57,6 @@ class File(str):
     def __fspath__(self):
         return self.filepath
 
-    def is_remote(self):
-        if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            return True
-        return False
-
     @property
     def filepath(self):
         """Return the resolved filepath on the side where it is called from.
@@ -74,9 +69,8 @@ class File(str):
         Returns:
              - filepath (string)
         """
-        if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            if hasattr(self, 'local_path'):
-                return self.local_path
+        if hasattr(self, 'local_path'):
+            return self.local_path
 
         return self.path
 

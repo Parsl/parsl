@@ -23,6 +23,7 @@ config = Config(
                 parallelism=0.5,
                 overrides=user_opts['midway']['overrides']
             ),
+            working_dir=user_opts['midway']['script_dir'],
             label='midway_ipp'
         )
     ]
