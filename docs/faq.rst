@@ -219,3 +219,16 @@ There are a few common situations in which a Parsl script might hang:
 
         # Assuming ports 50000 to 55000 are open
         config["controller"]["portRange"] = "50000,55000"
+
+How can I start a Jupyter notebook over SSH?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+See instructions `here <https://techtalktone.wordpress.com/2017/03/28/running-jupyter-notebooks-on-a-remote-server-via-ssh/>`_.
+
+How can I sync my conda environment and Jupyter environment?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Run:: 
+
+   conda install nb_conda
+
+Now all available conda environments (for example, one created by following the instructions `here <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.
