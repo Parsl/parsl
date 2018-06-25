@@ -160,7 +160,6 @@ class Strategy(object):
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            init_blocks = executor.provider.init_blocks
             tasks_per_node = executor.provider.tasks_per_node
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
