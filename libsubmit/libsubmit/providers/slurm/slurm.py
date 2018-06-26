@@ -164,7 +164,9 @@ class Slurm(ClusterProvider, RepresentationMixin):
         job_config["user_script"] = command
 
         # Wrap the command
-        job_config["user_script"] = launchers[self.launcher](command, self.tasks_per_block)
+        job_config["user_script"] = launchers[self.launcher](command,
+                                                             self.tasks_per_node,
+                                                             self.nodes_per_block)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
