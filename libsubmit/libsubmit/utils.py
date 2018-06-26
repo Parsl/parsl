@@ -45,7 +45,10 @@ class RepresentationMixin(object):
 
     def __repr__(self):
         argspec = inspect.getargspec(self.__init__)
-        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+        if len(argspec.args) > 1:
+            defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+        else:
+            defaults = []
 
         for arg in argspec.args[1:]:
             if not hasattr(self, arg):
