@@ -163,7 +163,7 @@ class Local(ExecutionProvider, RepresentationMixin):
         script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_command = launchers.get(self.launcher, None)(command, self.tasks_per_node * self.nodes_per_block)
+        wrap_command = launchers.get(self.launcher, None)(command, self.tasks_per_node, self.nodes_per_block)
 
         self._write_submit_script(wrap_command, script_path)
 

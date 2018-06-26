@@ -1,4 +1,4 @@
-def single_node_launcher(command, task_blocks, walltime=None):
+def single_node_launcher(command, tasks_per_node, nodes_per_block, walltime=None):
     ''' Worker launcher that wraps the user's command with the framework to
     launch multiple command invocations in parallel. This wrapper sets the
     bash env variable CORES to the number of cores on the machine. By setting
@@ -12,6 +12,8 @@ def single_node_launcher(command, task_blocks, walltime=None):
     KWargs:
         - walltime (int) : This is not used by this launcher.
     '''
+
+    task_blocks = tasks_per_node * nodes_per_block
 
     x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
@@ -32,7 +34,7 @@ echo "All workers done"
     return x
 
 
-def srun_launcher(command, task_blocks, walltime=None):
+def srun_launcher(command, tasks_per_node, nodes_per_block, walltime=None):
     ''' Worker launcher that wraps the user's command with the SRUN launch framework
     to launch multiple cmd invocations in parallel on a single job allocation.
 
@@ -44,6 +46,7 @@ def srun_launcher(command, task_blocks, walltime=None):
         - walltime (int) : This is not used by this launcher.
     '''
 
+    task_blocks = tasks_per_node * nodes_per_block
     x = '''export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
@@ -65,7 +68,7 @@ echo "Done"
     return x
 
 
-def srun_mpi_launcher(command, task_blocks, walltime=None):
+def srun_mpi_launcher(command, tasks_per_node, nodes_per_block, walltime=None):
     ''' Worker launcher that wraps the user's command with the SRUN launch framework
     to launch multiple cmd invocations in parallel on a single job allocation.
 
@@ -77,6 +80,7 @@ def srun_mpi_launcher(command, task_blocks, walltime=None):
         - walltime (int) : This is not used by this launcher.
     '''
 
+    task_blocks = tasks_per_node * nodes_per_block
     x = '''export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
@@ -119,18 +123,20 @@ echo "Done"
     return x
 
 
-def aprun_launcher(command, task_blocks, walltime=None):
+def aprun_launcher(command, tasks_per_node, nodes_per_block, walltime=None):
     ''' Worker launcher that wraps the user's command with the Aprun launch framework
     to launch multiple cmd invocations in parallel on a single job allocation.
 
     Args:
         - command (string): The command string to be launched
-        - task_block (string) : bash evaluated string.
+        - tasks_per_node (int) : Workers to launch per node
+        - nodes_per_block (int) : Number of nodes in a block
 
     KWargs:
         - walltime (int) : This is not used by this launcher.
     '''
 
+    tasks_per_block = tasks_per_node * nodes_per_block
     x = '''
 WORKERCOUNT={1}
 
@@ -139,14 +145,11 @@ cat << APRUN_EOF > cmd_$JOBNAME.sh
 APRUN_EOF
 chmod a+x cmd_$JOBNAME.sh
 
-TASKBLOCKS={1}
-
-for i in $(seq 1 1 $TASKBLOCKS):
-do
-    aprun /bin/bash cmd_$JOBNAME.sh &
-done
+aprun -n {tasks_per_block} -N {tasks_per_node} /bin/bash cmd_$JOBNAME.sh &
 wait
 
 echo "Done"
-'''.format(command, task_blocks)
+'''.format(command, tasks_per_block,
+           tasks_per_block=tasks_per_block,
+           tasks_per_node=tasks_per_node)
     return x
