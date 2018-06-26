@@ -1,11 +1,8 @@
 import logging
 import os
 import time
-from string import Template
 
-import libsubmit.error as ep_error
 from libsubmit.launchers import launchers
-from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.providers.torque.template import template_string
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.utils import RepresentationMixin
@@ -133,7 +130,6 @@ class Torque(ClusterProvider, RepresentationMixin):
         for missing_job in jobs_missing:
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = translate_table['E']
-
 
     def submit(self, command, blocksize, job_name="parsl.auto"):
         ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
