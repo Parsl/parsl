@@ -166,13 +166,13 @@ class SSHChannel(RepresentationMixin):
                     "Copying {0} into existing directory {1}".format(local_source, remote_dir)
                 )
             else:
-                logger.error("Pushing {0} to {1} failed".format(local_source, remote_dir))
+                logger.exception("Pushing {0} to {1} failed".format(local_source, remote_dir))
                 if e.errno == 2:
                     raise BadScriptPath(e, self.hostname)
                 elif e.errno == 13:
                     raise BadPermsScriptPath(e, self.hostname)
                 else:
-                    logger.error("File push failed due to SFTP client failure")
+                    logger.exception("File push failed due to SFTP client failure")
                     raise FileCopyException(e, self.hostname)
 
         try:
@@ -180,7 +180,8 @@ class SSHChannel(RepresentationMixin):
             # Set perm because some systems require the script to be executable
             self.sftp_client.chmod(remote_dest, 0o777)
         except Exception as e:
-            logger.error("File push failed")
+            logger.exception("File push from local source {} to remote destination {} failed".format(
+                local_source, remote_dest))
             raise FileCopyException(e, self.hostname)
 
         return remote_dest
@@ -207,19 +208,19 @@ class SSHChannel(RepresentationMixin):
             os.makedirs(local_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.error("Failed to create script_dir: {0}".format(script_dir))
+                logger.exception("Failed to create script_dir: {0}".format(script_dir))
                 raise BadScriptPath(e, self.hostname)
 
         # Easier to check this than to waste time trying to pull file and
         # realize there's a problem.
         if os.path.exists(local_dest):
-            logger.error("Remote file copy will overwrite a local file:{0}".format(local_dest))
+            logger.exception("Remote file copy will overwrite a local file:{0}".format(local_dest))
             raise FileExists(None, self.hostname, filename=local_dest)
 
         try:
             self.sftp_client.get(remote_source, local_dest)
         except Exception as e:
-            logger.error("File pull failed")
+            logger.exception("File pull failed")
             raise FileCopyException(e, self.hostname)
 
         return local_dest
