@@ -2,9 +2,7 @@ import logging
 import os
 import re
 import time
-from string import Template
 
-import libsubmit.error as ep_error
 from libsubmit.utils import RepresentationMixin
 from libsubmit.providers.condor.template import template_string
 from libsubmit.providers.cluster_provider import ClusterProvider
@@ -144,7 +142,6 @@ class Condor(RepresentationMixin, ClusterProvider):
         """
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
-
 
     def submit(self, command, blocksize, job_name="parsl.auto"):
         """Submits the command onto an Local Resource Manager job of blocksize parallel elements.
