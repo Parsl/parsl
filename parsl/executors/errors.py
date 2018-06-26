@@ -7,8 +7,12 @@ class ExecutorError(Exception):
     Only to be invoked when only a more specific error is not available.
     """
 
+    def __init__(self, executor, reason):
+        self.executor = executor
+        self.reason = reason
+
     def __repr__(self):
-        return "Site:{0}, Reason:{1}".format(self.site, self.reason)
+        return "Executor {0} failed due to {1}".format(self.executor, self.reason)
 
     def __str__(self):
         return self.__repr__()
@@ -17,12 +21,12 @@ class ExecutorError(Exception):
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 
-    def __init__(self, sitename, reason):
-        self.site = sitename
+    def __init__(self, provider, reason):
+        self.provider = provider
         self.reason = reason
 
 
-class ControllerErr(ExecutorError):
+class ControllerError(ExecutorError):
     """Error raise by IPP controller."""
 
     def __init__(self, reason):

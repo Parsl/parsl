@@ -16,17 +16,18 @@ class AppBase(object):
 
     """
 
-    def __init__(self, func, executor=None, walltime=60, sites='all', cache=False, exec_type="bash"):
+    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False, exec_type="bash"):
         """Construct the App object.
 
         Args:
              - func (function): Takes the function to be made into an App
 
         Kwargs:
-             - executor (Executor): Executor for the execution resource. This can be omitted only
+             - data_flow_kernel (DataFlowKernel): The :class:`~parsl.dataflow.dflow.DataFlowKernel` responsible for
+               managing this app. This can be omitted only
                after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
-             - walltime (int) : Walltime in seconds for the app execution
-             - sites (str|list) : List of site names that this app could execute over. default is 'all'
+             - walltime (int) : Walltime in seconds for the app execution.
+             - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
              - exec_type (string) : App type (bash|python)
              - cache (Bool) : Enable caching of this app ?
 
@@ -36,10 +37,13 @@ class AppBase(object):
         """
         self.__name__ = func.__name__
         self.func = func
-        self.executor = executor
+        self.data_flow_kernel = data_flow_kernel
         self.exec_type = exec_type
         self.status = 'created'
-        self.sites = sites
+        self.executors = executors
+        if not (isinstance(executors, list) or isinstance(executors, str)):
+            logger.error("App {} specifies invalid executor option, expects string or list".format(
+                func.__name__))
         self.cache = cache
 
         params = signature(func).parameters
@@ -68,19 +72,19 @@ def app_wrapper(func):
     return wrapper
 
 
-def App(apptype, executor=None, walltime=60, cache=False, sites='all'):
+def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
     """The App decorator function.
 
     Args:
         - apptype (string) : Apptype can be bash|python
 
     Kwargs:
-        - executor (Executor): Executor for the execution resource. This can be omitted only
+        - data_flow_kernel (DataFlowKernel): The :class:`~parsl.dataflow.dflow.DataFlowKernel` responsible for
+          managing this app. This can be omitted only
           after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
         - walltime (int) : Walltime for app in seconds,
              default=60
-        - sites (str|List) : List of site names on which the app could execute
-             default='all'
+        - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
         - cache (Bool) : Enable caching of the app call
              default=False
 
@@ -91,8 +95,8 @@ def App(apptype, executor=None, walltime=60, cache=False, sites='all'):
 
     def wrapper(f):
         return APP_FACTORY_FACTORY.make(apptype, f,
-                                        executor=executor,
-                                        sites=sites,
+                                        data_flow_kernel=data_flow_kernel,
+                                        executors=executors,
                                         cache=cache,
                                         walltime=walltime)
 

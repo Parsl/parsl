@@ -1,46 +1,48 @@
 import logging
 import sys
 import concurrent.futures as cf
+
 from parsl.executors.base import ParslExecutor
+from parsl.dataflow.error import ConfigurationError
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ThreadPoolExecutor(ParslExecutor):
-    """The thread pool executor."""
+class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
+    """A thread-based executor.
 
-    def __init__(self, max_workers=2, thread_name_prefix='',
-                 execution_provider=None, config=None, **kwargs):
-        """Initialize the thread pool.
+    Parameters
+    ----------
+    max_threads : int
+        Number of threads. Default is 2.
+    thread_name_prefix : string
+        Thread name prefix (only supported in python v3.6+).
+    storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
+        Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
+    managed : bool
+        If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
+        this is managed by the user.
+    """
 
-        Config options that are really used are :
-
-        config.sites.site.execution.options = {"maxThreads" : <int>,
-                                               "threadNamePrefix" : <string>}
-
-        Kwargs:
-           - max_workers (int) : Number of threads (Default=2) (keeping name workers/threads for backward compatibility)
-           - thread_name_prefix (string) : Thread name prefix (Only supported in python v3.6+
-           - execution_provider (ep object) : This is ignored here
-           - config (dict): The config dict object for the site:
-
-
-        """
+    def __init__(self, label='threads', max_threads=2, thread_name_prefix='', storage_access=None, working_dir=None, managed=True):
+        self.label = label
         self._scaling_enabled = False
-        if not config:
-            config = {"execution": {}}
-        if "maxThreads" not in config["execution"]:
-            config["execution"]["maxThreads"] = max_workers
-        if "threadNamePrefix" not in config["execution"]:
-            config["execution"]["threadNamePrefix"] = thread_name_prefix
+        self.max_threads = max_threads
+        self.thread_name_prefix = thread_name_prefix
 
-        self.config = config
+        self.storage_access = storage_access if storage_access is not None else []
+        if len(self.storage_access) > 1:
+            raise ConfigurationError('Multiple storage access schemes are not yet supported')
+        self.working_dir = working_dir
+        self.managed = managed
 
+    def start(self):
         if sys.version_info > (3, 6):
-            self.executor = cf.ThreadPoolExecutor(max_workers=config["execution"]["maxThreads"],
-                                                  thread_name_prefix=config["execution"]["threadNamePrefix"])
+            self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
+                                                  thread_name_prefix=self.thread_name_prefix)
         else:
-            self.executor = cf.ThreadPoolExecutor(max_workers=config["execution"]["maxThreads"])
+            self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads)
 
     @property
     def scaling_enabled(self):
@@ -52,8 +54,6 @@ class ThreadPoolExecutor(ParslExecutor):
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
-        Returns:
-              Future
         """
         return self.executor.submit(*args, **kwargs)
 

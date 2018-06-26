@@ -37,7 +37,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.linkcode'
+    'sphinx.ext.linkcode',
+    'sphinx.ext.napoleon'
 ]
 
 url = 'https://raw.githubusercontent.com/Parsl/parsl-tutorial/master/parsl-introduction.ipynb'
@@ -58,6 +59,10 @@ def linkcode_resolve(domain, info):
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'libsubmit': ('https://libsubmit.readthedocs.io/en/stable', None)
+}
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
@@ -109,7 +114,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 #
-default_role = 'all'
+default_role = 'any'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #

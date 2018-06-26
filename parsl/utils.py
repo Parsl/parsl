@@ -111,12 +111,18 @@ def timeout(seconds=None):
 
 
 @contextmanager
+def wait_for_file(path, seconds=10):
+    for i in range(0, int(seconds * 100)):
+        time.sleep(seconds / 100.)
+        if os.path.exists(path):
+            break
+    yield
+
+
+@contextmanager
 def time_limited_open(path, mode, seconds=1):
-    @timeout(seconds)
-    def check_path(path):
-        while not os.path.exists(path):
-            time.sleep(0.1)
-    check_path(path)
+    wait_for_file(path, seconds)
+
     f = open(path, mode)
     yield f
     f.close()

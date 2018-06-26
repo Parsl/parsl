@@ -1,6 +1,6 @@
 .. _label-exceptions:
 
-Error Handling
+Error handling
 ==============
 
 In this section we will cover the various mechanisms Parsl provides to add resiliency
@@ -84,20 +84,20 @@ Here is an example of setting retries via keyword argument to the DFK:
    dfk = DataFlowKernel(config=config, retries=2)
 
 
-Lazy Fail
+Lazy fail
 ---------
 
-While Retries address resiliency at the level of ``Apps``, lazy failure adds
+While retries address resiliency at the level of ``Apps``, lazy failure adds
 resiliency at the workflow level. When lazy failures are enabled, the workflow does
 not halt as soon as it encounters a failure, but continues execution of every
-app that is unaffected. Lazy failures is the default behavior in parsl, with the
+app that is unaffected. Lazy failures is the default behavior in Parsl, with the
 expectation that when running production workflows, individual app failures can be
 deferred until the end of the workflow. During the development and testing of
 workflows, failing immediately on any failure is often preferred and this behavior
-is possible by setting ``lazyErrors=False``.
+is possible by setting ``lazy_errors=False``.
 
 
-For eg:
+For example:
 
 .. code-block:: python
 
@@ -118,29 +118,4 @@ For eg:
       time ----->
 
 
-There are two ways to disable lazy failures: via setting ``config['globals']['lazyErrors']=False``
-or by setting ``lazyErrors=False`` as keyword argument to the DataFlowKernel at initialization.
-
-Here is an example of disabling lazy failures via the config passed to the DFK
-
-.. code-block:: python
-
-   from parsl import DataFlowKernel, App
-   from parsl.tests.configs.local_ipp import config
-   config["globals"]["lazyErrors"] = False
-
-   dfk = DataFlowKernel(config=config)
-
-
-
-Here is an example of disabling lazy failures via keyword argument to the DFK:
-
-.. code-block:: python
-
-   from parsl import DataFlowKernel, App
-   from parsl.tests.configs.local_ipp import config
-
-   dfk = DataFlowKernel(config=config, lazyErrors=False)
-
-.. note:: The naming inconsistency in the config option and kwargs to dfk will be fixed
-          in 0.5.0 release
+Lazy errors can be disabled by setting `lazy_errors=False` in the :class:`parsl.config.Config`.

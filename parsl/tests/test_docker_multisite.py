@@ -6,53 +6,36 @@ import shutil
 import time
 
 import pytest
-
+from libsubmit.providers.local.local import Local
 from parsl.app.app import App
+from parsl.config import Config
 from parsl.dataflow.dflow import DataFlowKernel
+from parsl.executors.ipp import IPyParallelExecutor
 
-config = {
-    "sites": [
-        {"site": "pool_app1",
-         "auth": {"channel": None},
-         "execution": {
-             "executor": "ipp",
-             "container": {
-                 "type": "docker",
-                 "image": "app1_v0.1",
-             },
-             "provider": "local",
-             "block": {
-                 "initBlocks": 1,
-             },
-         }
-         },
-        {"site": "pool_app2",
-         "auth": {"channel": None},
-         "execution": {
-             "executor": "ipp",
-             "container": {
-                 "type": "docker",
-                 "image": "app2_v0.1",
-             },
-             "provider": "local",
-             "block": {
-                 "initBlocks": 1,
-             },
-         }
-         }
-    ],
-    "globals": {"lazyErrors": True}
-}
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            label='pool_app1',
+            provider=Local(init_blocks=1),
+            container_image='app1_v0.1'
+        ),
+        IPyParallelExecutor(
+            label='pool_app2',
+            provider=Local(init_blocks=1),
+            container_image='app2_v0.1'
+        )
+    ]
+)
 dfk = DataFlowKernel(config=config)
 
 
-@App('python', dfk, sites=['pool_app1'], cache=True)
+@App('python', dfk, executors=['pool_app1'], cache=True)
 def app_1(data):
     import app1
     return app1.predict(data)
 
 
-@App('python', dfk, sites=['pool_app2'], cache=True)
+@App('python', dfk, executors=['pool_app2'], cache=True)
 def app_2(data):
     import app2
     return app2.predict(data)

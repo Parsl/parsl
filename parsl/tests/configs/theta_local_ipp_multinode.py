@@ -1,42 +1,27 @@
-import pytest
-from parsl.tests.utils import get_rundir
+from libsubmit.providers.cobalt.cobalt import Cobalt
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
+from parsl.executors.ipp_controller import Controller
 from parsl.tests.user_opts import user_opts
+from parsl.tests.utils import get_rundir
 
-if 'theta' not in user_opts:
-    pytest.skip('theta user_opts not configured', allow_module_level=True)
-else:
-    info = user_opts['theta']
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            label='theta_local_ipp_multinode',
+            provider=Cobalt(
+                walltime="00:30:00",
+                nodes_per_block=8,
+                tasks_per_node=1,
+                init_blocks=1,
+                max_blocks=1,
+                launcher='aprun',
+                overrides=user_opts['account']['overrides'],
+                account=user_opts['theta']['account']
+            )
+        )
 
-config = {
-    "sites": [
-        {
-            "site": "theta_local_ipp_multinode",
-            "auth": {
-                "channel": "local",
-                "scriptDir": info['script_dir']
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": "cobalt",
-                "scriptDir": "./scripts",
-                "block": {
-                    "initBlocks": 1,
-                    "maxBlocks": 1,  # Limiting to just one block
-                    "launcher": 'aprun',
-                    "nodes": 8,  # of nodes in that block
-                    "taskBlocks": 8,  # total tasks in a block
-                    "walltime": "00:30:00",
-                    "options": info['options']
-                }
-            }
-        }
     ],
-    "globals": {
-        "lazyErrors": True,
-        "strategy": None,
-        "runDir": get_rundir()
-    },
-    "controller": {
-        "publicIp": info['public_ip']
-    }
-}
+    run_dir=get_rundir(),
+    controller=Controller(public_ip=user_opts['theta']['public_ip'])
+)

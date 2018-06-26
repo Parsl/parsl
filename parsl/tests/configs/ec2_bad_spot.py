@@ -1,41 +1,27 @@
-import pytest
-
-from parsl.tests.utils import get_rundir
+from libsubmit.providers.aws.aws.EC2Provider import EC2Provider
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.user_opts import user_opts
+from parsl.tests.utils import get_rundir
 
-if 'ec2' in user_opts:
-    info = user_opts['ec2']
-else:
-    pytest.skip('ec2 user_opts not configured', allow_module_level=True)
-
-info["spotMaxBid"] = 0.001  # Price too low
-
-config = {
-    "sites": [
-        {
-            "site": "ec2_bad_spot",
-            "auth": {
-                "channel": None,
-                "profile": "default"
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": "aws",
-                "channel": None,
-                "block": {
-                    "initBlocks": 1,
-                    "maxBlocks": 1,
-                    "minBlocks": 0,
-                    "taskBlocks": 1,
-                    "nodes": 1,
-                    "walltime": "00:25:00",
-                    "options": info["options"]
-                }
-            }
-        }
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            label='ec2_bad_spot',
+            provider=EC2Provider(
+                user_opts['ec2']['image_id'],
+                region=user_opts['ec2']['region'],
+                key_name=user_opts['ec2']['key_name'],
+                state_file='awsproviderstate.json',
+                spot_max_bid='0.001',  # price too low
+                nodes_per_block=1,
+                tasks_per_node=1,
+                init_blocks=1,
+                max_blocks=1,
+                min_blocks=0,
+                walltime='00:25:00',
+            )
+        )
     ],
-    "globals": {
-        "lazyErrors": True,
-        "runDir": get_rundir()
-    }
-}
+    run_dir=get_rundir(),
+)

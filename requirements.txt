@@ -1,5 +1,5 @@
 ipyparallel
-libsubmit==0.4.0
+libsubmit>=0.4.1
 globus-sdk
 dill
 tblib

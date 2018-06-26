@@ -1,42 +1,27 @@
 """The following config uses threads say for local lightweight apps and IPP workers for
 heavy weight applications.
 
-The app decorator has a parameter `sites=[<list of sites>]` to specify the site to which
+The app decorator has a parameter `executors=[<list of executors>]` to specify the executor to which
 apps should be directed.
 """
+from libsubmit.providers.local.local import Local
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
+from parsl.executors.threads import ThreadPoolExecutor
 from parsl.tests.utils import get_rundir
 
-config = {
-    "sites": [
-        {
-            "site": "local_threads",
-            "auth": {
-                "channel": None,
-            },
-            "execution": {
-                "executor": "threads",
-                "provider": None,
-                "maxThreads": 4
-            }
-        }, {
-            "site": "local_ipp",
-            "auth": {
-                "channel": None,
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": "local",
-                "block": {
-                    "nodes": 1,
-                    "taskBlocks": 1,
-                    "walltime": "00:05:00",
-                    "initBlocks": 4,
-                }
-            }
-        }
+config = Config(
+    executors=[
+        ThreadPoolExecutor(max_threads=4, label='local_threads'),
+        IPyParallelExecutor(
+            label='local_ipp',
+            provider=Local(
+                walltime="00:05:00",
+                nodes_per_block=1,
+                tasks_per_node=1,
+                init_blocks=4
+            )
+        )
     ],
-    "globals": {
-        "lazyErrors": True,
-        "runDir": get_rundir()
-    }
-}
+    run_dir=get_rundir()
+)

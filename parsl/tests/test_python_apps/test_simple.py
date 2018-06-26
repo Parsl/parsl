@@ -2,7 +2,7 @@ import argparse
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_ipp import config
 
 parsl.clear()
 parsl.load(config)

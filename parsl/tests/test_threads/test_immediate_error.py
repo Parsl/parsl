@@ -1,21 +1,20 @@
 import parsl
 import pytest
 from parsl import App
-from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_threads import config
-config['globals']['lazyErrors'] = False
-parsl.clear()
-dfk = DataFlowKernel(config=config)
-
-
-@App('python', dfk)
-def divide(a, b):
-    return a / b
 
 
 @pytest.mark.local
 def test_non_lazy_behavior():
     """Testing non lazy errors to work"""
+
+    parsl.clear()
+    config.lazy_errors = False
+    parsl.load(config)
+
+    @App('python')
+    def divide(a, b):
+        return a / b
 
     try:
         items = []

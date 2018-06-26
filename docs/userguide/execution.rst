@@ -10,8 +10,8 @@ Execution Providers
 
 Execution providers are responsible for managing execution resources. In the simplest case the local computer is used and parallel tasks are forked to individual threads. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, Condor and Cobalt. Clouds, on the other hand, provide APIs that allow more fine-grained composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
 
-Parsl's execution interface is called ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_) -- a Python library that provides a common interface to execution providers.
-Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor LRMs. New execution providers can be easily added by implementing libsubmit's execution provider interface.
+Parsl's execution interface is called ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_.)--a Python library that provides a common interface to execution providers.
+Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor LRMs. New execution providers can be easily added by implementing Libsubmit's execution provider interface.
 
 Executors
 ---------
@@ -94,7 +94,7 @@ determines when to trigger scaling (in or out) events to match
 workflow needs.
 
 The animated diagram below shows how blocks are elastically 
-managed within a site. The script configuration for a site
+managed within an executor. The script configuration for an executor
 defines the minimum, maximum, and initial number of blocks to be used. 
 Depending on workload, Parsl provisions or deprovisions blocks. 
 
@@ -102,9 +102,9 @@ Depending on workload, Parsl provisions or deprovisions blocks.
 
 The configuration options for specifying elasticity bounds are:
 
-1. ``minBlocks``: Minimum number of blocks to maintain per site.
-2. ``initBlocks``: Initial number of blocks to provision at initialization of workflow.
-3. ``maxBlocks``: Maximum number of blocks that can be active at a site from one workflow.
+1. ``min_blocks``: Minimum number of blocks to maintain per executor.
+2. ``init_blocks``: Initial number of blocks to provision at initialization of workflow.
+3. ``max_blocks``: Maximum number of blocks that can be active at an executor from one workflow.
 
 
 Parallelism
@@ -112,13 +112,13 @@ Parallelism
 
 Parsl provides a simple user-managed model for controlling elasticity. 
 It allows users to prescribe the minimum
-and maximum number of blocks to be used on a given site as well as 
+and maximum number of blocks to be used on a given executor as well as 
 a parameter (*p*) to control the level of parallelism. Parallelism
 is expressed as the ratio of TaskBlocks to active tasks. 
 Recall that each TaskBlock is capable of executing a single task at any given time. 
 A parallelism value of 1 represents aggressive scaling where as many resources 
 as possible are used; parallelism close to 0 represents the opposite situation in which
-as few resources as possible (i.e., minBlocks) are used.
+as few resources as possible (i.e., min_blocks) are used.
 
 For example:
 
@@ -147,31 +147,30 @@ Configuration
 The example below shows how elasticity and parallelism can be configured. Here, a local IPythonParallel
 environment is used with a minimum of 1 block and a maximum of 2 blocks, where each block may host
 up to 4 TaskBlocks. Parallelism of 0.5 means that when more than 2 tasks are queue per TaskBlock a new
-block will be requested (up to two possible blocks).
+block will be requested (up to two possible blocks). An example :class:`~parsl.config.Config` is:
 
 .. code:: python
 
-    localIPP = {
-        "sites": [
-            {"site": "Local_IPP",
-             "auth": {
-                 "channel": None,
-             },
-             "execution": {
-                 "executor": "ipp",
-                 "provider": "local",
-                 "block": {
-                     "minBlocks" : 1,
-                     "maxBlocks" : 2, # Shape of the blocks
-                     "initBlocks": 1,
-                     "TaskBlocks": 4, # Number of workers in a block
-                     "parallelism" : 0.5
-                 }
-             }
-            }]
-    }
+    from parsl.config import Config
+    from libsubmit.providers.local.local import Local
+    from parsl.executors.ipp import IPyParallelExecutor
 
-The animated diagram below illustrates the behavior of this site. 
+    config = Config(
+        executors=[
+            IPyParallelExecutor(
+                label='local_ipp',
+                provider=Local(
+                    min_blocks=1,
+                    max_blocks=2,
+                    init_blocks=1,
+                    tasks_per_block=4,
+                    parallelism=0.5
+                )
+            )
+        ]
+    )
+
+The animated diagram below illustrates the behavior of this executor. 
 In the diagram, the tasks are allocated to the first block, until 
 5 tasks are submitted. At this stage, as more than 2 tasks are waiting
 per TaskBlock, Parsl provisions a new block for executing the remaining
@@ -180,14 +179,14 @@ tasks.
 .. image:: parsl_parallelism.gif
 
 
-Multi-Site
+Multi-executor
 ----------
 
 .. note::
    This feature is available from Parsl 0.4.0
 
-Parsl supports the definition of any number of execution sites in the configuration,
-as well as specifying which of these sites could execute specific apps.
+Parsl supports the definition of any number of executors in the configuration,
+as well as specifying which of these executors could execute specific apps.
 
 The common scenarios for this feature are:
 
@@ -207,7 +206,7 @@ The common scenarios for this feature are:
   checkpoint) until successful completion.
 
 
-Here's a code snippet that shows how sites can be specified in the ``App`` decorator.
+Here's a code snippet that shows how executors can be specified in the ``App`` decorator.
 
 .. code-block:: python
 
@@ -218,12 +217,12 @@ Here's a code snippet that shows how sites can be specified in the ``App`` decor
      #       (Analysis & Visualization phase)         <--- Run on GPU node
 
      # A mock Molecular Dynamics simulation app
-     @App('bash', dfk, sites=["Theta.Phi"])
+     @App('bash', dfk, executors=["Theta.Phi"])
      def MD_Sim(arg, outputs=[]):
          return "MD_simulate {} -o {}".format(arg, outputs[0])
 
      # Visualize results from the mock MD simulation app
-     @App('bash', dfk, sites=["Cooley.GPU"])
+     @App('bash', dfk, executors=["Cooley.GPU"])
      def Visualize(inputs=[], outputs=[]):
          bash_array = " ".join(inputs)
          return "viz {} -o {}".format(bash_array, outputs[0])
