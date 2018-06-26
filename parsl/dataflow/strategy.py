@@ -152,7 +152,6 @@ class Strategy (object):
             site_config = self.sites[sitename]['config']
 
             if not exc.scaling_enabled:
-                logger.debug("Site:{0} Status:STATIC".format(sitename))
                 continue
 
             # Tasks that are either pending completion
@@ -164,7 +163,6 @@ class Strategy (object):
             # Get the shape and bounds for the site
             minBlocks = site_config["execution"]["block"]["minBlocks"]
             maxBlocks = site_config["execution"]["block"]["maxBlocks"]
-            initBlocks = site_config["execution"]["block"]["initBlocks"]
             taskBlocks = site_config["execution"]["block"]["taskBlocks"]
             parallelism = site_config["execution"]["block"]["parallelism"]
 
@@ -173,9 +171,6 @@ class Strategy (object):
                                                             'PENDING')])
             active_slots = active_blocks * taskBlocks
 
-            logger.debug("Min:{} initBlocks:{} Max:{}".format(minBlocks,
-                                                              initBlocks,
-                                                              maxBlocks))
             # import pdb; pdb.set_trace()
             logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
                                                                    active_slots,
