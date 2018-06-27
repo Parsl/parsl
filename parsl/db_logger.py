@@ -1,3 +1,4 @@
+import os
 import logging
 
 try:
@@ -32,7 +33,8 @@ class NullHandler(logging.Handler):
 def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
                   port=443,
                   enable_es_logging=False,
-                  index_name="parsl.campaign",
+                  index_name="my_python_index",
+                  version='1.0.0',
                   **kwargs):
     """
     Parameters
@@ -65,8 +67,13 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                                        'port': port}],
                                use_ssl=True,
                                auth_type=CMRESHandler.AuthType.NO_AUTH,
-                               es_index_name="my_python_index",
-                               es_additional_fields={'Campaign': "test"})
+                               es_index_name=index_name,
+                               es_additional_fields={
+                                   'Campaign': "test",
+                                   # use the name of the user's home directory as their username since there
+                                   # does not seem to be a portable way to do this
+                                   'Version': version,
+                                   'Username': os.path.split(os.path.expanduser('~'))[-1]})
         logger = logging.getLogger("ParslElasticsearch")
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)

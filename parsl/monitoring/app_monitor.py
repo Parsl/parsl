@@ -16,9 +16,11 @@ def monitor(pid, task_id, db_logger_config, run_id):
     while True:
         children = pm.children(recursive=True)
         d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
-        d["psutil_cpu"] = psutil.cpu_count()
+        d["psutil_cpu_count"] = psutil.cpu_count()
         d["task_run_id"] = run_id
         d["task_id"] = task_id
+        d['psutil_process_memory_virtual'] = pm.memory_info().vms
+        d['psutil_process_memory_resident'] = pm.memory_info().rss
         for n in ["user", "system", "children_user", "children_system"]:
             d["psutil_process_" + n] = getattr(pm.cpu_times(), n)
         for child in children:
@@ -27,6 +29,8 @@ def monitor(pid, task_id, db_logger_config, run_id):
             except TypeError:
             # ignore an error that occurs if compare the comparison is comparing against a bad or non existant value by simply replacing it with the newer child's info
                 c = {"psutil_process_child_" + str(k): v for k, v in child.as_dict().items() if k in simple}
+            c['psutil_process_child_memory_virtual'] = child.memory_info().vms
+            c['psutil_process_child_memory_resident'] = child.memory_info().rss
             d.update(c)
         logger.info("test", extra=d)
         time.sleep(4)
