@@ -1,5 +1,6 @@
 import logging
 
+from inspect import signature, Parameter
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -107,8 +108,18 @@ class BashApp(AppBase):
         This bit is the same for both bash & python apps.
         """
         super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, exec_type="bash")
+        self.kwargs = {}
         self.fn_hash = fn_hash
         self.cache = cache
+
+        # We duplicate the extraction of parameter defaults
+        # to self.kwargs to ensure availability at point of
+        # command string format. Refer: #349
+        sig = signature(func)
+
+        for s in sig.parameters:
+            if sig.parameters[s].default != Parameter.empty:
+                self.kwargs[s] = sig.parameters[s].default
 
     def __call__(self, *args, **kwargs):
         """Handle the call to a Bash app.

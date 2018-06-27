@@ -4,7 +4,6 @@ nose
 pytest>=3.6.0
 pytest-xdist
 pytest-ordering
-pytest-timeout
 coverage
 mock>=1.0.0
 pandas

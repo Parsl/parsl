@@ -80,7 +80,7 @@ class DataManager(ParslExecutor):
 
     def _set_local_path(self, file):
         globus_ep = self._get_globus_endpoint()
-        file.local_path = os.path.join(globus_ep.working_dir, file.filename)
+        file.local_path = os.path.join(globus_ep['working_dir'], file.filename)
 
     def _get_globus_endpoint(self, executor_label=None):
         for executor in self.executors.values():
@@ -95,10 +95,12 @@ class DataManager(ParslExecutor):
                             if local_path != common_path:
                                 raise Exception('"local_path" must be equal or an absolute subpath of "working_dir"')
                             relative_path = os.path.relpath(working_dir, common_path)
-                            scheme.endpoint_path = os.path.join(endpoint_path, relative_path)
+                            endpoint_path = os.path.join(endpoint_path, relative_path)
                         else:
-                            scheme.endpoint_path = working_dir
-                        return scheme
+                            endpoint_path = working_dir
+                        return {'endpoint_uuid': scheme.endpoint_uuid,
+                                'endpoint_path': endpoint_path,
+                                'working_dir': working_dir}
         raise Exception('No executor with a Globus endpoint and working_dir defined')
 
     def stage_in(self, file, executor):
@@ -180,11 +182,11 @@ class DataManager(ParslExecutor):
     def _globus_stage_in(self, globus_ep, outputs=[]):
         file = outputs[0]
         file.local_path = os.path.join(
-                globus_ep.working_dir, file.filename)
+                globus_ep['working_dir'], file.filename)
         dst_path = os.path.join(
-                globus_ep.endpoint_path, file.filename)
+                globus_ep['endpoint_path'], file.filename)
         self.globus.transfer_file(
-                file.netloc, globus_ep.endpoint_uuid,
+                file.netloc, globus_ep['endpoint_uuid'],
                 file.path, dst_path)
 
     def stage_out(self, file, executor=None):
