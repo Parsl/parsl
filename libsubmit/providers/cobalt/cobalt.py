@@ -98,7 +98,6 @@ class CobaltProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-
     def _status(self):
         """ Internal: Do not call. Returns the status list for a list of job_ids
 
@@ -320,30 +319,3 @@ class CobaltProvider(ExecutionProvider, RepresentationMixin):
     def _test_add_resource(self, job_id):
         self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])
         return True
-
-
-if __name__ == "__main__":
-
-    config = {
-        "site": "cooley",
-        "execution": {
-            "executor": "ipp",
-            "provider": "cobalt",
-            "block": {
-                "initParallelism": 2,
-                "maxParallelism": 2,
-                "minParallelism": 0,
-                "walltime": "00:25:00",
-                "options": {
-                    "account": "ExM",
-                    "submit_script_dir": ".scripts",
-                    "overrides": "",
-                }
-            }
-        }
-    }
-
-    p = Cobalt(config)
-    p._status()
-    p.submit("echo 'Hello World'", 1)
-    p._status()

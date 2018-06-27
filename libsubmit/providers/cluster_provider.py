@@ -74,9 +74,10 @@ class ClusterProvider(ExecutionProvider):
         self.walltime = wtime_to_minutes(walltime)
 
         if not callable(self.launcher):
-            raise(ep_error.BadLauncher(self.launcher, "Launcher for executor:{} is of type:{}. Expects a libsubmit.launcher.launcher.Launcher or callable".format(
-                label,
-                type(self.launcher))))
+            raise(ep_error.BadLauncher(self.launcher,
+                                       "Launcher for executor:{} is of type:{}. Expects a libsubmit.launcher.launcher.Launcher or callable".format(
+                                           label,
+                                           type(self.launcher))))
 
         self.script_dir = script_dir
         if not os.path.exists(self.script_dir):

@@ -108,9 +108,9 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         job_config["overrides"] = self.overrides
         job_config["user_script"] = command
 
-        job_config["user_script"] = launchers[self.launcher](command,
-                                                             self.tasks_per_node,
-                                                             self.nodes_per_block)
+        job_config["user_script"] = self.launcher(command,
+                                                  self.tasks_per_node,
+                                                  self.nodes_per_block)
         return job_config
 
     def submit(self, command="", blocksize=1, job_name="parsl.auto"):

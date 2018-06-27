@@ -9,26 +9,49 @@ import logging
 logger = logging.getLogger(__name__)
 
 from libsubmit.version import VERSION
-from libsubmit.providers.slurm.slurm import Slurm
-from libsubmit.providers.aws.aws import EC2Provider
-from libsubmit.providers.googlecloud.googlecloud import GoogleCloud
-from libsubmit.providers.grid_engine.grid_engine import GridEngine
-from libsubmit.providers.azure.azure import AzureProvider
-from libsubmit.providers.jetstream.jetstream import Jetstream
-from libsubmit.providers.condor.condor import Condor
-from libsubmit.providers.torque.torque import Torque
-from libsubmit.providers.local.local import Local
-from libsubmit.providers.cobalt.cobalt import Cobalt
-from libsubmit.channels.ssh.ssh import SSHChannel
-from libsubmit.channels.ssh_il.ssh_il import SSHInteractiveLoginChannel
-from libsubmit.channels.local.local import LocalChannel
+from libsubmit.providers import LocalProvider
+
+
+from libsubmit.providers import CobaltProvider
+from libsubmit.providers import CondorProvider
+from libsubmit.providers import GridEngineProvider
+from libsubmit.providers import SlurmProvider
+from libsubmit.providers import TorqueProvider
+
+from libsubmit.providers import AWSProvider
+from libsubmit.providers import AzureProvider
+from libsubmit.providers import GoogleCloudProvider
+from libsubmit.providers import JetstreamProvider
+
+from libsubmit.channels import SSHChannel
+from libsubmit.channels import SSHInteractiveLoginChannel
+from libsubmit.channels import LocalChannel
+
+from libsubmit.launchers import SimpleLauncher, SingleNodeLauncher, SrunLauncher, \
+    AprunLauncher, SrunMPILauncher, AprunLauncher
 
 __author__ = 'Yadu Nand Babuji'
 __version__ = VERSION
 
-__all__ = ['Slurm', 'EC2Provider', 'AzureProvider', 'GoogleCloud', 'Jetstream',
-           'Local', 'Cobalt', 'Condor', 'Torque', 'GridEngine',
-           'LocalChannel', 'SSHChannel', 'SSHInteractiveLoginChannel']
+__all__ = ['LocalProvider',
+           'CobaltProvider',
+           'CondorProvider',
+           'GridEngineProvider',
+           'SlurmProvider',
+           'TorqueProvider',
+           'AWSProvider',
+           'AzureProvider',
+           'GoogleCloudProvider',
+           'JetstreamProvider',
+           'LocalChannel',
+           'SSHChannel',
+           'SSHInteractiveLoginChannel',
+           'SimpleLauncher',
+           'SingleNodeLauncher',
+           'SrunLauncher',
+           'AprunLauncher',
+           'SrunMPILauncher',
+           'AprunLauncher']
 
 
 def set_stream_logger(name='libsubmit', level=logging.DEBUG, format_string=None):
