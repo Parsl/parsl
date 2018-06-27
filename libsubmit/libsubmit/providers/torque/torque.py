@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from libsubmit.launchers import launchers
+from libsubmit.launchers import AprunLauncher
 from libsubmit.providers.torque.template import template_string
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.utils import RepresentationMixin
@@ -21,7 +21,7 @@ translate_table = {
 }  # Suspended
 
 
-class Torque(ClusterProvider, RepresentationMixin):
+class TorqueProvider(ClusterProvider, RepresentationMixin):
     """Torque Execution Provider
 
     This provider uses sbatch to submit, squeue for status, and scancel to cancel
@@ -32,9 +32,9 @@ class Torque(ClusterProvider, RepresentationMixin):
     ----------
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
-        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
-        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
     account : str
         Account the job will be charged against.
     queue : str
@@ -61,6 +61,11 @@ class Torque(ClusterProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS.
     overrides : str
         String to prepend to the Torque submit script.
+    launcher : Launcher
+        Launcher for this provider. Possible launchers include
+        :class:`~libsubmit.launchers.AprunLauncher` (the default), or
+        :class:`~libsubmit.launchers.SingleNodeLauncher`,
+
     """
     def __init__(self,
                  channel,
@@ -75,7 +80,7 @@ class Torque(ClusterProvider, RepresentationMixin):
                  min_blocks=0,
                  max_blocks=100,
                  parallelism=1,
-                 launcher='aprun',
+                 launcher=AprunLauncher(),
                  walltime="00:20:00"):
         super().__init__(label,
                          channel,
@@ -187,9 +192,9 @@ class Torque(ClusterProvider, RepresentationMixin):
         job_config["user_script"] = command
 
         # Wrap the command
-        job_config["user_script"] = launchers[self.launcher](command,
-                                                             self.tasks_per_block,
-                                                             self.tasks_per_node)
+        job_config["user_script"] = self.launcher(command,
+                                                  self.tasks_per_block,
+                                                  self.tasks_per_node)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)

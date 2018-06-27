@@ -26,7 +26,7 @@ translate_table = {
 }
 
 
-class GoogleCloud():
+class GoogleCloudProvider():
     """A provider for using resources from the Google Compute Engine.
 
     Parameters
