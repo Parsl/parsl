@@ -7,8 +7,10 @@
 | ++++++++++++++ |
 ==================
 """
-from libsubmit.channels.ssh.ssh import SSHChannel
-from libsubmit.providers.torque.torque import Torque
+from libsubmit.channels import SSHChannel
+from libsubmit.providers import TorqueProvider
+from libsubmit.launchers import AprunLauncher
+
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.user_opts import user_opts
@@ -18,7 +20,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='beagle_multinode_mpi',
-            provider=Torque(
+            provider=TorqueProvider(
                 'debug',
                 channel=SSHChannel(
                     hostname='login4.beagle.ci.uchicago.edu',
@@ -29,7 +31,7 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                launcher='aprun',
+                launcher=AprunLauncher,
                 overrides=user_opts['beagle']['overrides'],
             )
         )

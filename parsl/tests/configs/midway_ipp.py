@@ -1,14 +1,16 @@
 from parsl.tests.user_opts import user_opts
 
+from libsubmit.channels import SSHChannel
+from libsubmit.providers import SlurmProvider
+
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
-from libsubmit.channels.ssh.ssh import SSHChannel
-from libsubmit.providers.slurm.slurm import Slurm
+from parsl.executors.ipp_controller import Controller
 
 config = Config(
     executors=[
         IPyParallelExecutor(
-            provider=Slurm(
+            provider=SlurmProvider(
                 'westmere',
                 channel=SSHChannel(
                     hostname='swift.rcc.uchicago.edu',
@@ -23,7 +25,8 @@ config = Config(
                 parallelism=0.5,
                 overrides=user_opts['midway']['overrides']
             ),
-            label='midway_ipp'
+            label='midway_ipp',
+            controller=Controller(public_ip=user_opts['public_ip']),
         )
     ]
 )

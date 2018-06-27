@@ -1,4 +1,4 @@
-from libsubmit.providers.cobalt.cobalt import Cobalt
+from libsubmit.providers import CobaltProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.executors.ipp_controller import Controller
@@ -9,7 +9,8 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='theta_local_ipp_multinode',
-            provider=Cobalt(
+            provider=CobaltProvider(
+                
                 walltime="00:30:00",
                 nodes_per_block=8,
                 tasks_per_node=1,

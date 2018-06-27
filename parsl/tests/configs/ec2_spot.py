@@ -1,4 +1,4 @@
-from libsubmit.providers.aws.aws.EC2Provider import EC2Provider
+from libsubmit.providers import AWSProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.user_opts import user_opts
@@ -8,7 +8,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='ec2_bad_spot',
-            provider=EC2Provider(
+            provider=AWSProvder(
                 user_opts['ec2']['image_id'],
                 region=user_opts['ec2']['region'],
                 key_name=user_opts['ec2']['key_name'],

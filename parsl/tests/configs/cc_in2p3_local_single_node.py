@@ -7,8 +7,8 @@
 | ++++++++++++++ |
 ==================
 """
-from libsubmit.channels.local.local import LocalChannel
-from libsubmit.providers.grid_engine.grid_engine import GridEngine
+from libsubmit.channels import LocalChannel
+from libsubmit.providers import GridEngine
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.user_opts import user_opts
@@ -18,7 +18,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='cc_in2p3_local_single_node',
-            provider=GridEngine(
+            provider=GridEngineProvider(
                 channel=LocalChannel(
                     script_dir=user_opts['cc_in2p3']['script_dir']
                 ),
