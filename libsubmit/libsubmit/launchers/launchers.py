@@ -1,13 +1,16 @@
 from abc import ABCMeta, abstractmethod
 
-class Launcher(metaclass=ABCMeta):
 
+class Launcher(metaclass=ABCMeta):
+    """ Launcher base class to enforce launcher interface
+    """
     @abstractmethod
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
         """ Wraps the command with the Launcher calls.
         *MUST* be implemented by the concrete child classes
         """
         pass
+
 
 class SimpleLauncher(Launcher):
     """ Does no wrapping. Just returns the command as-is
@@ -23,6 +26,7 @@ class SimpleLauncher(Launcher):
         - walltime (int) : This is not used by this launcher.
         """
         return command
+
 
 class SingleNodeLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the framework to
@@ -58,6 +62,7 @@ wait
 echo "All workers done"
 '''.format(command, task_blocks)
         return x
+
 
 class SrunLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the SRUN launch framework
@@ -193,9 +198,7 @@ echo "Done"
         return x
 
 
-
-
-if __name__ == '__main__' :
+if __name__ == '__main__':
 
     s = SingleNodeLauncher()
     wrapped = s("hello", 1, 1)

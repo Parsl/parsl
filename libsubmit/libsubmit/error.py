@@ -34,6 +34,7 @@ class ScriptPathError(ExecutionProviderException):
     def __repr__(self):
         return "Unable to write submit script:{0} Reason:{1}".format(self.script_path, self.reason)
 
+
 class BadLauncher(ExecutionProviderException):
     ''' Error raised when a non callable object is provider as Launcher
     '''
