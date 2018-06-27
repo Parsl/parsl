@@ -5,7 +5,7 @@ from string import Template
 
 import libsubmit.error as ep_error
 from libsubmit.utils import wtime_to_minutes
-from libsubmit.launchers import launchers
+from libsubmit.launchers import AprunLauncher
 from libsubmit.providers.cobalt.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.utils import RepresentationMixin
@@ -21,7 +21,7 @@ translate_table = {
 }
 
 
-class Cobalt(ExecutionProvider, RepresentationMixin):
+class CobaltProvider(ExecutionProvider, RepresentationMixin):
     """ Cobalt Execution Provider
 
     This provider uses cobalt to submit (qsub), obtain the status of (qstat), and cancel (qdel)
@@ -32,9 +32,9 @@ class Cobalt(ExecutionProvider, RepresentationMixin):
     ----------
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
-        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
-        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
     label : str
         Label for this provider.
     script_dir : str
@@ -57,12 +57,16 @@ class Cobalt(ExecutionProvider, RepresentationMixin):
         Torque queue to request blocks from.
     overrides : str
         String to append to the Torque submit script on the scheduler.
+    launcher : Launcher
+        Launcher for this provider. Possible launchers include
+        :class:`~libsubmit.launchers.AprunLauncher` (the default) or,
+        :class:`~libsubmit.launchers.SingleNodeLauncher`
     """
     def __init__(self,
                  channel,
                  label='cobalt',
                  script_dir='parsl_scripts',
-                 launcher='single_node',
+                 launcher=AprunLauncher(),
                  nodes_per_block=1,
                  tasks_per_node=1,
                  min_blocks=0,
@@ -94,9 +98,6 @@ class Cobalt(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-        if launcher in ['srun', 'srun_mpi']:
-            logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
-                           "Recommended options include 'single_node' or 'aprun'.".format(launcher))
 
     def _status(self):
         """ Internal: Do not call. Returns the status list for a list of job_ids
@@ -251,8 +252,7 @@ class Cobalt(ExecutionProvider, RepresentationMixin):
                      blocksize, self.nodes_per_block, self.tasks_per_node)
 
         # Wrap the command
-        launcher = launchers.get(self.launcher, None)
-        job_config["user_script"] = launcher(command, self.tasks_per_node * self.nodes_per_block)
+        job_config["user_script"] = self.launcher(command, self.tasks_per_node, self.nodes_per_block)
 
         queue_opt = '-q {}'.format(self.queue) if self.queue is not None else ''
 

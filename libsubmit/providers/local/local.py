@@ -4,8 +4,8 @@ import signal
 import time
 
 import libsubmit.error as ep_error
-from libsubmit.channels.local.local import LocalChannel
-from libsubmit.launchers import launchers
+from libsubmit.channels import LocalChannel
+from libsubmit.launchers import SingleNodeLauncher
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.utils import RepresentationMixin
 
@@ -26,7 +26,7 @@ translate_table = {
 }  # (special exit state
 
 
-class Local(ExecutionProvider, RepresentationMixin):
+class LocalProvider(ExecutionProvider, RepresentationMixin):
     """ Local Execution Provider
 
     This provider is used to provide execution resources from the localhost.
@@ -50,7 +50,7 @@ class Local(ExecutionProvider, RepresentationMixin):
                  script_dir='parsl_scripts',
                  tasks_per_node=1,
                  nodes_per_block=1,
-                 launcher='single_node',
+                 launcher=SingleNodeLauncher(),
                  init_blocks=4,
                  min_blocks=0,
                  max_blocks=10,
@@ -163,7 +163,7 @@ class Local(ExecutionProvider, RepresentationMixin):
         script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_command = launchers.get(self.launcher, None)(command, self.tasks_per_node, self.nodes_per_block)
+        wrap_command = self.launcher(command, self.tasks_per_node, self.nodes_per_block)
 
         self._write_submit_script(wrap_command, script_path)
 

@@ -4,6 +4,7 @@ import re
 import time
 
 from libsubmit.utils import RepresentationMixin
+from libsubmit.launchers import SingleNodeLauncher
 from libsubmit.providers.condor.template import template_string
 from libsubmit.providers.cluster_provider import ClusterProvider
 
@@ -20,16 +21,16 @@ translate_table = {
 }
 
 
-class Condor(RepresentationMixin, ClusterProvider):
+class CondorProvider(RepresentationMixin, ClusterProvider):
     """HTCondor Execution Provider.
 
     Parameters
     ----------
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
-        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
-        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
     label : str
         Label for this provider.
     nodes_per_block : int
@@ -59,6 +60,9 @@ class Condor(RepresentationMixin, ClusterProvider):
         Command to be run before running a task.
     requirements : str
         Condor requirements.
+    launcher : Launcher
+        Launcher for this provider. Possible launchers include
+        :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
     """
     def __init__(self,
                  channel=None,
@@ -75,7 +79,7 @@ class Condor(RepresentationMixin, ClusterProvider):
                  overrides='',
                  walltime="00:10:00",
                  worker_setup='',
-                 launcher='single_node',
+                 launcher=SingleNodeLauncher(),
                  requirements=''):
 
         super().__init__(label,
@@ -210,8 +214,12 @@ class Condor(RepresentationMixin, ClusterProvider):
 
         # Move the user script
         # This is where the command should be wrapped by the launchers.
+        wrapped_command = self.launcher(command,
+                                        self.tasks_per_node,
+                                        self.nodes_per_block)
+
         with open(userscript_path, 'w') as f:
-            f.write(job_config["worker_setup"] + '\n' + command)
+            f.write(job_config["worker_setup"] + '\n' + wrapped_command)
 
         user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
         job_config["input_files"] = user_script_path

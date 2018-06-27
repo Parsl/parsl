@@ -30,7 +30,7 @@ translate_table = {
 }
 
 
-class EC2Provider(ExecutionProvider, RepresentationMixin):
+class AWSProvider(ExecutionProvider, RepresentationMixin):
     """A provider for using Amazon Elastic Compute Cloud (EC2) resources.
 
     One of 3 methods are required to authenticate: keyfile, profile or environment

@@ -2,10 +2,10 @@ import logging
 import os
 import time
 
-from libsubmit.channels.local.local import LocalChannel
-from libsubmit.launchers import launchers
+from libsubmit.channels import LocalChannel
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.grid_engine.template import template_string
+from libsubmit.launchers import SingleNodeLauncher
 from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -30,16 +30,16 @@ translate_table = {
 }
 
 
-class GridEngine(ClusterProvider, RepresentationMixin):
+class GridEngineProvider(ClusterProvider, RepresentationMixin):
     """A provider for the Grid Engine scheduler.
 
     Parameters
     ----------
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
-        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
-        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
     label : str
         Label for this provider.
     script_dir : str
@@ -60,8 +60,9 @@ class GridEngine(ClusterProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS.
     overrides : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
-    launcher : str
-        FIXME. Can be one of 'single_node', 'srun', 'aprun', or 'srun_mpi'.
+    launcher : Launcher
+        Launcher for this provider. Possible launchers include
+        :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
     """
 
     def __init__(self,
@@ -76,7 +77,7 @@ class GridEngine(ClusterProvider, RepresentationMixin):
                  parallelism=1,
                  walltime="00:10:00",
                  overrides='',
-                 launcher='single_node'):
+                 launcher=SingleNodeLauncher()):
         super().__init__(label,
                          channel,
                          script_dir,

@@ -18,9 +18,9 @@ class ClusterProvider(ExecutionProvider):
         Label for this provider.
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
-        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
-        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
     script_dir : str
         Relative or absolute path to a directory where intermediate scripts are placed.
     walltime : str
@@ -72,6 +72,11 @@ class ClusterProvider(ExecutionProvider):
         self.provisioned_blocks = 0
         self.launcher = launcher
         self.walltime = wtime_to_minutes(walltime)
+
+        if not callable(self.launcher):
+            raise(ep_error.BadLauncher(self.launcher, "Launcher for executor:{} is of type:{}. Expects a libsubmit.launcher.launcher.Launcher or callable".format(
+                label,
+                type(self.launcher))))
 
         self.script_dir = script_dir
         if not os.path.exists(self.script_dir):
