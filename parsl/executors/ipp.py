@@ -2,7 +2,7 @@ import logging
 import os
 
 from ipyparallel import Client
-from libsubmit.providers.local.local import Local
+from libsubmit.providers import LocalProvider
 from libsubmit.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
@@ -65,7 +65,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     """
 
     def __init__(self,
-                 provider=Local(),
+                 provider=LocalProvider(),
                  label='ipp',
                  engine_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                  engine_dir='.',
