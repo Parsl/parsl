@@ -40,8 +40,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         Label for this provider.
     script_dir : str
         Relative or absolute path to a directory where intermediate scripts are placed.
-    launcher : str
-        Launcher to use for launching workers. Can be 'single_node', 'srun', 'aprun', or 'srun_mpi'.
     nodes_per_block : int
         Nodes to provision per block.
     tasks_per_node : int
@@ -80,18 +78,18 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                  launcher=AprunLauncher(),
                  cmd_timeout=10):
         super().__init__(label,
-                         channel,
-                         script_dir,
-                         nodes_per_block,
-                         tasks_per_node,
-                         init_blocks,
-                         min_blocks,
-                         max_blocks,
-                         parallelism,
-                         walltime,
-                         launcher,
+                         channel=channel,
+                         script_dir=script_dir,
+                         nodes_per_block=nodes_per_block,
+                         tasks_per_node=tasks_per_node,
+                         init_blocks=init_blocks,
+                         min_blocks=min_blocks,
+                         max_blocks=max_blocks,
+                         parallelism=parallelism,
+                         walltime=walltime,
+                         launcher=launcher,
                          cmd_timeout=cmd_timeout)
-                         
+
         self.account = account
         self.queue = queue
         self.overrides = overrides
