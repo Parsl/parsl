@@ -1,8 +1,9 @@
 # Untested
 
 from libsubmit.providers import CobaltProvider
-from libsubmit.channels import SSHInteractiveLoginChannel
+from libsubmit.channels import LocalChannel
 from libsubmit.launchers import SingleNodeLauncher
+
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.executors.ipp_controller import Controller
@@ -14,6 +15,7 @@ config = Config(
         IPyParallelExecutor(
             label='cooley_local_single_node',
             provider=CobaltProvider(
+                launcher=SingleNodeLauncher(),
                 nodes_per_block=1,
                 tasks_per_node=1,
                 init_blocks=1,
@@ -23,7 +25,7 @@ config = Config(
                 queue='debug',
                 account=user_opts['cooley']['account']
             ),
-            controller=Controller(public_ip="10.230.100.209")
+            controller=Controller(public_ip="10.230.100.210")
         )
 
     ],
