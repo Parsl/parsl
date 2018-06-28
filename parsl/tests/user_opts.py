@@ -6,7 +6,7 @@ out the entry.
 """
 
 user_opts = {
-    #"public_ip" : PUBLIC_IP,
+    #"public_ip" : "10.236.1.193",
     #'midway': {
     #    'username': MIDWAY_USERNAME,
     #    'script_dir': '/scratch/midway2/{}/parsl_scripts'.format(MIDWAY_USERNAME),
@@ -29,11 +29,18 @@ user_opts = {
     #    'script_dir' : "/home/users/{}/parsl_scripts".format(SWAN_USERNAME),
     #    'overrides': "module load cray-python/3.6.1.1; source parsl_env/bin/activate"
     #},
-    # 'cooley': {
-    #     'username': 'fixme',
-    #     "account": 'CSC249ADCD01',
-    #     "overrides": "source /home/fixme/setup_cooley_env.sh"
-    # },
+    #'cooley': {
+    #     'username': ALCF_USERNAME,
+    #     "account": ALCF_ACCOUNT,
+    #     "overrides": "source /home/yadunand/setup_cooley_env.sh"
+    #},
+    #'theta': {
+    #     'username': ALCF_USERNAME,
+    #     "account": ALCF_ACCOUNT,
+    #     "overrides": "source /home/yadunand/setup_theta_env.sh"
+    #     # Once you log onto theta, get the ip address of the login machine
+    #     # by running >> ip addr show | grep -o 10.236.1.[0-9]*
+    #},
     # 'ec2': {
     #     "region": "us-east-2",
     #     "image_id": 'ami-82f4dae7',
@@ -43,15 +50,6 @@ user_opts = {
     #     'username': 'fixme',
     #     "script_dir": "fixme",
     #     "overrides": """#SBATCH --constraint=haswell module load python/3.5-anaconda ; source activate parsl_env_3.5"""
-    # },
-    # 'theta': {
-    #     'username': 'fixme',
-    #     "script_dir": "/home/fixme/parsl_scripts/",
-    #     "account": "CSC249ADCD01",
-    #     "overrides": "export PATH=/home/fixme/theta_parsl/anaconda3/bin/:$PATH; source activate /home/fixme/theta_parsl/anaconda3/envs/theta_parslenv",
-    #     # Once you log onto theta, get the ip address of the login machine
-    #     # by running >> ip addr show | grep -o 10.236.1.[0-9]*
-    #     'public_ip': '10.236.1.193'
     # },
     # 'cc_in2p3': {
     #     'script_dir': "~/parsl_scripts",
