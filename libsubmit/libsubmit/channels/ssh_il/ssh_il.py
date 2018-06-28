@@ -39,9 +39,9 @@ class SSHInteractiveLoginChannel(SSHChannel):
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         if script_dir:
-            self.script_dir = script_dir
+            self._script_dir = script_dir
         else:
-            self.script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
+            self._script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
 
         self.envs = {}
         if envs is not None:
