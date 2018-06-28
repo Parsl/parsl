@@ -81,6 +81,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  parallelism=1,
                  walltime="00:10:00",
                  overrides='',
+                 cmd_timeout=10,
                  launcher=SingleNodeLauncher()):
         super().__init__(label,
                          channel,
@@ -92,7 +93,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
+                         cmd_timeout=cmd_timeout,
+                         launcher=launcher)
         self.partition = partition
         self.overrides = overrides
 
@@ -176,7 +178,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(channel_script_path), 10)
+        retcode, stdout, stderr = super().execute_wait("sbatch {0}".format(channel_script_path))
 
         job_id = None
         if retcode == 0:
@@ -200,7 +202,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.channel.execute_wait("scancel {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = super().execute_wait("scancel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
