@@ -233,6 +233,7 @@ class DataFlowKernel(object):
                 logger.debug("Eager fail, skipping retry logic")
                 self.tasks[task_id]['status'] = States.failed
                 task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
+                task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                 task_log_info['task_fail_mode'] = 'eager'
                 self.db_logger.info("Task Fail", extra=task_log_info)
                 raise e
@@ -241,6 +242,7 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
                 task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+                task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                 task_log_info['task_' + 'fail_mode'] = 'lazy'
                 self.db_logger.info("Task Retry", extra=task_log_info)
 
@@ -251,6 +253,7 @@ class DataFlowKernel(object):
                 logger.info("Task {} failed after {} retry attempts".format(task_id,
                                                                             self.fail_retries))
                 task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+                task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                 task_log_info['task_' + 'fail_mode'] = 'lazy'
                 self.db_logger.info("Task Retry Failed", extra=task_log_info)
 
@@ -261,6 +264,7 @@ class DataFlowKernel(object):
             logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_completed'] = str(datetime.now())
             task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+            task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
             self.db_logger.info("Task Done", extra=task_log_info)
 
         if not memo_cbk and final_state_flag is True:
@@ -309,6 +313,7 @@ class DataFlowKernel(object):
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
                     task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+                    task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                     task_log_info['task_' + 'fail_mode'] = 'lazy'
                     self.db_logger.info("Task Dep Fail", extra=task_log_info)
 
@@ -359,6 +364,7 @@ class DataFlowKernel(object):
         self.tasks[task_id]['status'] = States.running
         self.tasks[task_id]['time_started'] = str(datetime.now())
         task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+        task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self.fail_retries - \
             self.tasks[task_id]['fail_count']
