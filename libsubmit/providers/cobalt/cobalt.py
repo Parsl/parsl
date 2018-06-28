@@ -5,9 +5,10 @@ from string import Template
 
 import libsubmit.error as ep_error
 from libsubmit.utils import wtime_to_minutes
+from libsubmit.channels import LocalChannel
 from libsubmit.launchers import AprunLauncher
 from libsubmit.providers.cobalt.template import template_string
-from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ translate_table = {
 }
 
 
-class CobaltProvider(ExecutionProvider, RepresentationMixin):
+class CobaltProvider(ClusterProvider, RepresentationMixin):
     """ Cobalt Execution Provider
 
     This provider uses cobalt to submit (qsub), obtain the status of (qstat), and cancel (qdel)
@@ -63,40 +64,37 @@ class CobaltProvider(ExecutionProvider, RepresentationMixin):
         :class:`~libsubmit.launchers.SingleNodeLauncher`
     """
     def __init__(self,
-                 channel,
+                 channel=LocalChannel(),
                  label='cobalt',
                  script_dir='parsl_scripts',
-                 launcher=AprunLauncher(),
                  nodes_per_block=1,
                  tasks_per_node=1,
+                 init_blocks=0,
                  min_blocks=0,
                  max_blocks=10,
+                 parallelism=1,
                  walltime="00:10:00",
                  account=None,
                  queue=None,
-                 overrides=''):
-        if channel is None:
-            logger.error("Cobalt cannot be initialized without a channel")
-            raise (ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
-        self.channel = channel
-        self.label = label
-
-        self.provisioned_blocks = 0
-        self.nodes_per_block = nodes_per_block
-        self.launcher = launcher
-        self.tasks_per_node = tasks_per_node
-        self.min_blocks = min_blocks
-        self.max_blocks = max_blocks
-        self.walltime = wtime_to_minutes(walltime)
+                 overrides='',
+                 launcher=AprunLauncher(),
+                 cmd_timeout=10):
+        super().__init__(label,
+                         channel,
+                         script_dir,
+                         nodes_per_block,
+                         tasks_per_node,
+                         init_blocks,
+                         min_blocks,
+                         max_blocks,
+                         parallelism,
+                         walltime,
+                         launcher,
+                         cmd_timeout=cmd_timeout)
+                         
         self.account = account
+        self.queue = queue
         self.overrides = overrides
-
-        self.script_dir = script_dir
-        if not os.path.exists(self.script_dir):
-            os.makedirs(self.script_dir)
-
-        # Dictionary that keeps track of jobs, keyed on job_id
-        self.resources = {}
 
     def _status(self):
         """ Internal: Do not call. Returns the status list for a list of job_ids
@@ -110,7 +108,7 @@ class CobaltProvider(ExecutionProvider, RepresentationMixin):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = self.channel.execute_wait("qstat -u $USER", 3)
+        retcode, stdout, stderr = super().execute_wait("qstat -u $USER")
 
         # Execute_wait failed. Do no update.
         if retcode != 0:
@@ -137,71 +135,6 @@ class CobaltProvider(ExecutionProvider, RepresentationMixin):
         for missing_job in jobs_missing:
             if self.resources[missing_job]['status'] in ['RUNNING', 'KILLING', 'EXITING']:
                 self.resources[missing_job]['status'] = translate_table['EXITING']
-
-    def status(self, job_ids):
-        """Get the status of a list of jobs identified by their ids.
-
-        Parameters
-        ----------
-        job_ids : list of str
-            Identifiers for the jobs.
-
-        Returns
-        -------
-        list of int
-            Status codes of the requested jobs.
-        """
-
-        self._status()
-        return [self.resources[jid]['status'] for jid in job_ids]
-
-    def _write_submit_script(self, template_string, script_filename, job_name, configs):
-        """
-        Load the template string with config values and write the generated submit script to
-        a submit script file.
-
-        Args:
-              - template_string (string) : The template string to be used for the writing submit script
-              - script_filename (string) : Name of the submit script
-              - job_name (string) : job name
-              - configs (dict) : configs that get pushed into the template
-
-        Returns:
-              - True: on success
-
-        Raises:
-              SchedulerMissingArgs : If template is missing args
-              ScriptPathError : Unable to write submit script out
-        """
-
-        try:
-            script_dir = os.path.dirname(script_filename)
-            if script_dir:
-                os.makedirs(script_dir)
-
-        except Exception as e:
-            if e.errno == 17:
-                pass
-            else:
-                logger.error("Unable to create script_dir:{0} due to:{1}".format(script_dir, e))
-                raise (ep_error.ScriptPathError(script_filename, e))
-
-        try:
-            submit_script = Template(template_string).substitute(**configs)
-
-            with open(script_filename, 'w') as f:
-                f.write(submit_script)
-            os.chmod(script_filename, 0o777)
-
-        except KeyError as e:
-            logger.error("Missing keys for submit script : %s", e)
-            raise (ep_error.SchedulerMissingArgs(e.args, self.label))
-
-        except IOError as e:
-            logger.error("Failed writing to submit script: %s", script_filename)
-            raise (ep_error.ScriptPathError(script_filename, e))
-
-        return True
 
     def submit(self, command, blocksize, job_name="parsl.auto"):
         """ Submits the command onto an Local Resource Manager job of blocksize parallel elements.
@@ -264,7 +197,7 @@ class CobaltProvider(ExecutionProvider, RepresentationMixin):
             self.nodes_per_block, queue_opt, self.walltime, account_opt, channel_script_path)
         logger.debug("Executing {}".format(command))
 
-        retcode, stdout, stderr = self.channel.execute_wait(command, 10)
+        retcode, stdout, stderr = super().execute_wait(command)
 
         # TODO : FIX this block
         if retcode != 0:
@@ -297,7 +230,7 @@ class CobaltProvider(ExecutionProvider, RepresentationMixin):
         """
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.channel.execute_wait("qdel {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = super().execute_wait("qdel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
@@ -307,15 +240,3 @@ class CobaltProvider(ExecutionProvider, RepresentationMixin):
             rets = [False for i in job_ids]
 
         return rets
-
-    @property
-    def scaling_enabled(self):
-        return True
-
-    @property
-    def current_capacity(self):
-        return self
-
-    def _test_add_resource(self, job_id):
-        self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])
-        return True
