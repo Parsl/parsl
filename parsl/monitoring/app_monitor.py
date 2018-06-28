@@ -29,13 +29,23 @@ def monitor(pid, task_id, db_logger_config, run_id):
         d['psutil_process_time_user'] = pm.cpu_times().user
         d['psutil_process_time_system'] = pm.cpu_times().system
         d['psutil_process_children_count'] = len(children)
-        d['psutil_process_disk_write'] = to_mb(pm.io_counters().write_bytes)
-        d['psutil_process_disk_read'] = to_mb(pm.io_counters().read_bytes)
+        try:
+            d['psutil_process_disk_write'] = to_mb(pm.io_counters().write_bytes)
+            d['psutil_process_disk_read'] = to_mb(pm.io_counters().read_bytes)
+        except psutil._exceptions.AccessDenied:
+            # this may be the wrong approach as it could give false security of low disk usage
+            # d['psutil_process_disk_write'] = 0
+            # d['psutil_process_disk_read'] = 0
+            d['psutil_process_disk_write'] = -1
+            d['psutil_process_disk_read'] = -1
         for child in children:
             for k, v in child.as_dict(attrs=summable_values).items():
                 d['psutil_process_' + str(k)] += v
-            d['psutil_process_disk_write'] += to_mb(child.io_counters().write_bytes)
-            d['psutil_process_disk_read'] += to_mb(child.io_counters().read_bytes)
+            try:
+                d['psutil_process_disk_write'] += to_mb(child.io_counters().write_bytes)
+                d['psutil_process_disk_read'] += to_mb(child.io_counters().read_bytes)
+            except psutil._exceptions.AccessDenied:
+                pass
             d['psutil_process_time_user'] += child.cpu_times().user
             d['psutil_process_time_system'] += child.cpu_times().system
             d['psutil_process_memory_virtual'] += to_mb(child.memory_info().vms)

@@ -105,14 +105,14 @@ class DataFlowKernel(object):
         self.db_logger_config = db_logger_config
         self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(**self.db_logger_config)
         self.workflow_name = str(inspect.stack()[1][1])
-        self.run_id = self.workflow_name + "-" + str(datetime.now().minute)
+        self.time_began = datetime.now()
+        self.time_completed = None
+        self.run_id = self.workflow_name + "-" + str(self.time_began.minute)
         self.dashboard = "https://search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com/_plugin/kibana/app/kibana#/dashboard/63549e70-757a-11e8-90be-3b2ab570ca29?_g=(refreshInterval%3A('%24%24hashKey'%3A'object%3A497'%2Cdisplay%3A'10%20seconds'%2Cpause%3A!f%2Csection%3A1%2Cvalue%3A10000)%2Ctime%3A(from%3Anow-15m%2Cinterval%3A'1m'%2Cmode%3Aquick%2Ctimezone%3AAmerica%2FChicago%2Cto%3Anow))"
         print("Run id is: " + self.run_id + " and dashboard is found at " + self.dashboard)
         self.db_logger.info("Parsl version: {}".format(get_version()))
         self.db_logger.info("Libsubmit version: {}".format(libsubmit.__version__))
-        self.time_began = datetime.now()
-        self.time_completed = None
-        self.db_logger.info("DFK start", extra={"time_began": str(self.time_began), 'time_completed': str(self.time_completed), 'task_run_id': self.run_id})
+        self.db_logger.info("DFK start", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')), 'time_completed': str(self.time_completed), 'task_run_id': self.run_id})
         self.db_logger.info("Name of script/workflow: " + self.run_id, extra={'task_run_id': self.run_id})
         for site in self._config['sites']:
             self.db_logger.info("Listed site: " + site['site'], extra={'task_run_id': self.run_id})
@@ -262,7 +262,7 @@ class DataFlowKernel(object):
             final_state_flag = True
 
             logger.info("Task {} completed".format(task_id))
-            self.tasks[task_id]['time_completed'] = str(datetime.now())
+            self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
             task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
             self.db_logger.info("Task Done", extra=task_log_info)
@@ -362,7 +362,7 @@ class DataFlowKernel(object):
             executable = app_monitor.monitor_wrapper(executable, task_id, self.db_logger_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
-        self.tasks[task_id]['time_started'] = str(datetime.now())
+        self.tasks[task_id]['time_started'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         self.db_logger.info("Task Launch", extra=task_log_info)
@@ -678,7 +678,7 @@ class DataFlowKernel(object):
             executor.shutdown()
 
         self.time_completed = datetime.now()
-        self.db_logger.info("DFK end", extra={"time_began": str(self.time_began), 'time_completed': str(self.time_completed), 'task_run_id': self.run_id})
+        self.db_logger.info("DFK end", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')), 'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')), 'task_run_id': self.run_id})
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
