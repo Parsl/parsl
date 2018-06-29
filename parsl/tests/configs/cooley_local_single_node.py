@@ -1,7 +1,6 @@
 # Untested
 
 from libsubmit.providers import CobaltProvider
-from libsubmit.channels import LocalChannel
 from libsubmit.launchers import SingleNodeLauncher
 
 from parsl.config import Config

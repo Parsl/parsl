@@ -8,7 +8,7 @@
 ==================
 """
 from libsubmit.channels import LocalChannel
-from libsubmit.providers import GridEngine
+from libsubmit.providers import GridEngineProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.user_opts import user_opts
