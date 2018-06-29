@@ -21,8 +21,8 @@ class ExecutorError(Exception):
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 
-    def __init__(self, provider, reason):
-        self.provider = provider
+    def __init__(self, executor, reason):
+        self.executor = executor
         self.reason = reason
 
 

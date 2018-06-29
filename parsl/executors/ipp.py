@@ -119,11 +119,11 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                         logger.debug("Launched block: {0}:{1}".format(i, engine))
                         if not engine:
                             raise(ScalingFailed(self.provider.label,
-                                                "Ipp executor failed to scale via provider"))
+                                                "Attempts to provision nodes via provider has failed"))
                         self.engines.extend([engine])
 
                 except Exception as e:
-                    logger.error("Scaling out failed: %s", e)
+                    logger.error("Scaling out failed: %s" % e)
                     raise e
 
         else:
