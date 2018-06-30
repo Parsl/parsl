@@ -1,10 +1,8 @@
 import logging
 import os
 import time
-from string import Template
 
 import libsubmit.error as ep_error
-from libsubmit.utils import wtime_to_minutes
 from libsubmit.channels import LocalChannel
 from libsubmit.launchers import AprunLauncher
 from libsubmit.providers.cobalt.template import template_string
