@@ -137,7 +137,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.profile = profile
         self.iam_instance_profile_arn = iam_instance_profile_arn
 
-
         self.walltime = walltime
         self.launcher = launcher
 
