@@ -6,7 +6,7 @@ import shutil
 import time
 
 import pytest
-from libsubmit.providers.local.local import Local
+from libsubmit.providers import LocalProvider
 from parsl.app.app import App
 from parsl.config import Config
 from parsl.dataflow.dflow import DataFlowKernel
@@ -16,12 +16,12 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='pool_app1',
-            provider=Local(init_blocks=1),
+            provider=LocalProvider(init_blocks=1),
             container_image='app1_v0.1'
         ),
         IPyParallelExecutor(
             label='pool_app2',
-            provider=Local(init_blocks=1),
+            provider=LocalProvider(init_blocks=1),
             container_image='app2_v0.1'
         )
     ]
