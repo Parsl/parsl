@@ -193,8 +193,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
-                                                  self.tasks_per_block,
-                                                  self.tasks_per_node)
+                                                  self.tasks_per_node,
+                                                  self.nodes_per_blocks)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
