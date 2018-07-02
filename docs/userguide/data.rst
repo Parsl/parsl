@@ -5,12 +5,12 @@ Data management
 
 Parsl is designed to enable implementation of dataflow patterns in which data passed between apps manages the flow of execution. Dataflow programming models are popular as they can cleanly express, via implicit parallelism,  the concurrency needed by many applications in a simple and intuitive way.
 
-Parsl aims to abstract not only parallel execution but also execution location, which in turn requires data location abstraction. This is crucial as it allows scripts to execute in different locations without regard for data location. Parsl implements a simple file abstraction that can be used to reference data irrespective of its location. At present this model supports local files as well as files accessible via `Globus <https://globus.org>`_. In the near future it will be extended to address remotely accessible files using FTP and HTTP.
+Parsl aims to abstract not only parallel execution but also execution location, which in turn requires data location abstraction. This is crucial as it allows scripts to execute in different locations without regard for data location. Parsl implements a simple file abstraction that can be used to reference data irrespective of its location. At present this model supports local files as well as files accessible via FTP, HTTP, HTTPS, and `Globus <https://globus.org>`_.
 
 Files
 -----
 
-The :py:class:`~parsl.data_provider.files.File` class abstracts the file access layer. Irrespective of where the script or its apps are executed, Parsl uses this abstraction to access that file. When referencing a Parsl file in an app, Parsl maps the object to the appropriate access path according to the selected access *scheme*. Local and Globus schemes are supported, and are described in more detail below.
+The :py:class:`~parsl.data_provider.files.File` class abstracts the file access layer. Irrespective of where the script or its apps are executed, Parsl uses this abstraction to access that file. When referencing a Parsl file in an app, Parsl maps the object to the appropriate access path according to the selected access *scheme*. Local, FTP, HTTP, HTTPS and Globus schemes are supported, and are described in more detail below.
 
 
 Local
@@ -34,10 +34,40 @@ The file may then be passed as input or output to an app. Here is an example Par
        open('test.txt', 'w').write('Hello\n')
 
        # create the Parsl file
-       parsl_file = File('file://test.txt')
+       parsl_file = File('file:///tmp/test.txt')
 
        # call the cat app with the Parsl file
        cat(inputs=[parsl_file])
+
+FTP, HTTP, HTTPS
+^^^^^^^^^^^^^^^^
+
+File objects with schemes FTP, HTTP, HTTPS represent a remote files on FTP, HTTP and HTTPS servers, respectively, for example
+
+.. code-block:: python
+
+        File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+
+When such a file object is passed as an input to an app, Parls will download the file to an executor where the app is scheduled for execution. Here is an example Parl script that implicitly downloads a file from an FTP server and change all text in the file to uppercase:
+
+.. code-block:: python
+
+       @App('ptyhon', dfk)
+       def covert(inputs=[], outputs=[]):
+            with open(inputs[0].filepath, 'r') as in:
+                content = in.read()
+                with open(outputs[0].filepath, 'w') as out:
+                    out.write(content.upper())
+
+       # create an remote Parsl file
+       in = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+
+       # create a local Parsl file
+       out = File('file:///tmp/ARIN-STATS-FORMAT-CHANGE.txt')
+
+       # call the convert app with the Parsl file
+       f = convert(inputs=[in], output=[out])
+       f.result()
 
 Globus
 ^^^^^^
@@ -57,26 +87,7 @@ endpoint and a path to the file on the endpoint, for example:
 
 Note: the Globus endpoint UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page. 
 
-Like the local file scheme, Globus files may be passed as input or output to a Parsl app. However, in the Globus case, the file object is only an abstract representation of the file on the remote side and thus the file must be staged to or from the remote executor.  For example, to stage in (transfer a file to the remote executor where the Parsl app will be executed), the :py:meth:`~parsl.data_provider.files.File.stage_in` and :py:meth:`~parsl.app.DataFuture.result` functions must be executed explicitly, for example:
-
-.. code-block:: python
-
-        unsorted_file = File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
-
-        dfu = unsorted_file.stage_in()
-        dfu.result()
-
-To stage a file out (transfer a file from the remote executor where the Parsl app is executed), the :py:meth:`~parsl.data_provider.files.File.stage_out` and :py:meth:`~parsl.app.DataFuture.result` functions must be executed explicitly, for example:
-
-.. code-block:: python
-
-        f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
-        f.result()
-
-        dfs = sorted_file.stage_out()
-        dfs.result()
-        
-        
+Like the local file scheme, Globus files may be passed as input or output to a Parsl app. However, in the Globus case, the file object is only an abstract representation of the file on the Globus endpoint and thus the file must be staged to or from the remote executor. The staging is implicit which means that Parls is responsible for transfering the input file from the Globus endpoint to the executor, or transferring the output file from the executor to the Globus endpoint.
 Parsl scripts may combine staging of files in and out of apps. For example, the following script stages a file from a remote Globus endpoint, it then sorts the strings in that file, and stages the sorted output file to another remote endpoint.  
 
 .. code-block:: python
@@ -94,15 +105,8 @@ Parsl scripts may combine staging of files in and out of apps. For example, the 
         unsorted_file = File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
         sorted_file = File ('globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/sorted.txt')
 
-        dfu = unsorted_file.stage_in()
-        dfu.result()
-
         f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
         f.result()
-
-        dfs = sorted_file.stage_out()
-        dfs.result()
-
 
 
 Configuration
