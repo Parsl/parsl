@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 
 from ipyparallel import Client
 from libsubmit.providers import LocalProvider
@@ -73,6 +74,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                  controller=Controller(),
                  container_image=None,
                  storage_access=None,
+                 engine_debug_level=None,
                  managed=True):
         self.provider = provider
         self.label = label
@@ -80,11 +82,17 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.engine_dir = engine_dir
         self.working_dir = working_dir
         self.controller = controller
+        self.engine_debug_level = engine_debug_level
         self.container_image = container_image
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
             raise ConfigurationError('Multiple storage access schemes are not yet supported')
         self.managed = managed
+
+        self.debug_option = ""
+        if self.engine_debug_level :
+            self.debug_option = "--log-level={}".format(self.engine_debug_level)
+
 
     def start(self):
         self.controller.profile = self.label
@@ -142,7 +150,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
 
         """
         self.engine_file = os.path.expanduser(filepath)
-
+        uid = str(uuid.uuid4())
         engine_json = None
         try:
             with open(self.engine_file, 'r') as f:
@@ -153,13 +161,13 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
             raise e
 
         return """cd {0}
-cat <<EOF > ipengine.json
+cat <<EOF > ipengine.{uid}.json
 {1}
 EOF
 
 mkdir -p '.ipengine_logs'
-ipengine --file=ipengine.json >> .ipengine_logs/$JOBNAME.log 2>&1
-""".format(engine_dir, engine_json)
+ipengine --file=ipengine.{uid}.json {debug_option} >> .ipengine_logs/$JOBNAME.log 2>&1
+""".format(engine_dir, engine_json, debug_option=self.debug_option, uid=uid)
 
     def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):
         """Reads the json contents from filepath and uses that to compose the engine launch command.
@@ -172,7 +180,7 @@ ipengine --file=ipengine.json >> .ipengine_logs/$JOBNAME.log 2>&1
             container_image (str): The container to be used to launch workers
         """
         self.engine_file = os.path.expanduser(filepath)
-
+        uid = str(uuid.uuid())
         engine_json = None
         try:
             with open(self.engine_file, 'r') as f:
@@ -183,12 +191,12 @@ ipengine --file=ipengine.json >> .ipengine_logs/$JOBNAME.log 2>&1
             raise e
 
         return """cd {0}
-cat <<EOF > ipengine.json
+cat <<EOF > ipengine.{uid}.json
 {1}
 EOF
 
-DOCKER_ID=$(docker create --network host {2} ipengine --file=/tmp/ipengine.json)
-docker cp ipengine.json $DOCKER_ID:/tmp/ipengine.json
+DOCKER_ID=$(docker create --network host {2} ipengine --file=/tmp/ipengine.{uid}.json) {debug_option}
+docker cp ipengine.{uid}.json $DOCKER_ID:/tmp/ipengine.{uid}.json
 
 # Copy current dir to the working directory
 DOCKER_CWD=$(docker image inspect --format='{{{{.Config.WorkingDir}}}}' {2})
@@ -202,7 +210,7 @@ at_exit() {{
 
 trap at_exit SIGTERM SIGINT
 sleep infinity
-""".format(engine_dir, engine_json, container_image)
+""".format(engine_dir, engine_json, container_image, debug_option=self.debug_option, uid=uid)
 
     @property
     def scaling_enabled(self):
