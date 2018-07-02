@@ -68,9 +68,9 @@ user_opts = {
     #     "overrides": """#SBATCH --constraint=haswell module load python/3.5-anaconda ; source activate parsl_env_3.5"""
     # },
     # 'cc_in2p3': {
-    #     'script_dir': "~/parsl_scripts",
-    #     "overrides": """export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH; source activate parsl_env_3.5"""
-    # },
+    #    'script_dir': "~/parsl_scripts",
+    #    "overrides": """export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH; source activate parsl_env_3.6"""
+    #},
     # 'globus': {
     #     'endpoint': 'fixme',
     #     'path': 'fixme'

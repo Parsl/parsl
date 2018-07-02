@@ -32,7 +32,10 @@ import parsl
 # Tested. Confirmed. ssh X Slurm X srun
 # from parsl.tests.configs.cori_ipp_multinode import config
 
-from parsl.tests.configs.cooley_ssh_il_single_node import config
+# from parsl.tests.configs.cooley_ssh_il_single_node import config
+
+# Tested. Confirmed. local X GridEngine X singleNode
+#from parsl.tests.configs.cc_in2p3_local_single_node import config
 
 from parsl.app.app import App
 parsl.load(config)
