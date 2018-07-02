@@ -58,8 +58,10 @@ def monitor_wrapper(f, task_id, db_logger_config, run_id):
     def wrapped(*args, **kwargs):
         p = Process(target=monitor, args=(os.getpid(), task_id, db_logger_config, run_id))
         p.start()
-        result = f(*args, **kwargs)
-        p.terminate()
+        try:
+            result = f(*args, **kwargs)
+        finally:
+            p.terminate()
         return result
     return wrapped
 
