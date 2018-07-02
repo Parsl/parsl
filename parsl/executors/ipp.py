@@ -91,9 +91,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.managed = managed
 
         self.debug_option = ""
-        if self.engine_debug_level :
+        if self.engine_debug_level:
             self.debug_option = "--log-level={}".format(self.engine_debug_level)
-
 
     def start(self):
         self.controller.profile = self.label

@@ -35,10 +35,10 @@ import parsl
 # from parsl.tests.configs.cooley_ssh_il_single_node import config
 
 # Tested. Confirmed. local X GridEngine X singleNode
-#from parsl.tests.configs.cc_in2p3_local_single_node import config
+# from parsl.tests.configs.cc_in2p3_local_single_node import config
 
 from parsl.app.app import App
-parsl.load(config)
+# parsl.load(config)
 # parsl.set_stream_logger()
 
 
@@ -135,6 +135,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.sitespec:
+        config = None
         try:
             exec("import parsl; from {} import config".format(args.sitespec))
             parsl.load(config)
