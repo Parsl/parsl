@@ -11,7 +11,7 @@ summable_values = ['cpu_percent', 'memory_percent', 'num_threads']
 def monitor(pid, task_id, db_logger_config, run_id):
     logger = get_db_logger(enable_es_logging=False) if db_logger_config is None else get_db_logger(**db_logger_config)
 
-    logger.info("starting monitoring for {} on {}".format(pid, os.getpid()))
+    logger.info("starting monitoring for {} on {}".format(pid, os.getpid(), extra={'task_id': task_id, 'task_run_id': run_id}))
     pm = psutil.Process(pid)
     pm.cpu_percent()
 
@@ -51,7 +51,7 @@ def monitor(pid, task_id, db_logger_config, run_id):
             except psutil._exceptions.AccessDenied:
                 pass
         logger.info("test", extra=d)
-        time.sleep(4)
+        time.sleep(5)
 
 
 def monitor_wrapper(f, task_id, db_logger_config, run_id):
