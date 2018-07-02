@@ -180,7 +180,7 @@ ipengine --file=ipengine.{uid}.json {debug_option} >> .ipengine_logs/$JOBNAME.lo
             container_image (str): The container to be used to launch workers
         """
         self.engine_file = os.path.expanduser(filepath)
-        uid = str(uuid.uuid())
+        uid = str(uuid.uuid4())
         engine_json = None
         try:
             with open(self.engine_file, 'r') as f:
