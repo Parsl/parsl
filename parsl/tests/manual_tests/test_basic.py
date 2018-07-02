@@ -1,5 +1,4 @@
 import argparse
-import os
 import time
 
 import parsl
@@ -14,7 +13,7 @@ import parsl
 # from parsl.tests.configs.midway_ipp_multicore import config
 
 # Tested. Confirmed. ssh X Slurm X SrunLauncher
-#from parsl.tests.configs.midway_ipp_multinode import config
+# from parsl.tests.configs.midway_ipp_multinode import config
 
 # OSG requires python3.5 for testing. This test is inconsitent,
 # breaks often depending on where the test lands
@@ -28,7 +27,7 @@ import parsl
 # from parsl.tests.configs.swan_ipp_multinode import config
 
 # Tested. Confirmed. ssh X Slurm X SingleNodeLauncher
-#from parsl.tests.configs.cori_ipp_single_node import config
+# from parsl.tests.configs.cori_ipp_single_node import config
 
 # Tested. Confirmed. ssh X Slurm X srun
 # from parsl.tests.configs.cori_ipp_multinode import config
@@ -37,7 +36,8 @@ from parsl.tests.configs.cooley_ssh_il_single_node import config
 
 from parsl.app.app import App
 parsl.load(config)
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
+
 
 @App('python')
 def double(x):
@@ -56,6 +56,7 @@ def import_echo(x, string, stdout=None):
     time.sleep(0)
     print(string)
     return x * 5
+
 
 @App('python')
 def platform(sleep=10, stdout=None):
@@ -88,9 +89,8 @@ def test_imports(n=2):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
-def test_platform(n=2):
-    start = time.time()
 
+def test_platform(n=2):
     # sync
     x = platform(sleep=0)
     print(x.result())
@@ -121,19 +121,6 @@ def test_parallel_for(n=2):
     return d
 
 
-def test_custom_exception():
-    from globus_sdk import GlobusError
-
-    with pytest.raises(GlobusError):
-        x = custom_exception()
-        x.result()
-
-
-def demonstrate_custom_exception():
-    x = custom_exception()
-    print(x.result())
-
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -155,7 +142,6 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    # demonstrate_custom_exception()
     x = test_simple(int(args.count))
     # x = test_imports()
     # x = test_parallel_for()
