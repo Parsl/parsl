@@ -4,7 +4,7 @@ heavy weight applications.
 The app decorator has a parameter `executors=[<list of executors>]` to specify the executor to which
 apps should be directed.
 """
-from libsubmit.providers.local.local import LocalThreads
+from libsubmit.providers import LocalProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.executors.threads import ThreadPoolExecutor
@@ -15,7 +15,7 @@ config = Config(
         ThreadPoolExecutor(max_threads=4, label='local_threads'),
         IPyParallelExecutor(
             label='local_ipp',
-            provider=LocalThreads(
+            provider=LocalProvider(
                 walltime="00:05:00",
                 nodes_per_block=1,
                 tasks_per_node=1,
