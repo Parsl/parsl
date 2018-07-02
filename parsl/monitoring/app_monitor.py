@@ -41,15 +41,15 @@ def monitor(pid, task_id, db_logger_config, run_id):
         for child in children:
             for k, v in child.as_dict(attrs=summable_values).items():
                 d['psutil_process_' + str(k)] += v
+            d['psutil_process_time_user'] += child.cpu_times().user
+            d['psutil_process_time_system'] += child.cpu_times().system
+            d['psutil_process_memory_virtual'] += to_mb(child.memory_info().vms)
+            d['psutil_process_memory_resident'] += to_mb(child.memory_info().rss)
             try:
                 d['psutil_process_disk_write'] += to_mb(child.io_counters().write_bytes)
                 d['psutil_process_disk_read'] += to_mb(child.io_counters().read_bytes)
             except psutil._exceptions.AccessDenied:
                 pass
-            d['psutil_process_time_user'] += child.cpu_times().user
-            d['psutil_process_time_system'] += child.cpu_times().system
-            d['psutil_process_memory_virtual'] += to_mb(child.memory_info().vms)
-            d['psutil_process_memory_resident'] += to_mb(child.memory_info().rss)
         logger.info("test", extra=d)
         time.sleep(4)
 
