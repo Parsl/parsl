@@ -54,7 +54,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
         this is managed by the user.
-
+    engine_debug_level : int | str
+        Sets engine logging to specified debug level. Choices: (0, 10, 20, 30, 40, 50, 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL')
 
     .. note::
            Some deficiencies with this executor are:
