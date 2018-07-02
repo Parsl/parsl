@@ -112,7 +112,7 @@ class DataFlowKernel(object):
         print("Run id is: " + self.run_id + " and dashboard is found at " + self.dashboard)
         self.db_logger.info("Parsl version: {}".format(get_version()))
         self.db_logger.info("Libsubmit version: {}".format(libsubmit.__version__))
-        self.db_logger.info("DFK start", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')), 'time_completed': str(self.time_completed), 'task_run_id': self.run_id})
+        self.db_logger.info("DFK start", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')), 'time_completed': str(self.time_completed), 'task_run_id': self.run_id, 'rundir': self.rundir})
         self.db_logger.info("Name of script/workflow: " + self.run_id, extra={'task_run_id': self.run_id})
         for site in self._config['sites']:
             self.db_logger.info("Listed site: " + site['site'], extra={'task_run_id': self.run_id})
@@ -678,7 +678,7 @@ class DataFlowKernel(object):
             executor.shutdown()
 
         self.time_completed = datetime.now()
-        self.db_logger.info("DFK end", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')), 'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')), 'task_run_id': self.run_id})
+        self.db_logger.info("DFK end", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')), 'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')), 'task_run_id': self.run_id, 'rundir': self.rundir})
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
