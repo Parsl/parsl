@@ -22,7 +22,7 @@ setup(
     packages=find_packages(),
     install_requires=install_requires,
     extras_require = {
-        'db_logging' : ['CMRESHandler'],
+        'db_logging' : ['CMRESHandler', 'psutil'],
         },
     classifiers=[
         # Maturity
