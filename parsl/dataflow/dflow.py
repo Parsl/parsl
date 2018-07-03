@@ -330,7 +330,7 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception as e:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
-        if self.bd_logger_config is not None and self.db_logger_config.get('enable_remote_monitoring', False):
+        if self.db_logger_config is not None and self.db_logger_config.get('enable_remote_monitoring', False):
             executable = app_monitor.monitor_wrapper(executable, task_id, self.db_logger_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
