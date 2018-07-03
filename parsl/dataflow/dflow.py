@@ -22,6 +22,7 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
+from parsl.db_logger import get_db_logger
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ class DataFlowKernel(object):
 
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
+        self.db_logger = db_logger
 
         checkpoints = self.load_checkpoints(config.checkpoint_files)
         self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
@@ -169,20 +171,37 @@ class DataFlowKernel(object):
 
             if not self._config.lazy_errors:
                 logger.debug("Eager fail, skipping retry logic")
+                self.db_logger.info("Task Fail", extra={'task': task_id,
+                                                        'task_name': self.tasks[task_id]['func_name'],
+                                                        'status': 'failed',
+                                                        'fail_mode': 'eager'})
                 raise e
 
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 logger.debug("Task {} marked for retry".format(task_id))
+                self.db_logger.info("Task Retry", extra={'task': task_id,
+                                                         'task_name': self.tasks[task_id]['func_name'],
+                                                         'status': 'retry_set',
+                                                         'fail_mode': 'lazy'})
                 self.tasks[task_id]['status'] = States.pending
 
             else:
                 logger.info("Task {} failed after {} retry attempts".format(task_id,
                                                                             self._config.retries))
+                self.db_logger.info("Task Retry Failed", extra={'task': task_id,
+                                                                'task_name': self.tasks[task_id]['func_name'],
+                                                                'status': 'retry_failed',
+                                                                'fail_mode': 'lazy'})
+
                 self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
 
         else:
             logger.info("Task {} completed".format(task_id))
+            self.db_logger.info("Task Done", extra={'task': task_id,
+                                                    'task_name': self.tasks[task_id]['func_name'],
+                                                    'status': 'done'})
+
             self.tasks[task_id]['status'] = States.done
             final_state_flag = True
 
@@ -231,6 +250,11 @@ class DataFlowKernel(object):
                         "Task {} deferred due to dependency failure".format(tid))
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
+                    self.db_logger.info("Task Dep Fail", extra={'task': task_id,
+                                                                'task_name': self.tasks[task_id]['func_name'],
+                                                                'status': 'dep_fail',
+                                                                'fail_mode': 'lazy'})
+
                     try:
                         fu = Future()
                         fu.retries_left = 0
@@ -279,6 +303,12 @@ class DataFlowKernel(object):
         except Exception as e:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
         exec_fu = executor.submit(executable, *args, **kwargs)
+        self.db_logger.info("Task Launch", extra={'task': task_id,
+                                                  'task_name': self.tasks[task_id]['func_name'],
+                                                  'depends': [fu.tid for fu in self.tasks[task_id]['depends']],
+                                                  'status': 'launched',
+                                                  'site': site,
+                                                  })
         self.tasks[task_id]['status'] = States.running
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
