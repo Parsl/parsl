@@ -28,7 +28,6 @@ from parsl.utils import get_version
 from parsl.app.errors import RemoteException
 from parsl.monitoring import app_monitor
 from parsl.db_logger import get_db_logger
-from parsl.monitoring import app_monitor
 
 # from parsl.dataflow.start_controller import Controller
 # Exceptions

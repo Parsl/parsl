@@ -37,7 +37,7 @@ def monitor(pid, task_id, db_logger_config, run_id):
                 # this may be the wrong approach as it could give false security of low disk usage
                 # d['psutil_process_disk_write'] = 0
                 # d['psutil_process_disk_read'] = 0
-                print("psutil disk access denied exception")
+                print("psutil disk access denied exception for task: " + str(task_id))
                 d['psutil_process_disk_write'] = -1
                 d['psutil_process_disk_read'] = -1
             for child in children:
@@ -51,13 +51,13 @@ def monitor(pid, task_id, db_logger_config, run_id):
                     d['psutil_process_disk_write'] += to_mb(child.io_counters().write_bytes)
                     d['psutil_process_disk_read'] += to_mb(child.io_counters().read_bytes)
                 except psutil._exceptions.AccessDenied:
-                    print("psutil disk access denied exception")
+                    print("psutil disk access denied exception for task: " + str(task_id) + "'s children.")
             logger.info("test", extra=d)
             time.sleep(5)
     except Exception:
-        print('Exception in the monitoring')
+        print('Exception in the monitoring task: ' + str(task_id))
     else:
-        print('No exception in the monitoring loop for ' + str(task_id))
+        print('No exception in the monitoring loop for task: ' + str(task_id))
 
 
 def monitor_wrapper(f, task_id, db_logger_config, run_id):
@@ -67,7 +67,7 @@ def monitor_wrapper(f, task_id, db_logger_config, run_id):
         try:
             result = f(*args, **kwargs)
         except Exception:
-            print("App Failure terminating monitoring process")
+            print("App Failure terminating monitoring process task: " str(task_id))
         finally:
             p.terminate()
         return result
