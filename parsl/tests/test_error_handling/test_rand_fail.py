@@ -5,7 +5,7 @@ import pytest
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
-config['globals']['retries'] = 2
+config.retries = 2
 
 
 parsl.clear()

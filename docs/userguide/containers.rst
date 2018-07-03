@@ -124,42 +124,32 @@ specific system. Such cases will be noted explicitly.
 Parsl Config
 ^^^^^^^^^^^^
 
-Now that we have a Docker image available locally, we will create a ``site`` that
+Now that we have a Docker image available locally, we will create an ``executor`` that
 uses such an image to launch containers. ``Apps`` will execute in this environment.
 
 Here is a Parsl configuration using one of the Docker images created in the previous section.
 
 .. code-block:: python
 
-        local_docker_IPP = {
-            "sites": [
-                {
-                    "site": "pool_app1",
-                    "auth": {
-                        "channel": None
-                    },
-                    "execution": {
-                        "executor": "ipp",
-                        "container": {
-                            "type": "docker",  # Specify Docker
-                            "image": "app1_v0.1",  # Specify docker image
-                        },
-                        "provider": "local",
-                        "block": {
-                            "initBlocks": 2,  # Start with 4 workers
-                        },
-                    }
-                }
-            ],
-            "globals": {
-                "lazyErrors": True
-            }
-        }
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
+from libsubmit.providers.local.local import Local
 
-For workflows with multiple apps which require different docker images, a new site should be
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            label='pool_app1',
+            container_image='app1_v0.1'
+            provider=Local(init_blocks=2)
+        )
+    ],
+    lazy_errors=True
+)
+
+For workflows with multiple apps which require different docker images, a new executor should be
 created for each of the images that will be used. In the Parsl workflow definition the ``App``
-decorator can then be tagged with the ``sites`` keyword argument to ensure that apps execute
-on the specific sites with the right container image.
+decorator can then be tagged with the ``executors`` keyword argument to ensure that apps execute
+on the specific executors with the right container image.
 
 .. caution::
    If you have specific modules or python packages that are imported from relative paths,
@@ -175,31 +165,31 @@ How this works
 
 .. code-block:: bash
 
-                           +-----local/Kubernetes/slurm... ---
-                           |
-   +----- Parsl--------+   |    +---------site1------------------+
-   |                   |   |    |           ...                  |
-   |                   |   |    | +-------App1Container--------+ |
-   | App1(sites=pool1)----------+-+--------app1.py             | |
-   |                   |   |    | |         +-----predict()    | |
-   |       X           |   |    | +----------------------------+ |
-   |      / \          |   |    +--------------------------------+
-   |     Y...Y         |   |
-   |      \ /          |   |    +---------site2------------------+
-   |       Z           |   |    |           ...                  |
-   |                   |   |    | +-------App2Container--------+ |
-   | App2(sites=pool2)----------+-+------- app2.py             | |
-   |                   |   |    | |         +-----predict()    | |
-   |                   |   |    | +----------------------------+ |
-   +-------------------+   |    +--------------------------------+
-                           |
-                           +------------------- -- -
+                               +-----local/Kubernetes/slurm... ---
+                               |
+   +----- Parsl--------+       |    +---------executor-1-------------+
+   |                   |       |    |           ...                  |
+   |                   |       |    | +-------App1Container--------+ |
+   | App1(executors=['pool1'])------+-+--------app1.py             | |
+   |                   |       |    | |         +-----predict()    | |
+   |       X           |       |    | +----------------------------+ |
+   |      / \          |       |    +--------------------------------+
+   |     Y...Y         |       |
+   |      \ /          |       |    +---------executor-2-------------+
+   |       Z           |       |    |           ...                  |
+   |                   |       |    | +-------App2Container--------+ |
+   | App2(executors=['pool2'])------+-+------- app2.py             | |
+   |                   |       |    | |         +-----predict()    | |
+   |                   |       |    | +----------------------------+ |
+   +-------------------+       |    +--------------------------------+
+                               |
+                               +------------------- -- -
 
 
 The diagram above illustrates the various components and how the interact with
-each other to act as a fast model serving system. In this model, each site in the Parsl
+each other to act as a fast model serving system. In this model, each executor in the Parsl
 config definition can only serve one container image. Parsl launches multiple blocks
-matching the definition of the site, and each block will contain one container instantiated
+matching the definition of the executor, and each block will contain one container instantiated
 with a worker running inside. In the examples given above, the worker is launched in the
 working directory which also contains some application code:``app1.py``.
 
@@ -215,12 +205,12 @@ Here's the contents of ``app1.py``:
         """Returns the double of the items"""
         return [i*2 for i in list_items]
 
-A snippet of the Parsl code that imports the ``app1.py`` file and calls ``predict()`` on a site
+A snippet of the Parsl code that imports the ``app1.py`` file and calls ``predict()`` on a executor
 that specifies the right container image ``app1_v0.1`` is below :
 
 .. code-block:: python
 
-    @App('python', dfk, sites=['pool_app1'], cache=True)
+    @App('python', dfk, executors=['pool_app1'], cache=True)
     def app_1(data):
         import app1
         return app1.predict(data)

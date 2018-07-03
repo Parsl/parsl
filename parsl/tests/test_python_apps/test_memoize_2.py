@@ -4,10 +4,11 @@ import pytest
 
 import parsl
 from parsl.app.app import App
+from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_threads_no_cache import config
 
 parsl.clear()
-dfk = parsl.load(config)
+dfk = DataFlowKernel(config)
 
 
 @App('python', dfk)
@@ -30,7 +31,7 @@ def test_python_memoization(n=4):
 
 dfk.cleanup()
 parsl.clear()
-dfk = parsl.load(config)
+dfk = DataFlowKernel(config)
 
 
 @App('python', dfk)

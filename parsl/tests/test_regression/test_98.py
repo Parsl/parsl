@@ -2,7 +2,6 @@
 Regression test for issue #98
 '''
 import argparse
-import json
 
 import pytest
 
@@ -18,9 +17,9 @@ def test_immutable_config(n=2):
     """Regression test for immutable config #98
     """
 
-    original = json.dumps(config, sort_keys=True)
+    original = str(config)
     dfk = DataFlowKernel(config=config)
-    after = json.dumps(config, sort_keys=True)
+    after = str(config)
 
     dfk.cleanup()
     assert original == after, "Config modified"

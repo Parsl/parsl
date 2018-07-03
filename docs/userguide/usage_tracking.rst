@@ -46,7 +46,7 @@ What is sent?
 * Anonymized Parsl script ID
 * Start and end times
 * Parsl exit code
-* Count of sites used
+* Count of executors used
 
 How is the data sent?
 ---------------------

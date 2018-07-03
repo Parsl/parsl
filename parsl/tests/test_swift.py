@@ -28,6 +28,7 @@ def bad_foo(x, y):
 def test_simple():
     print("Start")
     tex = TurbineExecutor()
+    tex.start()
     x = tex.submit(foo, 5, 10)
     print("Got: ", x)
     print("X result: ", x.result())
@@ -40,6 +41,7 @@ def test_simple():
 def test_slow():
     futs = {}
     tex = TurbineExecutor()
+    tex.start()
     for i in range(0, 3):
         futs[i] = tex.submit(slow_foo, 1, 2)
 
@@ -52,6 +54,7 @@ def test_slow():
 def test_except():
     with pytest.raises(NameError):
         tex = TurbineExecutor()
+        tex.start()
         x = tex.submit(bad_foo, 5, 10)
         x.result()
 

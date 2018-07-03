@@ -1,32 +1,27 @@
-import itertools
-import os
-import logging
 import atexit
-import random
+import itertools
+import logging
+import os
 import pickle
+import random
 import threading
-
 from concurrent.futures import Future
 from functools import partial
 
-import parsl
 import libsubmit
-from parsl.dataflow.error import *
-from parsl.dataflow.states import States
-from parsl.dataflow.futures import AppFuture
-from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
-from parsl.dataflow.usage_tracking.usage import UsageTracker
-from parsl.dataflow.memoization import Memoizer
-from parsl.dataflow.config_defaults import update_config
-from parsl.data_provider.files import File
-from parsl.data_provider.data_manager import DataManager
-from parsl.execution_provider.provider_factory import ExecProviderFactory as EPF
-from parsl.utils import get_version
+import parsl
 from parsl.app.errors import RemoteException
-
-# from parsl.dataflow.start_controller import Controller
-# Exceptions
+from parsl.config import Config
+from parsl.data_provider.data_manager import DataManager
+from parsl.data_provider.files import File
+from parsl.dataflow.error import *
+from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
+from parsl.dataflow.futures import AppFuture
+from parsl.dataflow.memoization import Memoizer
+from parsl.dataflow.rundirs import make_rundir
+from parsl.dataflow.states import States
+from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.utils import get_version
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +32,7 @@ class DataFlowKernel(object):
     It is responsible for managing futures, such that when dependencies are resolved,
     pending tasks move to the runnable state.
 
-    Here's a simplified diagram of what happens internally::
+    Here is a simplified diagram of what happens internally::
 
          User             |        DFK         |    Executor
         ----------------------------------------------------------
@@ -50,32 +45,27 @@ class DataFlowKernel(object):
 
     """
 
-    def __init__(self, config=None, executors=None, lazyErrors=True, appCache=True,
-                 rundir=None, retries=0, checkpointFiles=None, checkpointMode=None):
-        """ Initialize the DataFlowKernel.
+    def __init__(self, config=Config()):
+        """Initialize the DataFlowKernel.
 
-        Please note that keyword args passed to the DFK here will always override
-        options passed in via the config.
-
-        KWargs:
-            - config (dict): A single data object encapsulating all config attributes
-            - executors (list of Executor objs): Optional, kept for (somewhat) backward compatibility with 0.2.0
-            - lazyErrors(bool): Default=True, allow workflow to continue on app failures.
-            - appCache (bool): Enable caching of apps
-            - rundir (str): Path to run directory. Defaults to ./runinfo/runNNN
-            - retries(int): Default=0, Set the number of retry attempts in case of failure
-            - checkpointFiles (list of str): List of filepaths to checkpoint files
-            - checkpointMode (None, 'dfk_exit', 'task_exit', 'periodic'): Method to use.
-        Returns:
-            DataFlowKernel object
+        Parameters
+        ----------
+        config : Config
+            A specification of all configuration options. For more details see the
+            :class:~`parsl.config.Config` documentation.
         """
 
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
-        # Create run dirs for this run
-        self.rundir = make_rundir(config=config, path=rundir)
-        parsl.set_file_logger("{}/parsl.log".format(self.rundir),
+        if isinstance(config, dict):
+            raise ConfigurationError(
+                    'Expected `Config` class, received dictionary. For help, '
+                    'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
+        self._config = config
+        logger.debug("Starting DataFlowKernel with config\n{}".format(config))
+        self.run_dir = make_rundir(config.run_dir)
+        parsl.set_file_logger("{}/parsl.log".format(self.run_dir),
                               level=logging.DEBUG)
 
         logger.info("Parsl version: {}".format(get_version()))
@@ -83,67 +73,43 @@ class DataFlowKernel(object):
 
         self.checkpoint_lock = threading.Lock()
 
-        # Update config with defaults
-        self._config = update_config(config, self.rundir)
-
-        # Initialize the data manager
-        self.data_manager = DataManager.get_data_manager(self, config=self._config)
-
-        # Start the anonymized usage tracker and send init msg
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
 
-        # Load Memoizer with checkpoints before we start the run.
-        if checkpointFiles:
-            checkpoint_src = checkpointFiles
-        elif self._config and self._config["globals"]["checkpointFiles"]:
-            checkpoint_src = self._config["globals"]["checkpointFiles"]
-        else:
-            checkpoint_src = None
-
-        cpts = self.load_checkpoints(checkpoint_src)
-        # Initialize the memoizer
-        self.memoizer = Memoizer(self, memoize=appCache, checkpoint=cpts)
+        checkpoints = self.load_checkpoints(config.checkpoint_files)
+        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
+        self.checkpoint_mode = config.checkpoint_mode
 
-        if self._config:
-            self._executors_managed = True
-            # Create the executors
-            epf = EPF()
-            self.executors = epf.make(self.rundir, self._config)
+        data_manager = DataManager.get_data_manager(
+            max_threads=config.data_management_max_threads,
+            executors=config.executors
+        )
+        self.executors = {e.label: e for e in config.executors + [data_manager]}
+        for executor in self.executors.values():
+            executor.run_dir = self.run_dir  # FIXME we should have a real interface for this
+            executor.start()
 
-            # set global vars from config
-            self.lazy_fail = self._config["globals"].get("lazyErrors", lazyErrors)
-            self.fail_retries = self._config["globals"].get("retries", retries)
-            self.flowcontrol = FlowControl(self, self._config)
-            self.checkpoint_mode = self._config["globals"].get("checkpointMode",
-                                                               checkpointMode)
-            if self.checkpoint_mode == "periodic":
-                period = self._config["globals"].get("checkpointPeriod",
-                                                     "00:30:00")
-                try:
-                    h, m, s = map(int, period.split(':'))
-                    checkpoint_period = (h * 3600) + (m * 60) + s
-                    self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
-                except Exception as e:
-                    logger.error("invalid checkpointPeriod provided:{0} expected HH:MM:SS".format(period))
-                    self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
+        if self.checkpoint_mode == "periodic":
+            try:
+                h, m, s = map(int, config.checkpoint_period.split(':'))
+                checkpoint_period = (h * 3600) + (m * 60) + s
+                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
+            except Exception as e:
+                logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(period))
+                self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
+        if any([x.managed for x in config.executors]):
+            self.flowcontrol = FlowControl(self)
         else:
-            self._executors_managed = False
-            self.fail_retries = retries
-            self.lazy_fail = lazyErrors
-            self.executors = {i: x for i, x in enumerate(executors)}
-            self.flowcontrol = FlowNoControl(self, None)
-            self.checkpoint_mode = checkpointMode
+            self.flowcontrol = FlowNoControl(self)
 
         self.task_count = 0
         self.fut_task_lookup = {}
         self.tasks = {}
         self.task_launch_lock = threading.Lock()
 
-        logger.debug("Using executors: {0}".format(self.executors))
         atexit.register(self.atexit_cleanup)
 
     @staticmethod
@@ -201,17 +167,17 @@ class DataFlowKernel(object):
             self.tasks[task_id]['fail_history'].append(future._exception)
             self.tasks[task_id]['fail_count'] += 1
 
-            if not self.lazy_fail:
+            if not self._config.lazy_errors:
                 logger.debug("Eager fail, skipping retry logic")
                 raise e
 
-            if self.tasks[task_id]['fail_count'] <= self.fail_retries:
+            if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 logger.debug("Task {} marked for retry".format(task_id))
                 self.tasks[task_id]['status'] = States.pending
 
             else:
                 logger.info("Task {} failed after {} retry attempts".format(task_id,
-                                                                            self.fail_retries))
+                                                                            self._config.retries))
                 self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
 
@@ -284,6 +250,14 @@ class DataFlowKernel(object):
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
 
+        If the app task has the executors attributes not set (default=='all')
+        the task is launched on a randomly selected executor from the
+        list of executors. This behavior could later be updated to support
+        binding to executors based on user specified criteria.
+
+        If the app task specifies a particular set of executors, it will be
+        targeted at those specific executors.
+
         Args:
             task_id (uuid string) : A uuid string that uniquely identifies the task
             executable (callable) : A callable object
@@ -299,28 +273,26 @@ class DataFlowKernel(object):
             self.handle_update(task_id, memo_fu, memo_cbk=True)
             return memo_fu
 
-        site = self.tasks[task_id]["site"]
-        executor = None
+        executor_label = self.tasks[task_id]["executor"]
         try:
-            executor = self.executors[site]
+            executor = self.executors[executor_label]
         except Exception as e:
-            logger.error("Task {}: requests invalid site {}".format(task_id,
-                                                                    site))
+            logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
-        exec_fu.retries_left = self.fail_retries - \
+        exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
-        logger.info("Task {} launched on site {}".format(task_id, site))
+        logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
-    def _add_input_deps(self, site, args, kwargs):
+    def _add_input_deps(self, executor, args, kwargs):
         """Look for inputs of the app that are remote files. Submit stage_in
         apps for such files and replace the file objects in the inputs list with
         corresponding DataFuture objects.
 
         Args:
-            - site (str) : site where the app is going to be launched
+            - executor (str) : executor where the app is going to be launched
             - args (List) : Positional args to app function
             - kwargs (Dict) : Kwargs to app function
         """
@@ -328,7 +300,7 @@ class DataFlowKernel(object):
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             if isinstance(f, File) and f.is_remote():
-                inputs[idx] = f.stage_in([site])
+                inputs[idx] = f.stage_in(executor)
 
     @staticmethod
     def _count_all_deps(task_id, args, kwargs):
@@ -427,16 +399,16 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, *args, parsl_sites='all', fn_hash=None, cache=False, **kwargs):
+    def submit(self, func, *args, executors='all', fn_hash=None, cache=False, **kwargs):
         """Add task to the dataflow system.
 
-        If the app task has the sites attributes not set (default=='all')
+        If the app task has the executors attributes not set (default=='all')
         the task will be launched on a randomly selected executor from the
         list of executors. This behavior could later be updated to support
-        binding to sites based on user specified criteria.
+        binding to executors based on user specified criteria.
 
-        If the app task specifies a particular set of sites, it will be
-        targetted at those specific sites.
+        If the app task specifies a particular set of executors, it will be
+        targetted at those specific executors.
 
         >>> IF all deps are met:
         >>>   send to the runnable queue and launch the task
@@ -448,7 +420,7 @@ class DataFlowKernel(object):
             - *args : Args to the function
 
         KWargs :
-            - parsl_sites (List|String) : List of sites this call could go to.
+            - executors (list or string) : List of executors this call could go to.
                     Default='all'
             - fn_hash (Str) : Hash of the function and inputs
                     Default=None
@@ -461,23 +433,14 @@ class DataFlowKernel(object):
         """
         task_id = self.task_count
         self.task_count += 1
-        # Determine an execution site
-        site = None
-        if isinstance(parsl_sites, str) and parsl_sites.lower() == 'all':
-            # Pick a random site from the list
-            while True:
-                site, executor = random.choice(list(self.executors.items()))
-                if site != 'data_manager':
-                    break
-        elif isinstance(parsl_sites, list):
-            # Pick a random site from user specified list
-            site = random.choice(parsl_sites)
-        else:
-            logger.error("App {} specifies invalid site option, expects str|list".format(
-                func.__name__))
+        if isinstance(executors, str) and executors.lower() == 'all':
+            choices = list(e for e in self.executors if e != 'data_manager')
+        elif isinstance(executors, list):
+            choices = executors
+        executor = random.choice(choices)
 
         task_def = {'depends': None,
-                    'site': site,
+                    'executor': executor,
                     'func': func,
                     'func_name': func.__name__,
                     'args': args,
@@ -501,7 +464,7 @@ class DataFlowKernel(object):
             self.tasks[task_id] = task_def
 
         # Transform remote input files to data futures
-        self._add_input_deps(site, args, kwargs)
+        self._add_input_deps(executor, args, kwargs)
 
         # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
@@ -621,10 +584,9 @@ class DataFlowKernel(object):
 
         This involves killing resources explicitly and sending die messages to IPP workers.
 
-        If the executors are managed, i.e created by the DFK
-            then : we scale_in each of the executors and call executor.shutdown
-            else : we do nothing. Executor cleanup is left to the user.
-
+        If the executors are managed (created by the DFK), then we call scale_in on each of
+        the executors and call executor.shutdown. Otherwise, we do nothing, and executor
+        cleanup is left to the user.
         """
         logger.info("DFK cleanup initiated")
 
@@ -649,21 +611,16 @@ class DataFlowKernel(object):
         # Send final stats
         self.usage_tracker.send_message()
         self.usage_tracker.close()
-        # We do not need to cleanup if the executors are managed outside
-        # the DFK
-        if not self._executors_managed:
-            return
 
         logger.info("Terminating flow_control and strategy threads")
         self.flowcontrol.close()
 
         for executor in self.executors.values():
-            if executor.scaling_enabled:
-                job_ids = executor.execution_provider.resources.keys()
-                executor.scale_in(len(job_ids))
-
-            # We are not doing shutdown here because even with block=False this blocks.
-            executor.shutdown()
+            if executor.managed:
+                if executor.scaling_enabled:
+                    job_ids = executor.provider.resources.keys()
+                    executor.scale_in(len(job_ids))
+                executor.shutdown()
 
         logger.info("DFK cleanup complete")
 
@@ -692,7 +649,7 @@ class DataFlowKernel(object):
             else:
                 checkpoint_queue = self.tasks
 
-            checkpoint_dir = '{0}/checkpoint'.format(self.rundir)
+            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
             checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
@@ -703,8 +660,7 @@ class DataFlowKernel(object):
                     pass
 
             with open(checkpoint_dfk, 'wb') as f:
-                state = {'config': self.config,
-                         'rundir': self.rundir,
+                state = {'rundir': self.run_dir,
                          'task_count': self.task_count
                          }
                 pickle.dump(state, f)
@@ -844,14 +800,14 @@ class DataFlowKernelLoader(object):
         """Load a DataFlowKernel.
 
         Args:
-            - config (dict) : Configuration to load. This config will be passed to a
+            - config (Config) : Configuration to load. This config will be passed to a
               new DataFlowKernel instantiation which will be set as the active DataFlowKernel.
         Returns:
             - DataFlowKernel : The loaded DataFlowKernel object.
         """
         if cls._dfk is not None:
             raise RuntimeError('Config has already been loaded')
-        cls._dfk = DataFlowKernel(config=config)
+        cls._dfk = DataFlowKernel(config)
 
         return cls._dfk
 

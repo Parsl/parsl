@@ -1,21 +1,11 @@
+from parsl.config import Config
+from parsl.executors.threads import ThreadPoolExecutor
 from parsl.tests.utils import get_rundir
 
-config = {
-    "sites": [
-        {
-            "site": "local_threads",
-            "auth": {
-                "channel": None
-            },
-            "execution": {
-                "executor": "threads",
-                "provider": None,
-                "maxThreads": 4,
-            }
-        }
+config = Config(
+    executors=[
+        ThreadPoolExecutor(max_threads=4),
     ],
-    "globals": {
-        "appCache": False,
-        "runDir": get_rundir()
-    }
-}
+    app_cache=False,
+    run_dir=get_rundir()
+)

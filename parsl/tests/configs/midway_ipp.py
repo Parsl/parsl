@@ -1,39 +1,32 @@
-import pytest
-from parsl.tests.utils import get_rundir
 from parsl.tests.user_opts import user_opts
 
-if 'midway' in user_opts:
-    info = user_opts['midway']
-else:
-    pytest.skip('midway user_opts not configured {}'.format(str(user_opts)), allow_module_level=True)
+from libsubmit.channels import SSHChannel
+from libsubmit.providers import SlurmProvider
 
-config = {
-    "sites": [
-        {
-            "site": "midway_ipp",
-            "auth": {
-                "channel": "ssh",
-                "hostname": "swift.rcc.uchicago.edu",
-                "username": info['username'],
-                "scriptDir": info['script_dir']
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": "slurm",
-                "block": {
-                    "nodes": 1,
-                    "minBlocks": 1,
-                    "maxBlocks": 2,
-                    "initBlocks": 1,
-                    "taskBlocks": 4,
-                    "parallelism": 0.5,
-                    "options": info['options']
-                }
-            }
-        }
-    ],
-    "globals": {
-        "lazyErrors": True,
-        "runDir": get_rundir()
-    }
-}
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
+from parsl.executors.ipp_controller import Controller
+
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            provider=SlurmProvider(
+                'westmere',
+                channel=SSHChannel(
+                    hostname='swift.rcc.uchicago.edu',
+                    username=user_opts['midway']['username'],
+                    script_dir=user_opts['midway']['script_dir']
+                ),
+                init_blocks=1,
+                min_blocks=1,
+                max_blocks=2,
+                nodes_per_block=1,
+                tasks_per_node=4,
+                parallelism=0.5,
+                overrides=user_opts['midway']['overrides']
+            ),
+            label='midway_ipp',
+            controller=Controller(public_ip=user_opts['public_ip']),
+        )
+    ]
+)

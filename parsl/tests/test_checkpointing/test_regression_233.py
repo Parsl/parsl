@@ -4,10 +4,10 @@ from parsl.app.app import App
 from parsl.dataflow.dflow import DataFlowKernel
 
 
-def run_checkpointed(cpts):
+def run_checkpointed(checkpoints):
     # set_stream_logger()
     from parsl.tests.configs.local_threads_checkpoint_task_exit import config
-    config["globals"]["checkpointFiles"] = cpts
+    config.checkpoint_files = checkpoints
     dfk = DataFlowKernel(config=config)
 
     @App('python', dfk, cache=True)
@@ -21,7 +21,7 @@ def run_checkpointed(cpts):
         items.append(x)
 
     dfk.cleanup()
-    return [i.result() for i in items], dfk.rundir
+    return [i.result() for i in items], dfk.run_dir
 
 
 def run_race(sleep_dur):
@@ -64,8 +64,8 @@ def test_slower_apps():
 def test_checkpoint_availability():
     import os
 
-    original, rundir = run_checkpointed([])
-    last_checkpoint = os.path.join(rundir, 'checkpoint')
+    original, run_dir = run_checkpointed([])
+    last_checkpoint = os.path.join(run_dir, 'checkpoint')
     print(last_checkpoint)
     cached, _ = run_checkpointed([last_checkpoint])
 
