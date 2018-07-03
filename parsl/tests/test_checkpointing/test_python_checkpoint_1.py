@@ -46,7 +46,7 @@ def test_initial_checkpoint_write(n=2):
     assert os.path.exists(
         cptpath), "Tasks checkpoint missing: {0}".format(cptpath)
 
-    return dfk.rundir
+    return dfk.run_dir
 
 
 if __name__ == '__main__':

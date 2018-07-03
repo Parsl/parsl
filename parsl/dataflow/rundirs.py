@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def make_rundir(config=None, path=None):
+def make_rundir(path):
     """When a path has not been specified, make the run directory.
 
     Creates a rundir with the following hierarchy:
@@ -20,13 +20,6 @@ def make_rundir(config=None, path=None):
                Default : None.
     """
     try:
-        logger.debug('config is ')
-        logger.debug(config)
-        if not path or (path is None):
-            path = "./runinfo"
-            if config.get("globals", {}).get('runDir'):
-                path = config["globals"]['runDir']
-
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -46,4 +39,4 @@ def make_rundir(config=None, path=None):
     except Exception as e:
         logger.error("Failed to create a run directory")
         logger.error("Error: {0}".format(e))
-        exit(-1)
+        raise

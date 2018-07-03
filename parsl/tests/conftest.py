@@ -1,12 +1,13 @@
 import importlib.util
-from itertools import chain
 import logging
 import os
 import shutil
 import subprocess
 from glob import glob
+from itertools import chain
 
 import pytest
+import _pytest.runner as runner
 from pytest_forked import forked_run_report
 
 import parsl
@@ -125,15 +126,16 @@ def load_dfk(config):
     """
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        if 'globals' not in module.config:
-            module.config['globals'] = {}
-        module.config['globals']['runDir'] = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
-        parsl.clear()
-        dfk = parsl.load(module.config)
-        yield
-        dfk.cleanup()
+        try:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
+            parsl.clear()
+            dfk = parsl.load(module.config)
+            yield
+            dfk.cleanup()
+        except KeyError:
+            pytest.skip('options in user_opts.py not configured for {}'.format(config))
     else:
         yield
 
@@ -189,3 +191,32 @@ def pytest_runtest_protocol(item):
         for rep in reports:
             item.ihook.pytest_runtest_logreport(report=rep)
         return True
+
+
+def pytest_make_collect_report(collector):
+    call = runner.CallInfo(lambda: list(collector.collect()), 'collect')
+    longrepr = None
+    if not call.excinfo:
+        outcome = "passed"
+    else:
+        from _pytest import nose
+        from _pytest.outcomes import Skipped
+        skip_exceptions = (Skipped,) + nose.get_skip_exceptions()
+        if call.excinfo.errisinstance(KeyError):
+            outcome = "skipped"
+            r = collector._repr_failure_py(call.excinfo, "line").reprcrash
+            message = "{} not configured in user_opts.py".format(r.message.split()[-1])
+            longrepr = (str(r.path), r.lineno, message)
+        elif call.excinfo.errisinstance(skip_exceptions):
+            outcome = "skipped"
+            r = collector._repr_failure_py(call.excinfo, "line").reprcrash
+            longrepr = (str(r.path), r.lineno, r.message)
+        else:
+            outcome = "failed"
+            errorinfo = collector.repr_failure(call.excinfo)
+            if not hasattr(errorinfo, "toterminal"):
+                errorinfo = runner.CollectErrorRepr(errorinfo)
+            longrepr = errorinfo
+    rep = runner.CollectReport(collector.nodeid, outcome, longrepr, getattr(call, 'result', None))
+    rep.call = call  # see collect_one_node
+    return rep

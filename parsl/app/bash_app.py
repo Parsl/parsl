@@ -1,5 +1,6 @@
 import logging
 
+from inspect import signature, Parameter
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -100,15 +101,25 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, executor=None, walltime=60, cache=False,
-                 sites='all', fn_hash=None):
+    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False,
+                 executors='all', fn_hash=None):
         """Initialize the super.
 
         This bit is the same for both bash & python apps.
         """
-        super().__init__(func, executor=executor, walltime=60, sites=sites, exec_type="bash")
+        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, exec_type="bash")
+        self.kwargs = {}
         self.fn_hash = fn_hash
         self.cache = cache
+
+        # We duplicate the extraction of parameter defaults
+        # to self.kwargs to ensure availability at point of
+        # command string format. Refer: #349
+        sig = signature(func)
+
+        for s in sig.parameters:
+            if sig.parameters[s].default != Parameter.empty:
+                self.kwargs[s] = sig.parameters[s].default
 
     def __call__(self, *args, **kwargs):
         """Handle the call to a Bash app.
@@ -129,14 +140,14 @@ class BashApp(AppBase):
         # Update kwargs in the app definition with ones passed in at calltime
         self.kwargs.update(kwargs)
 
-        if self.executor is None:
-            self.executor = DataFlowKernelLoader.dfk()
+        if self.data_flow_kernel is None:
+            self.data_flow_kernel = DataFlowKernelLoader.dfk()
 
-        app_fut = self.executor.submit(remote_side_bash_executor, self.func, *args,
-                                       parsl_sites=self.sites,
-                                       fn_hash=self.fn_hash,
-                                       cache=self.cache,
-                                       **self.kwargs)
+        app_fut = self.data_flow_kernel.submit(remote_side_bash_executor, self.func, *args,
+                                               executors=self.executors,
+                                               fn_hash=self.fn_hash,
+                                               cache=self.cache,
+                                               **self.kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
                     for o in kwargs.get('outputs', [])]

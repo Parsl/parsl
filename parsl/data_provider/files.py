@@ -2,8 +2,8 @@
 
 The primary purpose of the File object is to track the protocol to be used
 to transfer the file as well as to give the appropriate filepath depending
-on where(client-side, remote-side, intermediary-side) the File.filepath is
-being called from
+on where (client-side, remote-side, intermediary-side) the File.filepath is
+being called from.
 """
 
 import os
@@ -18,9 +18,8 @@ logger = logging.getLogger(__name__)
 class File(str):
     """The Parsl File Class.
 
-    This is planned to be a very simple class that simply
-    captures various attributes of a file, and relies on client-side and worker-side
-    systems to enable to appropriate transfer of files.
+    This class captures various attributes of a file, and relies on client-side and
+    worker-side systems to enable to appropriate transfer of files.
     """
 
     def __init__(self, url, dman=None, cache=False, caching_dir=".", staging='direct'):
@@ -79,37 +78,32 @@ class File(str):
             if hasattr(self, 'local_path'):
                 return self.local_path
 
-        if 'exec_site' not in globals() or self.staging == 'direct':
-            # Assume local and direct
-            return self.path
-        else:
-            # Return self.path for now
-            return self.path
+        return self.path
 
-    def stage_in(self, site_name):
-        """Transport file from the site of origin to local site.
+    def stage_in(self, executor):
+        """Transport file from the input source to the executor.
 
         Args:
-            - site_name (str) - site the file is staged in to.
+            - executor (str) - executor the file is staged in to.
 
         """
 
-        return self.dman.stage_in(self, site_name)
+        return self.dman.stage_in(self, executor)
 
     def stage_out(self):
-        """Transport file from local filesystem to origin site."""
+        """Transport file from executor to final output destination."""
         return self.dman.stage_out(self)
 
-    def set_data_future(self, df, site_name=None):
-        self.data_future[site_name] = df
+    def set_data_future(self, df, executor=None):
+        self.data_future[executor] = df
 
-    def get_data_future(self, site_name):
-        return self.data_future.get(site_name)
+    def get_data_future(self, executor):
+        return self.data_future.get(executor)
 
     def __getstate__(self):
-        """ Overriding the default pickling method.
+        """Override the default pickling method.
 
-        The File object get's pickled and transmitted to remote sites during app
+        The File object gets pickled and transmitted to remote executors during app
         execution. This enables pickling while retaining the lockable resources
         to the DFK/Client side.
         """
@@ -118,10 +112,10 @@ class File(str):
 
         # We have already made a copy of the future objects, they are now no longer
         # reliable as means to wait for the staging events
-        for site in state["data_future"]:
-            # This is assumed to be safe, since the data_future represents staging to a specific site
-            # and a site will only have one filepath.
-            state["data_future"][site] = state["data_future"][site].filepath
+        for executor in state["data_future"]:
+            # This is assumed to be safe, since the data_future represents staging to a specific executor
+            # and an executor will only have one filepath.
+            state["data_future"][executor] = state["data_future"][executor].filepath
 
         state["dman"] = None
 

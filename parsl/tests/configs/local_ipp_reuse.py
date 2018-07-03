@@ -1,35 +1,16 @@
 """ Use the following config with caution.
 """
-import pytest
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.utils import get_rundir
+from parsl.executors.ipp_controller import Controller
 
-pytest.skip('Should this be being tested?', allow_module_level=True)
-
-config = {
-    "sites": [
-        {
-            "site": "local_ipp_reuse",
-            "auth": {
-                "channel": None,
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": "local",
-                "script_dir": ".scripts",
-                "block": {
-                    "nodes": 1,
-                    "taskBlocks": 1,
-                    "initBlocks": 1,
-                    "maxBlocks": 1,
-                }
-            }
-        }
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            label='local_ipp_reuse',
+        ),
     ],
-    "globals": {
-        "lazyErrors": True,
-        'runDir': get_rundir()
-    },
-    "controller": {
-        "reuse": True
-    }
-}
+    controller=Controller(reuse=True),
+    run_dir=get_rundir(),
+)

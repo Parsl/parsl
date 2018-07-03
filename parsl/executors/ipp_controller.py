@@ -1,116 +1,95 @@
+import logging
 import os
+import random
+import signal
 import subprocess
 import time
-import random
-import logging
-import signal
 
 from parsl.executors.errors import *
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class Controller(object):
-    """Start and maintain a ipyparallel controller."""
+class Controller(RepresentationMixin):
+    """Start and maintain a IPythonParallel controller.
 
-    def __init__(self, publicIp=None, port=None, portRange="", reuse=False,
-                 log=True, ipythonDir="~/.ipython", mode="auto", profile=None):
-        """Initialize ipython controllers to the user specified configs.
+    Parameters
+    ----------
 
-        The specifig config sections that will be used by this are in the dict
-        config["controller"]
-
-        KWargs:
-              - publicIp (string): internal_ip, specify if this would be difficult to autofind.
-              - interfaces (string): interfaces for zero_mq to listen on
-                     Default: "*"
-              - port (int): port
-                     Default: A random port between 50000, 60000
-              - portRange (string): <string <port_min>,<port_max>,
-                     Default: 50000 - 60000
-              - reuse (bool): <Reuse an existing controller>
-              - ipythonDir (string) : IPython directory for IPP to store config files.
-                     This will be overriden by the auto controller start.
-                     Default: "~/.ipython"
-              - profile (str)  : Name of the profile/site from the sites in the config.
-                     Default : None
-              - mode (str) : If "auto" the default automatic behavior is maintained.
-                             If "manual" the controller is assumed to be created by the user.
-        """
-        logger.debug("Starting ipcontroller, baseDir:%s" % ipythonDir)
-
-        self.mode = mode
-        self.range_min = 50000
-        self.range_max = 60000
+    public_ip : str, optional
+        Specific IP address of the controller, as seen from the engines. If `None`, an attempt will
+        be made to guess the correct value. Default is None.
+    interfaces : str, optional
+        Interfaces for ZeroMQ to listen on. Default is "*".
+    port : int or str, optional
+        Port on which the iPython hub listens for registration. If set to `None`, the IPython default will be used. Default
+        is None.
+    port_range : str, optional
+        The minimum and maximum port value, in the format '<min>,<max>' (for example: '50000,60000'. If this does not equal
+        None, a random port in `port_range` will be selected.
+    reuse : bool, optional
+        Reuse an existing controller.
+    ipython_dir : str, optional
+        IPython directory for IPythonParallel to store config files. This will be overriden by the auto controller
+        start. Default is "~/.ipython".
+    profile : str, optional
+        Path to an IPython profile to use. Default is 'default'.
+    mode : str, optional
+        If "auto", controller will be created and managed automatically. If "manual" the controller
+        is assumed to be created by the user. Default is auto.
+    """
+    def __init__(self, public_ip=None, interfaces=None, port=None, port_range=None, reuse=False,
+                 log=True, ipython_dir="~/.ipython", mode="auto", profile='default'):
+        self.public_ip = public_ip
+        self.interfaces = interfaces
+        self.port = port
+        self.port_range = port_range
+        if port_range is not None:
+            port_min, port_max = [int(x) for x in port_range.split(',')]
+            self.port = random.randint(port_min, port_max)
         self.reuse = reuse
-        self.port = ''
-        self.ipythonDir = None
-        self.profile = 'default'
-        ipp_basedir = ''
-        reuse_string = ''
-        profile_string = ''
+        self.log = log
+        self.ipython_dir = ipython_dir
+        self.mode = mode
+        self.profile = profile
 
-        if mode == "manual":
+    def start(self):
+        """Start the controller."""
+
+        if self.mode == "manual":
             return
-        if self.reuse:
-            reuse_string = '--reuse'
 
-        if ipythonDir:
-            self.ipythonDir = os.path.abspath(os.path.expanduser(ipythonDir))
-            ipp_basedir = '--ipython-dir={0}'.format(self.ipythonDir)
+        if self.ipython_dir is not '~/.ipython':
+            self.ipython_dir = os.path.abspath(os.path.expanduser(self.ipython_dir))
 
-        if profile:
-            # Profile string is set only if non-"default" profile is specified
-            self.profile = profile
-            profile_string = '--profile={0}'.format(profile)
-
-        # If portRange is specified pick a random port from that range
-        try:
-            if portRange:
-                self.range_min, self.range_max = map(int, portRange.split(','))
-                self.port = '--port={0}'.format(random.randint(self.range_min, self.range_max))
-        except Exception as e:
-            msg = "Bad portRange. IPPController needs portA,portB. Got {0}. Error {1}".format(portRange,
-                                                                                              e)
-            logger.error(msg)
-            raise ControllerErr(msg)
-
-        # If port is specified use it, this will override the portRange
-        if port:
-            self.port = '--port={0}'.format(port)
-
-        # We have a publicIp default always = None
-        if publicIp:
-            self.publicIp = '--location={0}'.format(publicIp)
-        else:
-            self.publicIp = ''
-
-        if log:
-            stdout = open(os.path.join(self.ipythonDir, "{0}.controller.out".format(self.profile)), 'w')
-            stderr = open(os.path.join(self.ipythonDir, "{0}.controller.err".format(self.profile)), 'w')
+        if self.log:
+            stdout = open(os.path.join(self.ipython_dir, "{0}.controller.out".format(self.profile)), 'w')
+            stderr = open(os.path.join(self.ipython_dir, "{0}.controller.err".format(self.profile)), 'w')
         else:
             stdout = open(os.devnull, 'w')
             stderr = open(os.devnull, 'w')
 
-        interfaces = '--ip=*'
-
         try:
-            opts = ['ipcontroller', ipp_basedir, interfaces, profile_string,
-                    reuse_string, self.port, self.publicIp]
-            logger.debug("Start opts: %s" % opts)
+            opts = [
+                'ipcontroller',
+                '' if self.ipython_dir is '~/.ipython' else '--ipython-dir={}'.format(self.ipython_dir),
+                self.interfaces if self.interfaces is not None else '--ip=*',
+                '' if self.profile is 'default' else '--profile={0}'.format(self.profile),
+                '--reuse' if self.reuse else '',
+                '--port={}'.format(self.port) if self.port is not None else '',
+                '--location={}'.format(self.public_ip) if self.public_ip else ''
+            ]
+            logger.debug("Starting ipcontroller with '{}'".format(' '.join([str(x) for x in opts])))
             self.proc = subprocess.Popen(opts, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
-
         except FileNotFoundError as e:
             msg = "Could not find ipcontroller. Please make sure that ipyparallel is installed and available in your env"
             logger.error(msg)
-            raise ControllerErr(msg)
-
+            raise ControllerError(msg)
         except Exception as e:
             msg = "IPPController failed to start: {0}".format(e)
             logger.error(msg)
-            raise ControllerErr(msg)
-
-        return
+            raise ControllerError(msg)
 
     @property
     def engine_file(self):
@@ -121,7 +100,7 @@ class Controller(object):
         Returns :
               - str, File path to engine file
         """
-        return os.path.join(self.ipythonDir,
+        return os.path.join(self.ipython_dir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-engine.json')
 
@@ -134,7 +113,7 @@ class Controller(object):
         Returns :
               - str, File path to client file
         """
-        return os.path.join(self.ipythonDir,
+        return os.path.join(self.ipython_dir,
                             'profile_{0}'.format(self.profile),
                             'security/ipcontroller-client.json')
 
@@ -165,5 +144,4 @@ class Controller(object):
                 logger.warn("Ipcontroller process:{0} cleanup failed. May require manual cleanup".format(self.proc.pid))
 
         except Exception as e:
-            logger.warn("Failed to kill the ipcontroller process[{0}]: {1}".format(self.proc.pid,
-                                                                                   e))
+            logger.warn("Failed to kill the ipcontroller process[{0}]: {1}".format(self.proc.pid, e))

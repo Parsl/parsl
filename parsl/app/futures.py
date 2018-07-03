@@ -92,8 +92,8 @@ class DataFuture(Future):
             else:
                 raise NotFutureError("DataFuture can be created only with a FunctionFuture on None")
 
-        logger.debug("Creating DataFuture with parent : %s", parent)
-        logger.debug("Filepath : %s", self.filepath)
+        logger.debug("Creating DataFuture with parent: %s", parent)
+        logger.debug("Filepath: %s", self.filepath)
 
     @property
     def tid(self):
@@ -220,7 +220,7 @@ def testing_nonfuture():
     fpath = '~/shuffled.txt'
     df = DataFuture(None, fpath)
     print(df)
-    print("Result : ", df.filepath)
+    print("Result: ", df.filepath)
     assert df.filepath == os.path.abspath(os.path.expanduser(fpath))
 
 

@@ -6,7 +6,7 @@ import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_ipp import config
 
 parsl.clear()
 parsl.load(config)
@@ -118,9 +118,9 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    demonstrate_custom_exception()
+    # demonstrate_custom_exception()
     x = test_simple(int(args.count))
-    x = test_imports()
-    x = test_parallel_for()
-    x = test_parallel_for(int(args.count))
-    x = test_stdout()
+    # x = test_imports()
+    # x = test_parallel_for()
+    # x = test_parallel_for(int(args.count))
+    # x = test_stdout()
