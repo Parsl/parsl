@@ -61,7 +61,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
     if enable_es_logging:
         if not _es_logging_enabled:
             raise OptionalModuleMissing(
-                ['cmreslogging'], "Logging to ElasticSearch requires the cmreslogging module")
+                ['CMRESHandler'], "Logging to ElasticSearch requires the cmreslogging module")
 
         handler = CMRESHandler(hosts=[{'host': host,
                                        'port': port}],
