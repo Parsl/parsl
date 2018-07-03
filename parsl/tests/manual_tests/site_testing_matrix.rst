@@ -1,4 +1,3 @@
-
 Site Testing
 ============
 
@@ -7,7 +6,7 @@ Sites that we will test in this exercise:
 * Local IPP
 * Midway RCC at UChicago
 * Open Science Grid (OSG)
-* Swan at Cray 
+* Swan at Cray
 * Cori at NERSC
 * Cooley (ALCF)
 * Theta (ALCF)
@@ -31,9 +30,9 @@ Test Progress
 +------------------------+------------+------------+------------+------------+
 | Swan (Cray)            |Ssh         |Torque      |Aprun       | PASSED     |
 +------------------------+------------+------------+------------+------------+
-| Cori (NERSC)           |Ssh         |Slurm       |SingleNode  | PASSED     | 
+| Cori (NERSC)           |Ssh         |Slurm       |SingleNode  | PASSED     |
 +------------------------+------------+------------+------------+------------+
-| Cori (NERSC)           |Ssh         |Slurm       |Srun        | PASSED     | 
+| Cori (NERSC)           |Ssh         |Slurm       |Srun        | PASSED     |
 +------------------------+------------+------------+------------+------------+
 | Cooley (ALCF)          |SshIL       |Cobalt      |SingleNode  | PASSED     |
 +------------------------+------------+------------+------------+------------+
@@ -42,4 +41,12 @@ Test Progress
 | CC_IN2P3 (French grid) |Local       |GridEngine  |SingleNode  | PASSED     |
 +------------------------+------------+------------+------------+------------+
 | AWS EC2                |None        |AWS         |SingleNode  | PASSED     |
++------------------------+------------+------------+------------+------------+
+| AWS EC2 (spot)         |None        |AWS         |SingleNode  | PASSED     |
++------------------------+------------+------------+------------+------------+
+| Azure                  |None        |Azure       |SingleNode  | DEFERRED   |
++------------------------+------------+------------+------------+------------+
+| Nova/Jetstream         |None        |Jetstream   |SingleNode  | DEFERRED   |
++------------------------+------------+------------+------------+------------+
+| Google Cloud           |None        |GoogleCloud |SingleNode  | DEFERRED   |
 +------------------------+------------+------------+------------+------------+
