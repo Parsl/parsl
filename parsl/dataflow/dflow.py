@@ -100,8 +100,8 @@ class DataFlowKernel(object):
         self.db_logger.info("DFK start", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
                             'time_completed': str(self.time_completed), 'task_run_id': self.run_id, 'rundir': self.run_dir})
         self.db_logger.info("Name of script/workflow: " + self.run_id, extra={'task_run_id': self.run_id})
-        for site in self._config['sites']:
-            self.db_logger.info("Listed site: " + site['site'], extra={'task_run_id': self.run_id})
+        for executor in self._config.executors:
+            self.db_logger.info("Listed executor: " + executor.label, extra={'task_run_id': self.run_id})
         # ES logging end
 
         checkpoints = self.load_checkpoints(config.checkpoint_files)
@@ -204,7 +204,7 @@ class DataFlowKernel(object):
                 self.db_logger.info("Task Fail", extra=task_log_info)
                 raise e
 
-            if self.tasks[task_id]['fail_count'] <= self.fail_retries:
+            if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
                 task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
@@ -218,8 +218,6 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
 
-                logger.info("Task {} failed after {} retry attempts".format(task_id,
-                                                                            self.fail_retries))
                 task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
                 task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                 task_log_info['task_' + 'fail_mode'] = 'lazy'
