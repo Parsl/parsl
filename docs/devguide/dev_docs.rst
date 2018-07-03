@@ -288,8 +288,7 @@ srunMpiLauncher
 Flow Control
 ============
 
-This section deals with functionality related to controlling the flow of tasks to various different
-execution sites.
+This section deals with functionality related to controlling the flow of tasks to various executors. 
 
 FlowControl
 -----------

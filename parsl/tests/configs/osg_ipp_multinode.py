@@ -1,51 +1,31 @@
-import pytest
-from parsl.tests.utils import get_rundir
+from parsl.executors.ipp_controller import Controller
+from libsubmit.channels.ssh.ssh import SSHChannel
+from libsubmit.providers.condor.condor import Condor
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.user_opts import user_opts
+from parsl.tests.utils import get_rundir
 
-if 'osg' not in user_opts:
-    pytest.skip('osg user_opts not configured', allow_module_level=True)
-else:
-    info = user_opts['osg']
-
-config = {
-    "sites": [
-        {
-            "site": "OSG_local_IPP",
-            "auth": {
-                "channel": "local",
-                "username": info['username'],
-                "scriptDir": info['script_dir']
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": "condor",
-                "block": {
-                    "nodes": 1,  # of nodes in block
-                    "taskBlocks": 1,  # total tasks in a block
-                    "initBlocks": 4,
-                    "maxBlocks": 1,
-                    "options": {
-                        "partition":
-                        "debug",
-                        # The following override is used to specify condor class-ads
-                        # to ensure that we only get machines with cvmfs, modules and
-                        # consequently python3
-                        "overrides":
-                        'Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
-                        # Worker setup is used to specify instructions to load the
-                        # appropriate env on the worker nodes.
-                        "workerSetup":
-                        """module load python/3.5.2; python3 -m venv parsl_env; source parsl_env/bin/activate; pip3 install ipyparallel"""
-                    }
-                }
-            }
-        }
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            label='osg_remote_ipp',
+            provider=Condor(
+                channel=SSHChannel(
+                    hostname='login.osgconnect.net',
+                    username=user_opts['osg']['username'],
+                    script_dir=user_opts['osg']['script_dir']
+                ),
+                nodes_per_block=1,
+                tasks_per_node=1,
+                init_blocks=4,
+                max_blocks=4,
+                overrides='Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
+                worker_setup=user_opts['osg']['worker_setup'],
+                walltime="01:00:00"
+            ),
+            controller=Controller(public_ip=user_opts['public_ip'])
+        )
     ],
-    "controller": {
-        "publicIp": '192.170.227.195'
-    },
-    "globals": {
-        "lazyErrors": True,
-        "runDir": get_rundir()
-    }
-}
+    run_dir=get_rundir()
+)

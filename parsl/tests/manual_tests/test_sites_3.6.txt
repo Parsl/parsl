@@ -1,0 +1,8 @@
+#parsl.tests.configs.local_ipp
+#parsl.tests.configs.midway_ipp
+#parsl.tests.configs.midway_ipp_multicore
+parsl.tests.configs.midway_ipp_multinode
+parsl.tests.configs.swan_ipp
+parsl.tests.configs.swan_ipp_multinode
+parsl.tests.configs.cori_ipp_single_node
+parsl.tests.configs.cori_ipp_multinode

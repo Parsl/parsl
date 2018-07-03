@@ -38,9 +38,6 @@ class Memoizer(object):
     def __init__(self, dfk, memoize=True, checkpoint={}):
         """Initialize the memoizer.
 
-        If either the appCache global config or the memoize kwarg is set to false,
-        memoization is disabled.
-
         Args:
             - dfk (DFK obj): The DFK object
 
@@ -48,13 +45,8 @@ class Memoizer(object):
             - memoize (Bool): enable memoization or not.
             - checkpoint (Dict): A checkpoint loaded as a dict.
         """
-        self.memoize = True
         self.dfk = dfk
-
-        if self.dfk.config and not self.dfk.config["globals"]["appCache"]:
-            self.memoize = False
-        if not memoize:
-            self.memoize = False
+        self.memoize = memoize
 
         if self.memoize:
             logger.info("App caching initialized")

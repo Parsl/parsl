@@ -4,7 +4,7 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.app.app import App
 from parsl.app.app_factory import AppFactoryFactory, AppFactory
 
-workers = ThreadPoolExecutor(max_workers=4)
+workers = ThreadPoolExecutor(max_threads=4)
 
 
 @App('bash', workers)

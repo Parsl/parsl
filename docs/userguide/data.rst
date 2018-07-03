@@ -1,6 +1,6 @@
 .. _label-data:
 
-Data Management
+Data management
 ===============
 
 Parsl is designed to enable implementation of dataflow patterns in which data passed between apps manages the flow of execution. Dataflow programming models are popular as they can cleanly express, via implicit parallelism,  the concurrency needed by many applications in a simple and intuitive way.
@@ -57,7 +57,7 @@ endpoint and a path to the file on the endpoint, for example:
 
 Note: the Globus endpoint UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page. 
 
-Like the local file scheme, Globus files may be passed as input or output to a Parsl app. However, in the Globus case, the file object is only an abstract representation of the file on the remote side and thus the file must be staged to or from the execution site.  For example, to stage in (transfer a file to the site where the Parsl app will be executed), the :py:meth:`~parsl.data_provider.files.File.stage_in` and :py:meth:`~parsl.app.DataFuture.result` functions must be executed explicitly, for example:
+Like the local file scheme, Globus files may be passed as input or output to a Parsl app. However, in the Globus case, the file object is only an abstract representation of the file on the remote side and thus the file must be staged to or from the remote executor.  For example, to stage in (transfer a file to the remote executor where the Parsl app will be executed), the :py:meth:`~parsl.data_provider.files.File.stage_in` and :py:meth:`~parsl.app.DataFuture.result` functions must be executed explicitly, for example:
 
 .. code-block:: python
 
@@ -66,7 +66,7 @@ Like the local file scheme, Globus files may be passed as input or output to a P
         dfu = unsorted_file.stage_in()
         dfu.result()
 
-To stage a file out (transfer a file from the site where the Parsl app is executed), the :py:meth:`~parsl.data_provider.files.File.stage_out` and :py:meth:`~parsl.app.DataFuture.result` functions must be executed explicitly, for example:
+To stage a file out (transfer a file from the remote executor where the Parsl app is executed), the :py:meth:`~parsl.data_provider.files.File.stage_out` and :py:meth:`~parsl.app.DataFuture.result` functions must be executed explicitly, for example:
 
 .. code-block:: python
 
@@ -110,35 +110,38 @@ Configuration
 
 To inform Parsl where the file is to be transferred to or from (i.e., where the Parsl app is executed), the configuration must specify the `endpoint_name` (the UUID of the Globus endpoint that is associated with the system where the parsl app is executed). 
 
-In order to manage where data is staged users may configure the default "working_dir" on a site. This is specified in the data configuration object as follows: 
+In order to manage where data is staged users may configure the default `working_dir` on a remote executor. This is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
 
 .. code-block:: python
 
-        config = {
-            "sites": [
-                {
-                    "data": {
-                         "working_dir" : "/home/user/parsl_script"
-                     }
-                }
+        from parsl.config import Config
+        from parsl.executors.ipp import IPyParallelExecutor
+
+        config = Config(
+            executors=[
+                IPyParallelExecutor(
+                    working_dir="/home/user/parsl_script"
+                )
             ]
-        }
+        )
 
 In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus DTN is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the `endpoint_path` (the common root path seen in Globus), and the `local_path` (the common root path on the local file system). In most cases `endpoint_path` and `local_path` are the same. 
 
 .. code-block:: python
 
-        config = {
-            "sites": [
-                {
-                ...
-                    "data": {
-                        "globus": {
-                            "endpoint_name": "7d2dc622-2edb-11e8-b8be-0ac6873fc732",
-                            "endpoint_path": "/",
-                            "local_path" : "/home/user"
-                         }
-                     }
-                }
+        from parsl.config import Config
+        from parsl.executors.ipp import IPyParallelExecutor
+        from parsl.data_manager.scheme import GlobusScheme
+
+        config = Config(
+            executors=[
+                IPyParallelExecutor(
+                    working_dir="/home/user/parsl_script",
+                    storage_access=GlobusScheme(
+                        endpoint_uuid="7d2dc622-2edb-11e8-b8be-0ac6873fc732",
+                        endpoint_path="/",
+                        local_path="/home/user"
+                    )
+                )
             ]
-        }
+        )

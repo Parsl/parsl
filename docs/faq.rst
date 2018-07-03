@@ -56,16 +56,16 @@ to write the object into a file and use files to communicate between Apps.
 How do I specify where Apps should be run?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Parsl's multi-site support allows you to define the site (including local threads)
+Parsl's multi-executor support allows you to define the executor (including local threads)
 on which an App should be executed. For example:
 
 .. code-block:: python
 
-     @app('python', dfk, sites=['SuperComputer1'])
+     @app('python', dfk, executors=['SuperComputer1'])
      def BigSimulation(...):
          ...
 
-     @app('python', dfk, sites=['GPUMachine'])
+     @app('python', dfk, executors=['GPUMachine'])
      def Visualize (...)
          ...
 
@@ -78,33 +78,26 @@ the workers can connect back. While our pilot job system, ipyparallel,
 can identify the IP address automatically on certain systems,
 it is safer to specify the address explicitly.
 
-Here's how you specify the address in the config dictionary passed to the DataFlowKernel:
+To specify the address in the :class:`~parsl.config.Config` (note this is an example
+using the :class:`libsubmit.providers.cobalt.cobalt.Cobalt`; any other provider could
+be substituted below):
 
 .. code-block:: python
 
-    multiNode = {
-        "sites": [{
-            "site": "ALCF_Theta_Local",
-            "auth": {
-                "channel": "ssh",
-                "scriptDir": "/home/{}/parsl_scripts/".format(USERNAME)
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": '<SCHEDULER>'
-                "block": { # Define the block
-                    ...
-                }
-            },
-        }],
-        "globals": {
-            "lazyErrors": True,
-    },
-        "controller": {
-        "publicIp": '<AA.BB.CC.DD>'  # <--- SPECIFY PUBLIC IP HERE
-        }
-    }
+    from libsubmit.providers.cobalt.cobalt import Cobalt
+    from parsl.config import Config
+    from parsl.executors.ipp import IPyParallelExecutor
+    from parsl.executors.ipp_controller import Controller
 
+    config = Config(
+        executors=[
+            IPyParallelExecutor(
+                label='ALCF_theta_local',
+                provider=Cobalt(),
+                controller=Controller(public_ip='<AA.BB.CC.DD>')  # specify public ip here
+            )
+        ],
+    )
 
 .. _pyversion:
 
@@ -204,18 +197,39 @@ There are a few common situations in which a Parsl script might hang:
      ssh over to a machine that is public facing. Machines provisioned from
      cloud-vendors setup with public IPs are another option.
 
-   * Parsl hasn't autodetected the public IP.
-     This can be resolved by manually specifying the public IP via the config:
-
-     .. code-block:: python
-
-        config["controller"]["publicIp"] = 8.8.8.8
+   * Parsl hasn't autodetected the public IP. See `Workers do not connect back to Parsl`_ for more details.
 
    * Firewall restrictions that block certain port ranges.
      If there is a certain port range that is **not** blocked, you may specify
-     that via the config:
+     that via the :class:`~parsl.executors.ipp_controller.Controller` object:
 
      .. code-block:: python
 
-        # Assuming ports 50000 to 55000 are open
-        config["controller"]["portRange"] = "50000,55000"
+        from libsubmit.providers.cobalt.cobalt import Cobalt
+        from parsl.config import Config
+        from parsl.executors.ipp import IPyParallelExecutor
+        from parsl.executors.ipp_controller import Controller
+
+        config = Config(
+            executors=[
+                IPyParallelExecutor(
+                    label='ALCF_theta_local',
+                    provider=Cobalt(),
+                    controller=Controller(port_range='50000,55000')
+                )
+            ],
+        )
+
+
+How can I start a Jupyter notebook over SSH?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+See instructions `here <https://techtalktone.wordpress.com/2017/03/28/running-jupyter-notebooks-on-a-remote-server-via-ssh/>`_.
+
+How can I sync my conda environment and Jupyter environment?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Run:: 
+
+   conda install nb_conda
+
+Now all available conda environments (for example, one created by following the instructions `here <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.

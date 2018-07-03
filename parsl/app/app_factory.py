@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class AppFactory(object):
     """AppFactory streamlines creation of apps."""
 
-    def __init__(self, app_class, func, executor=None, cache=False, sites='all', walltime=60):
+    def __init__(self, app_class, func, data_flow_kernel=None, cache=False, executors='all', walltime=60):
         """Construct an AppFactory for a particular app_class.
 
         Args:
@@ -22,9 +22,9 @@ class AppFactory(object):
             - func(Function) : The function to execute
 
         Kwargs:
-            - executor(Executor) : An executor object which will handle app execution
+            - data_flow_kernel(DataFlowKernel) : The DataFlowKernel which will manage app execution.
             - walltime(int) : Walltime in seconds, default=60
-            - sites (str|list) : List of site names that this app could execute over. default is 'all'
+            - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
             - cache (Bool) : Enable caching of app.
 
         Returns:
@@ -32,11 +32,11 @@ class AppFactory(object):
         """
         self.__name__ = func.__name__
         self.app_class = app_class
-        self.executor = executor
+        self.data_flow_kernel = data_flow_kernel
         self.func = func
         self.status = 'created'
         self.walltime = walltime
-        self.sites = sites
+        self.executors = executors
         self.sig = signature(func)
         self.cache = cache
         # Function source hashing is done here to avoid redoing this every time
@@ -68,8 +68,8 @@ class AppFactory(object):
         """
         # Create and call the new App object
         app_obj = self.app_class(self.func,
-                                 executor=self.executor,
-                                 sites=self.sites,
+                                 data_flow_kernel=self.data_flow_kernel,
+                                 executors=self.executors,
                                  walltime=self.walltime,
                                  cache=self.cache,
                                  fn_hash=self.func_hash)
@@ -106,12 +106,12 @@ class AppFactoryFactory(object):
         self.apps = {'bash': BashApp,
                      'python': PythonApp}
 
-    def make(self, kind, func, executor=None, **kwargs):
+    def make(self, kind, func, data_flow_kernel=None, **kwargs):
         """Creates a new App of the kind specified.
 
         Args:
             kind(string) : For now only(bash|python)
-            executor(Executor) : An executor object which will handle app execution
+            data_flow_kernel(DataFlowKernel) : The DataFlowKernel which will manage app execution.
             func(Function) : The function to execute
 
         Kwargs:
@@ -128,7 +128,7 @@ class AppFactoryFactory(object):
         if kind in self.apps:
             return AppFactory(self.apps[kind],
                               func,
-                              executor=executor,
+                              data_flow_kernel=data_flow_kernel,
                               **kwargs)
 
         else:

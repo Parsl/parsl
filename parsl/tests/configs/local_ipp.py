@@ -1,20 +1,18 @@
-config = {
-    "sites": [
-        {
-            "site": "local_ipp",
-            "auth": {
-                "channel": None
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": "local",
-                "block": {
-                    "initBlocks": 4,
-                }
-            }
-        }
-    ],
-    "globals": {
-        "lazyErrors": True,
-    }
-}
+from libsubmit.providers import LocalProvider
+from libsubmit.channels import LocalChannel
+
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
+
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            label="local_ipp",
+            provider=LocalProvider(
+                channel=LocalChannel(),
+                init_blocks=2,
+                max_blocks=2,
+            )
+        )
+    ]
+)

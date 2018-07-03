@@ -7,41 +7,37 @@
 | ++++++++++++++ |
 ==================
 """
-import pytest
-from parsl.tests.utils import get_rundir
+from libsubmit.channels import SSHChannel
+from libsubmit.launchers import AprunLauncher
+from libsubmit.providers import TorqueProvider
+
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
+from parsl.executors.ipp_controller import Controller
+
 from parsl.tests.user_opts import user_opts
+from parsl.tests.utils import get_rundir
 
-if 'swan' not in user_opts:
-    pytest.skip('swan user_opts not configured', allow_module_level=True)
-else:
-    info = user_opts['swan']
+config = Config(
+    executors=[
+        IPyParallelExecutor(
+            label='swan_ipp',
+            provider=TorqueProvider(
+                channel=SSHChannel(
+                    hostname='swan.cray.com',
+                    username=user_opts['swan']['username'],
+                    script_dir=user_opts['swan']['script_dir'],
+                ),
+                nodes_per_block=1,
+                tasks_per_node=1,
+                init_blocks=1,
+                max_blocks=1,
+                launcher=AprunLauncher(),
+                overrides=user_opts['swan']['overrides']
+            ),
+            controller=Controller(public_ip=user_opts['public_ip']),
+        )
 
-config = {
-    "sites": [
-        {
-            "site": "swan_ipp",
-            "auth": {
-                "channel": "ssh",
-                "hostname": "swan.cray.com",
-                "username": info['username'],
-                "scriptDir": "/home/users/{}/parsl_scripts".format(info['username'])
-            },
-            "execution": {
-                "executor": "ipp",
-                "provider": "torque",
-                "block": {
-                    "nodes": 1,
-                    "launcher": 'aprun',
-                    "taskBlocks": 1,
-                    "initBlocks": 1,
-                    "maxBlocks": 1,
-                    'options': info['options']
-                }
-            }
-        }
     ],
-    "globals": {
-        "lazyErrors": True,
-        "runDir": get_rundir()
-    }
-}
+    run_dir=get_rundir()
+)
