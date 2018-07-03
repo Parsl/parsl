@@ -213,6 +213,8 @@ class DataFlowKernel(object):
                 self.db_logger.info("Task Retry", extra=task_log_info)
 
             else:
+                logger.info("Task {} failed after {} retry attempts".format(task_id,
+                                                                            self._config.retries))
                 self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
 
@@ -329,8 +331,7 @@ class DataFlowKernel(object):
         try:
             executor = self.executors[executor_label]
         except Exception as e:
-            logger.error("Task {}: requests invalid site {}".format(task_id,
-                                                                    site))
+            logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
         if self.db_logger_config.get('enable_remote_monitoring', False):
             executable = app_monitor.monitor_wrapper(executable, task_id, self.db_logger_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
@@ -339,7 +340,7 @@ class DataFlowKernel(object):
         task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         self.db_logger.info("Task Launch", extra=task_log_info)
-        exec_fu.retries_left = self.fail_retries - \
+        exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
