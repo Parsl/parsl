@@ -54,8 +54,9 @@ def monitor(pid, task_id, db_logger_config, run_id):
                     print("psutil disk access denied exception for task: " + str(task_id) + "'s children.")
             logger.info("test", extra=d)
             time.sleep(5)
-    except Exception:
+    except Exception as e:
         print('Exception in the monitoring task: ' + str(task_id))
+        print(e)
     else:
         print('No exception in the monitoring loop for task: ' + str(task_id))
 
@@ -65,12 +66,12 @@ def monitor_wrapper(f, task_id, db_logger_config, run_id):
         p = Process(target=monitor, args=(os.getpid(), task_id, db_logger_config, run_id))
         p.start()
         try:
-            result = f(*args, **kwargs)
+            return f(*args, **kwargs)
         except Exception:
-            print("App Failure terminating monitoring process task: " str(task_id))
+            print("App Failure terminating monitoring process task: " + str(task_id))
+            raise
         finally:
             p.terminate()
-        return result
     return wrapped
 
 
