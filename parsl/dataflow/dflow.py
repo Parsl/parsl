@@ -93,15 +93,16 @@ class DataFlowKernel(object):
         self.time_began = datetime.now()
         self.time_completed = None
         self.run_id = self.workflow_name + "-" + str(self.time_began.minute)
-        self.dashboard = "https://search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com/_plugin/kibana/app/kibana#/dashboard/63549e70-757a-11e8-90be-3b2ab570ca29?_g=(refreshInterval%3A('%24%24hashKey'%3A'object%3A497'%2Cdisplay%3A'10%20seconds'%2Cpause%3A!f%2Csection%3A1%2Cvalue%3A10000)%2Ctime%3A(from%3Anow-15m%2Cinterval%3A'1m'%2Cmode%3Aquick%2Ctimezone%3AAmerica%2FChicago%2Cto%3Anow))"
+        self.dashboard = "https://search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com/_plugin/kibana/app/kibana#/dashboard/63549e70-757a-11e8-90be-3b2ab570ca29?_g=(refreshInterval%3A('%24%24hashKey'%3A'object%3A497'%2Cdisplay%3A'10%20seconds'%2Cpause%3A!f%2Csection%3A1%2Cvalue%3A10000)%2Ctime%3A(from%3Anow-15m%2Cinterval%3A'1m'%2Cmode%3Aquick%2Ctimezone%3AAmerica%2FChicago%2Cto%3Anow))"  # noqa: E501
         print("Run id is: " + self.run_id + " and dashboard is found at " + self.dashboard)
         self.db_logger.info("Parsl version: {}".format(get_version()))
         self.db_logger.info("Libsubmit version: {}".format(libsubmit.__version__))
-        self.db_logger.info("DFK start", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')), 'time_completed': str(self.time_completed), 'task_run_id': self.run_id, 'rundir': self.rundir})
+        self.db_logger.info("DFK start", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
+                            'time_completed': str(self.time_completed), 'task_run_id': self.run_id, 'rundir': self.rundir})
         self.db_logger.info("Name of script/workflow: " + self.run_id, extra={'task_run_id': self.run_id})
         for site in self._config['sites']:
             self.db_logger.info("Listed site: " + site['site'], extra={'task_run_id': self.run_id})
-        #ES logging end
+        # ES logging end
 
         checkpoints = self.load_checkpoints(config.checkpoint_files)
         self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
@@ -685,7 +686,8 @@ class DataFlowKernel(object):
                 executor.shutdown()
 
         self.time_completed = datetime.now()
-        self.db_logger.info("DFK end", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')), 'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')), 'task_run_id': self.run_id, 'rundir': self.rundir})
+        self.db_logger.info("DFK end", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
+                            'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')), 'task_run_id': self.run_id, 'rundir': self.rundir})
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):

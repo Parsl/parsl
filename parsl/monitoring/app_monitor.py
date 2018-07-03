@@ -66,7 +66,7 @@ def monitor_wrapper(f, task_id, db_logger_config, run_id):
         p.start()
         try:
             result = f(*args, **kwargs)
-        except:
+        except Exception:
             print("App Failure terminating monitoring process")
         finally:
             p.terminate()
