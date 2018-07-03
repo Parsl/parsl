@@ -5,13 +5,11 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-config['sites'][0]['execution']['block'] = {
-    "taskBlocks": 4,
-    "initBlocks": 0,
-    "minBlocks": 0,
-    "maxBlocks": 10,
-    "parallelism": 0,
-}
+config.executors[0].tasks_per_block = 4
+config.executors[0].init_blocks = 0
+config.executors[0].min_blocks = 0
+config.executors[0].max_blocks = 10
+config.executors[0].parallelism = 0
 
 parsl.clear()
 parsl.load(config)
@@ -27,7 +25,7 @@ def python_app():
 def test_python(N=2):
     """No blocks provisioned if parallelism==0
 
-    If I set initBlocks=0 and parallelism=0 I don't think any blocks will be provisioned.
+    If I set init_blocks=0 and parallelism=0 I don't think any blocks will be provisioned.
     I tested and the script makes no progress. Perhaps we should catch this case and present an error to users.
     """
 

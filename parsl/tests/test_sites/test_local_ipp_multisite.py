@@ -11,7 +11,7 @@ parsl.clear()
 dfk = parsl.load(config)
 
 
-@App("python", sites=['local_ipp_2'])
+@App("python", executors=['local_ipp_2'])
 def python_app_2():
     import os
     import threading
@@ -20,7 +20,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", sites=['local_ipp_1'])
+@App("python", executors=['local_ipp_1'])
 def python_app_1():
     import os
     import threading

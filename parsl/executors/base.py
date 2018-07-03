@@ -12,6 +12,14 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     @abstractmethod
+    def start(self, *args, **kwargs):
+        """Start the executor.
+
+        Any spin-up operations (for example: starting thread pools) should be performed here.
+        """
+        pass
+
+    @abstractmethod
     def submit(self, *args, **kwargs):
         """Submit.
 

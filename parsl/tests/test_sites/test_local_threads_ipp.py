@@ -16,7 +16,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@App("python", dfk, sites=['local_threads'])
+@App("python", dfk, executors=['local_threads'])
 def python_app_2():
     import os
     import threading
@@ -25,7 +25,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", dfk, sites=['local_ipp'])
+@App("python", dfk, executors=['local_ipp'])
 def python_app_1():
     import os
     import threading
@@ -84,4 +84,4 @@ if __name__ == "__main__":
         parsl.set_stream_logger()
 
     test_python()
-    # test_bash()
+    test_bash()

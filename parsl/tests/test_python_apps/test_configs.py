@@ -22,14 +22,14 @@ def worker_identify(x, sleep_dur=0.2):
 @pytest.mark.skip('fails intermittently')
 def test_parallel_for():
     d = []
-    for i in range(0, config["sites"][0]["execution"]["maxThreads"]):
+    for i in range(0, config.executors[0].max_threads):
         d.extend([worker_identify(i)])
 
     [item.result() for item in d]
 
     thread_count = len(set([item.result()['tid'] for item in d]))
     process_count = len(set([item.result()['pid'] for item in d]))
-    assert thread_count == config["sites"][0]["execution"]["maxThreads"], "Wrong number of threads"
+    assert thread_count == config.executors[0].max_threads, "Wrong number of threads"
     assert process_count == 1, "More processes than allowed"
     return d
 

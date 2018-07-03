@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, executor=None, walltime=60, cache=False,
-                 sites='all', fn_hash=None):
+    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False,
+                 executors='all', fn_hash=None):
         """Initialize the super.
 
         This bit is the same for both bash & python apps.
         """
-        super().__init__(wrap_error(func), executor=executor, walltime=walltime, sites=sites, exec_type="python")
+        super().__init__(wrap_error(func), data_flow_kernel=data_flow_kernel, walltime=walltime, executors=executors, exec_type="python")
         self.fn_hash = fn_hash
         self.cache = cache
 
@@ -40,13 +40,13 @@ class PythonApp(AppBase):
                    App_fut
 
         """
-        if self.executor is None:
-            self.executor = DataFlowKernelLoader.dfk()
-        app_fut = self.executor.submit(self.func, *args,
-                                       parsl_sites=self.sites,
-                                       fn_hash=self.fn_hash,
-                                       cache=self.cache,
-                                       **kwargs)
+        if self.data_flow_kernel is None:
+            self.data_flow_kernel = DataFlowKernelLoader.dfk()
+        app_fut = self.data_flow_kernel.submit(self.func, *args,
+                                               executors=self.executors,
+                                               fn_hash=self.fn_hash,
+                                               cache=self.cache,
+                                               **kwargs)
 
         # logger.debug("App[{}] assigned Task[{}]".format(self.func.__name__,
         #                                                 app_fut.tid))

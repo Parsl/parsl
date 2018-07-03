@@ -60,7 +60,7 @@ Here's a config for Cori that starts with a request for 2 nodes.
               "channel"   : "ssh",
               "hostname"  : "cori.nersc.gov",
               "username"  : "yadunand",
-              "scriptDir" : "/global/homes/y/yadunand/parsl_scripts"
+              "script_dir" : "/global/homes/y/yadunand/parsl_scripts"
           },
           "execution" : {
               "executor"   : "ipp",
@@ -68,12 +68,12 @@ Here's a config for Cori that starts with a request for 2 nodes.
               "script_dir" : ".scripts",
               "block" : {                 # Definition of a block
                   "nodes"      : 1,       # of nodes in that block
-                  "taskBlocks" : 1,       # total tasks in a block
+                  "task_blocks" : 1,       # total tasks in a block
                   "walltime"   : "00:10:00",
-                  "initBlocks" : 1,
-                  "minBlocks"  : 0,
-                  "maxBlocks"  : 1,
-                  "scriptDir"  : ".",
+                  "init_blocks" : 1,
+                  "min_blocks"  : 0,
+                  "max_blocks"  : 1,
+                  "script_dir"  : ".",
                   "options"    : {
                       "partition" : "debug",
                       "overrides" : """#SBATCH --constraint=haswell

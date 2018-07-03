@@ -11,7 +11,7 @@ from parsl.tests.test_checkpointing.test_python_checkpoint_1 import \
 from parsl.tests.configs.local_threads_checkpoint import config
 
 rundir = test_initial_checkpoint_write()
-config['globals']['checkpointFiles'] = [os.path.join(rundir, 'checkpoint')]
+config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
 
 parsl.clear()
 parsl.load(config)

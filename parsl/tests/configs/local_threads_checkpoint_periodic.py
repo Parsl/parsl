@@ -1,23 +1,14 @@
+from parsl.config import Config
+from parsl.executors.threads import ThreadPoolExecutor
 from parsl.tests.utils import get_rundir
 
-config = {
-    "sites": [
-        {
-            "site": "local_threads",
-            "auth": {
-                "channel": None
-            },
-            "execution": {
-                "executor": "threads",
-                "provider": None,
-                "maxThreads": 2,
-            }
-        }
+config = Config(
+    executors=[
+        ThreadPoolExecutor(
+            label='local_threads_checkpoint_periodic',
+        )
     ],
-    "globals": {
-        "lazyErrors": True,
-        "runDir": get_rundir(),
-        "checkpointMode": "periodic",
-        "checkpointPeriod": "00:00:05",
-    }
-}
+    checkpoint_mode='periodic',
+    checkpoint_period='00:00:05',
+    run_dir=get_rundir(),
+)

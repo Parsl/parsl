@@ -143,7 +143,7 @@ class UsageTracker (object):
         if testvar == 'true':
             test = True
 
-        if self.config and self.config["globals"]["usageTracking"] is False:
+        if not self.config.usage_tracking:
             track = False
 
         envvar = str(os.environ.get("PARSL_TRACKING", True)).lower()
@@ -180,9 +180,7 @@ class UsageTracker (object):
         """
         app_count = self.dfk.task_count
 
-        site_count = 0
-        if self.dfk._executors_managed:
-            site_count = len(self.dfk.config['sites'])
+        site_count = len([x for x in self.dfk.config.executors if x.managed])
 
         failed_states = (States.failed, States.dep_fail)
         app_fails = len([t for t in self.dfk.tasks if
