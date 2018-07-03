@@ -116,6 +116,8 @@ class Strategy(object):
         self.strategies = {None: self._strategy_noop, 'simple': self._strategy_simple}
 
         self.strategize = self.strategies[self.config.strategy]
+        self.logger_flag = False
+        self.prior_loghandlers = set(logging.getLogger().handlers)
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
@@ -128,6 +130,20 @@ class Strategy(object):
         KWargs:
             - kind (Not used)
         """
+
+    def unset_logging(self):
+        """ Mute newly added handlers to the root level, right after calling executor.status
+        """
+        if self.logger_flag is True:
+            return
+
+        root_logger = logging.getLogger()
+
+        for hndlr in root_logger.handlers:
+            if hndlr not in self.prior_loghandlers:
+                hndlr.setLevel(logging.ERROR)
+
+        self.logger_flag = True
 
     def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
         """Peek at the DFK and the executors specified.
@@ -143,9 +159,6 @@ class Strategy(object):
         KWargs:
             - kind (Not used)
         """
-        # Add logic to check executors
-        # for task in tasks :
-        #    if self.dfk.tasks[task]:
 
         for label, executor in self.dfk.executors.items():
             if not executor.scaling_enabled:
@@ -155,6 +168,7 @@ class Strategy(object):
             active_tasks = executor.executor.outstanding
 
             status = executor.status()
+            self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these
             # FIXME probably more of this logic should be moved to the provider
