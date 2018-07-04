@@ -189,7 +189,7 @@ class DataManager(ParslExecutor):
                 file.netloc, globus_ep['endpoint_uuid'],
                 file.path, dst_path)
 
-    def stage_out(self, file, executor=None):
+    def stage_out(self, file, executor):
         """Transport the file from the local filesystem to the remote Globus endpoint.
 
         This function returns a DataFuture.
@@ -226,10 +226,8 @@ class DataManager(ParslExecutor):
 
     def _globus_stage_out(self, globus_ep, inputs=[]):
         file = inputs[0]
-        src_path = os.path.join(globus_ep.endpoint_path, file.filename)
+        src_path = os.path.join(globus_ep['endpoint_path'], file.filename)
         self.globus.transfer_file(
-            globus_ep.endpoint_name,
-            file.netloc,
-            src_path,
-            file.path
+            globus_ep['endpoint_uuid'], file.netloc,
+            src_path, file.path
         )

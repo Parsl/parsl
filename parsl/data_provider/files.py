@@ -90,9 +90,9 @@ class File(str):
 
         return self.dman.stage_in(self, executor)
 
-    def stage_out(self):
+    def stage_out(self, executor=None):
         """Transport file from executor to final output destination."""
-        return self.dman.stage_out(self)
+        return self.dman.stage_out(self, executor)
 
     def set_data_future(self, df, executor=None):
         self.data_future[executor] = df

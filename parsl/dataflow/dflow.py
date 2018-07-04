@@ -194,6 +194,13 @@ class DataFlowKernel(object):
             if self.checkpoint_mode is 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
+        # Submit _*_stage_out tasks for output data futures that correspond with remote files
+        if self.tasks[task_id]['executor'] != 'data_manager':
+            for dfu in self.tasks[task_id]['app_fu'].outputs:
+                f = dfu.file_obj
+                if isinstance(f, File) and f.is_remote():
+                    f.stage_out(self.tasks[task_id]['executor'])
+
         # Identify tasks that have resolved dependencies and launch
         for tid in list(self.tasks):
             # Skip all non-pending tasks
@@ -296,6 +303,10 @@ class DataFlowKernel(object):
             - args (List) : Positional args to app function
             - kwargs (Dict) : Kwargs to app function
         """
+
+        # Return if the task is _*_stage_in
+        if executor == 'data_manager':
+            return
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
