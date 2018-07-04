@@ -196,8 +196,8 @@ class DataFlowKernel(object):
 
         # Submit _*_stage_out tasks for output data futures that correspond with remote files
         if (self.tasks[task_id]['app_fu'] and
-            self.tasks[task_id]['status'] == States.done and
-            self.tasks[task_id]['executor'] != 'data_manager'):
+                self.tasks[task_id]['status'] == States.done and
+                self.tasks[task_id]['executor'] != 'data_manager'):
             for dfu in self.tasks[task_id]['app_fu'].outputs:
                 f = dfu.file_obj
                 if isinstance(f, File) and f.is_remote():
