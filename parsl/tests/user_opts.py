@@ -14,7 +14,7 @@ out the entry.
 # ALCF_ALLOCATION = "CSC249ADCD01"
 #COMET_USERNAME = "yadunand"
 
-#user_opts = {
+user_opts = {
     # "public_ip" : PUBLIC_IP,
     # 'comet': {
     #     'username': COMET_USERNAME,
