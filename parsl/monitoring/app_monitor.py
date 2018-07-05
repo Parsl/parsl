@@ -32,11 +32,6 @@ def monitor(pid, task_id, db_logger_config, run_id):
             d['psutil_process_disk_write'] = to_mb(pm.io_counters().write_bytes)
             d['psutil_process_disk_read'] = to_mb(pm.io_counters().read_bytes)
         except psutil._exceptions.AccessDenied:
-            # this may be the wrong approach as it could give false security of low disk usage
-            # d['psutil_process_disk_write'] = 0
-            # d['psutil_process_disk_read'] = 0
-            # d['psutil_process_disk_write'] = -1
-            # d['psutil_process_disk_read'] = -1
             # not setting should result in a null value that should report as a blank and not "spoil" the kibana aggregations
             pass
         for child in children:
