@@ -1,5 +1,5 @@
-import os
 import logging
+import getpass
 
 try:
     from cmreslogging.handlers import CMRESHandler
@@ -73,7 +73,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                                    # use the name of the user's home directory as their username since there
                                    # does not seem to be a portable way to do this
                                    'Version': version,
-                                   'Username': os.path.split(os.path.expanduser('~'))[-1]})
+                                   'Username': getpass.getuser()})
         logger = logging.getLogger("ParslElasticsearch")
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)

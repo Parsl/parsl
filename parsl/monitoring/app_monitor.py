@@ -2,13 +2,12 @@ import time
 from multiprocessing import Process
 import psutil
 import os
-from parsl.db_logger import get_db_logger
-
-simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
-summable_values = ['cpu_percent', 'memory_percent', 'num_threads']
+from parsl.monitoring.db_logger import get_db_logger
 
 
 def monitor(pid, task_id, db_logger_config, run_id):
+    simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
+    summable_values = ['cpu_percent', 'memory_percent', 'num_threads']
 
     logger = get_db_logger(enable_es_logging=False) if db_logger_config is None else get_db_logger(**db_logger_config)
     logger.info("starting monitoring for {} on {}".format(pid, os.getpid(), extra={'task_id': task_id, 'task_run_id': run_id}))
@@ -36,8 +35,10 @@ def monitor(pid, task_id, db_logger_config, run_id):
             # this may be the wrong approach as it could give false security of low disk usage
             # d['psutil_process_disk_write'] = 0
             # d['psutil_process_disk_read'] = 0
-            d['psutil_process_disk_write'] = -1
-            d['psutil_process_disk_read'] = -1
+            # d['psutil_process_disk_write'] = -1
+            # d['psutil_process_disk_read'] = -1
+            # not setting should result in a null value that should report as a blank and not "spoil" the kibana aggregations
+            pass
         for child in children:
             for k, v in child.as_dict(attrs=summable_values).items():
                 d['psutil_process_' + str(k)] += v

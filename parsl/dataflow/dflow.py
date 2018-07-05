@@ -6,6 +6,7 @@ import pickle
 import random
 import threading
 import inspect
+import sys
 from datetime import datetime
 
 from concurrent.futures import Future
@@ -27,7 +28,7 @@ from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
 from parsl.app.errors import RemoteException
 from parsl.monitoring import app_monitor
-from parsl.db_logger import get_db_logger
+from parsl.monitoring.db_logger import get_db_logger
 
 # from parsl.dataflow.start_controller import Controller
 # Exceptions
@@ -54,7 +55,7 @@ class DataFlowKernel(object):
 
     """
 
-    def __init__(self, config=Config(), db_logger_config=None):
+    def __init__(self, config=Config()):
         """Initialize the DataFlowKernel.
 
         Parameters
@@ -86,14 +87,18 @@ class DataFlowKernel(object):
         self.usage_tracker.send_message()
 
         # ES logging
-        self.db_logger_config = db_logger_config
+        self.db_logger_config = config.db_logger_config
         self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(**self.db_logger_config)
         self.workflow_name = str(inspect.stack()[1][1])
         self.time_began = datetime.now()
         self.time_completed = None
         self.run_id = self.workflow_name + "-" + str(self.time_began.minute)
-        self.dashboard = "https://search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com/_plugin/kibana/app/kibana#/dashboard/63549e70-757a-11e8-90be-3b2ab570ca29?_g=(refreshInterval%3A('%24%24hashKey'%3A'object%3A497'%2Cdisplay%3A'10%20seconds'%2Cpause%3A!f%2Csection%3A1%2Cvalue%3A10000)%2Ctime%3A(from%3Anow-15m%2Cinterval%3A'1m'%2Cmode%3Aquick%2Ctimezone%3AAmerica%2FChicago%2Cto%3Anow))"  # noqa: E501
-        print("Run id is: " + self.run_id + " and dashboard is found at " + self.dashboard)
+        self.dashboard = self.db_logger_config.get('dashboard_link', None) if self.db_logger_config is not None else None
+        # TODO: make configurable
+        logger.info("Run id is: " + self.run_id)
+        if self.dashboard is not None:
+            logger.info("Dashboard is found at " + self.dashboard)
+        self.db_logger.info("Python version: {}".format(sys.version_info))
         self.db_logger.info("Parsl version: {}".format(get_version()))
         self.db_logger.info("Libsubmit version: {}".format(libsubmit.__version__))
         self.db_logger.info("DFK start", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
@@ -197,19 +202,21 @@ class DataFlowKernel(object):
             if not self._config.lazy_errors:
                 logger.debug("Eager fail, skipping retry logic")
                 self.tasks[task_id]['status'] = States.failed
-                task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
-                task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                task_log_info['task_fail_mode'] = 'eager'
-                self.db_logger.info("Task Fail", extra=task_log_info)
+                if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                    task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
+                    task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
+                    task_log_info['task_fail_mode'] = 'eager'
+                    self.db_logger.info("Task Fail", extra=task_log_info)
                 raise e
 
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
-                task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-                task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                task_log_info['task_' + 'fail_mode'] = 'lazy'
-                self.db_logger.info("Task Retry", extra=task_log_info)
+                if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                    task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+                    task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
+                    task_log_info['task_' + 'fail_mode'] = 'lazy'
+                    self.db_logger.info("Task Retry", extra=task_log_info)
 
             else:
                 logger.info("Task {} failed after {} retry attempts".format(task_id,
@@ -217,10 +224,11 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['status'] = States.failed
                 final_state_flag = True
 
-                task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-                task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                task_log_info['task_' + 'fail_mode'] = 'lazy'
-                self.db_logger.info("Task Retry Failed", extra=task_log_info)
+                if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                    task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+                    task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
+                    task_log_info['task_' + 'fail_mode'] = 'lazy'
+                    self.db_logger.info("Task Retry Failed", extra=task_log_info)
 
         else:
             self.tasks[task_id]['status'] = States.done
@@ -228,9 +236,10 @@ class DataFlowKernel(object):
 
             logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-            task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-            self.db_logger.info("Task Done", extra=task_log_info)
+            if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+                task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
+                self.db_logger.info("Task Done", extra=task_log_info)
 
         if not memo_cbk and final_state_flag is True:
             # Update the memoizer with the new result if this is not a
@@ -277,10 +286,11 @@ class DataFlowKernel(object):
                         "Task {} deferred due to dependency failure".format(tid))
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
-                    task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-                    task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                    task_log_info['task_' + 'fail_mode'] = 'lazy'
-                    self.db_logger.info("Task Dep Fail", extra=task_log_info)
+                    if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                        task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+                        task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
+                        task_log_info['task_' + 'fail_mode'] = 'lazy'
+                        self.db_logger.info("Task Dep Fail", extra=task_log_info)
 
                     try:
                         fu = Future()
@@ -334,9 +344,10 @@ class DataFlowKernel(object):
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
         self.tasks[task_id]['time_started'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-        task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-        self.db_logger.info("Task Launch", extra=task_log_info)
+        if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+            task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
+            task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
+            self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         exec_fu.add_done_callback(partial(self.handle_update, task_id))

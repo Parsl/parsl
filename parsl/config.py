@@ -54,6 +54,7 @@ class Config(RepresentationMixin):
                  retries=0,
                  run_dir='runinfo',
                  strategy='simple',
+                 db_logger_config=None,
                  usage_tracking=True):
         if executors is None:
             executors = [ThreadPoolExecutor()]
@@ -70,6 +71,7 @@ class Config(RepresentationMixin):
         self.run_dir = run_dir
         self.strategy = strategy
         self.usage_tracking = usage_tracking
+        self.db_logger_config = db_logger_config
 
     @property
     def executors(self):
