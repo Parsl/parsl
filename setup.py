@@ -21,6 +21,9 @@ setup(
     package_data={'': ['LICENSE']},
     packages=find_packages(),
     install_requires=install_requires,
+    extras_require = {
+        'db_logging' : ['CMRESHandler', 'psutil'],
+        },
     classifiers=[
         # Maturity
         'Development Status :: 3 - Alpha',

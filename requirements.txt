@@ -6,3 +6,5 @@ tblib
 nbsphinx
 ipykernel
 requests
+psutil
+CMRESHandler
