@@ -12,7 +12,7 @@ Sites that we will test in this exercise:
 * Theta (ALCF)
 * CC_in2p3 French grid
 * AWS EC2
-
+* Comet (SDSC)
 
 Test Progress
 =============
@@ -49,4 +49,6 @@ Test Progress
 | Nova/Jetstream         |None        |Jetstream   |SingleNode  | DEFERRED   |
 +------------------------+------------+------------+------------+------------+
 | Google Cloud           |None        |GoogleCloud |SingleNode  | DEFERRED   |
++------------------------+------------+------------+------------+------------+
+| Comet SDSC             |Ssh         |Slurm       |Srun        | PASSED     |
 +------------------------+------------+------------+------------+------------+
