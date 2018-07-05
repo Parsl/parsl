@@ -37,8 +37,10 @@ import parsl
 # Tested. Confirmed. local X GridEngine X singleNode
 # from parsl.tests.configs.cc_in2p3_local_single_node import config
 
+from parsl.tests.configs.comet_ipp_multinode import config
+
 from parsl.app.app import App
-# parsl.load(config)
+parsl.load(config)
 # parsl.set_stream_logger()
 
 

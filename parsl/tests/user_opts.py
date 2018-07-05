@@ -5,14 +5,14 @@ The fields must be configured separately for each user. To disable any associate
 out the entry.
 """
 
-#PUBLIC_IP = "52.86.208.63" # "128.135.250.229"
+# PUBLIC_IP = "52.86.208.63" # "128.135.250.229"
 # MIDWAY_USERNAME = "yadunand"
 # OSG_USERNAME = "yadunand"
 # SWAN_USERNAME = "p02509"
 # CORI_USERNAME = "yadunand"
 # ALCF_USERNAME = "yadunand"
 # ALCF_ALLOCATION = "CSC249ADCD01"
-#COMET_USERNAME = "yadunand"
+# COMET_USERNAME = "yadunand"
 
 user_opts = {
     # "public_ip" : PUBLIC_IP,
