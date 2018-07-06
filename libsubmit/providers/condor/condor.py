@@ -2,12 +2,11 @@ import logging
 import os
 import re
 import time
-from string import Template
 
-import libsubmit.error as ep_error
 from libsubmit.utils import RepresentationMixin
+from libsubmit.launchers import SingleNodeLauncher
 from libsubmit.providers.condor.template import template_string
-from libsubmit.providers.provider_base import ExecutionProvider
+from libsubmit.providers.cluster_provider import ClusterProvider
 
 logger = logging.getLogger(__name__)
 
@@ -22,22 +21,32 @@ translate_table = {
 }
 
 
-class Condor(RepresentationMixin, ExecutionProvider):
+class CondorProvider(RepresentationMixin, ClusterProvider):
     """HTCondor Execution Provider.
 
     Parameters
     ----------
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
-        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
-        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
     label : str
         Label for this provider.
     nodes_per_block : int
         Nodes to provision per block.
+    tasks_per_node : int
+        Workers to start per node
+    init_blocks : int
+        Number of blocks to provision at time of initialization
+    min_blocks : int
+        Minimum number of blocks to maintain
     max_blocks : int
         Maximum number of blocks to maintain.
+    parallelism : float
+        Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
+        scaling where as many resources as possible are used; parallelism close to 0 represents
+        the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     environment : dict of str
         A dictionary of environmant variable name and value pairs which will be set before
         running a task.
@@ -51,28 +60,41 @@ class Condor(RepresentationMixin, ExecutionProvider):
         Command to be run before running a task.
     requirements : str
         Condor requirements.
+    launcher : Launcher
+        Launcher for this provider. Possible launchers include
+        :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
     """
     def __init__(self,
                  channel=None,
                  label='condor',
                  nodes_per_block=1,
+                 tasks_per_node=1,
+                 init_blocks=1,
+                 min_blocks=0,
                  max_blocks=10,
+                 parallelism=1,
                  environment=None,
                  script_dir='parsl_scripts',
                  project='',
                  overrides='',
+                 walltime="00:10:00",
                  worker_setup='',
+                 launcher=SingleNodeLauncher(),
                  requirements=''):
 
-        self.channel = channel
-        if self.channel is None:
-            logger.error("Condor provider cannot be initialized without a channel")
-            raise(ep_error.ChannelRequired(self.__class__.__name__, "Missing a channel to execute commands"))
+        super().__init__(label,
+                         channel,
+                         script_dir,
+                         nodes_per_block,
+                         tasks_per_node,
+                         init_blocks,
+                         min_blocks,
+                         max_blocks,
+                         parallelism,
+                         walltime,
+                         launcher)
 
-        self.label = label
-        self.nodes_per_block = nodes_per_block
         self.provisioned_blocks = 0
-        self.max_blocks = max_blocks
 
         self.environment = environment if environment is not None else {}
         for key, value in self.environment.items():
@@ -83,22 +105,17 @@ class Condor(RepresentationMixin, ExecutionProvider):
             except AttributeError:
                 pass
 
-        self.script_dir = script_dir
-        if not os.path.exists(self.script_dir):
-            os.makedirs(self.script_dir)
         self.project = project
         self.overrides = overrides
         self.worker_setup = worker_setup
         self.requirements = requirements
-
-        self.resources = {}  # Dictionary that keeps track of jobs, keyed on job_id
 
     def _status(self):
         """Update the resource dictionary with job statuses."""
 
         job_id_list = ' '.join(self.resources.keys())
         cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
+        retcode, stdout, stderr = super().execute_wait(cmd)
         """
         Example output:
 
@@ -129,49 +146,6 @@ class Condor(RepresentationMixin, ExecutionProvider):
         """
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
-
-    def _write_submit_script(self, template_string, script_filename, job_name, configs):
-        """Load the template string with config values and write the generated submit script to
-        a submit script file.
-
-        Parameters
-        ----------
-        template_string : str
-            The template string to be used for the writing submit script
-        script_filename : str
-            Name of the submit script
-        job_name : str
-            The job name.
-        configs : dict of str
-             Configs that get pushed into the template.
-
-        Returns
-        -------
-        bool
-            True if successful, False otherwise.
-
-        Raises
-        ------
-        SchedulerMissingArgs
-            If template is missing arguments.
-        ScriptPathError
-            If a problem is encountered writing out the submit script.
-        """
-
-        # This section needs to be brought upto par with the condor provider.
-        try:
-            submit_script = Template(template_string).substitute(jobname=job_name, **configs)
-            with open(script_filename, 'w') as f:
-                f.write(submit_script)
-
-        except KeyError as e:
-            logger.error("Missing keys for submit script : %s", e)
-
-        except IOError as e:
-            logger.error("Failed writing to submit script: %s", script_filename)
-            raise (ep_error.ScriptPathError(script_filename, e))
-
-        return True
 
     def submit(self, command, blocksize, job_name="parsl.auto"):
         """Submits the command onto an Local Resource Manager job of blocksize parallel elements.
@@ -234,14 +208,18 @@ class Condor(RepresentationMixin, ExecutionProvider):
         job_config["overrides"] = self.overrides
         job_config["worker_setup"] = self.worker_setup
         job_config["user_script"] = command
-        job_config["tasks_per_node"] = 1
+        job_config["tasks_per_node"] = self.tasks_per_node
         job_config["requirements"] = self.requirements
         job_config["environment"] = ' '.join(['{}={}'.format(key, value) for key, value in self.environment.items()])
 
         # Move the user script
         # This is where the command should be wrapped by the launchers.
+        wrapped_command = self.launcher(command,
+                                        self.tasks_per_node,
+                                        self.nodes_per_block)
+
         with open(userscript_path, 'w') as f:
-            f.write(job_config["worker_setup"] + '\n' + command)
+            f.write(job_config["worker_setup"] + '\n' + wrapped_command)
 
         user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
         job_config["input_files"] = user_script_path
@@ -252,7 +230,7 @@ class Condor(RepresentationMixin, ExecutionProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
+        retcode, stdout, stderr = super().execute_wait(cmd, 3)
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         job_id = []

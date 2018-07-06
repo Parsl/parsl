@@ -2,8 +2,8 @@ import logging
 import os
 import time
 
-from libsubmit.channels.local.local import LocalChannel
-from libsubmit.launchers import launchers
+from libsubmit.channels import LocalChannel
+from libsubmit.launchers import SingleNodeLauncher
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.slurm.template import template_string
 from libsubmit.utils import RepresentationMixin
@@ -25,7 +25,7 @@ translate_table = {
 }  # (special exit state
 
 
-class Slurm(ClusterProvider, RepresentationMixin):
+class SlurmProvider(ClusterProvider, RepresentationMixin):
     """Slurm Execution Provider
 
     This provider uses sbatch to submit, squeue for status and scancel to cancel
@@ -40,9 +40,9 @@ class Slurm(ClusterProvider, RepresentationMixin):
         Label for this provider.
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
-        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
-        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
     script_dir : str
         Relative or absolute path to a directory where intermediate scripts are placed.
     nodes_per_block : int
@@ -61,8 +61,11 @@ class Slurm(ClusterProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS.
     overrides : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
-    launcher : str
-        FIXME. Can be one of 'single_node', 'srun', 'aprun', or 'srun_mpi'.
+    launcher : Launcher
+        Launcher for this provider. Possible launchers include
+        :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
+        :class:`~libsubmit.launchers.SrunLauncher`, or
+        :class:`~libsubmit.launchers.AprunLauncher`
     """
 
     def __init__(self,
@@ -78,7 +81,8 @@ class Slurm(ClusterProvider, RepresentationMixin):
                  parallelism=1,
                  walltime="00:10:00",
                  overrides='',
-                 launcher='single_node'):
+                 cmd_timeout=10,
+                 launcher=SingleNodeLauncher()):
         super().__init__(label,
                          channel,
                          script_dir,
@@ -89,7 +93,8 @@ class Slurm(ClusterProvider, RepresentationMixin):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
+                         cmd_timeout=cmd_timeout,
+                         launcher=launcher)
         self.partition = partition
         self.overrides = overrides
 
@@ -164,14 +169,16 @@ class Slurm(ClusterProvider, RepresentationMixin):
         job_config["user_script"] = command
 
         # Wrap the command
-        job_config["user_script"] = launchers[self.launcher](command, self.tasks_per_block)
+        job_config["user_script"] = self.launcher(command,
+                                                  self.tasks_per_node,
+                                                  self.nodes_per_block)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        retcode, stdout, stderr = self.channel.execute_wait("sbatch {0}".format(channel_script_path), 10)
+        retcode, stdout, stderr = super().execute_wait("sbatch {0}".format(channel_script_path))
 
         job_id = None
         if retcode == 0:
@@ -195,7 +202,7 @@ class Slurm(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.channel.execute_wait("scancel {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = super().execute_wait("scancel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
