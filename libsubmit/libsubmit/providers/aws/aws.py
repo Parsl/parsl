@@ -8,6 +8,7 @@ from libsubmit.error import *
 from libsubmit.providers.aws.template import template_string
 from libsubmit.providers.provider_base import ExecutionProvider
 from libsubmit.utils import RepresentationMixin
+from libsubmit.launchers import SingleNodeLauncher
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ translate_table = {
 }
 
 
-class EC2Provider(ExecutionProvider, RepresentationMixin):
+class AWSProvider(ExecutionProvider, RepresentationMixin):
     """A provider for using Amazon Elastic Compute Cloud (EC2) resources.
 
     One of 3 methods are required to authenticate: keyfile, profile or environment
@@ -52,6 +53,10 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS.
     key_file : str
         Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'.
+    nodes_per_block : int
+        This is always 1 for ec2. Nodes to provision per block.
+    tasks_per_node : int
+        Tasks to run per node.
     profile : str
         Profile to be used from the standard aws config file ~/.aws/config.
     nodes_per_block : int
@@ -77,38 +82,65 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
         Launch instance with a specific role.
     state_file : str
         Path to the state file from a previous run to re-use.
+    walltime : str
+        Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
+    launcher : Launcher
+        Launcher for this provider. Possible launchers include
+        :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
+        :class:`~libsubmit.launchers.SrunLauncher`, or
+        :class:`~libsubmit.launchers.AprunLauncher`
     """
 
     def __init__(self,
                  image_id,
                  label='ec2',
-                 overrides='',
-                 key_file=None,
-                 profile=None,
-                 nodes_per_block='1',
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
+                 tasks_per_node=1,
+                 nodes_per_block=1,
+                 parallelism=1,
+
+                 overrides='',
                  instance_type='t2.small',
                  region='us-east-2',
-                 key_name=None,
                  spot_max_bid=0,
+
+                 key_name=None,
+                 key_file=None,
+                 profile=None,
                  iam_instance_profile_arn='',
-                 state_file=None):
+
+                 state_file=None,
+                 walltime="01:00:00",
+                 launcher=SingleNodeLauncher()):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
 
-        self.label = label
-        self.resources = {}
-        self.overrides = overrides
         self.image_id = image_id
-        self.key_name = key_name
-        self.iam_instance_profile_arn = iam_instance_profile_arn
-        self.region = region
-        self.max_nodes = max_blocks * nodes_per_block
+        self.label = label
+        self.init_blocks = init_blocks
+        self.min_blocks = min_blocks
         self.max_blocks = max_blocks
+        self.tasks_per_node = tasks_per_node
         self.nodes_per_block = nodes_per_block
+        self.max_nodes = max_blocks * nodes_per_block
+        self.parallelism = parallelism
+
+        self.overrides = overrides
+        self.instance_type = instance_type
+        self.region = region
         self.spot_max_bid = spot_max_bid
+
+        self.key_name = key_name
+        self.key_file = key_file
+        self.profile = profile
+        self.iam_instance_profile_arn = iam_instance_profile_arn
+
+        self.walltime = walltime
+        self.launcher = launcher
+
+        self.resources = {}
 
         env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
         if profile is None and key_file is None and not env_specified:
@@ -521,21 +553,14 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
         """
 
         all_states = []
-        for job_id in job_ids:
-            try:
-                if job_id in self.resources:
-                    self.ec2.Instance(job_id)
-                    print("State: ", self.resources[job_id]["instance"].state)
-                    print("Reason: ", self.resources[job_id]["instance"].state_reason)
-                    # self.resources[job_id]["instance"].update()
-                    s = self.resources[job_id]["instance"].state['Name']
-                    state_string = translate_table.get(s, 'UNKNOWN')
-                    all_states.extend([state_string])
 
-            except Exception as e:
-                logger.warn('Caught exception: {0}'.format(e))
-                logger.warn('Could not get state of instance: {0}'.format(job_id))
-                all_states.extend(['UNKNOWN'])
+        status = self.client.describe_instances(InstanceIds=job_ids)
+        for r in status['Reservations']:
+            for i in r['Instances']:
+                instance_id = i['InstanceId']
+                instance_state = translate_table.get(i['State']['Name'], 'UNKNOWN')
+                self.resources[instance_id]['status'] = instance_state
+                all_states.extend([instance_state])
 
         return all_states
 
@@ -560,7 +585,10 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
         """
 
         job_name = "parsl.auto.{0}".format(time.time())
-        [instance, *rest] = self.spin_up_instance(command=command, job_name=job_name)
+        wrapped_cmd = self.launcher(command,
+                                    self.tasks_per_node,
+                                    self.nodes_per_block)
+        [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
 
         if not instance:
             logger.error("Failed to submit request to EC2")
@@ -612,7 +640,7 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
         """Print human readable summary of current AWS state to log and to console."""
         self.get_instance_state()
         status_string = "EC2 Summary:\n\tVPC IDs: {}\n\tSubnet IDs: \
-{}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n"                                                          .format(
+{}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n".format(
             self.vpc_id, self.sn_ids, self.sg_id, self.instances
         )
         status_string += "\tInstance States:\n\t\t"
@@ -656,7 +684,7 @@ class EC2Provider(ExecutionProvider, RepresentationMixin):
         os.remove(self.config['state_file_path'])
 
     @property
-    def scaling_enabled():
+    def scaling_enabled(self):
         return True
 
     @property

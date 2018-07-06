@@ -18,16 +18,17 @@ class ClusterProvider(ExecutionProvider):
         Label for this provider.
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.local.local.LocalChannel` (the default),
-        :class:`~libsubmit.channels.ssh.ssh.SSHChannel`, or
-        :class:`~libsubmit.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel`.
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
     script_dir : str
         Relative or absolute path to a directory where intermediate scripts are placed.
     walltime : str
         Walltime requested per block in HH:MM:SS.
     launcher : str
         FIXME
-
+    cmd_timeout : int
+        Timeout for commands made to the scheduler in seconds
 
     .. code:: python
 
@@ -58,7 +59,9 @@ class ClusterProvider(ExecutionProvider):
                  max_blocks,
                  parallelism,
                  walltime,
-                 launcher):
+                 launcher,
+                 cmd_timeout=10):
+
         self._scaling_enabled = True
         self.label = label
         self.channel = channel
@@ -72,6 +75,12 @@ class ClusterProvider(ExecutionProvider):
         self.provisioned_blocks = 0
         self.launcher = launcher
         self.walltime = wtime_to_minutes(walltime)
+        self.cmd_timeout = cmd_timeout
+        if not callable(self.launcher):
+            raise(ep_error.BadLauncher(self.launcher,
+                                       "Launcher for executor:{} is of type:{}. Expects a libsubmit.launcher.launcher.Launcher or callable".format(
+                                           label,
+                                           type(self.launcher))))
 
         self.script_dir = script_dir
         if not os.path.exists(self.script_dir):
@@ -80,8 +89,11 @@ class ClusterProvider(ExecutionProvider):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    def execute_wait(self, cmd, timeout=10):
-        return self.channel.execute_wait(cmd, timeout)
+    def execute_wait(self, cmd, timeout=None):
+        t = self.cmd_timeout
+        if timeout is not None:
+            t = timeout
+        return self.channel.execute_wait(cmd, t)
 
     def _write_submit_script(self, template, script_filename, job_name, configs):
         """Generate submit script and write it to a file.
