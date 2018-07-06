@@ -5,16 +5,22 @@ The fields must be configured separately for each user. To disable any associate
 out the entry.
 """
 
-# PUBLIC_IP = "128.135.250.229" # "52.86.208.63"
+# PUBLIC_IP = "52.86.208.63" # "128.135.250.229"
 # MIDWAY_USERNAME = "yadunand"
 # OSG_USERNAME = "yadunand"
 # SWAN_USERNAME = "p02509"
 # CORI_USERNAME = "yadunand"
 # ALCF_USERNAME = "yadunand"
 # ALCF_ALLOCATION = "CSC249ADCD01"
+# COMET_USERNAME = "yadunand"
 
 user_opts = {
     # "public_ip" : PUBLIC_IP,
+    # 'comet': {
+    #     'username': COMET_USERNAME,
+    #     'script_dir': '/home/{}/parsl_scripts'.format(COMET_USERNAME),
+    #     'overrides': 'export PATH:/home/{}/anaconda3/bin/:$PATH; source activate parsl_0.5.0_py3.6;'.format(COMET_USERNAME),
+    # },
     # 'midway': {
     #     'username': MIDWAY_USERNAME,
     #     'script_dir': '/scratch/midway2/{}/parsl_scripts'.format(MIDWAY_USERNAME),
@@ -68,8 +74,8 @@ user_opts = {
     #     "overrides": """#SBATCH --constraint=haswell module load python/3.5-anaconda ; source activate parsl_env_3.5"""
     # },
     # 'cc_in2p3': {
-    #    'script_dir': "~/parsl_scripts",
-    #    "overrides": """export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH; source activate parsl_env_3.6"""
+    #     'script_dir': "~/parsl_scripts",
+    #     "overrides": """export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH; source activate parsl_env_3.5"""
     # },
     # 'globus': {
     #     'endpoint': 'fixme',
