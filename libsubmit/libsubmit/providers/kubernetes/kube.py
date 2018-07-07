@@ -183,10 +183,9 @@ class KubernetesProvider(ExecutionProvider):
             security_context = client.V1SecurityContext(run_as_group=self.group_id,
                                                         run_as_user=self.user_id,
                                                         run_as_non_root=self.run_as_non_root)
-#                    self.user_id = None
-#                    self.group_id = None
-#                    self.run_as_non_root = None
-
+            #                    self.user_id = None
+            #                    self.group_id = None
+            #                    self.run_as_non_root = None
         # Create the enviornment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
@@ -242,8 +241,7 @@ class KubernetesProvider(ExecutionProvider):
             body=deployment,
             namespace=self.namespace)
 
-        logger.debug("Deployment created. status='{0}'".format(
-            str(api_response.status)))
+        logger.debug("Deployment created. status='{0}'".format(str(api_response.status)))
 
     def _delete_deployment(self, deployment_name):
         """ Delete deployment """
@@ -265,3 +263,4 @@ class KubernetesProvider(ExecutionProvider):
     @property
     def channels_required(self):
         return False
+
