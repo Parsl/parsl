@@ -15,7 +15,7 @@ except ImportError:
     _kubernetes_enabled = False
 
 
-class Kubernetes(ExecutionProvider):
+class KubernetesProvider(ExecutionProvider):
     """ Kubernetes execution provider:
 
         TODO: put in a config
@@ -187,13 +187,11 @@ class Kubernetes(ExecutionProvider):
 #                    self.group_id = None
 #                    self.run_as_non_root = None
 
-
         # Create the enviornment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
         launch_args = ["-c", "{0}; /app/deploy.sh;".format(cmd_string)]
         print(launch_args)
-
 
         # Configureate Pod template container
         container = None
@@ -244,7 +242,8 @@ class Kubernetes(ExecutionProvider):
             body=deployment,
             namespace=self.namespace)
 
-        logger.debug("Deployment created. status='{0}'".format(str(api_response.status)))
+        logger.debug("Deployment created. status='{0}'".format(
+            str(api_response.status)))
 
     def _delete_deployment(self, deployment_name):
         """ Delete deployment """
@@ -256,7 +255,8 @@ class Kubernetes(ExecutionProvider):
                 propagation_policy='Foreground',
                 grace_period_seconds=5))
 
-        logger.debug("Deployment deleted. status='{0}'".format(str(api_response.status)))
+        logger.debug("Deployment deleted. status='{0}'".format(
+            str(api_response.status)))
 
     @property
     def scaling_enabled(self):
@@ -265,28 +265,3 @@ class Kubernetes(ExecutionProvider):
     @property
     def channels_required(self):
         return False
-
-
-if __name__ == "__main__":
-    # print("None")
-
-    config = {
-        "site": "OSG",
-        "execution": {
-            "executor": "ipp",
-            "provider": "kubernetes",
-            "namespace": "development",
-            "image": "039706667969.dkr.ecr.us-east-1.amazonaws.com/hellocontainer2",
-            "secret": "ryan-kube-secret",
-            "block": {
-                "initParallelism": 1,
-                "maxParallelism": 1,
-                "minParallelism": 1
-            }
-        }
-    }
-
-    p = Kubernetes(config)
-    p._status()
-    p.submit("echo 'Hello World'", 1)
-    p._status()
