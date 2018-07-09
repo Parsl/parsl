@@ -263,4 +263,3 @@ class KubernetesProvider(ExecutionProvider):
     @property
     def channels_required(self):
         return False
-
