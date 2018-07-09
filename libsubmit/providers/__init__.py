@@ -15,6 +15,9 @@ from libsubmit.providers.googlecloud.googlecloud import GoogleCloudProvider
 from libsubmit.providers.azure.azure import AzureProvider
 from libsubmit.providers.jetstream.jetstream import JetstreamProvider
 
+# Kubernetes
+from libsubmit.providers.kubernetes.kube import KubernetesProvider
+
 __all__ = ['LocalProvider',
            'CobaltProvider',
            'CondorProvider',
@@ -24,4 +27,5 @@ __all__ = ['LocalProvider',
            'AWSProvider',
            'GoogleCloudProvider',
            'AzureProvider',
-           'JetstreamProvider']
+           'JetstreamProvider',
+           'KubernetesProvider']
