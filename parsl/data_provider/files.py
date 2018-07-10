@@ -123,7 +123,7 @@ class File(str):
     def __setstate__(self, state):
         """ Overloading the default pickle method to reconstruct a File from serialized form
 
-        This might require knowledge of whethere a DataManager is already present in the context.
+        This might require knowledge of whether a DataManager is already present in the context.
         """
         self.__dict__.update(state)
 
