@@ -60,7 +60,10 @@ class File(str):
     def is_remote(self):
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
             return True
-        return False
+        elif self.scheme in ['file']:  # TODO: is this enough?
+            return False
+        else:
+            raise Exception('Cannot determine if unknown file scheme {} is remote'.format(self.scheme))
 
     @property
     def filepath(self):
