@@ -22,7 +22,7 @@ class File(str):
     worker-side systems to enable to appropriate transfer of files.
     """
 
-    def __init__(self, url, dman=None, cache=False, caching_dir=".", staging='direct'):
+    def __init__(self, url, dman=None, cache=False, caching_dir="."):
         """Construct a File object from a url string.
 
         Args:
@@ -46,7 +46,6 @@ class File(str):
 
         self.cache = cache
         self.caching_dir = caching_dir
-        self.staging = staging
 
     def __str__(self):
         return self.filepath
