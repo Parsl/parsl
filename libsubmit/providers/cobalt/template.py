@@ -1,5 +1,4 @@
 template_string = '''#!/bin/bash -e
-
 $overrides
 
 echo "Starting Cobalt job script"
