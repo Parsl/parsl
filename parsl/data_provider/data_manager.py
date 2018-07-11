@@ -136,6 +136,8 @@ class DataManager(ParslExecutor):
             stage_in_app = self._globus_stage_in_app()
             app_fut = stage_in_app(globus_ep, outputs=[file])
             return app_fut._outputs[0]
+        else:
+            raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
 
     def _file_stage_in_app(self):
         return App("python", executors=['data_manager'])(self._file_stage_in)
@@ -214,6 +216,8 @@ class DataManager(ParslExecutor):
             globus_ep = self._get_globus_endpoint(executor)
             stage_out_app = self._globus_stage_out_app()
             return stage_out_app(globus_ep, inputs=[file])
+        else:
+            raise Exception('Staging out with unknown file scheme {} is not supported'.format(file.scheme))
 
     def _file_stage_out_app(self):
         return App("python", executors=['data_manager'])(self._file_stage_out)
