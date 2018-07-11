@@ -10,7 +10,7 @@ Note: the continuous integration environment will validate all pull requests usi
 Naming conventions
 ==================
 
-The following convention should be followed:ClassName, ExceptionName, GLOBAL_CONSTANT_NAME, and lowercase_with_underscores for everything else.
+The following convention should be followed: ClassName, ExceptionName, GLOBAL_CONSTANT_NAME, and lowercase_with_underscores for everything else.
 
 Version increments
 ==================

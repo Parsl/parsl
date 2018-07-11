@@ -141,7 +141,7 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, e
 
 
 def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
-    """Decorator function for making python apps.
+    """Decorator function for making bash apps.
 
     Parameters
     ----------

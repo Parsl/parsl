@@ -209,9 +209,9 @@ class DataManager(ParslExecutor):
             stage_out_app = self._file_stage_out_app()
             return stage_out_app()
         elif file.scheme == 'http' or file.scheme == 'https':
-            raise Exception('FTP file staging out is not supported')
-        elif file.scheme == 'ftp':
             raise Exception('HTTP/HTTPS file staging out is not supported')
+        elif file.scheme == 'ftp':
+            raise Exception('FTP file staging out is not supported')
         elif file.scheme == 'globus':
             globus_ep = self._get_globus_endpoint(executor)
             stage_out_app = self._globus_stage_out_app()
