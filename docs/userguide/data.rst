@@ -26,18 +26,18 @@ The file may then be passed as input or output to an app. Here is an example Par
 
 .. code-block:: python
 
-       @App('bash', dfk)
-       def cat(inputs=[], stdout='stdout.txt'):
-            return 'cat %s' % (inputs[0])
+    @App('bash')
+    def cat(inputs=[], stdout='stdout.txt'):
+         return 'cat %s' % (inputs[0])
 
-       # create a test file
-       open('test.txt', 'w').write('Hello\n')
+    # create a test file
+    open('/tmp/test.txt', 'w').write('Hello\n')
 
-       # create the Parsl file
-       parsl_file = File('file:///tmp/test.txt')
+    # create the Parsl file
+    parsl_file = File('file:///tmp/test.txt')
 
-       # call the cat app with the Parsl file
-       cat(inputs=[parsl_file])
+    # call the cat app with the Parsl file
+    cat(inputs=[parsl_file])
 
 FTP, HTTP, HTTPS
 ^^^^^^^^^^^^^^^^
@@ -46,28 +46,29 @@ File objects with schemes FTP, HTTP, HTTPS represent a remote files on FTP, HTTP
 
 .. code-block:: python
 
-        File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+    File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
 
 When such a file object is passed as an input to an app, Parls will download the file to an executor where the app is scheduled for execution. Here is an example Parl script that implicitly downloads a file from an FTP server and change all text in the file to uppercase:
 
 .. code-block:: python
 
-       @App('ptyhon', dfk)
-       def covert(inputs=[], outputs=[]):
-            with open(inputs[0].filepath, 'r') as in:
-                content = in.read()
-                with open(outputs[0].filepath, 'w') as out:
-                    out.write(content.upper())
+    @App('python')
+    def convert(inputs=[], outputs=[]):
+        with open(inputs[0].filepath, 'r') as inp:
+            content = inp.read()
+            with open(outputs[0].filepath, 'w') as out:
+                out.write(content.upper())
 
-       # create an remote Parsl file
-       in = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+    # create an remote Parsl file
+    inp = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
 
-       # create a local Parsl file
-       out = File('file:///tmp/ARIN-STATS-FORMAT-CHANGE.txt')
+    # create a local Parsl file
+    out = File('file:///tmp/ARIN-STATS-FORMAT-CHANGE.txt')
 
-       # call the convert app with the Parsl file
-       f = convert(inputs=[in], output=[out])
-       f.result()
+    # call the convert app with the Parsl file
+    f = convert(inputs=[inp], outputs=[out])
+    f.result()
+
 
 Globus
 ^^^^^^
