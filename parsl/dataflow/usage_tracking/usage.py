@@ -7,6 +7,7 @@ import json
 import logging
 import socket
 import sys
+import platform
 import multiprocessing as mp
 
 from parsl.dataflow.states import States
@@ -168,6 +169,8 @@ class UsageTracker (object):
                    'test': self.test_mode,
                    'parsl_v': self.parsl_version,
                    'python_v': self.python_version,
+                   'os': platform.system(),
+                   'os_v': platform.release(),
                    'start': time.time()}
 
         return json.dumps(message)
