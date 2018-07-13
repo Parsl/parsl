@@ -1,6 +1,6 @@
 """This module implements the AppFutures.
 
-    We have two basic types of futures:
+We have two basic types of futures:
     1. DataFutures which represent data objects
     2. AppFutures which represent the futures on App/Leaf tasks.
 
@@ -110,7 +110,7 @@ class AppFuture(Future):
 
         Waits for the result of the AppFuture
         KWargs:
-              timeout (int): Timeout in seconds
+        timeout (int): Timeout in seconds
         """
         try:
             if self.parent:
