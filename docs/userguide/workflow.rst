@@ -18,14 +18,14 @@ Simple sequential or procedural workflows can be created by passing an AppFuture
 .. code-block:: python
 
       # Generate a random number
-      @App('python', dfk)
+      @App('python')
       def generate(limit):
             from random import randint
             """Generate a random integer and return it"""
             return randint(1,limit)
 
       # write a message to a file
-      @App('bash', dfk)
+      @App('bash')
       def save(message, outputs=[]):
             return 'echo %s &> {outputs[0]}' % (message)
 
@@ -44,7 +44,7 @@ Parallel execution occurs automatically in Parsl, respecting dependencies among 
 
 .. code-block:: python
 
-      @App('python', dfk)
+      @App('python')
       def wait_sleep_double(x, fu_1, fu_2):
            import time
            time.sleep(2)   # Sleep for 2 seconds
@@ -71,7 +71,7 @@ The most common way that Parsl ``Apps`` are executed in parallel is via looping.
 
 .. code-block:: python
 
-    @App('python', dfk)
+    @App('python')
     def generate(limit):
         from random import randint
         """Generate a random integer and return it"""
@@ -93,15 +93,15 @@ Parallel dataflows can be developed by passing data between ``Apps``. In this ex
 
 .. code-block:: python
 
-      @App('bash', dfk)
+      @App('bash')
       def generate(outputs=[]):
           return 'echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}'
 
-      @App('bash', dfk)
+      @App('bash')
       def concat(inputs=[], outputs=[], stdout='stdout.txt', stderr='stderr.txt'):
           return 'cat {0} >> {1}'.format(' '.join(inputs), outputs[0])
 
-      @App('python', dfk)
+      @App('python')
       def total(inputs=[]):
           total = 0
           with open(inputs[0], 'r') as f:

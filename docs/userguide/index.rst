@@ -15,5 +15,5 @@ User guide
    checkpoints
    configuring
    importing
-   usage_tracking
    containers
+   usage_tracking
