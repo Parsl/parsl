@@ -625,7 +625,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             Each entry in the list will contain False if the operation fails. Otherwise, the entry will be True.
         """
 
-        if self.linger is True :
+        if self.linger is True:
             logger.debug("Ignoring cancel requests due to linger mode")
             return [False for x in job_ids]
 
