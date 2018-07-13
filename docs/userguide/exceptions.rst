@@ -32,7 +32,7 @@ of a failed task. For example:
 
 .. code-block:: python
 
-      @App('python', dfk)
+      @App('python')
       def bad_divide(x):
           return 6/x
 
@@ -59,33 +59,28 @@ re-launch applications that have failed, until the retry limit is reached.
 This feature will be available starting in Parsl `v0.5.0`.
 
 By default ``retries = 0``. Retries can be enabled by setting ``retries`` in the
-config passed to the DataFlowKernel, or as an explicit keyword argument to the
-DataFlowKernel at its initialization.
+Config object specified to parsl.
 
 Here is an example of setting retries via the config:
 
 .. code-block:: python
 
-   from parsl import DataFlowKernel, App
+   from parsl import App, load
    from parsl.tests.configs.local_threads import config
-   config["globals"]["retries"] = 2
+   config.retries = 2
 
-   dfk = DataFlowKernel(config=config)
+   load(config)
 
 
-
-Here is an example of setting retries via keyword argument to the DFK:
-
-.. code-block:: python
-
-   from parsl import DataFlowKernel, App
-   from parsl.tests.configs.local_ipp import config
-
-   dfk = DataFlowKernel(config=config, retries=2)
 
 
 Lazy fail
 ---------
+
+.. warning::
+   Disabling lazy_errors with ``lazy_errors=False`` is not recommended in Parsl 0.6.0,
+   due to a known bug (`issue#282 <https://github.com/Parsl/parsl/issues/282>`_).
+   If ``lazy_errors=False`` is set expect unhandled internal failures.
 
 While retries address resiliency at the level of ``Apps``, lazy failure adds
 resiliency at the workflow level. When lazy failures are enabled, the workflow does
