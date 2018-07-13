@@ -1,5 +1,5 @@
-Developer Guide
-***************
+`Developer Guide
+****************
 
 .. automodule:: parsl
    :no-undoc-members:
@@ -163,42 +163,42 @@ ExecutionProvider (Base)
 Local
 -----
 
-.. autoclass:: libsubmit.providers.local.local.Local
+.. autoclass:: libsubmit.providers.LocalProvider
    :members:
    :special-members:
 
 Slurm
 -----
 
-.. autoclass:: libsubmit.providers.slurm.slurm.Slurm
+.. autoclass:: libsubmit.providers.SlurmProvider
    :members:
    :special-members:
 
 Cobalt
 ------
 
-.. autoclass:: libsubmit.providers.cobalt.cobalt.Cobalt
+.. autoclass:: libsubmit.providers.CobaltProvider
    :members:
    :special-members:
 
 Condor
 ------
 
-.. autoclass:: libsubmit.providers.condor.condor.Condor
+.. autoclass:: libsubmit.providers.CondorProvider
    :members:
    :special-members:
 
 Torque
 ------
 
-.. autoclass:: libsubmit.providers.torque.torque.Torque
+.. autoclass:: libsubmit.providers.TorqueProvider
    :members:
    :special-members:
 
 GridEngine
 ----------
 
-.. autoclass:: libsubmit.providers.gridEngine.gridEngine.GridEngine
+.. autoclass:: libsubmit.providers.GridEngineProvider
    :members:
    :special-members:
 
@@ -206,7 +206,7 @@ GridEngine
 Amazon Web Services
 -------------------
 
-.. autoclass:: libsubmit.providers.aws.aws.EC2Provider
+.. autoclass:: libsubmit.providers.AWSProvider
    :members:
    :special-members:
 
@@ -214,17 +214,27 @@ Amazon Web Services
 Azure
 -----
 
-.. autoclass:: libsubmit.providers.azure.azureProvider.AzureProvider
+.. autoclass:: libsubmit.providers.AzureProvider
    :members:  __init__, submit, status, cancel
 
-.. autoclass:: libsubmit.providers.azure.azureDeployer.Deployer
+.. autoclass:: libsubmit.providers.azure.deployer.Deployer
    :members: __init__, deploy, destroy
+
 
 Google Cloud Platform
 ---------------------
 
-.. autoclass:: libsubmit.providers.googlecloud.googlecloud.GoogleCloud
-    :members:  __init__, submit, status, cancel, create_instance, get_correct_zone, delete_instance
+.. autoclass:: libsubmit.providers.GoogleCloudProvider
+   :members:  __init__, submit, status, cancel, create_instance, get_correct_zone, delete_instance
+
+
+Kubernetes
+----------
+
+.. autoclass:: libsubmit.providers.KubernetesProvider
+   :members:
+   :special-members:
+
 
 Channels
 ========
@@ -243,21 +253,21 @@ locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
 LocalChannel
 ------------
-.. autoclass:: libsubmit.channels.local.local.LocalChannel
+.. autoclass:: libsubmit.channels.LocalChannel
    :members:
    :special-members:
 
 
 SshChannel
 ----------
-.. autoclass:: libsubmit.channels.ssh.ssh.SshChannel
+.. autoclass:: libsubmit.channels.SSHChannel
    :members:
    :special-members:
 
 
-SshILChannel
-------------
-.. autoclass:: libsubmit.channels.ssh_il.ssh_il.SshILChannel
+SSH Interactive Login Channel
+-----------------------------
+.. autoclass:: libsubmit.channels.SSHInteractiveLoginChannel
    :members:
    :special-members:
 
@@ -269,26 +279,44 @@ Launchers
 Launchers are basically wrappers for user submitted scripts as they are submitted to
 a specific execution resource.
 
-singleNodeLauncher
+SimpleLauncher
+--------------
+
+.. autoclass:: libsubmit.launchers.SimpleLauncher
+   :members:
+
+
+
+SingleNodeLauncher
 ------------------
 
-.. autofunction:: libsubmit.launchers.singleNodeLauncher
+.. autoclass:: libsubmit.launchers.SingleNodeLauncher
+   :members:
 
-srunLauncher
+AprunLauncher
+------------------
+
+.. autoclass:: libsubmit.launchers.AprunLauncher
+   :members:
+
+
+SrunLauncher
 ------------
 
-.. autofunction:: libsubmit.launchers.srunLauncher
+.. autoclass:: libsubmit.launchers.SrunLauncher
+   :members:
 
-srunMpiLauncher
+SrunMPILauncher
 ---------------
 
-.. autofunction:: libsubmit.launchers.srunMpiLauncher
+.. autoclass:: libsubmit.launchers.SrunMPILauncher
+   :members:
 
 
 Flow Control
 ============
 
-This section deals with functionality related to controlling the flow of tasks to various executors. 
+This section deals with functionality related to controlling the flow of tasks to various executors.
 
 FlowControl
 -----------
