@@ -33,6 +33,7 @@ class NullHandler(logging.Handler):
 def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
                   port=443,
                   enable_es_logging=False,
+                  enable_ssl=True,
                   index_name="my_python_index",
                   version='1.0.0',
                   **kwargs):
@@ -65,7 +66,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
 
         handler = CMRESHandler(hosts=[{'host': host,
                                        'port': port}],
-                               use_ssl=True,
+                               use_ssl=enable_ssl,
                                auth_type=CMRESHandler.AuthType.NO_AUTH,
                                es_index_name=index_name,
                                es_additional_fields={
