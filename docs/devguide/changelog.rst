@@ -103,7 +103,27 @@ New functionality
 Bug Fixes
 ^^^^^^^^^
 
+* Making naming conventions consistent `issue#109 <https://github.com/Parsl/parsl/issues/109>`_
+
+* Globus staging returns unclear error bug `issue#178 <https://github.com/Parsl/parsl/issues/178>`_
+
 * Duplicate log-lines when using IPP `issue#204 <https://github.com/Parsl/parsl/issues/204>`_
+
+* Usage tracking with certain missing network causes 20s startup delay. `issue#220 <https://github.com/Parsl/parsl/issues/220>`_
+
+* `task_exit` checkpointing repeatedly truncates checkpoint file during run bug `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
+
+* Checkpoints will not reload from a run that was Ctrl-C'ed `issue#232 <https://github.com/Parsl/parsl/issues/232>`_
+
+* Race condition in task checkpointing `issue#234 <https://github.com/Parsl/parsl/issues/234>`_
+
+* Failures not to be checkpointed `issue#239 <https://github.com/Parsl/parsl/issues/239>`_
+
+* Naming inconsitencies with `maxThreads`, `max_threads`, `max_workers` are now resolved `issue#303 <https://github.com/Parsl/parsl/issues/303>`_
+
+* Fatal not a git repository alerts `issue#326 <https://github.com/Parsl/parsl/issues/326>`_
+
+* Default ``kwargs`` in bash apps unavailable at command-line string format time `issue#349 <https://github.com/Parsl/parsl/issues/349>`_
 
 * Fix launcher class inconsistencies `issue#360 <https://github.com/Parsl/parsl/issues/360>`_
 
@@ -111,24 +131,7 @@ Bug Fixes
      * Fixes faulty status updates
      * Faulty termination of instance at cleanup, leaving zombie nodes.
 
-* Making naming conventions consistent `issue#109 <https://github.com/Parsl/parsl/issues/109>`_
 
-* Making naming conventions consistent `issue#109 <https://github.com/Parsl/parsl/issues/109>`_
-
-* Naming inconsitencies with `maxThreads`, `max_threads`, `max_workers` are now resolved `issue#303 <https://github.com/Parsl/parsl/issues/303>`_
-
-* Default ``kwargs`` in bash apps unavailable at command-line string format time `issue#349 <https://github.com/Parsl/parsl/issues/349>`_
-
-* Failures not to be checkpointed `issue#239 <https://github.com/Parsl/parsl/issues/239>`_
-
-* Fatal not a git repository alerts `issue#326 <https://github.com/Parsl/parsl/issues/326>`_
-
-* Race condition in task checkpointing `issue#234 <https://github.com/Parsl/parsl/issues/234>`_
-
-* Race condition in task checkpointing `issue#234 <https://github.com/Parsl/parsl/issues/234>`_
-*
-
-    
 Parsl 0.5.1
 -----------
 
@@ -152,8 +155,6 @@ Bug Fixes
 
 * Checkpoints will not reload from a run that was Ctrl-C'ed `issue#232 <https://github.com/Parsl/parsl/issues/232>`_
 
-* Checkpoints will not reload from a run that was Ctrl-C'ed `issue#220 <https://github.com/Parsl/parsl/issues/220>`_
-
 * Race condition in task checkpointing `issue#234 <https://github.com/Parsl/parsl/issues/234>`_
 
 * `task_exit` checkpointing repeatedly truncates checkpoint file during run `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
@@ -169,6 +170,18 @@ Bug Fixes
 * Allow `DataFuture` to be initialized with a `str` file object `issue#185 <https://github.com/Parsl/parsl/issues/185>`_
 
 * Error for globus transfer failure `issue#162 <https://github.com/Parsl/parsl/issues/162>`_
+
+
+  Parsl 0.5.2
+-----------
+
+Released. June 21st, 2018.
+This is an emergency release addressing `issue#347 <https://github.com/Parsl/parsl/issues/347>`_
+
+Bug Fixes
+^^^^^^^^^
+
+* Parsl version conflict with libsubmit 0.4.1 `issue#347 <https://github.com/Parsl/parsl/issues/347>`_
 
 
 Parsl 0.5.0
