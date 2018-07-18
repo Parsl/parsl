@@ -78,9 +78,9 @@ Lazy fail
 ---------
 
 .. warning::
-   Disabling lazy_errors with ``lazy_errors=False`` is not recommended in Parsl 0.6.0,
-   due to a known bug (`issue#282 <https://github.com/Parsl/parsl/issues/282>`_).
-   If ``lazy_errors=False`` is set expect unhandled internal failures.
+   Due to a known bug (`issue#282 <https://github.com/Parsl/parsl/issues/282>`_),
+   disabling lazy_errors with ``lazy_errors=False`` is **not** supported in Parsl 0.6.0,
+
 
 While retries address resiliency at the level of ``Apps``, lazy failure adds
 resiliency at the workflow level. When lazy failures are enabled, the workflow does

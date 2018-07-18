@@ -15,7 +15,7 @@ in the :class:`~parsl.config.Config`.
 
 .. code-block:: python
 
-   @app('bash', dfk, cache=True)
+   @app('bash', cache=True)
    def hello (msg, stdout=None):
        return 'echo {}'.format(msg)
 

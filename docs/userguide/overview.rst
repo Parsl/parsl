@@ -24,17 +24,17 @@ A MapReduce job can be simply defined as follows:
     load(config)
 
     # Map function that returns double the input integer
-    @App('python', dfk)
+    @App('python')
     def app_double(x):
         return x*2
 
     # Reduce function that returns the sum of a list
-    @App('python', dfk)
+    @App('python')
     def app_sum(inputs=[]):
         return sum(inputs)
 
     # Create a list of integers
-    items = range(0,N)
+    items = range(0,10)
 
     # Map phase: apply an *app* function to each item in list
     mapped_results = []
