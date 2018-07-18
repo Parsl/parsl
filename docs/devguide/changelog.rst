@@ -1,6 +1,137 @@
 Changelog
 =========
 
+Parsl 0.6.0
+-----------
+
+Pending Release. ``Alpha``
+
+New functionality
+^^^^^^^^^^^^^^^^^
+
+* Switch to class based configuration `issue#133 <https://github.com/Parsl/parsl/issues/133>`_
+
+  Here's a the config for using threads for local execution
+
+  .. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors.threads import ThreadPoolExecutor
+
+    config = Config(executors=[ThreadPoolExecutor()])
+
+  Here's a more complex config that uses SSH to run on a Slurm based cluster
+
+  .. code-block:: python
+
+    from libsubmit.channels import SSHChannel
+    from libsubmit.providers import SlurmProvider
+
+    from parsl.config import Config
+    from parsl.executors.ipp import IPyParallelExecutor
+    from parsl.executors.ipp_controller import Controller
+
+    config = Config(
+        executors=[
+            IPyParallelExecutor(
+                provider=SlurmProvider(
+                    'westmere',
+                    channel=SSHChannel(
+                        hostname='swift.rcc.uchicago.edu',
+                        username=<USERNAME>,
+                        script_dir=<SCRIPTDIR>
+                    ),
+                    init_blocks=1,
+                    min_blocks=1,
+                    max_blocks=2,
+                    nodes_per_block=1,
+                    tasks_per_node=4,
+                    parallelism=0.5,
+                    overrides=<SPECIFY_INSTRUCTIONS_TO_LOAD_PYTHON3>
+                ),
+                label='midway_ipp',
+                controller=Controller(public_ip=<PUBLIC_IP>),
+            )
+        ]
+    )
+
+* Implicit Data Staging `issue#281 <https://github.com/Parsl/parsl/issues/281>`_
+
+  .. code-block:: python
+    # create an remote Parsl file
+    inp = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+
+    # create a local Parsl file
+    out = File('file:///tmp/ARIN-STATS-FORMAT-CHANGE.txt')
+
+    # call the convert app with the Parsl file
+    f = convert(inputs=[inp], outputs=[out])
+    f.result()
+
+* Support for application profiling `issue#5 <https://github.com/Parsl/parsl/issues/5>`_
+
+* Real-time usage tracking via external systems `issue#248 <https://github.com/Parsl/parsl/issues/248>`_, `issue#251 <https://github.com/Parsl/parsl/issues/251>`_
+
+* Several fixes and upgrades to tests and testing infrastructure `issue#157 <https://github.com/Parsl/parsl/issues/157>`_, `issue#159 <https://github.com/Parsl/parsl/issues/159>`_,
+  `issue#128 <https://github.com/Parsl/parsl/issues/128>`_, `issue#192 <https://github.com/Parsl/parsl/issues/192>`_,
+  `issue#196 <https://github.com/Parsl/parsl/issues/196>`_
+
+* Better state reporting in logs `issue#242 <https://github.com/Parsl/parsl/issues/242>`_
+
+* Hide DFK `issue#50 <https://github.com/Parsl/parsl/issues/50>`_
+
+  * Instead of passing a config dictionary to the DataFlowKernel, now you can call ``parsl.load(Config)``
+  * Instead of having to specify the ``dfk`` at the time of ``App`` declaration, the DFK is a singleton loaded
+    at call time :
+
+    .. code-block:: python
+
+        import parsl
+        from parsl.tests.configs.local_ipp import config
+        parsl.load(config)
+
+        @App('python')
+        def double(x):
+            return x * 2
+
+        fut = double(5)
+        fut.result()
+
+* Support for better reporting of remote side exceptions `issue#110 <https://github.com/Parsl/parsl/issues/110>`_
+
+
+Bug Fixes
+^^^^^^^^^
+
+* Making naming conventions consistent `issue#109 <https://github.com/Parsl/parsl/issues/109>`_
+
+* Globus staging returns unclear error bug `issue#178 <https://github.com/Parsl/parsl/issues/178>`_
+
+* Duplicate log-lines when using IPP `issue#204 <https://github.com/Parsl/parsl/issues/204>`_
+
+* Usage tracking with certain missing network causes 20s startup delay. `issue#220 <https://github.com/Parsl/parsl/issues/220>`_
+
+* `task_exit` checkpointing repeatedly truncates checkpoint file during run bug `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
+
+* Checkpoints will not reload from a run that was Ctrl-C'ed `issue#232 <https://github.com/Parsl/parsl/issues/232>`_
+
+* Race condition in task checkpointing `issue#234 <https://github.com/Parsl/parsl/issues/234>`_
+
+* Failures not to be checkpointed `issue#239 <https://github.com/Parsl/parsl/issues/239>`_
+
+* Naming inconsitencies with `maxThreads`, `max_threads`, `max_workers` are now resolved `issue#303 <https://github.com/Parsl/parsl/issues/303>`_
+
+* Fatal not a git repository alerts `issue#326 <https://github.com/Parsl/parsl/issues/326>`_
+
+* Default ``kwargs`` in bash apps unavailable at command-line string format time `issue#349 <https://github.com/Parsl/parsl/issues/349>`_
+
+* Fix launcher class inconsistencies `issue#360 <https://github.com/Parsl/parsl/issues/360>`_
+
+* Several fixes to AWS provider `issue#362 <https://github.com/Parsl/parsl/issues/362>`_
+     * Fixes faulty status updates
+     * Faulty termination of instance at cleanup, leaving zombie nodes.
+
+
 Parsl 0.5.1
 -----------
 
@@ -24,8 +155,6 @@ Bug Fixes
 
 * Checkpoints will not reload from a run that was Ctrl-C'ed `issue#232 <https://github.com/Parsl/parsl/issues/232>`_
 
-* Checkpoints will not reload from a run that was Ctrl-C'ed `issue#220 <https://github.com/Parsl/parsl/issues/220>`_
-
 * Race condition in task checkpointing `issue#234 <https://github.com/Parsl/parsl/issues/234>`_
 
 * `task_exit` checkpointing repeatedly truncates checkpoint file during run `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
@@ -41,6 +170,18 @@ Bug Fixes
 * Allow `DataFuture` to be initialized with a `str` file object `issue#185 <https://github.com/Parsl/parsl/issues/185>`_
 
 * Error for globus transfer failure `issue#162 <https://github.com/Parsl/parsl/issues/162>`_
+
+
+  Parsl 0.5.2
+-----------
+
+Released. June 21st, 2018.
+This is an emergency release addressing `issue#347 <https://github.com/Parsl/parsl/issues/347>`_
+
+Bug Fixes
+^^^^^^^^^
+
+* Parsl version conflict with libsubmit 0.4.1 `issue#347 <https://github.com/Parsl/parsl/issues/347>`_
 
 
 Parsl 0.5.0

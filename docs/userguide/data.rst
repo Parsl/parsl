@@ -16,7 +16,7 @@ The :py:class:`~parsl.data_provider.files.File` class abstracts the file access 
 Local
 ^^^^^
 
-The `file` scheme is used to reference local files.  A file using the local file scheme must specify the absolute file path, for example: 
+The `file` scheme is used to reference local files.  A file using the local file scheme must specify the absolute file path, for example:
 
 .. code-block:: python
 
@@ -42,13 +42,14 @@ The file may then be passed as input or output to an app. Here is an example Par
 FTP, HTTP, HTTPS
 ^^^^^^^^^^^^^^^^
 
-File objects with schemes FTP, HTTP, HTTPS represent a remote files on FTP, HTTP and HTTPS servers, respectively, for example
+File objects with schemes FTP, HTTP, HTTPS represent remote files on FTP, HTTP and HTTPS servers, respectively, for example
 
 .. code-block:: python
 
     File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
 
-When such a file object is passed as an input to an app, Parls will download the file to an executor where the app is scheduled for execution. Here is an example Parl script that implicitly downloads a file from an FTP server and change all text in the file to uppercase:
+When such a file object is passed as an input to an app, Parsl will download the file to the executor where the app is scheduled for execution.
+Here is an example Parsl script that implicitly downloads a file from an FTP server and changes all text in the file to uppercase:
 
 .. code-block:: python
 
@@ -86,14 +87,14 @@ endpoint and a path to the file on the endpoint, for example:
 
         File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
 
-Note: the Globus endpoint UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page. 
+Note: the Globus endpoint UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page.
 
 Like the local file scheme, Globus files may be passed as input or output to a Parsl app. However, in the Globus case, the file object is only an abstract representation of the file on the Globus endpoint and thus the file must be staged to or from the remote executor. The staging is implicit which means that Parls is responsible for transfering the input file from the Globus endpoint to the executor, or transferring the output file from the executor to the Globus endpoint.
-Parsl scripts may combine staging of files in and out of apps. For example, the following script stages a file from a remote Globus endpoint, it then sorts the strings in that file, and stages the sorted output file to another remote endpoint.  
+Parsl scripts may combine staging of files in and out of apps. For example, the following script stages a file from a remote Globus endpoint, it then sorts the strings in that file, and stages the sorted output file to another remote endpoint.
 
 .. code-block:: python
 
-        @App('python', dfk)
+        @App('python')
         def sort_strings(inputs=[], outputs=[]):
             with open(inputs[0], 'r') as u:
                 strs = u.readlines()
@@ -113,7 +114,7 @@ Parsl scripts may combine staging of files in and out of apps. For example, the 
 Configuration
 ^^^^^^^^^^^^^
 
-To inform Parsl where the file is to be transferred to or from (i.e., where the Parsl app is executed), the configuration must specify the `endpoint_name` (the UUID of the Globus endpoint that is associated with the system where the parsl app is executed). 
+To inform Parsl where the file is to be transferred to or from (i.e., where the Parsl app is executed), the configuration must specify the `endpoint_name` (the UUID of the Globus endpoint that is associated with the system where the parsl app is executed).
 
 In order to manage where data is staged users may configure the default `working_dir` on a remote executor. This is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
 
@@ -130,7 +131,7 @@ In order to manage where data is staged users may configure the default `working
             ]
         )
 
-In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus DTN is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the `endpoint_path` (the common root path seen in Globus), and the `local_path` (the common root path on the local file system). In most cases `endpoint_path` and `local_path` are the same. 
+In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus DTN is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the `endpoint_path` (the common root path seen in Globus), and the `local_path` (the common root path on the local file system). In most cases `endpoint_path` and `local_path` are the same.
 
 .. code-block:: python
 

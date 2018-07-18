@@ -21,7 +21,7 @@ There are several key functionalities provided by AppFutures:
 
    .. code-block:: python
 
-       @App('python', dfk)
+       @App('python')
        def double(x):
              return x*2
 
@@ -35,7 +35,7 @@ There are several key functionalities provided by AppFutures:
 
    .. code-block:: python
 
-      @App('python', dfk)
+      @App('python')
       def sleep_double(x):
            import time
            time.sleep(2)   # Sleep for 2 seconds
@@ -51,7 +51,7 @@ There are several key functionalities provided by AppFutures:
 
    .. code-block:: python
 
-      @App('python', dfk)
+      @App('python')
       def bad_divide(x):
           return 6/x
 
@@ -82,7 +82,7 @@ The following example shows how DataFutures are used:
 
       # This app echoes the input string to the first file specified in the
       # outputs list
-      @App('bash', dfk)
+      @App('bash')
       def echo(message, outputs=[]):
           return 'echo %s &> {outputs[0]}' % (message)
 
@@ -95,7 +95,7 @@ The following example shows how DataFutures are used:
       # Print the contents of the output DataFuture when complete
       with open(hello.outputs[0].result(), 'r') as f:
            print(f.read())
-   
+
 
 
 

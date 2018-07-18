@@ -47,6 +47,10 @@ What is sent?
 * Start and end times
 * Parsl exit code
 * Count of executors used
+* Count of failures
+* Parsl, libsubmit, python version info
+* OS and OS version
+
 
 How is the data sent?
 ---------------------

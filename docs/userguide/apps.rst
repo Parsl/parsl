@@ -10,13 +10,13 @@ Python Apps
 -----------
 
 The following code snippet shows a simple Python function used to double the input value (``double(Int)``). This function is defined as a Parsl app using the ``@App`` decorator.
-The first argument to ``@App`` specifies the App type as "python". The second argument ``dfk`` is the Dataflow Kernel which must be configured with appropriate execution resources (e.g., local thread execution).
+The first argument to ``@App`` specifies the App type as "python".
 
 Python apps are *pure* Python functions. As these functions are executed asynchronously, and potentially remotely, it is important to note that they must explicitly import any required modules and act only on defined input arguments (i.e., it cannot include variables used elsewhere in the script).
 
 .. code-block:: python
 
-       @App('python', dfk)
+       @App('python')
        def double(x):
              return x*2
 
@@ -26,7 +26,7 @@ Python apps may also act upon files. In order to make these files known to Parsl
 
 .. code-block:: python
 
-       @App('python', dfk)
+       @App('python')
        def echo(inputs=[], outputs=[]):
              with open(inputs[0], 'r') as in_file, open(outputs[0], 'w') as out_file:
                  out_file.write(in_file.readline())
@@ -42,6 +42,7 @@ There are limitations on what Python functions can be converted to apps:
 2. Functions must explicitly import any required modules.
 3. Functions should not use script-level or global variables.
 4. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python constructs, such as inputs and outputs to functions. Therefore, Python apps can only use inputs and outputs that can be serialized by cloudpickle or pickle.
+5. STDOUT and STDERR produced by python apps remotely are not captured.
 
 Special Keywords Arguments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -51,7 +52,8 @@ Any Parsl app (decorated with the ``@App`` decorator) can use the following spec
 1. inputs : (list) This keyword argument allows you to pass a list of input :ref:`label-futures`, and thus wait on
    the results of these futures to be resolved before execution.
 2. outputs : (list) This keyword argument allows you to explicitly list the output :ref:`label-futures` that
-will be produced by this app. Parsl will track these files and ensure they are correctly created. They can then be passed to other apps as input arguments.
+   will be produced by this app. Parsl will track these files and ensure they are correctly created.
+   They can then be passed to other apps as input arguments.
 
 Returns
 ^^^^^^^
@@ -75,7 +77,7 @@ them in files that are managed by Parsl.
 
 .. code-block:: python
 
-       @App('bash', dfk)
+       @App('bash')
        def echo_hello(stderr='std.err', stdout='std.out'):
            return 'echo "Hello World!"'
 
@@ -104,7 +106,7 @@ to the decorated function. The string that is returned is formatted by the Pytho
 
 .. code-block:: python
 
-       @App('bash', dfk)
+       @App('bash')
        def echo(arg1, inputs=[], stderr='std.err', stdout='std.out'):
            return 'echo %s %s %s' % (arg1, inputs[0], inputs[1])
 

@@ -10,8 +10,7 @@ can configure the file logger to write to an output file.
 
 .. code-block:: python
 
-   from parsl import *
-   import logging
+   import parsl
 
    # Emit log lines to the screen
    parsl.set_stream_logger()
@@ -31,7 +30,7 @@ Parsl Apps include keyword arguments for capturing stderr and stdout in files.
 
 .. code-block:: python
 
-   @app('bash', dfk)
+   @app('bash')
    def hello (msg, stdout=None):
        return 'echo {}'.format(msg)
 
@@ -61,11 +60,11 @@ on which an App should be executed. For example:
 
 .. code-block:: python
 
-     @app('python', dfk, executors=['SuperComputer1'])
+     @app('python', executors=['SuperComputer1'])
      def BigSimulation(...):
          ...
 
-     @app('python', dfk, executors=['GPUMachine'])
+     @app('python', executors=['GPUMachine'])
      def Visualize (...)
          ...
 
@@ -74,17 +73,17 @@ Workers do not connect back to Parsl
 
 If you are running via ssh to a remote system from your local machine, or from the
 login node of a cluster/supercomputer, it is necessary to have a public IP to which
-the workers can connect back. While our pilot job system, ipyparallel, 
+the workers can connect back. While our pilot job system, ipyparallel,
 can identify the IP address automatically on certain systems,
 it is safer to specify the address explicitly.
 
 To specify the address in the :class:`~parsl.config.Config` (note this is an example
-using the :class:`libsubmit.providers.cobalt.cobalt.Cobalt`; any other provider could
+using the :class:`libsubmit.providers.Cobalt`; any other provider could
 be substituted below):
 
 .. code-block:: python
 
-    from libsubmit.providers.cobalt.cobalt import Cobalt
+    from libsubmit.providers import Cobalt
     from parsl.config import Config
     from parsl.executors.ipp import IPyParallelExecutor
     from parsl.executors.ipp_controller import Controller
@@ -132,7 +131,7 @@ For instance, with conda, follow this `cheatsheet <https://conda.io/docs/_downlo
 .. code-block:: bash
 
    # Activate an environmentconda install
-   source active <my_env>
+   source activate <my_env>
 
    # Install packages:
    conda install <ipyparallel, dill, boto3...>
@@ -173,7 +172,7 @@ Here's an example of running a python2.7 code as a bash application:
 
 .. code-block:: python
 
-   @app('bash', dfk)
+   @app('bash')
    def python_27_app (arg1, arg2 ...):
        return '''conda activate py2.7_env  # Use conda to ensure right env
        python2.7 my_python_app.py -arg {0} -d {1}
@@ -205,7 +204,7 @@ There are a few common situations in which a Parsl script might hang:
 
      .. code-block:: python
 
-        from libsubmit.providers.cobalt.cobalt import Cobalt
+        from libsubmit.providers import Cobalt
         from parsl.config import Config
         from parsl.executors.ipp import IPyParallelExecutor
         from parsl.executors.ipp_controller import Controller
@@ -228,7 +227,7 @@ See instructions `here <https://techtalktone.wordpress.com/2017/03/28/running-ju
 How can I sync my conda environment and Jupyter environment?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Run:: 
+Run::
 
    conda install nb_conda
 
