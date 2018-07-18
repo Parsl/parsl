@@ -19,14 +19,19 @@ Core Functionality
     * **libsubmit (to be renamed) provides this functionality.**
     * **A shared filesystem is assumed; data staging (of files) is not yet supported.**
 * **The Data Flow Kernel (DFK) schedules Parsl task execution (based on dataflow).**
+* **Class-based config definition (v0.6.0)**
+* **Singleton config, and separate DFK from app definitions (v0.6.0)**
+* Class-based app definition
 
 Data management
 ---------------
 
 * **File abstraction to support representation of local and remote files.**
-* Support for a variety of common data access protocols (e.g., **local**, HTTP, **Globus(v0.5.0)**).
-* Input/output staging models that support transparent movement of data from source to a location on which it is accessible for compute. This includes staging to/from the client (script execution location), service (pilot job controller location), and worker node.
-* Support for creation of a sandbox and execution within this environment for systems without a shared file system, to isolate data and simplify script code. Sandbox execution can optionally be turned off in extreme scale environments.
+* **Support for a variety of common data access protocols (e.g., FTP, HTTP, Globus) (v0.6.0)**.
+* **Input/output staging models that support transparent movement of data from source to a location on which it is accessible for compute. This includes staging to/from the client (script execution location) and worker node (v0.6.0)**.
+* Support for creation of a sandbox and execution within the sandbox.
+* Multi-site support including transparent movement between sites.
+* Support for systems without a shared file system (point-to-point staging).
 * Support for data caching at multiple levels and across sites.
 
 .. todo::
@@ -36,14 +41,15 @@ Data management
 Execution core and parallelism (DFK)
 ------------------------------------
 
-* **Support for application and data futures within scripts**
-* **Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution ordered by data dependencies and throttled by resource limits**
-* Well defined state transition model for task lifecycle
+* **Support for application and data futures within scripts.**
+* **Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution ordered by data dependencies and throttled by resource limits.**
+* **Well-defined state transition model for task lifecycle. (v0.5.0)**
+* Add data staging to task state transition model.
 * More efficient algorithms for managing dependency resolution.
-* Scheduling and allocation algorithms that determine job placement based on **job** and data requirements (including deadlines) as well as **site capabilities**
-* **Logic to manage (provision, resize) execution resource block based on job requirements, and fitting tasks into the resource blocks (v0.4.0)**
+* Scheduling and allocation algorithms that determine job placement based on job and data requirements (including deadlines) as well as site capabilities.
+* **Directing jobs to a specific set of sites.(v0.4.0)**
+* **Logic to manage (provision, resize) execution resource block based on job requirements, and running multiple tasks per resource block (v0.4.0).**
 * **Retry logic to support recovery and fault tolerance**
-    - **This can be done by the user now with Exception handling**
 * **Workflow level checkpointing and restart (v0.4.0)**
 
 Resource provisioning and execution
@@ -52,29 +58,34 @@ Resource provisioning and execution
 * **Uniform abstraction for execution resources (to support resource provisioning, job submission, allocation management) on cluster, cloud, and supercomputing resources**
 * **Support for different execution models on any execution provider (e.g., pilot jobs using Ipython parallel on clusters and extreme-scale execution using Swift/T on supercomputers)**
     * **Slurm**
-    * **Condor**
+    * **HTCondor**
     * **Cobalt**
+    * **GridEngine**
     * **PBS/Torque**
     * **AWS**
-    * **Azure**
+    * **GoogleCloud**
+    * Azure
     * **Nova/OpenStack/Jetstream (partial support)**
+    * **Kubernetes (v0.6.0)**
 * **Support for launcher mechanisms**
     * **srun**
-    * **aprun (Partial support on Crays and Theta as of 0.4.0)**
+    * **aprun (Complete support 0.6.0)**    
     * Various MPI launch mechanisms (Mpiexec, mpirun..)
 * Support for remote execution using **SSH** and OAuth-based authentication (SSH execution support added in 0.3.0)
 * **Utilizing multiple sites for a single script’s execution (v0.4.0)**
 * Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
-* API/method for {adding entries to, viewing entries} in repository
 * IPP workers to support multiple threads of execution per node.
+* Smarter serialization with caching frequently used objects.
 * **Support for user-defined containers as Parsl apps and orchestration of workflows comprised of containers (v0.5.0)**
-
-
+    * **Docker (locally)**
+    * Shifter (NERSC, Blue Waters)
+    * Singularity (ALCF)
+    
 Visualization, debugging, fault tolerance
 -----------------------------------------
 
-* **Support for exception handling**
-* Interface for accessing real-time state and audit logs
+* **Support for exception handling**.
+* **Interface for accessing real-time state (v0.6.0)**.
 * Visualization library that enables users to introspect graph, task, and data dependencies, as well as observe state of executed/executing tasks
 * Integration of visualization into jupyter
 * Support for visualizing dead/dying parts of the task graph and retrying with updates to the task.
@@ -84,9 +95,9 @@ Visualization, debugging, fault tolerance
 Authentication and authorization
 --------------------------------
 
-* Seamless authentication using OAuth-based methods within Parsl scripts (e.g., native app grants)
-* Support for arbitrary identity providers and pass through to execution resources (including 2FA)
-* Support for transparent/scoped access to external services (e.g., Globus transfer)
+* **Seamless authentication using OAuth-based methods within Parsl scripts (e.g., native app grants) (v0.6.0)**
+* Support for arbitrary identity providers and pass through to execution resources
+* Support for transparent/scoped access to external services **(e.g., Globus transfer) (v0.6.0)**
 
 Ecosystem
 ---------
@@ -100,10 +111,10 @@ Ecosystem
 Documentation / Tutorials:
 --------------------------
 
-* Documentation about Parsl and its features
-* Documentation about supported sites and how to use them
-* Self-guided Jupyter notebook tutorials on Parsl features
-* Hands-on tutorial suitable for webinars and meetings
+* **Documentation about Parsl and its features**
+* **Documentation about supported sites (v0.6.0)**
+* **Self-guided Jupyter notebook tutorials on Parsl features**
+* **Hands-on tutorial suitable for webinars and meetings**
 
 
 
