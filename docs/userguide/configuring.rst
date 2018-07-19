@@ -77,6 +77,58 @@ to launch workers on the machine
 .. literalinclude:: ../../parsl/tests/configs/swan_ipp_multinode.py
 
 
+CC-IN2P3
+--------
+
+.. image:: https://cc.in2p3.fr/wp-content/uploads/2017/03/bandeau_accueil.jpg
+
+The snippet below shows an example configuration for executing from a login node on IN2P3's Computing Centre.
+The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
+This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
+
+.. literalinclude:: ../../parsl/tests/configs/cc_in2p3_local_single_node.py
+
+Midway (RCC, UChicago)
+----------------------
+
+.. image:: https://rcc.uchicago.edu/sites/rcc.uchicago.edu/files/styles/slideshow-image/public/uploads/images/slideshows/20140430_RCC_8978.jpg?itok=BmRuJ-wq
+
+This Midway cluster is a campus cluster hosted by the Research Computing Center at the University of Chicago.
+The snippet below shows an example configuration for executing remotely on Midway.
+The configuration uses the `SSHProvider` to connect remotely to Midway, uses the `SlurmProvider` to interface
+with the scheduler, and uses the `SrunProvider` to launch workers.
+
+.. literalinclude:: ../../parsl/tests/configs/midway_ipp_multinode.py
+
+
+Open Science Grid
+-----------------
+
+.. image:: https://hcc-docs.unl.edu/download/attachments/11635314/Screen%20Shot%202013-03-19%20at%202.19.28%20PM.png?version=1&modificationDate=1492720049000&api=v2
+
+The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
+The snippet below shows an example configuration for executing remotely on OSG.
+The configuration uses the `SSHProvider` to connect remotely to OSG, uses the `CondorProvider` to interface
+with the scheduler.
+
+.. literalinclude:: ../../parsl/tests/configs/osg_ipp_multinode.py
+
+Amazon Web Services
+-------------------
+
+.. image:: ./aws_image.png
+
+.. note::
+   Please note that `boto3` library is a requirement to use AWS with Parsl.
+   This can be installed via `python3 -m pip install libsubmit+aws`
+
+Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
+The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud(EC2) service.
+The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
+re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
+
+.. literalinclude:: ../../parsl/tests/configs/ec2_single_node.py
+
 
 Further help
 ------------
