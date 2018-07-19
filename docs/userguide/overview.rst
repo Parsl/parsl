@@ -5,13 +5,13 @@ Parsl is designed to enable the straightforward orchestration of asynchronous ta
 
 Developing a workflow is a two-step process:
 
-1. Annotate functions that can be executed in parallel as Parsl ``Apps``.
+1. Annotate functions that can be executed in parallel as Parsl apps.
 2. Specify dependencies between functions using standard Python code.
 
-In Parsl, the execution of an ``App`` yields `futures <https://en.wikipedia.org/wiki/Futures_and_promises>`_.
-These futures can be passed to other ``Apps`` as inputs, establishing a dependency. These dependencies are assembled  implicitly into `directed acyclic graphs <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_,
-although these are never explicitly expressed. It is important to note that this graph is dynamically built and then update while the Parsl script executes. That is, the graph is not computed in advanced and is only complete when the script finishes executing.
-``Apps`` that have all their dependencies met are slated for execution (in parallel).
+In Parsl, the execution of an app yields `futures <https://en.wikipedia.org/wiki/Futures_and_promises>`_.
+These futures can be passed to other apps as inputs, establishing a dependency. These dependencies are assembled  implicitly into `directed acyclic graphs <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_,
+although these are never explicitly expressed. It is important to note that this graph is dynamically built and then updated while the Parsl script executes. That is, the graph is not computed in advanced and is only complete when the script finishes executing.
+Apps that have all their dependencies met are slated for execution (in parallel).
 This allows Parsl to exploit all parallelism to the fullest extent and at the granularity expressed by the user.
 
 
@@ -19,17 +19,17 @@ A MapReduce job can be simply defined as follows:
 
 .. code-block:: python
 
-    from parsl import App, load
+    from parsl import python_app, load
     from parsl.configs.local_threads import config
     load(config)
 
     # Map function that returns double the input integer
-    @App('python')
+    @python_app
     def app_double(x):
         return x*2
 
     # Reduce function that returns the sum of a list
-    @App('python')
+    @python_app
     def app_sum(inputs=[]):
         return sum(inputs)
 
