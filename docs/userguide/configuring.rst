@@ -15,41 +15,68 @@ Parsl workflows are developed completely independently from their execution envi
       )
       parsl.load(config)
 
+.. contents:: Example Site Configurations
 
-Example
--------
+.. note::
+   Please note that all configuration examples below import a `user_opts` file where all user specific
+   options are defined. To use the configuration, these options **must** be defined either by creating
+   a user_opts file, or explicitly edit the configuration with user specific information.
 
-The following shows an example configuration for accessing NERSC's Cori supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
+Comet (SDSC)
+------------
 
-.. code-block :: python
+.. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
-    from libsubmit.providers.slurm.slurm import Slurm
-    from libsubmit.channels.ssh.ssh import SSHChannel
-    from parsl.config import Config
-    from parsl.executors.ipp import IPyParallelExecutor
+The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
-    config = Config(
-        executors=[
-            IPyParallelExecutor(
-                label='cori_ipp_single_node',
-                provider=Slurm(
-                    'debug',
-                    channel=SSHChannel(
-                        username='username',
-                        hostname='cori.nersc.gov',
-                        script_dir='/global/homes/y/username/parsl_scripts'
-                    )
-                    nodes_per_block=2,
-                    tasks_per_node=1,
-                    init_blocks=1,
-                    max_blocks=1,
-                    walltime="00:10:00",
-                    overrides="module load python/3.5-anaconda; source activate /global/homes/y/yadunand/.conda/envs/parsl_env_3.5"
-                )
-            )
+.. literalinclude:: ../../parsl/tests/configs/comet_ipp_multinode.py
 
-        ]
-    )
+
+Cori (NERSC)
+------------
+
+.. image:: https://6lli539m39y3hpkelqsm3c2fg-wpengine.netdna-ssl.com/wp-content/uploads/2017/08/Cori-NERSC.png
+
+The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
+
+.. literalinclude:: ../../parsl/tests/configs/cori_ipp_multinode.py
+
+
+Theta (ALCF)
+------------
+
+.. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
+
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's **Theta** supercomputer.
+This example uses the `IPythonParallel` executor and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
+assumes that the script is being executed on the login nodes of Theta.
+
+.. literalinclude:: ../../parsl/tests/configs/theta_local_ipp_multinode.py
+
+
+Cooley (ALCF)
+------------
+
+.. image:: https://today.anl.gov/wp-content/uploads/sites/44/2015/06/Cray-Cooley.jpg
+
+The following snippet shows an example configuration for executing remotely on Argonne Leadership Computing Facility's **Cooley** analysis and visualization system.
+The example uses an `SSHInteractiveLoginChannel` to connect remotely to Cooley using ALCF's 2FA token.
+The configuration uses the `CobaltProvider` to interface with the Cooleys' scheduler.
+
+.. literalinclude:: ../../parsl/tests/configs/cooley_ssh_il_single_node.py
+
+Swan (Cray)
+-----------
+
+.. image:: https://www.cray.com/blog/wp-content/uploads/2016/11/XC50-feat-blog.jpg
+
+The following snippet shows an example configuration for executing remotely on Swan, an XC50 machine hosted by the Cray Partner Network.
+The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
+to launch workers on the machine
+
+.. literalinclude:: ../../parsl/tests/configs/swan_ipp_multinode.py
+
+
 
 Further help
 ------------
