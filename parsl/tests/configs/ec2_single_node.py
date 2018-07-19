@@ -22,7 +22,7 @@ from parsl.tests.utils import get_rundir
 config = Config(
     executors=[
         IPyParallelExecutor(
-            label='ec2_bad_spot',
+            label='ec2_single_node',
             provider=AWSProvider(
                 user_opts['ec2']['image_id'],
                 region=user_opts['ec2']['region'],

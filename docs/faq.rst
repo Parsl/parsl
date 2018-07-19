@@ -100,6 +100,26 @@ be substituted below):
 
 .. _pyversion:
 
+parsl.dataflow.error.ConfigurationError
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Parsl configuration model underwent a major and non-backward compatible change in the transition to v0.6.0.
+Prior to v0.6.0 the configuration object was a python dictionary with nested dictionaries and lists.
+The switch to a class based configuration allowed for well-defined options for each specific component being
+configured as well as transparency on configuration defaults. The following traceback indicates that the old
+style configuration was passed to Parsl v0.6.0+ and requires an upgrade to the configuration.
+
+.. code-block:: python
+
+   File "/home/yadu/src/parsl/parsl/dataflow/dflow.py", line 70, in __init__
+       'Expected `Config` class, received dictionary. For help, '
+   parsl.dataflow.error.ConfigurationError: Expected `Config` class, received dictionary. For help,
+   see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html
+
+For more information on how to update your configuration script, please refer to our configuration guide
+:ref:`here <configuration_section>`.
+
+   
 Remote execution fails with SystemError(unknown opcode)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
