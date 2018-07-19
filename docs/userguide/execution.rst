@@ -2,21 +2,21 @@ Execution
 =========
 
 Parsl is designed to support arbitrary execution providers (e.g., PCs, clusters, supercomputers) as well as arbitrary execution models (e.g., threads, pilot jobs, etc.). That is, Parsl scripts are independent of execution provider or executor. Instead, the configuration used to run the script tells Parsl how to execute apps on the desired environment.
-Parsl provides a high level abstraction, called a *Block*, for providing a uniform description of a resource configuration for a particular app or script.
+Parsl provides a high level abstraction, called a *block*, for providing a uniform description of a resource configuration for a particular app or script.
 
 
-Execution Providers
+Execution providers
 -------------------
 
 Execution providers are responsible for managing execution resources. In the simplest case the local computer is used and parallel tasks are forked to individual threads. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, Condor and Cobalt. Clouds, on the other hand, provide APIs that allow more fine-grained composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
 
 Parsl's execution interface is called ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_.)--a Python library that provides a common interface to execution providers.
-Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor LRMs. New execution providers can be easily added by implementing Libsubmit's execution provider interface.
+Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor. New execution providers can be easily added by implementing Libsubmit's execution provider interface.
 
 Executors
 ---------
 
-Depending on the execution provider there are a number of ways to then submit workload to that resource. For example, for local execution threads or pilot jobs may be used, for supercomputing resources pilot jobs, various launchers, or even a distributed execution model such as that provided by Swift/T may be used. Parsl supports these models via an *executor* model.
+Depending on the execution provider there are a number of ways to submit workloads to that resource. For example, for local execution threads or pilot jobs may be used, for supercomputing resources pilot jobs, various launchers, or even a distributed execution model such as that provided by Swift/T may be used. Parsl supports these models via an *executor* model.
 Executors represent a particular method via which tasks can be executed. As described below, an executor initialized with an execution provider can dynamically scale with the resources requirements of the workflow.
 
 Parsl currently supports the following executors:
@@ -36,7 +36,7 @@ Providing a uniform representation of heterogeneous resources
 is one of the most difficult challenges for parallel execution.
 Parsl provides an abstraction based on resource units called *blocks*.
 A block is a single unit of resources that is obtained from an execution provider.
-Within a block are a number of nodes. Parsl can then create *Tasks*
+Within a block are a number of nodes. Parsl can then create *tasks*
 within and across (e.g., for MPI jobs) nodes.
 A Task is a virtual suballocation in which individual tasks can be launched.
 Three different examples of block configurations are shown below.
@@ -108,7 +108,7 @@ The configuration options for specifying elasticity bounds are:
 
 The configuaration options for specifying the shape of each block are:
 
-1. ``tasks_per_node``: Number of tasks that can execute per node, corresponds to workers started per node.
+1. ``tasks_per_node``: Number of tasks that can execute per node, which corresponds to workers started per node.
 2. ``nodes_per_block``: Number of nodes requested per block.
 
 Parallelism
@@ -131,15 +131,15 @@ For example:
 .. code:: python
 
     if active_tasks == 0:
-        blocks = minBlocks
+        blocks = min_blocks
     else:
-        blocks = max(minBlocks, 1)
+        blocks = max(min_blocks, 1)
 
 - When p = 1: Use as many resources as possible. One task is stacked per Task.
 
 .. code-block:: python
 
-     blocks = min(maxBlocks,
+     blocks = min(max_blocks,
                    ceil(active_tasks / Tasks))
 
 - When p = 1/2: Stack up to 2 tasks per Task before overflowing and requesting a new block.
@@ -215,19 +215,19 @@ Here's a code snippet that shows how executors can be specified in the ``App`` d
 
 .. code-block:: python
 
-     #(CPU Heavy app) (CPU Heavy app) (CPU Heavy app) <--- Run on compute queue
+     #(CPU heavy app) (CPU heavy app) (CPU heavy app) <--- Run on compute queue
      #      |                |               |
      #    (data)           (data)          (data)
      #       \               |              /
-     #       (Analysis & Visualization phase)         <--- Run on GPU node
+     #       (Analysis and visualization phase)         <--- Run on GPU node
 
-     # A mock Molecular Dynamics simulation app
-     @App('bash', dfk, executors=["Theta.Phi"])
+     # A mock molecular dynamics simulation app
+     @bash_app(executors=["Theta.Phi"])
      def MD_Sim(arg, outputs=[]):
          return "MD_simulate {} -o {}".format(arg, outputs[0])
 
      # Visualize results from the mock MD simulation app
-     @App('bash', dfk, executors=["Cooley.GPU"])
-     def Visualize(inputs=[], outputs=[]):
+     @bash_app(executors=["Cooley.GPU"])
+     def visualize(inputs=[], outputs=[]):
          bash_array = " ".join(inputs)
          return "viz {} -o {}".format(bash_array, outputs[0])

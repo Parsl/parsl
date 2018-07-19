@@ -8,9 +8,9 @@ with incremental changes over and over. Often large fragments of
 a workflow will not have changed, yet apps will be executed again, wasting
 valuable developer time and computation resources. App caching
 solves this problem by storing results from apps that have completed
-so that they can be re-used. App caching can be enabled by setting the `cache`
-argument to the :func:`~parsl.app.app` decorator to `True` (by default it is `False`). App caching
-can be globally disabled by setting `app_cache=False` (which by default is `True`)
+so that they can be re-used. App caching can be enabled by setting the ``cache``
+argument to the :func:`~parsl.app.app` decorator to ``True`` (by default it is ``False``). App caching
+can be globally disabled by setting ``app_cache=False`` (which by default is ``True``)
 in the :class:`~parsl.config.Config`.
 
 .. code-block:: python

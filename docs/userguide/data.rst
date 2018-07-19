@@ -26,7 +26,7 @@ The file may then be passed as input or output to an app. Here is an example Par
 
 .. code-block:: python
 
-    @App('bash')
+    @bash_app
     def cat(inputs=[], stdout='stdout.txt'):
          return 'cat %s' % (inputs[0])
 
@@ -89,12 +89,12 @@ endpoint and a path to the file on the endpoint, for example:
 
 Note: the Globus endpoint UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page.
 
-Like the local file scheme, Globus files may be passed as input or output to a Parsl app. However, in the Globus case, the file object is only an abstract representation of the file on the Globus endpoint and thus the file must be staged to or from the remote executor. The staging is implicit which means that Parls is responsible for transfering the input file from the Globus endpoint to the executor, or transferring the output file from the executor to the Globus endpoint.
+Like the local file scheme, Globus files may be passed as input or output to a Parsl app. However, in the Globus case, the file object is only an abstract representation of the file on the Globus endpoint and thus the file must be staged to or from the remote executor. The staging is implicit which means that Parsl is responsible for transferring the input file from the Globus endpoint to the executor, or transferring the output file from the executor to the Globus endpoint.
 Parsl scripts may combine staging of files in and out of apps. For example, the following script stages a file from a remote Globus endpoint, it then sorts the strings in that file, and stages the sorted output file to another remote endpoint.
 
 .. code-block:: python
 
-        @App('python')
+        @python_app
         def sort_strings(inputs=[], outputs=[]):
             with open(inputs[0], 'r') as u:
                 strs = u.readlines()
