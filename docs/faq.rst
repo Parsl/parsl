@@ -4,7 +4,7 @@ FAQ
 How can I debug a Parsl script?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Parsl interfaces with the Python logger. To enable logging of parsl's
+Parsl interfaces with the Python logger. To enable logging of Parsl's
 progress to stdout, turn on the logger as follows. Alternatively, you
 can configure the file logger to write to an output file.
 
@@ -23,15 +23,15 @@ can configure the file logger to write to an output file.
    Follow instructions below for application logs.
 
 
-How can I view outputs and errors from Apps?
+How can I view outputs and errors from apps?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Parsl Apps include keyword arguments for capturing stderr and stdout in files.
+Parsl apps include keyword arguments for capturing stderr and stdout in files.
 
 .. code-block:: python
 
-   @app('bash')
-   def hello (msg, stdout=None):
+   @bash_app
+   def hello(msg, stdout=None):
        return 'echo {}'.format(msg)
 
    # When hello() runs the STDOUT will be written to 'hello.txt'
@@ -45,14 +45,14 @@ or as a list of futures via the special keyword `inputs=[]`.
 The App will wait for all inputs to be satisfied before execution.
 
 
-Can I pass any Python object between Apps?
+Can I pass any Python object between apps?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-No. Unfortunately, only `picklable <https://docs.python.org/3/library/pickle.html#what-can-be-pickled-and-unpickled>`_ objects can be passed between Apps.
+No. Unfortunately, only `picklable <https://docs.python.org/3/library/pickle.html#what-can-be-pickled-and-unpickled>`_ objects can be passed between apps.
 For objects that can't be pickled, it is recommended to use object specific methods
-to write the object into a file and use files to communicate between Apps.
+to write the object into a file and use files to communicate between apps.
 
-How do I specify where Apps should be run?
+How do I specify where apps should be run?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Parsl's multi-executor support allows you to define the executor (including local threads)
@@ -60,11 +60,11 @@ on which an App should be executed. For example:
 
 .. code-block:: python
 
-     @app('python', executors=['SuperComputer1'])
+     @python_app(executors=['SuperComputer1'])
      def BigSimulation(...):
          ...
 
-     @app('python', executors=['GPUMachine'])
+     @python_app(executors=['GPUMachine'])
      def Visualize (...)
          ...
 
@@ -188,11 +188,11 @@ python apps is that all the inputs and outputs including the function
 would be mangled when being transmitted between python interpreters with
 different version numbers (also see :ref:`pyversion`)
 
-Here's an example of running a python2.7 code as a bash application:
+Here is an example of running a python2.7 code as a bash application:
 
 .. code-block:: python
 
-   @app('bash')
+   @bash_app
    def python_27_app (arg1, arg2 ...):
        return '''conda activate py2.7_env  # Use conda to ensure right env
        python2.7 my_python_app.py -arg {0} -d {1}
