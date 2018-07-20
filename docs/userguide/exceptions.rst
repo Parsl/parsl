@@ -9,20 +9,20 @@ and robustness to workflows.
 Exceptions
 ----------
 
-Apps fail in remote settings due to a variety of reasons. To handle errors
+Apps fail in remote settings for a variety of reasons. To handle errors
 Parsl captures, tracks, and provides functionality to appropriately respond to failures during
-workflow execution. A specific executing instance of an App is called a **task**.
+workflow execution. A specific executing instance of an App is called a *task*.
 If a task is unable to complete execution within specified time limits and produce
 the specified set of outputs it is considered to have failed.
 
 Failures might occur to one or more of the following reasons:
 
-1. Task exceed specified walltime.
-2. Formatting error while formatting the command-line string in ``Bash Apps``
+1. Task exceeded specified walltime.
+2. Formatting error while formatting the command-line string in Bash apps
 3. Task failed during execution
 4. Task completed execution but failed to produce one or more of its specified
    outputs.
-5. The App failed to launch, for example if an input dependency is not met.
+5. The app failed to launch, for example if an input dependency is not met.
 
 
 Since Parsl tasks are executed asynchronously, we are faced with the issue of
@@ -32,9 +32,9 @@ of a failed task. For example:
 
 .. code-block:: python
 
-      @App('python')
+      @python_app
       def bad_divide(x):
-          return 6/x
+          return 6 / x
 
       # Call bad divide with 0, to cause a divide by zero exception
       doubled_x = bad_divide(0)
@@ -43,29 +43,28 @@ of a failed task. For example:
       try:
            doubled_x.result()
       except ZeroDivisionError as e:
-           print('Oops! You tried to divide by 0 ')
-      except Exception ase:
-           print('Oops! Something really bad happened')
+           print('Oops! You tried to divide by 0.')
+      except Exception as e:
+           print('Oops! Something really bad happened.')
 
 
 Retries
 -------
 
 Retries are one of the simplest and most frequently used methods to add resiliency
-to ``App`` failures. By retrying failed apps, transient failures (eg. machine failure,
+to app failures. By retrying failed apps, transient failures (eg. machine failure,
 network failure) and intermittent failures within applications can be addressed.
-When ``retries`` are enabled (set to integer > 0), parsl will automatically
+When ``retries`` are enabled (set to integer > 0), Parsl will automatically
 re-launch applications that have failed, until the retry limit is reached.
-This feature will be available starting in Parsl `v0.5.0`.
 
 By default ``retries = 0``. Retries can be enabled by setting ``retries`` in the
-Config object specified to parsl.
+``Config`` object specified to Parsl.
 
 Here is an example of setting retries via the config:
 
 .. code-block:: python
 
-   from parsl import App, load
+   from parsl import load
    from parsl.tests.configs.local_threads import config
    config.retries = 2
 
@@ -79,10 +78,10 @@ Lazy fail
 
 .. warning::
    Due to a known bug (`issue#282 <https://github.com/Parsl/parsl/issues/282>`_),
-   disabling lazy_errors with ``lazy_errors=False`` is **not** supported in Parsl 0.6.0,
+   disabling lazy_errors with ``lazy_errors=False`` is **not** supported in Parsl 0.6.0.
 
 
-While retries address resiliency at the level of ``Apps``, lazy failure adds
+While retries address resiliency at the level of apps, lazy failure adds
 resiliency at the workflow level. When lazy failures are enabled, the workflow does
 not halt as soon as it encounters a failure, but continues execution of every
 app that is unaffected. Lazy failures is the default behavior in Parsl, with the
