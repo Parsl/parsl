@@ -11,7 +11,7 @@ Exceptions
 
 Apps fail in remote settings for a variety of reasons. To handle errors
 Parsl captures, tracks, and provides functionality to appropriately respond to failures during
-workflow execution. A specific executing instance of an App is called a *task*.
+workflow execution. A specific executing instance of an app is called a *task*.
 If a task is unable to complete execution within specified time limits and produce
 the specified set of outputs it is considered to have failed.
 

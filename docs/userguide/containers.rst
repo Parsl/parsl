@@ -1,12 +1,12 @@
-Container Support
+Container support
 =================
 
 There are two broad models for app execution with containers:
 
-1. Workers are launched inside containers; a single container can be re-used for several ``Apps``.
-2. Each ``App`` is launched inside a fresh container.
+1. Workers are launched inside containers; a single container can be re-used for several apps.
+2. Each app is launched inside a fresh container.
 
-This document describes the first case. In this model, the ``Apps`` are executed on a worker that is launched within a container.
+This document describes the first case. In this model, the apps are executed on a worker that is launched within a container.
 For simplicity we focus on `Docker <https://docs.docker.com/>`_ although the same methods can be extended
 to supported other container systems such as `Singularity <http://singularity.lbl.gov/>`_,
 `Shifter <https://www.nersc.gov/research-and-development/user-defined-images/>`_ etc.
@@ -19,7 +19,7 @@ Docker
 ------
 
 The following section describes creating a pool of containers, each with a worker
-that executes specific ``Apps``. Most of the immediately following sections can be skimmed
+that executes specific apps. Most of the immediately following sections can be skimmed
 if you have experience working with containers.
 
 Installing Docker
@@ -42,7 +42,7 @@ Once installed make sure that Docker is installed:
    docker run hello-world
 
 
-Creating an Image
+Creating an image
 ^^^^^^^^^^^^^^^^^
 
 Please note that the following instructions are tested on Ubuntu 16.04. If you are on a different
@@ -125,29 +125,29 @@ Parsl Config
 ^^^^^^^^^^^^
 
 Now that we have a Docker image available locally, we will create an ``executor`` that
-uses such an image to launch containers. ``Apps`` will execute in this environment.
+uses such an image to launch containers. Apps will execute in this environment.
 
 Here is a Parsl configuration using one of the Docker images created in the previous section.
 
 .. code-block:: python
 
-from parsl.config import Config
-from parsl.executors.ipp import IPyParallelExecutor
-from libsubmit.providers.local.local import Local
+    from parsl.config import Config
+    from parsl.executors.ipp import IPyParallelExecutor
+    from libsubmit.providers.local.local import Local
 
-config = Config(
-    executors=[
-        IPyParallelExecutor(
-            label='pool_app1',
-            container_image='app1_v0.1'
-            provider=Local(init_blocks=2)
-        )
-    ],
-    lazy_errors=True
-)
+    config = Config(
+        executors=[
+            IPyParallelExecutor(
+                label='pool_app1',
+                container_image='app1_v0.1'
+                provider=Local(init_blocks=2)
+            )
+        ],
+        lazy_errors=True
+    )
 
 For workflows with multiple apps which require different docker images, a new executor should be
-created for each of the images that will be used. In the Parsl workflow definition the ``App``
+created for each of the images that will be used. In the Parsl workflow definition the app
 decorator can then be tagged with the ``executors`` keyword argument to ensure that apps execute
 on the specific executors with the right container image.
 
@@ -197,7 +197,7 @@ The application codes ``app1.py`` and ``app2.py`` in our example Docker images, 
 contain a simple python function ``predict()`` that takes a list of numbers (floats/ints) applies
 a simple arithmetic operation and returns a corresponding list.
 
-Here's the contents of ``app1.py``:
+Here is the contents of ``app1.py``:
 
 .. code-block:: python
 
@@ -210,7 +210,7 @@ that specifies the right container image ``app1_v0.1`` is below :
 
 .. code-block:: python
 
-    @App('python', dfk, executors=['pool_app1'], cache=True)
+    @python_app(executors=['pool_app1'], cache=True)
     def app_1(data):
         import app1
         return app1.predict(data)

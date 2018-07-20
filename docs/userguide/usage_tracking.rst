@@ -1,6 +1,6 @@
 .. _label-usage-tracking:
 
-Usage Statistics Collection
+Usage statistics collection
 ===========================
 
 Parsl sends usage statistics back to the Parsl development team to measure worldwide usage and and improve
@@ -33,7 +33,7 @@ of providing generic information. To keep the cost low, we need to require zero 
 By not opting out, and allowing these statistics to be reported back, you are explicitly supporting the
 further development of Parsl.
 
-If you must opt out of usage reporting, set ``PARSL_TRACKING=false`` in your environment.
+If you wish to opt out of usage reporting, set ``PARSL_TRACKING=false`` in your environment.
 
 
 .. _what-is-sent:
@@ -46,9 +46,9 @@ What is sent?
 * Anonymized Parsl script ID
 * Start and end times
 * Parsl exit code
-* Count of executors used
-* Count of failures
-* Parsl, libsubmit, python version info
+* Number of executors used
+* Number of failures
+* Parsl, libsubmit, Python version info
 * OS and OS version
 
 

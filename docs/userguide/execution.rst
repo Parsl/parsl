@@ -211,7 +211,7 @@ The common scenarios for this feature are:
   checkpoint) until successful completion.
 
 
-Here's a code snippet that shows how executors can be specified in the ``App`` decorator.
+Here's a code snippet that shows how executors can be specified in the app decorator.
 
 .. code-block:: python
 

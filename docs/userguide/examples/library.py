@@ -1,5 +1,5 @@
-from parsl import App
+from parsl.app import python_app
 
-@App('python')
+@python_app
 def increment(x):
     return x + 1

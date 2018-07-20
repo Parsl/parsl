@@ -7,7 +7,8 @@ Reference guide
 
     parsl.set_stream_logger
     parsl.set_file_logger
-    parsl.App
+    parsl.app.python_app
+    parsl.app.bash_app
     parsl.app.futures.DataFuture
     parsl.config.Config
     parsl.dataflow.futures.AppFuture

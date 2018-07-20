@@ -1,10 +1,10 @@
 .. _codebases
 
-Modularizing Parsl Workflows
+Modularizing Parsl workflows
 ----------------------------
 
 It is often convenient to start with having a single script which defines
-the various `Apps`, load the appropriate configurations and composes the workflow.
+the various apps load the appropriate configurations and composes the workflow.
 However, as your use-case inevitably grows and changes, modularizing your code comes with
 several benefits:
 

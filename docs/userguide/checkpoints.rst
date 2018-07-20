@@ -26,15 +26,15 @@ Checkpointing works in the following modes:
    from completed tasks to a minimum.
 
    >>> from parsl.configs.local_threads import config
-   >>> config.checkpointMode = 'task_exit'
+   >>> config.checkpoint_mode = 'task_exit'
 
 
 2. ``periodic``: The periodic mode allows the user to specify the interval at which
    all tasks are checkpointed.
 
    >>> from parsl.configs.local_threads import config
-   >>> config.checkpointMode = 'periodic'
-   >>> config.checkpointPeriod = "01:00:00"
+   >>> config.checkpoint_mode = 'periodic'
+   >>> config.checkpoint_period = "01:00:00"
 
 3. ``dfk_exit``: In this mode, checkpoints are created when the DataFlowKernel is
    about to exit. This reduces the risk of losing results due to
@@ -43,7 +43,7 @@ Checkpointing works in the following modes:
    terminated abruptly (machine failure, SIGKILL etc)
 
    >>> from parsl.configs.local_threads import config
-   >>> config.checkpointMode = 'dfk_exit'
+   >>> config.checkpoint_mode = 'dfk_exit'
 
 4. Manual: In addition to these automated checkpointing modes, it is also possible to manually initiate a checkpoint
    by calling ``DataFlowKernel.checkpoint()`` in the workflow code.
@@ -61,17 +61,18 @@ Creating a checkpoint
 ^^^^^^^^^^^^^^^^^^^^^
 
 When using automated checkpointing there is no need for users to modify their
-Parsl script in any way: checkpointing will be conducted completely automatically.
+Parsl script: checkpointing will be conducted completely automatically.
 The following example shows how manual checkpointing can be invoked in a Parsl script.
 
 .. code-block:: python
 
-    from parsl import App, load
+    import parsl
+    from parsl.app import python_app
     from parsl.configs.local_threads import config
 
-    dfk = load(config)
+    dfk = parsl.load(config)
 
-    @App('python', cache=True)
+    @python_app(cache=True)
     def slow_double(x, sleep_dur=1):
         import time
         time.sleep(sleep_dur)

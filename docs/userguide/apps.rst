@@ -15,7 +15,7 @@ Python apps are *pure* Python functions. As these functions are executed asynchr
 
 .. code-block:: python
 
-       @App('python')
+       @python_app
        def double(x):
              return x * 2
 
