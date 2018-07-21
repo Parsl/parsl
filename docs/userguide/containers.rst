@@ -1,14 +1,17 @@
 Container support
 =================
 
-There are two broad models for app execution with containers:
+Containers provide an ideal way for abstracting execution resource heterogeneity
+and providing a common sandbox for execution. 
+
+There are two models for executing an app in a container:
 
 1. Workers are launched inside containers; a single container can be re-used for several apps.
 2. Each app is launched inside a fresh container.
 
 This document describes the first case. In this model, the apps are executed on a worker that is launched within a container.
-For simplicity we focus on `Docker <https://docs.docker.com/>`_ although the same methods can be extended
-to supported other container systems such as `Singularity <http://singularity.lbl.gov/>`_,
+For simplicity we focus on `Docker <https://docs.docker.com/>`_ although the same approach can be used with other
+supported container systems such as `Singularity <http://singularity.lbl.gov/>`_,
 `Shifter <https://www.nersc.gov/research-and-development/user-defined-images/>`_ etc.
 
 .. caution::
@@ -18,14 +21,13 @@ to supported other container systems such as `Singularity <http://singularity.lb
 Docker
 ------
 
-The following section describes creating a pool of containers, each with a worker
-that executes specific apps. Most of the immediately following sections can be skimmed
-if you have experience working with containers.
+The following section describes how to create a pool of Docker containers, each with a worker
+that executes specific apps. 
 
 Installing Docker
 ^^^^^^^^^^^^^^^^^
 
-To install Docker please ensure you have sudo privileges and follow instructions
+To install Docker please ensure you have sudo privileges and follow Docker's installation instructions
 `here <https://docs.docker.com/install/>`_.
 
 Once installed make sure that Docker is installed:
@@ -46,17 +48,17 @@ Creating an image
 ^^^^^^^^^^^^^^^^^
 
 Please note that the following instructions are tested on Ubuntu 16.04. If you are on a different
-operating system, every command that is not a Docker command might need to be tweaked for your
+operating system, the following instructions might  need to be tweaked for your
 specific system. Such cases will be noted explicitly.
 
-1. Pull an image with the latest python.
+1. Pull a Docker image with the latest Python.
 
    .. code-block:: bash
 
       # Get a basic python image
       docker pull python
 
-2. Construct a new python image with your modifications by creating a file called ``Dockerfile`` with
+2. Construct a new Python image by creating a file called ``Dockerfile`` with
    the following contents. Every command in the container definition is assumed to be running in Ubuntu.
 
    .. code-block:: bash
@@ -85,22 +87,21 @@ specific system. Such cases will be noted explicitly.
       sudo usermod -a -G docker $USER
 
 
-5. Ensure that you are running ``Python3.6.X``. If you need python3.5, make sure that
-   the container built in the previous steps install and setup the python version that
-   match the host machine's environment.
+5. Ensure that you are running ``Python3.6.X``. If you need another Python version, make sure that
+   the container built in the previous steps matches the host machine's environment.
 
    .. code-block:: bash
 
       # This command should return Python 3.6 or higher.
       python3 -V
 
-6. Set up apps. Check the following directories for two simple apps:
+6. Set up Parsl apps. The following directories contain sample apps for this guide:
 
    * ``parsl/docker/app1``
    * ``parsl/docker/app2``
 
    These container scripts are setup such that, when they are built they copy the application
-   python code over to ``/home``, which will be the ``cwd`` when app invocations
+   Python code over to ``/home``, which will be the ``cwd`` when app invocations
    are made. Each of these `appN.py` scripts contain the definition of a ``predict(List)``
    function.
 
@@ -146,7 +147,7 @@ Here is a Parsl configuration using one of the Docker images created in the prev
         lazy_errors=True
     )
 
-For workflows with multiple apps which require different docker images, a new executor should be
+For workflows with multiple apps which require different Docker images, a new executor should be
 created for each of the images that will be used. In the Parsl workflow definition the app
 decorator can then be tagged with the ``executors`` keyword argument to ensure that apps execute
 on the specific executors with the right container image.
@@ -186,7 +187,7 @@ How this works
                                +------------------- -- -
 
 
-The diagram above illustrates the various components and how the interact with
+The diagram above illustrates the various components and how they interact with
 each other to act as a fast model serving system. In this model, each executor in the Parsl
 config definition can only serve one container image. Parsl launches multiple blocks
 matching the definition of the executor, and each block will contain one container instantiated
