@@ -9,9 +9,9 @@ Parsl apps are defined by annotating Python functions with an app decorator. Cur
 Python Apps
 -----------
 
-The following code snippet shows a Python function used to double the input value (``double(int)``). This function is defined as a Parsl app using the ``@python_app`` decorator.
+The following code snippet shows a Python function ``double(int)``, used to double the input value. This function is defined as a Parsl app using the ``@python_app`` decorator.
 
-Python apps are *pure* Python functions. As these functions are executed asynchronously, and potentially remotely, it is important to note that they must explicitly import any required modules and act only on defined input arguments (i.e., it cannot include variables used elsewhere in the script).
+Python apps are *pure* Python functions. As these functions are executed asynchronously, and potentially remotely, it is important to note that they must explicitly import any required modules and act only on defined input arguments (i.e., they cannot include variables used elsewhere in the script).
 
 .. code-block:: python
 
@@ -46,7 +46,7 @@ There are limitations on what Python functions can be converted to apps:
 Special Keyword Arguments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Any Parsl app (decorated with the ``@python_app`` or ``@bash_app`` decorator) can use the following special reserved keyword arguments.
+Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_app`` decorator) can use the following special reserved keyword arguments.
 
 1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures`. Parsl will establish a dependency on these inputs and wait for the results of these futures to be resolved before execution. This is useful if one wishes to pass in an arbitrary number of futures at call
    time; note that if :ref:`label-futures` are passed as positional arguments, they will also be resolved before execution.

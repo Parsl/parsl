@@ -73,7 +73,7 @@ Workers do not connect back to Parsl
 
 If you are running via ssh to a remote system from your local machine, or from the
 login node of a cluster/supercomputer, it is necessary to have a public IP to which
-the workers can connect back. While our pilot job system, ipyparallel,
+the workers can connect back. While our pilot job system, IPyParallel,
 can identify the IP address automatically on certain systems,
 it is safer to specify the address explicitly.
 
@@ -136,7 +136,7 @@ the apps sent to the workers will fail with the following error:
 Parsl complains about missing packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If ``parsl`` is cloned from a github repository and added to the ``PYTHONPATH``, it is
+If ``parsl`` is cloned from a Github repository and added to the ``PYTHONPATH``, it is
 possible to miss the installation of some dependent libraries. In this configuration,
 ``parsl`` will raise errors such as:
 

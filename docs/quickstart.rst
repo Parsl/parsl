@@ -1,7 +1,7 @@
 Quickstart
 ==========
 
-To try Parsl now (without installing any code) experiment with our `hosted tutorial notebooks <http://try.parsl-project.org>`_
+To try Parsl now (without installing any code) experiment with our `hosted tutorial notebooks <http://try.parsl-project.org>`_.
 
 
 Installation
@@ -68,7 +68,7 @@ For Developers
 Requirements
 ------------
 
-Parsl requires the following :
+Parsl requires the following:
 
 * Python 3.5+
 

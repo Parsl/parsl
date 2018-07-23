@@ -2,7 +2,7 @@ Execution
 =========
 
 Parsl scripts can be executed on different execution providers (e.g., PCs, clusters, supercomputers) and using different execution models (e.g., threads, pilot jobs, etc.).
-Parsl seperates the code from the configuration that specifies which execution provider(s) and executor(s) to use.
+Parsl separates the code from the configuration that specifies which execution provider(s) and executor(s) to use.
 Parsl provides a high level abstraction, called a *block*, for providing a uniform description of a resource configuration irrespective of the specific execution provider.
 
 
@@ -11,7 +11,7 @@ Execution providers
 
 Execution providers are responsible for managing execution resources. In the simplest case a PC could be used for execution. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, HTCondor and Cobalt. Clouds, on the other hand, provide APIs that allow more fine-grained composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
 
-Parsl relies on the ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_.) library to provides a common interface to execution providers.
+Parsl relies on the ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_) library to provides a common interface to execution providers.
 Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor. New execution providers can be added by implementing Libsubmit's execution provider interface.
 
 Executors
@@ -41,19 +41,19 @@ Within a block are a number of nodes. Parsl can then execute *tasks* (instances 
 within and across (e.g., for MPI jobs) nodes.
 Three different examples of block configurations are shown below.
 
-1. A single Block comprised of a Node executing one task :
+1. A single block comprised of a node executing one task:
 
    .. image:: ../images/N1_T1.png
       :scale: 75%
 
-2. A single Block comprised on a Node executing several tasks. This configuration is
+2. A single block comprised on a node executing several tasks. This configuration is
    most suitable for single threaded apps running on multicore target systems.
    The number of tasks executed concurrently is proportional to the number of cores available on the system.
 
    .. image:: ../images/N1_T4.png
        :scale: 75%
 
-3. A Block comprised of several Nodes and executing several tasks. This configuration
+3. A block comprised of several nodes and executing several tasks. This configuration
    is generally used by MPI applications and requires support from specific
    MPI launchers supported by the target system (e.g., aprun, srun, mpirun, mpiexec).
 
@@ -64,7 +64,6 @@ Three different examples of block configurations are shown below.
 
 Elasticity
 ----------
-
 
 Parsl implements a dynamic dependency graph in which the
 graph is extended as new tasks are enqueued and completed.
@@ -101,7 +100,7 @@ The configuration options for specifying elasticity bounds are:
 2. ``init_blocks``: Initial number of blocks to provision at initialization of workflow.
 3. ``max_blocks``: Maximum number of blocks that can be active per executor.
 
-The configuaration options for specifying the shape of each block are:
+The configuration options for specifying the shape of each block are:
 
 1. ``tasks_per_node``: Number of tasks that can execute concurrently per node (which corresponds to the number of workers started per node).
 2. ``nodes_per_block``: Number of nodes requested per block.
@@ -114,7 +113,7 @@ It allows users to prescribe the minimum
 and maximum number of blocks to be used on a given executor as well as
 a parameter (*p*) to control the level of parallelism. Parallelism
 is expressed as the ratio of task execution capacity and the sum of running tasks
-and available tasks (tasks with their dependencies met, but waiting for execution)
+and available tasks (tasks with their dependencies met, but waiting for execution).
 A parallelism value of 1 represents aggressive scaling where as many resources
 as possible are used; parallelism close to 0 represents the opposite situation in which
 as few resources as possible (i.e., min_blocks) are used. By selecting a fraction between 0 and 1,
@@ -136,7 +135,7 @@ For example:
 .. code-block:: python
 
    blocks = min(max_blocks,
-                ceil(active_tasks / (tasks_per_node * nodes_per_block))
+                ceil((running_tasks + available_tasks) / (tasks_per_node * nodes_per_block))
 
 - When p = 1/2: Stack up to 2 tasks before overflowing and requesting a new block.
 
@@ -173,7 +172,7 @@ block will be requested (up to 2 possible blocks). An example :class:`~parsl.con
 
 The animated diagram below illustrates the behavior of this executor.
 In the diagram, the tasks are allocated to the first block, until
-5 tasks are submitted. At this stage, as more than double the avaialble
+5 tasks are submitted. At this stage, as more than double the available
 task capacity is used, Parsl provisions a new block for executing the remaining
 tasks.
 

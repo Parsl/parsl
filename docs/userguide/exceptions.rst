@@ -53,7 +53,7 @@ Retries
 
 Often errors in distributed/parallel environments are transient. Retrying
 a task is a common method for adding resiliency to a workflow.
-By retrying failed apps, transient failures (eg. machine failure,
+By retrying failed apps, transient failures (e.g., machine failure,
 network failure) and intermittent failures within applications can be overcome.
 When ``retries`` are enabled (and set to an integer > 0), Parsl will automatically
 re-launch applications that have failed, until the retry limit is reached.
