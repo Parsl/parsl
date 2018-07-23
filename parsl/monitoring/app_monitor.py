@@ -59,12 +59,3 @@ def monitor_wrapper(f, task_id, db_logger_config, run_id):
         finally:
             p.terminate()
     return wrapped
-
-
-if __name__ == "__main__":
-    def f(x):
-        for i in range(10**x):
-            continue
-
-    wrapped_f = monitor_wrapper(f, 0)
-    wrapped_f(9)
