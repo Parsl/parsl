@@ -113,7 +113,8 @@ Parsl provides a simple user-managed model for controlling elasticity.
 It allows users to prescribe the minimum
 and maximum number of blocks to be used on a given executor as well as
 a parameter (*p*) to control the level of parallelism. Parallelism
-is expressed as the ratio of task execution capacity and active tasks (running tasks + dependency resolved but waiting tasks)
+is expressed as the ratio of task execution capacity and active tasks (running tasks)
+and available tasks (tasks with their dependencies met, but waiting for execution)
 A parallelism value of 1 represents aggressive scaling where as many resources
 as possible are used; parallelism close to 0 represents the opposite situation in which
 as few resources as possible (i.e., min_blocks) are used. By selecting a fraction between 0 and 1,
