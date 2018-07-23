@@ -4,6 +4,9 @@ from libsubmit.utils import RepresentationMixin
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
 
+from typing import Optional, Any, List # for mypy
+from parsl.executors.base import ParslExecutor # for mypy
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,6 +43,8 @@ class Config(RepresentationMixin):
     strategy : str, optional
         Strategy to use for scaling resources according to workflow needs. Can be 'simple' or `None`. If `None`, dynamic
         scaling will be disabled. Default is 'simple'.
+    # TODO: db_logger_config is not documented here. The type is keyword based here, by the looks of it, which might
+    # be better structured as a type-checked config object? For now, I've told mypy it is Optional[Any] which is weak.
     usage_tracking : bool, optional
         Enable usage tracking. Default is True.
     """
@@ -56,6 +61,7 @@ class Config(RepresentationMixin):
                  strategy='simple',
                  db_logger_config=None,
                  usage_tracking=True):
+        # type: (Optional[List[ParslExecutor]], Optional[bool], Optional[List[str]], Optional[str], Optional[str], Optional[int], Optional[bool], Optional[int], Optional[str], Optional[str], Optional[Any], Optional[bool]) -> None
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
