@@ -25,6 +25,8 @@ However the following helper functions are provided for logging:
 """
 import logging
 
+from typing import Optional
+
 from parsl.version import VERSION
 from parsl.app.app import App
 from parsl.executors.threads import ThreadPoolExecutor
@@ -49,6 +51,7 @@ dfk = DataFlowKernelLoader.dfk
 
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
+    # type: (str, int, Optional[str]) -> None
     """Add a stream log handler.
 
     Args:
@@ -79,6 +82,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
 
 
 def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
+    # type: (str, str, int, Optional[str]) -> None
     """Add a stream log handler.
 
     Args:
