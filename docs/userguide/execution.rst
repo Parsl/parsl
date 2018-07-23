@@ -113,19 +113,32 @@ Parsl provides a simple user-managed model for controlling elasticity.
 It allows users to prescribe the minimum
 and maximum number of blocks to be used on a given executor as well as
 a parameter (*p*) to control the level of parallelism. Parallelism
-is expressed as the ratio of task execution capacity and active tasks (running tasks)
+is expressed as the ratio of task execution capacity and the sum of running tasks
 and available tasks (tasks with their dependencies met, but waiting for execution)
 A parallelism value of 1 represents aggressive scaling where as many resources
 as possible are used; parallelism close to 0 represents the opposite situation in which
 as few resources as possible (i.e., min_blocks) are used. By selecting a fraction between 0 and 1,
 the aggressiveness in provisioning resources can be controlled.
 
+For example:
+
+- When p = 0: Use the fewest resources possible.
+
 .. code:: python
 
-   blocks = max ( min(max_blocks, p * ceil(active_tasks / (tasks_per_node * nodes_per_block)),
-                  min_blocks,
-                  1 (if active_tasks > 0)
-                )
+   if active_tasks == 0:
+       blocks = min_blocks
+   else:
+       blocks = max(min_blocks, 1)
+
+- When p = 1: Use as many resources as possible.
+
+.. code-block:: python
+
+   blocks = min(max_blocks,
+                ceil(active_tasks / (tasks_per_node * nodes_per_block))
+
+- When p = 1/2: Stack up to 2 tasks before overflowing and requesting a new block.
 
 
 Configuration
