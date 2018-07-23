@@ -289,13 +289,14 @@ class CannedBytes(CannedObject):
         data = self.buffers[0]
         return self.wrap(data)
 
-
 class CannedBuffer(CannedBytes):
-    wrap = buffer
+    wrap = buffer # type: ignore
+    # unsure what the type error is/means here but mute it for now
 
 
 class CannedMemoryView(CannedBytes):
-    wrap = memoryview
+    wrap = memoryview # type: ignore
+    # unsure what the type error is/means here but mute it for now
 
 #-------------------------------------------------------------------------------
 # Functions
