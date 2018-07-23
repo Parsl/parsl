@@ -246,10 +246,9 @@ class UsageTracker (object):
 
 if __name__ == '__main__':
 
-    from parsl import *
+    from parsl import set_stream_logger
+    from parsl import ThreadPoolExecutor
+    from parsl import DataFlowKernel
 
     set_stream_logger()
-    workers = ThreadPoolExecutor(max_workers=4)
-    dfk = DataFlowKernel(executors=[workers])
-
-    dfk.cleanup()
+    workers = ThreadPoolExecutor(max_threads=4)
