@@ -6,7 +6,7 @@ Futures
 When a Python function is invoked, the Python interpreter waits for the function to complete execution
 and returns the results. When functions execute for a long period of time it may not be desirable to wait for completion, instead it is often preferable that the function executes asynchronously. Parsl provides such asynchronous behavior by returning a `future <https://en.wikipedia.org/wiki/Futures_and_promises>`_ in lieu of results.
 A future is essentially an object that can be used track the status of an asynchronous task so that it may, in the future, be interrogated to find the status,
-results, exceptions, etc. A future is a proxy for a result that is not yet available.
+results, exceptions, etc. A future is a proxy for a result that may not yet be available.
 
 Parsl provides two types of futures: AppFutures and DataFutures. While related, these two types of futures enable subtly different workflow patterns.
 

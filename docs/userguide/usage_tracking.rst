@@ -3,7 +3,7 @@
 Usage statistics collection
 ===========================
 
-Parsl sends anonymized usage statistics back to the Parsl development team to measure worldwide usage and and improve
+Parsl sends anonymized usage statistics back to the Parsl development team to measure worldwide usage and improve
 reliability and usability. The usage statistics are used only for improvements and reporting. They are not 
 shared in raw form outside of the Parsl team. 
 

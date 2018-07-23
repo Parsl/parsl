@@ -4,7 +4,7 @@ Checkpointing
 -------------
 
 Large scale workflows are prone to errors due to node failures, application or environment errors, and myriad other issues. 
-Parsl's checkpointing model provides workflow resilence and fault tolerance.
+Parsl's checkpointing model provides workflow resilience and fault tolerance.
 
 .. note::
    Checkpointing is *only* possible for apps which have AppCaching enabled.
@@ -15,7 +15,7 @@ Parsl follows an incremental checkpointing model, where each checkpoint file con
 all results that have been updated since the last checkpoint.
 
 When loading a checkpoint file the Parsl script will use checkpointed results for
-any apps that have been previously executed. Like AppCaching, checkpoints
+any apps that have been previously executed. Like app caching, checkpoints
 use the app name, hash, and input parameters to locate previously computed
 results. If multiple checkpoints exist for an app (with the same hash)
 the most recent entry will be used.
@@ -46,7 +46,7 @@ Parsl provides four checkpointing modes:
    >>> from parsl.configs.local_threads import config
    >>> config.checkpoint_mode = 'dfk_exit'
 
-4. Manual: In addition to these automated checkpointing modes, it is also possible to manually initiate a checkpoint
+4. Manual: in addition to these automated checkpointing modes, it is also possible to manually initiate a checkpoint
    by calling ``DataFlowKernel.checkpoint()`` in the workflow code.
 
 

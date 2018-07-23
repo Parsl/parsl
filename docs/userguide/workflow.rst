@@ -89,7 +89,7 @@ One of the most common ways that Parsl apps are executed in parallel is via loop
 Parallel dataflows
 ------------------
 
-Parallel dataflows can be developed by passing data between apps. In the following example a a set of files, each with a random number, is crated by the generate app. These files are thenconcatenated into a single file, which is subsequently used to compute the sum of all numbers. 
+Parallel dataflows can be developed by passing data between apps. In the following example a set of files, each with a random number, is created by the generate app. These files are then concatenated into a single file, which is subsequently used to compute the sum of all numbers. 
 
 .. code-block:: python
 

@@ -10,11 +10,11 @@ Developing a workflow is a two-step process:
 
 In Parsl, the execution of an app yields `futures <https://en.wikipedia.org/wiki/Futures_and_promises>`_.
 These futures can be passed to other apps as inputs, establishing a dependency. These dependencies are assembled implicitly into `directed acyclic graphs <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_,
-although these are never explicitly expressed. Furthermore, the dependency graph is dynamically built and then updated while the Parsl script executes. That is, the graph is not computed in advanced and is only complete when the script finishes executing.
+although these are never explicitly expressed. Furthermore, the dependency graph is dynamically built and then updated while the Parsl script executes. That is, the graph is not computed in advance and is only complete when the script finishes executing.
 Apps that have all their dependencies met are slated for execution (in parallel).
 
 
-A MapReduce job can be simply defined as follows:
+The following example demonstrates how a MapReduce job can be defined.
 
 .. code-block:: python
 
