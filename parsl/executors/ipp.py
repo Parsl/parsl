@@ -127,7 +127,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                         logger.debug("Launched block: {0}:{1}".format(i, engine))
                         if not engine:
                             raise(ScalingFailed(self.provider.label,
-                                                "Attempts to provision nodes via provider has failed"))
+                                                "Attempt to provision nodes via provider has failed"))
                         self.engines.extend([engine])
 
                 except Exception as e:
