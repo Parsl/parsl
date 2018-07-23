@@ -188,7 +188,6 @@ class DataFlowKernel(object):
             self.flowcontrol = FlowNoControl(self)
 
         self.task_count = 0
-        self.fut_task_lookup = {}
         self.tasks = {}
         self.submitter_lock = threading.Lock()
 
