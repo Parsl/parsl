@@ -8,7 +8,7 @@ try:
     pickle = cPickle
 except:
     cPickle = None
-    import pickle
+    import pickle # type: ignore
 _stdlib_pickle = pickle
 
 try:
