@@ -1,10 +1,18 @@
 Changelog
 =========
 
+Parsl 0.6.1
+-----------
+
+Released on July 23rd, 2018.
+
+This point release contains fixes for `issue#409 <https://github.com/Parsl/parsl/issues/409>`_
+
+
 Parsl 0.6.0
 -----------
 
-Pending Release. ``Alpha``
+Released July 23rd, 2018.
 
 New functionality
 ^^^^^^^^^^^^^^^^^
