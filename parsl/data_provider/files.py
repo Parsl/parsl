@@ -13,6 +13,7 @@ from parsl.data_provider.data_manager import DataManager
 
 from parsl.app.futures import DataFuture # for mypy
 from typing import Dict
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class File(str):
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {} # type: Dict[str, DataFuture]
+        self.local_path = None # type: Optional[str]
         if self.scheme == 'globus':
             self.dman.add_file(self)
 
@@ -74,13 +76,15 @@ class File(str):
         The appropriate filepath will be returned when called from within
         an app running remotely as well as regular python on the client side.
 
+        What does local_path have to only override this for an enumerated list of schemes? Why can't it override filepath *always*?
+
         Args:
             - self
         Returns:
              - filepath (string)
         """
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            if hasattr(self, 'local_path'):
+            if local_path is not None:
                 return self.local_path
 
         return self.path
