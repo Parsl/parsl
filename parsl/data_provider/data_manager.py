@@ -21,12 +21,12 @@ class DataManager(ParslExecutor):
     default_data_manager = None
 
     @classmethod
-    def get_data_manager(cls, max_threads=None, executors=None):
+    def get_data_manager(cls, max_threads=None, executors=[]):
         if cls.default_data_manager is None:
             cls.default_data_manager = DataManager(max_threads=max_threads, executors=executors)
         return cls.default_data_manager
 
-    def __init__(self, max_threads=10, executors=None):
+    def __init__(self, max_threads=10, executors=[]):
         """Initialize the DataManager.
 
         Kwargs:
