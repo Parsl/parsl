@@ -49,7 +49,7 @@ class DataManager(ParslExecutor):
         """Submit a staging app. All optimization should be here."""
         return self.executor.submit(*args, **kwargs)
 
-    def scale_in(self, blocks, *args, **kwargs):
+    def scale_in(self, blocks) -> None:
         pass
 
     def scale_out(self, *args, **kwargs):

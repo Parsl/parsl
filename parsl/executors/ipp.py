@@ -242,7 +242,7 @@ sleep infinity
 
         return r
 
-    def scale_in(self, blocks):
+    def scale_in(self, blocks: int) -> None:
         """Scale in the number of active blocks by the specified number.
 
         """
