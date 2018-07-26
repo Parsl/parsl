@@ -207,6 +207,7 @@ class DataFlowKernel(object):
                     task_log_info['task_fail_mode'] = 'eager'
                     task_log_info['tasks_failed_count'] = self.tasks_failed_count
                     task_log_info['tasks_completed_count'] = self.tasks_completed_count
+                    task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
                     self.db_logger.info("Task Fail", extra=task_log_info)
                 raise e
 
@@ -219,6 +220,7 @@ class DataFlowKernel(object):
                     task_log_info['task_' + 'fail_mode'] = 'lazy'
                     task_log_info['tasks_failed_count'] = self.tasks_failed_count
                     task_log_info['tasks_completed_count'] = self.tasks_completed_count
+                    task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
                     self.db_logger.info("Task Retry", extra=task_log_info)
 
             else:
@@ -234,6 +236,7 @@ class DataFlowKernel(object):
                     task_log_info['task_' + 'fail_mode'] = 'lazy'
                     task_log_info['tasks_failed_count'] = self.tasks_failed_count
                     task_log_info['tasks_completed_count'] = self.tasks_completed_count
+                    task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
                     self.db_logger.info("Task Retry Failed", extra=task_log_info)
 
         else:
@@ -248,6 +251,7 @@ class DataFlowKernel(object):
                 task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                 task_log_info['tasks_failed_count'] = self.tasks_failed_count
                 task_log_info['tasks_completed_count'] = self.tasks_completed_count
+                task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
                 self.db_logger.info("Task Done", extra=task_log_info)
 
         if not memo_cbk and final_state_flag is True:
@@ -313,6 +317,7 @@ class DataFlowKernel(object):
                         task_log_info['task_' + 'fail_mode'] = 'lazy'
                         task_log_info['tasks_failed_count'] = self.tasks_failed_count
                         task_log_info['tasks_completed_count'] = self.tasks_completed_count
+                        task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
                         self.db_logger.info("Task Dep Fail", extra=task_log_info)
 
                     try:
@@ -372,6 +377,7 @@ class DataFlowKernel(object):
             task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
             task_log_info['tasks_failed_count'] = self.tasks_failed_count
             task_log_info['tasks_completed_count'] = self.tasks_completed_count
+            task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
             self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
@@ -724,8 +730,10 @@ class DataFlowKernel(object):
                 executor.shutdown()
 
         self.time_completed = datetime.now()
-        self.db_logger.info("DFK end", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
-                            'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')), 'task_run_id': self.run_id, 'rundir': self.run_dir})
+        self.db_logger.info("DFK end", extra={'tasks_failed_count': self.tasks_failed_count, 'tasks_completed_count': self.tasks_completed_count,
+                                              "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
+                                              'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')),
+                                              'task_run_id': self.run_id, 'rundir': self.run_dir})
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
