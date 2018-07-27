@@ -4,6 +4,7 @@ import uuid
 
 from ipyparallel import Client
 from libsubmit.providers import LocalProvider
+from libsubmit.providers.provider_base import ExecutionProvider # for mypy
 from libsubmit.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
@@ -11,6 +12,11 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import *
 from parsl.executors.ipp_controller import Controller
 from parsl.utils import wait_for_file
+
+from typing import Any
+from typing import List
+from typing import Optional
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +55,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Alternative to above, specify the engine_dir
     working_dir : str
         Directory where input data should be staged to.
-    storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
+    storage_access : list of :class:`~parsl.data_provider.scheme.GlobusScheme` (or perhaps Any at the moment, because I don't know what the semantics actually are...)
         Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
@@ -67,16 +73,16 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     """
 
     def __init__(self,
-                 provider=LocalProvider(),
-                 label='ipp',
-                 engine_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
-                 engine_dir='.',
-                 working_dir=None,
-                 controller=Controller(),
-                 container_image=None,
-                 storage_access=None,
-                 engine_debug_level=None,
-                 managed=True):
+                 provider: ExecutionProvider =LocalProvider(),
+                 label: str ='ipp',
+                 engine_file: str ='~/.ipython/profile_default/security/ipcontroller-engine.json',
+                 engine_dir: str='.',
+                 working_dir: Optional[str] =None,
+                 controller: Controller =Controller(),
+                 container_image: Optional[str] =None,
+                 storage_access: List[Any] =None,
+                 engine_debug_level: str =None,
+                 managed: bool =True) -> None:
         self.provider = provider
         self.label = label
         self.engine_file = engine_file
@@ -219,7 +225,7 @@ sleep infinity
     def submit(self, *args, **kwargs):
         """Submits work to the thread pool.
 
-        This method is simply pass through and behaves like a submit call as described
+        This method is simply pass through [not entirely true seeing as it goes via lb_view...] and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         Returns:
@@ -267,14 +273,14 @@ sleep infinity
 
         return status
 
-    def shutdown(self, hub=True, targets='all', block=False):
+    # what the correct general signature for shutdown is, i don't know.
+    # perhaps there are different ones? or perhaps they should all have targets and block?
+    def shutdown(self, block: bool =False) -> bool:
         """Shutdown the executor, including all workers and controllers.
 
         The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
 
         Kwargs:
-            - hub (Bool): Whether the hub should be shutdown, Default:True,
-            - targets (list of ints| 'all'): List of engine id's to kill, Default:'all'
             - block (Bool): To block for confirmations or not
 
         Raises:

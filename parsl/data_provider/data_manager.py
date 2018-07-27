@@ -8,6 +8,9 @@ from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
 from parsl.app.app import App
 
+from typing import List
+from parsl.data_provider.files import File # for mypy
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +29,7 @@ class DataManager(ParslExecutor):
             cls.default_data_manager = DataManager(max_threads=max_threads, executors=executors)
         return cls.default_data_manager
 
-    def __init__(self, max_threads=10, executors=None):
+    def __init__(self, max_threads=10, executors=None) -> None:
         """Initialize the DataManager.
 
         Kwargs:
@@ -38,11 +41,11 @@ class DataManager(ParslExecutor):
         self.label = 'data_manager'
         self.executors = {e.label: e for e in executors}
         self.max_threads = max_threads
-        self.files = []
+        self.files = [] # type: List[File]
         self.globus = None
         self.managed = True
 
-    def start(self):
+    def start(self) -> None:
         self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads)
 
     def submit(self, *args, **kwargs):
@@ -70,7 +73,7 @@ class DataManager(ParslExecutor):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def add_file(self, file):
+    def add_file(self, file: File) -> None:
         if file.scheme == 'globus':
             if not self.globus:
                 self.globus = get_globus()

@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
+from typing import Any
 
 class ParslExecutor(metaclass=ABCMeta):
     """Define the strict interface for all Executor classes.
@@ -16,7 +17,7 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def start(self, *args, **kwargs):
+    def start(self) -> None:
         """Start the executor.
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
@@ -56,7 +57,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def shutdown(self, *args, **kwargs):
+    def shutdown(self, block: bool) -> bool:
         """Shutdown the executor.
 
         This includes all attached resources such as workers and controllers.

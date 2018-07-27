@@ -664,7 +664,7 @@ class DataFlowKernel(object):
         if not self.cleanup_called:
             self.cleanup()
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """DataFlowKernel cleanup.
 
         This involves killing resources explicitly and sending die messages to IPP workers.
