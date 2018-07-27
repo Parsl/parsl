@@ -3,7 +3,6 @@ import os
 from string import Template
 
 import libsubmit.error as ep_error
-from libsubmit.utils import wtime_to_minutes
 from libsubmit.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ class ClusterProvider(ExecutionProvider):
         self.parallelism = parallelism
         self.provisioned_blocks = 0
         self.launcher = launcher
-        self.walltime = wtime_to_minutes(walltime)
+        self.walltime = walltime
         self.cmd_timeout = cmd_timeout
         if not callable(self.launcher):
             raise(ep_error.BadLauncher(self.launcher,
