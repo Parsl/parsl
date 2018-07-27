@@ -8,7 +8,7 @@ from parsl.executors.ipp_controller import Controller
 from parsl.tests.utils import get_rundir
 
 # CAUTION: Make sure to setup user_opts.py
-from user_opts import user_opts
+from .user_opts import user_opts
 
 config = Config(
     executors=[

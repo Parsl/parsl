@@ -6,7 +6,7 @@ from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.utils import get_rundir
 
 # CAUTION: Make sure to setup user_opts.py
-from user_opts import user_opts
+from .user_opts import user_opts
 
 config = Config(
     executors=[
