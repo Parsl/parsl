@@ -89,6 +89,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
         :class:`~libsubmit.launchers.SrunLauncher`, or
         :class:`~libsubmit.launchers.AprunLauncher`
+    linger : Bool
+        When set to True, the workers will not `halt`. The user is responsible for shutting
+        down the node.
     """
 
     def __init__(self,
@@ -113,6 +116,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
                  state_file=None,
                  walltime="01:00:00",
+                 linger=False,
                  launcher=SingleNodeLauncher()):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
@@ -139,7 +143,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         self.walltime = walltime
         self.launcher = launcher
-
+        self.linger = linger
         self.resources = {}
 
         env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
@@ -449,6 +453,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         command = Template(template_string).substitute(jobname=job_name,
                                                        user_script=command,
+                                                       linger=str(self.linger).lower(),
                                                        overrides=self.overrides)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
@@ -619,6 +624,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         list of bool
             Each entry in the list will contain False if the operation fails. Otherwise, the entry will be True.
         """
+
+        if self.linger is True:
+            logger.debug("Ignoring cancel requests due to linger mode")
+            return [False for x in job_ids]
 
         try:
             self.client.terminate_instances(InstanceIds=list(job_ids))
