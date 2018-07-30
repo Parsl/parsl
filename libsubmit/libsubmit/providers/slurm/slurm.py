@@ -6,7 +6,7 @@ from libsubmit.channels import LocalChannel
 from libsubmit.launchers import SingleNodeLauncher
 from libsubmit.providers.cluster_provider import ClusterProvider
 from libsubmit.providers.slurm.template import template_string
-from libsubmit.utils import RepresentationMixin
+from libsubmit.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config = {}
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["nodes"] = self.nodes_per_block
-        job_config["walltime"] = self.walltime
+        job_config["walltime"] = wtime_to_minutes(self.walltime)
         job_config["overrides"] = self.overrides
         job_config["partition"] = self.partition
         job_config["user_script"] = command

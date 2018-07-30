@@ -7,7 +7,7 @@ from libsubmit.channels import LocalChannel
 from libsubmit.launchers import AprunLauncher
 from libsubmit.providers.cobalt.template import template_string
 from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.utils import RepresentationMixin
+from libsubmit.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +190,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         command = 'qsub -n {0} {1} -t {2} {3} {4}'.format(
-            self.nodes_per_block, queue_opt, self.walltime, account_opt, channel_script_path)
+            self.nodes_per_block, queue_opt, wtime_to_minutes(self.walltime), account_opt, channel_script_path)
         logger.debug("Executing {}".format(command))
 
         retcode, stdout, stderr = super().execute_wait(command)
