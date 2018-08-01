@@ -57,7 +57,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         """
         return self.executor.submit(*args, **kwargs)
 
-    def scale_out(self, workers=1):
+    def scale_out(self, workers: int =1) -> None:
         """Scales out the number of active workers by 1.
 
         This method is notImplemented for threads and will raise the error if called.

@@ -227,10 +227,8 @@ sleep infinity
         """
         return self.lb_view.apply_async(*args, **kwargs)
 
-    def scale_out(self, *args, **kwargs):
-        """Scales out the number of active workers by 1.
-
-        This method is notImplemented for threads and will raise the error if called.
+    def scale_out(self, *args, **kwargs) -> None:
+        """Scales out the number of active workers by 1
 
         """
         if self.provider:

@@ -34,7 +34,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_out(self, *args, **kwargs):
+    def scale_out(self, blocks: int) -> None:
         """Scale out method.
 
         We should have the scale out method simply take resource object
