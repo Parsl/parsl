@@ -2,8 +2,13 @@ import logging
 import time
 import math
 
-logger = logging.getLogger(__name__)
+from parsl.dataflow.dflow import DataFlowKernel # for mypy
+from typing import Dict
+from typing import Any
+from typing import Callable
+from typing import Optional
 
+logger = logging.getLogger(__name__)
 
 class Strategy(object):
     """FlowControl strategy.
@@ -103,11 +108,11 @@ class Strategy(object):
 
     """
 
-    def __init__(self, dfk):
+    def __init__(self, dfk: DataFlowKernel) -> None:
         """Initialize strategy."""
         self.dfk = dfk
         self.config = dfk.config
-        self.executors = {}
+        self.executors = {} # type: Dict[str, Dict[str, Any]]
         self.max_idletime = 60 * 2  # 2 minutes
 
         for e in self.dfk.config.executors:
@@ -121,7 +126,7 @@ class Strategy(object):
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
-    def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_noop(self, tasks, kind: str =None) -> None:
         """Do nothing.
 
         Args:
@@ -145,7 +150,7 @@ class Strategy(object):
 
         self.logger_flag = True
 
-    def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_simple(self, tasks, kind: str =None) -> None:
         """Peek at the DFK and the executors specified.
 
         We assume here that tasks are not held in a runnable
