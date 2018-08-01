@@ -243,7 +243,7 @@ sleep infinity
         return r
 
     def scale_in(self, blocks):
-        """Scale in the number of active workers by `blocks` workers.
+        """Scale in the number of active blocks by the specified number.
 
         """
         status = dict(zip(self.engines, self.provider.status(self.engines)))

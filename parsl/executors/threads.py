@@ -68,8 +68,8 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
 
         raise NotImplementedError
 
-    def scale_in(self, workers):
-        """Scale in the number of active workers by specified amount.
+    def scale_in(self, blocks):
+        """Scale in the number of active blocks by specified amount.
 
         This method is not implemented for threads and will raise the error if called.
 
