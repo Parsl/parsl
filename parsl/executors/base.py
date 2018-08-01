@@ -44,8 +44,10 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_in(self, *args, **kwargs):
+    def scale_in(self, count):
         """Scale in method.
+
+        Cause the executor to reduce the number of blocks by count.
 
         We should have the scale in method simply take resource object
         which will have the scaling methods, scale_in itself should be a coroutine, since
