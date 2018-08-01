@@ -7,7 +7,11 @@ class ParslExecutor(metaclass=ABCMeta):
     This is a metaclass that only enforces concrete implementations of
     functionality by the child classes.
 
-    .. note:: Shutdown is currently missing, as it is not yet supported by some of the executors (threads, for example).
+    In addition to the listed methods, a ParslExecutor instance must always
+    have a member field:
+
+       label: str - a human readable label for the executor, unique
+              with respect to other executors.
 
     """
 
