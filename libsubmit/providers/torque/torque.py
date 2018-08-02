@@ -187,7 +187,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         job_config["task_blocks"] = self.nodes_per_block * self.tasks_per_node
         job_config["nodes_per_block"] = self.nodes_per_block
         job_config["tasks_per_node"] = self.tasks_per_node
-        job_config["walltime"] = wtime_to_minutes(self.walltime)
+        job_config["walltime"] = self.walltime
         job_config["overrides"] = self.overrides
         job_config["user_script"] = command
 
