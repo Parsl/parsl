@@ -363,7 +363,7 @@ class DataFlowKernel(object):
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
-    def _add_input_deps(self, executor, args, kwargs):
+    def _add_input_deps(self, executor, args, kwargs) -> None:
         """Look for inputs of the app that are remote files. Submit stage_in
         apps for such files and replace the file objects in the inputs list with
         corresponding DataFuture objects.
