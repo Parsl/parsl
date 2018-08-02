@@ -7,7 +7,11 @@ class ParslExecutor(metaclass=ABCMeta):
     This is a metaclass that only enforces concrete implementations of
     functionality by the child classes.
 
-    .. note:: Shutdown is currently missing, as it is not yet supported by some of the executors (threads, for example).
+    In addition to the listed methods, a ParslExecutor instance must always
+    have a member field:
+
+       label: str - a human readable label for the executor, unique
+              with respect to other executors.
 
     """
 
@@ -40,8 +44,10 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_in(self, *args, **kwargs):
+    def scale_in(self, count):
         """Scale in method.
+
+        Cause the executor to reduce the number of blocks by count.
 
         We should have the scale in method simply take resource object
         which will have the scaling methods, scale_in itself should be a coroutine, since
