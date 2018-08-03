@@ -11,7 +11,7 @@ try:
     from kubernetes import client, config
     config.load_kube_config()
     _kubernetes_enabled = True
-except ImportError:
+except (ImportError, NameError, FileNotFoundError):
     _kubernetes_enabled = False
 
 
