@@ -9,10 +9,12 @@ from parsl.data_provider.globus import get_globus
 from parsl.app.app import App
 
 from typing import List
-from parsl.data_provider.files import File # for mypy
 
 logger = logging.getLogger(__name__)
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from parsl.data_provider.files import File # for mypy
 
 class DataManager(ParslExecutor):
     """The DataManager is responsible for transferring input and output data.
@@ -73,7 +75,7 @@ class DataManager(ParslExecutor):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def add_file(self, file: File) -> None:
+    def add_file(self, file: "File") -> None:
         if file.scheme == 'globus':
             if not self.globus:
                 self.globus = get_globus()

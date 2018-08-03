@@ -11,7 +11,10 @@ import logging
 from urllib.parse import urlparse
 from parsl.data_provider.data_manager import DataManager
 
-from parsl.app.futures import DataFuture # for mypy
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from parsl.app.futures import DataFuture
+
 from typing import Dict
 from typing import Optional
 

@@ -6,7 +6,9 @@ import time
 from parsl.dataflow.strategy import Strategy
 
 from typing import List
-from parsl.dataflow.dflow import DataFlowKernel # for mypy
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from parsl.dataflow.dflow import DataFlowKernel
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class FlowNoControl(object):
 
     """
 
-    def __init__(self, dfk: DataFlowKernel, *args, threshold: int =2, interval: int =2) -> None:
+    def __init__(self, dfk: "DataFlowKernel", *args, threshold: int =2, interval: int =2) -> None:
         """Initialize the flowcontrol object. This does nothing.
 
         Args:
@@ -73,7 +75,7 @@ class FlowControl(object):
     from a duplicate logger being added by the thread.
     """
 
-    def __init__(self, dfk: DataFlowKernel, *args, threshold: int =20, interval: int =5) -> None:
+    def __init__(self, dfk: "DataFlowKernel", *args, threshold: int =20, interval: int =5) -> None:
         """Initialize the flowcontrol object.
 
         We start the timer thread here

@@ -2,7 +2,10 @@ import logging
 import time
 import math
 
-from parsl.dataflow.dflow import DataFlowKernel # for mypy
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from parsl.dataflow.dflow import DataFlowKernel
+
 from typing import Dict
 from typing import Any
 from typing import Callable
@@ -108,7 +111,7 @@ class Strategy(object):
 
     """
 
-    def __init__(self, dfk: DataFlowKernel) -> None:
+    def __init__(self, dfk: "DataFlowKernel") -> None:
         """Initialize strategy."""
         self.dfk = dfk
         self.config = dfk.config
