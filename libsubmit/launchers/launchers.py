@@ -1,7 +1,9 @@
 from abc import ABCMeta, abstractmethod
 
+from libsubmit.utils import RepresentationMixin
 
-class Launcher(metaclass=ABCMeta):
+
+class Launcher(RepresentationMixin, metaclass=ABCMeta):
     """ Launcher base class to enforce launcher interface
     """
     @abstractmethod
