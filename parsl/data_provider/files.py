@@ -87,7 +87,7 @@ class File(str):
              - filepath (string)
         """
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            if local_path is not None:
+            if self.local_path is not None:
                 return self.local_path
 
         return self.path
