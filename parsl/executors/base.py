@@ -40,6 +40,14 @@ class ParslExecutor(metaclass=ABCMeta):
 
         These are consistent
 
+        The value returned must be some kind of future that I'm a bit vague on the
+        strict requirements for:
+
+             it must be possible to assign a retries_left member slot to that object.
+             it's referred to as exec_fu - but it's whatever the underlying executor returns (ipp, thread pools, whatever) which has some Future-like behaviour
+                  - so is it always the case that we can add retries_left? (I guess the python model permits that but it's a bit type-ugly)
+
+
         """
         pass
 
