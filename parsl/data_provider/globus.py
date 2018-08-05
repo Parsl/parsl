@@ -4,7 +4,7 @@ import globus_sdk
 
 
 logger = logging.getLogger(__name__)
-# Add StreamHanler to print out error Globus events to stderr
+# Add StreamHandler to print error Globus events to stderr
 handler = logging.StreamHandler()
 handler.setLevel(logging.WARN)
 format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
@@ -131,7 +131,7 @@ class Globus(object):
         """
         A Globus transfer job (task) can be in one of the three states: ACTIVE, SUCCEEDED, FAILED.
         Parsl every 20 seconds polls a status of the transfer job (task) from the Globus Transfer service,
-        with 60 second timeout limit. If the task  is ACTIVE after time runs out 'task_wait' returns False,
+        with 60 second timeout limit. If the task is ACTIVE after time runs out 'task_wait' returns False,
         and True otherwise.
         """
         while not tc.task_wait(task['task_id'], 60, 15):
