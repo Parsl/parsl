@@ -1,15 +1,22 @@
 import logging
 import json
 import globus_sdk
-# from globus_sdk.exc import TransferAPIError
 
 
 logger = logging.getLogger(__name__)
+# Add StreamHanler to print out error Globus events to stderr
+handler = logging.StreamHandler()
+handler.setLevel(logging.WARN)
+format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
-'''
+
+"""
 'Parsl Application' OAuth2 client registered with Globus Auth
 by lukasz@globusid.org
-'''
+"""
 CLIENT_ID = '8b8060fd-610e-4a74-885e-1051c71ad473'
 REDIRECT_URI = 'https://auth.globus.org/v2/web/auth-code'
 SCOPES = ('openid '
@@ -121,22 +128,35 @@ class Globus(object):
                 src_ep, src_path, dst_ep, dst_path, e))
 
         last_event_time = None
-        while not tc.task_wait(task['task_id'], 600, 20):
+        """
+        A Globus transfer job (task) can be in one of the three states: ACTIVE, SUCCEEDED, FAILED.
+        Parsl every 20 seconds polls a status of the transfer job (task) from the Globus Transfer service,
+        with 60 second timeout limit. If the task  is ACTIVE after time runs out 'task_wait' returns False,
+        and True otherwise.
+        """
+        while not tc.task_wait(task['task_id'], 60, 15):
             task = tc.get_task(task['task_id'])
+            # Get the last error Globus event
             events = tc.task_event_list(task['task_id'], num_results=1, filter='is_error:1')
-            for e in events:
-                if e['time'] == last_event_time:
-                    break
-                last_event_time = e['time']
-                logger.info('Non-critical Globus Transfer error event: {} at {}'.format(e['description'], e['time']))
-                logger.debug('{}'.format(e['details']))
+            event = events.data[0]
+            # Print the error event to stderr and Parsl file log if it was not yet printed
+            if event['time'] != last_event_time:
+                last_event_time = event['time']
+                logger.warn('Non-critical Globus Transfer error event for globus://{}{}: "{}" at {}. Retrying...'.format(
+                    src_ep, src_path, event['description'], event['time']))
+                logger.debug('Globus Transfer error details: {}'.format(event['details']))
 
+        """
+        The Globus transfer job (task) has been terminated (is not ACTIVE). Check if the transfer
+        SUCCEEDED or FAILED.
+        """
         task = tc.get_task(task['task_id'])
-        if task['status'] != 'SUCCEEDED':
-            logger.error(task)
-            raise Exception('Globus transfer {}, from {}{} to {}{} failed due to error: {}'.format(
-                task['task_id'], src_ep, src_path, dst_ep, dst_path,
-                task['nice_status_short_description']))
-        else:
+        if task['status'] == 'SUCCEEDED':
             logger.debug('Globus transfer {}, from {}{} to {}{} succeeded'.format(
                 task['task_id'], src_ep, src_path, dst_ep, dst_path))
+        else:
+            logger.debug('Globus Transfer task: {}'.format(task))
+            events = tc.task_event_list(task['task_id'], num_results=1, filter='is_error:1')
+            event = events.data[0]
+            raise Exception('Globus transfer {}, from {}{} to {}{} failed due to error: "{}"'.format(
+                task['task_id'], src_ep, src_path, dst_ep, dst_path, event['details']))
