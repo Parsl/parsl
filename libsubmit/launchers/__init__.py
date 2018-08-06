@@ -1,8 +1,13 @@
-from libsubmit.launchers.launchers import SimpleLauncher, SingleNodeLauncher, SrunLauncher, AprunLauncher, SrunMPILauncher, AprunLauncher
+from libsubmit.launchers.launchers import SimpleLauncher, SingleNodeLauncher, \
+    SrunLauncher, AprunLauncher, SrunMPILauncher, AprunLauncher, \
+    GnuParallelLauncher, MpiExecLauncher
 
 __all__ = ['SimpleLauncher',
            'SingleNodeLauncher',
            'SrunLauncher',
            'AprunLauncher',
            'SrunMPILauncher',
-           'AprunLauncher']
+           'AprunLauncher',
+           'GnuParallelLauncher',
+           'MpiExecLauncher']
+

@@ -65,6 +65,101 @@ echo "All workers done"
 '''.format(command, task_blocks)
         return x
 
+class GnuParallelLauncher(Launcher):
+    """ Worker launcher that wraps the user's command with the framework to
+    launch multiple command invocations via GNU parallel sshlogin.
+
+    This wrapper sets the bash env variable CORES to the number of cores on the
+    machine. 
+
+    This launcher makes the following assumptions:
+    - GNU parallel is installed and can be located in $PATH
+    - Paswordless SSH login is configured between the controller node and the
+      target nodes.
+    - The provider makes available the $PBS_NODEFILE environment variable
+    """
+    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+        """
+        Args:
+        - command (string): The command string to be launched
+        - task_block (string) : bash evaluated string.
+
+        KWargs:
+        - walltime (int) : This is not used by this launcher.
+        """
+        task_blocks = tasks_per_node * nodes_per_block
+
+        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+echo "Found cores : $CORES"
+WORKERCOUNT={3}
+
+# Deduplicate the nodefile
+SSHLOGINFILE="$JOBNAME.nodes"
+sort -u $PBS_NODEFILE > $SSHLOGINFILE
+
+cat << PARALLEL_CMD_EOF > cmd_$JOBNAME.sh
+{0}
+PARALLEL_CMD_EOF
+chmod u+x cmd_$JOBNAME.sh
+
+#file to contain the commands to parallel
+PFILE=cmd_${{JOBNAME}}.sh.parallel
+
+# Truncate the file
+cp /dev/null $PFILE
+
+for COUNT in $(seq 1 1 $WORKERCOUNT)
+do
+    echo "sh cmd_$JOBNAME.sh" >> $PFILE
+done
+
+parallel --env _ --joblog "$JOBNAME.sh.parallel.log" \
+    --sshloginfile $SSHLOGINFILE --jobs {1} < $PFILE
+
+echo "All workers done"
+'''.format(command, tasks_per_node, nodes_per_block, task_blocks)
+        return x
+
+class MpiExecLauncher(Launcher):
+    """ Worker launcher that wraps the user's command with the framework to
+    launch multiple command invocations via mpiexec.
+
+    This wrapper sets the bash env variable CORES to the number of cores on the
+    machine. 
+
+    This launcher makes the following assumptions:
+    - mpiexec is installed and can be located in $PATH
+    - The provider makes available the $PBS_NODEFILE environment variable
+    """
+    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+        """
+        Args:
+        - command (string): The command string to be launched
+        - task_block (string) : bash evaluated string.
+
+        KWargs:
+        - walltime (int) : This is not used by this launcher.
+        """
+        task_blocks = tasks_per_node * nodes_per_block
+
+        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+echo "Found cores : $CORES"
+WORKERCOUNT={3}
+
+# Deduplicate the nodefile
+SSHLOGINFILE="$JOBNAME.nodes"
+sort -u $PBS_NODEFILE > $HOSTFILE
+
+cat << MPIEXEC_EOF > cmd_$JOBNAME.sh
+{0}
+MPIEXEC_EOF
+chmod u+x cmd_$JOBNAME.sh
+
+mpiexec -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
+
+echo "All workers done"
+'''.format(command, tasks_per_node, nodes_per_block, task_blocks)
+        return x
 
 class SrunLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the SRUN launch framework
