@@ -147,7 +147,7 @@ echo "Found cores : $CORES"
 WORKERCOUNT={3}
 
 # Deduplicate the nodefile
-SSHLOGINFILE="$JOBNAME.nodes"
+HOSTFILE="$JOBNAME.nodes"
 sort -u $PBS_NODEFILE > $HOSTFILE
 
 cat << MPIEXEC_EOF > cmd_$JOBNAME.sh
