@@ -244,13 +244,9 @@ sleep infinity
 
         return r
 
-    def scale_in(self, blocks, *args, **kwargs):
-        """Scale in the number of active workers by 1.
+    def scale_in(self, blocks):
+        """Scale in the number of active blocks by the specified number.
 
-        This method is notImplemented for threads and will raise the error if called.
-
-        Raises:
-             NotImplemented exception
         """
         status = dict(zip(self.engines, self.provider.status(self.engines)))
 
@@ -258,7 +254,7 @@ sleep infinity
         to_kill = [engine for engine in status if status[engine] == "RUNNING"][:blocks]
 
         if self.provider:
-            r = self.provider.cancel(to_kill, *args, **kwargs)
+            r = self.provider.cancel(to_kill)
         else:
             logger.error("No execution provider available")
             r = None
