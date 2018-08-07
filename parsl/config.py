@@ -48,7 +48,7 @@ class Config(RepresentationMixin):
                  app_cache=True,
                  checkpoint_files=None,
                  checkpoint_mode=None,
-                 checkpoint_period="00:30:00",
+                 checkpoint_period=None,
                  data_management_max_threads=10,
                  lazy_errors=True,
                  retries=0,
@@ -62,8 +62,17 @@ class Config(RepresentationMixin):
         self.app_cache = app_cache
         self.checkpoint_files = checkpoint_files
         self.checkpoint_mode = checkpoint_mode
-        if checkpoint_mode is not 'periodic' and checkpoint_period is not None:
-            logger.debug("Checkpoint period only has an effect with checkpoint_mode='periodic'")
+        if checkpoint_period is not None:
+            if checkpoint_mode is None:
+                logger.debug('The requested `checkpoint_period={}` will have no effect because `checkpoint_mode=None`'.format(
+                    checkpoint_period)
+                )
+            elif checkpoint_mode is not 'periodic':
+                logger.debug("Requested checkpoint period of {} only has an effect with checkpoint_mode='periodic'".format(
+                    checkpoint_period)
+                )
+        if checkpoint_mode is 'periodic' and checkpoint_period is None:
+            checkpoint_period = "00:30:00"
         self.checkpoint_period = checkpoint_period
         self.data_management_max_threads = data_management_max_threads
         self.lazy_errors = lazy_errors
