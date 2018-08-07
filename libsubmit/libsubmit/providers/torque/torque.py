@@ -5,7 +5,7 @@ import time
 from libsubmit.launchers import AprunLauncher
 from libsubmit.providers.torque.template import template_string
 from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.utils import RepresentationMixin, wtime_to_minutes
+from libsubmit.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
