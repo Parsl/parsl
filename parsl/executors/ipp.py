@@ -160,7 +160,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
             logger.error("Could not open engine_json : ", self.engine_file)
             raise e
 
-        return """cd {0}
+        return """mkdir -p {0}
+cd {0}
 cat <<EOF > ipengine.{uid}.json
 {1}
 EOF
@@ -190,7 +191,8 @@ ipengine --file=ipengine.{uid}.json {debug_option} >> .ipengine_logs/$JOBNAME.lo
             logger.error("Could not open engine_json : ", self.engine_file)
             raise e
 
-        return """cd {0}
+        return """mkdir -p {0}
+cd {0}
 cat <<EOF > ipengine.{uid}.json
 {1}
 EOF
