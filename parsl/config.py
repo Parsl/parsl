@@ -98,4 +98,3 @@ class Config(RepresentationMixin):
     def copy(self):
         import copy
         return copy.deepcopy(self)
-        
