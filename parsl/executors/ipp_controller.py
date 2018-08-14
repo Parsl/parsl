@@ -118,7 +118,7 @@ class Controller(RepresentationMixin):
                             'security/ipcontroller-client.json')
 
     def close(self):
-        """Terminate the controller process and it's child processes.
+        """Terminate the controller process and its child processes.
 
         Args:
               - None
