@@ -2,6 +2,10 @@ import logging
 import time
 import math
 
+import tabulate
+
+from parsl.executors.ipp import IPyParallelExecutor
+
 logger = logging.getLogger(__name__)
 
 
@@ -160,6 +164,8 @@ class Strategy(object):
             - kind (Not used)
         """
 
+        headers = ['executor', 'active tasks', 'running blocks', 'submitting blocks', 'pending blocks', 'connected engines']
+        data = []
         for label, executor in self.dfk.executors.items():
             if not executor.scaling_enabled:
                 continue
@@ -178,15 +184,20 @@ class Strategy(object):
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            active_blocks = sum([1 for x in status if x in ('RUNNING',
-                                                            'SUBMITTING',
-                                                            'PENDING')])
+            running = sum([1 for x in status if x == 'RUNNING'])
+            submitting = sum([1 for x in status if x == 'SUBMITTING'])
+            pending = sum([1 for x in status if x == 'PENDING'])
+            active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            # import pdb; pdb.set_trace()
-            logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
-                                                                   active_slots,
-                                                                   parallelism))
+            data.append([
+                label,
+                len(active_tasks),
+                running,
+                submitting,
+                pending,
+                len(executor.executor) if isinstance(executor, IPyParallelExecutor) else 'N/A'
+            ])
 
             # Case 1
             # No tasks.
@@ -246,6 +257,7 @@ class Strategy(object):
             else:
                 # logger.debug("Strategy: Case 3")
                 pass
+        logger.debug('\n' + tabulate.tabulate(data, headers=headers))
 
 
 if __name__ == '__main__':
