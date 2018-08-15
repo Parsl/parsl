@@ -97,12 +97,16 @@ class DataFlowKernel(object):
         logger.info("Run id is: " + self.run_id)
         if self.dashboard is not None:
             logger.info("Dashboard is found at " + self.dashboard)
-        self.db_logger.info("Python version: {}".format(sys.version_info))
-        self.db_logger.info("Parsl version: {}".format(get_version()))
-        self.db_logger.info("Libsubmit version: {}".format(libsubmit.__version__))
-        self.db_logger.info("DFK start", extra={"time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
-                            'time_completed': str(self.time_completed), 'task_run_id': self.run_id, 'rundir': self.run_dir})
-        self.db_logger.info("Name of script/workflow: " + self.run_id, extra={'task_run_id': self.run_id})
+        workflow_info = {
+                'python_version': sys.version_info,
+                'parsl_version': get_version(),
+                'libsumbit_version': libsubmit.__version__,
+                "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
+                'time_completed': str(self.time_completed),
+                'task_run_id': self.run_id,
+                'rundir': self.run_dir,
+        }
+        self.db_logger.info("DFK start", extra=workflow_info)
         for executor in self._config.executors:
             self.db_logger.info("Listed executor: " + executor.label, extra={'task_run_id': self.run_id})
         # ES logging end
