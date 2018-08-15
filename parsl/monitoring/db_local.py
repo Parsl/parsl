@@ -1,16 +1,16 @@
 import logging
 from logging import Handler
 import sqlalchemy as sa
-from sqlalchemy import Table, Column, DateTime, Text, Integer, Float
+from sqlalchemy import Table, Column, Text, Integer, Float
 
 
 # TODO: expand to full set of info
 def create_workflows_table(meta):
     return Table(
             'workflows', meta,
-            Column('time_began', DateTime, nullable=False),
+            Column('time_began', Text, nullable=False),
             Column('task_run_id', Text, nullable=False, primary_key=True),
-            Column('time_completed', DateTime),
+            Column('time_completed', Text),
             Column('hostname', Text, nullable=False),
             Column('user', Text, nullable=False),
             Column('rundir', Text, nullable=False)
@@ -24,7 +24,7 @@ def create_task_status_table(task_id, run_id, meta):
           table_name, meta,
           Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
           Column('task_status', Integer, nullable=False),
-          Column('timestamp', DateTime, nullable=False, primary_key=True),
+          Column('timestamp', Text, nullable=False, primary_key=True),
           Column('run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
     )
 
@@ -49,7 +49,7 @@ def create_task_resource_table(task_id, run_id, meta):
     return Table(
           table_name + '_resources', meta,
           Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
-          Column('timestamp', DateTime, nullable=False, primary_key=True),
+          Column('timestamp', Text, nullable=False, primary_key=True),
           Column('run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
           Column('cpu_percent', Float, nullable=True),
           Column('cpu_percent', Float, nullable=True),
