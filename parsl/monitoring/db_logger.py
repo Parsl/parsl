@@ -1,6 +1,6 @@
 import logging
 import getpass
-from db_local import DatabaseHandler
+from parsl.monitoring.db_local import DatabaseHandler
 
 try:
     from cmreslogging.handlers import CMRESHandler
