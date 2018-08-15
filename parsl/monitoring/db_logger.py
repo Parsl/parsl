@@ -1,5 +1,6 @@
 import logging
 import getpass
+from db_local import DatabaseHandler
 
 try:
     from cmreslogging.handlers import CMRESHandler
@@ -35,7 +36,10 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                   enable_es_logging=False,
                   enable_ssl=True,
                   index_name="my_python_index",
+                  logger_name='ParslElasticsearch',
+                  eng_link='sqlite:///parsl.db',
                   version='1.0.0',
+                  enable_local_db_logging=False,
                   **kwargs):
     """
     Parameters
@@ -75,7 +79,12 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                                    # does not seem to be a portable way to do this
                                    'Version': version,
                                    'Username': getpass.getuser()})
-        logger = logging.getLogger("ParslElasticsearch")
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.INFO)
+        logger.addHandler(handler)
+    elif enable_local_db_logging:
+        handler = DatabaseHandler(eng_link)
+        logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
     else:
