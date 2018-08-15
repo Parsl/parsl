@@ -2,8 +2,6 @@ import logging
 import time
 import math
 
-import tabulate
-
 from parsl.executors.ipp import IPyParallelExecutor
 
 logger = logging.getLogger(__name__)
@@ -164,8 +162,6 @@ class Strategy(object):
             - kind (Not used)
         """
 
-        headers = ['executor', 'active tasks', 'running blocks', 'submitting blocks', 'pending blocks', 'connected engines']
-        data = []
         for label, executor in self.dfk.executors.items():
             if not executor.scaling_enabled:
                 continue
@@ -190,14 +186,12 @@ class Strategy(object):
             active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            data.append([
-                label,
-                len(active_tasks),
-                running,
-                submitting,
-                pending,
-                len(executor.executor) if isinstance(executor, IPyParallelExecutor) else 'N/A'
-            ])
+            if isinstance(executor, IPyParallelExecutor):
+                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected engines'.format(
+                    label, len(active_tasks), running, submitting, pending, len(executor.executor)))
+            else:
+                logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
+                    label, len(active_tasks), running, submitting, pending))
 
             # Case 1
             # No tasks.
@@ -257,7 +251,6 @@ class Strategy(object):
             else:
                 # logger.debug("Strategy: Case 3")
                 pass
-        logger.debug('\n' + tabulate.tabulate(data, headers=headers))
 
 
 if __name__ == '__main__':
