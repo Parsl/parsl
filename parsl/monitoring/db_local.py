@@ -3,6 +3,7 @@ from logging import Handler
 import sqlalchemy as sa
 from sqlalchemy import Table, Column, DateTime, Text, Integer, Float
 
+
 # TODO: expand to full set of info
 def create_workflows_table(meta):
     return Table(
