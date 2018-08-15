@@ -91,7 +91,9 @@ class DatabaseHandler(Handler):
             workflow = create_workflow_table(run_id, self.meta)
             self.meta.create_all(self.eng)
         # if this is the first sight of the task in the workflow, add it to the workflow table
-        if len(self.eng.execute(self.meta.tables[run_id].select(self.meta.tables[run_id].c.task_id == info['task_id'])).fetchall()) == 0:
+        # check to make sure it is a task log and not just a workflow overview log
+        if info.get('task_id', False) and\
+                len(self.eng.execute(self.meta.tables[run_id].select(self.meta.tables[run_id].c.task_id == info['task_id'])).fetchall()) == 0:
             with self.eng.begin() as con:
                 workflow = self.meta.tables[run_id]
                 ins = workflow.insert().values(**{k: v for k, v in info.items() if k in workflow.c})
