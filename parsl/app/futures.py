@@ -203,7 +203,7 @@ class DataFuture(Future):
                             self.__class__.__name__,
                             id(self),
                             _STATE_TO_DESCRIPTION_MAP[parent._state],
-                            self.filepath + '_file')
+                            self.filepath)
                 return '<%s at %#x state=%s>' % (
                     self.__class__.__name__,
                     id(self),
