@@ -43,7 +43,7 @@ def create_workflow_table(run_id, meta):
           Column('task_fn_hash', Text, nullable=False),
           Column('task_time_started', Text, nullable=False),
           Column('task_time_completed', Text, nullable=True),
-          Column('task_cache_enabled', Boolean, nullable=False),
+          Column('task_memoize', Boolean, nullable=False),
           # Column('task_kwargs.input', Text, nullable=True),
           # Column('task_kwargs.output', Text, nullable=True),
           # Column('task_kwargs.stdin', Text, nullable=True),
