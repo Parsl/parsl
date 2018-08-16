@@ -1,7 +1,11 @@
 import logging
 from logging import Handler
-import sqlalchemy as sa
-from sqlalchemy import Table, Column, Text, Integer, Float, Boolean
+
+try:
+    import sqlalchemy as sa
+    from sqlalchemy import Table, Column, Text, Integer, Float, Boolean
+except ImportError:
+    pass
 
 
 # TODO: expand to full set of info
