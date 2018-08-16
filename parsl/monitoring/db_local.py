@@ -79,12 +79,11 @@ class DatabaseHandler(Handler):
         self.eng = sa.create_engine(elink)
         self.meta = sa.MetaData()
         self.meta.reflect(bind=self.eng)
-        print('Handler created')
 
     def emit(self, record):
-        print('beginning emit')
         # self.meta.reflect(bind=self.eng)
         info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
+        info['timestamp'] = record.created
         run_id = info['task_run_id']
         # create workflows table if this is a new database without one
         if 'workflows' not in self.meta.tables.keys():
@@ -108,9 +107,7 @@ class DatabaseHandler(Handler):
             self.meta.create_all(self.eng)
 
         # check to make sure it is a task log and not just a workflow overview log
-        print(info.get('task_id', 'DID NOT FIND TASK ID'))
         if info.get('task_id', None) is not None:
-            print('task update should be happening')
             # if this is the first sight of the task in the workflow, add it to the workflow table
             if len(self.eng.execute(self.meta.tables[run_id].select(self.meta.tables[run_id].c.task_id == info['task_id'])).fetchall()) == 0:
                 with self.eng.begin() as con:
@@ -148,4 +145,3 @@ class DatabaseHandler(Handler):
                 task_resource_table = self.meta.tables[run_id + str(info['task_id']) + '_resources']
                 self.eng.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
                 print(task_resource_table, 'had a task resource update added')
-        print('finish emit')

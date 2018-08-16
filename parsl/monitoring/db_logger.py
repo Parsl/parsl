@@ -83,7 +83,6 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
     elif enable_local_db_logging:
-        print('local db logging enabled')
         handler = DatabaseHandler(eng_link)
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
