@@ -128,12 +128,12 @@ class DatabaseHandler(Handler):
                     self.eng.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
                     print(task_status_table, 'table was created and had a task status update added')
                 # if this status table already exists, just insert the update
-            else:
-                task_status_table = self.meta.tables[run_id + str(info['task_id'])]
-                self.eng.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
-                print(task_status_table, 'had a task status update added')
+                else:
+                    task_status_table = self.meta.tables[run_id + str(info['task_id'])]
+                    self.eng.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
+                    print(task_status_table, 'had a task status update added')
 
-            if 'cpu_percent' in info.keys():
+            if 'psutil_process_cpu_percent' in info.keys():
                 # TODO: only use this if it is a task resource update and not a task status update
                 # if this is a task resource update then handle that, if the resource table DNE then create it
                 if (run_id + str(info['task_id']) + "_resources") not in self.meta.tables.keys():
@@ -143,7 +143,7 @@ class DatabaseHandler(Handler):
                     self.eng.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
                     print(task_resource_table, 'table was created and had a task resource update added')
                 # if this resource table already exists, just insert the update
-            else:
-                task_resource_table = self.meta.tables[run_id + str(info['task_id']) + '_resources']
-                self.eng.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
-                print(task_resource_table, 'had a task resource update added')
+                else:
+                    task_resource_table = self.meta.tables[run_id + str(info['task_id']) + '_resources']
+                    self.eng.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
+                    print(task_resource_table, 'had a task resource update added')
