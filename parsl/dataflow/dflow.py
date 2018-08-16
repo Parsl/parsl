@@ -205,7 +205,8 @@ class DataFlowKernel(object):
             if not self._config.lazy_errors:
                 logger.debug("Eager fail, skipping retry logic")
                 self.tasks[task_id]['status'] = States.failed
-                if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                if self.db_logger_config is not None and\
+                        (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
                     task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
                     task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                     task_log_info['task_fail_mode'] = 'eager'
@@ -218,7 +219,8 @@ class DataFlowKernel(object):
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
-                if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                if self.db_logger_config is not None and\
+                        (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
                     task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
                     task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                     task_log_info['task_' + 'fail_mode'] = 'lazy'
@@ -234,7 +236,8 @@ class DataFlowKernel(object):
                 final_state_flag = True
                 self.tasks_failed_count += 1
 
-                if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                if self.db_logger_config is not None and\
+                        (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
                     task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
                     task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                     task_log_info['task_' + 'fail_mode'] = 'lazy'
@@ -250,7 +253,8 @@ class DataFlowKernel(object):
 
             logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+            if self.db_logger_config is not None and\
+                    (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
                 task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
                 task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                 task_log_info['tasks_failed_count'] = self.tasks_failed_count
@@ -315,7 +319,8 @@ class DataFlowKernel(object):
                         "Task {} deferred due to dependency failure".format(tid))
                     # Raise a dependency exception
                     self.tasks[tid]['status'] = States.dep_fail
-                    if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+                    if self.db_logger_config is not None and\
+                            (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
                         task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
                         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
                         task_log_info['task_' + 'fail_mode'] = 'lazy'
@@ -371,12 +376,14 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception as e:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
-        if self.db_logger_config is not None and self.db_logger_config.get('enable_remote_monitoring', False):
+        if self.db_logger_config is not None and\
+                (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
             executable = app_monitor.monitor_wrapper(executable, task_id, self.db_logger_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
         self.tasks[task_id]['time_started'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        if self.db_logger_config is not None and self.db_logger_config.get('enable_es_logging', False):
+        if self.db_logger_config is not None and\
+                (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
             task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
             task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
             task_log_info['tasks_failed_count'] = self.tasks_failed_count
