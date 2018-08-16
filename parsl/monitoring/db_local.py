@@ -79,7 +79,7 @@ class DatabaseHandler(Handler):
         self.eng = sa.create_engine(elink)
 
     def emit(self, record):
-        with self.eng.begin() as con:
+        with self.eng.connect() as con:
             meta = sa.MetaData()
             # Having what i think is race conditions so try a couple times and don't complain if breaks
             trys = 3
@@ -107,7 +107,7 @@ class DatabaseHandler(Handler):
             # create workflows table if this is a new database without one
             if 'workflows' not in meta.tables.keys():
                 workflows = create_workflows_table(meta)
-                workflows.create(con)
+                workflows.create(con, checkfirst=True)
             # if this is the first sight of the workflow, add it to the workflows table
             if len(con.execute(meta.tables['workflows'].select(meta.tables['workflows'].c.task_run_id == run_id)).fetchall()) == 0:
                 try:
@@ -122,7 +122,7 @@ class DatabaseHandler(Handler):
             # create workflow table if this is a new run without one
             if run_id not in meta.tables.keys():
                 workflow = create_workflow_table(run_id, meta)
-                workflow.create(con)
+                workflow.create(con, checkfirst=True)
 
             # check to make sure it is a task log and not just a workflow overview log
             if info.get('task_id', None) is not None:
@@ -131,8 +131,7 @@ class DatabaseHandler(Handler):
                     # if this is a task resource update then handle that, if the resource table DNE then create it
                     if (run_id + str(info['task_id']) + "_resources") not in meta.tables.keys():
                         task_resource_table = create_task_resource_table(info['task_id'], run_id, meta)
-                        # task_status_table.create(con)
-                        task_resource_table.create(con)
+                        task_resource_table.create(con, checkfirst=True)
                         con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
                         print(task_resource_table, 'table was created and had a task resource update added')
                     # if this resource table already exists, just insert the update
@@ -154,8 +153,7 @@ class DatabaseHandler(Handler):
                     # if this is the first sight of a task, create a task_status_table to hold this task's updates
                     if (run_id + str(info['task_id'])) not in meta.tables.keys():
                         task_status_table = create_task_status_table(info['task_id'], run_id, meta)
-                        # task_status_table.create(con)
-                        task_status_table.create(con)
+                        task_status_table.create(con, checkfirst=True)
                         con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
                         print(task_status_table, 'table was created and had a task status update added')
                     # if this status table already exists, just insert the update
