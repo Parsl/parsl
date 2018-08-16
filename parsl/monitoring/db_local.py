@@ -83,6 +83,8 @@ class DatabaseHandler(Handler):
     def emit(self, record):
         # self.meta.reflect(bind=self.eng)
         info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
+        # formating values to convert from python or parsl to db standards
+        info = ', '.join(info['task_fail_history']) if info.get('task_fail_history', None) is not None else None
         info['timestamp'] = record.created
         run_id = info['task_run_id']
         # create workflows table if this is a new database without one
