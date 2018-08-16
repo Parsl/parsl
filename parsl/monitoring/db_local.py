@@ -1,18 +1,18 @@
 import logging
 from logging import Handler
 import sqlalchemy as sa
-from sqlalchemy import Table, Column, Text, Integer, Float
+from sqlalchemy import Table, Column, Text, Integer, Float, Boolean
 
 
 # TODO: expand to full set of info
 def create_workflows_table(meta):
     return Table(
             'workflows', meta,
-            Column('time_began', Text, nullable=False),
             Column('task_run_id', Text, nullable=False, primary_key=True),
+            Column('time_began', Text, nullable=False),
             Column('time_completed', Text),
-            Column('hostname', Text, nullable=False),
-            Column('user', Text, nullable=False),
+            # Column('host', Text, nullable=False),
+            # Column('user', Text, nullable=False),
             Column('rundir', Text, nullable=False)
     )
 
@@ -24,8 +24,11 @@ def create_task_status_table(task_id, run_id, meta):
           table_name, meta,
           Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
           Column('task_status', Integer, nullable=False),
+          Column('task_status_name', Integer, nullable=False),
           Column('timestamp', Text, nullable=False, primary_key=True),
-          Column('run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
+          Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
+          Column('task_fail_count', Integer, nullable=False),
+          Column('task_fail_history', Text, nullable=True),
     )
 
 
@@ -35,11 +38,16 @@ def create_workflow_table(run_id, meta):
     return Table(
           table_name, meta,
           Column('task_id', Integer, primary_key=True, nullable=False),
-          Column('run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
-          Column('executor', Text, nullable=False),
-          Column('task_name', Text, nullable=False),
-          Column('task_input', Text, nullable=True),
-          Column('task_output', Text, nullable=True)
+          Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
+          Column('task_executor', Text, nullable=False),
+          Column('task_fn_hash', Text, nullable=False),
+          Column('task_time_started', Text, nullable=False),
+          Column('task_time_completed', Text, nullable=True),
+          Column('task_cache_enabled', Boolean, nullable=False),
+          # Column('task_kwargs.input', Text, nullable=True),
+          # Column('task_kwargs.output', Text, nullable=True),
+          # Column('task_kwargs.stdin', Text, nullable=True),
+          # Column('task_kwargs.stdout', Text, nullable=True),
     )
 
 
@@ -50,12 +58,18 @@ def create_task_resource_table(task_id, run_id, meta):
           table_name + '_resources', meta,
           Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
           Column('timestamp', Text, nullable=False, primary_key=True),
-          Column('run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
-          Column('cpu_percent', Float, nullable=True),
-          Column('cpu_percent', Float, nullable=True),
-          Column('memory_percent', Float, nullable=True),
-          Column('user_time', Float, nullable=True),
-          Column('system_time', Float, nullable=True)
+          Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
+          Column('psutil_process_pid', Integer, nullable=True),
+          Column('psutil_process_cpu_percent', Float, nullable=True),
+          Column('psutil_process_memory_percent', Float, nullable=True),
+          Column('psutil_process_children_count', Integer, nullable=True),
+          Column('psutil_process_time_user', Float, nullable=True),
+          Column('psutil_process_time_system', Float, nullable=True),
+          Column('psutil_process_memory_virtual', Float, nullable=True),
+          Column('psutil_process_memory_resident', Float, nullable=True),
+          Column('psutil_process_disk_read', Float, nullable=True),
+          Column('psutil_process_disk_write', Float, nullable=True),
+          Column('psutil_process_status', Text, nullable=True),
     )
 
 
@@ -92,7 +106,8 @@ class DatabaseHandler(Handler):
             self.meta.create_all(self.eng)
 
         # check to make sure it is a task log and not just a workflow overview log
-        if info.get('task_id', False):
+        if info.get('task_id', None) is not None:
+            print('task update should be happening')
             # if this is the first sight of the task in the workflow, add it to the workflow table
             if len(self.eng.execute(self.meta.tables[run_id].select(self.meta.tables[run_id].c.task_id == info['task_id'])).fetchall()) == 0:
                 with self.eng.begin() as con:
