@@ -85,7 +85,7 @@ class DatabaseHandler(Handler):
     def emit(self, record):
         with self.eng.connect() as con:
             meta = sa.MetaData()
-            # Having what i think is race conditions so try a couple times and don't complain if breaks
+            # Having what i think is an issue to reflect so try a couple times and don't complain if breaks
             trys = 3
             for t in range(trys):
                 failed = False
@@ -108,6 +108,18 @@ class DatabaseHandler(Handler):
             info['task_fail_history'] = ', '.join([str(h) for h in info['task_fail_history']]) if info.get('task_fail_history', None) is not None else None
             info['timestamp'] = record.created
             run_id = info['task_run_id']
+
+            if 'time_completed' in info.keys() and info['time_completed'] != 'None':
+                workflows = meta.tables['workflows']
+                up = workflows.update().values(time_completed=info['time_completed']).where(workflows.c.task_run_id == run_id)
+                con.execute(up)
+                return
+            if 'task_time_completed' in info.keys() and info['task_time_completed'] is not None:
+                workflow = meta.tables[run_id]
+                up = workflow.update().values(task_time_completed=info['task_time_completed']).where(workflow.c.task_id == info['task_id'])
+                con.execute(up)
+                return
+
             # create workflows table if this is a new database without one
             if 'workflows' not in meta.tables.keys():
                 workflows = create_workflows_table(meta)
