@@ -17,7 +17,9 @@ def create_workflows_table(meta):
             Column('time_completed', Text),
             # Column('host', Text, nullable=False),
             # Column('user', Text, nullable=False),
-            Column('rundir', Text, nullable=False)
+            Column('rundir', Text, nullable=False),
+            Column('tasks_failed_count', Integer, nullable=False),
+            Column('tasks_completed_count', Integer, nullable=False),
     )
 
 
@@ -135,6 +137,16 @@ class DatabaseHandler(Handler):
                 except sa.exc.IntegrityError as e:
                     print(e)
                     print(dir(e))
+
+            # if log has task counts, update the workflow entry in the workflows table
+            if 'tasks_completed_count' in info.keys():
+                workflows = meta.tables['workflows']
+                up = workflows.update().values(tasks_completed_count=info['tasks_completed_count']).where(workflows.c.task_run_id == run_id)
+                con.execute(up)
+            if 'tasks_failed_count' in info.keys():
+                workflows = meta.tables['workflows']
+                up = workflows.update().values(tasks_failed_count=info['tasks_failed_count']).where(workflows.c.task_run_id == run_id)
+                con.execute(up)
 
             # create workflow table if this is a new run without one
             if run_id not in meta.tables.keys():

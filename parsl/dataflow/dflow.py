@@ -105,6 +105,8 @@ class DataFlowKernel(object):
                 'time_completed': str(self.time_completed),
                 'task_run_id': self.run_id,
                 'rundir': self.run_dir,
+                'tasks_completed_count': self.tasks_completed_count,
+                'tasks_failed_count': self.tasks_failed_count,
         }
         self.db_logger.info("DFK start", extra=workflow_info)
         for executor in self._config.executors:
