@@ -178,12 +178,12 @@ class DatabaseHandler(Handler):
                                 # print(task_status_table, 'had a task status update added')
                             return
             except Exception:
-                print('logging failed on attempt', t)
+                # print('logging failed on attempt', t)
                 failed = True
             if failed:
                 pass
             else:
                 break
         else:
-            # print('loggin failed after', t, 'attempts')
+            # print('logging failed after', t, 'attempts')
             return
