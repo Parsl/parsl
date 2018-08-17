@@ -50,10 +50,10 @@ def create_workflow_table(run_id, meta):
           Column('task_time_started', Text, nullable=False),
           Column('task_time_completed', Text, nullable=True),
           Column('task_memoize', Boolean, nullable=False),
-          # Column('task_kwargs.input', Text, nullable=True),
-          # Column('task_kwargs.output', Text, nullable=True),
-          # Column('task_kwargs.stdin', Text, nullable=True),
-          # Column('task_kwargs.stdout', Text, nullable=True),
+          Column('task_inputs', Text, nullable=True),
+          Column('task_outputs', Text, nullable=True),
+          Column('task_stdin', Text, nullable=True),
+          Column('task_stdout', Text, nullable=True),
     )
 
 

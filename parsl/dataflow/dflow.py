@@ -149,6 +149,25 @@ class DataFlowKernel(object):
 
         atexit.register(self.atexit_cleanup)
 
+    def _create_task_log_info(self, task_id, fail_mode=None):
+        """
+        Create the dictionary that will be included in the log.
+        """
+        task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
+        task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
+        task_log_info['tasks_failed_count'] = self.tasks_failed_count
+        task_log_info['tasks_completed_count'] = self.tasks_completed_count
+        task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+        if self.tasks[task_id]['kwargs'].get('inputs', None) is not None:
+            task_log_info['task_inputs'] = ', '.join([str(i) for i in self.tasks[task_id]['kwargs']['inputs']])
+        if self.tasks[task_id]['kwargs'].get('outputs', None) is not None:
+            task_log_info['task_outputs'] = ', '.join([str(i) for i in self.tasks[task_id]['kwargs']['outputs']])
+        task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
+        task_log_info['task_stdout'] = self.tasks[task_id]['kwargs'].get('stdout', None)
+        if fail_mode is not None:
+            task_log_info['task_fail_mode'] = fail_mode
+        return task_log_info
+
     @staticmethod
     def _count_deps(depends, task_id):
         """Internal.
@@ -209,12 +228,7 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['status'] = States.failed
                 if self.db_logger_config is not None and\
                         (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
-                    task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
-                    task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                    task_log_info['task_fail_mode'] = 'eager'
-                    task_log_info['tasks_failed_count'] = self.tasks_failed_count
-                    task_log_info['tasks_completed_count'] = self.tasks_completed_count
-                    task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+                    task_log_info = self._create_task_log_info(task_id, 'eager')
                     self.db_logger.info("Task Fail", extra=task_log_info)
                 raise e
 
@@ -223,12 +237,7 @@ class DataFlowKernel(object):
                 logger.debug("Task {} marked for retry".format(task_id))
                 if self.db_logger_config is not None and\
                         (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
-                    task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-                    task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                    task_log_info['task_' + 'fail_mode'] = 'lazy'
-                    task_log_info['tasks_failed_count'] = self.tasks_failed_count
-                    task_log_info['tasks_completed_count'] = self.tasks_completed_count
-                    task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+                    task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Retry", extra=task_log_info)
 
             else:
@@ -240,12 +249,7 @@ class DataFlowKernel(object):
 
                 if self.db_logger_config is not None and\
                         (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
-                    task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-                    task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                    task_log_info['task_' + 'fail_mode'] = 'lazy'
-                    task_log_info['tasks_failed_count'] = self.tasks_failed_count
-                    task_log_info['tasks_completed_count'] = self.tasks_completed_count
-                    task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+                    task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Retry Failed", extra=task_log_info)
 
         else:
@@ -257,11 +261,7 @@ class DataFlowKernel(object):
             self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             if self.db_logger_config is not None and\
                     (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
-                task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-                task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                task_log_info['tasks_failed_count'] = self.tasks_failed_count
-                task_log_info['tasks_completed_count'] = self.tasks_completed_count
-                task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+                task_log_info = self._create_task_log_info(task_id)
                 self.db_logger.info("Task Done", extra=task_log_info)
 
         if not memo_cbk and final_state_flag is True:
@@ -323,12 +323,7 @@ class DataFlowKernel(object):
                     self.tasks[tid]['status'] = States.dep_fail
                     if self.db_logger_config is not None and\
                             (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
-                        task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-                        task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-                        task_log_info['task_' + 'fail_mode'] = 'lazy'
-                        task_log_info['tasks_failed_count'] = self.tasks_failed_count
-                        task_log_info['tasks_completed_count'] = self.tasks_completed_count
-                        task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+                        task_log_info = self._create_task_log_info(task_id, 'lazy')
                         self.db_logger.info("Task Dep Fail", extra=task_log_info)
 
                     try:
@@ -386,11 +381,7 @@ class DataFlowKernel(object):
         self.tasks[task_id]['time_started'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         if self.db_logger_config is not None and\
                 (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
-            task_log_info = {'task_' + k: v for k, v in self.tasks[task_id].items()}
-            task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
-            task_log_info['tasks_failed_count'] = self.tasks_failed_count
-            task_log_info['tasks_completed_count'] = self.tasks_completed_count
-            task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+            task_log_info = self._create_task_log_info(task_id)
             self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
