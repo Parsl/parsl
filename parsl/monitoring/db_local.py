@@ -93,15 +93,15 @@ class DatabaseHandler(Handler):
                 try:
                     meta.reflect(bind=con)
                 except Exception:
-                    print('reflect failed on attempt', t)
+                    # print('reflect failed on attempt', t)
                     failed = True
                 if failed:
                     pass
                 else:
-                    print('successful reflect on attempt', t)
+                    # print('successful reflect on attempt', t)
                     break
             else:
-                print('failed reflect and not logging after', trys, 'attempts')
+                # print('failed reflect and not logging after', trys, 'attempts')
                 return
 
             info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
@@ -133,10 +133,11 @@ class DatabaseHandler(Handler):
                     workflows = meta.tables['workflows']
                     ins = workflows.insert().values(**{k: v for k, v in info.items() if k in workflows.c})
                     con.execute(ins)
-                    print(run_id + " was added to the workflows table")
+                    # print(run_id + " was added to the workflows table")
                 except sa.exc.IntegrityError as e:
-                    print(e)
-                    print(dir(e))
+                    # print(e)
+                    # print(dir(e))
+                    pass
 
             # if log has task counts, update the workflow entry in the workflows table
             if 'tasks_completed_count' in info.keys():
@@ -161,12 +162,12 @@ class DatabaseHandler(Handler):
                         task_resource_table = create_task_resource_table(info['task_id'], run_id, meta)
                         task_resource_table.create(con, checkfirst=True)
                         con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
-                        print(task_resource_table, 'table was created and had a task resource update added')
+                        # print(task_resource_table, 'table was created and had a task resource update added')
                     # if this resource table already exists, just insert the update
                     else:
                         task_resource_table = meta.tables[run_id + str(info['task_id']) + '_resources']
                         con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
-                        print(task_resource_table, 'had a task resource update added')
+                        # print(task_resource_table, 'had a task resource update added')
                     return
 
                 # if this is the first sight of the task in the workflow, add it to the workflow table
@@ -174,7 +175,7 @@ class DatabaseHandler(Handler):
                     workflow = meta.tables[run_id]
                     ins = workflow.insert().values(**{k: v for k, v in info.items() if k in workflow.c})
                     con.execute(ins)
-                    print('Task ' + str(info['task_id']) + " was added to the workflow table")
+                    # print('Task ' + str(info['task_id']) + " was added to the workflow table")
 
                 if 'task_status' in info.keys():
                     # if this is the first sight of a task, create a task_status_table to hold this task's updates
@@ -182,10 +183,10 @@ class DatabaseHandler(Handler):
                         task_status_table = create_task_status_table(info['task_id'], run_id, meta)
                         task_status_table.create(con, checkfirst=True)
                         con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
-                        print(task_status_table, 'table was created and had a task status update added')
+                        # print(task_status_table, 'table was created and had a task status update added')
                     # if this status table already exists, just insert the update
                     else:
                         task_status_table = meta.tables[run_id + str(info['task_id'])]
                         con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
-                        print(task_status_table, 'had a task status update added')
+                        # print(task_status_table, 'had a task status update added')
                     return
