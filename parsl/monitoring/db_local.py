@@ -55,7 +55,6 @@ def create_workflow_table(run_id, meta):
     )
 
 
-# TODO: expand to full set of info
 def create_task_resource_table(task_id, run_id, meta):
     table_name = run_id + str(task_id)
     return Table(
@@ -109,6 +108,8 @@ class DatabaseHandler(Handler):
             info['timestamp'] = record.created
             run_id = info['task_run_id']
 
+            # if workflow or task has completed, update their entries with the time.
+            # FIXME: This appears to not updated failed tasks.
             if 'time_completed' in info.keys() and info['time_completed'] != 'None':
                 workflows = meta.tables['workflows']
                 up = workflows.update().values(time_completed=info['time_completed']).where(workflows.c.task_run_id == run_id)
@@ -143,7 +144,6 @@ class DatabaseHandler(Handler):
             # check to make sure it is a task log and not just a workflow overview log
             if info.get('task_id', None) is not None:
                 if 'psutil_process_cpu_percent' in info.keys():
-                    # TODO: only use this if it is a task resource update and not a task status update
                     # if this is a task resource update then handle that, if the resource table DNE then create it
                     if (run_id + str(info['task_id']) + "_resources") not in meta.tables.keys():
                         task_resource_table = create_task_resource_table(info['task_id'], run_id, meta)
@@ -165,7 +165,6 @@ class DatabaseHandler(Handler):
                     print('Task ' + str(info['task_id']) + " was added to the workflow table")
 
                 if 'task_status' in info.keys():
-                    # TODO: only fire this if it is a task status update and not a task resource update
                     # if this is the first sight of a task, create a task_status_table to hold this task's updates
                     if (run_id + str(info['task_id'])) not in meta.tables.keys():
                         task_status_table = create_task_status_table(info['task_id'], run_id, meta)
