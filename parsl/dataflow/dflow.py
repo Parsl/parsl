@@ -158,10 +158,8 @@ class DataFlowKernel(object):
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
         task_log_info['tasks_completed_count'] = self.tasks_completed_count
         task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
-        if self.tasks[task_id]['kwargs'].get('inputs', None) is not None:
-            task_log_info['task_inputs'] = ', '.join([str(i) for i in self.tasks[task_id]['kwargs']['inputs']])
-        if self.tasks[task_id]['kwargs'].get('outputs', None) is not None:
-            task_log_info['task_outputs'] = ', '.join([str(i) for i in self.tasks[task_id]['kwargs']['outputs']])
+        task_log_info['task_inputs'] = str(self.tasks[task_id]['kwargs'].get('inputs', None))
+        task_log_info['task_outputs'] = str(self.tasks[task_id]['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
         task_log_info['task_stdout'] = self.tasks[task_id]['kwargs'].get('stdout', None)
         if fail_mode is not None:
