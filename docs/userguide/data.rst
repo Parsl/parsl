@@ -132,7 +132,7 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
 
         from parsl.config import Config
         from parsl.executors.ipp import IPyParallelExecutor
-        from parsl.data_manager.scheme import GlobusScheme
+        from parsl.data_provider.scheme import GlobusScheme
 
         config = Config(
             executors=[
