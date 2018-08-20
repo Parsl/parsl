@@ -17,7 +17,7 @@ config = Config(
             storage_access=[GlobusScheme(
                 endpoint_uuid=user_opts['globus']['endpoint'],
                 endpoint_path=user_opts['globus']['path']
-            )[,
+            )],
             working_dir=user_opts['globus']['path']
         )
     ],
