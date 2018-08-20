@@ -88,7 +88,10 @@ class DataFlowKernel(object):
         self.tasks_failed_count = 0
         self.db_logger_config = config.db_logger_config
         self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(**self.db_logger_config)
-        self.workflow_name = str(inspect.stack()[1][1])
+        # self.workflow_name = str(inspect.stack()[1][1])
+        self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
+        if self.db_logger_config is not None:
+            self.workflow_name = self.db_logger_config.get('workflow_name', self.workflow_name)
         self.time_began = datetime.now()
         self.time_completed = None
         self.run_id = self.workflow_name + "-" + str(self.time_began.minute)

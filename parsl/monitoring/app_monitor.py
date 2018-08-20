@@ -54,7 +54,10 @@ def monitor(pid, task_id, db_logger_config, run_id):
                     d['psutil_process_disk_read'] += 0
         finally:
             logger.info("test", extra=d)
-            time.sleep(10)
+            sleep_duration = 10
+            if db_logger_config is not None:
+                sleep_duration = db_logger_config.get('resource_loog_sleep_duration', sleep_duration)
+            time.sleep(sleep_duration)
 
 
 def monitor_wrapper(f, task_id, db_logger_config, run_id):

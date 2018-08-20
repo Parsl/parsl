@@ -1,5 +1,6 @@
 import logging
 from logging import Handler
+import time
 
 try:
     import sqlalchemy as sa
@@ -25,7 +26,7 @@ def create_workflows_table(meta):
 
 # TODO: expand to full set of info
 def create_task_status_table(task_id, run_id, meta):
-    table_name = run_id + str(task_id)
+    table_name = run_id + "-" + str(task_id)
     return Table(
           table_name, meta,
           Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
@@ -57,7 +58,7 @@ def create_workflow_table(run_id, meta):
 
 
 def create_task_resource_table(task_id, run_id, meta):
-    table_name = run_id + str(task_id)
+    table_name = run_id + "-" + str(task_id)
     return Table(
           table_name + '_resources', meta,
           Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
@@ -94,7 +95,7 @@ class DatabaseHandler(Handler):
                     info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
                     # formating values to convert from python or parsl to db standards
                     info['task_fail_history'] = str(info.get('task_fail_history', None))
-                    info['timestamp'] = record.created
+                    info['timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(record.created))
                     run_id = info['task_run_id']
 
                     # if workflow or task has completed, update their entries with the time.
@@ -108,7 +109,6 @@ class DatabaseHandler(Handler):
                         workflow = meta.tables[run_id]
                         up = workflow.update().values(task_time_completed=info['task_time_completed']).where(workflow.c.task_id == info['task_id'])
                         con.execute(up)
-                        return
 
                     # create workflows table if this is a new database without one
                     if 'workflows' not in meta.tables.keys():
@@ -145,14 +145,14 @@ class DatabaseHandler(Handler):
                     if info.get('task_id', None) is not None:
                         if 'psutil_process_cpu_percent' in info.keys():
                             # if this is a task resource update then handle that, if the resource table DNE then create it
-                            if (run_id + str(info['task_id']) + "_resources") not in meta.tables.keys():
+                            if (run_id + "-" + str(info['task_id']) + "_resources") not in meta.tables.keys():
                                 task_resource_table = create_task_resource_table(info['task_id'], run_id, meta)
                                 task_resource_table.create(con, checkfirst=True)
                                 con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
                                 # print(task_resource_table, 'table was created and had a task resource update added')
                             # if this resource table already exists, just insert the update
                             else:
-                                task_resource_table = meta.tables[run_id + str(info['task_id']) + '_resources']
+                                task_resource_table = meta.tables[run_id + "-" + str(info['task_id']) + '_resources']
                                 con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
                                 # print(task_resource_table, 'had a task resource update added')
                             return
@@ -166,14 +166,14 @@ class DatabaseHandler(Handler):
 
                         if 'task_status' in info.keys():
                             # if this is the first sight of a task, create a task_status_table to hold this task's updates
-                            if (run_id + str(info['task_id'])) not in meta.tables.keys():
+                            if (run_id + "-" + str(info['task_id'])) not in meta.tables.keys():
                                 task_status_table = create_task_status_table(info['task_id'], run_id, meta)
                                 task_status_table.create(con, checkfirst=True)
                                 con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
                                 # print(task_status_table, 'table was created and had a task status update added')
                             # if this status table already exists, just insert the update
                             else:
-                                task_status_table = meta.tables[run_id + str(info['task_id'])]
+                                task_status_table = meta.tables[run_id + "-" + str(info['task_id'])]
                                 con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
                                 # print(task_status_table, 'had a task status update added')
                             return
