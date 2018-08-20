@@ -138,11 +138,11 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
             executors=[
                 IPyParallelExecutor(
                     working_dir="/home/user/parsl_script",
-                    storage_access=GlobusScheme(
+                    storage_access=[GlobusScheme(
                         endpoint_uuid="7d2dc622-2edb-11e8-b8be-0ac6873fc732",
                         endpoint_path="/",
                         local_path="/home/user"
-                    )
+                    )]
                 )
             ]
         )
