@@ -149,8 +149,8 @@ class DataFlowKernel(object):
         """
         count = 0
         for dep in depends:
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
                 if not dep.done():
+            if isinstance(dep, Future):
                     count += 1
 
         return count
@@ -402,7 +402,7 @@ class DataFlowKernel(object):
         depends = []
         count = 0
         for dep in args:
-            if isinstance(dep, Future) or issubclass(dep.__class__, Future):
+            if isinstance(dep, Future):
                 if not dep.done():
                     count += 1
                 depends.extend([dep])
@@ -410,14 +410,14 @@ class DataFlowKernel(object):
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future) or issubclass(dep.__class__, Future):
+            if isinstance(dep, Future):
                 if not dep.done():
                     count += 1
                 depends.extend([dep])
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
-            if issubclass(dep.__class__, Future) or isinstance(dep, Future):
+            if isinstance(dep, Future):
                 if not dep.done():
                     count += 1
                 depends.extend([dep])
@@ -447,7 +447,7 @@ class DataFlowKernel(object):
         # Replace item in args
         new_args = []
         for dep in args:
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
+            if isinstance(dep, Future):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
@@ -458,7 +458,7 @@ class DataFlowKernel(object):
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
+            if isinstance(dep, Future):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
@@ -468,7 +468,7 @@ class DataFlowKernel(object):
         if 'inputs' in kwargs:
             new_inputs = []
             for dep in kwargs['inputs']:
-                if isinstance(dep, Future) or issubclass(type(dep), Future):
+                if isinstance(dep, Future):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
