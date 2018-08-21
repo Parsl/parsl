@@ -6,6 +6,10 @@ from parsl.monitoring.db_logger import get_db_logger
 
 
 def monitor(pid, task_id, db_logger_config, run_id):
+    sleep_duration = 10
+    if db_logger_config is not None:
+        sleep_duration = db_logger_config.get('resource_loop_sleep_duration', sleep_duration)
+    time.sleep(sleep_duration)
     simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
     summable_values = ['cpu_percent', 'memory_percent', 'num_threads']
 
@@ -21,10 +25,10 @@ def monitor(pid, task_id, db_logger_config, run_id):
         return some_bytes / 1024**2
 
     while True:
-        d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
-        d["task_run_id"] = run_id
-        d["task_id"] = task_id
         try:
+            d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
+            d["task_run_id"] = run_id
+            d["task_id"] = task_id
             children = pm.children(recursive=True)
             d["psutil_cpu_count"] = psutil.cpu_count()
             d['psutil_process_memory_virtual'] = to_mb(pm.memory_info().vms)
@@ -52,11 +56,17 @@ def monitor(pid, task_id, db_logger_config, run_id):
                 except psutil._exceptions.AccessDenied:
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
+
+            to_be_rounded = ['psutil_process_memory_virtual', 'psutil_process_memory_resident', 'psutil_process_cpu_percent', 'psutil_process_memory_percent',
+                             'psutil_process_disk_write', 'psutil_process_disk_read']
+            for k in to_be_rounded:
+                d[k] = round(d[k], 2)
+
         finally:
-            logger.info("test", extra=d)
+            logger.info("task resource update", extra=d)
             sleep_duration = 10
             if db_logger_config is not None:
-                sleep_duration = db_logger_config.get('resource_loog_sleep_duration', sleep_duration)
+                sleep_duration = db_logger_config.get('resource_loop_sleep_duration', sleep_duration)
             time.sleep(sleep_duration)
 
 

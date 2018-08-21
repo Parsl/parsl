@@ -84,7 +84,9 @@ class DatabaseHandler(Handler):
         self.eng = sa.create_engine(elink)
 
     def emit(self, record):
+        self.eng.dispose()
         trys = 3
+        info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
         for t in range(trys):
             # Having what i think is an issue to reflect so try a couple times and don't complain if breaks
             failed = False
@@ -92,7 +94,6 @@ class DatabaseHandler(Handler):
                 with self.eng.connect() as con:
                     meta = sa.MetaData()
                     meta.reflect(bind=con)
-                    info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
                     # formating values to convert from python or parsl to db standards
                     info['task_fail_history'] = str(info.get('task_fail_history', None))
                     info['timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(record.created))
@@ -116,15 +117,9 @@ class DatabaseHandler(Handler):
                         workflows.create(con, checkfirst=True)
                     # if this is the first sight of the workflow, add it to the workflows table
                     if len(con.execute(meta.tables['workflows'].select(meta.tables['workflows'].c.task_run_id == run_id)).fetchall()) == 0:
-                        try:
-                            workflows = meta.tables['workflows']
-                            ins = workflows.insert().values(**{k: v for k, v in info.items() if k in workflows.c})
-                            con.execute(ins)
-                            # print(run_id + " was added to the workflows table")
-                        except sa.exc.IntegrityError as e:
-                            # print(e)
-                            # print(dir(e))
-                            pass
+                        workflows = meta.tables['workflows']
+                        ins = workflows.insert().values(**{k: v for k, v in info.items() if k in workflows.c})
+                        con.execute(ins)
 
                     # if log has task counts, update the workflow entry in the workflows table
                     if 'tasks_completed_count' in info.keys():
@@ -143,26 +138,15 @@ class DatabaseHandler(Handler):
 
                     # check to make sure it is a task log and not just a workflow overview log
                     if info.get('task_id', None) is not None:
-                        if 'psutil_process_cpu_percent' in info.keys():
-                            # if this is a task resource update then handle that, if the resource table DNE then create it
-                            if (run_id + "-" + str(info['task_id']) + "_resources") not in meta.tables.keys():
-                                task_resource_table = create_task_resource_table(info['task_id'], run_id, meta)
-                                task_resource_table.create(con, checkfirst=True)
-                                con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
-                                # print(task_resource_table, 'table was created and had a task resource update added')
-                            # if this resource table already exists, just insert the update
-                            else:
-                                task_resource_table = meta.tables[run_id + "-" + str(info['task_id']) + '_resources']
-                                con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
-                                # print(task_resource_table, 'had a task resource update added')
-                            return
-
                         # if this is the first sight of the task in the workflow, add it to the workflow table
                         if len(con.execute(meta.tables[run_id].select(meta.tables[run_id].c.task_id == info['task_id'])).fetchall()) == 0:
+                            if 'psutil_process_pid' in info.keys():
+                                # this is the race condition that a resource log is before a status log so ignore this resource update
+                                pass
+
                             workflow = meta.tables[run_id]
                             ins = workflow.insert().values(**{k: v for k, v in info.items() if k in workflow.c})
                             con.execute(ins)
-                            # print('Task ' + str(info['task_id']) + " was added to the workflow table")
 
                         if 'task_status' in info.keys():
                             # if this is the first sight of a task, create a task_status_table to hold this task's updates
@@ -170,20 +154,31 @@ class DatabaseHandler(Handler):
                                 task_status_table = create_task_status_table(info['task_id'], run_id, meta)
                                 task_status_table.create(con, checkfirst=True)
                                 con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
-                                # print(task_status_table, 'table was created and had a task status update added')
                             # if this status table already exists, just insert the update
                             else:
                                 task_status_table = meta.tables[run_id + "-" + str(info['task_id'])]
                                 con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
-                                # print(task_status_table, 'had a task status update added')
                             return
-            except Exception:
-                # print('logging failed on attempt', t)
+
+                        if 'psutil_process_pid' in info.keys():
+                            # if this is a task resource update then handle that, if the resource table DNE then create it
+                            if (run_id + "-" + str(info['task_id']) + "_resources") not in meta.tables.keys():
+                                task_resource_table = create_task_resource_table(info['task_id'], run_id, meta)
+                                task_resource_table.create(con, checkfirst=True)
+                                con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
+                            # if this resource table already exists, just insert the update
+                            else:
+                                task_resource_table = meta.tables[run_id + "-" + str(info['task_id']) + '_resources']
+                                con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
+                            return
+
+            except Exception as e:
                 failed = True
+                self.eng.dispose()
+                time.sleep(5)
             if failed:
                 pass
             else:
                 break
         else:
-            # print('logging failed after', t, 'attempts')
             return
