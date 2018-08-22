@@ -385,9 +385,7 @@ class DataFlowKernel(object):
 
     @staticmethod
     def _count_all_deps(task_id, args, kwargs):
-        """Internal.
-
-        Count the number of unresolved futures in the list depends.
+        """Count the number of unresolved futures on which a task depends.
 
         Args:
             - task_id (uuid string) : Task_id
@@ -485,11 +483,8 @@ class DataFlowKernel(object):
 
         If the app task has the executors attributes not set (default=='all')
         the task will be launched on a randomly selected executor from the
-        list of executors. This behavior could later be updated to support
-        binding to executors based on user specified criteria.
-
-        If the app task specifies a particular set of executors, it will be
-        targetted at those specific executors.
+        list of executors. If the app task specifies a particular set of
+        executors, it will be targeted at the specified executors.
 
         >>> IF all deps are met:
         >>>   send to the runnable queue and launch the task
