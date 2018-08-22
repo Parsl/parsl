@@ -7,7 +7,8 @@ Reference guide
 
     parsl.set_stream_logger
     parsl.set_file_logger
-    parsl.App
+    parsl.app.app.python_app
+    parsl.app.app.bash_app
     parsl.app.futures.DataFuture
     parsl.config.Config
     parsl.dataflow.futures.AppFuture
@@ -35,7 +36,7 @@ Reference guide
     parsl.app.errors.MissingOutputs
     parsl.app.errors.NotFutureError
     parsl.app.errors.ParslError
-    parsl.executors.errors.ControllerErr
+    parsl.executors.errors.ControllerError
     parsl.executors.errors.ExecutorError
     parsl.executors.errors.ScalingFailed
     parsl.executors.exceptions.ExecutorException

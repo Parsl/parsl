@@ -29,7 +29,7 @@ Comet (SDSC)
 
 .. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
-The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
+The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/tests/configs/comet_ipp_multinode.py
 
@@ -63,7 +63,7 @@ Cooley (ALCF)
 
 The following snippet shows an example configuration for executing remotely on Argonne Leadership Computing Facility's **Cooley** analysis and visualization system.
 The example uses an `SSHInteractiveLoginChannel` to connect remotely to Cooley using ALCF's 2FA token.
-The configuration uses the `CobaltProvider` to interface with the Cooleys' scheduler.
+The configuration uses the `CobaltProvider` to interface with Cooley's scheduler.
 
 .. literalinclude:: ../../parsl/tests/configs/cooley_ssh_il_single_node.py
 
@@ -125,7 +125,7 @@ Amazon Web Services
    This can be installed via `python3 -m pip install libsubmit+aws`
 
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
-The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud(EC2) service.
+The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
 re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
 

@@ -16,13 +16,13 @@ The :py:class:`~parsl.data_provider.files.File` class abstracts the file access 
 Local
 ^^^^^
 
-The `file` scheme is used to reference local files.  A file using the local file scheme must specify the absolute file path, for example:
+The ``file`` scheme is used to reference local files.  A file using the local file scheme must specify the absolute file path, for example:
 
 .. code-block:: python
 
         File('file://path/filename.txt')
 
-The file may then be passed as input or output to an app. The following example executes the `cat` command on a local file:
+The file may then be passed as input or output to an app. The following example executes the ``cat`` command on a local file:
 
 .. code-block:: python
 
@@ -74,7 +74,7 @@ The following example illustrates how the remote file is implicitly downloaded f
 Globus
 ^^^^^^
 
-The `Globus` scheme is used to reference files that can be accessed using Globus (a guide to using Globus is available `here
+The ``Globus`` scheme is used to reference files that can be accessed using Globus (a guide to using Globus is available `here
 <https://docs.globus.org/how-to/get-started/>`_). A file using the Globus scheme must specify the UUID of the Globus
 endpoint and a path to the file on the endpoint, for example:
 
@@ -109,7 +109,7 @@ Parsl scripts may combine staging of files in and out of apps. For example, the 
 Configuration
 ^^^^^^^^^^^^^
 
-In order to manage where data is staged users may configure the default `working_dir` on a remote executor. This is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
+In order to manage where data is staged users may configure the default ``working_dir`` on a remote executor. This is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
 
 .. code-block:: python
 
@@ -124,25 +124,25 @@ In order to manage where data is staged users may configure the default `working
             ]
         )
 
-When using the Globus scheme Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the `endpoint_name` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
+When using the Globus scheme Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the ``endpoint_name`` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
 
-In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus DTN is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the `endpoint_path` (the common root path seen in Globus), and the `local_path` (the common root path on the local file system). In most cases `endpoint_path` and `local_path` are the same.
+In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus endpoint is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the ``endpoint_path`` (the common root path seen in Globus), and the ``local_path`` (the common root path on the local file system). In most cases ``endpoint_path`` and ``local_path`` are the same.
 
 .. code-block:: python
 
         from parsl.config import Config
         from parsl.executors.ipp import IPyParallelExecutor
-        from parsl.data_manager.scheme import GlobusScheme
+        from parsl.data_provider.scheme import GlobusScheme
 
         config = Config(
             executors=[
                 IPyParallelExecutor(
                     working_dir="/home/user/parsl_script",
-                    storage_access=GlobusScheme(
+                    storage_access=[GlobusScheme(
                         endpoint_uuid="7d2dc622-2edb-11e8-b8be-0ac6873fc732",
                         endpoint_path="/",
                         local_path="/home/user"
-                    )
+                    )]
                 )
             ]
         )

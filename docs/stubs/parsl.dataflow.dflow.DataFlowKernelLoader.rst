@@ -13,9 +13,9 @@ parsl.dataflow.dflow.DataFlowKernelLoader
 
    .. autosummary::
    
+      ~DataFlowKernelLoader.clear
       ~DataFlowKernelLoader.dfk
       ~DataFlowKernelLoader.load
-      ~DataFlowKernelLoader.set_default
    
    
 

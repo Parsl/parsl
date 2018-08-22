@@ -5,23 +5,23 @@ App caching
 
 When developing a workflow, developers often run the same workflow
 with incremental changes over and over. Often large fragments of
-a workflow will not have changed, yet apps will be executed again, wasting
+a workflow will not have changed, yet apps will be re-executed, wasting
 valuable developer time and computation resources. App caching
 solves this problem by storing results from apps that have completed
 so that they can be re-used. App caching can be enabled by setting the ``cache``
-argument to the :func:`~parsl.app.app` decorator to ``True`` (by default it is ``False``). App caching
-can be globally disabled by setting ``app_cache=False`` (which by default is ``True``)
+argument in the :func:`~parsl.app.python_app` or :func:`~parsl.app.bash_app` decorator to ``True`` (by default it is ``False``). App caching
+can be globally disabled by setting ``app_cache=False``
 in the :class:`~parsl.config.Config`.
 
 .. code-block:: python
 
-   @app('bash', cache=True)
+   @bash_app(cache=True)
    def hello (msg, stdout=None):
        return 'echo {}'.format(msg)
 
 
 App caching can be particularly useful when developing interactive workflows such as when
-using a Jupyter notebook. In this case, cells containing apps are often re-executed as 
+using a Jupyter notebook. In this case, cells containing apps are often re-executed
 during development. Using app caching will ensure that only modified apps are re-executed.
 
 Caveats
@@ -29,7 +29,7 @@ Caveats
 
 It is important to consider several important issues when using app caching:
 
-- Determinism:  App caching is generally useful only when the apps are deterministic.
+- Determinism: App caching is generally useful only when the apps are deterministic.
   If the outputs may be different for identical inputs, app caching will hide
   this non-deterministic behavior. For instance, caching an app that returns
   a random number will result in every invocation returning the same result.

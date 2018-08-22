@@ -4,8 +4,8 @@ import logging
 from inspect import getsource
 from hashlib import md5
 from inspect import signature
-from parsl.app.bash_app import BashApp
-from parsl.app.python_app import PythonApp
+from parsl.app.bash import BashApp
+from parsl.app.python import PythonApp
 from parsl.app.errors import InvalidAppTypeError
 
 logger = logging.getLogger(__name__)

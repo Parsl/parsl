@@ -126,7 +126,7 @@ class DataFlowKernel(object):
                 checkpoint_period = (h * 3600) + (m * 60) + s
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
             except Exception as e:
-                logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(period))
+                logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
         if any([x.managed for x in config.executors]):

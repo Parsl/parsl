@@ -1,15 +1,15 @@
 .. _codebases
 
-Modularizing Parsl Workflows
+Modularizing Parsl workflows
 ----------------------------
 
-It is often convenient to start with having a single script which defines
-the various `Apps`, load the appropriate configurations and composes the workflow.
-However, as your use-case inevitably grows and changes, modularizing your code comes with
-several benefits:
+Parsl workflows can be developed in many ways. When developing a simple workflow it is
+often convenient to include the app definitions and control logic in a single script.
+However, as a workflow inevitably grows and changes, like any code, there are significant
+benefits to be obtained by modularizing the workflow, including:
 
    1. Better readability
-   2. Logical separation of components
+   2. Logical separation of components (e.g., apps, config, and control logic)
    3. Ease of reuse of components
 
 
@@ -18,20 +18,24 @@ several benefits:
    Refer: `Issue#50 <https://github.com/Parsl/parsl/issues/50>`_
 
 
-Here is a simplified example of modularizing a simple workflow:
+The following example illustrates how a Parsl project can be organized into modules.
 
-The configuration can be defined in the Parsl script, or elsewhere before being imported.
-As an example of the latter, consider a file called ``config.py`` which contains the
-following definition:
+The configuration(s) can be defined in a module or file (e.g., ``config.py``)
+which can be imported into the control script depending on which execution resources
+should be used.
 
 .. literalinclude:: examples/config.py
 
-In a separate file called ``library.py``, we define:
+Parsl apps can be defined in separate file(s) or module(s) (e.g., ``library.py``)
+grouped by functionality.
+
 
 .. literalinclude:: examples/library.py
 
-Putting these together in a third file called ``run_increment.py``, we load the
-configuration from ``config.py`` before calling the ``increment`` app:
+Finally, the control logic for the Parsl application can then be implemented in a
+separate file (e.g., ``run_increment.py``). This file must the import the
+configuration from ``config.py`` before calling the ``increment`` app from
+``library.py``:
 
 .. literalinclude:: examples/run_increment.py
 
