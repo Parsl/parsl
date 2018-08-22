@@ -61,6 +61,7 @@ def create_workflow_table(run_id, meta):
 
 def create_task_resource_table(task_id, run_id, meta):
     table_name = run_id + "-" + str(task_id)
+    print('resource table for', task_id)
     return Table(
           table_name + '_resources', meta,
           Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
@@ -164,6 +165,7 @@ class DatabaseHandler(Handler):
 
                         if 'psutil_process_pid' in info.keys():
                             # if this is a task resource update then handle that, if the resource table DNE then create it
+                            print('resource for', info['task_id'])
                             if (run_id + "-" + str(info['task_id']) + "_resources") not in meta.tables.keys():
                                 task_resource_table = create_task_resource_table(info['task_id'], run_id, meta)
                                 task_resource_table.create(con, checkfirst=True)
@@ -202,9 +204,7 @@ class RemoteHandler(Handler):
             try:
                 info = {k: v for k, v in record.__dict__.items() if not k.startswith('__') and k not in standard_log_info}
                 bod = 'log={}'.format(json.dumps(info))
-                response = http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
-                if response.body.decode() != '0':
-                    raise httpclient.HTTPError('no ack')
+                http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
             except Exception as e:
                 # Other errors are possible, such as IOError.
                 # print("Error: " + str(e))

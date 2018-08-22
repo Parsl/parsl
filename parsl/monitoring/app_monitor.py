@@ -18,6 +18,7 @@ def monitor(pid, task_id, db_logger_config, run_id):
     # logger = get_db_logger(enable_es_logging=False)
 
     # logger.info("starting monitoring for {} on {}".format(pid, os.getpid(), extra={'task_id': task_id, 'task_run_id': run_id}))
+    print('monitor started for', task_id)
     pm = psutil.Process(pid)
     pm.cpu_percent()
 

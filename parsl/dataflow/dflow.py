@@ -89,7 +89,7 @@ class DataFlowKernel(object):
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
         self.db_logger_config = config.db_logger_config
-        self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(**self.db_logger_config)
+        self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(remote_worker=True, **self.db_logger_config)
         # self.workflow_name = str(inspect.stack()[1][1])
         self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
         if self.db_logger_config is not None:
