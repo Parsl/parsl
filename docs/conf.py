@@ -78,8 +78,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Parsl'
-copyright = '2017, Yadu Nand Babuji'
-author = 'Yadu Nand Babuji'
+copyright = '2018, University of Chicago'
+author = 'The Parsl Project'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
