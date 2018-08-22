@@ -6,7 +6,6 @@ from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers.kubernetes.template import template_string
 from parsl.providers.error import OptionalModuleMissing
 
-
 try:
     from kubernetes import client
     from kubernetes import config as kube_config
@@ -15,54 +14,76 @@ except (ImportError, NameError, FileNotFoundError):
     _kubernetes_enabled = False
 
 
-class KubernetesProvider(ExecutionProvider):
-    """ Kubernetes execution provider:
+class KubernetesProvider(ExecutionProvider, RepresentationMixin):
+    """ Kubernetes execution provider
 
-        TODO: put in a config
+    Parameters
+    ----------
+
+    namespace : str
+        FIXME
+    image : str
+        FIXME
+    channel : Channel
+        Channel for accessing this provider. Possible channels include
+        :class:`~libsubmit.channels.LocalChannel` (the default),
+        :class:`~libsubmit.channels.SSHChannel`, or
+        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
+    tasks_per_node : int
+        Tasks to run per node.
+    nodes_per_block : int
+        Nodes to provision per block.
+    init_blocks : int
+        Number of blocks to provision at the start of the run. Default is 1.
+    min_blocks : int
+        Minimum number of blocks to maintain.
+    max_blocks : int
+        Maximum number of blocks to maintain.
+    parallelism : float
+        Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
+        scaling where as many resources as possible are used; parallelism close to 0 represents
+        the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
+    secret : str
+        FIXME
+    user_id : str
+        FIXME
+    group_id : str
+        FIXME
+    run_as_non_root : str
+        FIXME
     """
 
-    def __repr__(self):
-        return "<Kubernetes Execution Provider for site:{0}>".format(self.sitename)
-
-    def __init__(self, config, channel=None):
-        """ Initialize the Kubernetes execution provider class
-
-        Args:
-             - Config (dict): Dictionary with all the config options.
-
-        KWargs :
-             - channel (channel object) : default=None A channel object
-        """
-        kube_config.load_kube_config()
-
-        self.channel = channel
-
+    def __init__(self,
+                 namespace,
+                 image,
+                 channel=LocalChannel(),
+                 tasks_per_node=1,
+                 nodes_per_block=1,
+                 init_blocks=4,
+                 min_blocks=0,
+                 max_blocks=10,
+                 parallelism=1,
+                 security=None,
+                 secret=None):
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
                                         "Kubernetes provider requires kubernetes module and config.")
 
+        self.namespace = namespace
+        self.image = image
+        self.channel = channel
+        self.tasks_per_node = tasks_per_node
+        self.nodes_per_block = nodes_per_block
+        self.init_blocks = init_blocks
+        self.min_blocks = min_blocks
+        self.max_blocks = max_blocks
+        self.parallelism = parallelism
+        self.secret = secret
+        self.user_id = user_id
+        self.group_id = group_id
+        self.run_as_non_root = run_as_non_root
+
         self.kube_client = client.ExtensionsV1beta1Api()
-
-        self.config = config
-        self.sitename = self.config['site']
-        self.namespace = self.config['execution']['namespace']
-        self.image = self.config['execution']['image']
-
-        self.init_blocks = self.config["execution"]["block"]["initBlocks"]
-        self.min_blocks = self.config["execution"]["block"]["minBlocks"]
-        self.max_blocks = self.config["execution"]["block"]["maxBlocks"]
-
-        self.user_id = None
-        self.group_id = None
-        self.run_as_non_root = None
-        if 'security' in self.config['execution']:
-            self.user_id = self.config["execution"]['security']["user_id"]
-            self.group_id = self.config["execution"]['security']["group_id"]
-            self.run_as_non_root = self.config["execution"]['security']["run_as_non_root"]
-
-        self.secret = None
-        if 'secret' in self.config['execution']:
-            self.secret = self.config['execution']['secret']
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
