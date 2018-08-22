@@ -14,7 +14,7 @@ def monitor(pid, task_id, db_logger_config, run_id):
     summable_values = ['cpu_percent', 'memory_percent', 'num_threads']
 
     logger = get_db_logger(enable_es_logging=False) if db_logger_config is None\
-        else get_db_logger(logger_name=run_id + str(task_id), **{k: v for k, v in db_logger_config.items() if k != 'logger_name'})
+        else get_db_logger(logger_name=run_id + str(task_id), is_remote_worker=True, **{k: v for k, v in db_logger_config.items() if k != 'logger_name'})
     # logger = get_db_logger(enable_es_logging=False)
 
     # logger.info("starting monitoring for {} on {}".format(pid, os.getpid(), extra={'task_id': task_id, 'task_run_id': run_id}))

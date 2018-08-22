@@ -1,6 +1,8 @@
 import logging
 from logging import Handler
 import time
+import json
+from tornado import httpclient
 
 try:
     import sqlalchemy as sa
@@ -182,3 +184,31 @@ class DatabaseHandler(Handler):
                 break
         else:
             return
+
+
+class RemoteHandler(Handler):
+    def __init__(self, addr='http://localhost:8899', request_timeout=40, retries=3, on_fail_sleep_duration=5):
+        logging.Handler.__init__(self)
+        self.addr = addr
+        self.request_timeout = request_timeout
+        self.retries = retries
+        self.on_fail_sleep_duration = on_fail_sleep_duration
+
+    def emit(self, record):
+        http_client = httpclient.HTTPClient()
+        standard_log_info = ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 'filename', 'module', 'exc_info', 'exc_text', 'stack_info', 'lineno',
+                             'funcName', 'created', 'msecs', 'relativeCreated', 'thread', 'threadName', 'processName', 'process']
+        for t in range(self.retries):
+            try:
+                info = {k: v for k, v in record.__dict__.items() if not k.startswith('__') and k not in standard_log_info}
+                bod = 'log={}'.format(json.dumps(info))
+                response = http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
+                if response.body.decode() != '0':
+                    raise httpclient.HTTPError('no ack')
+            except Exception as e:
+                # Other errors are possible, such as IOError.
+                # print("Error: " + str(e))
+                time.sleep(self.on_fail_sleep_duration)
+            else:
+                break
+        http_client.close()

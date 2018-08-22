@@ -7,6 +7,7 @@ import random
 import threading
 import inspect
 import sys
+import multiprocessing
 from datetime import datetime
 
 from concurrent.futures import Future
@@ -29,6 +30,7 @@ from parsl.utils import get_version
 from parsl.app.errors import RemoteException
 from parsl.monitoring import app_monitor
 from parsl.monitoring.db_logger import get_db_logger
+from parsl.monitoring import logging_server
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +116,10 @@ class DataFlowKernel(object):
         self.db_logger.info("DFK start", extra=workflow_info)
         for executor in self._config.executors:
             self.db_logger.info("Listed executor: " + executor.label, extra={'task_run_id': self.run_id})
+
+        if self.db_logger_config is not None and self.db_logger_config.get('enable_logging_server', False):
+            self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'db_logger_config': self.db_logger_config})
+            self.logging_server.start()
         # ES logging end
 
         checkpoints = self.load_checkpoints(config.checkpoint_files)
@@ -739,6 +745,9 @@ class DataFlowKernel(object):
                                               "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
                                               'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')),
                                               'task_run_id': self.run_id, 'rundir': self.run_dir})
+        if self.logging_server is not None:
+            self.logging_server.terminate()
+            self.logging_server.join()
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
