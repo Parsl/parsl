@@ -100,7 +100,9 @@ All project documentation is written in reStructuredText. `Sphinx <http://sphinx
 Where to start
 --------------
 
-We welcome contributions of any type (e.g., bug fixes, new features, reporting issues, documentation, etc).  If you're looking for a good place to get started you might like to peruse our current Git issues (those marked with `help wanted <https://github.com/Parsl/parsl/labels/help%20wanted>`_ are a good place to start).  
+We welcome contributions of any type (e.g., bug fixes, new features, reporting issues, documentation, etc).  If you're looking for a good place to get started you might like to peruse our current Git issues (those marked with `help wanted <https://github.com/Parsl/parsl/labels/help%20wanted>`_ are a good place to start).
+
+When you make your first contribution, it should include updating the codemeta file to include yourself as a contributor to the project.
 
 Discussion and Support
 ----------------------
