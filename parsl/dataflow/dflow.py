@@ -141,16 +141,15 @@ class DataFlowKernel(object):
 
         atexit.register(self.atexit_cleanup)
 
-    @staticmethod
-    def _count_deps(depends, task_id):
+    def _count_deps(self, depends, task_id):
         """Internal.
 
         Count the number of unresolved futures in the list depends.
         """
         count = 0
         for dep in depends:
-                if not dep.done():
             if isinstance(dep, Future):
+                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
                     count += 1
 
         return count
@@ -383,8 +382,7 @@ class DataFlowKernel(object):
             if isinstance(f, File) and f.is_remote():
                 inputs[idx] = f.stage_in(executor)
 
-    @staticmethod
-    def _count_all_deps(task_id, args, kwargs):
+    def _count_all_deps(self, task_id, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
 
         Args:
@@ -401,7 +399,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in args:
             if isinstance(dep, Future):
-                if not dep.done():
+                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
                     count += 1
                 depends.extend([dep])
 
@@ -409,22 +407,21 @@ class DataFlowKernel(object):
         for key in kwargs:
             dep = kwargs[key]
             if isinstance(dep, Future):
-                if not dep.done():
+                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
                     count += 1
                 depends.extend([dep])
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
             if isinstance(dep, Future):
-                if not dep.done():
+                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
                     count += 1
                 depends.extend([dep])
 
         # logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count, depends
 
-    @staticmethod
-    def sanitize_and_wrap(task_id, args, kwargs):
+    def sanitize_and_wrap(self, task_id, args, kwargs):
         """This function should be called **ONLY** when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
@@ -449,7 +446,8 @@ class DataFlowKernel(object):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    dep_failures.extend([e])
+                    if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                        dep_failures.extend([e])
             else:
                 new_args.extend([dep])
 
@@ -460,7 +458,8 @@ class DataFlowKernel(object):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    dep_failures.extend([e])
+                    if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                        dep_failures.extend([e])
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
@@ -470,7 +469,8 @@ class DataFlowKernel(object):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        dep_failures.extend([e])
+                        if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                            dep_failures.extend([e])
 
                 else:
                     new_inputs.extend([dep])
