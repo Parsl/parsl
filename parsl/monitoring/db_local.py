@@ -1,12 +1,11 @@
 import logging
-from logging import Handler
 import time
 import json
 from tornado import httpclient
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Table, Column, Text, Integer, Float, Boolean
+    from sqlalchemy import Table, Column, Text
 except ImportError:
     pass
 
@@ -21,8 +20,8 @@ def create_workflows_table(meta):
             # Column('host', Text, nullable=False),
             # Column('user', Text, nullable=False),
             Column('rundir', Text, nullable=False),
-            Column('tasks_failed_count', Integer, nullable=False),
-            Column('tasks_completed_count', Integer, nullable=False),
+            Column('tasks_failed_count', Text, nullable=False),
+            Column('tasks_completed_count', Text, nullable=False),
     )
 
 
@@ -30,13 +29,13 @@ def create_workflows_table(meta):
 def create_task_status_table(meta):
     return Table(
           'task_status', meta,
-          Column('task_id', Integer, sa.ForeignKey('task.task_id'), nullable=False),
-          Column('task_status', Integer, nullable=False),
-          Column('task_status_name', Integer, nullable=False),
+          Column('task_id', Text, sa.ForeignKey('task.task_id'), nullable=False),
+          Column('task_status', Text, nullable=False),
+          Column('task_status_name', Text, nullable=False),
           # Column('timestamp', Text, nullable=False, primary_key=True),
           Column('timestamp', Text, nullable=False),
           Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
-          Column('task_fail_count', Integer, nullable=False),
+          Column('task_fail_count', Text, nullable=False),
           Column('task_fail_history', Text, nullable=True),
     )
 
@@ -44,13 +43,13 @@ def create_task_status_table(meta):
 def create_workflow_table(meta):
     return Table(
           'task', meta,
-          Column('task_id', Integer, nullable=False),
+          Column('task_id', Text, nullable=False),
           Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
           Column('task_executor', Text, nullable=False),
           Column('task_fn_hash', Text, nullable=False),
           Column('task_time_started', Text, nullable=False),
           Column('task_time_completed', Text, nullable=True),
-          Column('task_memoize', Boolean, nullable=False),
+          Column('task_memoize', Text, nullable=False),
           Column('task_inputs', Text, nullable=True),
           Column('task_outputs', Text, nullable=True),
           Column('task_stdin', Text, nullable=True),
@@ -61,25 +60,25 @@ def create_workflow_table(meta):
 def create_task_resource_table(meta):
     return Table(
           'task_resources', meta,
-          Column('task_id', Integer, sa.ForeignKey('task.task_id'), nullable=False),
+          Column('task_id', Text, sa.ForeignKey('task.task_id'), nullable=False),
           # Column('timestamp', Text, nullable=False, primary_key=True),
           Column('timestamp', Text, nullable=False),
           Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
-          Column('psutil_process_pid', Integer, nullable=True),
-          Column('psutil_process_cpu_percent', Float, nullable=True),
-          Column('psutil_process_memory_percent', Float, nullable=True),
-          Column('psutil_process_children_count', Integer, nullable=True),
-          Column('psutil_process_time_user', Float, nullable=True),
-          Column('psutil_process_time_system', Float, nullable=True),
-          Column('psutil_process_memory_virtual', Float, nullable=True),
-          Column('psutil_process_memory_resident', Float, nullable=True),
-          Column('psutil_process_disk_read', Float, nullable=True),
-          Column('psutil_process_disk_write', Float, nullable=True),
+          Column('psutil_process_pid', Text, nullable=True),
+          Column('psutil_process_cpu_percent', Text, nullable=True),
+          Column('psutil_process_memory_percent', Text, nullable=True),
+          Column('psutil_process_children_count', Text, nullable=True),
+          Column('psutil_process_time_user', Text, nullable=True),
+          Column('psutil_process_time_system', Text, nullable=True),
+          Column('psutil_process_memory_virtual', Text, nullable=True),
+          Column('psutil_process_memory_resident', Text, nullable=True),
+          Column('psutil_process_disk_read', Text, nullable=True),
+          Column('psutil_process_disk_write', Text, nullable=True),
           Column('psutil_process_status', Text, nullable=True),
     )
 
 
-class DatabaseHandler(Handler):
+class DatabaseHandler(logging.Handler):
     def __init__(self, elink):
         logging.Handler.__init__(self)
         self.eng = sa.create_engine(elink)
@@ -183,7 +182,7 @@ class DatabaseHandler(Handler):
                 return
 
 
-class RemoteHandler(Handler):
+class RemoteHandler(logging.Handler):
     def __init__(self, web_app_host, web_app_port, request_timeout=40, retries=3, on_fail_sleep_duration=5):
         logging.Handler.__init__(self)
         self.addr = web_app_host + ':' + str(web_app_port)
@@ -197,7 +196,7 @@ class RemoteHandler(Handler):
                              'funcName', 'created', 'msecs', 'relativeCreated', 'thread', 'threadName', 'processName', 'process']
         for t in range(self.retries):
             try:
-                info = {k: v for k, v in record.__dict__.items() if not k.startswith('__') and k not in standard_log_info}
+                info = {k: str(v) for k, v in record.__dict__.items() if not k.startswith('__') and k not in standard_log_info}
                 bod = 'log={}'.format(json.dumps(info))
                 http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
             except Exception as e:

@@ -89,8 +89,10 @@ class DataFlowKernel(object):
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
         self.db_logger_config = config.db_logger_config
-        self.db_logger = get_db_logger(enable_es_logging=False) if self.db_logger_config is None else get_db_logger(remote_worker=True, **self.db_logger_config)
-        # self.workflow_name = str(inspect.stack()[1][1])
+        if self.db_logger_config is None:
+            self.db_logger = get_db_logger(enable_es_logging=False)
+        else:
+            self.db_logger = get_db_logger(**self.db_logger_config)
         self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
         if self.db_logger_config is not None:
             self.workflow_name = self.db_logger_config.get('workflow_name', self.workflow_name)
@@ -102,6 +104,12 @@ class DataFlowKernel(object):
         logger.info("Run id is: " + self.run_id)
         if self.dashboard is not None:
             logger.info("Dashboard is found at " + self.dashboard)
+        # start tornado logging server
+        if self.db_logger_config is not None and self.db_logger_config.get('enable_logging_server', False):
+            self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'db_logger_config': self.db_logger_config})
+            self.logging_server.start()
+        else:
+            self.logging_server = None
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
@@ -114,12 +122,6 @@ class DataFlowKernel(object):
                 'tasks_failed_count': self.tasks_failed_count,
         }
         self.db_logger.info("DFK start", extra=workflow_info)
-        for executor in self._config.executors:
-            self.db_logger.info("Listed executor: " + executor.label, extra={'task_run_id': self.run_id})
-
-        if self.db_logger_config is not None and self.db_logger_config.get('enable_logging_server', False):
-            self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'db_logger_config': self.db_logger_config})
-            self.logging_server.start()
         # ES logging end
 
         checkpoints = self.load_checkpoints(config.checkpoint_files)

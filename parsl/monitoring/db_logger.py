@@ -37,11 +37,11 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                   enable_es_logging=False,
                   enable_ssl=True,
                   index_name="my_python_index",
-                  logger_name='ParslElasticsearch',
+                  logger_name='parsl_db_logger',
                   eng_link='sqlite:///parsl.db',
                   version='1.0.0',
                   enable_local_db_logging=False,
-                  is_remote_worker=False,
+                  is_logging_server=False,
                   web_app_host='http://localhost',
                   web_app_port=8899,
                   **kwargs):
@@ -66,7 +66,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
     OptionalModuleMissing
 
     """
-    logger = logging.getLogger(__file__)
+    logger = logging.getLogger(logger_name)
     if enable_es_logging:
         if not _es_logging_enabled:
             raise OptionalModuleMissing(
@@ -86,12 +86,12 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
-    elif enable_local_db_logging and is_remote_worker:
+    elif enable_local_db_logging and not is_logging_server:
         handler = RemoteHandler(web_app_host, web_app_port)
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
-    elif enable_local_db_logging:
+    elif enable_local_db_logging and is_logging_server:
         handler = DatabaseHandler(eng_link)
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
@@ -99,4 +99,5 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
     else:
         logger.addHandler(NullHandler())
 
+    # print('returning logger', logger, 'with handlers', logger.handlers)
     return logger
