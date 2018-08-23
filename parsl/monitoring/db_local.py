@@ -27,25 +27,24 @@ def create_workflows_table(meta):
 
 
 # TODO: expand to full set of info
-def create_task_status_table(task_id, run_id, meta):
-    table_name = run_id + "-" + str(task_id)
+def create_task_status_table(meta):
     return Table(
-          table_name, meta,
-          Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
+          'task_status', meta,
+          Column('task_id', Integer, sa.ForeignKey('task.task_id'), nullable=False),
           Column('task_status', Integer, nullable=False),
           Column('task_status_name', Integer, nullable=False),
-          Column('timestamp', Text, nullable=False, primary_key=True),
+          # Column('timestamp', Text, nullable=False, primary_key=True),
+          Column('timestamp', Text, nullable=False),
           Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
           Column('task_fail_count', Integer, nullable=False),
           Column('task_fail_history', Text, nullable=True),
     )
 
 
-def create_workflow_table(run_id, meta):
-    table_name = run_id
+def create_workflow_table(meta):
     return Table(
-          table_name, meta,
-          Column('task_id', Integer, primary_key=True, nullable=False),
+          'task', meta,
+          Column('task_id', Integer, nullable=False),
           Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
           Column('task_executor', Text, nullable=False),
           Column('task_fn_hash', Text, nullable=False),
@@ -59,13 +58,12 @@ def create_workflow_table(run_id, meta):
     )
 
 
-def create_task_resource_table(task_id, run_id, meta):
-    table_name = run_id + "-" + str(task_id)
-    print('resource table for', task_id)
+def create_task_resource_table(meta):
     return Table(
-          table_name + '_resources', meta,
-          Column('task_id', Integer, sa.ForeignKey(run_id + '.task_id'), nullable=False),
-          Column('timestamp', Text, nullable=False, primary_key=True),
+          'task_resources', meta,
+          Column('task_id', Integer, sa.ForeignKey('task.task_id'), nullable=False),
+          # Column('timestamp', Text, nullable=False, primary_key=True),
+          Column('timestamp', Text, nullable=False),
           Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
           Column('psutil_process_pid', Integer, nullable=True),
           Column('psutil_process_cpu_percent', Float, nullable=True),
@@ -85,6 +83,8 @@ class DatabaseHandler(Handler):
     def __init__(self, elink):
         logging.Handler.__init__(self)
         self.eng = sa.create_engine(elink)
+        self.meta = sa.MetaData()
+        self.meta.reflect(bind=self.eng)
 
     def emit(self, record):
         self.eng.dispose()
@@ -95,8 +95,6 @@ class DatabaseHandler(Handler):
             failed = False
             try:
                 with self.eng.connect() as con:
-                    meta = sa.MetaData()
-                    meta.reflect(bind=con)
                     # formating values to convert from python or parsl to db standards
                     info['task_fail_history'] = str(info.get('task_fail_history', None))
                     info['timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(record.created))
@@ -105,93 +103,90 @@ class DatabaseHandler(Handler):
                     # if workflow or task has completed, update their entries with the time.
                     # FIXME: This appears to not updated failed tasks.
                     if 'time_completed' in info.keys() and info['time_completed'] != 'None':
-                        workflows = meta.tables['workflows']
+                        workflows = self.meta.tables['workflows']
                         up = workflows.update().values(time_completed=info['time_completed']).where(workflows.c.task_run_id == run_id)
                         con.execute(up)
                         return
                     if 'task_time_completed' in info.keys() and info['task_time_completed'] is not None:
-                        workflow = meta.tables[run_id]
-                        up = workflow.update().values(task_time_completed=info['task_time_completed']).where(workflow.c.task_id == info['task_id'])
+                        workflow = self.meta.tables['task']
+                        up = workflow.update().values(task_time_completed=info['task_time_completed']).where(workflow.c.task_id == info['task_id'])\
+                                     .where(workflow.c.task_run_id == run_id)
                         con.execute(up)
 
                     # create workflows table if this is a new database without one
-                    if 'workflows' not in meta.tables.keys():
-                        workflows = create_workflows_table(meta)
-                        workflows.create(con, checkfirst=True)
+                    if 'workflows' not in self.meta.tables.keys():
+                        workflows = create_workflows_table(self.meta)
+                        self.meta.create_all(con)
                     # if this is the first sight of the workflow, add it to the workflows table
-                    if len(con.execute(meta.tables['workflows'].select(meta.tables['workflows'].c.task_run_id == run_id)).fetchall()) == 0:
-                        workflows = meta.tables['workflows']
+                    if len(con.execute(self.meta.tables['workflows'].select(self.meta.tables['workflows'].c.task_run_id == run_id)).fetchall()) == 0:
+                        workflows = self.meta.tables['workflows']
                         ins = workflows.insert().values(**{k: v for k, v in info.items() if k in workflows.c})
                         con.execute(ins)
 
                     # if log has task counts, update the workflow entry in the workflows table
                     if 'tasks_completed_count' in info.keys():
-                        workflows = meta.tables['workflows']
+                        workflows = self.meta.tables['workflows']
                         up = workflows.update().values(tasks_completed_count=info['tasks_completed_count']).where(workflows.c.task_run_id == run_id)
                         con.execute(up)
                     if 'tasks_failed_count' in info.keys():
-                        workflows = meta.tables['workflows']
+                        workflows = self.meta.tables['workflows']
                         up = workflows.update().values(tasks_failed_count=info['tasks_failed_count']).where(workflows.c.task_run_id == run_id)
                         con.execute(up)
 
                     # create workflow table if this is a new run without one
-                    if run_id not in meta.tables.keys():
-                        workflow = create_workflow_table(run_id, meta)
-                        workflow.create(con, checkfirst=True)
+                    if 'task' not in self.meta.tables.keys():
+                        workflow = create_workflow_table(self.meta)
+                        self.meta.create_all(con)
 
                     # check to make sure it is a task log and not just a workflow overview log
                     if info.get('task_id', None) is not None:
                         # if this is the first sight of the task in the workflow, add it to the workflow table
-                        if len(con.execute(meta.tables[run_id].select(meta.tables[run_id].c.task_id == info['task_id'])).fetchall()) == 0:
+                        if len(con.execute(self.meta.tables['task'].select(self.meta.tables['task'].c.task_id == info['task_id'])
+                                               .where(self.meta.tables['task'].c.task_run_id == run_id)).fetchall()) == 0:
                             if 'psutil_process_pid' in info.keys():
                                 # this is the race condition that a resource log is before a status log so ignore this resource update
-                                pass
+                                return
 
-                            workflow = meta.tables[run_id]
+                            workflow = self.meta.tables['task']
                             ins = workflow.insert().values(**{k: v for k, v in info.items() if k in workflow.c})
                             con.execute(ins)
 
                         if 'task_status' in info.keys():
                             # if this is the first sight of a task, create a task_status_table to hold this task's updates
-                            if (run_id + "-" + str(info['task_id'])) not in meta.tables.keys():
-                                task_status_table = create_task_status_table(info['task_id'], run_id, meta)
-                                task_status_table.create(con, checkfirst=True)
+                            if 'task_status' not in self.meta.tables.keys():
+                                task_status_table = create_task_status_table(self.meta)
+                                self.meta.create_all(con)
                                 con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
                             # if this status table already exists, just insert the update
                             else:
-                                task_status_table = meta.tables[run_id + "-" + str(info['task_id'])]
+                                task_status_table = self.meta.tables['task_status']
                                 con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
                             return
 
                         if 'psutil_process_pid' in info.keys():
                             # if this is a task resource update then handle that, if the resource table DNE then create it
-                            print('resource for', info['task_id'])
-                            if (run_id + "-" + str(info['task_id']) + "_resources") not in meta.tables.keys():
-                                task_resource_table = create_task_resource_table(info['task_id'], run_id, meta)
-                                task_resource_table.create(con, checkfirst=True)
+                            if 'task_resources' not in self.meta.tables.keys():
+                                task_resource_table = create_task_resource_table(self.meta)
+                                self.meta.create_all(con)
                                 con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
                             # if this resource table already exists, just insert the update
                             else:
-                                task_resource_table = meta.tables[run_id + "-" + str(info['task_id']) + '_resources']
+                                task_resource_table = self.meta.tables['task_resources']
                                 con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
                             return
 
             except Exception as e:
+                print(str(e))
                 failed = True
-                self.eng.dispose()
                 time.sleep(5)
-            if failed:
-                pass
-            else:
-                break
-        else:
-            return
+            if not failed:
+                return
 
 
 class RemoteHandler(Handler):
-    def __init__(self, addr='http://localhost:8899', request_timeout=40, retries=3, on_fail_sleep_duration=5):
+    def __init__(self, web_app_host, web_app_port, request_timeout=40, retries=3, on_fail_sleep_duration=5):
         logging.Handler.__init__(self)
-        self.addr = addr
+        self.addr = web_app_host + ':' + str(web_app_port)
         self.request_timeout = request_timeout
         self.retries = retries
         self.on_fail_sleep_duration = on_fail_sleep_duration
@@ -207,8 +202,9 @@ class RemoteHandler(Handler):
                 http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
             except Exception as e:
                 # Other errors are possible, such as IOError.
-                # print("Error: " + str(e))
+                print("Error: " + str(e))
                 time.sleep(self.on_fail_sleep_duration)
             else:
                 break
         http_client.close()
+        return

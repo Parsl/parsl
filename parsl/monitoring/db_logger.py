@@ -42,7 +42,8 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                   version='1.0.0',
                   enable_local_db_logging=False,
                   is_remote_worker=False,
-                  web_app_addr='http://localhost:8899',
+                  web_app_host='http://localhost',
+                  web_app_port=8899,
                   **kwargs):
     """
     Parameters
@@ -86,7 +87,7 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
     elif enable_local_db_logging and is_remote_worker:
-        handler = RemoteHandler(web_app_addr)
+        handler = RemoteHandler(web_app_host, web_app_port)
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
