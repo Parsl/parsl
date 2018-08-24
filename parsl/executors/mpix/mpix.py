@@ -216,6 +216,8 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self.managed = managed
         self.engines = []
         self.tasks = {}
+        self.launch_cmd = """mpiexec -np 4 python3 /home/yadu/src/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_url} --result_url={result_url}
+        """.format(task_url=self.jobs_q_url, result_url=self.results_q_url)
 
     def start(self):
         self.outgoing_q = zmq_pipes.JobsQOutgoing(self.jobs_q_url)
@@ -227,8 +229,6 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self._start_queue_management_thread()
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
-        self.launch_cmd = """mpiexec -np 4 python3 /home/yadu/src/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_url} --result_url={result_url}
-""".format(task_url=self.jobs_q_url, result_url=self.results_q_url)
         logger.debug("Launch command :{}".format(self.launch_cmd))
 
         if self.provider:
@@ -403,7 +403,14 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        raise NotImplementedError
+        if self.provider:
+            r = self.provider.submit(self.launch_cmd)
+            self.engines.extend([r])
+        else:
+            logger.error("No execution provider available")
+            r = None
+
+        return r
 
     def scale_in(self, workers):
         """Scale in the number of active blocks by specified amount.
@@ -413,7 +420,9 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        raise NotImplementedError
+        if self.provider:
+            r = self.provider.cancel(workers)
+        return r
 
 
 if __name__ == "__main__":
