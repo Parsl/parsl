@@ -183,6 +183,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
     def __init__(self,
                  label='MPIExecutor',
                  provider=LocalProvider(),
+                 launch_cmd=None,
                  jobs_q_url=None,
                  results_q_url=None,
                  storage_access=None,
@@ -206,6 +207,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self.jobs_q_url = jobs_q_url
         self.results_q_url = results_q_url
         self.label = label
+        self.launch_cmd = launch_cmd
         self.mock = mock
         self.provider = provider
         self.engine_debug_level = engine_debug_level
@@ -227,8 +229,14 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self._start_queue_management_thread()
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
-        self.launch_cmd = """mpiexec -np 4 python3 /home/yadu/src/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_url} --result_url={result_url}
-""".format(task_url=self.jobs_q_url, result_url=self.results_q_url)
+        if not self.launch_cmd:
+            self.launch_cmd = """mpiexec -np 4 python3 /home/yadu/src/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_url} --result_url={result_url}
+"""
+        l_cmd = self.launch_cmd.format(task_url=self.jobs_q_url, 
+                                       result_url=self.results_q_url,
+                                       tasks_per_node=self.provider.tasks_per_node,
+                                       nodes_per_block=self.provider.nodes_per_block)
+        self.launch_cmd = l_cmd
         logger.debug("Launch command :{}".format(self.launch_cmd))
 
         if self.provider:
