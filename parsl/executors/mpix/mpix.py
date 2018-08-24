@@ -219,6 +219,10 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self.engines = []
         self.tasks = {}
 
+        if not launch_cmd:
+            self.launch_cmd = """mpiexec -np {tasks_per_node} fabric.py {debug} --task_url={task_url} --result_url={result_url}"""
+
+
     def start(self):
         self.outgoing_q = zmq_pipes.JobsQOutgoing(self.jobs_q_url)
         self.incoming_q = zmq_pipes.ResultsQIncoming(self.results_q_url)
@@ -229,17 +233,16 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self._start_queue_management_thread()
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
-        if not self.launch_cmd:
-            self.launch_cmd = """mpiexec -np 4 python3 /home/yadu/src/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_url} --result_url={result_url}
-"""
-        l_cmd = self.launch_cmd.format(task_url=self.jobs_q_url, 
-                                       result_url=self.results_q_url,
-                                       tasks_per_node=self.provider.tasks_per_node,
-                                       nodes_per_block=self.provider.nodes_per_block)
-        self.launch_cmd = l_cmd
-        logger.debug("Launch command :{}".format(self.launch_cmd))
-
         if self.provider:
+            debug_opts = "--debug" if self.engine_debug else ""
+            l_cmd = self.launch_cmd.format(debug=debug_opts,
+                                           task_url=self.jobs_q_url,
+                                           result_url=self.results_q_url,
+                                           tasks_per_node=self.provider.tasks_per_node,
+                                           nodes_per_block=self.provider.nodes_per_block)
+            self.launch_cmd = l_cmd
+            logger.debug("Launch command :{}".format(self.launch_cmd))
+
             self._scaling_enabled = self.provider.scaling_enabled
             logger.debug("Starting MPIExecutor with provider:\n%s", self.provider)
             if hasattr(self.provider, 'init_blocks'):
@@ -411,7 +414,14 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        raise NotImplementedError
+        if self.provider:
+            r = self.provider.submit(self.launch_cmd)
+            self.engines.extend([r])
+        else:
+            logger.error("No execution provider available")
+            r = None
+
+        return r
 
     def scale_in(self, workers):
         """Scale in the number of active blocks by specified amount.
@@ -421,7 +431,9 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        raise NotImplementedError
+        if self.provider:
+            r = self.provider.cancel(workers)
+        return r
 
 
 if __name__ == "__main__":
