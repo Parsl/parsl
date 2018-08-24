@@ -29,6 +29,7 @@ from parsl.version import VERSION
 from parsl.app.app import App
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.executors.ipp import IPyParallelExecutor
+from parsl.executors.mpix import MPIExecutor
 from parsl.data_provider.files import File
 
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
@@ -40,7 +41,7 @@ __version__ = VERSION
 
 __all__ = [
     'App', 'DataFlowKernel', 'File', 'ThreadPoolExecutor',
-    'IPyParallelExecutor', 'set_stream_logger', 'set_file_logger'
+    'IPyParallelExecutor', 'MPIExecutor', 'set_stream_logger', 'set_file_logger'
 ]
 
 clear = DataFlowKernelLoader.clear
