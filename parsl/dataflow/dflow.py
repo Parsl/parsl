@@ -256,6 +256,7 @@ class DataFlowKernel(object):
                 final_state_flag = True
                 self.tasks_failed_count += 1
 
+                self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 if self.db_logger_config is not None and\
                         (self.db_logger_config.get('enable_es_logging', False) or self.db_logger_config.get('enable_local_db_logging', False)):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
