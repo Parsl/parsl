@@ -6,11 +6,16 @@ from parsl.monitoring.db_logger import get_db_logger
 
 
 def monitor(pid, task_id, db_logger_config, run_id):
+    """Internal
+    Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
+    """
     sleep_duration = 10
     if db_logger_config is not None:
         sleep_duration = db_logger_config.get('resource_loop_sleep_duration', sleep_duration)
     time.sleep(sleep_duration)
+    # these values are simple to log. Other information is available in special formats such as memory below.
     simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
+    # values that can be summed up to see total resources used by task process and its children
     summable_values = ['cpu_percent', 'memory_percent', 'num_threads']
 
     if db_logger_config is None:
@@ -40,7 +45,7 @@ def monitor(pid, task_id, db_logger_config, run_id):
                 d['psutil_process_disk_write'] = to_mb(pm.io_counters().write_bytes)
                 d['psutil_process_disk_read'] = to_mb(pm.io_counters().read_bytes)
             except psutil._exceptions.AccessDenied:
-                # not setting should result in a null value that should report as a blank and not "spoil" the kibana aggregations
+                # occassionally pid temp files that hold this information are unvailable to be read so set to zero
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0
             for child in children:
@@ -54,6 +59,7 @@ def monitor(pid, task_id, db_logger_config, run_id):
                     d['psutil_process_disk_write'] += to_mb(child.io_counters().write_bytes)
                     d['psutil_process_disk_read'] += to_mb(child.io_counters().read_bytes)
                 except psutil._exceptions.AccessDenied:
+                    # occassionally pid temp files that hold this information are unvailable to be read so add zero
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
 
@@ -71,12 +77,16 @@ def monitor(pid, task_id, db_logger_config, run_id):
 
 
 def monitor_wrapper(f, task_id, db_logger_config, run_id):
+    """ Internal
+    Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
+    """
     def wrapped(*args, **kwargs):
         p = Process(target=monitor, args=(os.getpid(), task_id, db_logger_config, run_id))
         p.start()
         try:
             return f(*args, **kwargs)
         finally:
+            # Note: I believe finally blocks are not called if the python parsl process is killed with certain SIGs which may leave the monitor as a zombie
             p.terminate()
             p.join()
     return wrapped

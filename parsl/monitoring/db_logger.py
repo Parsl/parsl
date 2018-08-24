@@ -54,8 +54,24 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
         Port to use to access the elasticsearch cluster
     enable_es_logging : Bool, optional
         Set to True to enable logging to elasticsearch
+    enable_ssl : Bool, optional
+        Set to False if ssl is not supported by the elasticsearch server
     index_name : str, optional
         Index name to use for elasticsearch
+    logger_name : str, optional
+        Name of the logger to use. Prevents adding repeat handlers or incorrect handlers
+    eng_link : str, optional
+        The location of the SQL database to use for local logging which SQLalchemy recognizes as valid address
+    version : str, optional
+        Used to distinguish between different versions of a workflow in logs
+    enable_local_db_logging : Bool, optional
+        Enable to use local db logging/SQL logging
+    is_logging_server : Bool, optional
+        Used internally to determine which handler to return when using local db logging
+    web_app_host : str, optional
+        url which points to the logging server. Localhost works when using port forwarding or with local task executors.
+    web_app_port : int, optional
+        Port to use to access the logging server
 
     Returns
     -------
@@ -79,19 +95,19 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
                                es_index_name=index_name,
                                es_additional_fields={
                                    'Campaign': "test",
-                                   # use the name of the user's home directory as their username since there
-                                   # does not seem to be a portable way to do this
                                    'Version': version,
                                    'Username': getpass.getuser()})
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
     elif enable_local_db_logging and not is_logging_server:
+        # add a handler that will pass logs to the logging server
         handler = RemoteHandler(web_app_host, web_app_port)
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
     elif enable_local_db_logging and is_logging_server:
+        # add a handler that will take logs being recieved on the server and log them to the database
         handler = DatabaseHandler(eng_link)
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
@@ -99,5 +115,4 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
     else:
         logger.addHandler(NullHandler())
 
-    # print('returning logger', logger, 'with handlers', logger.handlers)
     return logger

@@ -1,9 +1,9 @@
 import logging
 import time
 import json
-from tornado import httpclient
 
 try:
+    from tornado import httpclient
     import sqlalchemy as sa
     from sqlalchemy import Table, Column, Text
 except ImportError:
@@ -79,13 +79,18 @@ def create_task_resource_table(meta):
 
 
 class DatabaseHandler(logging.Handler):
+    """ The handler that takes a log record and puts it into an SQL database. Needs to be a bit fast. """
     def __init__(self, elink):
+        """ Set up the handler to link it to the database specified by elink. """
         logging.Handler.__init__(self)
         self.eng = sa.create_engine(elink)
         self.meta = sa.MetaData()
         self.meta.reflect(bind=self.eng)
 
     def emit(self, record):
+        """ Take a task record and insert or update information in the SQL database. Creates the necessary tables if needed.
+        Allow multiple tries since originally this was erroneous and used concurrently. Squashes errors/exceptions.
+        This handler is added to a logger that is returned by get_db_logger when requested. """
         self.eng.dispose()
         trys = 3
         info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
@@ -100,7 +105,6 @@ class DatabaseHandler(logging.Handler):
                     run_id = info['task_run_id']
 
                     # if workflow or task has completed, update their entries with the time.
-                    # FIXME: This appears to not updated failed tasks.
                     if 'time_completed' in info.keys() and info['time_completed'] != 'None':
                         workflows = self.meta.tables['workflows']
                         up = workflows.update().values(time_completed=info['time_completed']).where(workflows.c.task_run_id == run_id)
@@ -183,7 +187,10 @@ class DatabaseHandler(logging.Handler):
 
 
 class RemoteHandler(logging.Handler):
+    """ Handler used to pass a log to the logging server for it to be written to the database.
+    This handler is added to a logger that is returned by get_db_logger when requested. """
     def __init__(self, web_app_host, web_app_port, request_timeout=40, retries=3, on_fail_sleep_duration=5):
+        """ Set up various behavior of the attempt to connect to the logging server. Not currently configurable. """
         logging.Handler.__init__(self)
         self.addr = web_app_host + ':' + str(web_app_port)
         self.request_timeout = request_timeout
@@ -191,6 +198,8 @@ class RemoteHandler(logging.Handler):
         self.on_fail_sleep_duration = on_fail_sleep_duration
 
     def emit(self, record):
+        """ Open up an HTTP connection to the logging server. This is currently blocking.
+        It should not matter for the resource monitors but could hold up the DFK logs if this connection/sending takes a lot of time. """
         http_client = httpclient.HTTPClient()
         standard_log_info = ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 'filename', 'module', 'exc_info', 'exc_text', 'stack_info', 'lineno',
                              'funcName', 'created', 'msecs', 'relativeCreated', 'thread', 'threadName', 'processName', 'process']
