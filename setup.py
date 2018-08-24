@@ -23,6 +23,7 @@ setup(
     install_requires=install_requires,
     extras_require = {
         'db_logging' : ['CMRESHandler', 'psutil'],
+        'mpix' : ['mpi4py'],
         },
     classifiers=[
         # Maturity
