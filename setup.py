@@ -19,6 +19,7 @@ setup(
     package_data={'': ['LICENSE']},
     packages=find_packages(),
     install_requires=install_requires,
+    scripts = ['parsl/executors/mpix/fabric.py'],
     extras_require = {
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
