@@ -1,6 +1,20 @@
 """Exceptions raise by Executors."""
 
 
+class OptionalModuleMissing(Exception):
+    ''' Error raised a required module is missing for a optional/extra provider
+    '''
+
+    def __init__(self, module_names, reason):
+        self.module_names = module_names
+        self.reason = reason
+
+    def __repr__(self):
+        return "Unable to initialize logger.Missing:{0},  Reason:{1}".format(
+            self.module_names, self.reason
+        )
+
+
 class ExecutorError(Exception):
     """Base class for all exceptions.
 
