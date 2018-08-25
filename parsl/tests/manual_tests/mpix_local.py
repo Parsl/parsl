@@ -12,8 +12,9 @@ config = Config(
             results_q_url="tcp://127.0.0.1:50006",
             provider=LocalProvider(
                 channel=LocalChannel(),
-                init_blocks=0,
+                init_blocks=1,
                 max_blocks=0,
+                tasks_per_node=3,
             )
         )
     ],
