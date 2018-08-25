@@ -1,10 +1,13 @@
+#!/usr/bin/env python3
 import argparse
 import logging
 import os
+import sys
 import threading
 import time
 import uuid
 import zmq
+
 from mpi4py import MPI
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -214,6 +217,8 @@ if __name__ == "__main__":
     start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
                       rank,
                       level=logging.DEBUG if args.debug is True else logging.INFO)
+
+    logger.debug("Python version :{}".format(sys.version))
 
     try:
         if rank == 0:
