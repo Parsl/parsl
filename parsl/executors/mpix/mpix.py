@@ -219,7 +219,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self.engines = []
         self.tasks = {}
         if not launch_cmd:
-            self.launch_cmd = """mpiexec -np 4 python3 fabric.py -d --task_url={task_url} --result_url={result_url}""".format(task_url=self.jobs_q_url, result_url=self.results_q_url)
+            self.launch_cmd = """mpiexec -np {tasks_per_node} fabric.py -d --task_url={task_url} --result_url={result_url}"""
 
     def start(self):
         self.outgoing_q = zmq_pipes.JobsQOutgoing(self.jobs_q_url)
@@ -427,7 +427,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        to_kill = self.engines[:block]
+        to_kill = self.engines[:blocks]
         if self.provider:
             r = self.provider.cancel(to_kill)
         else:
