@@ -1,6 +1,4 @@
-from libsubmit.providers import LocalProvider
 from libsubmit.providers import CobaltProvider
-from libsubmit.channels import LocalChannel
 from libsubmit.launchers import SimpleLauncher
 
 from parsl.config import Config
@@ -19,11 +17,12 @@ config = Config(
             label="local_ipp",
             jobs_q_url=JOB_URL,
             results_q_url=RESULT_URL,
-            launch_cmd="""which python3; 
-aprun -b -cc depth -j 1 -n $(($COBALT_PARTSIZE * {tasks_per_node})) -N {tasks_per_node} python3 /home/yadunand/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_url} --result_url={result_url}""",
+            launch_cmd='which python3; \
+aprun -b -cc depth -j 1 -n $(($COBALT_PARTSIZE * {tasks_per_node})) -N {tasks_per_node} \
+python3 /home/yadunand/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_url} --result_url={result_url}',
             provider=CobaltProvider(
                 queue="debug-flat-quad",
-                #queue="default",
+                # queue="default",
                 launcher=SimpleLauncher(),
                 walltime="00:30:00",
                 nodes_per_block=2,
