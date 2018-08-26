@@ -13,7 +13,7 @@ config = Config(
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=1,
-                max_blocks=0,
+                max_blocks=1,
                 tasks_per_node=3,
             )
         )
