@@ -65,12 +65,13 @@ echo "All workers done"
 '''.format(command, task_blocks)
         return x
 
+
 class GnuParallelLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the framework to
     launch multiple command invocations via GNU parallel sshlogin.
 
     This wrapper sets the bash env variable CORES to the number of cores on the
-    machine. 
+    machine.
 
     This launcher makes the following assumptions:
     - GNU parallel is installed and can be located in $PATH
@@ -120,12 +121,13 @@ echo "All workers done"
 '''.format(command, tasks_per_node, nodes_per_block, task_blocks)
         return x
 
+
 class MpiExecLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the framework to
     launch multiple command invocations via mpiexec.
 
     This wrapper sets the bash env variable CORES to the number of cores on the
-    machine. 
+    machine.
 
     This launcher makes the following assumptions:
     - mpiexec is installed and can be located in $PATH
@@ -160,6 +162,7 @@ mpiexec -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
 echo "All workers done"
 '''.format(command, tasks_per_node, nodes_per_block, task_blocks)
         return x
+
 
 class SrunLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the SRUN launch framework

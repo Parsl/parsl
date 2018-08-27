@@ -10,4 +10,3 @@ __all__ = ['SimpleLauncher',
            'AprunLauncher',
            'GnuParallelLauncher',
            'MpiExecLauncher']
-
