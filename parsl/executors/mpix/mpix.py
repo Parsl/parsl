@@ -14,9 +14,8 @@ except ImportError:
 else:
     _mpi_enabled = True
 
-
-from ipyparallel.serialize import pack_apply_message, unpack_apply_message
-from ipyparallel.serialize import serialize_object, deserialize_object
+from ipyparallel.serialize import pack_apply_message  # , unpack_apply_message
+from ipyparallel.serialize import deserialize_object  # , serialize_object,
 
 from parsl.executors.mpix import zmq_pipes
 from parsl.executors.errors import *
@@ -32,134 +31,16 @@ BUFFER_THRESHOLD = 1024 * 1024
 ITEM_THRESHOLD = 1024
 
 
-def runner(incoming_q, outgoing_q):
-    """This is a function that mocks the Swift-T side.
-
-    It listens on the the incoming_q for tasks and posts returns on the outgoing_q.
-
-    Args:
-         - incoming_q (Queue object) : The queue to listen on
-         - outgoing_q (Queue object) : Queue to post results on
-
-    The messages posted on the incoming_q will be of the form :
-
-    .. code:: python
-
-       {
-          "task_id" : <uuid.uuid4 string>,
-          "buffer"  : serialized buffer containing the fn, args and kwargs
-       }
-
-    If ``None`` is received, the runner will exit.
-
-    Response messages should be of the form:
-
-    .. code:: python
-
-       {
-          "task_id" : <uuid.uuid4 string>,
-          "result"  : serialized buffer containing result
-          "exception" : serialized exception object
-       }
-
-    On exiting the runner will post ``None`` to the outgoing_q
-
-    """
-    logger.debug("[RUNNER] Starting")
-
-    def execute_task(bufs):
-        """Deserialize the buffer and execute the task.
-
-        Returns the serialized result or exception.
-        """
-        user_ns = locals()
-        user_ns.update({'__builtins__': __builtins__})
-
-        f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
-
-        fname = getattr(f, '__name__', 'f')
-        prefix = "parsl_"
-        fname = prefix + "f"
-        argname = prefix + "args"
-        kwargname = prefix + "kwargs"
-        resultname = prefix + "result"
-
-        user_ns.update({fname: f,
-                        argname: args,
-                        kwargname: kwargs,
-                        resultname: resultname})
-
-        code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                               argname, kwargname)
-
-        try:
-            logger.debug("[RUNNER] Executing: {0}".format(code))
-            exec(code, user_ns, user_ns)
-
-        except Exception as e:
-            logger.warning("Caught exception; will raise it: {}".format(e))
-            raise e
-
-        else:
-            logger.debug("[RUNNER] Result: {0}".format(user_ns.get(resultname)))
-            return user_ns.get(resultname)
-
-    while True:
-        try:
-            # Blocking wait on the queue
-            msg = incoming_q.get(block=True, timeout=10)
-
-        except queue.Empty:
-            # Handle case where no items were in the queue
-            logger.debug("[RUNNER] Queue is empty")
-
-        except IOError as e:
-            logger.debug("[RUNNER] Broken pipe: {}".format(e))
-            try:
-                # Attempt to send a stop notification to the management thread
-                outgoing_q.put(None)
-
-            except Exception:
-                pass
-
-            break
-
-        except Exception as e:
-            logger.debug("[RUNNER] Caught unknown exception: {}".format(e))
-
-        else:
-            # Handle received message
-            if not msg:
-                # Empty message is a die request
-                logger.debug("[RUNNER] Received exit request")
-                outgoing_q.put(None)
-                break
-            else:
-                # Received a valid message, handle it
-                logger.debug("[RUNNER] Got a valid task with ID {}".format(msg["task_id"]))
-                try:
-                    response_obj = execute_task(msg['buffer'])
-                    response = {"task_id": msg["task_id"],
-                                "result": serialize_object(response_obj)}
-
-                    logger.debug("[RUNNER] Returing result: {}".format(
-                                   deserialize_object(response["result"])))
-
-                except Exception as e:
-                    logger.debug("[RUNNER] Caught task exception: {}".format(e))
-                    response = {"task_id": msg["task_id"],
-                                "exception": serialize_object(e)}
-
-                outgoing_q.put(response)
-
-    logger.debug("[RUNNER] Terminating")
-
-
 class MPIExecutor(ParslExecutor, RepresentationMixin):
     """The MPI executor.
 
-    Bypass the Swift/T language and run on top off the MPI engines
-    in an MPI environment.
+    The MPI Executor system has 3 components:
+      1. The MPIExecutor instance which is run as part of the Parsl script.
+      2. The MPI based fabric which coordinates task execution over several nodes.
+      3. ZeroMQ pipes that connect the MPIExecutor and the fabric
+
+    Our design assumes that there is a single fabric running over a `block` and that
+    there might be several such `fabric` instances.
 
     Here is a diagram
 
@@ -168,7 +49,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
                         |  Data   |  Executor   |   IPC      | External Process(es)
                         |  Flow   |             |            |
                    Task | Kernel  |             |            |
-                 +----->|-------->|------------>|outgoing_q -|-> Worker_Process
+                 +----->|-------->|------------>|outgoing_q -|-> Fabric (MPI Ranks)
                  |      |         |             |            |    |         |
            Parsl<---Fut-|         |             |            |  result   exception
                      ^  |         |             |            |    |         |
@@ -193,8 +74,8 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
                  managed=True):
         """Initialize the MPI Executor
 
-        Trying to implement the emews model.
-
+        We only store the config options here, the executor is started only when
+        start() is called.
         """
 
         if not _mpi_enabled:
@@ -222,7 +103,14 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         if not launch_cmd:
             self.launch_cmd = """mpiexec -np {tasks_per_node} fabric.py {debug} --task_url={task_url} --result_url={result_url}"""
 
+        if (self.provider.tasks_per_node * self.provider.nodes_per_block) < 2:
+            logger.error("MPIExecutor requires atleast 2 workers launched")
+            raise InsufficientMPIRanks(tasks_per_node=self.provider.tasks_per_node,
+                                       nodes_per_block=self.provider.nodes_per_block)
+
     def start(self):
+        """ Here we create the ZMQ pipes and the MPI fabric
+        """
         self.outgoing_q = zmq_pipes.JobsQOutgoing(self.jobs_q_url)
         self.incoming_q = zmq_pipes.ResultsQIncoming(self.results_q_url)
 
@@ -230,6 +118,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
+
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
         if self.provider:
@@ -296,8 +185,6 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         The `None` message is a die request.
         """
         while True:
-            logger.debug("[MTHREAD] Management thread active")
-            print("Results_q : ", self.incoming_q)
             try:
                 msg = self.incoming_q.get(timeout=1)
 

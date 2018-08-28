@@ -15,6 +15,20 @@ class OptionalModuleMissing(Exception):
         )
 
 
+class InsufficientMPIRanks(Exception):
+    ''' Error raised a required module is missing for a optional/extra provider
+    '''
+
+    def __init__(self, tasks_per_node=None, nodes_per_block=None):
+        self.tasks_per_node = tasks_per_node
+        self.nodes_per_block = nodes_per_block
+
+    def __repr__(self):
+        return "MPIExecutor requires at least 2 ranks launched. \
+        You requested tasks_per_node={}, nodes_per_block={}".format(self.tasks_per_node,
+                                                                    self.nodes_per_block)
+
+
 class ExecutorError(Exception):
     """Base class for all exceptions.
 
