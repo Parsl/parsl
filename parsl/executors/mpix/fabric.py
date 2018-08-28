@@ -157,10 +157,10 @@ def worker(comm, rank):
             result = execute_task(req['buffer'])
         except Exception as e:
             result_package = {'task_id': tid, 'exception': serialize_object(e)}
+            logger.debug("No result dues to exception : {}".format(e))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
-
-        logger.debug("Result : {}".format(result))
+            logger.debug("Result : {}".format(result))
         comm.send(result_package, dest=0, tag=RESULT_TAG)
 
 
@@ -229,5 +229,6 @@ if __name__ == "__main__":
             worker(comm, rank)
     except Exception as e:
         print("Caught error : ", e)
+        raise
 
     print("Done")
