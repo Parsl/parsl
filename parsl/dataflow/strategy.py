@@ -2,6 +2,8 @@ import logging
 import time
 import math
 
+from parsl.executors.ipp import IPyParallelExecutor
+
 logger = logging.getLogger(__name__)
 
 
@@ -178,15 +180,18 @@ class Strategy(object):
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            active_blocks = sum([1 for x in status if x in ('RUNNING',
-                                                            'SUBMITTING',
-                                                            'PENDING')])
+            running = sum([1 for x in status if x == 'RUNNING'])
+            submitting = sum([1 for x in status if x == 'SUBMITTING'])
+            pending = sum([1 for x in status if x == 'PENDING'])
+            active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            # import pdb; pdb.set_trace()
-            logger.debug("Tasks:{} Slots:{} Parallelism:{}".format(len(active_tasks),
-                                                                   active_slots,
-                                                                   parallelism))
+            if isinstance(executor, IPyParallelExecutor):
+                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected engines'.format(
+                    label, len(active_tasks), running, submitting, pending, len(executor.executor)))
+            else:
+                logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
+                    label, len(active_tasks), running, submitting, pending))
 
             # Case 1
             # No tasks.
@@ -204,14 +209,18 @@ class Strategy(object):
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
                     if not self.executors[executor.label]['idle_since']:
-                        logger.debug("Strategy: Scale_in, tasks=0 starting kill timer")
+                        logger.debug("Executor {} has 0 active tasks; starting kill timer (if idle time exceeds {}s, resources will be removed)".format(
+                            label, self.max_idletime)
+                        )
                         self.executors[executor.label]['idle_since'] = time.time()
 
                     idle_since = self.executors[executor.label]['idle_since']
                     if (time.time() - idle_since) > self.max_idletime:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
-                        logger.debug("Strategy: Scale_in, tasks=0")
+                        logger.debug("Idle time has reached {}s for executor {}; removing resources".format(
+                            self.max_idletime, label)
+                        )
                         executor.scale_in(active_blocks - min_blocks)
 
                     else:

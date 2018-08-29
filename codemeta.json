@@ -1,0 +1,201 @@
+{
+    "@context": [
+        "https://doi.org/10.5063/schema/codemeta-2.0",
+        "http://schema.org"
+    ],
+    "@type": "SoftwareSourceCode",
+    "identifier": "parsl",
+    "name": "parsl",
+    "version": "0.6.1",
+    "description": "Simple data dependent workflows in Python",
+    "license": "OSI Approved :: Apache Software License",
+    "author": [
+        {
+            "@id":"http://orcid.org/0000-0002-9162-6003",
+            "@type": "Person",
+            "givenName": "Yadu",
+            "familyName": "Nand Babuji",
+            "email": "yadu@uchicago.edu"
+        },
+        {
+            "@id":"http://orcid.org/0000-0002-8640-5417",
+            "@type": "Person",
+            "givenName": "Anna",
+            "familyName": "Woodard",
+            "email": "annawoodard@uchicago.edu"
+        },
+        {
+            "@id":"http://orcid.org/0000-0002-7370-4805",
+            "@type": "Person",
+            "givenName": "Kyle",
+            "familyName": "Chard",
+            "email": "chard@uchicago.edu"
+        },
+        {
+            "@id":"http://orcid.org/0000-0001-5934-7525",
+            "@type": "Person",
+            "givenName": "Daniel S.",
+            "familyName": "Katz",
+            "email": "d.katz@ieee.org"
+        },
+        {
+            "@id":"http://orcid.org/0000-0000-0000-0000",
+            "@type": "Person",
+            "givenName": "Michael",
+            "familyName": "Wilde",
+            "email": "wilde@parallelworks.com"
+        },
+        {
+            "@id":"http://orcid.org/0000-0000-0000-0000",
+            "@type": "Person",
+            "givenName": "Justin",
+            "familyName": "Wozniak",
+            "email": "woz@anl.gov"
+        },
+        {
+            "@id":"http://orcid.org/0000-0000-0000-0000",
+            "@type": "Person",
+            "givenName": "Ian",
+            "familyName": "Foster",
+            "email": "foster@anl.gov"
+        }
+    ],
+    "softwareRequirements": [
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "cmreshandler",
+            "name": "CMRESHandler",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "ipyparallel",
+            "name": "ipyparallel",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "libsubmit",
+            "name": "libsubmit",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "ipykernel",
+            "name": "ipykernel",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "psutil",
+            "name": "psutil",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "dill",
+            "name": "dill",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "globus-sdk",
+            "name": "globus-sdk",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "requests",
+            "name": "requests",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "tblib",
+            "name": "tblib",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "identifier": "nbsphinx",
+            "name": "nbsphinx",
+            "provider": {
+                "@id": "https://pypi.org",
+                "@type": "Organization",
+                "name": "The Python Package Index",
+                "url": "https://pypi.org"
+            },
+            "runtimePlatform": "Python 3.6.4"
+        }
+    ],
+    "audience": [
+        {
+            "@type": "Audience",
+            "audienceType": "Developers"
+        }
+    ],
+    "provider": {
+        "@id": "https://pypi.org",
+        "@type": "Organization",
+        "name": "The Python Package Index",
+        "url": "https://pypi.org"
+    },
+    "runtimePlatform": "Python 3.6.4",
+    "url": "https://github.com/Parsl/parsl",
+    "developmentStatus": "3 - Alpha",
+    "programmingLanguage": "Python :: 3.6"
+}
