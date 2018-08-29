@@ -40,24 +40,6 @@ class AppFuture(Future):
 
     """
 
-    def parent_callback(self, executor_fu):
-        """Callback from executor future to update the parent.
-
-        Args:
-            - executor_fu (Future): Future returned by the executor along with callback
-
-        Returns:
-            - None
-
-        Updates the super() with the result() or exception()
-        """
-        # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
-        if executor_fu.done() is True:
-            try:
-                super().set_result(executor_fu.result())
-            except Exception as e:
-                super().set_exception(e)
-
     def __init__(self, parent, tid=None, stdout=None, stderr=None):
         """Initialize the AppFuture.
 
@@ -81,6 +63,24 @@ class AppFuture(Future):
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
+
+    def parent_callback(self, executor_fu):
+        """Callback from executor future to update the parent.
+
+        Args:
+            - executor_fu (Future): Future returned by the executor along with callback
+
+        Returns:
+            - None
+
+        Updates the super() with the result() or exception()
+        """
+        # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
+        if executor_fu.done() is True:
+            try:
+                super().set_result(executor_fu.result())
+            except Exception as e:
+                super().set_exception(e)
 
     @property
     def stdout(self):

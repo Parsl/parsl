@@ -209,14 +209,18 @@ class Strategy(object):
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
                     if not self.executors[executor.label]['idle_since']:
-                        logger.debug("Strategy: Scale_in, tasks=0 starting kill timer")
+                        logger.debug("Executor {} has 0 active tasks; starting kill timer (if idle time exceeds {}s, resources will be removed)".format(
+                            label, self.max_idletime)
+                        )
                         self.executors[executor.label]['idle_since'] = time.time()
 
                     idle_since = self.executors[executor.label]['idle_since']
                     if (time.time() - idle_since) > self.max_idletime:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
-                        logger.debug("Strategy: Scale_in, tasks=0")
+                        logger.debug("Idle time has reached {}s for executor {}; removing resources".format(
+                            self.max_idletime, label)
+                        )
                         executor.scale_in(active_blocks - min_blocks)
 
                     else:
