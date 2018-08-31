@@ -126,7 +126,7 @@ class DataFlowKernel(object):
                 checkpoint_period = (h * 3600) + (m * 60) + s
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
             except Exception as e:
-                logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(period))
+                logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
         if any([x.managed for x in config.executors]):
@@ -141,16 +141,15 @@ class DataFlowKernel(object):
 
         atexit.register(self.atexit_cleanup)
 
-    @staticmethod
-    def _count_deps(depends, task_id):
+    def _count_deps(self, depends, task_id):
         """Internal.
 
         Count the number of unresolved futures in the list depends.
         """
         count = 0
         for dep in depends:
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
-                if not dep.done():
+            if isinstance(dep, Future):
+                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
                     count += 1
 
         return count
@@ -383,11 +382,8 @@ class DataFlowKernel(object):
             if isinstance(f, File) and f.is_remote():
                 inputs[idx] = f.stage_in(executor)
 
-    @staticmethod
-    def _count_all_deps(task_id, args, kwargs):
-        """Internal.
-
-        Count the number of unresolved futures in the list depends.
+    def _count_all_deps(self, task_id, args, kwargs):
+        """Count the number of unresolved futures on which a task depends.
 
         Args:
             - task_id (uuid string) : Task_id
@@ -402,31 +398,30 @@ class DataFlowKernel(object):
         depends = []
         count = 0
         for dep in args:
-            if isinstance(dep, Future) or issubclass(dep.__class__, Future):
-                if not dep.done():
+            if isinstance(dep, Future):
+                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
                     count += 1
                 depends.extend([dep])
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future) or issubclass(dep.__class__, Future):
-                if not dep.done():
+            if isinstance(dep, Future):
+                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
                     count += 1
                 depends.extend([dep])
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
-            if issubclass(dep.__class__, Future) or isinstance(dep, Future):
-                if not dep.done():
+            if isinstance(dep, Future):
+                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
                     count += 1
                 depends.extend([dep])
 
         # logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count, depends
 
-    @staticmethod
-    def sanitize_and_wrap(task_id, args, kwargs):
+    def sanitize_and_wrap(self, task_id, args, kwargs):
         """This function should be called **ONLY** when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
@@ -447,32 +442,35 @@ class DataFlowKernel(object):
         # Replace item in args
         new_args = []
         for dep in args:
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
+            if isinstance(dep, Future):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    dep_failures.extend([e])
+                    if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                        dep_failures.extend([e])
             else:
                 new_args.extend([dep])
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future) or issubclass(type(dep), Future):
+            if isinstance(dep, Future):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    dep_failures.extend([e])
+                    if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                        dep_failures.extend([e])
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
             new_inputs = []
             for dep in kwargs['inputs']:
-                if isinstance(dep, Future) or issubclass(type(dep), Future):
+                if isinstance(dep, Future):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        dep_failures.extend([e])
+                        if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                            dep_failures.extend([e])
 
                 else:
                     new_inputs.extend([dep])
@@ -485,11 +483,8 @@ class DataFlowKernel(object):
 
         If the app task has the executors attributes not set (default=='all')
         the task will be launched on a randomly selected executor from the
-        list of executors. This behavior could later be updated to support
-        binding to executors based on user specified criteria.
-
-        If the app task specifies a particular set of executors, it will be
-        targetted at those specific executors.
+        list of executors. If the app task specifies a particular set of
+        executors, it will be targeted at the specified executors.
 
         >>> IF all deps are met:
         >>>   send to the runnable queue and launch the task

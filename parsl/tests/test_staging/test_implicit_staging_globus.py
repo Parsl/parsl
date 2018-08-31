@@ -20,7 +20,7 @@ def sort_strings(inputs=[], outputs=[]):
 
 
 @pytest.mark.local
-def test_implicit_staging_https():
+def test_implicit_staging_globus():
     """Test implicit staging for an ftp file
 
     Create a remote input file (globus) that points to unsorted.txt.
@@ -47,4 +47,4 @@ if __name__ == "__main__":
     if args.debug:
         parsl.set_stream_logger()
 
-    test_implicit_staging_https()
+    test_implicit_staging_globus()

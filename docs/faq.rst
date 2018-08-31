@@ -242,7 +242,20 @@ There are a few common situations in which a Parsl script might hang:
 
 How can I start a Jupyter notebook over SSH?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-See instructions `here <https://techtalktone.wordpress.com/2017/03/28/running-jupyter-notebooks-on-a-remote-server-via-ssh/>`_.
+
+Run
+
+.. code-block::
+
+    jupyter notebook --no-browser --ip=`/sbin/ip route get 8.8.8.8 | awk '{print $NF;exit}'`
+
+for a Jupyter notebook, or 
+
+.. code-block::
+
+    jupyter lab --no-browser --ip=`/sbin/ip route get 8.8.8.8 | awk '{print $NF;exit}'`
+
+for Jupyter lab (recommended). If that doesn't work, see instructions `here <https://techtalktone.wordpress.com/2017/03/28/running-jupyter-notebooks-on-a-remote-server-via-ssh/>`_.
 
 How can I sync my conda environment and Jupyter environment?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

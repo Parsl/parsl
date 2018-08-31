@@ -354,10 +354,10 @@ class TurbineExecutor(ParslExecutor):
         """
         raise NotImplementedError
 
-    def scale_in(self, workers=1):
-        """Scale in the number of active workers by 1.
+    def scale_in(self, workers):
+        """Scale in the number of active blocks by specified amount.
 
-        This method is notImplemented for threads and will raise the error if called.
+        This method is not implemented for turbine and will raise an error if called.
 
         Raises:
              NotImplementedError
