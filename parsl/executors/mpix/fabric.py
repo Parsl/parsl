@@ -5,7 +5,6 @@ import os
 import sys
 import threading
 import time
-import uuid
 import zmq
 
 from mpi4py import MPI
@@ -16,18 +15,55 @@ from parsl.executors.mpix import zmq_pipes
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
+HEARTBEAT_PERIOD = 30  # Seconds
 
 
-def result_queue_manager(comm, result_q):
+def result_queue_manager(comm, result_q, worker_catalog, fabric_id):
+    """ Manages all responses from workers
+
+    The result queue uses MPI Iprobe to asynchronously check for messages matching
+    the RESULT_TAG and when one is available forwards it to the outgoing result queue.
+
+    In addition there's a 30s timer which is used to send a heartbeat message to the
+    MPIExecutor, which contains the list of active tasks. Without locking there's a
+    potential race condition since active_tasks could change while the heart_beat
+    message is being made. We could probably send a dummy message back via results_q
+    on receipt on the task.
+    """
+
     logger.debug("Starting result_queue_manager thread")
+
+    hbt_timer = time.time()
+
     while True:
         info = MPI.Status()
-        result = comm.recv(source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=info)
-        logger.debug("[RESULT_Q MANAGER] Received result : {}".format(result))
+        while not comm.Iprobe(source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=info):
+            time.sleep(0.1)
+            delta = time.time() - hbt_timer
+            if delta > 30:
+                logger.debug("Sending heartbeat")
+                result_q.put({'hbt': time.time(),
+                              'fabric_id': fabric_id,
+                              'active_tasks': [task for task in worker_catalog.values() if task]})
+                hbt_timer = time.time()
+
+        incoming_rank = info.Get_source()
+        result = comm.recv(source=incoming_rank, tag=RESULT_TAG, status=info)
+        worker_catalog[incoming_rank] = None
+        logger.debug("[RESULT_Q MANAGER] Received result for task:{}".format(result['task_id']))
         result_q.put(result)
 
+        # Make sure the heartbeat is sent even when the results are flowing back quickly
+        delta = time.time() - hbt_timer
+        if delta > HEARTBEAT_PERIOD:
+            logger.debug("Sending heartbeat")
+            result_q.put({'hbt': time.time(),
+                          'fabric_id': fabric_id,
+                          'active_tasks': [task for task in worker_catalog.values() if task]})
+            hbt_timer = time.time()
 
-def master(comm, rank, task_q_url=None, result_q_url=None):
+
+def master(comm, rank, fabric_id=None, task_q_url=None, result_q_url=None):
     """ Due to the asynchronous nature of the the task queue and results queue
     we have the main thread processing requests for jobs and the a secondary thread
     that exclusively listens for results using tags
@@ -35,9 +71,8 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
 
     logger.info("Master started")
 
-    master_id = str(uuid.uuid4())
-    task_queue = zmq_pipes.JobsQIncoming(task_q_url, server_id=master_id)
-    result_queue = zmq_pipes.ResultsQOutgoing(result_q_url, server_id=master_id)
+    task_queue = zmq_pipes.JobsQIncoming(task_q_url, server_id=fabric_id)
+    result_queue = zmq_pipes.ResultsQOutgoing(result_q_url, server_id=fabric_id)
 
     logger.info("Connected to task_queue:{}".format(task_queue))
     logger.info("Connected to result_queue:{}".format(result_queue))
@@ -46,9 +81,13 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
     comm.Barrier()
     logger.debug("Master synced")
 
+    # The catalog assumes rank:0 is master, and the remainder are workers
+    worker_catalog = {i: None for i in range(1, comm.size)}
+
     # Starting threads to listen for results
     result_queue_thread = threading.Thread(target=result_queue_manager,
-                                           args=(comm, result_queue,))
+                                           args=(comm, result_queue,
+                                                 worker_catalog, fabric_id))
     result_queue_thread.daemon = True
     result_queue_thread.start()
 
@@ -56,20 +95,22 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
     start = time.time()
     abort_flag = False
 
-    task_catalog = {}
     while True:
 
         try:
             task = task_queue.get(timeout=10)
+
         except zmq.Again as e:
-            logger.debug("No tasks yet: {}".format(e))
-            time.sleep(0.2)
+            # logger.debug("No tasks yet: {}".format(e))
+            time.sleep(0.1)
             continue
+
         except Exception as e:
             logger.debug("Caught task recv exception : {}".format(e))
-            time.sleep(0.2)
+            time.sleep(0.1)
             continue
-        logger.debug("Received task, type:{} task:{}".format(type(task), task))
+
+        logger.debug("Received task:{}".format(task['task_id']))
 
         if task["task_id"] == "STOP":
             logger.info("Received STOP request, preparing to terminate MPI fabric")
@@ -77,18 +118,18 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
             break
         else:
             tid = task["task_id"]
-            task_catalog[tid] = {'worker': None,
-                                 'status': 'queued',
-                                 'recv_time': time.time(),
-                                 'start_t': None,
-                                 'end_t': None}
 
         info = MPI.Status()
-        req = comm.recv(source=MPI.ANY_SOURCE, tag=TASK_REQUEST_TAG, status=info)
+        comm.recv(source=MPI.ANY_SOURCE, tag=TASK_REQUEST_TAG, status=info)
         worker_rank = info.Get_source()
-        logger.info("Received task request:{} from rank:{}".format(req, worker_rank))
-        task_catalog[tid]['worker'] = worker_rank
+        logger.info("Assigning task:{} to rank:{}".format(task["task_id"], worker_rank))
         comm.send(task, dest=worker_rank, tag=worker_rank)
+
+        result_queue.put({'task_id': tid,
+                          'fabric_id': fabric_id,
+                          'info': time.time()})
+
+        worker_catalog[worker_rank] = tid
         count += 1
 
     end = time.time()
@@ -137,7 +178,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(comm, rank):
+def worker(comm, rank, fabric_id=None):
     logger.info("Worker started")
 
     # Sync worker with master
@@ -145,6 +186,8 @@ def worker(comm, rank):
     logger.debug("Synced")
 
     task_request = b'TREQ'
+
+    snd_req = None
 
     while True:
         comm.send(task_request, dest=0, tag=TASK_REQUEST_TAG)
@@ -156,12 +199,19 @@ def worker(comm, rank):
         try:
             result = execute_task(req['buffer'])
         except Exception as e:
-            result_package = {'task_id': tid, 'exception': serialize_object(e)}
-            logger.debug("No result dues to exception : {}".format(e))
+            result_package = {'task_id': tid,
+                              'fabric_id': fabric_id,
+                              'exception': serialize_object(e)}
+            logger.debug("No result due to exception : {}".format(e))
         else:
-            result_package = {'task_id': tid, 'result': serialize_object(result)}
+            result_package = {'task_id': tid,
+                              'fabric_id': fabric_id,
+                              'result': serialize_object(result)}
             logger.debug("Result : {}".format(result))
-        comm.send(result_package, dest=0, tag=RESULT_TAG)
+
+        if snd_req:
+            snd_req.Wait()
+        snd_req = comm.send(result_package, dest=0, tag=RESULT_TAG)
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -194,6 +244,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",
                         help="Count of apps to launch")
+    parser.add_argument("-i", "--id", required=True,
+                        help="Identifier for this fabric")
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
     parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
@@ -220,13 +272,17 @@ if __name__ == "__main__":
 
     logger.debug("Python version :{}".format(sys.version))
 
+    fabric_id = str(args.id)
     try:
         if rank == 0:
             master(comm, rank,
+                   fabric_id=fabric_id,
                    task_q_url=args.task_url,
                    result_q_url=args.result_url)
         else:
-            worker(comm, rank)
+            worker(comm, rank,
+                   fabric_id=fabric_id)
+
     except Exception as e:
         print("Caught error : ", e)
         raise

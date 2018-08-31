@@ -48,7 +48,7 @@ class ResultsQIncoming(object):
         self.results_receiver.bind(self.results_q)
 
     def get(self, block=True, timeout=None):
-        result = self.results_receiver.recv_pyobj()
+        result = self.results_receiver.recv_pyobj(flags=zmq.NOBLOCK)
         return result
 
 

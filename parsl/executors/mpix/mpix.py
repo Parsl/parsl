@@ -4,8 +4,10 @@
 from concurrent.futures import Future
 import logging
 import uuid
+import time
 import threading
 import queue
+import zmq
 
 try:
     import mpi4py
@@ -29,6 +31,9 @@ logger = logging.getLogger(__name__)
 
 BUFFER_THRESHOLD = 1024 * 1024
 ITEM_THRESHOLD = 1024
+
+HEARTBEAT_PERIOD = 30   # Seconds
+MAX_BEATS_MISSABLE = 3  # Failure assumed after these many heartbeat periods
 
 
 class MPIExecutor(ParslExecutor, RepresentationMixin):
@@ -100,7 +105,11 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self.engines = []
         self.tasks = {}
         if not launch_cmd:
-            self.launch_cmd = """mpiexec -np {tasks_per_node} fabric.py -d --task_url={task_url} --result_url={result_url}"""
+            self.launch_cmd = "mpiexec -np {tasks_per_node} fabric.py -d \
+ --task_url={task_url} \
+ --result_url={result_url} \
+ --id={fabric_id} \
+ --logdir={logdir}"
 
         if (self.provider.tasks_per_node * self.provider.nodes_per_block) < 2:
             logger.error("MPIExecutor requires atleast 2 workers launched")
@@ -118,12 +127,16 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self._queue_management_thread = None
         self._start_queue_management_thread()
 
+        print("Run dir : ", self.run_dir)
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
         l_cmd = self.launch_cmd.format(task_url=self.jobs_q_url,
                                        result_url=self.results_q_url,
                                        tasks_per_node=self.provider.tasks_per_node,
-                                       nodes_per_block=self.provider.nodes_per_block)
+                                       nodes_per_block=self.provider.nodes_per_block,
+                                       fabric_id=uuid.uuid4(),
+                                       logdir="{}/parsl_worker_logs".format(self.run_dir)
+        )
         self.launch_cmd = l_cmd
         logger.debug("Launch command :{}".format(self.launch_cmd))
 
@@ -181,40 +194,87 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
         The `None` message is a die request.
         """
+
+        fabric_catalog = {}
+
         while True:
+            if not self.is_alive:
+                break
+
             try:
-                msg = self.incoming_q.get(timeout=1)
+                msg = self.incoming_q.get()
+
+            except zmq.Again as e:
+                for fabric_id in fabric_catalog:
+                    if time.time() - fabric_catalog[fabric_id]['last_beat'] > HEARTBEAT_PERIOD * MAX_BEATS_MISSABLE:
+                        logger.debug("Fabric:{} has missed {}. Cancelling tasks".format(fabric_id,
+                                                                                        MAX_BEATS_MISSABLE))
+                        for tid in fabric_catalog[fabric_id]['active_tasks']:
+                            self.tasks[tid].set_exception(
+                                Exception("EngineError: MPIExecutor has lost contact with fabric:{}".format(fabric_id))
+                            )
+                time.sleep(0.5)
+                continue
 
             except queue.Empty as e:
                 # Timed out.
-                pass
+                time.sleep(0.1)
+                continue
 
             except IOError as e:
                 logger.debug("[MTHREAD] Caught broken queue with exception code {}: {}".format(e.errno, e))
-                return
+                raise
 
             except Exception as e:
                 logger.debug("[MTHREAD] Caught unknown exception: {}".format(e))
+                raise
 
             else:
-
                 if msg is None:
                     logger.debug("[MTHREAD] Got None")
                     return
 
+                elif 'hbt' in msg:
+                    fabric_id = msg['fabric_id']
+                    logger.debug("[MTHREAD] Got heartbeat from :{}".format(msg['fabric_id']))
+
+                    if fabric_id not in fabric_catalog:
+                        fabric_catalog[fabric_id] = {'last_beat': time.time(),
+                                                     'active_tasks': []}
+                    else:
+                        fabric_catalog[fabric_id]['last_beat'] = time.time()
+                        fabric_catalog[fabric_id]['active_tasks'] = msg['active_tasks']
+
                 else:
-                    # logger.debug("[MTHREAD] Received message: {}".format(msg))
+                    task_id = msg['task_id']
                     task_fut = self.tasks[msg['task_id']]
+                    fabric_id = msg.get('fabric_id', None)
+
+                    if fabric_id not in fabric_catalog:
+                        fabric_catalog[fabric_id] = {'last_beat': time.time(),
+                                                     'active_tasks': []}
+
                     if 'result' in msg:
                         result, _ = deserialize_object(msg['result'])
                         task_fut.set_result(result)
+                        try:
+                            fabric_catalog[fabric_id]['active_tasks'].remove(task_id)
+                        except ValueError:
+                            pass
 
                     elif 'exception' in msg:
                         exception, _ = deserialize_object(msg['exception'])
                         task_fut.set_exception(exception)
+                        try:
+                            fabric_catalog[fabric_id]['active_tasks'].remove(task_id)
+                        except ValueError:
+                            pass
 
-            if not self.is_alive:
-                break
+                    elif 'info' in msg:
+                        # logger.debug('Received start notice from:{}'.format(task_id))
+                        # We ignore the start time returned in msg['info'] for now
+                        # info = msg['info']
+                        fabric_catalog[fabric_id]['active_tasks'].append(task_id)
 
     # When the executor gets lost, the weakref callback will wake up
     # the queue management thread.
