@@ -26,6 +26,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     func_name = func.__name__
 
+    partial_cmdline = None
+
     # Try to run the func to compose the commandline
     try:
         # Execute the func to get the commandline
@@ -34,7 +36,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         executable = partial_cmdline.format(*args, **kwargs)
 
     except AttributeError as e:
-        if partial_cmdline:
+        if partial_cmdline is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e), None)
         else:
             raise pe.BashAppNoReturn("Bash app '{}' returned NoneType, must return string object".format(func_name), None)
