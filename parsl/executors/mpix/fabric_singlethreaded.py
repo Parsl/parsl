@@ -68,9 +68,9 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
 
     while not abort_flag:
 
-        logger.info("Start loop")
-        logger.info("Ready worker queue length: {}".format(len(ready_worker_queue)))
-        logger.info("Ready task queue length: {}".format(len(ready_task_queue)))
+#        logger.info("Start loop")
+#        logger.info("Ready worker queue length: {}".format(len(ready_worker_queue)))
+#        logger.info("Ready task queue length: {}".format(len(ready_task_queue)))
 
         # probe if there is a result:
 
@@ -101,7 +101,8 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
                 ready_task_queue.append(task)
 
         except zmq.Again:
-            logger.info("zmq task queue has no task on this iteration")
+             pass
+#            logger.info("zmq task queue has no task on this iteration")
 
 
         if(len(ready_task_queue) > 0 and len(ready_worker_queue) > 0):
@@ -111,7 +112,8 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
             count += 1
 
         else:
-            logger.info("Nothing to match between ready worker and task queue in this iteration")
+            pass
+#            logger.info("Nothing to match between ready worker and task queue in this iteration")
 
     end = time.time()
     rate = float(count) / (end - start)
