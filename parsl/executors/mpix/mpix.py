@@ -184,11 +184,15 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
         The `None` message is a die request.
         """
+        logger.info("[MTHREAD] queue management worker starting")
         while True:
+            logger.info("[MTHREAD] queue management worker start of loop")
             try:
                 msg = self.incoming_q.get(timeout=1)
+                logger.info("[MTHREAD] get has returned")
 
             except queue.Empty as e:
+                logger.info("[MTHREAD] queue empty")
                 # Timed out.
                 pass
 
@@ -200,24 +204,42 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
                 logger.debug("[MTHREAD] Caught unknown exception: {}".format(e))
 
             else:
+                logger.info("[MTHREAD] queue else: path")
 
                 if msg is None:
                     logger.debug("[MTHREAD] Got None")
                     return
 
                 else:
+                    logger.info("[MTHREAD] queue else:result path")
                     # logger.debug("[MTHREAD] Received message: {}".format(msg))
                     task_fut = self.tasks[msg['task_id']]
                     if 'result' in msg:
+                        logger.info("[MTHREAD] A 1")
                         result, _ = deserialize_object(msg['result'])
+                        logger.info("[MTHREAD] A 2")
                         task_fut.set_result(result)
+                        logger.info("[MTHREAD] A 3")
 
                     elif 'exception' in msg:
-                        exception, _ = deserialize_object(msg['exception'])
-                        task_fut.set_exception(exception)
+                        logger.info("[MTHREAD] B 1")
+                        try:
+                          exception, _ = deserialize_object(msg['exception'])
+                          logger.info("[MTHREAD] B 2")
+                          task_fut.set_exception(exception)
+                          logger.info("[MTHREAD] B 3")
+                        except Exception as e:
+                          logger.info("[MTHREAD] B - exception {} on processing exception".format(e))
+                          task_fut.set_exception(ValueError("Received exception, but handling also threw an exception: {}".format(e))) # TODO could be a proper wrapped exception?
+                    else:
+                        logger.error("[MTHREAD] this is not a result or an exception - raising exception")
+                        raise ValueError("Not a result or exception")
+                    logger.info("[MTHREAD] queue else:result path finished")
 
             if not self.is_alive:
+                logger.info("[MTHREAD] self.is_alive test: not alive - terminating this loop")
                 break
+        logger.info("[MTHREAD] queue management worker finished")
 
     # When the executor gets lost, the weakref callback will wake up
     # the queue management thread.
@@ -233,10 +255,11 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         """
         logger.debug("In _start %s", "*" * 40)
         if self._queue_management_thread is None:
-            logger.debug("Starting management thread ")
+            logger.debug("Starting queue management thread")
             self._queue_management_thread = threading.Thread(target=self._queue_management_worker)
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
+            logger.debug("Started queue management thread")
 
         else:
             logger.debug("Management thread already exists, returning")
