@@ -39,7 +39,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if partial_cmdline is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e), None)
         else:
-            raise pe.BashAppNoReturn("Bash app '{}' returned NoneType, must return string object".format(func_name), None)
+            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned none - with this exeception: {}".format(func_name, e), None)
 
     except IndexError as e:
         raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e), None)
