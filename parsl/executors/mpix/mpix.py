@@ -231,23 +231,23 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Checks if a thread already exists, then starts it.
         Could be used later as a restart if the management thread dies.
         """
-        logging.debug("In _start %s", "*" * 40)
+        logger.debug("In _start %s", "*" * 40)
         if self._queue_management_thread is None:
-            logging.debug("Starting management thread ")
+            logger.debug("Starting management thread ")
             self._queue_management_thread = threading.Thread(target=self._queue_management_worker)
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
 
         else:
-            logging.debug("Management thread already exists, returning")
+            logger.debug("Management thread already exists, returning")
 
     def shutdown(self):
         """Shutdown method, to kill the threads and workers."""
         self.is_alive = False
-        logging.debug("Waking management thread")
+        logger.debug("Waking management thread")
         self.incoming_q.put(None)  # Wake up the thread
         self._queue_management_thread.join()  # Force join
-        logging.debug("Exiting thread")
+        logger.debug("Exiting thread")
         self.worker.join()
         return True
 
