@@ -2,6 +2,7 @@ import logging
 import os
 import time
 
+from libsubmit.channels import LocalChannel
 from libsubmit.launchers import AprunLauncher
 from libsubmit.providers.torque.template import template_string
 from libsubmit.providers.cluster_provider import ClusterProvider
@@ -68,7 +69,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
     """
     def __init__(self,
-                 channel,
+                 channel=LocalChannel(),
                  account=None,
                  queue=None,
                  overrides='',
@@ -208,7 +209,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             submit_options = '{0} -A {1}'.format(submit_options, self.account)
 
         launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
-        retcode, stdout, stderr = self.channel.execute_wait(launch_cmd, 3)
+        retcode, stdout, stderr = self.channel.execute_wait(launch_cmd, 10)
 
         job_id = None
         if retcode == 0:
@@ -217,7 +218,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
         else:
-            logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+            message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
+            if (stdout is not None) and (stderr is not None):
+                message += "\nstderr:{}\nstdout{}".format(stderr.strip(), stdout.strip())
+            logger.error(message)
 
         return job_id
 
