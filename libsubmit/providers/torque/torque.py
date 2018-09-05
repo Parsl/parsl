@@ -2,6 +2,7 @@ import logging
 import os
 import time
 
+from libsubmit.channels import LocalChannel
 from libsubmit.launchers import AprunLauncher
 from libsubmit.providers.torque.template import template_string
 from libsubmit.providers.cluster_provider import ClusterProvider
@@ -68,7 +69,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
     """
     def __init__(self,
-                 channel,
+                 channel=LocalChannel(),
                  account=None,
                  queue=None,
                  overrides='',
