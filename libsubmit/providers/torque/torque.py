@@ -218,7 +218,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
         else:
-            logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+            message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
+            if (stdout is not None) and (stderr is not None):
+                message += "\nstderr:{}\nstdout{}".format(stderr.strip(), stdout.strip())
+            logger.error(message)
 
         return job_id
 
