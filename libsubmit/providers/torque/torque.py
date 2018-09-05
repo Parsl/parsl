@@ -209,7 +209,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             submit_options = '{0} -A {1}'.format(submit_options, self.account)
 
         launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
-        retcode, stdout, stderr = self.channel.execute_wait(launch_cmd, 3)
+        retcode, stdout, stderr = self.channel.execute_wait(launch_cmd, 10)
 
         job_id = None
         if retcode == 0:
