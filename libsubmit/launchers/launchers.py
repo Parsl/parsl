@@ -288,13 +288,14 @@ cat << APRUN_EOF > cmd_$JOBNAME.sh
 APRUN_EOF
 chmod a+x cmd_$JOBNAME.sh
 
-aprun -n {tasks_per_block} -N {tasks_per_node} /bin/bash cmd_$JOBNAME.sh &
+aprun -n {tasks_per_block} -N {tasks_per_node} {aprun_override} /bin/bash cmd_$JOBNAME.sh &
 wait
 
 echo "Done"
 '''.format(command, tasks_per_block,
            tasks_per_block=tasks_per_block,
-           tasks_per_node=tasks_per_node)
+           tasks_per_node=tasks_per_node,
+           aprun_override=self.aprun_override)
         return x
 
 
