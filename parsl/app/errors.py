@@ -50,6 +50,12 @@ class AppBadFormatting(ParslError):
 class AppFailure(AppException):
     """An error raised during execution of an app.
 
+    TODO: why does this not deserialise right?
+    BODGE: default value on exitcode... TODO: investigate
+    deserialisation problem. Does deserialisation need an
+    initial that can have no values, or something like
+    that?
+
     What this exception contains depends entirely on context
     Contains:
     reason(string)
@@ -57,7 +63,7 @@ class AppFailure(AppException):
     retries(int/None)
     """
 
-    def __init__(self, reason, exitcode, retries=None):
+    def __init__(self, reason, exitcode=-22, retries=None):
         super().__init__(reason)
         self.reason = reason
         self.exitcode = exitcode

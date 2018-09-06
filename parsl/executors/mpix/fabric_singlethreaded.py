@@ -181,7 +181,7 @@ def worker(comm, rank):
             result = execute_task(req['buffer'])
         except Exception as e:
             result_package = {'task_id': tid, 'exception': serialize_object(e)}
-            logger.debug("No result due to exception : {}".format(e))
+            logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
             logger.debug("Result : {}".format(result))
