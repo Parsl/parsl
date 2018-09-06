@@ -57,12 +57,12 @@ def remote_side_bash_executor(func, *args, **kwargs):
     logging.debug("Stderr: %s", stderr)
 
     try:
-        std_out = open(stdout, 'w') if stdout else None
+        std_out = open(stdout, 'a+') if stdout else None
     except Exception as e:
         raise pe.BadStdStreamFile(stdout, e)
 
     try:
-        std_err = open(stderr, 'w') if stderr else None
+        std_err = open(stderr, 'a+') if stderr else None
     except Exception as e:
         raise pe.BadStdStreamFile(stderr, e)
 
