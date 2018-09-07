@@ -265,7 +265,7 @@ class AprunLauncher(Launcher):
     to launch multiple cmd invocations in parallel on a single job allocation
 
     """
-    def __init__(self, overrides=None):
+    def __init__(self, overrides=''):
         self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
