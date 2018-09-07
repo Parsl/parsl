@@ -265,8 +265,8 @@ class AprunLauncher(Launcher):
     to launch multiple cmd invocations in parallel on a single job allocation
 
     """
-    def __init__(self, aprun_override=None):
-        self.aprun_override = aprun_override
+    def __init__(self, overrides=''):
+        self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
         """
@@ -288,13 +288,14 @@ cat << APRUN_EOF > cmd_$JOBNAME.sh
 APRUN_EOF
 chmod a+x cmd_$JOBNAME.sh
 
-aprun -n {tasks_per_block} -N {tasks_per_node} /bin/bash cmd_$JOBNAME.sh &
+aprun -n {tasks_per_block} -N {tasks_per_node} {overrides} /bin/bash cmd_$JOBNAME.sh &
 wait
 
 echo "Done"
 '''.format(command, tasks_per_block,
            tasks_per_block=tasks_per_block,
-           tasks_per_node=tasks_per_node)
+           tasks_per_node=tasks_per_node,
+           overrides=self.overrides)
         return x
 
 
