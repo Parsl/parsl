@@ -32,6 +32,58 @@ class NullHandler(logging.Handler):
         pass
 
 
+class LoggerConfig():
+    """ This is a config class for creating a logger. """
+    def __init__(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
+                  port=443,
+                  enable_ssl=True,
+                  logger_type=None,
+                  index_name="my_python_index",
+                  logger_name='parsl_db_logger',
+                  eng_link='sqlite:///parsl.db',
+                  version='1.0.0',
+                  web_app_host='http://localhost',
+                  web_app_port=8899,
+                  **kwargs):
+        """ Initializes a db logger configuration class.
+
+        Parameters
+        ----------
+        host : str, optional
+            Used with Elasticsearch logging, the location of where to access Elasticsearch.
+        port : int, optional
+            Used with Elasticsearch logging, the port of where to access Elasticsearch.
+        enable_ssl : Bool, optional
+            Used with Elasticsearch logging, whether to use ssl when connecting to Elasticsearch.
+        logger_type : str, optional
+            Determines whether to use Elasticsearch logging or local database logging, defaults to None or no logging.
+        index_name : str, optional
+            Used with Elasticsearch logging, the name of the index to log to.
+        logger_name : str, optional
+            Used with both Elasticsearch and local db logging to define naming conventions for loggers.
+        eng_ling : str, optional
+            Used with local database logging, SQLalchemy engine link to define where to connect to the database.
+        version : str, optional
+            Optional workflow identification to distinguish between workflows with the same name, not used internally only for display to user.
+        web_app_host : str, optional
+            Used with local database logging, how to access the tornado logging server that is spawned by Parsl.
+        web_app_port: int, optional
+            Used with local database logging, how to access the tornado logging server that is spawned by Parsl.
+        """
+
+        self.host = host
+        self.port = port
+        self.enable_ssl = enable_ssl
+        self.logger_type = logger_type
+        self.index_name = index_name
+        self.logger_name = logger_name
+        self.eng_link = eng_link
+        self.version = version
+        self.is_logging_server = False
+        self.web_app_host = web_app_host
+        self.web_app_port = web_app_port
+
+
 def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
                   port=443,
                   enable_es_logging=False,
