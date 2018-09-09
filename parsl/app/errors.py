@@ -41,7 +41,7 @@ class AppBadFormatting(ParslError):
     """
 
     def __init__(self, reason, exitcode, retries=None):
-        super().__init__()
+        super().__init__(reason)
         self.reason = reason
         self.exitcode = exitcode
         self.retries = retries
@@ -58,7 +58,7 @@ class AppFailure(AppException):
     """
 
     def __init__(self, reason, exitcode, retries=None):
-        super().__init__()
+        super().__init__(reason)
         self.reason = reason
         self.exitcode = exitcode
         self.retries = retries
@@ -74,7 +74,7 @@ class AppTimeout(AppException):
     """
 
     def __init__(self, reason, exitcode, retries=None):
-        super().__init__()
+        super().__init__(reason)
         self.reason = reason
         self.exitcode = -55
         self.retries = retries
@@ -90,7 +90,7 @@ class BashAppNoReturn(AppException):
     """
 
     def __init__(self, reason, exitcode, retries=None):
-        super().__init__()
+        super().__init__(reason)
         self.reason = reason
         self.exitcode = -21
         self.retries = retries
@@ -105,7 +105,7 @@ class MissingOutputs(ParslError):
     """
 
     def __init__(self, reason, outputs):
-        super().__init__()
+        super().__init__(reason)
         self.reason = reason
         self.outputs = outputs
 
@@ -147,7 +147,7 @@ class DependencyError(ParslError):
     """
 
     def __init__(self, dependent_exceptions, reason, outputs):
-        super().__init__()
+        super().__init__(reason)
         self.dependent_exceptions = dependent_exceptions
         self.reason = reason
         self.outputs = outputs
