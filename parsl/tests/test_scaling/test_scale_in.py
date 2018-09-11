@@ -1,7 +1,15 @@
 import os
 import uuid
-from parsl import DataFlowKernel, App
-from parsl import set_stream_logger
+from copy import deepcopy
+# from parsl import DataFlowKernel, App
+# from parsl import set_stream_logger
+
+import parsl
+from parsl.config import Config
+from parsl.executors.ipp import IPyParallelExecutor
+from parsl.app.app import python_app
+from libsubmit.providers import LocalProvider
+
 # set_stream_logger()
 base_config = {
     "sites": [
@@ -27,27 +35,34 @@ base_config = {
 
 
 def test_manual_scale_in():
-    config = base_config.copy()
-    config['globals']['strategy'] = None
-    dfk = DataFlowKernel(config=config)
-    exc = dfk.executors['local_ipp']
+    exc = IPyParallelExecutor(
+        label='ipp',
+        provider=LocalProvider(init_blocks=3)
+    )
+    config = Config(
+        executors=[exc],
+        retries=5,
+        strategy=None
+    )
+    parsl.clear()
+    parsl.load(config)
 
-    @App('python', dfk, walltime=10)
+    @python_app(walltime=10)
     def first():
         import time
         time.sleep(1)
         return 'first'
 
-    @App('python', dfk, walltime=10)
+    @python_app(walltime=10)
     def second():
         import time
-        time.sleep(4)
+        time.sleep(14)
         return 'second'
 
-    @App('python', dfk, walltime=10)
+    @python_app(walltime=10)
     def third():
         import time
-        time.sleep(3)
+        time.sleep(13)
         return 'third'
 
     # print(exc.executor.queue_status())
@@ -63,12 +78,27 @@ def test_manual_scale_in():
 
 
 def test_auto_scale_in():
-    config = base_config.copy()
-    config['sites'][0]['execution']['block']['initBlocks'] = 1
-    config['sites'][0]['execution']['block']['maxBlocks'] = 3
-    dfk = DataFlowKernel(config=config)
+    exc = IPyParallelExecutor(
+        label='ipp',
+        provider=LocalProvider(
+            init_blocks=3,
+            max_blocks=3
+        )
+    )
+    config = Config(
+        executors=[exc],
+        retries=5
+    )
+    parsl.clear()
+    parsl.load(config)
 
-    @App('python', dfk)
+
+    # config = base_config.copy()
+    # config['sites'][0]['execution']['block']['initBlocks'] = 1
+    # config['sites'][0]['execution']['block']['maxBlocks'] = 3
+    # dfk = DataFlowKernel(config=config)
+
+    @python_app
     def small_record(*args, **kwargs):
         import random
         import time
@@ -106,5 +136,5 @@ def test_auto_scale_in():
         assert record[0].strip() == record[-1].strip()
         os.remove(record_filename)
 
-# test_manual_scale_in()
-test_auto_scale_in()
+test_manual_scale_in()
+# test_auto_scale_in()

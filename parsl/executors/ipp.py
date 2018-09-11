@@ -100,6 +100,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.controller.start()
 
         self.engine_file = self.controller.engine_file
+        self.killed_blocks = set()
 
         with wait_for_file(self.controller.client_file, seconds=120):
             logger.debug("Waiting for {0}".format(self.controller.client_file))
@@ -116,6 +117,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
 
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []
+        self.engines_map = dict()
 
         if self.provider:
             self._scaling_enabled = self.provider.scaling_enabled
@@ -129,6 +131,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                             raise(ScalingFailed(self.provider.label,
                                                 "Attempts to provision nodes via provider has failed"))
                         self.engines.extend([engine])
+                        self.engines_map[i] = engine
 
                 except Exception as e:
                     logger.error("Scaling out failed: %s" % e)
@@ -273,12 +276,14 @@ sleep infinity
         spill_over = max(0, blocks - len(blocks_with_no_tasks))
         if spill_over:
             logger.warning('Requested to scale in more blocks than there are idle blocks: '
-                           '{} idle blocks, killing {}'.format(blocks, blocks + spill_over))
+                           '{} idle blocks, killing {}'.format(len(blocks_with_no_tasks),
+                                                               len(blocks_with_no_tasks) + spill_over))
         to_kill = blocks_with_no_tasks[:blocks] + running_blocks[:spill_over]
         logger.debug('Killing: {}'.format(to_kill))
-        self.executor.shutdown(targets=to_kill)
+        # self.executor.shutdown(targets=to_kill, hub=True)
         self.killed_blocks |= set(to_kill)
-        return self.executor.shutdown(targets=to_kill)
+        return self.provider.cancel([e for i, e in self.engines_map.items() if i in to_kill])
+        # return self.executor.shutdown(targets=to_kill)
 
 
         # Calculate how many to kill from idle blocks, and any spill over into active blocks
