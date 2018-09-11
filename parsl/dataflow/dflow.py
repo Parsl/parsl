@@ -177,8 +177,7 @@ class DataFlowKernel(object):
             task_log_info['task_fail_mode'] = fail_mode
         return task_log_info
 
-    @staticmethod
-    def _count_deps(depends, task_id):
+    def _count_deps(self, depends, task_id):
         """Internal.
 
         Count the number of unresolved futures in the list depends.
