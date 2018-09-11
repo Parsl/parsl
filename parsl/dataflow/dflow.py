@@ -88,7 +88,7 @@ class DataFlowKernel(object):
         # ES logging
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
-        self.db_logger_config_object = config.db_logger_config_object
+        self.db_logger_config_object = config.db_logger_config
         if self.db_logger_config_object is None:
             self.db_logger = get_db_logger()
         else:

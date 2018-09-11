@@ -34,7 +34,8 @@ class NullHandler(logging.Handler):
 
 class LoggerConfig():
     """ This is a config class for creating a logger. """
-    def __init__(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
+    def __init__(self,
+                 host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
                  port=443,
                  enable_ssl=True,
                  logger_type='local_database',
@@ -80,7 +81,7 @@ class LoggerConfig():
         self.host = host
         self.port = port
         self.enable_ssl = enable_ssl
-        if logger_type is not in ['local_database', 'elasticsearch']:
+        if logger_type not in ['local_database', 'elasticsearch']:
             raise ValueError('Value of logger type was invalid, choices arei ' + str(['local_database', 'elasticsearch']))
         self.logger_type = logger_type
         self.index_name = index_name
@@ -120,25 +121,25 @@ def get_db_logger(
 
     """
     logger = logging.getLogger(logger_name)
-    if db_logger_object is None:
+    if db_logger_config_object is None:
         logger.addHandler(NullHandler())
         return logger
 
-    if db_logger_object.logger_type == 'elasticsearch':
+    if db_logger_config_object.logger_type == 'elasticsearch':
         if not _es_logging_enabled:
             raise OptionalModuleMissing(
                 ['CMRESHandler'], "Logging to ElasticSearch requires the cmreslogging module")
 
-        handler = CMRESHandler(hosts=[{'host': db_logger_object.host,
-                                       'port': db_logger_object.port}],
-                               use_ssl=db_logger_object.enable_ssl,
+        handler = CMRESHandler(hosts=[{'host': db_logger_config_object.host,
+                                       'port': db_logger_config_object.port}],
+                               use_ssl=db_logger_config_object.enable_ssl,
                                auth_type=CMRESHandler.AuthType.NO_AUTH,
-                               es_index_name=db_logger_object.index_name,
+                               es_index_name=db_logger_config_object.index_name,
                                es_additional_fields={
                                    'Campaign': "test",
-                                   'Version': db_logger_object.version,
+                                   'Version': db_logger_config_object.version,
                                    'Username': getpass.getuser()})
-        logger = logging.getLogger(db_logger_object.logger_name)
+        logger = logging.getLogger(db_logger_config_object.logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
     elif db_logger_config_object.logger_type == 'local_database' and not is_logging_server:
