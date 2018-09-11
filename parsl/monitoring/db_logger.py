@@ -35,16 +35,17 @@ class NullHandler(logging.Handler):
 class LoggerConfig():
     """ This is a config class for creating a logger. """
     def __init__(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
-                  port=443,
-                  enable_ssl=True,
-                  logger_type=None,
-                  index_name="my_python_index",
-                  logger_name='parsl_db_logger',
-                  eng_link='sqlite:///parsl.db',
-                  version='1.0.0',
-                  web_app_host='http://localhost',
-                  web_app_port=8899,
-                  **kwargs):
+                 port=443,
+                 enable_ssl=True,
+                 logger_type='local_database',
+                 index_name="my_python_index",
+                 logger_name='parsl_db_logger',
+                 eng_link='sqlite:///parsl.db',
+                 version='1.0.0',
+                 web_app_host='http://localhost',
+                 web_app_port=8899,
+                 resource_loop_sleep_duration=15,
+                 workflow_name=None):
         """ Initializes a db logger configuration class.
 
         Parameters
@@ -56,7 +57,7 @@ class LoggerConfig():
         enable_ssl : Bool, optional
             Used with Elasticsearch logging, whether to use ssl when connecting to Elasticsearch.
         logger_type : str, optional
-            Determines whether to use Elasticsearch logging or local database logging, defaults to None or no logging.
+            Determines whether to use Elasticsearch logging or local database logging, defaults to 'local_database' and accepts 'elasticsearch'.
         index_name : str, optional
             Used with Elasticsearch logging, the name of the index to log to.
         logger_name : str, optional
@@ -67,63 +68,47 @@ class LoggerConfig():
             Optional workflow identification to distinguish between workflows with the same name, not used internally only for display to user.
         web_app_host : str, optional
             Used with local database logging, how to access the tornado logging server that is spawned by Parsl.
-        web_app_port: int, optional
+        web_app_port : int, optional
             Used with local database logging, how to access the tornado logging server that is spawned by Parsl.
+        resource_loop_sleep_duration : float, optional
+            The amount of time in seconds to sleep in between resource monitoring logs per task.
+        workflow_name : str, optional
+            Name to record as the workflow base name, defaults to the name of the parsl script file if left as None.
         """
-
+        if host.startswith('http'):
+            raise ValueError('Do not include "http(s)://" in elasticsearch host string.')
         self.host = host
         self.port = port
         self.enable_ssl = enable_ssl
+        if logger_type is not in ['local_database', 'elasticsearch']:
+            raise ValueError('Value of logger type was invalid, choices arei ' + str(['local_database', 'elasticsearch']))
         self.logger_type = logger_type
         self.index_name = index_name
         self.logger_name = logger_name
         self.eng_link = eng_link
         self.version = version
-        self.is_logging_server = False
         self.web_app_host = web_app_host
         self.web_app_port = web_app_port
+        self.resource_loop_sleep_duration = resource_loop_sleep_duration
+        self.workflow_name = workflow_name
+        # for now just set this to none but can be used to present the dashboard location to user
+        self.dashboard_link = None
 
 
-def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-east-1.es.amazonaws.com',
-                  port=443,
-                  enable_es_logging=False,
-                  enable_ssl=True,
-                  index_name="my_python_index",
+def get_db_logger(
                   logger_name='parsl_db_logger',
-                  eng_link='sqlite:///parsl.db',
-                  version='1.0.0',
-                  enable_local_db_logging=False,
                   is_logging_server=False,
-                  web_app_host='http://localhost',
-                  web_app_port=8899,
+                  db_logger_config_object=None,
                   **kwargs):
     """
     Parameters
     ----------
-    host : str, optional
-        URL to the elasticsearch cluster. Skip the http(s)://
-    port : int, optional
-        Port to use to access the elasticsearch cluster
-    enable_es_logging : Bool, optional
-        Set to True to enable logging to elasticsearch
-    enable_ssl : Bool, optional
-        Set to False if ssl is not supported by the elasticsearch server
-    index_name : str, optional
-        Index name to use for elasticsearch
     logger_name : str, optional
         Name of the logger to use. Prevents adding repeat handlers or incorrect handlers
-    eng_link : str, optional
-        The location of the SQL database to use for local logging which SQLalchemy recognizes as valid address
-    version : str, optional
-        Used to distinguish between different versions of a workflow in logs
-    enable_local_db_logging : Bool, optional
-        Enable to use local db logging/SQL logging
     is_logging_server : Bool, optional
         Used internally to determine which handler to return when using local db logging
-    web_app_host : str, optional
-        url which points to the logging server. Localhost works when using port forwarding or with local task executors.
-    web_app_port : int, optional
-        Port to use to access the logging server
+    db_logger_config_object : LoggerConfig, optional
+        Pass in a logger class object instead of a dict to use for generating loggers.
 
     Returns
     -------
@@ -135,32 +120,38 @@ def get_db_logger(host='search-parsl-logging-test-2yjkk2wuoxukk2wdpiicl7mcrm.us-
 
     """
     logger = logging.getLogger(logger_name)
-    if enable_es_logging:
+    if db_logger_object is None:
+        logger.addHandler(NullHandler())
+        return logger
+
+    if db_logger_object.logger_type == 'elasticsearch':
         if not _es_logging_enabled:
             raise OptionalModuleMissing(
                 ['CMRESHandler'], "Logging to ElasticSearch requires the cmreslogging module")
 
-        handler = CMRESHandler(hosts=[{'host': host,
-                                       'port': port}],
-                               use_ssl=enable_ssl,
+        handler = CMRESHandler(hosts=[{'host': db_logger_object.host,
+                                       'port': db_logger_object.port}],
+                               use_ssl=db_logger_object.enable_ssl,
                                auth_type=CMRESHandler.AuthType.NO_AUTH,
-                               es_index_name=index_name,
+                               es_index_name=db_logger_object.index_name,
                                es_additional_fields={
                                    'Campaign': "test",
-                                   'Version': version,
+                                   'Version': db_logger_object.version,
                                    'Username': getpass.getuser()})
-        logger = logging.getLogger(logger_name)
+        logger = logging.getLogger(db_logger_object.logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
-    elif enable_local_db_logging and not is_logging_server:
+    elif db_logger_config_object.logger_type == 'local_database' and not is_logging_server:
         # add a handler that will pass logs to the logging server
-        handler = RemoteHandler(web_app_host, web_app_port)
+        handler = RemoteHandler(db_logger_config_object.web_app_host, db_logger_config_object.web_app_port)
+        # use the specific name generated by the server or the monitor wrapper
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
-    elif enable_local_db_logging and is_logging_server:
+    elif db_logger_config_object.logger_type == 'local_database' and is_logging_server:
         # add a handler that will take logs being recieved on the server and log them to the database
-        handler = DatabaseHandler(eng_link)
+        handler = DatabaseHandler(db_logger_config_object.eng_link)
+        # use the specific name generated by the server or the monitor wrapper
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         logger.addHandler(handler)
