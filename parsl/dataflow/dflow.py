@@ -92,7 +92,7 @@ class DataFlowKernel(object):
         if self.db_logger_config_object is None:
             self.db_logger = get_db_logger()
         else:
-            self.db_logger = get_db_logger(db_logger_config_object = self.db_logger_config_object)
+            self.db_logger = get_db_logger(db_logger_config_object=self.db_logger_config_object)
         self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
         if self.db_logger_config_object is not None and self.db_logger_config_object.workflow_name is not None:
             self.workflow_name = self.db_logger_config_object.workflow_name

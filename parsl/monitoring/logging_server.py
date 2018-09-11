@@ -30,7 +30,8 @@ class MainHandler(tornado.web.RequestHandler):
 
 
 def run(db_logger_config_object):
-    """ Set up the logging server according to configurations the user specified. This is the function launched as a separate process from the DFK in order to start logging. """
+    """ Set up the logging server according to configurations the user specified. This is the function launched as a separate process from the DFK in order to
+    start logging. """
     # Assumtion that db_logger_config_object is not none because if it were this server should not have been started
     app = tornado.web.Application([(r"/", MainHandler, dict(db_logger_config_object=db_logger_config_object))])
     app.listen(db_logger_config_object.web_app_port)
