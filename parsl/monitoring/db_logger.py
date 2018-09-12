@@ -41,7 +41,7 @@ class LoggerConfig():
                  logger_type='local_database',
                  index_name="my_python_index",
                  logger_name='parsl_db_logger',
-                 eng_link='sqlite:///parsl.db',
+                 eng_link=None,
                  version='1.0.0',
                  web_app_host='http://localhost',
                  web_app_port=8899,
@@ -64,7 +64,8 @@ class LoggerConfig():
         logger_name : str, optional
             Used with both Elasticsearch and local db logging to define naming conventions for loggers.
         eng_ling : str, optional
-            Used with local database logging, SQLalchemy engine link to define where to connect to the database.
+            Used with local database logging, SQLalchemy engine link to define where to connect to the database. If not set, DFK init will use a sqlite3
+            database inside the rundir.
         version : str, optional
             Optional workflow identification to distinguish between workflows with the same name, not used internally only for display to user.
         web_app_host : str, optional
