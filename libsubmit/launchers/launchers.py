@@ -154,7 +154,7 @@ WORKERCOUNT={3}
 
 # Deduplicate the nodefile
 HOSTFILE="$JOBNAME.nodes"
-if [ -z "$HOSTFILE" ]; then
+if [ -z "$PBS_NODEFILE" ]; then
     echo "localhost" > $HOSTFILE
 else
     sort -u $PBS_NODEFILE > $HOSTFILE
