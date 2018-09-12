@@ -89,7 +89,8 @@ class DataFlowKernel(object):
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
         self.db_logger_config_object = config.db_logger_config
-        if self.db_logger_config_object is not None and self.db_logger_config_object.logger_type == 'local_database' and self.db_logger_config_object.eng_link is None:
+        if self.db_logger_config_object is not None and self.db_logger_config_object.logger_type == 'local_database'\
+                and self.db_logger_config_object.eng_link is None:
             self.db_logger_config_object.eng_link = 'sqlite3:///{}'.format(self.run_dir)
             # maybe only two slashes. Not sure the format of the run_dir so will test and see.
             # self.db_logger_config_object.eng_link = 'sqlite3://{}'.format(self.run_dir)
