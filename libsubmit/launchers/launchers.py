@@ -96,7 +96,11 @@ WORKERCOUNT={3}
 
 # Deduplicate the nodefile
 SSHLOGINFILE="$JOBNAME.nodes"
-sort -u $PBS_NODEFILE > $SSHLOGINFILE
+if [ -z "$PBS_NODEFILE" ]; then
+    echo "localhost" > $SSHLOGINFILE
+else
+    sort -u $PBS_NODEFILE > $SSHLOGINFILE
+fi
 
 cat << PARALLEL_CMD_EOF > cmd_$JOBNAME.sh
 {0}
@@ -150,14 +154,18 @@ WORKERCOUNT={3}
 
 # Deduplicate the nodefile
 HOSTFILE="$JOBNAME.nodes"
-sort -u $PBS_NODEFILE > $HOSTFILE
+if [ -z "$PBS_NODEFILE" ]; then
+    echo "localhost" > $HOSTFILE
+else
+    sort -u $PBS_NODEFILE > $HOSTFILE
+fi
 
 cat << MPIEXEC_EOF > cmd_$JOBNAME.sh
 {0}
 MPIEXEC_EOF
 chmod u+x cmd_$JOBNAME.sh
 
-mpiexec -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
+mpiexec --bind-to none -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
 
 echo "All workers done"
 '''.format(command, tasks_per_node, nodes_per_block, task_blocks)
