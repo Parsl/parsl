@@ -8,7 +8,9 @@ import threading
 import inspect
 import sys
 import multiprocessing
+import getpass
 from datetime import datetime
+from socket import gethostname
 
 from concurrent.futures import Future
 from functools import partial
@@ -125,6 +127,8 @@ class DataFlowKernel(object):
                 'rundir': self.run_dir,
                 'tasks_completed_count': self.tasks_completed_count,
                 'tasks_failed_count': self.tasks_failed_count,
+                'user': getpass.getuser(),
+                'host': gethostname(),
         }
         self.db_logger.info("DFK start", extra=workflow_info)
         # ES logging end
