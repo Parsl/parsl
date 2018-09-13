@@ -2,6 +2,8 @@ import logging
 import time
 import json
 
+logger = logging.getLogger(__name__)
+
 try:
     from tornado import httpclient
     import sqlalchemy as sa
@@ -14,7 +16,7 @@ except ImportError:
 def create_workflows_table(meta):
     return Table(
             'workflows', meta,
-            Column('task_run_id', Text, nullable=False, primary_key=True),
+            Column('run_id', Text, nullable=False, primary_key=True),
             Column('time_began', Text, nullable=False),
             Column('time_completed', Text),
             Column('host', Text, nullable=False),
@@ -32,19 +34,18 @@ def create_task_status_table(meta):
           Column('task_id', Text, sa.ForeignKey('task.task_id'), nullable=False),
           Column('task_status', Text, nullable=False),
           Column('task_status_name', Text, nullable=False),
-          # Column('timestamp', Text, nullable=False, primary_key=True),
           Column('timestamp', Text, nullable=False),
-          Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
+          Column('run_id', Text, sa.ForeignKey('workflows.run_id'), nullable=False),
           Column('task_fail_count', Text, nullable=False),
           Column('task_fail_history', Text, nullable=True),
     )
 
 
-def create_workflow_table(meta):
+def create_task_table(meta):
     return Table(
           'task', meta,
           Column('task_id', Text, nullable=False),
-          Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
+          Column('run_id', Text, sa.ForeignKey('workflows.run_id'), nullable=False),
           Column('task_executor', Text, nullable=False),
           Column('task_fn_hash', Text, nullable=False),
           Column('task_time_started', Text, nullable=False),
@@ -61,9 +62,8 @@ def create_task_resource_table(meta):
     return Table(
           'task_resources', meta,
           Column('task_id', Text, sa.ForeignKey('task.task_id'), nullable=False),
-          # Column('timestamp', Text, nullable=False, primary_key=True),
           Column('timestamp', Text, nullable=False),
-          Column('task_run_id', Text, sa.ForeignKey('workflows.task_run_id'), nullable=False),
+          Column('run_id', Text, sa.ForeignKey('workflows.run_id'), nullable=False),
           Column('psutil_process_pid', Text, nullable=True),
           Column('psutil_process_cpu_percent', Text, nullable=True),
           Column('psutil_process_memory_percent', Text, nullable=True),
@@ -102,18 +102,18 @@ class DatabaseHandler(logging.Handler):
                     # formating values to convert from python or parsl to db standards
                     info['task_fail_history'] = str(info.get('task_fail_history', None))
                     info['timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(record.created))
-                    run_id = info['task_run_id']
+                    run_id = info['run_id']
 
                     # if workflow or task has completed, update their entries with the time.
                     if 'time_completed' in info.keys() and info['time_completed'] != 'None':
                         workflows = self.meta.tables['workflows']
-                        up = workflows.update().values(time_completed=info['time_completed']).where(workflows.c.task_run_id == run_id)
+                        up = workflows.update().values(time_completed=info['time_completed']).where(workflows.c.run_id == run_id)
                         con.execute(up)
                         return
                     if 'task_time_completed' in info.keys() and info['task_time_completed'] is not None:
                         workflow = self.meta.tables['task']
                         up = workflow.update().values(task_time_completed=info['task_time_completed']).where(workflow.c.task_id == info['task_id'])\
-                                     .where(workflow.c.task_run_id == run_id)
+                                     .where(workflow.c.run_id == run_id)
                         con.execute(up)
 
                     # create workflows table if this is a new database without one
@@ -121,7 +121,7 @@ class DatabaseHandler(logging.Handler):
                         workflows = create_workflows_table(self.meta)
                         self.meta.create_all(con)
                     # if this is the first sight of the workflow, add it to the workflows table
-                    if len(con.execute(self.meta.tables['workflows'].select(self.meta.tables['workflows'].c.task_run_id == run_id)).fetchall()) == 0:
+                    if len(con.execute(self.meta.tables['workflows'].select(self.meta.tables['workflows'].c.run_id == run_id)).fetchall()) == 0:
                         workflows = self.meta.tables['workflows']
                         ins = workflows.insert().values(**{k: v for k, v in info.items() if k in workflows.c})
                         con.execute(ins)
@@ -129,23 +129,23 @@ class DatabaseHandler(logging.Handler):
                     # if log has task counts, update the workflow entry in the workflows table
                     if 'tasks_completed_count' in info.keys():
                         workflows = self.meta.tables['workflows']
-                        up = workflows.update().values(tasks_completed_count=info['tasks_completed_count']).where(workflows.c.task_run_id == run_id)
+                        up = workflows.update().values(tasks_completed_count=info['tasks_completed_count']).where(workflows.c.run_id == run_id)
                         con.execute(up)
                     if 'tasks_failed_count' in info.keys():
                         workflows = self.meta.tables['workflows']
-                        up = workflows.update().values(tasks_failed_count=info['tasks_failed_count']).where(workflows.c.task_run_id == run_id)
+                        up = workflows.update().values(tasks_failed_count=info['tasks_failed_count']).where(workflows.c.run_id == run_id)
                         con.execute(up)
 
-                    # create workflow table if this is a new run without one
+                    # create task table if this is a new run without one
                     if 'task' not in self.meta.tables.keys():
-                        workflow = create_workflow_table(self.meta)
+                        workflow = create_task_table(self.meta)
                         self.meta.create_all(con)
 
                     # check to make sure it is a task log and not just a workflow overview log
                     if info.get('task_id', None) is not None:
                         # if this is the first sight of the task in the workflow, add it to the workflow table
                         if len(con.execute(self.meta.tables['task'].select(self.meta.tables['task'].c.task_id == info['task_id'])
-                                               .where(self.meta.tables['task'].c.task_run_id == run_id)).fetchall()) == 0:
+                                               .where(self.meta.tables['task'].c.run_id == run_id)).fetchall()) == 0:
                             if 'psutil_process_pid' in info.keys():
                                 # this is the race condition that a resource log is before a status log so ignore this resource update
                                 return
@@ -179,7 +179,7 @@ class DatabaseHandler(logging.Handler):
                             return
 
             except Exception as e:
-                print(str(e))
+                logger.error("Try a couple times since some known issues can occur. Number of Failures: {} Error: {}".format(t, str(e)))
                 failed = True
                 time.sleep(5)
             if not failed:
@@ -210,7 +210,7 @@ class RemoteHandler(logging.Handler):
                 http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
             except Exception as e:
                 # Other errors are possible, such as IOError.
-                print("Error: " + str(e))
+                logger.error(str(e))
                 time.sleep(self.on_fail_sleep_duration)
             else:
                 break

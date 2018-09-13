@@ -6,9 +6,9 @@ from parsl.monitoring.db_logger import get_db_logger
 
 class MainHandler(tornado.web.RequestHandler):
     """ A handler for all requests/logs sent to the logging server."""
-    def initialize(self, db_logger_config_object):
+    def initialize(self, db_logger_config):
         """This function is called on every request which is not ideal but __init__ does not appear to work."""
-        self.db_logger_config_object = db_logger_config_object
+        self.db_logger_config = db_logger_config
 
     def get(self):
         """Defines responses to get requests for the / ending. Not used by Parsl but could be."""
@@ -25,16 +25,16 @@ class MainHandler(tornado.web.RequestHandler):
         try:
             self.application.logger.info('from tornado task ' + str(arg.get('task_id', 'NO TASK')), extra=arg)
         except AttributeError as e:
-            self.application.logger = get_db_logger(logger_name='loggingserver', is_logging_server=True, db_logger_config_object=self.db_logger_config_object)
+            self.application.logger = get_db_logger(logger_name='loggingserver', is_logging_server=True, db_logger_config=self.db_logger_config)
             self.application.logger.info('from tornado task ' + str(arg.get('task_id', 'NO TASK')), extra=arg)
 
 
-def run(db_logger_config_object):
+def run(db_logger_config):
     """ Set up the logging server according to configurations the user specified. This is the function launched as a separate process from the DFK in order to
     start logging. """
-    # Assumtion that db_logger_config_object is not none because if it were this server should not have been started
-    app = tornado.web.Application([(r"/", MainHandler, dict(db_logger_config_object=db_logger_config_object))])
-    app.listen(db_logger_config_object.web_app_port)
+    # Assumtion that db_logger_config is not none because if it were this server should not have been started
+    app = tornado.web.Application([(r"/", MainHandler, dict(db_logger_config=db_logger_config))])
+    app.listen(db_logger_config.web_app_port)
     tornado.ioloop.IOLoop.current().start()
 
 

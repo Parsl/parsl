@@ -30,6 +30,8 @@ class Config(RepresentationMixin):
     data_management_max_threads : int, optional
         Maximum number of threads to allocate for the data manager to use for managing input and output transfers.
         Default is 10.
+    db_logger_config : LoggerConfig, optional
+        The config to use for database monitoring. Default is None which does not log to a database.
     lazy_errors : bool, optional
         If True, errors from task failures will not be raised until `future.result()` is called. Otherwise, they will
         be raised as soon as the task returns. Default is True.
