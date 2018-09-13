@@ -100,7 +100,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.controller.start()
 
         self.engine_file = self.controller.engine_file
-        self.killed_blocks = set()
+        self.killed_engines = set()
 
         with wait_for_file(self.controller.client_file, seconds=120):
             logger.debug("Waiting for {0}".format(self.controller.client_file))
@@ -117,7 +117,6 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
 
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []
-        self.engines_map = dict()
 
         if self.provider:
             self._scaling_enabled = self.provider.scaling_enabled
@@ -131,7 +130,6 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                             raise(ScalingFailed(self.provider.label,
                                                 "Attempts to provision nodes via provider has failed"))
                         self.engines.extend([engine])
-                        self.engines_map[i] = engine
 
                 except Exception as e:
                     logger.error("Scaling out failed: %s" % e)
@@ -255,54 +253,33 @@ sleep infinity
             logger.error('No execution provider available')
             return None
 
-        # Scale in, starting with idle blocks
-        logger.debug('Scaling in by {}'.format(blocks))
-        logger.debug('IDs: {}'.format(self.executor.ids))
+        # Calculate number of engines
+        n_engines = blocks * self.provider.nodes_per_block * self.provider.tasks_per_node
+        logger.debug('Scaling in by {} blocks | {} engines'.format(blocks, n_engines))
 
-        # Get engine status and Client queue status
-        status = dict(zip(self.engines, self.provider.status(self.engines)))
+        # Get Client queue status
         queue_status = self.executor.queue_status()
 
-        # Get block status, and those blocks with no tasks
-        # all_blocks = [engine for engine in status if status[engine] == "RUNNING"]
-        all_blocks = {k for k in queue_status.keys() if k != 'unassigned' and k not in self.killed_blocks}
-        blocks_with_no_tasks = [
+        # Get engine status, and those engines with no assigned task
+        all_engines = {k for k in queue_status.keys() if k != 'unassigned' and k not in self.killed_engines}
+        idle_engines = [
             id_
-            for id_ in all_blocks
+            for id_ in all_engines
             if queue_status[id_]['tasks'] == 0
         ]
-        running_blocks = list(all_blocks - set(blocks_with_no_tasks))
-        logger.debug('Blocks with no tasks: {}'.format(blocks_with_no_tasks))
-        spill_over = max(0, blocks - len(blocks_with_no_tasks))
+        logger.debug('Idle engines: {}'.format(idle_engines))
+
+        # Select engines to kill
+        busy_engines = list(all_engines - set(idle_engines))
+        spill_over = max(0, n_engines - len(idle_engines))
         if spill_over:
-            logger.warning('Requested to scale in more blocks than there are idle blocks: '
-                           '{} idle blocks, killing {}'.format(len(blocks_with_no_tasks),
-                                                               len(blocks_with_no_tasks) + spill_over))
-        to_kill = blocks_with_no_tasks[:blocks] + running_blocks[:spill_over]
-        logger.debug('Killing: {}'.format(to_kill))
-        # self.executor.shutdown(targets=to_kill, hub=True)
-        self.killed_blocks |= set(to_kill)
-        return self.provider.cancel([e for i, e in self.engines_map.items() if i in to_kill])
-        # return self.executor.shutdown(targets=to_kill)
-
-
-        # Calculate how many to kill from idle blocks, and any spill over into active blocks
-        # TODO Issue a warning if there's spill over
-        spill_over = max(0, blocks - len(blocks_with_no_tasks))
-        if spill_over:
-            logger.warning('Requested to kill more blocks than there are idle blocks: '
-                           '{} requested, killing {}'.format(blocks, blocks + spill_over))
-        to_kill = blocks_with_no_tasks[:blocks] + all_blocks[:spill_over]
-
-        # Lots of logging, remove after development
-        logger.debug('Queue status: {}'.format(queue_status))
-        logger.debug('Blocks with no tasks: {}'.format(blocks_with_no_tasks))
-        logger.debug('All blocks: {}'.format(all_blocks))
-        logger.debug('Spill over: {}'.format(spill_over))
-        logger.debug('Killing: {}'.format(to_kill))
-
-        # Kill the blocks
-        return self.provider.cancel(to_kill)
+            logger.warning('Requested to scale in more engines than there are idle: '
+                           '{} idle engines, killing {}'.format(len(idle_engines),
+                                                               len(idle_engines) + spill_over))
+        to_kill = idle_engines[:blocks] + busy_engines[:spill_over]
+        logger.debug('Killing engines: {}'.format(to_kill))
+        self.killed_engines |= set(to_kill)
+        return self.executor.shutdown(targets=to_kill)
 
     def status(self):
         """Returns the status of the executor via probing the execution providers."""

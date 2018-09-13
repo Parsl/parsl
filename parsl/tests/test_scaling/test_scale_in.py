@@ -7,6 +7,7 @@ from copy import deepcopy
 import parsl
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
+from parsl.executors.threads import ThreadPoolExecutor
 from parsl.app.app import python_app
 from libsubmit.providers import LocalProvider
 
@@ -56,13 +57,13 @@ def test_manual_scale_in():
     @python_app(walltime=10)
     def second():
         import time
-        time.sleep(14)
+        time.sleep(5)
         return 'second'
 
     @python_app(walltime=10)
     def third():
         import time
-        time.sleep(13)
+        time.sleep(4)
         return 'third'
 
     # print(exc.executor.queue_status())
@@ -81,8 +82,8 @@ def test_auto_scale_in():
     exc = IPyParallelExecutor(
         label='ipp',
         provider=LocalProvider(
-            init_blocks=3,
-            max_blocks=3
+            init_blocks=1,
+            max_blocks=4
         )
     )
     config = Config(
@@ -91,12 +92,6 @@ def test_auto_scale_in():
     )
     parsl.clear()
     parsl.load(config)
-
-
-    # config = base_config.copy()
-    # config['sites'][0]['execution']['block']['initBlocks'] = 1
-    # config['sites'][0]['execution']['block']['maxBlocks'] = 3
-    # dfk = DataFlowKernel(config=config)
 
     @python_app
     def small_record(*args, **kwargs):
@@ -111,30 +106,84 @@ def test_auto_scale_in():
 
     # Round one of auto scale in
     filename_prefix = str(uuid.uuid4())[:8]
-    futs = [small_record(record_filename='{}_{}.txt'.format(filename_prefix, i)) for i in range(8)]
+    futs = [small_record(record_filename='{}_{}.txt'.format(filename_prefix, i)) for i in range(14)]
     for fut in futs:
         fut.result()
 
     # Check results of round one
     # This ensures that none of the tasks had their engines killed mid-run
-    for record_i in range(8):
+    for record_i in range(14):
         record_filename = '{}_{}.txt'.format(filename_prefix, record_i)
         record = open(record_filename).readlines()
         assert record[0].strip() == record[-1].strip()
         os.remove(record_filename)
 
     # Round two of auto scale in
-    filename_prefix2 = str(uuid.uuid4())[:8]
-    futs2 = [small_record(record_filename='{}_{}.txt'.format(filename_prefix2, i)) for i in range(8)]
-    for fut in futs2:
+    # filename_prefix2 = str(uuid.uuid4())[:8]
+    # futs2 = [small_record(record_filename='{}_{}.txt'.format(filename_prefix2, i)) for i in range(8)]
+    # for fut in futs2:
+    #     fut.result()
+    #
+    # # Check results of round two
+    # for record_i in range(8):
+    #     record_filename = '{}_{}.txt'.format(filename_prefix2, record_i)
+    #     record = open(record_filename).readlines()
+    #     assert record[0].strip() == record[-1].strip()
+    #     os.remove(record_filename)
+
+
+def test_auto_scale_in_pipeline():
+    ipp_config = Config(
+        executors=[IPyParallelExecutor(
+            label='ipp',
+            provider=LocalProvider(
+                init_blocks=1,
+                max_blocks=4
+            )
+        )],
+        retries=5
+    )
+    threads_config = Config(
+        executors=[ThreadPoolExecutor(max_threads=4)],
+        retries=3
+    )
+    parsl.clear()
+    parsl.load(ipp_config)
+
+    @python_app
+    def small_record(min_life=3, max_life=10, *args, **kwargs):
+        import random
+        import time
+        total_seconds = random.randint(min_life, max_life)
+        with open(kwargs['record_filename'], 'a') as record:
+            record.write('{}\n'.format(total_seconds))
+            for i in range(total_seconds):
+                time.sleep(1)
+                record.write('{}\n'.format(i + 1))
+
+    # Front burst
+    burst_size = 14
+    front_filename_prefix = str(uuid.uuid4())[:8]
+    back_filename_prefix = str(uuid.uuid4())[:8]
+    front_burst = [small_record(record_filename='{}_{}.txt'.format(front_filename_prefix, i)) for i in range(burst_size)]
+    bridge = small_record(min_life=15, max_life=15, record_filename='bridge.txt', inputs=front_burst)
+    back_burst = [small_record(
+        record_filename='{}_{}.txt'.format(back_filename_prefix, i),
+        inputs=[bridge]
+    ) for i in range(burst_size)]
+    for fut in back_burst:
         fut.result()
 
-    # Check results of round two
-    for record_i in range(8):
-        record_filename = '{}_{}.txt'.format(filename_prefix2, record_i)
-        record = open(record_filename).readlines()
-        assert record[0].strip() == record[-1].strip()
-        os.remove(record_filename)
+    # Check results of round one
+    # This ensures that none of the tasks had their engines killed mid-run
+    for record_i in range(burst_size):
+        for filename_prefix in (front_filename_prefix, back_filename_prefix):
+            record_filename = '{}_{}.txt'.format(filename_prefix, record_i)
+            record = open(record_filename).readlines()
+            assert record[0].strip() == record[-1].strip()
+            os.remove(record_filename)
 
-test_manual_scale_in()
+
+# test_manual_scale_in()
 # test_auto_scale_in()
+# test_auto_scale_in_pipeline()

@@ -111,6 +111,7 @@ class Strategy(object):
         self.config = dfk.config
         self.executors = {}
         self.max_idletime = 60 * 2  # 2 minutes
+        # self.max_idletime = 2  # Uncomment for development
 
         for e in self.dfk.config.executors:
             self.executors[e.label] = {'idle_since': None, 'config': e.label}
