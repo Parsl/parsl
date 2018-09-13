@@ -93,9 +93,9 @@ class DataFlowKernel(object):
         self.db_logger_config_object = config.db_logger_config
         if self.db_logger_config_object is not None and self.db_logger_config_object.logger_type == 'local_database'\
                 and self.db_logger_config_object.eng_link is None:
-            self.db_logger_config_object.eng_link = 'sqlite3:///{}'.format(self.run_dir)
-            # maybe only two slashes. Not sure the format of the run_dir so will test and see.
-            # self.db_logger_config_object.eng_link = 'sqlite3://{}'.format(self.run_dir)
+            # uses the rundir as the default location. Should report to users?
+            logger.info('Local monitoring database can be found inside the run_dir at: {}'.format(self.run_dir))
+            self.db_logger_config_object.eng_link = "sqlite:///{}".format(os.path.join(os.path.abspath(self.run_dir), 'parsl.db'))
         if self.db_logger_config_object is None:
             self.db_logger = get_db_logger()
         else:
