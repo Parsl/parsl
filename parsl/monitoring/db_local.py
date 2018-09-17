@@ -200,23 +200,23 @@ class RemoteHandler(logging.Handler):
         self.request_timeout = request_timeout
         self.retries = retries
         self.on_fail_sleep_duration = on_fail_sleep_duration
+        self.http_client = httpclient.HTTPClient()
 
     def emit(self, record):
         """ Open up an HTTP connection to the logging server. This is currently blocking.
         It should not matter for the resource monitors but could hold up the DFK logs if this connection/sending takes a lot of time. """
-        http_client = httpclient.HTTPClient()
         standard_log_info = ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 'filename', 'module', 'exc_info', 'exc_text', 'stack_info', 'lineno',
                              'funcName', 'created', 'msecs', 'relativeCreated', 'thread', 'threadName', 'processName', 'process']
         for t in range(self.retries):
             try:
                 info = {k: str(v) for k, v in record.__dict__.items() if not k.startswith('__') and k not in standard_log_info}
                 bod = 'log={}'.format(json.dumps(info))
-                http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
+                self.http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
             except Exception as e:
                 # Other errors are possible, such as IOError.
                 logger.error(str(e))
                 time.sleep(self.on_fail_sleep_duration)
             else:
                 break
-        http_client.close()
+        # http_client.close()
         return
