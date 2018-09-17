@@ -65,6 +65,8 @@ class DataManager(ParslExecutor):
         self._scaling_enabled = False
 
         self.label = 'data_manager'
+        if executors is None:
+            executors = []
         self.executors = {e.label: e for e in executors}
         self.max_threads = max_threads
         self.files = []
