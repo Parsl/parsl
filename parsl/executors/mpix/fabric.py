@@ -18,14 +18,24 @@ RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
 
-def result_queue_manager(comm, result_q):
-    logger.debug("Starting result_queue_manager thread")
-    while True:
-        info = MPI.Status()
-        result = comm.recv(source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=info)
-        logger.debug("[RESULT_Q MANAGER] Received result : {}".format(result))
-        result_q.put(result)
 
+def recv_result(comm, result_q):
+    info = MPI.Status()
+    result = comm.recv(source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=info)
+    result_q.put(result)
+    logger.debug("[RESULT_Q MANAGER] returned result : {}".format(result))
+
+def recv_task_request(comm, ready_worker_queue):
+ 
+    info = MPI.Status()
+    logger.info("calling comm.recv")
+    req = comm.recv(source=MPI.ANY_SOURCE, tag=TASK_REQUEST_TAG, status=info)
+    logger.info("returned from comm.recv")
+
+    worker_rank = info.Get_source()
+
+    ready_worker_queue.append(worker_rank)
+       
 
 def master(comm, rank, task_q_url=None, result_q_url=None):
     """ Due to the asynchronous nature of the the task queue and results queue
@@ -39,57 +49,68 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
     task_queue = zmq_pipes.JobsQIncoming(task_q_url, server_id=master_id)
     result_queue = zmq_pipes.ResultsQOutgoing(result_q_url, server_id=master_id)
 
+    ready_worker_queue = []
+    ready_task_queue = []
+
     logger.info("Connected to task_queue:{}".format(task_queue))
     logger.info("Connected to result_queue:{}".format(result_queue))
 
     # Sync everything
     comm.Barrier()
-    logger.debug("Master synced")
-
-    # Starting threads to listen for results
-    result_queue_thread = threading.Thread(target=result_queue_manager,
-                                           args=(comm, result_queue,))
-    result_queue_thread.daemon = True
-    result_queue_thread.start()
+    logger.debug("Master synced with workers")
 
     count = 1
     start = time.time()
     abort_flag = False
 
-    task_catalog = {}
-    while True:
+    while not abort_flag:
 
-        try:
-            task = task_queue.get(timeout=10)
-        except zmq.Again as e:
-            logger.debug("No tasks yet: {}".format(e))
-            time.sleep(0.2)
-            continue
-        except Exception as e:
-            logger.debug("Caught task recv exception : {}".format(e))
-            time.sleep(0.2)
-            continue
-        logger.debug("Received task, type:{} task:{}".format(type(task), task))
+#        logger.info("Start loop")
+#        logger.info("Ready worker queue length: {}".format(len(ready_worker_queue)))
+#        logger.info("Ready task queue length: {}".format(len(ready_task_queue)))
 
-        if task["task_id"] == "STOP":
-            logger.info("Received STOP request, preparing to terminate MPI fabric")
-            abort_flag = True
-            break
-        else:
-            tid = task["task_id"]
-            task_catalog[tid] = {'worker': None,
-                                 'status': 'queued',
-                                 'recv_time': time.time(),
-                                 'start_t': None,
-                                 'end_t': None}
+        # probe if there is a result:
 
         info = MPI.Status()
-        req = comm.recv(source=MPI.ANY_SOURCE, tag=TASK_REQUEST_TAG, status=info)
-        worker_rank = info.Get_source()
-        logger.info("Received task request:{} from rank:{}".format(req, worker_rank))
-        task_catalog[tid]['worker'] = worker_rank
-        comm.send(task, dest=worker_rank, tag=worker_rank)
-        count += 1
+
+        if comm.Iprobe(status=info):
+            logger.info("There is a message waiting in MPI")
+            tag = info.Get_tag()
+            logger.info("Message has tag {}".format(tag))
+
+            if tag == RESULT_TAG:
+                recv_result(comm, result_queue)
+
+            elif tag == TASK_REQUEST_TAG:
+                recv_task_request(comm, ready_worker_queue)
+
+            else:
+                logger.error("Unknown tag {} - ignoring this message and continuing".format(tag))
+
+
+        try:
+            task = task_queue.get(timeout=1) # this is a ratelimit on progress of the whole loop - maybe should be smaller / completely nonblocking for fast apps
+            if task["task_id"] == "STOP":
+                logger.info("Received STOP request, preparing to terminate MPI fabric")
+                abort_flag = True
+                break
+            else:
+                ready_task_queue.append(task)
+
+        except zmq.Again:
+             pass
+#            logger.info("zmq task queue has no task on this iteration")
+
+
+        if(len(ready_task_queue) > 0 and len(ready_worker_queue) > 0):
+            task = ready_task_queue.pop()
+            worker_rank = ready_worker_queue.pop()
+            comm.send(task, dest=worker_rank, tag=worker_rank)
+            count += 1
+
+        else:
+            pass
+#            logger.info("Nothing to match between ready worker and task queue in this iteration")
 
     end = time.time()
     rate = float(count) / (end - start)
@@ -98,7 +119,7 @@ def master(comm, rank, task_q_url=None, result_q_url=None):
     if abort_flag:
         comm.Abort()
 
-
+    
 def execute_task(bufs):
     """Deserialize the buffer and execute the task.
 
@@ -157,7 +178,7 @@ def worker(comm, rank):
             result = execute_task(req['buffer'])
         except Exception as e:
             result_package = {'task_id': tid, 'exception': serialize_object(e)}
-            logger.debug("No result due to exception : {}".format(e))
+            logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
             logger.debug("Result : {}".format(result))
