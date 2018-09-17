@@ -1,6 +1,12 @@
+import json
+import logging
+
+# Try to get rid of streamed loggers
+root_logger = logging.getLogger()
+root_logger.addHandler(logging.NullHandler())
+
 import tornado.ioloop
 import tornado.web
-import json
 from parsl.monitoring.db_logger import get_db_logger
 
 

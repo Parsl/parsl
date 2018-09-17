@@ -4,6 +4,10 @@ import json
 
 logger = logging.getLogger(__name__)
 
+# Try to get rid of streamed loggers
+root_logger = logging.getLogger()
+root_logger.addHandler(logging.NullHandler())
+
 try:
     from tornado import httpclient
     import sqlalchemy as sa
