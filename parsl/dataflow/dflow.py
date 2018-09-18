@@ -339,6 +339,7 @@ class DataFlowKernel(object):
         """
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
+            logger.info("Reusing cached result for task {}".format(task_id))
             self.handle_update(task_id, memo_fu, memo_cbk=True)
             return memo_fu
 
