@@ -25,9 +25,6 @@ def monitor(pid, task_id, db_logger_config, run_id):
     pm = psutil.Process(pid)
     pm.cpu_percent()
 
-    def to_mb(some_bytes):
-        return some_bytes / 1024**2
-
     while True:
         try:
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
@@ -35,14 +32,14 @@ def monitor(pid, task_id, db_logger_config, run_id):
             d["task_id"] = task_id
             children = pm.children(recursive=True)
             d["psutil_cpu_count"] = psutil.cpu_count()
-            d['psutil_process_memory_virtual'] = to_mb(pm.memory_info().vms)
-            d['psutil_process_memory_resident'] = to_mb(pm.memory_info().rss)
+            d['psutil_process_memory_virtual'] = pm.memory_info().vms
+            d['psutil_process_memory_resident'] = pm.memory_info().rss
             d['psutil_process_time_user'] = pm.cpu_times().user
             d['psutil_process_time_system'] = pm.cpu_times().system
             d['psutil_process_children_count'] = len(children)
             try:
-                d['psutil_process_disk_write'] = to_mb(pm.io_counters().write_bytes)
-                d['psutil_process_disk_read'] = to_mb(pm.io_counters().read_bytes)
+                d['psutil_process_disk_write'] = pm.io_counters().write_bytes
+                d['psutil_process_disk_read'] = pm.io_counters().read_bytes
             except psutil._exceptions.AccessDenied:
                 # occassionally pid temp files that hold this information are unvailable to be read so set to zero
                 d['psutil_process_disk_write'] = 0
@@ -52,20 +49,15 @@ def monitor(pid, task_id, db_logger_config, run_id):
                     d['psutil_process_' + str(k)] += v
                 d['psutil_process_time_user'] += child.cpu_times().user
                 d['psutil_process_time_system'] += child.cpu_times().system
-                d['psutil_process_memory_virtual'] += to_mb(child.memory_info().vms)
-                d['psutil_process_memory_resident'] += to_mb(child.memory_info().rss)
+                d['psutil_process_memory_virtual'] += child.memory_info().vms
+                d['psutil_process_memory_resident'] += child.memory_info().rss
                 try:
-                    d['psutil_process_disk_write'] += to_mb(child.io_counters().write_bytes)
-                    d['psutil_process_disk_read'] += to_mb(child.io_counters().read_bytes)
+                    d['psutil_process_disk_write'] += child.io_counters().write_bytes
+                    d['psutil_process_disk_read'] += child.io_counters().read_bytes
                 except psutil._exceptions.AccessDenied:
                     # occassionally pid temp files that hold this information are unvailable to be read so add zero
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
-
-            to_be_rounded = ['psutil_process_memory_virtual', 'psutil_process_memory_resident', 'psutil_process_cpu_percent', 'psutil_process_memory_percent',
-                             'psutil_process_disk_write', 'psutil_process_disk_read']
-            for k in to_be_rounded:
-                d[k] = round(d[k], 2)
 
         finally:
             logger.info("task resource update", extra=d)
