@@ -5,17 +5,17 @@ import os
 from parsl.monitoring.db_logger import get_db_logger
 
 
-def monitor(pid, task_id, db_logger_config, run_id):
+def monitor(pid, task_id, monitoring_config, run_id):
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
 
-    if db_logger_config is None:
+    if monitoring_config is None:
         logger = get_db_logger()
     else:
-        logger = get_db_logger(logger_name=run_id + str(task_id), db_logger_config=db_logger_config)
+        logger = get_db_logger(logger_name=run_id + str(task_id), monitoring_config=monitoring_config)
 
-    sleep_duration = db_logger_config.resource_loop_sleep_duration
+    sleep_duration = monitoring_config.resource_loop_sleep_duration
     time.sleep(sleep_duration)
     # these values are simple to log. Other information is available in special formats such as memory below.
     simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
@@ -61,16 +61,16 @@ def monitor(pid, task_id, db_logger_config, run_id):
 
         finally:
             logger.info("task resource update", extra=d)
-            sleep_duration = db_logger_config.resource_loop_sleep_duration
+            sleep_duration = monitoring_config.resource_loop_sleep_duration
             time.sleep(sleep_duration)
 
 
-def monitor_wrapper(f, task_id, db_logger_config, run_id):
+def monitor_wrapper(f, task_id, monitoring_config, run_id):
     """ Internal
     Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
     """
     def wrapped(*args, **kwargs):
-        p = Process(target=monitor, args=(os.getpid(), task_id, db_logger_config, run_id))
+        p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_config, run_id))
         p.start()
         try:
             return f(*args, **kwargs)
