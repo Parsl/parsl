@@ -5,18 +5,36 @@ import uuid
 import time
 
 
-class JobsQOutgoing(object):
-
+class TasksOutgoing(object):
+    """ Outgoing task queue from MPIX
+    """
     def __init__(self, task_q):
 
         self.task_q = task_q
         self.context = zmq.Context()
-
-        self.zmq_socket = self.context.socket(zmq.PUSH)
-        self.zmq_socket.bind(task_q)
+        self.zmq_socket = self.context.socket(zmq.DEALER)
+        self.zmq_socket.bind(self.task_q)
 
     def put(self, message):
+        #self.zmq_socket.send_pyobj(message)
+        #message  = "Hello"
+        print("IN put")
+        #self.zmq_socket.send_string(message)
         self.zmq_socket.send_pyobj(message)
+        print("DONE put")
+
+class ResultsIncoming(object):
+
+    def __init__(self, results_q):
+        self.results_q = results_q
+
+        self.context = zmq.Context()
+        self.results_receiver = self.context.socket(zmq.DEALER)
+        self.results_receiver.bind(self.results_q)
+
+    def get(self, block=True, timeout=None):
+        result = self.results_receiver.recv_pyobj()
+        return result
 
 
 class JobsQIncoming(object):
@@ -38,18 +56,6 @@ class JobsQIncoming(object):
         return work
 
 
-class ResultsQIncoming(object):
-
-    def __init__(self, results_q):
-        self.results_q = results_q
-
-        self.context = zmq.Context()
-        self.results_receiver = self.context.socket(zmq.PULL)
-        self.results_receiver.bind(self.results_q)
-
-    def get(self, block=True, timeout=None):
-        result = self.results_receiver.recv_pyobj()
-        return result
 
 
 class ResultsQOutgoing(object):
