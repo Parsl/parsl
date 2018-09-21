@@ -8,4 +8,5 @@ ipykernel
 requests
 psutil
 CMRESHandler
+sqlalchemy
 tabulate
