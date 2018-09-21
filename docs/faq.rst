@@ -98,6 +98,8 @@ be substituted below):
         ],
     )
 
+Another possibility that can cause workers not to connect back to Parsl is an incompatibility between the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
+
 .. _pyversion:
 
 parsl.dataflow.error.ConfigurationError
