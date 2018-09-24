@@ -76,6 +76,24 @@ class MonitoringConfig():
             The amount of time in seconds to sleep in between resource monitoring logs per task.
         workflow_name : str, optional
             Name to record as the workflow base name, defaults to the name of the parsl script file if left as None.
+
+        Example
+        -------
+        .. code-block:: python
+
+            import parsl
+            from parsl.config import Config
+            from parsl.executors.threads import ThreadPoolExecutor
+            from parsl.monitoring.db_logger import MonitoringConfig
+
+            config = Config(
+                executors=[ThreadPoolExecutor()],
+                lazy_errors=True,
+                monitoring_config=MonitoringConfig()
+                # an example customization that will log to a specified database instead of the default and operate on a locally specified port.
+                # monitoring_config=MonitoringConfig(eng_link='sqlite:///monitoring.db', web_app_host='http://localhost', web_app_port=9999)
+            )
+            parsl.load(config)
         """
         if database_type not in ['local_database', 'elasticsearch']:
             raise ValueError('Value of logger type was invalid, choices are ' + str(['local_database', 'elasticsearch']))
@@ -114,7 +132,7 @@ def get_db_logger(
         Name of the logger to use. Prevents adding repeat handlers or incorrect handlers
     is_logging_server : Bool, optional
         Used internally to determine which handler to return when using local db logging
-    monitoring_config : LoggerConfig, optional
+    monitoring_config : MonitoringConfig, optional
         Pass in a logger class object to use for generating loggers.
 
     Returns
