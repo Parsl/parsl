@@ -96,3 +96,7 @@ class Config(RepresentationMixin):
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
         self._executors = executors
+
+    def copy(self):
+        import copy
+        return copy.deepcopy(self)
