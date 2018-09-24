@@ -21,8 +21,6 @@ class ClusterProvider(ExecutionProvider):
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    script_dir : str
-        Relative or absolute path to a directory where intermediate scripts are placed.
     walltime : str
         Walltime requested per block in HH:MM:SS.
     launcher : str
@@ -51,7 +49,6 @@ class ClusterProvider(ExecutionProvider):
     def __init__(self,
                  label,
                  channel,
-                 script_dir,
                  nodes_per_block,
                  tasks_per_node,
                  init_blocks,
@@ -81,9 +78,7 @@ class ClusterProvider(ExecutionProvider):
                               "Launcher for executor:{} is of type:{}. Expects a parsl.launcher.launcher.Launcher or callable".format(
                                   label, type(self.launcher))))
 
-        self.script_dir = script_dir
-        if not os.path.exists(self.script_dir):
-            os.makedirs(self.script_dir)
+        self.script_dir = None
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}

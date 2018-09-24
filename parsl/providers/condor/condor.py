@@ -50,8 +50,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     environment : dict of str
         A dictionary of environmant variable name and value pairs which will be set before
         running a task.
-    script_dir : str
-        Relative or absolute path to a directory where intermediate scripts are placed.
     project : str
         Project which the job will be charged against
     overrides : str
@@ -74,7 +72,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  max_blocks=10,
                  parallelism=1,
                  environment=None,
-                 script_dir='parsl_scripts',
                  project='',
                  overrides='',
                  walltime="00:10:00",
@@ -84,7 +81,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         super().__init__(label,
                          channel,
-                         script_dir,
                          nodes_per_block,
                          tasks_per_node,
                          init_blocks,

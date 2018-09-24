@@ -96,3 +96,40 @@ class Channel(metaclass=ABCMeta):
 
         '''
         pass
+
+    @abstractmethod
+    def makedirs(self, path, mode=511, exist_ok=False):
+        """Create a directory.
+
+        If intermediate directories do not exist, they will be created.
+
+        Parameters
+        ----------
+        path : str
+            Path of directory to create.
+        mode : int
+            Permissions (posix-style) for the newly-created directory.
+        exist_ok : bool
+            If False, raise an OSError if the target directory already exists.
+        """
+        pass
+
+    @abstractmethod
+    def isdir(self, path):
+        """Return true if the path refers to an existing directory.
+
+        Parameters
+        ----------
+        path : str
+            Path of directory to check.
+        """
+        pass
+
+    @property
+    def script_dir(self):
+        return self._script_dir
+
+    @script_dir.setter
+    def script_dir(self, value):
+        self._script_dir = value
+

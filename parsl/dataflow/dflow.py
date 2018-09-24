@@ -2,6 +2,7 @@ import atexit
 import itertools
 import logging
 import os
+import pathlib
 import pickle
 import random
 import threading
@@ -148,7 +149,19 @@ class DataFlowKernel(object):
         )
         self.executors = {e.label: e for e in config.executors + [data_manager]}
         for executor in self.executors.values():
-            executor.run_dir = self.run_dir  # FIXME we should have a real interface for this
+            executor.run_dir = self.run_dir
+            if hasattr(executor, 'provider'):
+                if hasattr(executor.provider, 'script_dir'):
+                    executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                    if executor.provider.channel.script_dir is None:
+                        executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                        if not executor.provider.channel.isdir(self.run_dir):
+                            parent, child = pathlib.Path(self.run_dir).parts[-2:]
+                            remote_run_dir = os.path.join(parent, child)
+                            executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
+                            executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
+                    executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
+                    os.makedirs(executor.provider.script_dir, exist_ok=True)
             executor.start()
 
         if self.checkpoint_mode == "periodic":

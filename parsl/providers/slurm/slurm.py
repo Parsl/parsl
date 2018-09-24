@@ -43,8 +43,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    script_dir : str
-        Relative or absolute path to a directory where intermediate scripts are placed.
     nodes_per_block : int
         Nodes to provision per block.
     tasks_per_node : int
@@ -72,7 +70,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  partition,
                  label='slurm',
                  channel=LocalChannel(),
-                 script_dir='parsl_scripts',
                  nodes_per_block=1,
                  tasks_per_node=1,
                  init_blocks=1,
@@ -85,7 +82,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  launcher=SingleNodeLauncher()):
         super().__init__(label,
                          channel,
-                         script_dir,
                          nodes_per_block,
                          tasks_per_node,
                          init_blocks,

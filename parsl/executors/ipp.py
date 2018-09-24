@@ -43,7 +43,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Launch tasks in a container using this docker image. If set to None, no container is used.
         Default is None.
     engine_dir : str
-        Alternative to above, specify the engine_dir
+        Directory where engine logs and configuration files will be stored.
     working_dir : str
         Directory where input data should be staged to.
     storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
@@ -66,20 +66,20 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     def __init__(self,
                  provider=LocalProvider(),
                  label='ipp',
-                 engine_dir='.',
                  working_dir=None,
                  controller=Controller(),
                  container_image=None,
+                 engine_dir=None,
                  storage_access=None,
                  engine_debug_level=None,
                  managed=True):
         self.provider = provider
         self.label = label
-        self.engine_dir = engine_dir
         self.working_dir = working_dir
         self.controller = controller
         self.engine_debug_level = engine_debug_level
         self.container_image = container_image
+        self.engine_dir = engine_dir
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
             raise ConfigurationError('Multiple storage access schemes are not yet supported')
@@ -92,6 +92,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     def start(self):
         self.controller.profile = self.label
         self.controller.ipython_dir = self.run_dir
+        if self.engine_dir is None:
+            self.engine_dir = os.path.dirname(self.provider.channel.script_dir)
         self.controller.start()
 
         self.engine_file = self.controller.engine_file
@@ -156,8 +158,8 @@ cat <<EOF > ipengine.{uid}.json
 {1}
 EOF
 
-mkdir -p '.ipengine_logs'
-ipengine --file=ipengine.{uid}.json {debug_option} >> .ipengine_logs/$JOBNAME.log 2>&1
+mkdir -p 'engine_logs'
+ipengine --file=ipengine.{uid}.json {debug_option} >> engine_logs/$JOBNAME.log 2>&1
 """.format(engine_dir, engine_json, debug_option=self.debug_option, uid=uid)
 
     def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):

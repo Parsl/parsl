@@ -17,13 +17,13 @@ class LocalChannel(Channel, RepresentationMixin):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__(self, userhome=".", envs={}, script_dir="./.scripts", **kwargs):
+    def __init__(self, userhome=".", envs={}, script_dir=None, **kwargs):
         ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
             - userhome (string): (default='.') This is provided as a way to override and set a specific userhome
             - envs (dict) : A dictionary of env variables to be set when launching the shell
-            - script_dir (string): (default="./.scripts") Directory to place scripts
+            - script_dir (string): Directory to place scripts
         '''
         self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
@@ -31,17 +31,8 @@ class LocalChannel(Channel, RepresentationMixin):
         local_env = os.environ.copy()
         self._envs = copy.deepcopy(local_env)
         self._envs.update(envs)
-        self._script_dir = os.path.abspath(script_dir)
-        try:
-            os.makedirs(self._script_dir)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                logger.error("Failed to create script_dir : {0}".format(script_dir))
-                raise BadScriptPath(e, self.hostname)
+        self.script_dir = script_dir
 
-    @property
-    def script_dir(self):
-        return self._script_dir
 
     def execute_wait(self, cmd, walltime, envs={}):
         ''' Synchronously execute a commandline string on the shell.
@@ -165,3 +156,33 @@ class LocalChannel(Channel, RepresentationMixin):
              - False, because it really did not "close" this channel.
         '''
         return False
+
+    def isdir(self, path):
+        """Return true if the path refers to an existing directory.
+
+        Parameters
+        ----------
+        path : str
+            Path of directory to check.
+        """
+
+        return os.path.isdir(path)
+
+    def makedirs(self, path, mode=511, exist_ok=False):
+        """Create a directory.
+
+        If intermediate directories do not exist, they will be created.
+
+        Parameters
+        ----------
+        path : str
+            Path of directory to create.
+        mode : int
+            Permissions (posix-style) for the newly-created directory.
+        exist_ok : bool
+            If False, raise an OSError if the target directory already exists.
+        """
+
+        return os.makedirs(path, mode, exist_ok)
+
+
