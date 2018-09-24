@@ -21,6 +21,8 @@ def create_workflows_table(meta):
     return Table(
             'workflows', meta,
             Column('run_id', Text, nullable=False, primary_key=True),
+            Column('workflow_name', Text, nullable=False),
+            Column('workflow_version', Text, nullable=False),
             Column('time_began', Text, nullable=False),
             Column('time_completed', Text),
             Column('host', Text, nullable=False),

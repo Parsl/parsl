@@ -33,6 +33,7 @@ Reference guide
     parsl.providers.GridEngineProvider
     parsl.providers.SlurmProvider
     parsl.providers.TorqueProvider
+    parsl.monitoring.db_logger.MonitoringConfig
 
 .. autosummary::
     :toctree: stubs
