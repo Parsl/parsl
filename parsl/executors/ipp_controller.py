@@ -6,7 +6,7 @@ import subprocess
 import time
 
 from parsl.executors.errors import *
-from libsubmit.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

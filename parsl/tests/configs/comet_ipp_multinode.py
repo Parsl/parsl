@@ -1,6 +1,6 @@
-from libsubmit.channels import SSHChannel
-from libsubmit.providers import SlurmProvider
-from libsubmit.launchers import SrunLauncher
+from parsl.channels import SSHChannel
+from parsl.providers import SlurmProvider
+from parsl.launchers import SrunLauncher
 
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor

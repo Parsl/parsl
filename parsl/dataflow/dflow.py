@@ -16,7 +16,6 @@ from socket import gethostname
 from concurrent.futures import Future
 from functools import partial
 
-import libsubmit
 import parsl
 from parsl.app.errors import RemoteException
 from parsl.config import Config
@@ -81,7 +80,6 @@ class DataFlowKernel(object):
                               level=logging.DEBUG)
 
         logger.info("Parsl version: {}".format(get_version()))
-        logger.info("Libsubmit version: {}".format(libsubmit.__version__))
 
         self.checkpoint_lock = threading.Lock()
 
@@ -124,7 +122,6 @@ class DataFlowKernel(object):
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
-                'libsumbit_version': libsubmit.__version__,
                 "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
                 'time_completed': str(None),
                 'run_id': self.run_id,

@@ -1,5 +1,5 @@
-from libsubmit.providers import LocalProvider
-from libsubmit.channels import LocalChannel
+from parsl.providers import LocalProvider
+from parsl.channels import LocalChannel
 
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor

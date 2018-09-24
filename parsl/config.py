@@ -1,6 +1,6 @@
 import logging
 
-from libsubmit.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
 
