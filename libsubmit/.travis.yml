@@ -1,0 +1,16 @@
+language: python
+python:
+  - "3.4"
+  - "3.5"
+  - "3.6"
+
+# command to install dependencies
+install:
+    - pip install -r requirements.txt
+    - pip install flake8
+    - python setup.py install
+
+# command to run tests
+script:
+    - pip install -r test-requirements.txt
+    - flake8 libsubmit/

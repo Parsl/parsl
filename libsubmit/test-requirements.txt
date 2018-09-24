@@ -1,0 +1,5 @@
+flake8
+nose
+pytest
+coverage
+mock>=1.0.0
