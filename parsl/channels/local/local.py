@@ -5,7 +5,7 @@ import os
 import shutil
 import subprocess
 
-from parsl.channels.channel_base import Channel
+from parsl.channels.base import Channel
 from parsl.channels.errors import *
 from parsl.utils import RepresentationMixin
 

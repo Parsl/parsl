@@ -4,13 +4,14 @@ import logging
 import os
 
 import paramiko
+from parsl.channels.base import Channel
 from parsl.channels.errors import *
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class SSHChannel(RepresentationMixin):
+class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
