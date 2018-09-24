@@ -125,6 +125,8 @@ class DataFlowKernel(object):
                 "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
                 'time_completed': str(None),
                 'run_id': self.run_id,
+                'workflow_name': self.workflow_name,
+                'workflow_version': self.monitoring_config.version,
                 'rundir': self.run_dir,
                 'tasks_completed_count': self.tasks_completed_count,
                 'tasks_failed_count': self.tasks_failed_count,
