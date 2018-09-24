@@ -13,7 +13,7 @@ setup(
     long_description='Simple parallel workflows system for Python',
     url='https://github.com/Parsl/parsl',
     author='The Parsl Team',
-    author_email='parsl-user@googlegroups.com',
+    author_email='parsl@googlegroups.com',
     license='Apache 2.0',
     download_url='https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
     package_data={'': ['LICENSE']},
