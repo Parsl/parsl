@@ -26,7 +26,7 @@ def get_version():
             diff = subprocess.check_output(shlex.split('git diff HEAD'), env=env)
             status = 'dirty' if diff else 'clean'
             version = '{v}-{head}-{status}'.format(v=VERSION, head=head, status=status)
-        except Exception as e:
+        except Exception:
             pass
 
     return version
@@ -48,7 +48,7 @@ def get_all_checkpoints(rundir="runinfo"):
 
     """
 
-    if(not(os.path.isdir(rundir))):
+    if(not os.path.isdir(rundir)):
         return []
 
     dirs = sorted(os.listdir(rundir))
@@ -59,14 +59,14 @@ def get_all_checkpoints(rundir="runinfo"):
 
         checkpoint = os.path.abspath('{}/{}/checkpoint'.format(rundir, runid))
 
-        if(os.path.isdir(checkpoint)):
+        if os.path.isdir(checkpoint):
             checkpoints.append(checkpoint)
 
     return checkpoints
 
 
 def get_last_checkpoint(rundir="runinfo"):
-    """Finds the checkpoint from the last run, if one exists.
+    """Find the checkpoint from the last run, if one exists.
 
     Note that checkpoints are incremental, and this helper will not find
     previous checkpoints from earlier than the most recent run. It probably
@@ -80,13 +80,12 @@ def get_last_checkpoint(rundir="runinfo"):
        constructor, with 0 or 1 elements
 
     """
-
-    if(not(os.path.isdir(rundir))):
+    if not os.path.isdir(rundir):
         return []
 
     dirs = sorted(os.listdir(rundir))
 
-    if(len(dirs) == 0):
+    if len(dirs) == 0:
         return []
 
     last_runid = dirs[-1]
@@ -128,6 +127,7 @@ def time_limited_open(path, mode, seconds=1):
     f = open(path, mode)
     yield f
     f.close()
+
 
 def wtime_to_minutes(time_string):
     ''' wtime_to_minutes

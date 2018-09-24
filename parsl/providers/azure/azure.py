@@ -1,13 +1,14 @@
 import logging
 import time
 
+from parsl.providers.error import OptionalModuleMissing
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 try:
-    from azure.common.credentials import UserPassCredentials
+    from azure.common.credentials import UserPassCredentials, ResourceManagementClient, StorageManagementClient
     from parsl.azure.azure_deployer import Deployer
 
 except ImportError:
@@ -61,6 +62,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     """
 
     def __init__(self,
+                 channel,
                  subscription_id,
                  username,
                  password,
@@ -180,7 +182,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             try:
                 self.deployer.destroy(self.resources.get(job_id))
                 return True
-            except e:
+            except Exception as e:
                 logger.error("Failed to cancel {}".format(repr(job_id)))
                 logger.error(e)
                 return False

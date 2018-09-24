@@ -1,6 +1,10 @@
 import os
 import time
 
+import parsl
+from parsl.providers.condor import Condor
+from parsl.channels.ssh import SSHChannel
+
 
 def test_1():
     config = {

@@ -210,7 +210,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
             self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
         else:
             logger.error("Submission of command to scale_out failed: {0}".format(stderr))
-            raise (ep_error.ScaleOutFailed(self.__class__, "Request to submit job to local scheduler failed"))
+            raise (ScaleOutFailed(self.__class__, "Request to submit job to local scheduler failed"))
 
         logger.debug("Returning job id : {0}".format(job_id))
         return job_id

@@ -1,10 +1,11 @@
 import logging
 import time
-from parsl.providers.kubernetes.template import template_string
-
 logger = logging.getLogger(__name__)
 
 from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.kubernetes.template import template_string
+from parsl.providers.error import OptionalModuleMissing
+
 
 try:
     from kubernetes import client, config

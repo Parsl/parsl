@@ -1,8 +1,8 @@
 import ast
-import configparser
 import logging
 import os
 
+from parsl.providers.error import OptionalModuleMissing
 try:
     from novaclient import api_versions
     from novaclient import client
@@ -127,16 +127,3 @@ class JetstreamProvider(object):
             count += 1
 
         return count
-
-
-if __name__ == '__main__':
-
-    Config = configparser.ConfigParser()
-    Config.read('/home/yadu/.ssh/parsl.config')
-
-    print(Config['sites.jetstream']['OS_AUTH_URL'])
-    foo = jetstream(Config, 'pool1')
-
-    # foo.scale_out(blocks=1, block_size=2)
-    foo.scale_in(machines=2)
-    # foo.scale_out(blocks=1, block_size=2)

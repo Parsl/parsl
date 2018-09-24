@@ -1,5 +1,9 @@
 import time
 
+import parsl
+from parsl.providers.slurm import Slurm
+from parsl.channels.ssh import SSHChannel
+
 
 def test_1():
 

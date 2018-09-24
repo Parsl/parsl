@@ -1,3 +1,4 @@
+import parsl
 from parsl.channels.ssh.ssh import SSHChannel as SSH
 
 
