@@ -79,19 +79,21 @@ class MonitoringConfig():
 
         Example
         -------
-        import parsl
-        from parsl.config import Config
-        from parsl.executors.threads import ThreadPoolExecutor
-        from parsl.monitoring.db_logger import MonitoringConfig
+        .. code-block:: python
 
-        config = Config(
-            executors=[ThreadPoolExecutor()],
-            lazy_errors=True,
-            monitoring_config=MonitoringConfig()
-            # an example customization that will log to a specified database instead of the default and operate on a locally specified port.
-            # monitoring_config=MonitoringConfig(eng_link='sqlite:///monitoring.db', web_app_host='http://localhost', web_app_port=9999)
-        )
-        parsl.load(config)
+            import parsl
+            from parsl.config import Config
+            from parsl.executors.threads import ThreadPoolExecutor
+            from parsl.monitoring.db_logger import MonitoringConfig
+
+            config = Config(
+                executors=[ThreadPoolExecutor()],
+                lazy_errors=True,
+                monitoring_config=MonitoringConfig()
+                # an example customization that will log to a specified database instead of the default and operate on a locally specified port.
+                # monitoring_config=MonitoringConfig(eng_link='sqlite:///monitoring.db', web_app_host='http://localhost', web_app_port=9999)
+            )
+            parsl.load(config)
         """
         if database_type not in ['local_database', 'elasticsearch']:
             raise ValueError('Value of logger type was invalid, choices are ' + str(['local_database', 'elasticsearch']))
