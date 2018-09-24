@@ -112,26 +112,21 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []
 
-        if self.provider:
-            self._scaling_enabled = self.provider.scaling_enabled
-            logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
-            if hasattr(self.provider, 'init_blocks'):
-                try:
-                    for i in range(self.provider.init_blocks):
-                        engine = self.provider.submit(self.launch_cmd, 1)
-                        logger.debug("Launched block: {0}:{1}".format(i, engine))
-                        if not engine:
-                            raise(ScalingFailed(self.provider.label,
-                                                "Attempts to provision nodes via provider has failed"))
-                        self.engines.extend([engine])
+        self._scaling_enabled = self.provider.scaling_enabled
+        logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
+        if hasattr(self.provider, 'init_blocks'):
+            try:
+                for i in range(self.provider.init_blocks):
+                    engine = self.provider.submit(self.launch_cmd, 1)
+                    logger.debug("Launched block: {0}:{1}".format(i, engine))
+                    if not engine:
+                        raise(ScalingFailed(self.provider.label,
+                                            "Attempts to provision nodes via provider has failed"))
+                    self.engines.extend([engine])
 
-                except Exception as e:
-                    logger.error("Scaling out failed: %s" % e)
-                    raise e
-
-        else:
-            self._scaling_enabled = False
-            logger.debug("Starting IpyParallelExecutor with no provider")
+            except Exception as e:
+                logger.error("Scaling out failed: %s" % e)
+                raise e
 
         self.lb_view = self.executor.load_balanced_view()
         logger.debug("Starting executor")
