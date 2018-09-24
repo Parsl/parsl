@@ -42,9 +42,6 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     container_image : str
         Launch tasks in a container using this docker image. If set to None, no container is used.
         Default is None.
-    engine_file : str
-        Path to json engine file that will be used to compose ipp launch commands at
-        scaling events. Default is '~/.ipython/profile_default/security/ipcontroller-engine.json'.
     engine_dir : str
         Alternative to above, specify the engine_dir
     working_dir : str
@@ -69,7 +66,6 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     def __init__(self,
                  provider=LocalProvider(),
                  label='ipp',
-                 engine_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                  engine_dir='.',
                  working_dir=None,
                  controller=Controller(),
@@ -79,7 +75,6 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                  managed=True):
         self.provider = provider
         self.label = label
-        self.engine_file = engine_file
         self.engine_dir = engine_dir
         self.working_dir = working_dir
         self.controller = controller
