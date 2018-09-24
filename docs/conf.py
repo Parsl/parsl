@@ -21,7 +21,6 @@ import os
 import sys
 import requests
 sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('../parsl/libsubmit'))
 import parsl
 # -- General configuration ------------------------------------------------
 
@@ -61,7 +60,6 @@ templates_path = ['_templates']
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'libsubmit': ('https://libsubmit.readthedocs.io/en/stable', None)
 }
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -290,7 +288,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'Parsl.tex', 'Parsl Documentation',
-     'Yadu Nand Babuji', 'manual'),
+     'The Parsl Team', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

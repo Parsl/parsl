@@ -6,13 +6,11 @@ with open('parsl/version.py') as f:
 with open('requirements.txt') as f:
     install_requires = f.readlines()
 
-# tests_require = parse_requirements('test-requirements.txt')
-
 setup(
     name='parsl',
     version=VERSION,
     description='Simple data dependent workflows in Python',
-    long_description='Simple and easy parallel workflows system for Python',
+    long_description='Simple parallel workflows system for Python',
     url='https://github.com/Parsl/parsl',
     author='Yadu Nand Babuji',
     author_email='yadu@uchicago.edu',
@@ -23,8 +21,11 @@ setup(
     install_requires=install_requires,
     extras_require = {
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
+        'aws' : ['boto3'],
+        'azure' : ['azure-mgmt>=2.0.0', 'haikunator'],
+        'jetstream' : ['python-novaclient']
         },
-    classifiers=[
+    classifiers = [
         # Maturity
         'Development Status :: 3 - Alpha',
         # Intended audience
