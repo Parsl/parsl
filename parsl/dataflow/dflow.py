@@ -102,6 +102,9 @@ class DataFlowKernel(object):
         else:
             self.db_logger = get_db_logger(monitoring_config=self.monitoring_config)
         self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
+        self.workflow_version = None
+        if self.monitroing_config is not None and self.monitoring_config.version is not None:
+            self.workflow_version = self.monitoring_config.version
         if self.monitoring_config is not None and self.monitoring_config.workflow_name is not None:
             self.workflow_name = self.monitoring_config.workflow_name
         self.time_began = datetime.now()
@@ -126,7 +129,7 @@ class DataFlowKernel(object):
                 'time_completed': str(None),
                 'run_id': self.run_id,
                 'workflow_name': self.workflow_name,
-                'workflow_version': self.monitoring_config.version,
+                'workflow_version': self.workflow_version,
                 'rundir': self.run_dir,
                 'tasks_completed_count': self.tasks_completed_count,
                 'tasks_failed_count': self.tasks_failed_count,
