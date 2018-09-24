@@ -1,11 +1,10 @@
 import logging
 import time
-from libsubmit.providers.kubernetes.template import template_string
+from parsl.providers.kubernetes.template import template_string
 
 logger = logging.getLogger(__name__)
 
-from libsubmit.error import *
-from libsubmit.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider
 
 try:
     from kubernetes import client, config

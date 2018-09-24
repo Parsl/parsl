@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from libsubmit.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin
 
 
 class Launcher(RepresentationMixin, metaclass=ABCMeta):

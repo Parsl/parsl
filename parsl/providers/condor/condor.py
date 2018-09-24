@@ -3,10 +3,10 @@ import os
 import re
 import time
 
-from libsubmit.utils import RepresentationMixin
-from libsubmit.launchers import SingleNodeLauncher
-from libsubmit.providers.condor.template import template_string
-from libsubmit.providers.cluster_provider import ClusterProvider
+from parsl.utils import RepresentationMixin
+from parsl.launchers import SingleNodeLauncher
+from parsl.providers.condor.template import template_string
+from parsl.providers.cluster_provider import ClusterProvider
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +28,9 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     ----------
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.LocalChannel` (the default),
-        :class:`~libsubmit.channels.SSHChannel`, or
-        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
+        :class:`~parsl.channels.LocalChannel` (the default),
+        :class:`~parsl.channels.SSHChannel`, or
+        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     label : str
         Label for this provider.
     nodes_per_block : int
@@ -62,7 +62,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         Condor requirements.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
-        :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
+        :class:`~parsl.launchers.SingleNodeLauncher` (the default),
     """
     def __init__(self,
                  channel=None,

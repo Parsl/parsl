@@ -1,15 +1,14 @@
 import logging
 import time
 
-from libsubmit.error import *
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.utils import RepresentationMixin
+from parsl.providers.provider_base import ExecutionProvider
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 try:
     from azure.common.credentials import UserPassCredentials
-    from libsubmit.azure.azure_deployer import Deployer
+    from parsl.azure.azure_deployer import Deployer
 
 except ImportError:
     _azure_enabled = False

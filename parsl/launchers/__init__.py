@@ -1,4 +1,4 @@
-from libsubmit.launchers.launchers import SimpleLauncher, SingleNodeLauncher, \
+from parsl.launchers.launchers import SimpleLauncher, SingleNodeLauncher, \
     SrunLauncher, AprunLauncher, SrunMPILauncher, AprunLauncher, \
     GnuParallelLauncher, MpiExecLauncher
 

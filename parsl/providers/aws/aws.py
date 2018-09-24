@@ -4,11 +4,11 @@ import os
 import time
 from string import Template
 
-from libsubmit.error import *
-from libsubmit.providers.aws.template import template_string
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.utils import RepresentationMixin
-from libsubmit.launchers import SingleNodeLauncher
+from parsl.dataflow.error import ConfigurationError
+from parsl.providers.aws.template import template_string
+from parsl.providers.provider_base import ExecutionProvider
+from parsl.utils import RepresentationMixin
+from parsl.launchers import SingleNodeLauncher
 
 logger = logging.getLogger(__name__)
 
@@ -86,9 +86,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
-        :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
-        :class:`~libsubmit.launchers.SrunLauncher`, or
-        :class:`~libsubmit.launchers.AprunLauncher`
+        :class:`~parsl.launchers.SingleNodeLauncher` (the default),
+        :class:`~parsl.launchers.SrunLauncher`, or
+        :class:`~parsl.launchers.AprunLauncher`
     linger : Bool
         When set to True, the workers will not `halt`. The user is responsible for shutting
         down the node.

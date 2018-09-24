@@ -1,4 +1,4 @@
-from libsubmit.channels.local.local import LocalChannel
+from parsl.channels.local.local import LocalChannel
 
 
 def test_local():

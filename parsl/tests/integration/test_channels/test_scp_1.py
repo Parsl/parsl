@@ -1,6 +1,6 @@
 import os
 
-from libsubmit.channels.ssh.ssh import SSHChannel as SSH
+from parsl.channels.ssh.ssh import SSHChannel as SSH
 
 
 def connect_and_list(hostname, username):

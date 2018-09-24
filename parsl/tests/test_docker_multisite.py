@@ -6,7 +6,7 @@ import shutil
 import time
 
 import pytest
-from libsubmit.providers import LocalProvider
+from parsl.providers import LocalProvider
 from parsl.app.app import App
 from parsl.config import Config
 from parsl.dataflow.dflow import DataFlowKernel

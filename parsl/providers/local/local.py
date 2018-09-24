@@ -3,11 +3,11 @@ import os
 import signal
 import time
 
-import libsubmit.error as ep_error
-from libsubmit.channels import LocalChannel
-from libsubmit.launchers import SingleNodeLauncher
-from libsubmit.providers.provider_base import ExecutionProvider
-from libsubmit.utils import RepresentationMixin
+from parsl.channels import LocalChannel
+from parsl.launchers import SingleNodeLauncher
+from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -123,11 +123,11 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise (ep_error.SchedulerMissingArgs(e.args, self.label))
+            raise (SchedulerMissingArgs(e.args, self.label))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
-            raise (ep_error.ScriptPathError(script_filename, e))
+            raise (ScriptPathError(script_filename, e))
 
         return True
 

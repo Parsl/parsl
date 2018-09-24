@@ -3,8 +3,6 @@ import configparser
 import logging
 import os
 
-from libsubmit.error import *
-
 try:
     from novaclient import api_versions
     from novaclient import client

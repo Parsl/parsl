@@ -2,7 +2,7 @@ import getpass
 import logging
 
 import paramiko
-from libsubmit.channels.ssh.ssh import SSHChannel
+from parsl.channels.ssh.ssh import SSHChannel
 
 logger = logging.getLogger(__name__)
 

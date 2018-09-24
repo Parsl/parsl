@@ -1,7 +1,7 @@
 # Untested
 
-from libsubmit.providers import CobaltProvider
-from libsubmit.launchers import SingleNodeLauncher
+from parsl.providers import CobaltProvider
+from parsl.launchers import SingleNodeLauncher
 
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor

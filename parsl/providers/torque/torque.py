@@ -2,11 +2,11 @@ import logging
 import os
 import time
 
-from libsubmit.channels import LocalChannel
-from libsubmit.launchers import AprunLauncher
-from libsubmit.providers.torque.template import template_string
-from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.utils import RepresentationMixin
+from parsl.channels import LocalChannel
+from parsl.launchers import AprunLauncher
+from parsl.providers.torque.template import template_string
+from parsl.providers.cluster_provider import ClusterProvider
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +33,9 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
     ----------
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.LocalChannel` (the default),
-        :class:`~libsubmit.channels.SSHChannel`, or
-        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
+        :class:`~parsl.channels.LocalChannel` (the default),
+        :class:`~parsl.channels.SSHChannel`, or
+        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     account : str
         Account the job will be charged against.
     queue : str
@@ -64,8 +64,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         String to prepend to the Torque submit script.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
-        :class:`~libsubmit.launchers.AprunLauncher` (the default), or
-        :class:`~libsubmit.launchers.SingleNodeLauncher`,
+        :class:`~parsl.launchers.AprunLauncher` (the default), or
+        :class:`~parsl.launchers.SingleNodeLauncher`,
 
     """
     def __init__(self,

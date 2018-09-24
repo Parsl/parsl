@@ -2,8 +2,9 @@ import logging
 import os
 from string import Template
 
-import libsubmit.error as ep_error
-from libsubmit.providers.provider_base import ExecutionProvider
+from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
+from parsl.launchers.error import BadLauncher
+from parsl.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,9 @@ class ClusterProvider(ExecutionProvider):
         Label for this provider.
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.LocalChannel` (the default),
-        :class:`~libsubmit.channels.SSHChannel`, or
-        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
+        :class:`~parsl.channels.LocalChannel` (the default),
+        :class:`~parsl.channels.SSHChannel`, or
+        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     script_dir : str
         Relative or absolute path to a directory where intermediate scripts are placed.
     walltime : str
@@ -76,8 +77,8 @@ class ClusterProvider(ExecutionProvider):
         self.walltime = walltime
         self.cmd_timeout = cmd_timeout
         if not callable(self.launcher):
-            raise(ep_error.BadLauncher(self.launcher,
-                                       "Launcher for executor:{} is of type:{}. Expects a libsubmit.launcher.launcher.Launcher or callable".format(
+            raise(BadLauncher(self.launcher,
+                                       "Launcher for executor:{} is of type:{}. Expects a parsl.launcher.launcher.Launcher or callable".format(
                                            label,
                                            type(self.launcher))))
 
@@ -119,11 +120,11 @@ class ClusterProvider(ExecutionProvider):
 
         except KeyError as e:
             logger.error("Missing keys for submit script : %s", e)
-            raise (ep_error.SchedulerMissingArgs(e.args, self.sitename))
+            raise (SchedulerMissingArgs(e.args, self.sitename))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
-            raise (ep_error.ScriptPathError(script_filename, e))
+            raise (ScriptPathError(script_filename, e))
         except Exception as e:
             print("Template : ", template)
             print("Args : ", job_name)

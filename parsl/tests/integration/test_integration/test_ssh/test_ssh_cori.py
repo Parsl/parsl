@@ -1,5 +1,3 @@
-import libsubmit
-from libsubmit import SSHChannel, Slurm
 import time
 
 
@@ -51,5 +49,5 @@ def test_1():
 
 
 if __name__ == "__main__":
-    libsubmit.set_stream_logger()
+    parsl.set_stream_logger()
     test_1()

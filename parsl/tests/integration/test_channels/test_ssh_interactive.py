@@ -1,5 +1,4 @@
-import libsubmit
-from libsubmit.channels.ssh_il.ssh_il import SSHInteractiveLoginChannel as SSH
+from parsl.channels.ssh_il.ssh_il import SSHInteractiveLoginChannel as SSH
 
 
 def connect_and_list(hostname, username):
@@ -20,5 +19,5 @@ def test_cooley():
 
 
 if __name__ == "__main__":
-    libsubmit.set_stream_logger()
+    parsl.set_stream_logger()
     test_cooley()

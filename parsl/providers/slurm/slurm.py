@@ -1,12 +1,11 @@
-import logging
-import os
 import time
+import logging
 
-from libsubmit.channels import LocalChannel
-from libsubmit.launchers import SingleNodeLauncher
-from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.providers.slurm.template import template_string
-from libsubmit.utils import RepresentationMixin, wtime_to_minutes
+from parsl.channels import LocalChannel
+from parsl.launchers import SingleNodeLauncher
+from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.slurm.template import template_string
+from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +39,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Label for this provider.
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.LocalChannel` (the default),
-        :class:`~libsubmit.channels.SSHChannel`, or
-        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
+        :class:`~parsl.channels.LocalChannel` (the default),
+        :class:`~parsl.channels.SSHChannel`, or
+        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     script_dir : str
         Relative or absolute path to a directory where intermediate scripts are placed.
     nodes_per_block : int
@@ -63,9 +62,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
-        :class:`~libsubmit.launchers.SingleNodeLauncher` (the default),
-        :class:`~libsubmit.launchers.SrunLauncher`, or
-        :class:`~libsubmit.launchers.AprunLauncher`
+        :class:`~parsl.launchers.SingleNodeLauncher` (the default),
+        :class:`~parsl.launchers.SrunLauncher`, or
+        :class:`~parsl.launchers.AprunLauncher`
     """
 
     def __init__(self,

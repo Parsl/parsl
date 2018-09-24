@@ -3,8 +3,8 @@ import os
 import uuid
 
 from ipyparallel import Client
-from libsubmit.providers import LocalProvider
-from libsubmit.utils import RepresentationMixin
+from parsl.providers import LocalProvider
+from parsl.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.executors.base import ParslExecutor
@@ -23,18 +23,18 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
 
     Parameters
     ----------
-    provider : :class:`~libsubmit.providers.provider_base.ExecutionProvider`
-        Provider to access computation resources. Can be one of :class:`~libsubmit.providers.aws.aws.EC2Provider`,
-        :class:`~libsubmit.providers.azureProvider.azureProvider.AzureProvider`,
-        :class:`~libsubmit.providers.cobalt.cobalt.Cobalt`,
-        :class:`~libsubmit.providers.condor.condor.Condor`,
-        :class:`~libsubmit.providers.googlecloud.googlecloud.GoogleCloud`,
-        :class:`~libsubmit.providers.gridEngine.gridEngine.GridEngine`,
-        :class:`~libsubmit.providers.jetstream.jetstream.Jetstream`,
-        :class:`~libsubmit.providers.local.local.Local`,
-        :class:`~libsubmit.providers.sge.sge.GridEngine`,
-        :class:`~libsubmit.providers.slurm.slurm.Slurm`, or
-        :class:`~libsubmit.providers.torque.torque.Torque`.
+    provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
+        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
+        :class:`~parsl.providers.azureProvider.azureProvider.AzureProvider`,
+        :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
+        :class:`~parsl.providers.condor.condor.Condor`,
+        :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
+        :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,
+        :class:`~parsl.providers.jetstream.jetstream.Jetstream`,
+        :class:`~parsl.providers.local.local.Local`,
+        :class:`~parsl.providers.sge.sge.GridEngine`,
+        :class:`~parsl.providers.slurm.slurm.Slurm`, or
+        :class:`~parsl.providers.torque.torque.Torque`.
     label : str
         Label for this executor instance.
     controller : :class:`~parsl.executors.ipp_controller.Controller`

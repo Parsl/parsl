@@ -2,12 +2,12 @@ import logging
 import os
 import time
 
-import libsubmit.error as ep_error
-from libsubmit.channels import LocalChannel
-from libsubmit.launchers import AprunLauncher
-from libsubmit.providers.cobalt.template import template_string
-from libsubmit.providers.cluster_provider import ClusterProvider
-from libsubmit.utils import RepresentationMixin, wtime_to_minutes
+from parsl.providers.error import ScaleOutFailed
+from parsl.channels import LocalChannel
+from parsl.launchers import AprunLauncher
+from parsl.providers.cobalt.template import template_string
+from parsl.providers.cluster_provider import ClusterProvider
+from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,9 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
     ----------
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.LocalChannel` (the default),
-        :class:`~libsubmit.channels.SSHChannel`, or
-        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
+        :class:`~parsl.channels.LocalChannel` (the default),
+        :class:`~parsl.channels.SSHChannel`, or
+        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     label : str
         Label for this provider.
     script_dir : str
@@ -56,8 +56,8 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         String to append to the Torque submit script on the scheduler.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
-        :class:`~libsubmit.launchers.AprunLauncher` (the default) or,
-        :class:`~libsubmit.launchers.SingleNodeLauncher`
+        :class:`~parsl.launchers.AprunLauncher` (the default) or,
+        :class:`~parsl.launchers.SingleNodeLauncher`
     """
     def __init__(self,
                  channel=LocalChannel(),

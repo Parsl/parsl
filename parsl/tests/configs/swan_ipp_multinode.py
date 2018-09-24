@@ -9,9 +9,9 @@
 | ++++++++++++++ || ++++++++++++++ |
 ====================================
 """
-from libsubmit.channels import SSHChannel
-from libsubmit.launchers import AprunLauncher
-from libsubmit.providers import TorqueProvider
+from parsl.channels import SSHChannel
+from parsl.launchers import AprunLauncher
+from parsl.providers import TorqueProvider
 
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor

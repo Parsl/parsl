@@ -158,7 +158,7 @@ class RepresentationMixin(object):
 
     Examples
     --------
-    >>> from libsubmit.utils import RepresentationMixin
+    >>> from parsl.utils import RepresentationMixin
     >>> class Foo(RepresentationMixin):
             def __init__(self, first, second, third='three', fourth='fourth'):
                 self.first = first

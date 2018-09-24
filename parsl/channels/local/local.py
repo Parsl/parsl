@@ -5,9 +5,9 @@ import os
 import shutil
 import subprocess
 
-from libsubmit.channels.channel_base import Channel
-from libsubmit.channels.errors import *
-from libsubmit.utils import RepresentationMixin
+from parsl.channels.channel_base import Channel
+from parsl.channels.errors import *
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,4 @@
-import libsubmit
-from libsubmit.channels.ssh.ssh import SSHChannel as SSH
+from parsl.channels.ssh.ssh import SSHChannel as SSH
 
 
 def connect_and_list(hostname, username):
@@ -30,7 +29,7 @@ def test_pull(conn, fname="test001.txt"):
 
 if __name__ == "__main__":
 
-    libsubmit.set_stream_logger()
+    parsl.set_stream_logger()
 
     # This is for testing
     conn = SSH("midway.rcc.uchicago.edu", username="yadunand")

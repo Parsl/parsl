@@ -1,5 +1,4 @@
-import libsubmit
-from libsubmit import EC2Provider as ec2
+from parsl.channels.aws import EC2Provider as ec2
 import time
 
 
@@ -100,6 +99,6 @@ def test_2():
 
 
 if __name__ == "__main__":
-    libsubmit.set_stream_logger()
+    parsl.set_stream_logger()
     # test_1 ()
     test_2()
