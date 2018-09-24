@@ -105,7 +105,7 @@ class DataFlowKernel(object):
         self.workflow_version = None
         if self.monitoring_config is not None and self.monitoring_config.workflow_name is not None:
             self.workflow_name = self.monitoring_config.workflow_name
-        if self.monitroing_config is not None and self.monitoring_config.version is not None:
+        if self.monitoring_config is not None and self.monitoring_config.version is not None:
             self.workflow_version = self.monitoring_config.version
         self.time_began = datetime.now()
         self.time_completed = None
