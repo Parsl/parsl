@@ -1,11 +1,12 @@
-"""MPIExecutor builds on the Swift/T executor to use MPI for fast task distribution
-
+"""MPIExecutor builds on the Swift/T EMEWS architecture to use MPI for fast task distribution
 """
+
 from concurrent.futures import Future
 import logging
 import uuid
 import threading
 import queue
+from multiprocessing import Process
 
 try:
     import mpi4py
@@ -14,10 +15,11 @@ except ImportError:
 else:
     _mpi_enabled = True
 
-from ipyparallel.serialize import pack_apply_message  # , unpack_apply_message
-from ipyparallel.serialize import deserialize_object  # , serialize_object,
+from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
+from ipyparallel.serialize import deserialize_object  # ,serialize_object
 
 from parsl.executors.mpix import zmq_pipes
+from parsl.executors.mpix import interchange
 from parsl.executors.errors import *
 from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
@@ -76,6 +78,11 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
         We only store the config options here, the executor is started only when
         start() is called.
+
+        Parameters
+        ----------
+
+
         """
 
         if not _mpi_enabled:
@@ -103,21 +110,24 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         if not launch_cmd:
             self.launch_cmd = """mpiexec -np {tasks_per_node} fabric.py {debug} --task_url={task_url} --result_url={result_url}"""
 
+        """
         if (self.provider.tasks_per_node * self.provider.nodes_per_block) < 2:
             logger.error("MPIExecutor requires atleast 2 workers launched")
             raise InsufficientMPIRanks(tasks_per_node=self.provider.tasks_per_node,
                                        nodes_per_block=self.provider.nodes_per_block)
+        """
 
     def start(self):
         """ Here we create the ZMQ pipes and the MPI fabric
         """
-        self.outgoing_q = zmq_pipes.JobsQOutgoing(self.jobs_q_url)
-        self.incoming_q = zmq_pipes.ResultsQIncoming(self.results_q_url)
+        self.outgoing_q = zmq_pipes.TasksOutgoing('tcp://127.0.0.1:50055')
+        self.incoming_q = zmq_pipes.ResultsIncoming('tcp://127.0.0.1:50056')
 
         self.is_alive = True
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
+        self._start_local_queue_process()
 
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
@@ -224,13 +234,14 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
                     elif 'exception' in msg:
                         logger.info("[MTHREAD] B 1")
                         try:
-                          exception, _ = deserialize_object(msg['exception'])
-                          logger.info("[MTHREAD] B 2")
-                          task_fut.set_exception(exception)
-                          logger.info("[MTHREAD] B 3")
+                            exception, _ = deserialize_object(msg['exception'])
+                            logger.info("[MTHREAD] B 2")
+                            task_fut.set_exception(exception)
+                            logger.info("[MTHREAD] B 3")
                         except Exception as e:
-                          logger.info("[MTHREAD] B - exception {} on processing exception".format(e))
-                          task_fut.set_exception(ValueError("Received exception, but handling also threw an exception: {}".format(e))) # TODO could be a proper wrapped exception?
+                            logger.info("[MTHREAD] B - exception {} on processing exception".format(e))
+                            # TODO could be a proper wrapped exception?
+                            task_fut.set_exception(ValueError("Received exception, but handling also threw an exception: {}".format(e)))
                     else:
                         logger.error("[MTHREAD] this is not a result or an exception - raising exception")
                         raise ValueError("Not a result or exception")
@@ -246,6 +257,11 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
     def weakref_cb(self, q=None):
         """We do not use this yet."""
         q.put(None)
+
+    def _start_local_queue_process(self):
+
+        self.queue_proc = Process(target=interchange.starter, )
+        self.queue_proc.start()
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
@@ -340,13 +356,31 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-<<<<<<< fc5d0d1c930a3173b092f6b5fb9d4bd7c0d6dfc7
-=======
         to_kill = self.engines[:blocks]
->>>>>>> Updating launch command, and minor fix in scaling logic
         if self.provider:
             r = self.provider.cancel(workers)
         return r
+
+
+    def shutdown(self, hub=True, targets='all', block=False):
+        """Shutdown the executor, including all workers and controllers.
+
+        This is not implemented.
+
+        Kwargs:
+            - hub (Bool): Whether the hub should be shutdown, Default:True,
+            - targets (list of ints| 'all'): List of engine id's to kill, Default:'all'
+            - block (Bool): To block for confirmations or not
+
+        Raises:
+             NotImplementedError
+        """
+        logger.warning("Attempting MPIX shutdown")
+        self.outgoing_q.close()
+        self.incoming_q.close()
+        self.queue_proc.kill()
+        logger.warning("Finished MPIX shutdown attempt")
+        return True
 
 
 if __name__ == "__main__":

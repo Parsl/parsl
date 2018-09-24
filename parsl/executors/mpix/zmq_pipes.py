@@ -16,12 +16,13 @@ class TasksOutgoing(object):
         self.zmq_socket.bind(self.task_q)
 
     def put(self, message):
-        #self.zmq_socket.send_pyobj(message)
-        #message  = "Hello"
-        print("IN put")
-        #self.zmq_socket.send_string(message)
+        # print("IN put")
         self.zmq_socket.send_pyobj(message)
-        print("DONE put")
+        # print("DONE put")
+
+    def close(self):
+        self.zmq_socket.close()
+
 
 class ResultsIncoming(object):
 
@@ -35,6 +36,9 @@ class ResultsIncoming(object):
     def get(self, block=True, timeout=None):
         result = self.results_receiver.recv_pyobj()
         return result
+
+    def close(self):
+        self.zmq_socket.close()
 
 
 class JobsQIncoming(object):
@@ -54,8 +58,6 @@ class JobsQIncoming(object):
     def get(self, block=False, timeout=None):
         work = self.task_q.recv_pyobj(flags=zmq.NOBLOCK)
         return work
-
-
 
 
 class ResultsQOutgoing(object):
@@ -88,8 +90,8 @@ if __name__ == "__main__":
 
     if args.type == "client":
         print("Client")
-        jobs_q = JobsQOutgoing(jobQ)
-        results_q = ResultsQIncoming(resultQ)
+        jobs_q = TasksOutgoing(jobQ)
+        results_q = ResultsIncoming(resultQ)
         count = 0
         while True:
             jobs_q.put({'message': 'hello {}'.format(count)})
