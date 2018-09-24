@@ -20,6 +20,7 @@ Reference guide
     parsl.executors.ipp.IPyParallelExecutor
     parsl.executors.ipp_controller.Controller
     parsl.executors.swift_t.TurbineExecutor
+    parsl.monitoring.db_logger.MonitoringConfig
 
 .. autosummary::
     :toctree: stubs
