@@ -1,125 +1,191 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+
 import argparse
 import logging
 import os
 import sys
-import threading
+import random
+# import threading
+import pickle
 import time
-import uuid
+# import uuid
 import zmq
 
 from mpi4py import MPI
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
-from parsl.executors.mpix import zmq_pipes
+# from parsl.executors.mpix import zmq_pipes
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
 
+class Daimyo(object):
+    """ Daimyo (feudal lord) rules over the workers
 
-def recv_result(comm, result_q):
-    info = MPI.Status()
-    result = comm.recv(source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=info)
-    result_q.put(result)
-    logger.debug("[RESULT_Q MANAGER] returned result : {}".format(result))
-
-def recv_task_request(comm, ready_worker_queue):
- 
-    info = MPI.Status()
-    logger.info("calling comm.recv")
-    req = comm.recv(source=MPI.ANY_SOURCE, tag=TASK_REQUEST_TAG, status=info)
-    logger.info("returned from comm.recv")
-
-    worker_rank = info.Get_source()
-
-    ready_worker_queue.append(worker_rank)
-       
-
-def master(comm, rank, task_q_url=None, result_q_url=None):
-    """ Due to the asynchronous nature of the the task queue and results queue
-    we have the main thread processing requests for jobs and the a secondary thread
-    that exclusively listens for results using tags
+    1. Asynchronously queue large volume of tasks
+    2. Allow for workers to join and leave the union
+    3. Detect workers that have failed using heartbeats
+    4. Service single and batch requests from workers
+    5. Be aware of requests worker resource capacity,
+       eg. schedule only jobs that fit into walltime.
     """
+    def __init__(self,
+                 comm, rank,
+                 task_q_url="tcp://127.0.0.1:50097",
+                 result_q_url="tcp://127.0.0.1:50098",
+                 heartbeat_period=30):
+        """
+        Parameters
+        ----------
+        worker_url : str
+             Worker url on which workers will attempt to connect back
+        """
+        logger.info("Daimyo started")
 
-    logger.info("Master started")
+        self.context = zmq.Context()
+        self.task_incoming = self.context.socket(zmq.DEALER)
+        self.task_incoming.setsockopt(zmq.IDENTITY, b'00100')
+        self.task_incoming.connect(task_q_url)
 
-    master_id = str(uuid.uuid4())
-    task_queue = zmq_pipes.JobsQIncoming(task_q_url, server_id=master_id)
-    result_queue = zmq_pipes.ResultsQOutgoing(result_q_url, server_id=master_id)
+        self.result_outgoing = self.context.socket(zmq.DEALER)
+        self.result_outgoing.setsockopt(zmq.IDENTITY, b'00100')
+        self.result_outgoing.connect(result_q_url)
 
-    ready_worker_queue = []
-    ready_task_queue = []
+        logger.info("Daimyo connected")
+        self.pending_task_queue = []
+        self.ready_worker_queue = []
+        self.max_task_queue_size = 10 ^ 5
 
-    logger.info("Connected to task_queue:{}".format(task_queue))
-    logger.info("Connected to result_queue:{}".format(result_queue))
+        self.tasks_per_round = 1
 
-    # Sync everything
-    comm.Barrier()
-    logger.debug("Master synced with workers")
+        self.heartbeat_period = heartbeat_period
+        self.comm = comm
+        self.rank = rank
 
-    count = 1
-    start = time.time()
-    abort_flag = False
-
-    while not abort_flag:
-
-#        logger.info("Start loop")
-#        logger.info("Ready worker queue length: {}".format(len(ready_worker_queue)))
-#        logger.info("Ready task queue length: {}".format(len(ready_task_queue)))
-
-        # probe if there is a result:
-
+    def forward_result_to_interchange(self):
+        """ Receives a results from the MPI fabric and send it out via 0mq
+        """
         info = MPI.Status()
+        result = self.comm.recv(source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=info)
+        self.result_outgoing.send(result)
+        logger.debug("[RESULT_Q MANAGER] returned result : {}".format(result))
 
-        if comm.Iprobe(status=info):
-            logger.info("There is a message waiting in MPI")
-            tag = info.Get_tag()
-            logger.info("Message has tag {}".format(tag))
+    def heartbeat(self):
+        """ Send heartbeat to the incoming task queue
+        """
+        heartbeat = (0).to_bytes(4, "little")
+        r = self.task_incoming.send(heartbeat)
+        logger.debug("Return from heartbeat : {}".format(r))
 
-            if tag == RESULT_TAG:
-                recv_result(comm, result_queue)
+    def recv_task_request(self):
+        """ Receives 1 task request from MPI comm into the ready_worker_queue
+        """
+        info = MPI.Status()
+        # req = comm.recv(source=MPI.ANY_SOURCE, tag=TASK_REQUEST_TAG, status=info)
+        comm.recv(source=MPI.ANY_SOURCE, tag=TASK_REQUEST_TAG, status=info)
+        worker_rank = info.Get_source()
+        self.ready_worker_queue.append(worker_rank)
+        logger.info("Received task request from worker:{}".format(worker_rank))
 
-            elif tag == TASK_REQUEST_TAG:
-                recv_task_request(comm, ready_worker_queue)
+    def start(self):
+        """ Start the Daimyo process.
+
+
+        The worker loops on this:
+
+        1. If the last message sent was older than heartbeat period we send a heartbeat
+        2.
+
+
+        TODO: Move task receiving to a thread
+        """
+
+        self.comm.Barrier()
+        logger.debug("Daimyo synced with workers")
+
+        count = 0
+        start = None
+        abort_flag = False
+
+        # Ensure that the worker definitely sends a heartbeat at the beginning
+        last_beat = 0
+
+        poller = zmq.Poller()
+        poller.register(self.task_incoming, zmq.POLLIN)
+
+        while not abort_flag:
+            logger.info("Loop start")
+            time.sleep(1)
+            # Probing for result
+            info = MPI.Status()
+            if self.comm.Iprobe(status=info):
+                logger.info("There is a message waiting in MPI")
+                tag = info.Get_tag()
+                logger.info("Message has tag {}".format(tag))
+
+                if tag == RESULT_TAG:
+                    # recv_result(comm, result_queue)
+                    self.forward_result_to_interchange()
+
+                elif tag == TASK_REQUEST_TAG:
+                    # recv_task_request(comm, self.ready_worker_queue)
+                    self.recv_task_request()
+
+                else:
+                    logger.error("Unknown tag {} - ignoring this message and continuing".format(tag))
+
+            logger.debug("Current outstanding requests : {}".format(len(self.ready_worker_queue)))
+            # There are no workers waiting for tasks
+            if len(self.ready_worker_queue) == 0:
+                # Heartbeats are necessary only when there are no work requests being made
+                if time.time() > last_beat + self.heartbeat_period:
+                    self.heartbeat()
+                    # heartbeat = (0).to_bytes(4, "little")
+                    # r = self.task_incoming.send(heartbeat)
+                    # print("Return from heartbeat : ", r)
+                    last_beat = time.time()
+                continue
 
             else:
-                logger.error("Unknown tag {} - ignoring this message and continuing".format(tag))
+                # There is atleast 1 worker waiting for tasks, so make a request for tasks
+                # We need to be careful here to only wait for less than the heartbeat period
 
+                # Request a specific number of tasks
+                msg = (len(self.ready_worker_queue).to_bytes(4, "little"))
+                print("Requesting tasks : ", len(self.ready_worker_queue))
+                self.task_incoming.send(msg)
+                print("Worker: Waiting to receive task")
 
-        try:
-            task = task_queue.get(timeout=1) # this is a ratelimit on progress of the whole loop - maybe should be smaller / completely nonblocking for fast apps
-            if task["task_id"] == "STOP":
-                logger.info("Received STOP request, preparing to terminate MPI fabric")
-                abort_flag = True
-                break
-            else:
-                ready_task_queue.append(task)
+                socks = dict(poller.poll(self.heartbeat_period / 2))
+                # TODO : This bit should get the right number of tasks in 1 go
+                if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
 
-        except zmq.Again:
-             pass
-#            logger.info("zmq task queue has no task on this iteration")
+                    # Receive a task
+                    _, pkl_msg = self.task_incoming.recv_multipart()
 
+                    tasks = pickle.loads(pkl_msg)
+                    self.pending_task_queue.extend(tasks)
+                    logger.debug("Ready tasks : {}".format(self.pending_task_queue))
+                    # Forward to a worker
+                    worker_rank = self.ready_worker_queue.pop()
+                    task = self.pending_task_queue.pop()
+                    comm.send(task, dest=worker_rank, tag=worker_rank)
+                    time.sleep((random.randint(1, 10) / 10))
 
-        if(len(ready_task_queue) > 0 and len(ready_worker_queue) > 0):
-            task = ready_task_queue.pop()
-            worker_rank = ready_worker_queue.pop()
-            comm.send(task, dest=worker_rank, tag=worker_rank)
+            if not start:
+                start = time.time()
+            # print("[{}] Received: {}".format(self.identity, msg))
+            # time.sleep(random.randint(4,10)/10)
             count += 1
+            if msg == 'STOP':
+                break
 
-        else:
-            pass
-#            logger.info("Nothing to match between ready worker and task queue in this iteration")
+        delta = time.time() - start
+        print("Received {} tasks in {}seconds".format(count, delta))
 
-    end = time.time()
-    rate = float(count) / (end - start)
-    logger.warn("Total count:{} Task rate:{}".format(count, rate))
 
-    if abort_flag:
-        comm.Abort()
-
-    
 def execute_task(bufs):
     """Deserialize the buffer and execute the task.
 
@@ -169,8 +235,9 @@ def worker(comm, rank):
 
     while True:
         comm.send(task_request, dest=0, tag=TASK_REQUEST_TAG)
+        # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = comm.recv(source=0, tag=rank)
-
+        logger.debug("Got req: {}".format(req))
         tid = req['task_id']
         logger.debug("Got task : {}".format(tid))
 
@@ -182,7 +249,9 @@ def worker(comm, rank):
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
             logger.debug("Result : {}".format(result))
-        comm.send(result_package, dest=0, tag=RESULT_TAG)
+
+        pkl_package = pickle.dumps(result_package)
+        comm.send(pkl_package, dest=0, tag=RESULT_TAG)
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -210,11 +279,34 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
+def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
+    """Add a stream log handler.
+
+    Args:
+         - name (string) : Set the logger name.
+         - level (logging.LEVEL) : Set to logging.DEBUG by default.
+         - format_string (sting) : Set to None by default.
+
+    Returns:
+         - None
+    """
+    if format_string is None:
+        # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
+        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+
+    global logger
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
     parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
@@ -235,6 +327,7 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
+    set_stream_logger()
     start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
                       rank,
                       level=logging.DEBUG if args.debug is True else logging.INFO)
@@ -243,9 +336,8 @@ if __name__ == "__main__":
 
     try:
         if rank == 0:
-            master(comm, rank,
-                   task_q_url=args.task_url,
-                   result_q_url=args.result_url)
+            daimyo = Daimyo(comm, rank)
+            daimyo.start()
         else:
             worker(comm, rank)
     except Exception as e:
