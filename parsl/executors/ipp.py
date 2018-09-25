@@ -1,5 +1,6 @@
 import logging
 import os
+import pathlib
 import uuid
 
 from ipyparallel import Client
@@ -93,7 +94,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.controller.profile = self.label
         self.controller.ipython_dir = self.run_dir
         if self.engine_dir is None:
-            self.engine_dir = os.path.dirname(self.provider.channel.script_dir)
+            parent, child = pathlib.Path(self.run_dir).parts[-2:]
+            self.engine_dir = os.path.join(parent, child)
         self.controller.start()
 
         self.engine_file = self.controller.engine_file

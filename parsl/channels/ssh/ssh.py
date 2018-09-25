@@ -220,7 +220,7 @@ class SSHChannel(Channel, RepresentationMixin):
         Parameters
         ----------
         path : str
-            Path of directory to check.
+            Path of directory on the remote side to check.
         """
         result = True
         try:
@@ -231,14 +231,14 @@ class SSHChannel(Channel, RepresentationMixin):
         return result
 
     def makedirs(self, path, mode=511, exist_ok=False):
-        """Create a directory.
+        """Create a directory on the remote side.
 
         If intermediate directories do not exist, they will be created.
 
         Parameters
         ----------
         path : str
-            Path of directory to create.
+            Path of directory on the remote side to create.
         mode : int
             Permissions (posix-style) for the newly-created directory.
         exist_ok : bool
@@ -249,3 +249,13 @@ class SSHChannel(Channel, RepresentationMixin):
 
         self.execute_wait('mkdir -p {}'.format(path))
         self.sftp_client.chmod(path, mode)
+
+    def abspath(self, path):
+        """Return the absolute path on the remote side.
+
+        Parameters
+        ----------
+        path : str
+            Path for which the absolute path will be returned.
+        """
+        return self.sftp_client.normalize(path)

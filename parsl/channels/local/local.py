@@ -182,3 +182,13 @@ class LocalChannel(Channel, RepresentationMixin):
         """
 
         return os.makedirs(path, mode, exist_ok)
+
+    def abspath(self, path):
+        """Return the absolute path.
+
+        Parameters
+        ----------
+        path : str
+            Path for which the absolute path will be returned.
+        """
+        return os.path.abspath(path)

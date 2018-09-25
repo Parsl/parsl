@@ -125,10 +125,23 @@ class Channel(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def abspath(self, path):
+        """Return the absolute path.
+
+        Parameters
+        ----------
+        path : str
+            Path for which the absolute path will be returned.
+        """
+        pass
+
     @property
     def script_dir(self):
         return self._script_dir
 
     @script_dir.setter
     def script_dir(self, value):
+        if value is not None:
+            value = self.abspath(value)
         self._script_dir = value
