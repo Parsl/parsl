@@ -21,7 +21,7 @@ class PythonApp(AppBase):
 
         This bit is the same for both bash & python apps.
         """
-        super().__init__(wrap_error(func), data_flow_kernel=data_flow_kernel, walltime=walltime, executors=executors, exec_type="python")
+        super().__init__(wrap_error(func), data_flow_kernel=data_flow_kernel, walltime=walltime, executors=executors)
         self.fn_hash = fn_hash
         self.cache = cache
 

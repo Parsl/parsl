@@ -16,7 +16,7 @@ class AppBase(object):
 
     """
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False, exec_type="bash"):
+    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False):
         """Construct the App object.
 
         Args:
@@ -28,7 +28,6 @@ class AppBase(object):
                after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
              - walltime (int) : Walltime in seconds for the app execution.
              - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
-             - exec_type (string) : App type (bash|python)
              - cache (Bool) : Enable caching of this app ?
 
         Returns:
@@ -38,7 +37,6 @@ class AppBase(object):
         self.__name__ = func.__name__
         self.func = func
         self.data_flow_kernel = data_flow_kernel
-        self.exec_type = exec_type
         self.status = 'created'
         self.executors = executors
         if not (isinstance(executors, list) or isinstance(executors, str)):

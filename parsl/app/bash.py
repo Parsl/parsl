@@ -107,7 +107,7 @@ class BashApp(AppBase):
 
         This bit is the same for both bash & python apps.
         """
-        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, exec_type="bash")
+        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors)
         self.kwargs = {}
         self.fn_hash = fn_hash
         self.cache = cache
