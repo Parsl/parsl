@@ -8,3 +8,8 @@ parsl.egg-info/*
 .*err
 *log
 .ipynb_checkpoints
+tutorials/*
+venv/*
+web/*
+api/*
+.idea/*
