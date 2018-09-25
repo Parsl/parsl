@@ -132,4 +132,3 @@ class Channel(metaclass=ABCMeta):
     @script_dir.setter
     def script_dir(self, value):
         self._script_dir = value
-

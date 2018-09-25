@@ -1,5 +1,4 @@
 import copy
-import errno
 import logging
 import os
 import shutil
@@ -32,7 +31,6 @@ class LocalChannel(Channel, RepresentationMixin):
         self._envs = copy.deepcopy(local_env)
         self._envs.update(envs)
         self.script_dir = script_dir
-
 
     def execute_wait(self, cmd, walltime, envs={}):
         ''' Synchronously execute a commandline string on the shell.
@@ -184,5 +182,3 @@ class LocalChannel(Channel, RepresentationMixin):
         """
 
         return os.makedirs(path, mode, exist_ok)
-
-

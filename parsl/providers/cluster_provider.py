@@ -1,5 +1,4 @@
 import logging
-import os
 from string import Template
 
 from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
