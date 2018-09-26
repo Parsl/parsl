@@ -47,7 +47,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     def __init__(self,
                  channel=LocalChannel(),
                  label='local',
-                 script_dir='parsl_scripts',
                  tasks_per_node=1,
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
@@ -58,9 +57,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  parallelism=1):
         self.channel = channel
         self.label = label
-        if not os.path.exists(script_dir):
-            os.makedirs(script_dir)
-        self.script_dir = script_dir
         self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.tasks_per_node = tasks_per_node
@@ -70,6 +66,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.max_blocks = max_blocks
         self.parallelism = parallelism
         self.walltime = walltime
+        self.script_dir = None
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}

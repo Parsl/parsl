@@ -1,5 +1,6 @@
 import logging
 import os
+import pathlib
 import uuid
 
 from ipyparallel import Client
@@ -42,11 +43,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     container_image : str
         Launch tasks in a container using this docker image. If set to None, no container is used.
         Default is None.
-    engine_file : str
-        Path to json engine file that will be used to compose ipp launch commands at
-        scaling events. Default is '~/.ipython/profile_default/security/ipcontroller-engine.json'.
     engine_dir : str
-        Alternative to above, specify the engine_dir
+        Directory where engine logs and configuration files will be stored.
     working_dir : str
         Directory where input data should be staged to.
     storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
@@ -69,22 +67,20 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     def __init__(self,
                  provider=LocalProvider(),
                  label='ipp',
-                 engine_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
-                 engine_dir='.',
                  working_dir=None,
                  controller=Controller(),
                  container_image=None,
+                 engine_dir=None,
                  storage_access=None,
                  engine_debug_level=None,
                  managed=True):
         self.provider = provider
         self.label = label
-        self.engine_file = engine_file
-        self.engine_dir = engine_dir
         self.working_dir = working_dir
         self.controller = controller
         self.engine_debug_level = engine_debug_level
         self.container_image = container_image
+        self.engine_dir = engine_dir
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
             raise ConfigurationError('Multiple storage access schemes are not yet supported')
@@ -97,6 +93,9 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     def start(self):
         self.controller.profile = self.label
         self.controller.ipython_dir = self.run_dir
+        if self.engine_dir is None:
+            parent, child = pathlib.Path(self.run_dir).parts[-2:]
+            self.engine_dir = os.path.join(parent, child)
         self.controller.start()
 
         self.engine_file = self.controller.engine_file
@@ -117,26 +116,21 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []
 
-        if self.provider:
-            self._scaling_enabled = self.provider.scaling_enabled
-            logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
-            if hasattr(self.provider, 'init_blocks'):
-                try:
-                    for i in range(self.provider.init_blocks):
-                        engine = self.provider.submit(self.launch_cmd, 1)
-                        logger.debug("Launched block: {0}:{1}".format(i, engine))
-                        if not engine:
-                            raise(ScalingFailed(self.provider.label,
-                                                "Attempts to provision nodes via provider has failed"))
-                        self.engines.extend([engine])
+        self._scaling_enabled = self.provider.scaling_enabled
+        logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
+        if hasattr(self.provider, 'init_blocks'):
+            try:
+                for i in range(self.provider.init_blocks):
+                    engine = self.provider.submit(self.launch_cmd, 1)
+                    logger.debug("Launched block: {0}:{1}".format(i, engine))
+                    if not engine:
+                        raise(ScalingFailed(self.provider.label,
+                                            "Attempts to provision nodes via provider has failed"))
+                    self.engines.extend([engine])
 
-                except Exception as e:
-                    logger.error("Scaling out failed: %s" % e)
-                    raise e
-
-        else:
-            self._scaling_enabled = False
-            logger.debug("Starting IpyParallelExecutor with no provider")
+            except Exception as e:
+                logger.error("Scaling out failed: %s" % e)
+                raise e
 
         self.lb_view = self.executor.load_balanced_view()
         logger.debug("Starting executor")
@@ -166,8 +160,8 @@ cat <<EOF > ipengine.{uid}.json
 {1}
 EOF
 
-mkdir -p '.ipengine_logs'
-ipengine --file=ipengine.{uid}.json {debug_option} >> .ipengine_logs/$JOBNAME.log 2>&1
+mkdir -p 'engine_logs'
+ipengine --file=ipengine.{uid}.json {debug_option} >> engine_logs/$JOBNAME.log 2>&1
 """.format(engine_dir, engine_json, debug_option=self.debug_option, uid=uid)
 
     def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):
