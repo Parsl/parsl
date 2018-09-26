@@ -5,6 +5,7 @@ import uuid
 import time
 import pickle
 import logging
+import multiprocessing
 
 from ipyparallel.serialize import serialize_object
 
@@ -61,7 +62,10 @@ class Interchange(object):
         heartbeat_period : int
              Heartbeat period expected from workers
         """
-        logger.info("Starting Interchange process")
+        logger.debug("****************************************")
+        logger.debug("Starting Interchange process v0.2")
+        logger.debug("****************************************")
+
         self.client_address = client_address
         self.interchange_address = interchange_address
         self.identity = uuid.uuid4()
@@ -70,6 +74,7 @@ class Interchange(object):
             client_address, client_ports[0], client_ports[1]))
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
+        self.task_incoming.RCVTIMEO = 100 # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
@@ -116,7 +121,12 @@ class Interchange(object):
                 if len(self._task_queue) < self.max_task_queue_size:
                     # There's an unpickling cost here, could optimize by prepending
                     # buffer with tid
-                    msg = self.task_incoming.recv_pyobj()
+                    try:
+                        msg = self.task_incoming.recv_pyobj()
+                    except zmq.Again:
+                        # We just timed out while attempting to receive
+                        logger.debug("There are no more tasks in the incoming queue. Breaking")
+                        break
                     # msg = self.task_incoming.recv_string()
                     if msg == 'STOP':
                         raise ShutdownRequest
@@ -149,7 +159,8 @@ class Interchange(object):
 
         while True:
             self.socks = dict(poller.poll(timeout=poll_period))
-
+            #time.sleep(1)
+            #print("Sleeping")
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
                 message = self.task_outgoing.recv_multipart()
@@ -183,7 +194,6 @@ class Interchange(object):
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
-                logger.debug("***************************")
                 b_worker, b_message = self.results_incoming.recv_multipart()
                 worker = int.from_bytes(b_worker, "little")
                 if worker not in self._ready_worker_queue:
@@ -219,7 +229,7 @@ class Interchange(object):
         logger("Received {} tasks in {}seconds".format(count, delta))
 
 
-def start_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
+def start_file_logger(filename, name='parsl.executors.mpix.interchange', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
 
     Args:
@@ -235,6 +245,9 @@ def start_file_logger(filename, name='parsl', level=logging.DEBUG, format_string
         format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     global logger
+
+    logger = multiprocessing.get_logger()
+    return
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     handler = logging.FileHandler(filename)
@@ -248,7 +261,7 @@ def starter(*args, **kwargs):
     """ MPIX is expected to start the interchange process via calling this function
     to start a new process. The args, kwargs match that of the Interchange.__init__
     """
-
+    #logger = multiprocessing.get_logger()
     start_file_logger("interchange.logs")
     ic = Interchange(*args, **kwargs)
     ic.start()
