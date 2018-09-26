@@ -24,7 +24,7 @@ setup(
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
         'azure' : ['azure-mgmt>=2.0.0', 'haikunator'],
-        'jetstream' : ['python-novaclient']
+        'jetstream' : ['python-novaclient'],
         'mpix' : ['mpi4py'],
         },
     classifiers = [
