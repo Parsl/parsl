@@ -15,7 +15,7 @@ config = Config(
         ThreadPoolExecutor(max_threads=4, label='local_threads'),
         IPyParallelExecutor(
             label='local_ipp',
-            engine_dir='.',
+            engine_dir='engines',
             provider=LocalProvider(
                 walltime="00:05:00",
                 nodes_per_block=1,

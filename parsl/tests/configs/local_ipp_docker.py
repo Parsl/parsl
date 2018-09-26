@@ -12,7 +12,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='local_ipp_docker',
-            engine_dir='.',
+            engine_dir='engines',
             # container_image='parslbase_v0.1'
         )
     ],

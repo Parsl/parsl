@@ -11,7 +11,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='local_ipp_1',
-            engine_dir='.',
+            engine_dir='engines',
             provider=LocalProvider(
                 nodes_per_block=1,
                 tasks_per_node=1,
@@ -21,7 +21,7 @@ config = Config(
         ),
         IPyParallelExecutor(
             label='local_ipp_2',
-            engine_dir='.',
+            engine_dir='engines',
             provider=LocalProvider(
                 nodes_per_block=1,
                 tasks_per_node=1,
