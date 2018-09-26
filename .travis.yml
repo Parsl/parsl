@@ -13,7 +13,7 @@ before_install:
     -  sudo apt-get update -q
     - python$PY -m pip install Cython
     - python$PY -m pip install numpy
-    - ./conf/ci/travis-ci/install-mpi.sh $MPI
+    - parsl/executors/mpix/install-mpi.sh $MPI
     - python$PY --version
     - python$PY -m cython --version
     - python$PY -c "import numpy;print(numpy.__version__)"
