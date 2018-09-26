@@ -17,4 +17,3 @@ google-api-python-client
 google-auth
 nbsphinx
 kubernetes>=6.0.0
-mpi4py
