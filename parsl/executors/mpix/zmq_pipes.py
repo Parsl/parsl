@@ -5,6 +5,7 @@ import uuid
 import time
 import pickle
 
+
 class TasksOutgoing(object):
     """ Outgoing task queue from MPIX
     """

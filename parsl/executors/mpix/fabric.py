@@ -4,7 +4,7 @@ import argparse
 import logging
 import os
 import sys
-import random
+# import random
 # import threading
 import pickle
 import time
@@ -129,7 +129,7 @@ class Daimyo(object):
             # fairness and responsiveness.
             timer = time.time() + 0.05
             counter = 0
-            while time.time() < timer :
+            while time.time() < timer:
                 info = MPI.Status()
                 if not self.comm.Iprobe(status=info):
                     logger.debug("Timer expired, processed {} mpi events".format(counter))
@@ -142,7 +142,7 @@ class Daimyo(object):
                     if tag == RESULT_TAG:
                         # recv_result(comm, result_queue)
                         self.forward_result_to_interchange()
-                        result_counter+=1
+                        result_counter += 1
                         logger.debug("Forwarded result for task count {}".format(result_counter))
 
                     elif tag == TASK_REQUEST_TAG:
@@ -171,11 +171,7 @@ class Daimyo(object):
                 items = len(self.ready_worker_queue)
                 # Request a specific number of tasks
                 msg = ((items).to_bytes(4, "little"))
-                # msg = ((self.max_task_queue_size).to_bytes(4, "little"))
-                # msg = (len(self.ready_worker_queue).to_bytes(4, "little"))
-                #print("Requesting tasks : ", len(self.ready_worker_queue))
                 self.task_incoming.send(msg)
-                #print("Worker: Waiting to receive task")
 
                 start = time.time()
                 # socks = dict(poller.poll(timeout=(self.heartbeat_period / 2)))
@@ -198,7 +194,6 @@ class Daimyo(object):
                 comm.send(task, dest=worker_rank, tag=worker_rank)
                 task_sent_counter += 1
                 logger.debug("Assigning Worker:{} task:{}".format(worker_rank, task['task_id']))
-
 
             if not start:
                 start = time.time()
@@ -356,17 +351,20 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
-
-    start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
-                      rank,
-                      level=logging.DEBUG if args.debug is True else logging.INFO)
-
     try:
         if rank == 0:
+            start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
+                              rank,
+                              level=logging.DEBUG if args.debug is True else logging.INFO)
+
             logger.info("Python version :{}".format(sys.version))
             daimyo = Daimyo(comm, rank)
             daimyo.start()
         else:
+            start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
+                              rank,
+                              level=logging.DEBUG if args.debug is True else logging.INFO)
+
             worker(comm, rank)
     except Exception as e:
         logger.warning("Fabric exiting")

@@ -48,17 +48,18 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
     .. code:: python
 
-                        |  Data   |  Executor   |   IPC      | External Process(es)
-                        |  Flow   |             |            |
-                   Task | Kernel  |             |            |
-                 +----->|-------->|------------>|outgoing_q -|-> Fabric (MPI Ranks)
-                 |      |         |             |            |    |         |
-           Parsl<---Fut-|         |             |            |  result   exception
-                     ^  |         |             |            |    |         |
-                     |  |         |   Q_mngmnt  |            |    V         V
-                     |  |         |    Thread<--|incoming_q<-|--- +---------+
-                     |  |         |      |      |            |
-                     |  |         |      |      |            |
+
+                        |  Data   |  Executor   |  Interchange  | External Process(es)
+                        |  Flow   |             |               |
+                   Task | Kernel  |             |               |
+                 +----->|-------->|------------>|->outgoing_q---|-> Fabric (MPI Ranks)
+                 |      |         |             | batching      |    |         |
+           Parsl<---Fut-|         |             | load-balancing|  result   exception
+                     ^  |         |             | watchdogs     |    |         |
+                     |  |         |   Q_mngmnt  |               |    V         V
+                     |  |         |    Thread<--|-incoming_q<---|--- +---------+
+                     |  |         |      |      |               |
+                     |  |         |      |      |               |
                      +----update_fut-----+
 
     """
@@ -224,30 +225,20 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
                 else:
                     task_fut = self.tasks[msg['task_id']]
                     if 'result' in msg:
-                        # logger.info("[MTHREAD] A 1")
                         result, _ = deserialize_object(msg['result'])
-                        # logger.info("[MTHREAD] A 2")
                         task_fut.set_result(result)
-                        # logger.info("[MTHREAD] A 3")
 
                     elif 'exception' in msg:
-                        #logger.info("[MTHREAD] B 1")
                         try:
                             exception, _ = deserialize_object(msg['exception'])
-                            # logger.info("[MTHREAD] B 2")
                             task_fut.set_exception(exception)
-                            # logger.info("[MTHREAD] B 3")
                         except Exception as e:
-                            # logger.info("[MTHREAD] B - exception {} on processing exception".format(e))
                             # TODO could be a proper wrapped exception?
                             task_fut.set_exception(ValueError("Received exception, but handling also threw an exception: {}".format(e)))
                     else:
-                        # logger.error("[MTHREAD] this is not a result or an exception - raising exception")
                         raise ValueError("Not a result or exception")
-                    # logger.info("[MTHREAD] queue else:result path finished")
 
             if not self.is_alive:
-                # logger.info("[MTHREAD] self.is_alive test: not alive - terminating this loop")
                 break
         logger.info("[MTHREAD] queue management worker finished")
 
@@ -337,7 +328,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
         return r
 
-    def scale_in(self, workers):
+    def scale_in(self, blocks):
         """Scale in the number of active blocks by specified amount.
 
         This method is not implemented for turbine and will raise an error if called.
@@ -347,7 +338,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         """
         to_kill = self.engines[:blocks]
         if self.provider:
-            r = self.provider.cancel(workers)
+            r = self.provider.cancel(to_kill)
         return r
 
     def shutdown(self, hub=True, targets='all', block=False):
@@ -365,8 +356,8 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         """
 
         logger.warning("Attempting MPIX shutdown")
-        #self.outgoing_q.close()
-        #self.incoming_q.close()
+        # self.outgoing_q.close()
+        # self.incoming_q.close()
         self.queue_proc.terminate()
         logger.warning("Finished MPIX shutdown attempt")
         return True

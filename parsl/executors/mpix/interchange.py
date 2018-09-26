@@ -74,7 +74,7 @@ class Interchange(object):
             client_address, client_ports[0], client_ports[1]))
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
-        self.task_incoming.RCVTIMEO = 100 # in milliseconds
+        self.task_incoming.RCVTIMEO = 100  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
@@ -159,8 +159,7 @@ class Interchange(object):
 
         while True:
             self.socks = dict(poller.poll(timeout=poll_period))
-            #time.sleep(1)
-            #print("Sleeping")
+
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
                 message = self.task_outgoing.recv_multipart()
@@ -261,7 +260,7 @@ def starter(*args, **kwargs):
     """ MPIX is expected to start the interchange process via calling this function
     to start a new process. The args, kwargs match that of the Interchange.__init__
     """
-    #logger = multiprocessing.get_logger()
+    # logger = multiprocessing.get_logger()
     start_file_logger("interchange.logs")
     ic = Interchange(*args, **kwargs)
     ic.start()
