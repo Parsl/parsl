@@ -71,7 +71,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
                  results_q_url=None,
                  storage_access=None,
                  working_dir=None,
-                 engine_debug_level=None,
+                 engine_debug=False,
                  mock=False,
                  managed=True):
         """Initialize the MPI Executor
@@ -82,6 +82,8 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Parameters
         ----------
 
+        engine_debug : Bool
+             Enables engine debug logging
 
         """
 
@@ -98,7 +100,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self.launch_cmd = launch_cmd
         self.mock = mock
         self.provider = provider
-        self.engine_debug_level = engine_debug_level
+        self.engine_debug = engine_debug
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
             raise ConfigurationError('Multiple storage access schemes are not yet supported')
@@ -194,15 +196,14 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
         The `None` message is a die request.
         """
-        logger.info("[MTHREAD] queue management worker starting")
+        logger.debug("[MTHREAD] queue management worker starting")
         while True:
-            logger.info("[MTHREAD] queue management worker start of loop")
             try:
                 msg = self.incoming_q.get(timeout=1)
-                logger.info("[MTHREAD] get has returned")
+                logger.debug("[MTHREAD] get has returned")
 
             except queue.Empty as e:
-                logger.info("[MTHREAD] queue empty")
+                logger.debug("[MTHREAD] queue empty")
                 # Timed out.
                 pass
 
@@ -212,43 +213,41 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
             except Exception as e:
                 logger.debug("[MTHREAD] Caught unknown exception: {}".format(e))
+                return
 
             else:
-                logger.info("[MTHREAD] queue else: path")
 
                 if msg is None:
-                    logger.debug("[MTHREAD] Got None")
+                    logger.debug("[MTHREAD] Got None, exiting")
                     return
 
                 else:
-                    logger.info("[MTHREAD] queue else:result path")
-                    # logger.debug("[MTHREAD] Received message: {}".format(msg))
                     task_fut = self.tasks[msg['task_id']]
                     if 'result' in msg:
-                        logger.info("[MTHREAD] A 1")
+                        # logger.info("[MTHREAD] A 1")
                         result, _ = deserialize_object(msg['result'])
-                        logger.info("[MTHREAD] A 2")
+                        # logger.info("[MTHREAD] A 2")
                         task_fut.set_result(result)
-                        logger.info("[MTHREAD] A 3")
+                        # logger.info("[MTHREAD] A 3")
 
                     elif 'exception' in msg:
-                        logger.info("[MTHREAD] B 1")
+                        #logger.info("[MTHREAD] B 1")
                         try:
                             exception, _ = deserialize_object(msg['exception'])
-                            logger.info("[MTHREAD] B 2")
+                            # logger.info("[MTHREAD] B 2")
                             task_fut.set_exception(exception)
-                            logger.info("[MTHREAD] B 3")
+                            # logger.info("[MTHREAD] B 3")
                         except Exception as e:
-                            logger.info("[MTHREAD] B - exception {} on processing exception".format(e))
+                            # logger.info("[MTHREAD] B - exception {} on processing exception".format(e))
                             # TODO could be a proper wrapped exception?
                             task_fut.set_exception(ValueError("Received exception, but handling also threw an exception: {}".format(e)))
                     else:
-                        logger.error("[MTHREAD] this is not a result or an exception - raising exception")
+                        # logger.error("[MTHREAD] this is not a result or an exception - raising exception")
                         raise ValueError("Not a result or exception")
-                    logger.info("[MTHREAD] queue else:result path finished")
+                    # logger.info("[MTHREAD] queue else:result path finished")
 
             if not self.is_alive:
-                logger.info("[MTHREAD] self.is_alive test: not alive - terminating this loop")
+                # logger.info("[MTHREAD] self.is_alive test: not alive - terminating this loop")
                 break
         logger.info("[MTHREAD] queue management worker finished")
 
@@ -279,16 +278,6 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
         else:
             logger.debug("Management thread already exists, returning")
-
-    def shutdown(self):
-        """Shutdown method, to kill the threads and workers."""
-        self.is_alive = False
-        logger.debug("Waking management thread")
-        self.incoming_q.put(None)  # Wake up the thread
-        self._queue_management_thread.join()  # Force join
-        logger.debug("Exiting thread")
-        self.worker.join()
-        return True
 
     def submit(self, func, *args, **kwargs):
         """Submits work to the the outgoing_q.
@@ -361,7 +350,6 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
             r = self.provider.cancel(workers)
         return r
 
-
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.
 
@@ -375,10 +363,11 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
+
         logger.warning("Attempting MPIX shutdown")
-        self.outgoing_q.close()
-        self.incoming_q.close()
-        self.queue_proc.kill()
+        #self.outgoing_q.close()
+        #self.incoming_q.close()
+        self.queue_proc.terminate()
         logger.warning("Finished MPIX shutdown attempt")
         return True
 
