@@ -1,0 +1,15 @@
+{
+	"site": "azure",
+	"nodeGranularity": 1,
+	"maxNodes": 5,
+	"AMIID": "ami-ae90b6cb",
+	"logFile": "azureprovider.log",
+	"username": "",
+	"pass": "",
+	"subscriptionId": "",
+	"location": "eastus",
+	"AZURE_CLIENT_ID": "0",
+	"AZURE_CLIENT_SECRET": "",
+	"AZURE_TENANT_ID": "0",
+	"azureTemplateFile": "template.json"
+}

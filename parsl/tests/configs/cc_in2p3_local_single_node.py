@@ -7,8 +7,8 @@
 | ++++++++++++++ |
 ==================
 """
-from libsubmit.channels import LocalChannel
-from libsubmit.providers import GridEngineProvider
+from parsl.channels import LocalChannel
+from parsl.providers import GridEngineProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.utils import get_rundir
