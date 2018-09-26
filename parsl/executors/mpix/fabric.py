@@ -35,6 +35,7 @@ class Daimyo(object):
                  comm, rank,
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
+                 max_task_queue_size=10,
                  heartbeat_period=30):
         """
         Parameters
@@ -42,7 +43,7 @@ class Daimyo(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
         """
-        logger.info("Daimyo started")
+        logger.info("Daimyo started v0.4")
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
@@ -56,7 +57,7 @@ class Daimyo(object):
         logger.info("Daimyo connected")
         self.pending_task_queue = []
         self.ready_worker_queue = []
-        self.max_task_queue_size = 10 ^ 5
+        self.max_task_queue_size = max_task_queue_size
 
         self.tasks_per_round = 1
 
@@ -115,26 +116,41 @@ class Daimyo(object):
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
 
+        result_counter = 0
+        task_recv_counter = 0
+        task_sent_counter = 0
         while not abort_flag:
             logger.info("Loop start")
-            time.sleep(1)
-            # Probing for result
-            info = MPI.Status()
-            if self.comm.Iprobe(status=info):
-                logger.info("There is a message waiting in MPI")
-                tag = info.Get_tag()
-                logger.info("Message has tag {}".format(tag))
+            time.sleep(0.01)
 
-                if tag == RESULT_TAG:
-                    # recv_result(comm, result_queue)
-                    self.forward_result_to_interchange()
-
-                elif tag == TASK_REQUEST_TAG:
-                    # recv_task_request(comm, self.ready_worker_queue)
-                    self.recv_task_request()
-
+            # In this block we attempt to probe MPI for a set amount of time,
+            # and if we have exhausted all available MPI events, we move on
+            # to the next block. The timer and counter trigger balance
+            # fairness and responsiveness.
+            timer = time.time() + 0.05
+            counter = 0
+            while time.time() < timer :
+                info = MPI.Status()
+                if not self.comm.Iprobe(status=info):
+                    logger.debug("Timer expired, processed {} mpi events".format(counter))
+                    break
                 else:
-                    logger.error("Unknown tag {} - ignoring this message and continuing".format(tag))
+                    tag = info.Get_tag()
+                    logger.info("Message with tag {} received".format(tag))
+
+                    counter += 1
+                    if tag == RESULT_TAG:
+                        # recv_result(comm, result_queue)
+                        self.forward_result_to_interchange()
+                        result_counter+=1
+                        logger.debug("Forwarded result for task count {}".format(result_counter))
+
+                    elif tag == TASK_REQUEST_TAG:
+                        # recv_task_request(comm, self.ready_worker_queue)
+                        self.recv_task_request()
+
+                    else:
+                        logger.error("Unknown tag {} - ignoring this message and continuing".format(tag))
 
             logger.debug("Current outstanding requests : {}".format(len(self.ready_worker_queue)))
             # There are no workers waiting for tasks
@@ -152,30 +168,43 @@ class Daimyo(object):
                 # There is atleast 1 worker waiting for tasks, so make a request for tasks
                 # We need to be careful here to only wait for less than the heartbeat period
 
+                items = len(self.ready_worker_queue)
                 # Request a specific number of tasks
-                msg = (len(self.ready_worker_queue).to_bytes(4, "little"))
-                print("Requesting tasks : ", len(self.ready_worker_queue))
+                msg = ((items).to_bytes(4, "little"))
+                # msg = ((self.max_task_queue_size).to_bytes(4, "little"))
+                # msg = (len(self.ready_worker_queue).to_bytes(4, "little"))
+                #print("Requesting tasks : ", len(self.ready_worker_queue))
                 self.task_incoming.send(msg)
-                print("Worker: Waiting to receive task")
+                #print("Worker: Waiting to receive task")
 
-                socks = dict(poller.poll(self.heartbeat_period / 2))
+                start = time.time()
+                # socks = dict(poller.poll(timeout=(self.heartbeat_period / 2)))
+                socks = dict(poller.poll(1))
+                delta = time.time() - start
+                logger.debug("Time taken for poll: {}".format(delta))
                 # TODO : This bit should get the right number of tasks in 1 go
                 if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-
                     # Receive a task
                     _, pkl_msg = self.task_incoming.recv_multipart()
-
                     tasks = pickle.loads(pkl_msg)
+                    task_recv_counter += len(tasks)
                     self.pending_task_queue.extend(tasks)
-                    logger.debug("Ready tasks : {}".format(self.pending_task_queue))
-                    # Forward to a worker
-                    worker_rank = self.ready_worker_queue.pop()
-                    task = self.pending_task_queue.pop()
-                    comm.send(task, dest=worker_rank, tag=worker_rank)
-                    time.sleep((random.randint(1, 10) / 10))
+                    logger.debug("Ready tasks : {}".format([i['task_id'] for i in self.pending_task_queue]))
+
+            this_round = min(len(self.ready_worker_queue), len(self.pending_task_queue))
+            for i in range(this_round):
+                worker_rank = self.ready_worker_queue.pop()
+                task = self.pending_task_queue.pop()
+                comm.send(task, dest=worker_rank, tag=worker_rank)
+                task_sent_counter += 1
+                logger.debug("Assigning Worker:{} task:{}".format(worker_rank, task['task_id']))
+
 
             if not start:
                 start = time.time()
+
+            logger.debug("Tasks recvd:{} Tasks dispatched:{} Results recvd:{}".format(
+                task_recv_counter, task_sent_counter, result_counter))
             # print("[{}] Received: {}".format(self.identity, msg))
             # time.sleep(random.randint(4,10)/10)
             count += 1
@@ -327,21 +356,21 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
-    set_stream_logger()
+
     start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
                       rank,
                       level=logging.DEBUG if args.debug is True else logging.INFO)
 
-    logger.debug("Python version :{}".format(sys.version))
-
     try:
         if rank == 0:
+            logger.info("Python version :{}".format(sys.version))
             daimyo = Daimyo(comm, rank)
             daimyo.start()
         else:
             worker(comm, rank)
     except Exception as e:
-        print("Caught error : ", e)
+        logger.warning("Fabric exiting")
+        logger.exception("Caught error : {}".format(e))
         raise
 
     print("Done")
