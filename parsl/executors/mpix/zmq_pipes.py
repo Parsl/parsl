@@ -3,7 +3,7 @@
 import zmq
 import uuid
 import time
-
+import pickle
 
 class TasksOutgoing(object):
     """ Outgoing task queue from MPIX
@@ -22,6 +22,7 @@ class TasksOutgoing(object):
 
     def close(self):
         self.zmq_socket.close()
+        self.context.term()
 
 
 class ResultsIncoming(object):
@@ -37,8 +38,14 @@ class ResultsIncoming(object):
         result = self.results_receiver.recv_pyobj()
         return result
 
+    def request_close(self):
+        status = self.results_receiver.send(pickle.dumps(None))
+        time.sleep(0.1)
+        return status
+
     def close(self):
-        self.zmq_socket.close()
+        self.results_receiver.close()
+        self.context.term()
 
 
 class JobsQIncoming(object):
