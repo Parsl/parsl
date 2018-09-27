@@ -15,15 +15,14 @@ logger = logging.getLogger(__name__)
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False,
-                 executors='all', fn_hash=None):
-        """Initialize the super.
-
-        This bit is the same for both bash & python apps.
-        """
-        super().__init__(wrap_error(func), data_flow_kernel=data_flow_kernel, walltime=walltime, executors=executors)
-        self.fn_hash = fn_hash
-        self.cache = cache
+    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+        super().__init__(
+            wrap_error(func),
+            data_flow_kernel=data_flow_kernel,
+            walltime=walltime,
+            executors=executors,
+            cache=cache
+        )
 
     def __call__(self, *args, **kwargs):
         """This is where the call to a python app is handled.
@@ -44,7 +43,7 @@ class PythonApp(AppBase):
             self.data_flow_kernel = DataFlowKernelLoader.dfk()
         app_fut = self.data_flow_kernel.submit(self.func, *args,
                                                executors=self.executors,
-                                               fn_hash=self.fn_hash,
+                                               fn_hash=self.func_hash,
                                                cache=self.cache,
                                                **kwargs)
 

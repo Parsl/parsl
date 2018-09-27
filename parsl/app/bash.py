@@ -101,16 +101,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False,
-                 executors='all', fn_hash=None):
-        """Initialize the super.
-
-        This bit is the same for both bash & python apps.
-        """
-        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors)
+    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, cache=cache)
         self.kwargs = {}
-        self.fn_hash = fn_hash
-        self.cache = cache
 
         # We duplicate the extraction of parameter defaults
         # to self.kwargs to ensure availability at point of
@@ -145,7 +138,7 @@ class BashApp(AppBase):
 
         app_fut = self.data_flow_kernel.submit(remote_side_bash_executor, self.func, *args,
                                                executors=self.executors,
-                                               fn_hash=self.fn_hash,
+                                               fn_hash=self.func_hash,
                                                cache=self.cache,
                                                **self.kwargs)
 
