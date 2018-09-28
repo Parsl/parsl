@@ -3,10 +3,14 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from parsl.monitoring.web_app.app import app
-from parsl.monitoring.web_app.apps import app1
+from parsl.monitoring.web_app.apps import workflows
+from parsl.monitoring.web_app.apps import sql
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
+    html.Nav(children=[
+        dcc.Link('Workflows', href='/workflows'),
+        dcc.Link('SQL', href='/sql')]),
     html.Div(id='page-content')
 ])
 
@@ -14,8 +18,12 @@ app.layout = html.Div([
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
-    if pathname == '/apps/app1':
-        return app1.layout
+    if pathname == "/":
+        pass
+    elif pathname == "/workflows":
+        return workflows.layout
+    elif pathname == "/sql":
+        return sql.layout
     else:
         return '404'
 
