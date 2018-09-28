@@ -21,7 +21,7 @@ from ipyparallel.serialize import serialize_object
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
-LOOP_SLOWDOWN = 0.2  # in seconds
+LOOP_SLOWDOWN = 0.01  # in seconds
 
 
 class Daimyo(object):
@@ -61,7 +61,7 @@ class Daimyo(object):
         if max_queue_size == 0:
             max_queue_size = comm.size
         self.pending_task_queue = queue.Queue(maxsize=max_queue_size)
-        self.pending_result_queue = queue.Queue(maxsize=max_queue_size)
+        self.pending_result_queue = queue.Queue(maxsize=10 ^ 4)
         self.ready_worker_queue = queue.Queue(maxsize=max_queue_size + 10)
 
         self.tasks_per_round = 1
@@ -123,7 +123,7 @@ class Daimyo(object):
             ready_worker_count = self.ready_worker_queue.qsize()
             logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
 
-            if time.time() > last_beat + self.heartbeat_period:
+            if time.time() > last_beat + (float(self.heartbeat_period) / 2):
                 self.heartbeat()
                 last_beat = time.time()
 
@@ -142,6 +142,8 @@ class Daimyo(object):
                 if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
                     _, pkl_msg = self.task_incoming.recv_multipart()
                     tasks = pickle.loads(pkl_msg)
+                    logger.debug("[TASK_PULL_THREAD] Got tasks")
+                    logger
                     if tasks == 'STOP':
                         logger.critical("[TASK_PULL_THREAD] Received stop request")
                         kill_event.set()
@@ -150,8 +152,8 @@ class Daimyo(object):
                         task_recv_counter += len(tasks)
                         for task in tasks:
                             self.pending_task_queue.put(task)
-                            logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
-                                [i['task_id'] for i in self.pending_task_queue]))
+                            # logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
+                            #    [i['task_id'] for i in self.pending_task_queue]))
                 else:
                     logger.debug("[TASK_PULL_THREAD] No incoming tasks")
 
@@ -172,13 +174,17 @@ class Daimyo(object):
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
-            logger.debug("[RESULT_PUSH_THREAD] Loop start waiting for result")
+
             try:
                 result = self.pending_result_queue.get(block=True, timeout=timeout)
                 self.result_outgoing.send(result)
                 logger.debug("[RESULT_PUSH_THREAD] Sent result:{}".format(result))
+
             except queue.Empty:
                 logger.debug("[RESULT_PUSHER] No results to send in past {}seconds".format(timeout))
+
+            except Exception as e:
+                logger.exception("[RESULT_PUSH_THREAD] Got an exception : {}".format(e))
 
     def start(self):
         """ Start the Daimyo process.
@@ -247,7 +253,11 @@ class Daimyo(object):
                     else:
                         logger.error("Unknown tag {} - ignoring this message and continuing".format(tag))
 
-            this_round = min(self.ready_worker_queue.qsize(), self.pending_task_queue.qsize())
+            available_worker_cnt = self.ready_worker_queue.qsize()
+            available_task_cnt = self.pending_task_queue.qsize()
+            logger.debug("[MAIN] Ready workers: {} Ready tasks: {}".format(available_worker_cnt,
+                                                                           available_task_cnt))
+            this_round = min(available_worker_cnt, available_task_cnt)
             for i in range(this_round):
                 worker_rank = self.ready_worker_queue.get()
                 task = self.pending_task_queue.get()
