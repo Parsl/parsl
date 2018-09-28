@@ -163,7 +163,7 @@ def apply_masks(request):
                 pytest.skip("config '{}' is in blacklist".format(config))
             else:
                 pytest.skip(m.kwargs['reason'])
-    m = request.node.get_marker('local')
+    m = request.node.get_closest_marker('local')
     if m is not None:
         if config != 'local':
             if len(m.args) == 0:
