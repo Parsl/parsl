@@ -21,7 +21,7 @@ from ipyparallel.serialize import serialize_object
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
-LOOP_SLOWDOWN = 0.01  # in seconds
+LOOP_SLOWDOWN = 0.0  # in seconds
 
 
 class Daimyo(object):
@@ -46,7 +46,7 @@ class Daimyo(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
         """
-        logger.info("Daimyo started v0.4")
+        logger.info("Daimyo started v0.5")
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
@@ -133,29 +133,27 @@ class Daimyo(object):
                 logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
-                logger.debug("[TASK_PULL_THREAD] return from task request")
 
-                # start = time.time()
-                socks = dict(poller.poll(1))
-                # delta = time.time() - start
+            # start = time.time()
+            socks = dict(poller.poll(1))
+            # delta = time.time() - start
 
-                if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                    _, pkl_msg = self.task_incoming.recv_multipart()
-                    tasks = pickle.loads(pkl_msg)
-                    logger.debug("[TASK_PULL_THREAD] Got tasks")
-                    logger
-                    if tasks == 'STOP':
-                        logger.critical("[TASK_PULL_THREAD] Received stop request")
-                        kill_event.set()
-                        break
-                    else:
-                        task_recv_counter += len(tasks)
-                        for task in tasks:
-                            self.pending_task_queue.put(task)
-                            # logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
-                            #    [i['task_id'] for i in self.pending_task_queue]))
+            if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
+                _, pkl_msg = self.task_incoming.recv_multipart()
+                tasks = pickle.loads(pkl_msg)
+                if tasks == 'STOP':
+                    logger.critical("[TASK_PULL_THREAD] Received stop request")
+                    kill_event.set()
+                    break
                 else:
-                    logger.debug("[TASK_PULL_THREAD] No incoming tasks")
+                    logger.debug("[TASK_PULL_THREAD] Got tasks: {}".format(len(tasks)))
+                    task_recv_counter += len(tasks)
+                    for task in tasks:
+                        self.pending_task_queue.put(task)
+                        # logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
+                        #    [i['task_id'] for i in self.pending_task_queue]))
+            else:
+                logger.debug("[TASK_PULL_THREAD] No incoming tasks")
 
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
@@ -174,14 +172,13 @@ class Daimyo(object):
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
-
             try:
                 result = self.pending_result_queue.get(block=True, timeout=timeout)
                 self.result_outgoing.send(result)
                 logger.debug("[RESULT_PUSH_THREAD] Sent result:{}".format(result))
 
             except queue.Empty:
-                logger.debug("[RESULT_PUSHER] No results to send in past {}seconds".format(timeout))
+                logger.debug("[RESULT_PUSH_THREAD] No results to send in past {}seconds".format(timeout))
 
             except Exception as e:
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception : {}".format(e))
@@ -216,8 +213,8 @@ class Daimyo(object):
         task_recv_counter = 0
         task_sent_counter = 0
 
+        logger.info("Loop start")
         while not abort_flag:
-            logger.info("Loop start")
             time.sleep(LOOP_SLOWDOWN)
 
             # In this block we attempt to probe MPI for a set amount of time,
@@ -388,8 +385,8 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
          - None
     """
     if format_string is None:
-        # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
+        # format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     global logger
     logger = logging.getLogger(name)
@@ -424,7 +421,7 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
-    set_stream_logger()
+    # set_stream_logger()
     try:
         if rank == 0:
             start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
