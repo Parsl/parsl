@@ -6,6 +6,7 @@ from parsl.monitoring.web_app.app import app
 from parsl.monitoring.web_app.apps import workflows
 from parsl.monitoring.web_app.apps import sql
 
+
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Nav(children=[
@@ -26,6 +27,12 @@ def display_page(pathname):
         return sql.layout
     else:
         return '404'
+
+
+def run(handler):
+    print('db')
+    print(handler)
+    app.run_server()
 
 
 if __name__ == '__main__':
