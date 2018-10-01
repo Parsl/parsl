@@ -8,7 +8,6 @@ requests
 psutil
 CMRESHandler
 sqlalchemy
-tabulate
 paramiko
 boto3
 azure-mgmt>=2.0.0

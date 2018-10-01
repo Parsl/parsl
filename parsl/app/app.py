@@ -3,7 +3,11 @@
 The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
 import logging
+from inspect import getsource
+from hashlib import md5
 from inspect import signature
+
+from parsl.app.errors import InvalidAppTypeError
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +20,7 @@ class AppBase(object):
 
     """
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False, exec_type="bash"):
+    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False):
         """Construct the App object.
 
         Args:
@@ -28,7 +32,6 @@ class AppBase(object):
                after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
              - walltime (int) : Walltime in seconds for the app execution.
              - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
-             - exec_type (string) : App type (bash|python)
              - cache (Bool) : Enable caching of this app ?
 
         Returns:
@@ -38,13 +41,23 @@ class AppBase(object):
         self.__name__ = func.__name__
         self.func = func
         self.data_flow_kernel = data_flow_kernel
-        self.exec_type = exec_type
         self.status = 'created'
         self.executors = executors
+        self.cache = cache
         if not (isinstance(executors, list) or isinstance(executors, str)):
             logger.error("App {} specifies invalid executor option, expects string or list".format(
                 func.__name__))
-        self.cache = cache
+
+        if cache is True:
+            try:
+                self.fn_source = getsource(func)
+            except OSError:
+                logger.debug("Unable to get source code for AppCaching. Recommend creating module")
+                self.fn_source = func.__name__
+
+            self.func_hash = md5(self.fn_source.encode('utf-8')).hexdigest()
+        else:
+            self.func_hash = func.__name__
 
         params = signature(func).parameters
 
@@ -89,17 +102,27 @@ def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all
              default=False
 
     Returns:
-         An AppFactory object, which when called runs the apps through the executor.
+         A PythonApp or BashApp object, which when called runs the apps through the executor.
     """
-    from parsl import APP_FACTORY_FACTORY
+
+    from parsl.app.python import PythonApp
+    from parsl.app.bash import BashApp
+
+    logger.warning("The 'App' decorator will be depreciated in Parsl 0.8. Please use 'python_app' or 'bash_app' instead.")
+
+    if apptype is 'python':
+        app_class = PythonApp
+    elif apptype is 'bash':
+        app_class = BashApp
+    else:
+        raise InvalidAppTypeError("Invalid apptype requested {}; must be 'python' or 'bash'".format(apptype))
 
     def wrapper(f):
-        return APP_FACTORY_FACTORY.make(apptype, f,
-                                        data_flow_kernel=data_flow_kernel,
-                                        executors=executors,
-                                        cache=cache,
-                                        walltime=walltime)
-
+            return app_class(f,
+                             data_flow_kernel=data_flow_kernel,
+                             walltime=walltime,
+                             cache=cache,
+                             executors=executors)
     return wrapper
 
 
@@ -123,17 +146,15 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, e
     cache : bool
         Enable caching of the app call. Default is False.
     """
-
-    from parsl import APP_FACTORY_FACTORY
+    from parsl.app.python import PythonApp
 
     def decorator(func):
         def wrapper(f):
-            return APP_FACTORY_FACTORY.make('python', f,
-                                            data_flow_kernel=data_flow_kernel,
-                                            executors=executors,
-                                            cache=cache,
-                                            walltime=walltime)
-
+            return PythonApp(f,
+                             data_flow_kernel=data_flow_kernel,
+                             walltime=walltime,
+                             cache=cache,
+                             executors=executors)
         return wrapper(func)
     if function is not None:
         return decorator(function)
@@ -160,16 +181,15 @@ def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, exe
     cache : bool
         Enable caching of the app call. Default is False.
     """
-    from parsl import APP_FACTORY_FACTORY
+    from parsl.app.python import BashApp
 
     def decorator(func):
         def wrapper(f):
-            return APP_FACTORY_FACTORY.make('bash', f,
-                                            data_flow_kernel=data_flow_kernel,
-                                            executors=executors,
-                                            cache=cache,
-                                            walltime=walltime)
-
+            return BashApp(f,
+                           data_flow_kernel=data_flow_kernel,
+                           walltime=walltime,
+                           cache=cache,
+                           executors=executors)
         return wrapper(func)
     if function is not None:
         return decorator(function)
