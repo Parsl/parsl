@@ -49,7 +49,7 @@ class Interchange(object):
                  interchange_address="127.0.0.1",
                  client_ports=(50055, 50056),
                  interchange_ports=(50097, 50098),
-                 heartbeat_period=3):
+                 heartbeat_period=10):
         """
         Parameters
         ----------
