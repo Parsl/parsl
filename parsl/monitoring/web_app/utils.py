@@ -18,29 +18,19 @@ def generate_table1(sql, max_rows=100):
         ]) for i in range(min(len(dataframe), max_rows))]
     )
 
-def dropdown(sql, max_rows=100):
+
+def dropdown(id, sql, max_rows=100):
     sql_conn = sqlite3.connect('parsl.db')
     dataframe = pd.read_sql_query(sql, sql_conn)
 
-    for row in dataframe:
-        print(row)
+    options = [{'label': 'Select Workflow', 'value': ''}]
 
-    dcc.Dropdown(
-        id='my-dropdown',
-        options=[
-            {'label': 'New York City', 'value': 'NYC'},
-            {'label': 'Montreal', 'value': 'MTL'},
-            {'label': 'San Francisco', 'value': 'SF'}
-        ],
-        value='NYC'
-    ),
+    for i in range(len(dataframe)):
+        run_id = dataframe['run_id'].iloc[i]
+        options.append({'label': run_id, 'value': run_id})
 
-    return html.Table(
-        # Header
-        [html.Tr([html.Th(col) for col in dataframe.columns])] +
-
-        # Body
-        [html.Tr([
-            html.Td(html.A(dataframe.iloc[i][col])) for col in dataframe.columns
-        ]) for i in range(min(len(dataframe), max_rows))]
+    return dcc.Dropdown(
+        id=id,
+        options=options,
+        value=''
     )

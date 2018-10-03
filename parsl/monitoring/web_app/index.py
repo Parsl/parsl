@@ -1,3 +1,4 @@
+import os
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
@@ -5,7 +6,6 @@ from dash.dependencies import Input, Output
 from parsl.monitoring.web_app.app import app
 from parsl.monitoring.web_app.apps import workflows
 from parsl.monitoring.web_app.apps import sql
-
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -20,7 +20,7 @@ app.layout = html.Div([
               [Input('url', 'pathname')])
 def display_page(pathname):
     if pathname == "/":
-        pass
+        dcc.Location(id='url', pathname="/workflows"),
     elif pathname == "/workflows":
         return workflows.layout
     elif pathname == "/sql":
@@ -29,10 +29,10 @@ def display_page(pathname):
         return '404'
 
 
-def run(handler):
-    print('db')
-    print(handler)
-    app.run_server()
+def web_run():
+    run = os.fork()
+    if run == 0:
+        app.run_server()
 
 
 if __name__ == '__main__':

@@ -5,9 +5,11 @@ import logging
 root_logger = logging.getLogger()
 root_logger.addHandler(logging.NullHandler())
 
+
 import tornado.ioloop
 import tornado.web
 from parsl.monitoring.db_logger import get_db_logger
+from parsl.monitoring.web_app.index import web_run
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -41,6 +43,7 @@ def run(monitoring_config):
     # Assumtion that monitoring_config is not none because if it were this server should not have been started
     app = tornado.web.Application([(r"/", MainHandler, dict(monitoring_config=monitoring_config))])
     app.listen(monitoring_config.web_app_port)
+    web_run()
     tornado.ioloop.IOLoop.current().start()
 
 
