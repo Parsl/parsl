@@ -103,8 +103,8 @@ class Daimyo(object):
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
-            # ready_worker_count = self.ready_worker_counter.value
-            ready_worker_count = 2
+            ready_worker_count = self.ready_worker_counter.value
+            # ready_worker_count = 2
 
             logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
 
@@ -353,9 +353,11 @@ if __name__ == "__main__":
                         help="Count of apps to launch")
     parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
                         help="Parsl worker log directory")
-    parser.add_argument("-t", "--task_url",
+    parser.add_argument("-w", "--worker_count", default="0",
+                        help="Number of worker processes to launch. If set to '0', launches cores # of workers. Defualt is '0'")
+    parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
-    parser.add_argument("-r", "--result_url",
+    parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
 
     args = parser.parse_args()
@@ -372,7 +374,9 @@ if __name__ == "__main__":
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
         logger.info("Python version :{}".format(sys.version))
-        daimyo = Daimyo()
+        daimyo = Daimyo(task_q_url=args.task_url,
+                        result_q_url=args.result_url,
+                        worker_count=int(args.worker_count))
         daimyo.start()
     except Exception as e:
         logger.warning("Fabric exiting")
