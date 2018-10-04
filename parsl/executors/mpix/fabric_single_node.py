@@ -9,7 +9,7 @@ import threading
 import pickle
 import time
 import queue
-# import uuid
+import uuid
 import zmq
 
 import multiprocessing
@@ -21,7 +21,7 @@ from ipyparallel.serialize import serialize_object
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
-LOOP_SLOWDOWN = 0.00  # in seconds
+LOOP_SLOWDOWN = 0.0  # in seconds
 
 
 class Daimyo(object):
@@ -39,6 +39,7 @@ class Daimyo(object):
                  result_q_url="tcp://127.0.0.1:50098",
                  max_queue_size=10,
                  worker_count=0,
+                 uid=None,
                  heartbeat_period=30):
         """
         Parameters
@@ -60,16 +61,21 @@ class Daimyo(object):
         self.result_outgoing.setsockopt(zmq.IDENTITY, b'00100')
         self.result_outgoing.connect(result_q_url)
 
-        logger.info("Daimyo connected")
-        self.pending_task_queue = multiprocessing.Queue(maxsize=max_queue_size)
-        self.pending_result_queue = multiprocessing.Queue(maxsize=10 ^ 4)
-        self.ready_worker_counter = multiprocessing.Value('i', 0)
+        self.uid = uid
 
         if worker_count == 0:
             self.worker_count = multiprocessing.cpu_count()
         else:
             self.worker_count = worker_count
         logger.info("Daimyo will spawn {} workers".format(self.worker_count))
+        
+        logger.info("Daimyo connected")
+        self.pending_task_queue = multiprocessing.Queue(maxsize=self.worker_count + max_queue_size)
+        self.pending_result_queue = multiprocessing.Queue(maxsize=10 ^ 4)
+        self.ready_worker_queue = multiprocessing.Queue(maxsize=self.worker_count + 1)
+        #self.ready_worker_counter_lock = multiprocessing.Lock()
+        #self.ready_worker_counter = multiprocessing.Value('i', 0)
+
 
         if max_queue_size == 0:
             max_queue_size = self.worker_count
@@ -103,7 +109,8 @@ class Daimyo(object):
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
-            ready_worker_count = self.ready_worker_counter.value
+            ready_worker_count = self.ready_worker_queue.qsize()
+            #ready_worker_count = self.ready_worker_counter.value
             # ready_worker_count = 2
 
             logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
@@ -180,6 +187,19 @@ class Daimyo(object):
         TODO: Move task receiving to a thread
         """
         self._kill_event = threading.Event()
+
+        self.procs = {}
+        for worker_id in range(self.worker_count):
+            p = multiprocessing.Process(target=worker, args=(worker_id,
+                                                             self.pending_task_queue,
+                                                             self.pending_result_queue,
+                                                             self.ready_worker_queue,
+                                                             #self.ready_worker_counter,
+                                                             #self.ready_worker_counter_lock,
+                                                         ))
+            p.start()
+            self.procs[worker_id] = p
+
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
                                                     args=(self._kill_event,))
         self._result_pusher_thread = threading.Thread(target=self.push_results,
@@ -187,12 +207,6 @@ class Daimyo(object):
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
 
-        for worker_id in range(self.worker_count):
-            p = multiprocessing.Process(target=worker, args=(worker_id,
-                                                             self.pending_task_queue,
-                                                             self.pending_result_queue,
-                                                             self.ready_worker_counter))
-            p.start()
 
         logger.debug("Daimyo synced with workers")
 
@@ -204,13 +218,16 @@ class Daimyo(object):
         # TODO : Add mechanism in this loop to stop the fabric.
         # This might need a multiprocessing event to signal back.
         while not abort_flag:
-            time.sleep(LOOP_SLOWDOWN + 1)
+            time.sleep(0.1)
 
-        self._task_puller_thread.join()
-        self._result_pusher_thread.join()
+        for proc_id in self.procs:
+            self.procs[proc_id].terminate()
 
+        #self._task_puller_thread.join()
+        #self._result_pusher_thread.join()
         delta = time.time() - start
         logger.info("Fabric ran for {} seconds".format(delta))
+        sys.exit(-1)
 
 
 def execute_task(bufs):
@@ -251,40 +268,45 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, task_queue, result_queue, worker_counter):
+#def worker(worker_id, task_queue, result_queue, worker_counter, worker_counter_lock):
+def worker(worker_id, task_queue, result_queue, worker_queue):
     """
+
+    TODO : Add daimyo id to distinguish between multiple daimyo runs under same run
 
     Put request token into queue
     Get task from task_queue
     Pop request from queue
     Put result into result_queue
     """
-    start_file_logger('{}/fabric_single_node_{}.log'.format(args.logdir, 0),
+    start_file_logger('{}/fabric_single_node_{}.log'.format(args.logdir, worker_id),
                       0,
                       level=logging.DEBUG if args.debug is True else logging.INFO)
 
-    logger.info("Worker started")
-
     # Sync worker with master
-    logger.info('Worker ID:{} started'.format(worker_id))
+    logger.info('Worker ID: {} started'.format(worker_id))
 
     while True:
-
-        with worker_counter.get_lock():
-            worker_counter.value += 1
+        worker_queue.put(worker_id)
+        #with worker_counter_lock:
+        #    worker_counter.value += 1
 
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
-        logger.debug("Got req: {}".format(req))
         tid = req['task_id']
-        logger.debug("Got task : {}".format(tid))
+        logger.info("Got task : {}".format(tid))
 
-        logger.debug("Reducing worker counter")
-        with worker_counter.get_lock():
-            worker_counter.value -= 1
+        try:
+            worker_queue.get(worker_id)
+        except queue.Empty:
+            logger.warning("Worker ID: {} failed to remove itself from ready_worker_queue".format(worker_id))
+            pass
+        #with worker_counter_lock:
+        #    worker_counter.value -= 1
 
         try:
             result = execute_task(req['buffer'])
+
         except Exception as e:
             result_package = {'task_id': tid, 'exception': serialize_object(e)}
             logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
@@ -292,6 +314,7 @@ def worker(worker_id, task_queue, result_queue, worker_counter):
             result_package = {'task_id': tid, 'result': serialize_object(result)}
             logger.debug("Result : {}".format(result))
 
+        logger.info("Completed task : {}".format(tid))
         pkl_package = pickle.dumps(result_package)
         result_queue.put(pkl_package)
 
@@ -353,6 +376,8 @@ if __name__ == "__main__":
                         help="Count of apps to launch")
     parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
                         help="Parsl worker log directory")
+    parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
+                        help="Unique identifier string for Daimyo")
     parser.add_argument("-w", "--worker_count", default="0",
                         help="Number of worker processes to launch. If set to '0', launches cores # of workers. Defualt is '0'")
     parser.add_argument("-t", "--task_url", required=True,
@@ -369,13 +394,14 @@ if __name__ == "__main__":
 
     # set_stream_logger()
     try:
-        start_file_logger('{}/fabric_single_node_{}.log'.format(args.logdir, 'MAIN'),
+        start_file_logger('{}/fabric_single_{}.{}.log'.format(args.logdir, args.uid, 'MAIN'),
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
         logger.info("Python version :{}".format(sys.version))
         daimyo = Daimyo(task_q_url=args.task_url,
                         result_q_url=args.result_url,
+                        uid=args.uid,
                         worker_count=int(args.worker_count))
         daimyo.start()
     except Exception as e:
