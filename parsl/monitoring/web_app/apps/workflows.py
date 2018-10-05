@@ -27,6 +27,7 @@ def load_workflow(task_id):
     ])
 
 
+# TODO: task_resources is not created for all workflows. Throws error
 @app.callback(Output('graph', 'figure'),
               [Input('radio', 'value')],
               [State('task_id', 'children')])

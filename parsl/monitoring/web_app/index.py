@@ -3,10 +3,11 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from parsl.monitoring.web_app.app import app, config_server, get_db
-from parsl.monitoring.web_app.apps import workflows
-from parsl.monitoring.web_app.apps import sql
 
-if get_db is not None:
+if get_db() is not None:
+    from parsl.monitoring.web_app.apps import workflows
+    from parsl.monitoring.web_app.apps import sql
+
     app.layout = html.Div([
         dcc.Location(id='url', refresh=False),
         html.Nav(children=[

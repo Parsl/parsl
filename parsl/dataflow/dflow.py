@@ -758,7 +758,7 @@ class DataFlowKernel(object):
             self.logging_server.join()
 
         if self.web_app is not None:
-            shutdown_web_app(self.monitoring_config.web_app_host, self.monitoring_config.web_app_port + 1)
+            # shutdown_web_app(self.monitoring_config.web_app_host, self.monitoring_config.web_app_port + 1)
             self.web_app.terminate()
             self.web_app.join()
 
