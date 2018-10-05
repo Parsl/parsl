@@ -5,14 +5,8 @@ tblib
 nbsphinx
 ipykernel
 requests
-psutil
-CMRESHandler
-sqlalchemy
 paramiko
 boto3
-azure-mgmt>=2.0.0
-python-novaclient
 google-api-python-client
 google-auth
 nbsphinx
-kubernetes>=6.0.0
