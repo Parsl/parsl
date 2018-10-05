@@ -6,7 +6,7 @@ import logging
 import uuid
 import threading
 import queue
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 
 try:
     import mpi4py
@@ -62,31 +62,55 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
                      |  |         |      |      |               |
                      +----update_fut-----+
 
+
+    Parameters
+    ----------
+
+    provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
+       Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
+        :class:`~parsl.providers.azureProvider.azureProvider.AzureProvider`,
+        :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
+        :class:`~parsl.providers.condor.condor.Condor`,
+        :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
+        :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,
+        :class:`~parsl.providers.jetstream.jetstream.Jetstream`,
+        :class:`~parsl.providers.local.local.Local`,
+        :class:`~parsl.providers.sge.sge.GridEngine`,
+        :class:`~parsl.providers.slurm.slurm.Slurm`, or
+        :class:`~parsl.providers.torque.torque.Torque`.
+    label : str
+        Label for this executor instance.
+    engine_debug : Bool
+        Enables engine debug logging
+
+    public_ip : string
+        Please set the public ip of the machine on which Parsl is executing
+
+    worker_ports : (int, int)
+        Specify the ports to be used by workers to connect to Parsl. If this option is specified,
+        worker_port_range will not be honored.
+
+    worker_port_range : (int, int)
+        Worker ports will be chosen between the two integers provided
+
+    internal_port_range : (int, int)
+        Port range used by Parsl to communicate with internal services.
+
     """
 
     def __init__(self,
                  label='MPIExecutor',
                  provider=LocalProvider(),
                  launch_cmd=None,
-                 jobs_q_url=None,
-                 results_q_url=None,
+                 public_ip="127.0.0.1",
+                 worker_ports=None,
+                 worker_port_range=(54000, 55000),
+                 internal_port_range=(55000, 56000),
                  storage_access=None,
                  working_dir=None,
                  engine_debug=False,
                  mock=False,
                  managed=True):
-        """Initialize the MPI Executor
-
-        We only store the config options here, the executor is started only when
-        start() is called.
-
-        Parameters
-        ----------
-
-        engine_debug : Bool
-             Enables engine debug logging
-
-        """
 
         if not _mpi_enabled:
             raise OptionalModuleMissing("mpi4py", "Cannot initialize MPIExecutor without mpi4py")
@@ -95,8 +119,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
             logger.debug("MPI version :{}".format(mpi4py.__version__))
 
         logger.debug("Initializing MPIExecutor")
-        self.jobs_q_url = jobs_q_url
-        self.results_q_url = results_q_url
+
         self.label = label
         self.launch_cmd = launch_cmd
         self.mock = mock
@@ -109,6 +132,11 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         self.managed = managed
         self.engines = []
         self.tasks = {}
+
+        self.public_ip = public_ip
+        self.worker_ports = worker_ports
+        self.worker_port_range = worker_port_range
+        self.internal_port_range = internal_port_range
 
         if not launch_cmd:
             self.launch_cmd = """mpiexec -np {tasks_per_node} fabric.py {debug} --task_url={task_url} --result_url={result_url}"""
@@ -137,8 +165,8 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
         if self.provider:
             debug_opts = "--debug" if self.engine_debug else ""
             l_cmd = self.launch_cmd.format(debug=debug_opts,
-                                           task_url=self.jobs_q_url,
-                                           result_url=self.results_q_url,
+                                           task_url=self.worker_task_url,
+                                           result_url=self.worker_result_url,
                                            tasks_per_node=self.provider.tasks_per_node,
                                            nodes_per_block=self.provider.nodes_per_block)
             self.launch_cmd = l_cmd
@@ -250,8 +278,22 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
 
     def _start_local_queue_process(self):
 
-        self.queue_proc = Process(target=interchange.starter, )
+        comm_q = Queue(maxsize=10)
+        self.queue_proc = Process(target=interchange.starter,
+                                  args=(comm_q,),
+                                  kwargs={"worker_ports": self.worker_ports,
+                                          "worker_port_range": self.worker_port_range
+                                  },
+        )
         self.queue_proc.start()
+        try:
+            (worker_task_port, worker_result_port) = comm_q.get(block=True, timeout=120)
+        except queue.Empty:
+            logger.error("Interchange has not completed initialization in 120s. Aborting")
+            raise Exception("Interchange failed to start")
+
+        self.worker_task_url = "tcp://{}:{}".format(self.public_ip, worker_task_port)
+        self.worker_result_url = "tcp://{}:{}".format(self.public_ip, worker_result_port)
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
