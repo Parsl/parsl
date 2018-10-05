@@ -1,9 +1,9 @@
 flake8
 ipyparallel
-nose
 pytest>=3.6.0
 pytest-xdist
 pytest-ordering
 coverage
-mock>=1.0.0
 pandas
+coverage
+mock>=1.0.0

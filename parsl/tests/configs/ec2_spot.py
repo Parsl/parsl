@@ -1,4 +1,4 @@
-from libsubmit.providers import AWSProvider
+from parsl.providers import AWSProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.executors.ipp_controller import Controller

@@ -2,6 +2,7 @@ import atexit
 import itertools
 import logging
 import os
+import pathlib
 import pickle
 import random
 import threading
@@ -16,7 +17,6 @@ from socket import gethostname
 from concurrent.futures import Future
 from functools import partial
 
-import libsubmit
 import parsl
 
 from parsl.config import Config
@@ -83,7 +83,6 @@ class DataFlowKernel(object):
                               level=logging.DEBUG)
 
         logger.info("Parsl version: {}".format(get_version()))
-        logger.info("Libsubmit version: {}".format(libsubmit.__version__))
 
         self.checkpoint_lock = threading.Lock()
 
@@ -104,8 +103,11 @@ class DataFlowKernel(object):
         else:
             self.db_logger = get_db_logger(monitoring_config=self.monitoring_config)
         self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
+        self.workflow_version = None
         if self.monitoring_config is not None and self.monitoring_config.workflow_name is not None:
             self.workflow_name = self.monitoring_config.workflow_name
+        if self.monitoring_config is not None and self.monitoring_config.version is not None:
+            self.workflow_version = self.monitoring_config.version
         self.time_began = datetime.now()
         self.time_completed = None
         self.run_id = str(uuid4())
@@ -126,10 +128,11 @@ class DataFlowKernel(object):
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
-                'libsumbit_version': libsubmit.__version__,
                 "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
                 'time_completed': str(None),
                 'run_id': self.run_id,
+                'workflow_name': self.workflow_name,
+                'workflow_version': self.workflow_version,
                 'rundir': self.run_dir,
                 'tasks_completed_count': self.tasks_completed_count,
                 'tasks_failed_count': self.tasks_failed_count,
@@ -151,7 +154,19 @@ class DataFlowKernel(object):
         )
         self.executors = {e.label: e for e in config.executors + [data_manager]}
         for executor in self.executors.values():
-            executor.run_dir = self.run_dir  # FIXME we should have a real interface for this
+            executor.run_dir = self.run_dir
+            if hasattr(executor, 'provider'):
+                if hasattr(executor.provider, 'script_dir'):
+                    executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                    if executor.provider.channel.script_dir is None:
+                        executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                        if not executor.provider.channel.isdir(self.run_dir):
+                            parent, child = pathlib.Path(self.run_dir).parts[-2:]
+                            remote_run_dir = os.path.join(parent, child)
+                            executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
+                            executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
+                    executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
+                    os.makedirs(executor.provider.script_dir, exist_ok=True)
             executor.start()
 
         if self.checkpoint_mode == "periodic":

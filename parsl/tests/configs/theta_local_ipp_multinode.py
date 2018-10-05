@@ -1,5 +1,5 @@
-from libsubmit.providers import CobaltProvider
-from libsubmit.launchers import AprunLauncher
+from parsl.providers import CobaltProvider
+from parsl.launchers import AprunLauncher
 
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor

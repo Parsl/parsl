@@ -9,9 +9,9 @@
 | ++++++++++++++ || ++++++++++++++ |
 ====================================
 """
-from libsubmit.providers import SlurmProvider
-from libsubmit.channels import SSHChannel
-from libsubmit.launchers import SrunLauncher
+from parsl.providers import SlurmProvider
+from parsl.channels import SSHChannel
+from parsl.launchers import SrunLauncher
 
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
