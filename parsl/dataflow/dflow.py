@@ -18,7 +18,7 @@ from functools import partial
 
 import libsubmit
 import parsl
-from parsl.app.errors import RemoteException
+
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -34,6 +34,8 @@ from parsl.app.errors import RemoteException
 from parsl.monitoring import app_monitor
 from parsl.monitoring.db_logger import get_db_logger
 from parsl.monitoring import logging_server
+from parsl.monitoring.web_app import index
+from parsl.monitoring.web_app.app import shutdown_web_app
 
 logger = logging.getLogger(__name__)
 
@@ -116,8 +118,11 @@ class DataFlowKernel(object):
         if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database':
             self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'monitoring_config': self.monitoring_config})
             self.logging_server.start()
+            self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config})
+            self.web_app.start()
         else:
             self.logging_server = None
+            self.web_app = None
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
@@ -174,7 +179,8 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-        task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
+        task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}\
+
         task_log_info['run_id'] = self.run_id
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
@@ -750,6 +756,12 @@ class DataFlowKernel(object):
         if self.logging_server is not None:
             self.logging_server.terminate()
             self.logging_server.join()
+
+        if self.web_app is not None:
+            shutdown_web_app(self.monitoring_config.web_app_host, self.monitoring_config.web_app_port + 1)
+            self.web_app.terminate()
+            self.web_app.join()
+
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):

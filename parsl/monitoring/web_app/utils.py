@@ -1,15 +1,15 @@
-import sqlite3
 import dash_html_components as html
 import dash_core_components as dcc
 import pandas as pd
+from parsl.monitoring.web_app.app import app, get_db
 
 
 def generate_table1(sql, max_rows=100):
-    sql_conn = sqlite3.connect('parsl.db')
+    sql_conn = get_db()
+
     dataframe = pd.read_sql_query(sql, sql_conn)
 
     return html.Table(
-        # Header
         [html.Tr([html.Th(col) for col in dataframe.columns])] +
 
         # Body
@@ -19,9 +19,10 @@ def generate_table1(sql, max_rows=100):
     )
 
 
-def dropdown(id, sql, max_rows=100):
-    sql_conn = sqlite3.connect('parsl.db')
-    dataframe = pd.read_sql_query(sql, sql_conn)
+def dropdown(id):
+    sql_conn = get_db()
+
+    dataframe = pd.read_sql_query("SELECT run_id FROM workflows", sql_conn)
 
     options = [{'label': 'Select Workflow', 'value': ''}]
 
