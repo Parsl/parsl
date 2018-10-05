@@ -5,11 +5,11 @@ import uuid
 import time
 import pickle
 import logging
-import multiprocessing
 
 from ipyparallel.serialize import serialize_object
 
-LOOP_SLOWDOWN = 0.0 # in seconds
+LOOP_SLOWDOWN = 0.0  # in seconds
+
 
 class ShutdownRequest(Exception):
     ''' Error raised a required module is missing for a optional/extra provider
@@ -49,9 +49,10 @@ class Interchange(object):
                  client_address="127.0.0.1",
                  interchange_address="127.0.0.1",
                  client_ports=(50055, 50056),
-                 interchange_ports=(50097, 50098),
+                 worker_ports=None,
+                 worker_port_range=(54000, 55000),
                  heartbeat_period=10,
-                 logging_level=logging.INFO, 
+                 logging_level=logging.INFO,
              ):
         """
         Parameters
@@ -88,16 +89,31 @@ class Interchange(object):
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
         logger.debug("Connected to client")
 
-        print("[INTERCHANGE] Binding to ports:{},{} for incoming worker connections".format(
-            interchange_ports[0], interchange_ports[1]))
- 
-        logger.info("Binding to ports:{},{} for incoming worker connections".format(
-            interchange_ports[0], interchange_ports[1]))
+        self.worker_ports = worker_ports
+        self.worker_port_range = worker_port_range
+
         self.task_outgoing = self.context.socket(zmq.ROUTER)
-        self.task_outgoing.bind("tcp://*:{}".format(interchange_ports[0]))
         self.results_incoming = self.context.socket(zmq.ROUTER)
-        self.results_incoming.bind("tcp://*:{}".format(interchange_ports[1]))
-        logger.info("Incoming ports bound")
+
+        if self.worker_ports:
+            print("[TODO]****************** self.worker_ports:{}".format(self.worker_ports))
+            self.worker_task_port = self.worker_ports[0]
+            self.worker_result_port = self.worker_ports[1]
+
+            self.task_outgoing.bind("tcp://*:{}".format(self.worker_task_port))
+            self.results_incoming.bind("tcp://*:{}".format(self.worker_result_port))
+
+        else:
+            print("[TODO]****************** self.worker_port_range:{}".format(self.worker_port_range))
+            self.worker_task_port = self.task_outgoing.bind_to_random_port('tcp://*',
+                                                                           min_port=worker_port_range[0],
+                                                                           max_port=worker_port_range[1], max_tries=100)
+            self.worker_result_port = self.results_incoming.bind_to_random_port('tcp://*',
+                                                                                min_port=worker_port_range[0],
+                                                                                max_port=worker_port_range[1], max_tries=100)
+
+        logger.info("Bound to ports:{},{} for incoming worker connections".format(
+            self.worker_task_port, self.worker_result_port))
 
         self._task_queue = []
         self._ready_worker_queue = {}
@@ -160,6 +176,8 @@ class Interchange(object):
 
         TODO: Move task receiving to a thread
         """
+        logger.info("Incoming ports bound")
+
         # start = time.time()
         start = None
         count = 0
@@ -171,7 +189,7 @@ class Interchange(object):
 
         while True:
             self.socks = dict(poller.poll(timeout=poll_period))
-            
+
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
                 message = self.task_outgoing.recv_multipart()
@@ -265,12 +283,17 @@ def start_file_logger(filename, name='parsl.executors.mpix.interchange', level=l
     logger.addHandler(handler)
 
 
-def starter(*args, **kwargs):
+def starter(comm_q, *args, **kwargs):
     """ MPIX is expected to start the interchange process via calling this function
     to start a new process. The args, kwargs match that of the Interchange.__init__
     """
     # logger = multiprocessing.get_logger()
+    print("Got comm_q : ", comm_q)
     ic = Interchange(*args, **kwargs)
+    print("Initialized. worker_task_port:{} worker_result_port:{}".format(ic.worker_task_port,
+                                                                          ic.worker_result_port))
+    comm_q.put((ic.worker_task_port,
+                ic.worker_result_port))
     ic.start()
 
 
