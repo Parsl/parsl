@@ -60,6 +60,7 @@ class Daimyo(object):
         self.result_outgoing = self.context.socket(zmq.DEALER)
         self.result_outgoing.setsockopt(zmq.IDENTITY, b'00100')
         self.result_outgoing.connect(result_q_url)
+        logger.info("Daimyo connected")
 
         self.uid = uid
 
@@ -68,14 +69,10 @@ class Daimyo(object):
         else:
             self.worker_count = worker_count
         logger.info("Daimyo will spawn {} workers".format(self.worker_count))
-        
-        logger.info("Daimyo connected")
+
         self.pending_task_queue = multiprocessing.Queue(maxsize=self.worker_count + max_queue_size)
         self.pending_result_queue = multiprocessing.Queue(maxsize=10 ^ 4)
         self.ready_worker_queue = multiprocessing.Queue(maxsize=self.worker_count + 1)
-        #self.ready_worker_counter_lock = multiprocessing.Lock()
-        #self.ready_worker_counter = multiprocessing.Value('i', 0)
-
 
         if max_queue_size == 0:
             max_queue_size = self.worker_count
@@ -110,8 +107,6 @@ class Daimyo(object):
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
             ready_worker_count = self.ready_worker_queue.qsize()
-            #ready_worker_count = self.ready_worker_counter.value
-            # ready_worker_count = 2
 
             logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
 
@@ -194,11 +189,10 @@ class Daimyo(object):
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
-                                                             #self.ready_worker_counter,
-                                                             #self.ready_worker_counter_lock,
                                                          ))
             p.start()
             self.procs[worker_id] = p
+        logger.debug("Daimyo synced with workers")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
                                                     args=(self._kill_event,))
@@ -206,9 +200,6 @@ class Daimyo(object):
                                                       args=(self._kill_event,))
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
-
-
-        logger.debug("Daimyo synced with workers")
 
         start = None
         abort_flag = False
@@ -223,8 +214,8 @@ class Daimyo(object):
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
 
-        #self._task_puller_thread.join()
-        #self._result_pusher_thread.join()
+        # self._task_puller_thread.join()
+        # self._result_pusher_thread.join()
         delta = time.time() - start
         logger.info("Fabric ran for {} seconds".format(delta))
         sys.exit(-1)
@@ -268,7 +259,6 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-#def worker(worker_id, task_queue, result_queue, worker_counter, worker_counter_lock):
 def worker(worker_id, task_queue, result_queue, worker_queue):
     """
 
@@ -288,8 +278,6 @@ def worker(worker_id, task_queue, result_queue, worker_queue):
 
     while True:
         worker_queue.put(worker_id)
-        #with worker_counter_lock:
-        #    worker_counter.value += 1
 
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
@@ -301,8 +289,6 @@ def worker(worker_id, task_queue, result_queue, worker_queue):
         except queue.Empty:
             logger.warning("Worker ID: {} failed to remove itself from ready_worker_queue".format(worker_id))
             pass
-        #with worker_counter_lock:
-        #    worker_counter.value -= 1
 
         try:
             result = execute_task(req['buffer'])
