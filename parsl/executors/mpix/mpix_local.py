@@ -7,15 +7,26 @@ from parsl.executors.mpix import MPIExecutor
 config = Config(
     executors=[
         MPIExecutor(
-            label="local_ipp",
-            # These urls here are *NOT* used
-            jobs_q_url="tcp://127.0.0.1:50005",
-            results_q_url="tcp://127.0.0.1:50006",
-            # launch_cmd="mpiexec -np {tasks_per_node} /home/yadu/src/parsl/parsl/executors/mpix/fabric.py {debug}",
-            # launch_cmd="./cleanup.sh ; mpiexec -np {tasks_per_node} /home/yadu/src/parsl/parsl/executors/mpix/fabric_threaded.py {debug}",
-            launch_cmd="./cleanup.sh ; python3 fabric_single_node.py {debug} --task_url={task_url} --result_url={result_url}",
+            label="MPIX_Local",
+
+            # Set the public ip of the machine you are launching the workflow from. Default: 127.0.0.1 for local runs.
+            # public_ip = "10.236.1.193"
+
+            # Set the worker ports explicitly. This is useful for re-using workers between workflows.
+            # worker_ports=(50078, 50079),
+
+            # Set a port range from which ports should be picked.
+            worker_port_range=(40010, 40020),
+
+            # The fabric_threaded.py script launches the MPI version
+            # launch_cmd="./cleanup.sh ; mpiexec -np {tasks_per_node} fabric_threaded.py {debug}",
+            launch_cmd="./cleanup.sh ; \
+python fabric_single_node.py {debug} --task_url={task_url} --result_url={result_url}",
+            # launch_cmd="./cleanup.sh ",
             # launch_cmd="sleep 600",
-            # engine_debug=True,
+
+            # Enable engine debug logging
+            engine_debug=True,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=1,

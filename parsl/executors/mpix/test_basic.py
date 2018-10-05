@@ -7,7 +7,7 @@ import parsl
 # from parsl.configs.local_ipp import config
 from mpix_local import config
 
-# parsl.set_stream_logger()
+parsl.set_stream_logger()
 from parsl.app.app import App
 parsl.load(config)
 
