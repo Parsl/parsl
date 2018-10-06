@@ -181,7 +181,7 @@ def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, exe
     cache : bool
         Enable caching of the app call. Default is False.
     """
-    from parsl.app.python import BashApp
+    from parsl.app.bash import BashApp
 
     def decorator(func):
         def wrapper(f):
