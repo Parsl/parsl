@@ -21,7 +21,7 @@ from ipyparallel.serialize import serialize_object
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
-LOOP_SLOWDOWN = 1.0  # in seconds
+LOOP_SLOWDOWN = 0.0  # in seconds
 
 
 class Daimyo(object):
