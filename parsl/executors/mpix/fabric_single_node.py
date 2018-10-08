@@ -121,9 +121,7 @@ class Daimyo(object):
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
-            # start = time.time()
             socks = dict(poller.poll(1))
-            # delta = time.time() - start
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
                 _, pkl_msg = self.task_incoming.recv_multipart()

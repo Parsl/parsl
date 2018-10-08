@@ -96,7 +96,6 @@ class Interchange(object):
         self.results_incoming = self.context.socket(zmq.ROUTER)
 
         if self.worker_ports:
-            print("[TODO]****************** self.worker_ports:{}".format(self.worker_ports))
             self.worker_task_port = self.worker_ports[0]
             self.worker_result_port = self.worker_ports[1]
 
@@ -104,7 +103,6 @@ class Interchange(object):
             self.results_incoming.bind("tcp://*:{}".format(self.worker_result_port))
 
         else:
-            print("[TODO]****************** self.worker_port_range:{}".format(self.worker_port_range))
             self.worker_task_port = self.task_outgoing.bind_to_random_port('tcp://*',
                                                                            min_port=worker_port_range[0],
                                                                            max_port=worker_port_range[1], max_tries=100)
@@ -288,10 +286,7 @@ def starter(comm_q, *args, **kwargs):
     to start a new process. The args, kwargs match that of the Interchange.__init__
     """
     # logger = multiprocessing.get_logger()
-    print("Got comm_q : ", comm_q)
     ic = Interchange(*args, **kwargs)
-    print("Initialized. worker_task_port:{} worker_result_port:{}".format(ic.worker_task_port,
-                                                                          ic.worker_result_port))
     comm_q.put((ic.worker_task_port,
                 ic.worker_result_port))
     ic.start()

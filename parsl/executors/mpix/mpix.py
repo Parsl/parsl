@@ -24,8 +24,8 @@ from parsl.executors.errors import *
 from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
 
-from libsubmit.utils import RepresentationMixin
-from libsubmit.providers import LocalProvider
+from parsl.utils import RepresentationMixin
+from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +112,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
                  mock=False,
                  managed=True):
 
+        print("Hello")
         if not _mpi_enabled:
             raise OptionalModuleMissing("mpi4py", "Cannot initialize MPIExecutor without mpi4py")
         else:
@@ -362,6 +363,7 @@ class MPIExecutor(ParslExecutor, RepresentationMixin):
              NotImplementedError
         """
         if self.provider:
+            print("[TODO] Scaling out")
             r = self.provider.submit(self.launch_cmd)
             self.engines.extend([r])
         else:
