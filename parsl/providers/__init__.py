@@ -12,7 +12,6 @@ from parsl.providers.torque.torque import TorqueProvider
 # Cloud Providers
 from parsl.providers.aws.aws import AWSProvider
 from parsl.providers.googlecloud.googlecloud import GoogleCloudProvider
-from parsl.providers.azure.azure import AzureProvider
 from parsl.providers.jetstream.jetstream import JetstreamProvider
 
 # Kubernetes
