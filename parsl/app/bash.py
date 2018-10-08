@@ -26,6 +26,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     func_name = func.__name__
 
+    partial_cmdline = None
+
     # Try to run the func to compose the commandline
     try:
         # Execute the func to get the commandline
@@ -34,10 +36,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
         executable = partial_cmdline.format(*args, **kwargs)
 
     except AttributeError as e:
-        if partial_cmdline:
+        if partial_cmdline is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e), None)
         else:
-            raise pe.BashAppNoReturn("Bash app '{}' returned NoneType, must return string object".format(func_name), None)
+            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned none - with this exeception: {}".format(func_name, e), None)
 
     except IndexError as e:
         raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e), None)
@@ -55,12 +57,12 @@ def remote_side_bash_executor(func, *args, **kwargs):
     logging.debug("Stderr: %s", stderr)
 
     try:
-        std_out = open(stdout, 'w') if stdout else None
+        std_out = open(stdout, 'a+') if stdout else None
     except Exception as e:
         raise pe.BadStdStreamFile(stdout, e)
 
     try:
-        std_err = open(stderr, 'w') if stderr else None
+        std_err = open(stderr, 'a+') if stderr else None
     except Exception as e:
         raise pe.BadStdStreamFile(stderr, e)
 
