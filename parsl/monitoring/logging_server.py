@@ -42,7 +42,3 @@ def run(monitoring_config):
     app = tornado.web.Application([(r"/", MainHandler, dict(monitoring_config=monitoring_config))])
     app.listen(monitoring_config.web_app_port)
     tornado.ioloop.IOLoop.current().start()
-
-
-if __name__ == "__main__":
-    run()
