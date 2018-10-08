@@ -9,7 +9,7 @@ import threading
 import pickle
 import time
 import queue
-# import uuid
+import uuid
 import zmq
 
 from mpi4py import MPI
@@ -21,7 +21,7 @@ from ipyparallel.serialize import serialize_object
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
-LOOP_SLOWDOWN = 0.0  # in seconds
+LOOP_SLOWDOWN = 1.0  # in seconds
 
 
 class Daimyo(object):
@@ -39,7 +39,8 @@ class Daimyo(object):
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
                  max_queue_size=10,
-                 heartbeat_period=30):
+                 heartbeat_period=30,
+                 uid=None):
         """
         Parameters
         ----------
@@ -47,6 +48,7 @@ class Daimyo(object):
              Worker url on which workers will attempt to connect back
         """
         logger.info("Daimyo started v0.5")
+        self.uid = uid
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
@@ -405,9 +407,11 @@ if __name__ == "__main__":
                         help="Count of apps to launch")
     parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
                         help="Parsl worker log directory")
-    parser.add_argument("-t", "--task_url",
+    parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
+                        help="Unique identifier string for Daimyo")
+    parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
-    parser.add_argument("-r", "--result_url",
+    parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
 
     args = parser.parse_args()
@@ -429,13 +433,15 @@ if __name__ == "__main__":
                               level=logging.DEBUG if args.debug is True else logging.INFO)
 
             logger.info("Python version :{}".format(sys.version))
-            daimyo = Daimyo(comm, rank)
+            daimyo = Daimyo(comm, rank,
+                            task_q_url=args.task_url,
+                            result_q_url=args.result_url,
+                            uid=args.uid)
             daimyo.start()
         else:
             start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
                               rank,
                               level=logging.DEBUG if args.debug is True else logging.INFO)
-
             worker(comm, rank)
     except Exception as e:
         logger.warning("Fabric exiting")
