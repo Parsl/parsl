@@ -1,11 +1,12 @@
 import logging
 import os
+import pathlib
 import uuid
 
 from ipyparallel import Client
-from libsubmit.providers import LocalProvider
-from libsubmit.providers.provider_base import ExecutionProvider # for mypy
-from libsubmit.utils import RepresentationMixin
+from parsl.providers import LocalProvider
+from parsl.providers.provider_base import ExecutionProvider # for mypy
+from parsl.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.executors.base import ParslExecutor
@@ -29,18 +30,18 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
 
     Parameters
     ----------
-    provider : :class:`~libsubmit.providers.provider_base.ExecutionProvider`
-        Provider to access computation resources. Can be one of :class:`~libsubmit.providers.aws.aws.EC2Provider`,
-        :class:`~libsubmit.providers.azureProvider.azureProvider.AzureProvider`,
-        :class:`~libsubmit.providers.cobalt.cobalt.Cobalt`,
-        :class:`~libsubmit.providers.condor.condor.Condor`,
-        :class:`~libsubmit.providers.googlecloud.googlecloud.GoogleCloud`,
-        :class:`~libsubmit.providers.gridEngine.gridEngine.GridEngine`,
-        :class:`~libsubmit.providers.jetstream.jetstream.Jetstream`,
-        :class:`~libsubmit.providers.local.local.Local`,
-        :class:`~libsubmit.providers.sge.sge.GridEngine`,
-        :class:`~libsubmit.providers.slurm.slurm.Slurm`, or
-        :class:`~libsubmit.providers.torque.torque.Torque`.
+    provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
+        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
+        :class:`~parsl.providers.azureProvider.azureProvider.AzureProvider`,
+        :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
+        :class:`~parsl.providers.condor.condor.Condor`,
+        :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
+        :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,
+        :class:`~parsl.providers.jetstream.jetstream.Jetstream`,
+        :class:`~parsl.providers.local.local.Local`,
+        :class:`~parsl.providers.sge.sge.GridEngine`,
+        :class:`~parsl.providers.slurm.slurm.Slurm`, or
+        :class:`~parsl.providers.torque.torque.Torque`.
     label : str
         Label for this executor instance.
     controller : :class:`~parsl.executors.ipp_controller.Controller`
@@ -48,11 +49,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     container_image : str
         Launch tasks in a container using this docker image. If set to None, no container is used.
         Default is None.
-    engine_file : str
-        Path to json engine file that will be used to compose ipp launch commands at
-        scaling events. Default is '~/.ipython/profile_default/security/ipcontroller-engine.json'.
     engine_dir : str
-        Alternative to above, specify the engine_dir
+        Directory where engine logs and configuration files will be stored.
     working_dir : str
         Directory where input data should be staged to.
     storage_access : list of :class:`~parsl.data_provider.scheme.GlobusScheme` (or perhaps Any at the moment, because I don't know what the semantics actually are...)
@@ -75,22 +73,20 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     def __init__(self,
                  provider: ExecutionProvider =LocalProvider(),
                  label: str ='ipp',
-                 engine_file: str ='~/.ipython/profile_default/security/ipcontroller-engine.json',
-                 engine_dir: str='.',
                  working_dir: Optional[str] =None,
                  controller: Controller =Controller(),
                  container_image: Optional[str] =None,
+                 engine_dir: str='.',
                  storage_access: List[Any] =None,
                  engine_debug_level: str =None,
                  managed: bool =True) -> None:
         self.provider = provider
         self.label = label
-        self.engine_file = engine_file
-        self.engine_dir = engine_dir
         self.working_dir = working_dir
         self.controller = controller
         self.engine_debug_level = engine_debug_level
         self.container_image = container_image
+        self.engine_dir = engine_dir
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
             raise ConfigurationError('Multiple storage access schemes are not yet supported')
@@ -103,6 +99,9 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     def start(self):
         self.controller.profile = self.label
         self.controller.ipython_dir = self.run_dir
+        if self.engine_dir is None:
+            parent, child = pathlib.Path(self.run_dir).parts[-2:]
+            self.engine_dir = os.path.join(parent, child)
         self.controller.start()
 
         self.engine_file = self.controller.engine_file
@@ -172,8 +171,8 @@ cat <<EOF > ipengine.{uid}.json
 {1}
 EOF
 
-mkdir -p '.ipengine_logs'
-ipengine --file=ipengine.{uid}.json {debug_option} >> .ipengine_logs/$JOBNAME.log 2>&1
+mkdir -p 'engine_logs'
+ipengine --file=ipengine.{uid}.json {debug_option} >> engine_logs/$JOBNAME.log 2>&1
 """.format(engine_dir, engine_json, debug_option=self.debug_option, uid=uid)
 
     def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):

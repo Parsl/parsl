@@ -11,7 +11,7 @@ Block {Min:0, init:1, Max:1}
 ==================
 
 """
-from libsubmit.providers import AWSProvider
+from parsl.providers import AWSProvider
 
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor

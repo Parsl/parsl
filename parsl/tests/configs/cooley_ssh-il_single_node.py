@@ -1,6 +1,6 @@
 # Untested
-from libsubmit.channels import SSHInteractiveLoginChannel
-from libsubmit.providers import CobaltProvider
+from parsl.channels import SSHInteractiveLoginChannel
+from parsl.providers import CobaltProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.executors.ipp_controller import Controller

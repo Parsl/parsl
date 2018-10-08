@@ -89,3 +89,13 @@ class ParslExecutor(metaclass=ABCMeta):
         and Executors wrapped in a resource provider
         """
         pass
+
+    @property
+    def run_dir(self):
+        """Path to the run directory.
+        """
+        return self._run_dir
+
+    @run_dir.setter
+    def run_dir(self, value):
+        self._run_dir = value

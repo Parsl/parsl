@@ -1,5 +1,4 @@
 ipyparallel
-libsubmit>=0.5.0, <=0.7.0
 globus-sdk
 dill
 tblib
@@ -8,5 +7,13 @@ ipykernel
 requests
 psutil
 CMRESHandler
+sqlalchemy
+paramiko
+boto3
+azure-mgmt>=2.0.0
+python-novaclient
+google-api-python-client
+google-auth
+nbsphinx
+kubernetes>=6.0.0
 mypy
-tabulate

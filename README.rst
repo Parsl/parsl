@@ -59,31 +59,9 @@ For Developers
 Requirements
 ============
 
-Parsl requires the following:
-
-* Python 3.5+
-* Jupyter (for running tutorial notebooks), with Python3.5+ kernel
-
-
-For testing:
-
-* nose
-* coverage
-
-For building documentation:
-
-* nbsphinx
-* sphinx
-* sphinx_rtd_theme
+Parsl is supported in Python 3.5+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
 
 Contributing
 ============
 
-We welcome contributions from the community. Please see our `contributing guide <CONTRIBUTING.rst>`_. 
-
-Citation
-========
-
-If you use Parsl, please cite:
-
-Babuji, Yadu, Brizius, Alison, Chard, Kyle, Foster, Ian, Katz, Daniel S., Wilde, Michael, & Wozniak, Justin. (2017, August 30). Introducing Parsl: A Python Parallel Scripting Library. Zenodo. https://doi.org/10.5281/zenodo.853492
+We welcome contributions from the community. Please see our `contributing guide <CONTRIBUTING.rst>`_.

@@ -34,10 +34,8 @@ from parsl.executors.ipp import IPyParallelExecutor
 from parsl.data_provider.files import File
 
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
-from parsl.app.app_factory import AppFactoryFactory
-APP_FACTORY_FACTORY = AppFactoryFactory('central')
 
-__author__ = 'Yadu Nand Babuji'
+__author__ = 'The Parsl Team'
 __version__ = VERSION
 
 __all__ = [

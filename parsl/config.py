@@ -1,6 +1,6 @@
 import logging
 
-from libsubmit.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
 
@@ -33,6 +33,8 @@ class Config(RepresentationMixin):
     data_management_max_threads : int, optional
         Maximum number of threads to allocate for the data manager to use for managing input and output transfers.
         Default is 10.
+    monitoring_config : MonitoringConfig, optional
+        The config to use for database monitoring. Default is None which does not log to a database.
     lazy_errors : bool, optional
         If True, errors from task failures will not be raised until `future.result()` is called. Otherwise, they will
         be raised as soon as the task returns. Default is True.
@@ -59,7 +61,7 @@ class Config(RepresentationMixin):
                  retries=0,
                  run_dir='runinfo',
                  strategy='simple',
-                 db_logger_config=None,
+                 monitoring_config=None,
                  usage_tracking=True):
         # type: (Optional[List[ParslExecutor]], Optional[bool], Optional[List[str]], Optional[str], Optional[str], Optional[int], Optional[bool], Optional[int], Optional[str], Optional[str], Optional[Any], Optional[bool]) -> None
         if executors is None:
@@ -86,7 +88,7 @@ class Config(RepresentationMixin):
         self.run_dir = run_dir
         self.strategy = strategy
         self.usage_tracking = usage_tracking
-        self.db_logger_config = db_logger_config
+        self.monitoring_config = monitoring_config
 
     @property
     def executors(self):

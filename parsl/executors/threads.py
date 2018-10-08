@@ -4,7 +4,7 @@ import concurrent.futures as cf
 
 from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
-from libsubmit.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

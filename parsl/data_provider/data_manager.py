@@ -16,6 +16,35 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.data_provider.files import File # for mypy
 
+def _http_stage_in(working_dir, outputs=[]):
+    file = outputs[0]
+    if working_dir:
+        os.makedirs(working_dir, exist_ok=True)
+        file.local_path = os.path.join(working_dir, file.filename)
+    else:
+        file.local_path = file.filename
+    resp = requests.get(file.url, stream=True)
+    with open(file.local_path, 'wb') as f:
+        for chunk in resp.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+
+
+def _ftp_stage_in(working_dir, outputs=[]):
+    file = outputs[0]
+    if working_dir:
+        os.makedirs(working_dir, exist_ok=True)
+        file.local_path = os.path.join(working_dir, file.filename)
+    else:
+        file.local_path = file.filename
+    with open(file.local_path, 'wb') as f:
+        ftp = ftplib.FTP(file.netloc)
+        ftp.login()
+        ftp.cwd(os.path.dirname(file.path))
+        ftp.retrbinary('RETR {}'.format(file.filename), f.write)
+        ftp.quit()
+
+
 class DataManager(ParslExecutor):
     """The DataManager is responsible for transferring input and output data.
 
@@ -153,37 +182,10 @@ class DataManager(ParslExecutor):
         pass
 
     def _ftp_stage_in_app(self, executor):
-        return App("python", executors=[executor])(self._ftp_stage_in)
-
-    def _ftp_stage_in(self, working_dir, outputs=[]):
-        file = outputs[0]
-        if working_dir:
-            os.makedirs(working_dir, exist_ok=True)
-            file.local_path = os.path.join(working_dir, file.filename)
-        else:
-            file.local_path = file.filename
-        with open(file.local_path, 'wb') as f:
-            ftp = ftplib.FTP(file.netloc)
-            ftp.login()
-            ftp.cwd(os.path.dirname(file.path))
-            ftp.retrbinary('RETR {}'.format(file.filename), f.write)
-            ftp.quit()
+        return App("python", executors=[executor])(_ftp_stage_in)
 
     def _http_stage_in_app(self, executor):
-        return App("python", executors=[executor])(self._http_stage_in)
-
-    def _http_stage_in(self, working_dir, outputs=[]):
-        file = outputs[0]
-        if working_dir:
-            os.makedirs(working_dir, exist_ok=True)
-            file.local_path = os.path.join(working_dir, file.filename)
-        else:
-            file.local_path = file.filename
-        resp = requests.get(file.url, stream=True)
-        with open(file.local_path, 'wb') as f:
-            for chunk in resp.iter_content(chunk_size=1024):
-                if chunk:
-                    f.write(chunk)
+        return App("python", executors=[executor])(_http_stage_in)
 
     def _globus_stage_in_app(self):
         return App("python", executors=['data_manager'])(self._globus_stage_in)

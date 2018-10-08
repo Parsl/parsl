@@ -20,6 +20,20 @@ Reference guide
     parsl.executors.ipp.IPyParallelExecutor
     parsl.executors.ipp_controller.Controller
     parsl.executors.swift_t.TurbineExecutor
+    parsl.channels.local.local.LocalChannel
+    parsl.channels.ssh.ssh.SSHChannel
+    parsl.providers.AWSProvider
+    parsl.providers.AzureProvider
+    parsl.providers.CobaltProvider
+    parsl.providers.CondorProvider
+    parsl.providers.GoogleCloudProvider
+    parsl.providers.GridEngineProvider
+    parsl.providers.JetstreamProvider
+    parsl.providers.LocalProvider
+    parsl.providers.GridEngineProvider
+    parsl.providers.SlurmProvider
+    parsl.providers.TorqueProvider
+    parsl.monitoring.db_logger.MonitoringConfig
 
 .. autosummary::
     :toctree: stubs

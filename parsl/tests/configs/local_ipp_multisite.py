@@ -3,7 +3,7 @@ not show any performance improvements on local threads. This also allows you to
 send work to two separate remote executors, or to two separate partitions.
 """
 from parsl.config import Config
-from libsubmit.providers import LocalProvider
+from parsl.providers import LocalProvider
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.utils import get_rundir
 
@@ -11,6 +11,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='local_ipp_1',
+            engine_dir='engines',
             provider=LocalProvider(
                 nodes_per_block=1,
                 tasks_per_node=1,
@@ -20,6 +21,7 @@ config = Config(
         ),
         IPyParallelExecutor(
             label='local_ipp_2',
+            engine_dir='engines',
             provider=LocalProvider(
                 nodes_per_block=1,
                 tasks_per_node=1,
