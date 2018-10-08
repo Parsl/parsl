@@ -931,7 +931,7 @@ class DataFlowKernelLoader(object):
     need to instantiate this class.
     """
 
-    _dfk = None
+    _dfk = None # type: DataFlowKernel
 
     @classmethod
     def clear(cls):
