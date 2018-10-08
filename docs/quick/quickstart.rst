@@ -25,7 +25,7 @@ Installing on Linux
 
 2. Libsubmit supports a variety of computation resource via specific libraries. You might only need a subset of these, which can be installed by specifying the resources names::
 
-     $ python3 -m pip install libsumit[<aws>,<azure>,<jetstream>]
+     $ python3 -m pip install libsumit[<aws>,<jetstream>]
 
 
 Installing on Mac OS
@@ -64,7 +64,6 @@ Libsubmit requires the following :
 * paramiko
 * ipyparallel
 * boto3 - for AWS
-* azure, haikunator - for Azure
 * python-novaclient - for jetstream
 
 For testing:
