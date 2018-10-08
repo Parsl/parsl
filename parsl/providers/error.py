@@ -48,14 +48,6 @@ class ScaleOutFailed(ExecutionProviderException):
         )
 
 
-class ExecutionProviderException(Exception):
-    """ Base class for all exceptions
-    Only to be invoked when only a more specific error is not available.
-
-    """
-    pass
-
-
 class SchedulerMissingArgs(ExecutionProviderException):
     ''' Error raised when the template used to compose the submit script to the local resource manager is missing required arguments
     '''
