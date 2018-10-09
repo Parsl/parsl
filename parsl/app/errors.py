@@ -36,15 +36,10 @@ class AppBadFormatting(ParslError):
     What this exception contains depends entirely on context
     Contains:
     reason(string)
-    exitcode(int)
-    retries(int/None)
     """
 
-    def __init__(self, reason, exitcode, retries=None):
+    def __init__(self, reason):
         super().__init__(reason)
-        self.reason = reason
-        self.exitcode = exitcode
-        self.retries = retries
 
 
 class AppFailure(AppException):
