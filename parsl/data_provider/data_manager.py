@@ -118,7 +118,7 @@ class DataManager(ParslExecutor):
             if executor_label is None or executor.label == executor_label:
                 for scheme in executor.storage_access:
                     if isinstance(scheme, GlobusScheme):
-                        if executor.working_dir: 
+                        if executor.working_dir:
                             working_dir = os.path.normpath(executor.working_dir)
                         else:
                             working_dir = os.getcwd()
