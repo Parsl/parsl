@@ -32,6 +32,7 @@ from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
 from parsl.app.errors import RemoteException
 from parsl.monitoring.db_logger import get_db_logger
+from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
 
 
@@ -99,7 +100,6 @@ class DataFlowKernel(object):
         if self.monitoring_config is None:
             self.db_logger = get_db_logger()
         else:
-            from parsl.monitoring import app_monitor
             self.db_logger = get_db_logger(monitoring_config=self.monitoring_config)
         self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
         self.workflow_version = None
