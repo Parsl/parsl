@@ -256,7 +256,7 @@ class Interchange(object):
         logger("Received {} tasks in {}seconds".format(count, delta))
 
 
-def start_file_logger(filename, name='parsl.executors.mpix.interchange', level=logging.DEBUG, format_string=None):
+def start_file_logger(filename, name='parsl.executors.interchange', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
 
     Args:

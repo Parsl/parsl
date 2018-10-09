@@ -16,7 +16,6 @@ from mpi4py import MPI
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
-# from parsl.executors.mpix import zmq_pipes
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
@@ -24,7 +23,7 @@ TASK_REQUEST_TAG = 11
 LOOP_SLOWDOWN = 0.0  # in seconds
 
 
-class Daimyo(object):
+class Manager(object):
     """ Orchestrates the flow of tasks and results to and from the workers
 
     1. Queue up task requests from workers
@@ -45,7 +44,7 @@ class Daimyo(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
         """
-        logger.info("Daimyo started v0.5")
+        logger.info("Manager started v0.5")
         self.uid = uid
 
         self.context = zmq.Context()
@@ -57,7 +56,7 @@ class Daimyo(object):
         self.result_outgoing.setsockopt(zmq.IDENTITY, b'00100')
         self.result_outgoing.connect(result_q_url)
 
-        logger.info("Daimyo connected")
+        logger.info("Manager connected")
         if max_queue_size == 0:
             max_queue_size = comm.size
         self.pending_task_queue = queue.Queue(maxsize=max_queue_size)
@@ -184,7 +183,7 @@ class Daimyo(object):
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception : {}".format(e))
 
     def start(self):
-        """ Start the Daimyo process.
+        """ Start the Manager process.
 
         The worker loops on this:
 
@@ -196,7 +195,7 @@ class Daimyo(object):
         """
 
         self.comm.Barrier()
-        logger.debug("Daimyo synced with workers")
+        logger.debug("Manager synced with workers")
 
         self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
@@ -406,7 +405,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
                         help="Parsl worker log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
-                        help="Unique identifier string for Daimyo")
+                        help="Unique identifier string for Manager")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-r", "--result_url", required=True,
@@ -431,11 +430,11 @@ if __name__ == "__main__":
                               level=logging.DEBUG if args.debug is True else logging.INFO)
 
             logger.info("Python version :{}".format(sys.version))
-            daimyo = Daimyo(comm, rank,
-                            task_q_url=args.task_url,
-                            result_q_url=args.result_url,
-                            uid=args.uid)
-            daimyo.start()
+            manager = Manager(comm, rank,
+                              task_q_url=args.task_url,
+                              result_q_url=args.result_url,
+                              uid=args.uid)
+            manager.start()
         else:
             start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
                               rank,
