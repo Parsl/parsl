@@ -3,6 +3,7 @@ import logging
 import requests
 import ftplib
 import concurrent.futures as cf
+
 from parsl.data_provider.scheme import GlobusScheme
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
@@ -47,13 +48,18 @@ class DataManager(ParslExecutor):
     to it, and DataFutures are returned.
     """
 
-    default_data_manager = None
-
     @classmethod
     def get_data_manager(cls, max_threads=None, executors=None):
-        if cls.default_data_manager is None:
-            cls.default_data_manager = DataManager(max_threads=max_threads, executors=executors)
-        return cls.default_data_manager
+        """Return the DataManager of the currently loaded DataFlowKernel.
+
+        Note that an error will be raised if one tries to create a File before
+        loading a config. This is the correct behavior: a File which is not tied
+        to a DataFlowKernel is ill-defined.
+        """
+        from parsl.dataflow.dflow import DataFlowKernelLoader
+        dfk = DataFlowKernelLoader.dfk()
+
+        return dfk.executors['data_manager']
 
     def __init__(self, max_threads=10, executors=None):
         """Initialize the DataManager.
