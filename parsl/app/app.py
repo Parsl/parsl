@@ -117,7 +117,7 @@ def App(apptype, data_flow_kernel: DataFlowKernel =None, walltime: int =60, cach
     logger.warning("The 'App' decorator will be depreciated in Parsl 0.8. Please use 'python_app' or 'bash_app' instead.")
 
     if apptype is 'python':
-        app_class = PythonApp
+        app_class = PythonApp # type: Type
     elif apptype is 'bash':
         app_class = BashApp
     else:
