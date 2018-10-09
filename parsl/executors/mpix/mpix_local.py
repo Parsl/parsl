@@ -19,8 +19,9 @@ config = Config(
             worker_port_range=(40010, 40020),
 
             # The fabric_threaded.py script launches the MPI version
-            launch_cmd="./cleanup.sh ; mpiexec -np 4 python3 ./fabric_threaded.py {debug} --task_url={task_url} --result_url={result_url}",
-            # launch_cmd="./cleanup.sh ; python3 ./fabric_single_node.py {debug} --task_url={task_url} --result_url={result_url} ",
+            # launch_cmd="./cleanup.sh ; mpiexec -np 4 python3 fabric_threaded.py {debug} --task_url={task_url} --result_url={result_url}",
+
+            # launch_cmd="./cleanup.sh ; fabric_single_node.py {debug} --task_url={task_url} --result_url={result_url} ",
             # launch_cmd="./cleanup.sh ",
             # launch_cmd="sleep 600",
 
