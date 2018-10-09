@@ -58,7 +58,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     .. note::
            Some deficiencies with this executor are:
 
-               1. Ipengine's execute one task at a time. This means one engine per core
+               1. Ipengines execute one task at a time. This means one engine per core
                   is necessary to exploit the full parallelism of a node.
                2. No notion of remaining walltime.
                3. Lack of throttling means tasks could be queued up on a worker.
@@ -125,7 +125,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                     logger.debug("Launched block: {0}:{1}".format(i, engine))
                     if not engine:
                         raise(ScalingFailed(self.provider.label,
-                                            "Attempts to provision nodes via provider has failed"))
+                                            "Attempt to provision nodes via provider has failed"))
                     self.engines.extend([engine])
 
             except Exception as e:
