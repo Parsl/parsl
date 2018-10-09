@@ -34,6 +34,7 @@ class AppBadFormatting(ParslError):
     """An error raised during formatting of a bash function.
     """
 
+
 class AppFailure(AppException):
     """An error raised during execution of an app.
 
