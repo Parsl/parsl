@@ -7,6 +7,7 @@ from parsl.data_provider.scheme import GlobusScheme
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
 from parsl.app.app import App
+from parsl.data_provider.files import File
 
 from typing import List
 
@@ -16,28 +17,45 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.data_provider.files import File # for mypy
 
-def _http_stage_in(working_dir, outputs=[]):
+# BUG? both _http_stage_in and _ftp_stage_in take a list of files,
+# but only ever dosomething with the first elemtn of that list - 
+# not handling the multiple element (or 0 element) case
+
+
+# In both _http_stage_in and _ftp_stage_in the handling of
+# file.local_path is rearranged: file.local_path is an optional
+# string, so even though we are setting it, it is still optional
+# and so cannot be used as a parameter to open.
+
+def _http_stage_in(working_dir: str, outputs: List[File] =[]) -> None:
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
-        file.local_path = os.path.join(working_dir, file.filename)
+        local_path = os.path.join(working_dir, file.filename)
     else:
-        file.local_path = file.filename
+        local_path = file.filename
+
+    file.local_path = local_path
+
     resp = requests.get(file.url, stream=True)
-    with open(file.local_path, 'wb') as f:
+
+    with open(local_path, 'wb') as f:
         for chunk in resp.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
 
 
-def _ftp_stage_in(working_dir, outputs=[]):
+def _ftp_stage_in(working_dir: str, outputs: List[File]=[]) -> None:
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
-        file.local_path = os.path.join(working_dir, file.filename)
+        local_path = os.path.join(working_dir, file.filename)
     else:
-        file.local_path = file.filename
-    with open(file.local_path, 'wb') as f:
+        local_path = file.filename
+
+    file.local_path = local_path
+
+    with open(local_path, 'wb') as f:
         ftp = ftplib.FTP(file.netloc)
         ftp.login()
         ftp.cwd(os.path.dirname(file.path))
