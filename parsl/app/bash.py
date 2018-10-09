@@ -5,10 +5,12 @@ from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
+from parsl.dataflow.dflow import DataFlowKernel # only for mypy
+
 logger = logging.getLogger(__name__)
 
 
-def remote_side_bash_executor(func, *args, **kwargs):
+def remote_side_bash_executor(func, *args, **kwargs) -> int:
     """Execute the bash app type function and return the command line string.
 
     This string is reformatted with the *args, and **kwargs
@@ -103,7 +105,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+    def __init__(self, func, data_flow_kernel: DataFlowKernel =None, walltime: int =60, cache: bool=False, executors='all') -> None:
         super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, cache=cache)
         self.kwargs = {}
 
