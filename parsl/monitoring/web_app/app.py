@@ -4,10 +4,11 @@ import requests
 import sqlite3
 import os
 
-# FIXME DataFlowKernel running twice form some reason
-app = dash.Dash(__name__, static_folder='assets')
+
+app = dash.Dash(__name__)
 app.config['suppress_callback_exceptions']=True
 
+print(__name__)
 
 def init_db(db):
     if os.path.isfile(db):

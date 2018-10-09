@@ -12,7 +12,7 @@ def web_app(db, port):
     from parsl.monitoring.web_app.apps import sql, workflows
 
     app.layout = html.Div([
-        html.Link(href='/assets/styles.css', rel='stylesheet'),
+        # html.Link(href='/assets/styles.css', rel='stylesheet'),
         dcc.Location(id='url', refresh=False),
         html.Nav(children=[
             dcc.Link('Workflows', href='/workflows'),
@@ -36,18 +36,18 @@ def web_app(db, port):
 
 
 # TODO CSS is not being imported when ran through cli
-def cli_run(argv):
-    # argv = sys.argv[1:]
+def cli_run():
+    argv = sys.argv[1:]
     db_name = 'parsl.db'
     db_dir = './'
     port = 8050
     try:
-        opts, args = getopt.getopt(argv,"hdb_dir:db_name:port:",["db_dir=","db_name=","port="])
+        opts, args = getopt.getopt(argv,"h:o",["db_dir=","db_name=","port="])
     except getopt.GetoptError:
+        print('Invalid argument')
         print('parsl-visualize --db_dir <db_dir> --db_name <db_name> --port <port>')
         sys.exit(2)
     for opt, arg in opts:
-        print(opts)
         if opt == '-h':
             print('parsl-visualize --db_dir <db_dir> --db_name <db_name> --port <port>')
             sys.exit()
@@ -56,11 +56,14 @@ def cli_run(argv):
         elif opt in ("--db_name", ):
             db_name = arg
         elif opt in ("--port", ):
+            if not arg.isdigit():
+                print('Port number must be an integer')
+                sys.exit(2)
             port = arg
 
-    print('DB name is', db_name)
-    print('DB dir is', db_dir)
-    print('Port is', port)
+    print('db_name =', db_name)
+    print('db_dir =', db_dir)
+    print('port =', port)
 
     web_app(db_dir + db_name, port)
 
@@ -70,6 +73,6 @@ def run(monitoring_config):
     port = monitoring_config.web_app_port + 1
     web_app(db, port)
 
-
-if __name__ == '__main__':
-    cli_run(argv = sys.argv[1:])
+#
+# if __name__ == '__main__':
+#     cli_run(argv = sys.argv[1:])
