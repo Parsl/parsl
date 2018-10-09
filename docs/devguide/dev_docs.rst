@@ -211,16 +211,6 @@ Amazon Web Services
    :special-members:
 
 
-Azure
------
-
-.. autoclass:: libsubmit.providers.AzureProvider
-   :members:  __init__, submit, status, cancel
-
-.. autoclass:: libsubmit.providers.azure.deployer.Deployer
-   :members: __init__, deploy, destroy
-
-
 Google Cloud Platform
 ---------------------
 
