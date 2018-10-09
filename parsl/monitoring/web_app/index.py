@@ -2,8 +2,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 from parsl.monitoring.web_app.app import app, init_db
-
-import click
+import sys, getopt
 
 
 def web_app(db, port):
@@ -33,15 +32,36 @@ def web_app(db, port):
         else:
             return '404'
 
-    app.run_server(port=port, debug=True)
+    app.run_server(port=port, debug=True, use_reloader=False)
 
 
 # TODO CSS is not being imported when ran through cli
-@click.command()
-@click.option('--db_dir', default='./', help='Database location directory')
-@click.option('--db_name', default='parsl.db', help='Database name')
-@click.option('--port', default=8050)
-def cli_run(db_dir, db_name, port):
+def cli_run(argv):
+    # argv = sys.argv[1:]
+    db_name = 'parsl.db'
+    db_dir = './'
+    port = 8050
+    try:
+        opts, args = getopt.getopt(argv,"hdb_dir:db_name:port:",["db_dir=","db_name=","port="])
+    except getopt.GetoptError:
+        print('parsl-visualize --db_dir <db_dir> --db_name <db_name> --port <port>')
+        sys.exit(2)
+    for opt, arg in opts:
+        print(opts)
+        if opt == '-h':
+            print('parsl-visualize --db_dir <db_dir> --db_name <db_name> --port <port>')
+            sys.exit()
+        elif opt in ("--db_dir", ):
+            db_dir = arg
+        elif opt in ("--db_name", ):
+            db_name = arg
+        elif opt in ("--port", ):
+            port = arg
+
+    print('DB name is', db_name)
+    print('DB dir is', db_dir)
+    print('Port is', port)
+
     web_app(db_dir + db_name, port)
 
 
@@ -52,4 +72,4 @@ def run(monitoring_config):
 
 
 if __name__ == '__main__':
-    cli_run()
+    cli_run(argv = sys.argv[1:])
