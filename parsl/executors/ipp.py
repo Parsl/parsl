@@ -166,13 +166,12 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
             raise e
 
         return """mkdir -p {0}
-cd {0}
-cat <<EOF > ipengine.{uid}.json
+cat <<EOF > {0}/ipengine.{uid}.json
 {1}
 EOF
 
-mkdir -p 'engine_logs'
-ipengine --file=ipengine.{uid}.json {debug_option} >> engine_logs/$JOBNAME.log 2>&1
+mkdir -p '{0}/engine_logs'
+ipengine --file={0}/ipengine.{uid}.json {debug_option} >> {0}/engine_logs/$JOBNAME.log 2>&1
 """.format(engine_dir, engine_json, debug_option=self.debug_option, uid=uid)
 
     def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):
