@@ -1,6 +1,5 @@
 import time
 from multiprocessing import Process
-import psutil
 import os
 from parsl.monitoring.db_logger import get_db_logger
 
@@ -9,6 +8,7 @@ def monitor(pid, task_id, monitoring_config, run_id):
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
+    import psutil
 
     if monitoring_config is None:
         logger = get_db_logger()
