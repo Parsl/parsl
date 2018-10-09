@@ -32,15 +32,7 @@ class AppException(ParslError):
 
 class AppBadFormatting(ParslError):
     """An error raised during formatting of a bash function.
-
-    What this exception contains depends entirely on context
-    Contains:
-    reason(string)
     """
-
-    def __init__(self, reason):
-        super().__init__(reason)
-
 
 class AppFailure(AppException):
     """An error raised during execution of an app.
