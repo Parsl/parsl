@@ -179,7 +179,7 @@ class RepresentationMixin(object):
         if len(argspec.args) > 1:
             defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
         else:
-            defaults = []
+            defaults = {}
 
         for arg in argspec.args[1:]:
             if not hasattr(self, arg):
