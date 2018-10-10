@@ -1,16 +1,16 @@
 import errno
-import getpass
 import logging
 import os
 
 import paramiko
+from parsl.channels.base import Channel
 from parsl.channels.errors import *
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class SSHChannel(RepresentationMixin):
+class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
@@ -41,15 +41,11 @@ class SSHChannel(RepresentationMixin):
         self.username = username
         self.password = password
         self.kwargs = kwargs
+        self.script_dir = script_dir
 
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.load_system_host_keys()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        if script_dir:
-            self._script_dir = script_dir
-        else:
-            self._script_dir = "/tmp/{0}/scripts/".format(getpass.getuser())
 
         self.envs = {}
         if envs is not None:
@@ -76,10 +72,6 @@ class SSHChannel(RepresentationMixin):
 
         except Exception as e:
             raise SSHException(e, self.hostname)
-
-    @property
-    def script_dir(self):
-        return self._script_dir
 
     def prepend_envs(self, cmd, env={}):
         env.update(self.envs)
@@ -159,22 +151,16 @@ class SSHChannel(RepresentationMixin):
         remote_dest = remote_dir + '/' + os.path.basename(local_source)
 
         try:
-            self.sftp_client.mkdir(remote_dir)
+            self.makedirs(remote_dir, exist_ok=True)
         except IOError as e:
-            if e.errno is None:
-                logger.info(
-                    "Copying {0} into existing directory {1}".format(local_source, remote_dir)
-                )
+            logger.exception("Pushing {0} to {1} failed".format(local_source, remote_dir))
+            if e.errno == 2:
+                raise BadScriptPath(e, self.hostname)
+            elif e.errno == 13:
+                raise BadPermsScriptPath(e, self.hostname)
             else:
-                logger.exception("Pushing {0} to {1} failed".format(local_source, remote_dir))
-                if e.errno == 2:
-                    raise BadScriptPath(e, self.hostname)
-                elif e.errno == 13:
-                    raise BadPermsScriptPath(e, self.hostname)
-                else:
-                    logger.exception("File push failed due to SFTP client failure")
-                    raise FileCopyException(e, self.hostname)
-
+                logger.exception("File push failed due to SFTP client failure")
+                raise FileCopyException(e, self.hostname)
         try:
             self.sftp_client.put(local_source, remote_dest, confirm=True)
             # Set perm because some systems require the script to be executable
@@ -227,3 +213,49 @@ class SSHChannel(RepresentationMixin):
 
     def close(self):
         return self.ssh_client.close()
+
+    def isdir(self, path):
+        """Return true if the path refers to an existing directory.
+
+        Parameters
+        ----------
+        path : str
+            Path of directory on the remote side to check.
+        """
+        result = True
+        try:
+            self.sftp_client.lstat(path)
+        except FileNotFoundError:
+            result = False
+
+        return result
+
+    def makedirs(self, path, mode=511, exist_ok=False):
+        """Create a directory on the remote side.
+
+        If intermediate directories do not exist, they will be created.
+
+        Parameters
+        ----------
+        path : str
+            Path of directory on the remote side to create.
+        mode : int
+            Permissions (posix-style) for the newly-created directory.
+        exist_ok : bool
+            If False, raise an OSError if the target directory already exists.
+        """
+        if exist_ok is False and self.isdir(path):
+            raise OSError('Target directory {} already exists'.format(path))
+
+        self.execute_wait('mkdir -p {}'.format(path))
+        self.sftp_client.chmod(path, mode)
+
+    def abspath(self, path):
+        """Return the absolute path on the remote side.
+
+        Parameters
+        ----------
+        path : str
+            Path for which the absolute path will be returned.
+        """
+        return self.sftp_client.normalize(path)

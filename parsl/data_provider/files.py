@@ -77,8 +77,11 @@ class File(str):
              - filepath (string)
         """
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
+            # The path returned here has to match exactly with where the
             if hasattr(self, 'local_path'):
                 return self.local_path
+            else:
+                return self.filename
 
         return self.path
 

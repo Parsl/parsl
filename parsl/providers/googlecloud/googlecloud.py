@@ -48,8 +48,6 @@ class GoogleCloudProvider():
         Google compute engine version to use. Possibilies include 'v1' (default) or 'beta'.
     instance_type: str
         'n1-standard-1',
-    script_dir : str
-        Relative or absolute path to a directory where intermediate scripts are placed.
     init_blocks : int
         Number of blocks to provision immediately. Default is 1.
     min_blocks : int
@@ -88,7 +86,6 @@ class GoogleCloudProvider():
                  label='google_cloud',
                  google_version='v1',
                  instance_type='n1-standard-1',
-                 script_dir='parsl_scripts',
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -101,9 +98,6 @@ class GoogleCloudProvider():
         self.label = label
         self.client = googleapiclient.discovery.build('compute', google_version)
         self.instance_type = instance_type
-        self.script_dir = script_dir
-        if not os.path.exists(self.script_dir):
-            os.makedirs(self.script_dir)
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks

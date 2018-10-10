@@ -35,8 +35,6 @@ from parsl.executors import ExtremeScaleExecutor
 from parsl.data_provider.files import File
 
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
-from parsl.app.app_factory import AppFactoryFactory
-APP_FACTORY_FACTORY = AppFactoryFactory('central')
 
 __author__ = 'The Parsl Team'
 __version__ = VERSION
@@ -57,7 +55,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     Args:
          - name (string) : Set the logger name.
          - level (logging.LEVEL) : Set to logging.DEBUG by default.
-         - format_string (sting) : Set to None by default.
+         - format_string (string) : Set to None by default.
 
     Returns:
          - None

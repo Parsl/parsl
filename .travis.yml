@@ -35,6 +35,8 @@ script:
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - flake8 parsl/
-    - (for test in parsl/tests/test*; do pytest $test --config local || exit; done ) ;
+    - (for test in parsl/tests/test*/test*; do pytest $test --config local ; if [[ "$?" != 0 ]] && [[ "$?" != 5 ]]; then exit; fi; done ) ;
+      # allow exit code 5; this means pytest did not run a test in the
+      # specified file
     # - pytest parsl/tests --config parsl/tests/configs/local_threads.py
     # - pytest parsl/tests --config parsl/tests/configs/local_ipp.py

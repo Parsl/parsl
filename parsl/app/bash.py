@@ -39,7 +39,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if partial_cmdline is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e), None)
         else:
-            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned none - with this exeception: {}".format(func_name, e), None)
+            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned none - with this exception: {}".format(func_name, e), None)
 
     except IndexError as e:
         raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e), None)
@@ -103,16 +103,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False,
-                 executors='all', fn_hash=None):
-        """Initialize the super.
-
-        This bit is the same for both bash & python apps.
-        """
-        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, exec_type="bash")
+    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, cache=cache)
         self.kwargs = {}
-        self.fn_hash = fn_hash
-        self.cache = cache
 
         # We duplicate the extraction of parameter defaults
         # to self.kwargs to ensure availability at point of
@@ -147,7 +140,7 @@ class BashApp(AppBase):
 
         app_fut = self.data_flow_kernel.submit(remote_side_bash_executor, self.func, *args,
                                                executors=self.executors,
-                                               fn_hash=self.fn_hash,
+                                               fn_hash=self.func_hash,
                                                cache=self.cache,
                                                **self.kwargs)
 

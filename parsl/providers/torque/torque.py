@@ -42,8 +42,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         Torque queue to request blocks from.
     label : str
         Label for this provider.
-    script_dir : str
-        Relative or absolute path to a directory where intermediate scripts are placed.
     nodes_per_block : int
         Nodes to provision per block.
     tasks_per_node : int
@@ -74,7 +72,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  queue=None,
                  overrides='',
                  label='torque',
-                 script_dir='parsl_scripts',
                  nodes_per_block=1,
                  tasks_per_node=1,
                  init_blocks=1,
@@ -85,7 +82,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  walltime="00:20:00"):
         super().__init__(label,
                          channel,
-                         script_dir,
                          nodes_per_block,
                          tasks_per_node,
                          init_blocks,
@@ -99,10 +95,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         self.queue = queue
         self.overrides = overrides
         self.provisioned_blocks = 0
-
-        self.script_dir = script_dir
-        if not os.path.exists(self.script_dir):
-            os.makedirs(self.script_dir)
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}

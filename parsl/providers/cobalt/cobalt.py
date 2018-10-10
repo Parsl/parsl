@@ -36,8 +36,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     label : str
         Label for this provider.
-    script_dir : str
-        Relative or absolute path to a directory where intermediate scripts are placed.
     nodes_per_block : int
         Nodes to provision per block.
     tasks_per_node : int
@@ -62,7 +60,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
     def __init__(self,
                  channel=LocalChannel(),
                  label='cobalt',
-                 script_dir='parsl_scripts',
                  nodes_per_block=1,
                  tasks_per_node=1,
                  init_blocks=0,
@@ -77,7 +74,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                  cmd_timeout=10):
         super().__init__(label,
                          channel=channel,
-                         script_dir=script_dir,
                          nodes_per_block=nodes_per_block,
                          tasks_per_node=tasks_per_node,
                          init_blocks=init_blocks,

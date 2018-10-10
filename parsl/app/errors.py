@@ -63,8 +63,7 @@ class AppFailure(AppException):
     retries(int/None)
     """
 
-    def __init__(self, reason, exitcode=-22, retries=None):
-        super().__init__(reason)
+    def __init__(self, reason, exitcode, retries=None):
         self.reason = reason
         self.exitcode = exitcode
         self.retries = retries

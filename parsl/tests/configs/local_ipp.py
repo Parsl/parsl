@@ -8,6 +8,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label="local_ipp",
+            engine_dir='engines',
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=2,
