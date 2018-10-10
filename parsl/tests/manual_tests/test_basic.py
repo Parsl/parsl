@@ -39,11 +39,13 @@ import parsl
 
 # from parsl.tests.configs.comet_ipp_multinode import config
 
-from mpix_local import config
+# from mpix_local import config
+# from htex_local import config
+from exex_local import config
 
+parsl.set_stream_logger()
 from parsl.app.app import App
 parsl.load(config)
-# parsl.set_stream_logger()
 
 
 @App('python')
