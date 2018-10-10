@@ -12,13 +12,13 @@ LOOP_SLOWDOWN = 0.0  # in seconds
 
 
 class ShutdownRequest(Exception):
-    ''' Error raised a required module is missing for a optional/extra provider
+    ''' Exception raised when any async component receives a ShutdownRequest
     '''
     def __init__(self):
         self.tstamp = time.time()
 
     def __repr__(self):
-        return "Shutdown requet received at {}".format(self.tstamp)
+        return "Shutdown request received at {}".format(self.tstamp)
 
 
 class WorkerLost(Exception):
