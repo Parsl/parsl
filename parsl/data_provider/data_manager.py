@@ -7,7 +7,6 @@ from parsl.data_provider.scheme import GlobusScheme
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
 from parsl.app.app import App
-from parsl.data_provider.files import File
 
 from typing import List
 
@@ -16,6 +15,7 @@ logger = logging.getLogger(__name__)
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.data_provider.files import File # for mypy
+    from parsl.data_provider.files import File
 
 # BUG? both _http_stage_in and _ftp_stage_in take a list of files,
 # but only ever dosomething with the first elemtn of that list - 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 # string, so even though we are setting it, it is still optional
 # and so cannot be used as a parameter to open.
 
-def _http_stage_in(working_dir: str, outputs: List[File] =[]) -> None:
+def _http_stage_in(working_dir: str, outputs: "List[File]" =[]) -> None:
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
@@ -45,7 +45,7 @@ def _http_stage_in(working_dir: str, outputs: List[File] =[]) -> None:
                 f.write(chunk)
 
 
-def _ftp_stage_in(working_dir: str, outputs: List[File]=[]) -> None:
+def _ftp_stage_in(working_dir: str, outputs: "List[File]"=[]) -> None:
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
