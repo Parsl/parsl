@@ -40,26 +40,26 @@ import parsl
 # from parsl.tests.configs.comet_ipp_multinode import config
 
 # from mpix_local import config
-# from htex_local import config
-from exex_local import config
+# from parsl.tests.configs.htex_local import config
+from parsl.tests.configs.exex_local import config
 
 parsl.set_stream_logger()
-from parsl.app.app import App
+from parsl.app.app import python_app  # , bash_app
 parsl.load(config)
 
 
-@App('python')
+@python_app
 def double(x):
     return x * 2
 
 
-@App('python')
+@python_app
 def echo(x, string, stdout=None):
     print(string)
     return x * 5
 
 
-@App('python')
+@python_app
 def import_echo(x, string, stdout=None):
     import time
     time.sleep(0)
@@ -67,7 +67,7 @@ def import_echo(x, string, stdout=None):
     return x * 5
 
 
-@App('python')
+@python_app
 def platform(sleep=10, stdout=None):
     import platform
     import time
