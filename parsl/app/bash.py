@@ -74,7 +74,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     except subprocess.TimeoutExpired as e:
         print("Timeout")
-        raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout), e)
+        raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout))
 
     except Exception as e:
         print("Caught exception: ", e)

@@ -53,18 +53,7 @@ class AppFailure(AppException):
 
 class AppTimeout(AppException):
     """An error raised during execution of an app when it exceeds its allotted walltime.
-
-    Contains:
-    reason(string)
-    exitcode(int)
-    retries(int/None)
     """
-
-    def __init__(self, reason, exitcode, retries=None):
-        super().__init__(reason)
-        self.reason = reason
-        self.exitcode = -55
-        self.retries = retries
 
 
 class BashAppNoReturn(AppException):
