@@ -49,3 +49,25 @@ class ControllerError(ExecutorError):
 
     def __str__(self):
         return self.__repr__()
+
+
+class DeserializationError(ExecutorError):
+    """ Failure at the Deserialization of results/exceptions from remote workers
+    """
+
+    def __init__(self, reason):
+        self.reason = reason
+
+    def __repr__(self):
+        return "Failed to deserialize return objects. Reason:{}".format(self.reason)
+
+
+class BadMessage(ExecutorError):
+    """ Mangled/Poorly formatted/Unsupported message received
+    """
+
+    def __init__(self, reason):
+        self.reason = reason
+
+    def __repr__(self):
+        return "Received an unsupported message. Reason:{}".format(self.reason)

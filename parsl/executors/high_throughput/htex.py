@@ -31,12 +31,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     The HighThroughputExecutor system has 3 components:
       1. The HighThroughputExecutor instance which is run as part of the Parsl script.
-      2. The Interchange which is acts as a load-balancging proxy between workers and Parsl
-      2. The multiprocessing based fabric which coordinates task execution over several cores on a node.
-    ZeroMQ pipes connect the HighThroughputExecutor, Interchange and the process_worker_pool
-
-    Our design assumes that there is a single fabric running over a `block` and that
-    there might be several such `fabric` instances.
+      2. The Interchange which is acts as a load-balancing proxy between workers and Parsl
+      3. The multiprocessing based fabric which coordinates task execution over several cores on a node.
+      4. ZeroMQ pipes connect the HighThroughputExecutor, Interchange and the process_worker_pool
 
     Here is a diagram
 
@@ -86,7 +83,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     worker_port_range : (int, int)
         Worker ports will be chosen between the two integers provided
 
-    internal_port_range : (int, int)
+    interchange_port_range : (int, int)
         Port range used by Parsl to communicate with internal services.
 
     """
@@ -98,7 +95,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  public_ip="127.0.0.1",
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
-                 internal_port_range=(55000, 56000),
+                 interchange_port_range=(55000, 56000),
                  storage_access=None,
                  working_dir=None,
                  engine_debug=False,
@@ -114,7 +111,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.engine_debug = engine_debug
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
-            raise ConfigurationError('Multiple storage access schemes are not yet supported')
+            raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
         self.managed = managed
         self.engines = []
@@ -123,7 +120,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.public_ip = public_ip
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
-        self.internal_port_range = internal_port_range
+        self.interchange_port_range = interchange_port_range
 
         if not launch_cmd:
             self.launch_cmd = """process_worker_pool.py {debug} -w {tasks_per_node} --task_url={task_url} --result_url={result_url}"""
@@ -131,8 +128,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def start(self):
         """ Here we create the Interchange process and connect to it.
         """
-        self.outgoing_q = zmq_pipes.TasksOutgoing('tcp://127.0.0.1:50055')
-        self.incoming_q = zmq_pipes.ResultsIncoming('tcp://127.0.0.1:50056')
+        self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
+        self.incoming_q = zmq_pipes.ResultsIncoming('127.0.0.1', self.interchange_port_range)
 
         self.is_alive = True
 
@@ -170,7 +167,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         else:
             self._scaling_enabled = False
-            logger.debug("Starting IpyParallelExecutor with no provider")
+            logger.debug("Starting HighThroughputExecutor with no provider")
 
     def _queue_management_worker(self):
         """Listen to the queue for task status messages and handle them.
@@ -217,11 +214,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 pass
 
             except IOError as e:
-                logger.debug("[MTHREAD] Caught broken queue with exception code {}: {}".format(e.errno, e))
+                logger.exception("[MTHREAD] Caught broken queue with exception code {}: {}".format(e.errno, e))
                 return
 
             except Exception as e:
-                logger.debug("[MTHREAD] Caught unknown exception: {}".format(e))
+                logger.exception("[MTHREAD] Caught unknown exception: {}".format(e))
                 return
 
             else:
@@ -231,7 +228,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                     return
 
                 else:
-                    task_fut = self.tasks[msg['task_id']]
+                    try:
+                        tid = msg['task_id']
+                    except Exception as e:
+                        raise BadMessage("Message received does not contain 'task_id' field")
+
+                    task_fut = self.tasks[tid]
+
                     if 'result' in msg:
                         result, _ = deserialize_object(msg['result'])
                         task_fut.set_result(result)
@@ -242,9 +245,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             task_fut.set_exception(exception)
                         except Exception as e:
                             # TODO could be a proper wrapped exception?
-                            task_fut.set_exception(ValueError("Received exception, but handling also threw an exception: {}".format(e)))
+                            task_fut.set_exception(
+                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                     else:
-                        raise ValueError("Not a result or exception")
+                        raise BadMessage("Message received is neither result or exception")
 
             if not self.is_alive:
                 break
@@ -261,7 +265,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         comm_q = Queue(maxsize=10)
         self.queue_proc = Process(target=interchange.starter,
                                   args=(comm_q,),
-                                  kwargs={"worker_ports": self.worker_ports,
+                                  kwargs={"client_ports": (self.outgoing_q.port, self.incoming_q.port),
+                                          "worker_ports": self.worker_ports,
                                           "worker_port_range": self.worker_port_range
                                   },
         )

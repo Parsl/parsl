@@ -10,7 +10,7 @@ except ImportError:
 else:
     _es_logging_enabled = True
 
-from parsl.executors.errors import OptionalModuleMissing
+from parsl.errors import OptionalModuleMissing
 
 
 class NullHandler(logging.Handler):

@@ -23,14 +23,16 @@ logger = logging.getLogger(__name__)
 class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     """Executor designed for leadership class supercomputer scale
 
-    The ExtremeScaleExecutor system has 3 components:
+    The ExtremeScaleExecutor system has 4 components:
       1. The ExtremeScaleExecutor instance which is run as part of the Parsl script.
-      2. The Interchange which is acts as a load-balancging proxy between workers and Parsl
-      2. The MPI based fabric which coordinates task execution over several nodes.
-      3. ZeroMQ pipes that connect the ExtremeScaleExecutor and the fabric
+      2. The Interchange which is acts as a load-balancing proxy between workers and Parsl
+      3. The MPI based mpi_worker_pool which coordinates task execution over several nodes.
+         With MPI communication between workers, we can exploit low latency networking on
+         HPC systems.
+      4. ZeroMQ pipes that connect the ExtremeScaleExecutor, Interchange and the mpi_worker_pool
 
-    Our design assumes that there is a single fabric running over a `block` and that
-    there might be several such `fabric` instances.
+    Our design assumes that there is a single MPI application (mpi_worker_pool)
+    running over a `block` and that there might be several such instances.
 
     Here is a diagram
 
@@ -55,7 +57,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     ----------
 
     provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
-       Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
+       Provider to access computation resources. Can be any providers in `parsl.providers`:
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
@@ -71,7 +73,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         Enables engine debug logging
 
     public_ip : string
-        Please set the public ip of the machine on which Parsl is executing
+        Set the public ip of the machine on which Parsl is executing
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -80,8 +82,8 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     worker_port_range : (int, int)
         Worker ports will be chosen between the two integers provided
 
-    internal_port_range : (int, int)
-        Port range used by Parsl to communicate with internal services.
+    interchange_port_range : (int, int)
+        Port range used by Parsl to communicate with the Interchange.
 
     """
 
@@ -92,7 +94,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  public_ip="127.0.0.1",
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
-                 internal_port_range=(55000, 56000),
+                 interchange_port_range=(55000, 56000),
                  storage_access=None,
                  working_dir=None,
                  engine_debug=False,
@@ -105,7 +107,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                          public_ip=public_ip,
                          worker_ports=worker_ports,
                          worker_port_range=worker_port_range,
-                         internal_port_range=internal_port_range,
+                         interchange_port_range=interchange_port_range,
                          storage_access=storage_access,
                          working_dir=working_dir,
                          engine_debug=engine_debug,
