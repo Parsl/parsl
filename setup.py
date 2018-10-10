@@ -26,6 +26,8 @@ setup(
         'aws' : ['boto3'],
         'jetstream' : ['python-novaclient'],
         'extreme_scale' : ['mpi4py'],
+        'docs' : ['nbsphinx'],
+        'google_cloud' : ['google-auth', ['google-api-python-client']
         },
     classifiers = [
         # Maturity
