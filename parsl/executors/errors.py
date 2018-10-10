@@ -1,35 +1,8 @@
 """Exceptions raise by Executors."""
+from parsl.app.errors import ParslError
 
 
-class OptionalModuleMissing(Exception):
-    ''' Error raised a required module is missing for a optional/extra provider
-    '''
-
-    def __init__(self, module_names, reason):
-        self.module_names = module_names
-        self.reason = reason
-
-    def __repr__(self):
-        return "Unable to initialize logger.Missing:{0},  Reason:{1}".format(
-            self.module_names, self.reason
-        )
-
-
-class InsufficientMPIRanks(Exception):
-    ''' Error raised a required module is missing for a optional/extra provider
-    '''
-
-    def __init__(self, tasks_per_node=None, nodes_per_block=None):
-        self.tasks_per_node = tasks_per_node
-        self.nodes_per_block = nodes_per_block
-
-    def __repr__(self):
-        return "MPIExecutor requires at least 2 ranks launched. \
-        You requested tasks_per_node={}, nodes_per_block={}".format(self.tasks_per_node,
-                                                                    self.nodes_per_block)
-
-
-class ExecutorError(Exception):
+class ExecutorError(ParslError):
     """Base class for all exceptions.
 
     Only to be invoked when only a more specific error is not available.
@@ -42,8 +15,19 @@ class ExecutorError(Exception):
     def __repr__(self):
         return "Executor {0} failed due to {1}".format(self.executor, self.reason)
 
-    def __str__(self):
-        return self.__repr__()
+
+class InsufficientMPIRanks(ExecutorError):
+    ''' Error raised when attempting to launch a MPI worker pool with less than 2 ranks
+    '''
+
+    def __init__(self, tasks_per_node=None, nodes_per_block=None):
+        self.tasks_per_node = tasks_per_node
+        self.nodes_per_block = nodes_per_block
+
+    def __repr__(self):
+        return "MPIExecutor requires at least 2 ranks launched. \
+Ranks launched = tasks_per_node={} X nodes_per_block={}".format(self.tasks_per_node,
+                                                                self.nodes_per_block)
 
 
 class ScalingFailed(ExecutorError):

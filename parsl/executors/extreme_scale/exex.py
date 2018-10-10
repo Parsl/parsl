@@ -10,6 +10,7 @@ except ImportError:
 else:
     _mpi_enabled = True
 
+from parsl.errors import *
 from parsl.executors.errors import *
 from parsl.executors.high_throughput.htex import HighThroughputExecutor
 
