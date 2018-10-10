@@ -31,9 +31,10 @@ from parsl.dataflow.states import States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
 from parsl.app.errors import RemoteException
-from parsl.monitoring import app_monitor
 from parsl.monitoring.db_logger import get_db_logger
+from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
+
 
 logger = logging.getLogger(__name__)
 
