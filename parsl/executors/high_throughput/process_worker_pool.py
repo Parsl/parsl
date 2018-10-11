@@ -170,6 +170,7 @@ class Manager(object):
 
         TODO: Move task receiving to a thread
         """
+        start = time.time()
         self._kill_event = threading.Event()
 
         self.procs = {}
@@ -190,7 +191,6 @@ class Manager(object):
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
 
-        start = None
         abort_flag = False
 
         logger.info("Loop start")
@@ -207,7 +207,7 @@ class Manager(object):
         # self._result_pusher_thread.join()
         delta = time.time() - start
         logger.info("process_worker_pool ran for {} seconds".format(delta))
-        sys.exit(-1)
+        sys.exit(0)
 
 
 def execute_task(bufs):
