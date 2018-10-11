@@ -114,8 +114,6 @@ class Manager(object):
                 last_beat = time.time()
 
             if ready_worker_count > 0:
-
-                ready_worker_count = 4
                 logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
