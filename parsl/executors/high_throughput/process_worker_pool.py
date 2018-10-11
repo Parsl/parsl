@@ -380,9 +380,9 @@ if __name__ == "__main__":
                           worker_count=int(args.worker_count))
         manager.start()
     except Exception as e:
-        logger.warning("Fabric exiting")
+        logger.critical("process_worker_pool exiting from an exception")
         logger.exception("Caught error : {}".format(e))
         raise
-
-    logger.debug("Fabric exiting")
-    print("Fabric exiting.")
+    else:
+        logger.info("process_worker_pool exiting")
+        print("PROCESS_WORKER_POOL exiting.")

@@ -6,7 +6,7 @@ import pickle
 
 
 class TasksOutgoing(object):
-    """ Outgoing task queue from MPIX
+    """ Outgoing task queue from the executor to the Interchange
     """
     def __init__(self, ip_address, port_range):
         """
@@ -34,6 +34,8 @@ class TasksOutgoing(object):
 
 
 class ResultsIncoming(object):
+    """ Incoming results queue from the Interchange to the executor
+    """
 
     def __init__(self, ip_address, port_range):
         """

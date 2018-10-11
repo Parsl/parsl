@@ -269,14 +269,14 @@ class Manager(object):
             # print("[{}] Received: {}".format(self.identity, msg))
             # time.sleep(random.randint(4,10)/10)
             if self._kill_event.is_set():
-                logger.debug("Fabric received kill message. Initiating exit")
+                logger.critical("mpi_worker_pool received kill message. Initiating exit")
                 break
 
         self._task_puller_thread.join()
         self._result_pusher_thread.join()
 
         delta = time.time() - start
-        logger.info("Fabric ran for {} seconds".format(delta))
+        logger.info("mpi_worker_pool ran for {} seconds".format(delta))
 
 
 def execute_task(bufs):
@@ -441,9 +441,9 @@ if __name__ == "__main__":
                               level=logging.DEBUG if args.debug is True else logging.INFO)
             worker(comm, rank)
     except Exception as e:
-        logger.warning("Fabric exiting")
+        logger.critical("mpi_worker_pool exiting from an exception")
         logger.exception("Caught error : {}".format(e))
         raise
-
-    logger.debug("Fabric exiting")
-    print("Fabric exiting.")
+    else:
+        logger.info("mpi_worker_pool exiting")
+        print("MPI_WORKER_POOL exiting.")

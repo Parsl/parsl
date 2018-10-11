@@ -297,7 +297,7 @@ def start_file_logger(filename, name='parsl.executors.interchange', level=loggin
 
 
 def starter(comm_q, *args, **kwargs):
-    """ MPIX is expected to start the interchange process via calling this function
+    """ The executor is expected to start the interchange process via calling this function
     to start a new process. The args, kwargs match that of the Interchange.__init__
     """
     # logger = multiprocessing.get_logger()
