@@ -109,14 +109,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  storage_access=None,
                  working_dir=None,
                  engine_debug=False,
-                 mock=False,
                  managed=True):
 
         logger.debug("Initializing HighThroughputExecutor")
 
         self.label = label
         self.launch_cmd = launch_cmd
-        self.mock = mock
         self.provider = provider
         self.engine_debug = engine_debug
         self.storage_access = storage_access if storage_access is not None else []

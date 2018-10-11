@@ -113,7 +113,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  storage_access=None,
                  working_dir=None,
                  engine_debug=False,
-                 mock=False,
                  managed=True):
 
         super().__init__(label=label,
