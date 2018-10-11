@@ -29,7 +29,7 @@ ITEM_THRESHOLD = 1024
 class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
 
-    The HighThroughputExecutor system has 3 components:
+    The HighThroughputExecutor system has the following components:
       1. The HighThroughputExecutor instance which is run as part of the Parsl script.
       2. The Interchange which is acts as a load-balancing proxy between workers and Parsl
       3. The multiprocessing based worker pool which coordinates task execution over several

@@ -28,7 +28,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     to the interface, a future is returned that tracks the execution of the function on
     a distributed compute environment.
 
-    The ExtremeScaleExecutor system has 4 components:
+    The ExtremeScaleExecutor system has the following components:
       1. The ExtremeScaleExecutor instance which is run as part of the Parsl script
       2. The Interchange which is acts as a load-balancing proxy between workers and Parsl
       3. The MPI based mpi_worker_pool which coordinates task execution over several nodes
