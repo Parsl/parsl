@@ -395,10 +395,3 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.queue_proc.terminate()
         logger.warning("Finished MPIX shutdown attempt")
         return True
-
-
-if __name__ == "__main__":
-
-    print("Start")
-    turb_x = HighThroughputExecutor()
-    print("Done")

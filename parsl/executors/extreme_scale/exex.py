@@ -138,10 +138,3 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
         if not launch_cmd:
             self.launch_cmd = """mpiexec -np {tasks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url}"""
-
-
-if __name__ == "__main__":
-
-    print("Start")
-    turb_x = ExtremeScaleExecutor()
-    print("Done")
