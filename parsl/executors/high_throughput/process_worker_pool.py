@@ -168,12 +168,6 @@ class Manager(object):
     def start(self):
         """ Start the Manager process.
 
-        The worker loops on this:
-
-        1. If the last message sent was older than heartbeat period we send a heartbeat
-        2.
-
-
         TODO: Move task receiving to a thread
         """
         self._kill_event = threading.Event()
