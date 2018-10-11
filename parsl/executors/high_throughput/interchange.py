@@ -213,7 +213,8 @@ class Interchange(object):
                 if worker not in self._ready_worker_queue:
                     logger.debug("[MAIN] Adding worker to ready queue")
                     self._ready_worker_queue[worker] = {'last': time.time(),
-                                                        'wtime': 60,
+                                                        # [TODO] Add support for tracking walltimes
+                                                        # 'wtime': 60,
                                                         'free_slots': tasks_requested,
                                                         'tasks': []}
                 else:
@@ -238,7 +239,7 @@ class Interchange(object):
                 b_worker, b_message = self.results_incoming.recv_multipart()
                 worker = int.from_bytes(b_worker, "little")
                 if worker not in self._ready_worker_queue:
-                    logger.debug("[MAIN] Received a result from a un-registered worker:{}".format(worker))
+                    logger.warning("[MAIN] Received a result from a un-registered worker:{}".format(worker))
                 else:
                     r = pickle.loads(b_message)
                     logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], worker))
