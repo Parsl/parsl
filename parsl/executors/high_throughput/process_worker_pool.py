@@ -203,7 +203,7 @@ class Manager(object):
 
         logger.info("Loop start")
 
-        # TODO : Add mechanism in this loop to stop the fabric.
+        # TODO : Add mechanism in this loop to stop the worker pool
         # This might need a multiprocessing event to signal back.
         while not abort_flag:
             time.sleep(0.1)
@@ -214,7 +214,7 @@ class Manager(object):
         # self._task_puller_thread.join()
         # self._result_pusher_thread.join()
         delta = time.time() - start
-        logger.info("Fabric ran for {} seconds".format(delta))
+        logger.info("process_worker_pool ran for {} seconds".format(delta))
         sys.exit(-1)
 
 
@@ -266,7 +266,7 @@ def worker(worker_id, task_queue, result_queue, worker_queue):
     Pop request from queue
     Put result into result_queue
     """
-    start_file_logger('{}/fabric_single_node_{}.log'.format(args.logdir, worker_id),
+    start_file_logger('{}/process_worker_pool_{}.log'.format(args.logdir, worker_id),
                       0,
                       level=logging.DEBUG if args.debug is True else logging.INFO)
 
@@ -377,7 +377,7 @@ if __name__ == "__main__":
 
     # set_stream_logger()
     try:
-        start_file_logger('{}/fabric_single_{}.{}.log'.format(args.logdir, args.uid, 'MAIN'),
+        start_file_logger('{}/process_worker_pool_{}.{}.log'.format(args.logdir, args.uid, 'MAIN'),
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 

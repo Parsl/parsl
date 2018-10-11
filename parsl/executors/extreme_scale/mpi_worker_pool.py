@@ -77,7 +77,7 @@ class Manager(object):
         logger.debug("Return from heartbeat : {}".format(r))
 
     def recv_result_from_workers(self):
-        """ Receives a results from the MPI fabric and send it out via 0mq
+        """ Receives a results from the MPI worker pool and send it out via 0mq
 
         Returns:
         --------

@@ -32,7 +32,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     The HighThroughputExecutor system has 3 components:
       1. The HighThroughputExecutor instance which is run as part of the Parsl script.
       2. The Interchange which is acts as a load-balancing proxy between workers and Parsl
-      3. The multiprocessing based fabric which coordinates task execution over several cores on a node.
+      3. The multiprocessing based worker pool which coordinates task execution over several
+         cores on a node.
       4. ZeroMQ pipes connect the HighThroughputExecutor, Interchange and the process_worker_pool
 
     Here is a diagram
@@ -134,7 +135,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             self.launch_cmd = """process_worker_pool.py {debug} -w {tasks_per_node} --task_url={task_url} --result_url={result_url}"""
 
     def start(self):
-        """ Here we create the Interchange process and connect to it.
+        """Create the Interchange process and connect to it.
         """
         self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
         self.incoming_q = zmq_pipes.ResultsIncoming('127.0.0.1', self.interchange_port_range)
