@@ -57,22 +57,32 @@ class Interchange(object):
         """
         Parameters
         ----------
-        client_url : str
-             Client URL string
+        client_address: str
+             The ip address at which the parsl client can be reached. Default: "127.0.0.1"
 
-        worker_url : str
-             Worker url on which workers will attempt to connect back
+        interchange_address: str
+             The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
+
+        client_ports: tuple(int, int)
+             The ports at which the client can be reached
+
+        worker_ports: tuple(int, int)
+             The specific two ports at which workers will connect to the Interchange. Default: None
+
+        worker_port_range: tuple(int, int)
+             The interchange picks ports at random from the range which will be used by workers.
+             This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
 
         heartbeat_period : int
-             Heartbeat period expected from workers
+             Heartbeat period expected from workers (seconds). Default: 10s
 
         logging_level : int
-             Logging level as defined in the logging module. Default : logging.INFO (20)
+             Logging level as defined in the logging module. Default: logging.INFO (20)
 
         """
         start_file_logger("interchange.logs", level=logging_level)
         logger.debug("****************************************")
-        logger.debug("Starting Interchange process v0.2")
+        logger.debug("Starting Interchange process")
         logger.debug("****************************************")
 
         self.client_address = client_address
@@ -119,30 +129,34 @@ class Interchange(object):
 
         self.heartbeat_thresh = heartbeat_period * 2
 
-    def get_tasks(self, count):
-        """ Get's a batch of tasks from the task queue
+    def get_tasks(self, count, socks):
+        """ Get's a batch of tasks from the task queue.
 
         Parameters
         ----------
-             count: int
-                 Count of tasks to get from the queue
+        count: int
+            Count of tasks to get from the queue
+        socks: dict(poll events)
+            Dictionary of socket events from zmq.poller.poll()
 
         Returns
         -------
-             List of upto count tasks. May return fewer than count down to an empty list
-                eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
+        List of upto count tasks. May return fewer than count down to an empty list
+            eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
 
         Raises
         ------
-             ShutdownRequest: If shutdown requested by client.
-             Since the 'STOP' request might be queued, this may be processed in a delayed manner.
+        ShutdownRequest: If shutdown requested by client.
+            Tasks are moved from Zmq to the internal task_queue only when the queue in not full.
+            As a result the 'STOP' request might be queued in ZMQ and may be processed in a
+            delayed manner.
 
         """
         # Listen for tasks
         tasks = []
         logger.debug("[GET_TASKS] Listening for {} tasks".format(count))
         for c in range(count):
-            if self.task_incoming in self.socks and self.socks[self.task_incoming] == zmq.POLLIN:
+            if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
                 if len(self._task_queue) < self.max_task_queue_size:
                     # There's an unpickling cost here, could optimize by prepending
                     # buffer with tid
@@ -209,7 +223,7 @@ class Interchange(object):
             # If we had received any requests, check if there are tasks that could be passed
             for worker in self._ready_worker_queue:
                 if self._ready_worker_queue[worker]['free_slots']:
-                    tasks = self.get_tasks(self._ready_worker_queue[worker]['free_slots'])
+                    tasks = self.get_tasks(self._ready_worker_queue[worker]['free_slots'], self.socks)
                     if tasks:
                         self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
                         tids = [t['task_id'] for t in tasks]
