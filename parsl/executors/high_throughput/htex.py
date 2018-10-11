@@ -346,7 +346,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
              NotImplementedError
         """
         if self.provider:
-            print("[TODO] Scaling out")
             r = self.provider.submit(self.launch_cmd)
             self.engines.extend([r])
         else:
