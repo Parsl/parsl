@@ -68,24 +68,34 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         :class:`~parsl.providers.sge.sge.GridEngine`,
         :class:`~parsl.providers.slurm.slurm.Slurm`, or
         :class:`~parsl.providers.torque.torque.Torque`.
+
     label : str
         Label for this executor instance.
-    engine_debug : Bool
-        Enables engine debug logging
+
+    launch_cmd : str
+        Command line string to launch the process_worker_pool from the provider.
 
     public_ip : string
-        Please set the public ip of the machine on which Parsl is executing
+        Set the public ip of the machine on which Parsl is executing.
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
         worker_port_range will not be honored.
 
     worker_port_range : (int, int)
-        Worker ports will be chosen between the two integers provided
+        Worker ports will be chosen between the two integers provided.
 
     interchange_port_range : (int, int)
-        Port range used by Parsl to communicate with internal services.
+        Port range used by Parsl to communicate with the Interchange.
 
+    working_dir : str
+        Working dir to be used by the executor.
+
+    engine_debug : Bool
+        Enables engine debug logging.
+
+    managed : Bool
+        If this executor is managed by the DFK or externally handled.
     """
 
     def __init__(self,

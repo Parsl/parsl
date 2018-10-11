@@ -23,10 +23,15 @@ logger = logging.getLogger(__name__)
 class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     """Executor designed for leadership class supercomputer scale
 
+    The ExtremeScaleExecutor extends the Executor interface to enable task execution on
+    supercomputing systems (>1K Nodes). When functions and their arguments are submitted
+    to the interface, a future is returned that tracks the execution of the function on
+    a distributed compute environment.
+
     The ExtremeScaleExecutor system has 4 components:
-      1. The ExtremeScaleExecutor instance which is run as part of the Parsl script.
+      1. The ExtremeScaleExecutor instance which is run as part of the Parsl script
       2. The Interchange which is acts as a load-balancing proxy between workers and Parsl
-      3. The MPI based mpi_worker_pool which coordinates task execution over several nodes.
+      3. The MPI based mpi_worker_pool which coordinates task execution over several nodes
          With MPI communication between workers, we can exploit low latency networking on
          HPC systems.
       4. ZeroMQ pipes that connect the ExtremeScaleExecutor, Interchange and the mpi_worker_pool
@@ -67,24 +72,34 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         :class:`~parsl.providers.sge.sge.GridEngine`,
         :class:`~parsl.providers.slurm.slurm.Slurm`, or
         :class:`~parsl.providers.torque.torque.Torque`.
+
     label : str
         Label for this executor instance.
-    engine_debug : Bool
-        Enables engine debug logging
+
+    launch_cmd : str
+        Command line string to launch the mpi_worker_pool from the provider.
 
     public_ip : string
-        Set the public ip of the machine on which Parsl is executing
+        Set the public ip of the machine on which Parsl is executing.
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
         worker_port_range will not be honored.
 
     worker_port_range : (int, int)
-        Worker ports will be chosen between the two integers provided
+        Worker ports will be chosen between the two integers provided.
 
     interchange_port_range : (int, int)
         Port range used by Parsl to communicate with the Interchange.
 
+    working_dir : str
+        Working dir to be used by the executor.
+
+    engine_debug : Bool
+        Enables engine debug logging.
+
+    managed : Bool
+        If this executor is managed by the DFK or externally handled.
     """
 
     def __init__(self,
