@@ -177,14 +177,14 @@ class Interchange(object):
 
         return tasks
 
-    def start(self, poll_period=0.1):
+    def start(self, poll_period=1):
         """ Start the NeedNameQeueu
 
         Parameters:
         ----------
 
-        poll_period : float
-              Poll period in seconds
+        poll_period : int
+              Poll period in milliseconds
 
         TODO: Move task receiving to a thread
         """
