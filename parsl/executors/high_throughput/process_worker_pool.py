@@ -24,7 +24,7 @@ LOOP_SLOWDOWN = 0.0  # in seconds
 
 
 class Manager(object):
-    """ Manager (feudal lord) rules over the workers
+    """ Manager manages task execution by the workers
 
     1. Asynchronously queue large volume of tasks
     2. Allow for workers to join and leave the union
