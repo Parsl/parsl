@@ -55,7 +55,7 @@ class Manager(object):
         worker_count : int,
              Workers to launch, if set to 0 we launch cores # of workers. 0 is the default
         """
-        logger.info("Manager started v0.5")
+        logger.info("Manager started")
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
@@ -115,7 +115,7 @@ class Manager(object):
 
             logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
 
-            if time.time() > last_beat + (float(self.heartbeat_period) / 2):
+            if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat()
                 last_beat = time.time()
 

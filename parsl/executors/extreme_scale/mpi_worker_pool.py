@@ -122,7 +122,7 @@ class Manager(object):
             ready_worker_count = self.ready_worker_queue.qsize()
             logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
 
-            if time.time() > last_beat + (float(self.heartbeat_period) / 2):
+            if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat()
                 last_beat = time.time()
 
