@@ -227,9 +227,11 @@ class Interchange(object):
                     tasks = self.get_tasks(self._ready_worker_queue[worker]['free_slots'], self.socks)
                     if tasks:
                         self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
+                        task_count = len(tasks)
+                        count += task_count
                         tids = [t['task_id'] for t in tasks]
                         logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, worker))
-                        self._ready_worker_queue[worker]['free_slots'] -= len(tasks)
+                        self._ready_worker_queue[worker]['free_slots'] -= task_count
                         self._ready_worker_queue[worker]['tasks'].extend(tids)
                 else:
                     logger.debug("Nothing to send")
@@ -263,7 +265,6 @@ class Interchange(object):
             if not start:
                 start = time.time()
             # print("[{}] Received: {}".format(self.identity, msg))
-            count += 1
             # if msg == 'STOP':
             #     break
 
