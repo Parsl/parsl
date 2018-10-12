@@ -8,8 +8,8 @@ from parsl.providers.error import OptionalModuleMissing
 
 
 try:
-    from kubernetes import client, config
-    config.load_kube_config()
+    from kubernetes import client
+    from kubernetes import config as kube_config
     _kubernetes_enabled = True
 except (ImportError, NameError, FileNotFoundError):
     _kubernetes_enabled = False
@@ -33,6 +33,7 @@ class KubernetesProvider(ExecutionProvider):
         KWargs :
              - channel (channel object) : default=None A channel object
         """
+        kube_config.load_kube_config()
 
         self.channel = channel
 

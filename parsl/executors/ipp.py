@@ -26,7 +26,6 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     ----------
     provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
         Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
-        :class:`~parsl.providers.azureProvider.azureProvider.AzureProvider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
@@ -58,7 +57,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     .. note::
            Some deficiencies with this executor are:
 
-               1. Ipengine's execute one task at a time. This means one engine per core
+               1. Ipengines execute one task at a time. This means one engine per core
                   is necessary to exploit the full parallelism of a node.
                2. No notion of remaining walltime.
                3. Lack of throttling means tasks could be queued up on a worker.
@@ -125,7 +124,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                     logger.debug("Launched block: {0}:{1}".format(i, engine))
                     if not engine:
                         raise(ScalingFailed(self.provider.label,
-                                            "Attempts to provision nodes via provider has failed"))
+                                            "Attempt to provision nodes via provider has failed"))
                     self.engines.extend([engine])
 
             except Exception as e:
@@ -155,13 +154,12 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
             raise e
 
         return """mkdir -p {0}
-cd {0}
-cat <<EOF > ipengine.{uid}.json
+cat <<EOF > {0}/ipengine.{uid}.json
 {1}
 EOF
 
-mkdir -p 'engine_logs'
-ipengine --file=ipengine.{uid}.json {debug_option} >> engine_logs/$JOBNAME.log 2>&1
+mkdir -p '{0}/engine_logs'
+ipengine --file={0}/ipengine.{uid}.json {debug_option} >> {0}/engine_logs/$JOBNAME.log 2>&1
 """.format(engine_dir, engine_json, debug_option=self.debug_option, uid=uid)
 
     def compose_containerized_launch_cmd(self, filepath, engine_dir, container_image):

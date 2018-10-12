@@ -22,7 +22,6 @@ setup(
     extras_require = {
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
-        'azure' : ['azure-mgmt>=2.0.0', 'haikunator'],
         'jetstream' : ['python-novaclient']
         },
     classifiers = [

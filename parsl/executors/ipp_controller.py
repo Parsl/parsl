@@ -118,7 +118,7 @@ class Controller(RepresentationMixin):
                             'security/ipcontroller-client.json')
 
     def close(self):
-        """Terminate the controller process and it's child processes.
+        """Terminate the controller process and its child processes.
 
         Args:
               - None
@@ -139,7 +139,10 @@ class Controller(RepresentationMixin):
             try:
                 self.proc.wait(timeout=1)
                 x = self.proc.returncode
-                logger.debug("Controller exited with {0}".format(x))
+                if x == 0:
+                    logger.debug("Controller exited with {0}".format(x))
+                else:
+                    logger.error("Controller exited with {0}. May require manual cleanup".format(x))
             except subprocess.TimeoutExpired:
                 logger.warn("Ipcontroller process:{0} cleanup failed. May require manual cleanup".format(self.proc.pid))
 

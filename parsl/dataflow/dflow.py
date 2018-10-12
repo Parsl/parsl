@@ -31,11 +31,12 @@ from parsl.dataflow.states import States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
 from parsl.app.errors import RemoteException
-from parsl.monitoring import app_monitor
 from parsl.monitoring.db_logger import get_db_logger
+from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
 from parsl.monitoring.web_app import index
 from parsl.monitoring.web_app.app import shutdown_web_app
+
 
 logger = logging.getLogger(__name__)
 
@@ -487,7 +488,7 @@ class DataFlowKernel(object):
         """This function should be called **ONLY** when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
-        it, and will (most likely) result in a type error .
+        it, and will (most likely) result in a type error.
 
         Args:
              task_id (uuid str) : Task id

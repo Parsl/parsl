@@ -52,7 +52,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     Args:
          - name (string) : Set the logger name.
          - level (logging.LEVEL) : Set to logging.DEBUG by default.
-         - format_string (sting) : Set to None by default.
+         - format_string (string) : Set to None by default.
 
     Returns:
          - None
