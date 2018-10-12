@@ -348,9 +348,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def scale_out(self, workers=1):
         """Scales out the number of active workers by 1.
 
-        This method is not implemented for threads and will raise the error if called.
-        This would be nice to have, and can be done
-
         Raises:
              NotImplementedError
         """
@@ -366,7 +363,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def scale_in(self, blocks):
         """Scale in the number of active blocks by specified amount.
 
-        This method is not implemented for turbine and will raise an error if called.
+        The scale in method here is very rude. It doesn't give the workers
+        the opportunity to finish current tasks or cleanup. This is tracked
+        in issue #530
 
         Raises:
              NotImplementedError
