@@ -51,7 +51,7 @@ class Interchange(object):
                  client_ports=(50055, 50056),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
-                 heartbeat_period=10,
+                 heartbeat_period=60,
                  logging_level=logging.INFO,
              ):
         """
