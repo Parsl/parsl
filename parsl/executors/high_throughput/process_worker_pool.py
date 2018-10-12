@@ -251,8 +251,6 @@ def execute_task(bufs):
 def worker(worker_id, task_queue, result_queue, worker_queue):
     """
 
-    TODO : Add daimyo id to distinguish between multiple daimyo runs under same run
-
     Put request token into queue
     Get task from task_queue
     Pop request from queue
