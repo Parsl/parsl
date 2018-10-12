@@ -26,12 +26,18 @@ LOOP_SLOWDOWN = 0.0  # in seconds
 class Manager(object):
     """ Manager manages task execution by the workers
 
-    1. Asynchronously queue large volume of tasks
-    2. Allow for workers to join and leave the union
-    3. Detect workers that have failed using heartbeats
-    4. Service single and batch requests from workers
-    5. Be aware of requests worker resource capacity,
-       eg. schedule only jobs that fit into walltime.
+                |         0mq              |    Manager         |   Worker Processes
+                |                          |                    |
+                | <-----Request N task-----+--Count task reqs   |      Request task<--+
+    Interchange | -------------------------+->Receive task batch|          |          |
+                |                          |  Distribute tasks--+----> Get(block) &   |
+                |                          |                    |      Execute task   |
+                |                          |                    |          |          |
+                | <------------------------+--Return results----+----  Post result    |
+                |                          |                    |          |          |
+                |                          |                    |          +----------+
+                |                          |                IPC-Qeueues
+
     """
     def __init__(self,
                  task_q_url="tcp://127.0.0.1:50097",
