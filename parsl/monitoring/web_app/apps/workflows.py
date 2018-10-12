@@ -10,7 +10,7 @@ sql_conn = get_db()
 
 layout = html.Div(children=[
     html.H1("Workflows"),
-    dataframe_to_table(id='workflows_table', dataframe=pd.read_sql_query("SELECT workflow_name, run_id FROM workflows", sql_conn)),
+    dataframe_to_table(id='workflows_table', dataframe=pd.read_sql_query("SELECT * FROM workflows", sql_conn)),
     html.Div(id='workflow_details')
 ])
 
