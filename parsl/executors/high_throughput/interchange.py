@@ -190,8 +190,7 @@ class Interchange(object):
         """
         logger.info("Incoming ports bound")
 
-        # start = time.time()
-        start = None
+        start = time.time()
         count = 0
 
         poller = zmq.Poller()
@@ -261,12 +260,6 @@ class Interchange(object):
                     self.results_outgoing.send(pkl_package)
                     logger.warning("[MAIN] Sent failure reports, unregistering worker")
                 self._ready_worker_queue.pop(worker, 'None')
-
-            if not start:
-                start = time.time()
-            # print("[{}] Received: {}".format(self.identity, msg))
-            # if msg == 'STOP':
-            #     break
 
         delta = time.time() - start
         logger("Received {} tasks in {}seconds".format(count, delta))
