@@ -4,18 +4,15 @@ import pandas as pd
 from parsl.monitoring.web_app.app import app, get_db
 
 
-def generate_table1(sql, max_rows=100):
-    sql_conn = get_db()
-
-    dataframe = pd.read_sql_query(sql, sql_conn)
-
-    return html.Table(
+# TODO Add parameter to choose column in dataframe instead of hardcoded /workflows/'run_id'
+def dataframe_to_table(id, dataframe):
+    return html.Table(id=id, children=(
         [html.Tr([html.Th(col) for col in dataframe.columns])] +
 
         # Body
         [html.Tr([
-            html.Td(html.A(dataframe.iloc[i][col])) for col in dataframe.columns
-        ]) for i in range(min(len(dataframe), max_rows))]
+            html.Td(html.A(children=dataframe.iloc[i][col], href='/workflows/' + dataframe['run_id'].iloc[i])) for col in dataframe.columns
+        ]) for i in range(len(dataframe))])
     )
 
 

@@ -1,17 +1,23 @@
+import pandas as pd
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 
-from parsl.monitoring.web_app.app import app
-from parsl.monitoring.web_app.utils import generate_table1
+from parsl.monitoring.web_app.app import app, get_db, close_db
+from parsl.monitoring.web_app.utils import dataframe_to_table
+
+
+sql_conn = get_db()
 
 layout = html.Div(children=[
     html.H1("Tasks"),
-    generate_table1("SELECT * FROM task"),
+    dataframe_to_table(id="sql_task", dataframe=pd.read_sql_query("SELECT * FROM task", sql_conn)),
     html.H1("Task Resources"),
-    generate_table1("SELECT * FROM task_resources"),
+    dataframe_to_table(id="sql_task_resources", dataframe=pd.read_sql_query("SELECT * FROM task_resources", sql_conn)),
     html.H1("Task Status"),
-    generate_table1("SELECT * FROM task_status"),
+    dataframe_to_table(id="sql_task_status", dataframe=pd.read_sql_query("SELECT * FROM task_status", sql_conn)),
     html.H1("Workflows"),
-    generate_table1("SELECT * FROM workflows")
+    dataframe_to_table(id="sql_workflows", dataframe=pd.read_sql_query("SELECT * FROM workflows", sql_conn))
 ])
+
+close_db()

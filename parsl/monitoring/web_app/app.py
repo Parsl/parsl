@@ -8,14 +8,13 @@ import os
 app = dash.Dash(__name__)
 app.config['suppress_callback_exceptions']=True
 
-print(__name__)
 
 def init_db(db):
     if os.path.isfile(db):
         app.server.config.update(dict(DATABASE=db))
         return True
     else:
-        print('No database')
+        print(db + " hasn't been created yet")
         return False
 
 
@@ -50,10 +49,9 @@ def get_db():
         return g.db
 
 
-def close_db(e=None):
-    db = g.pop('db', None)
+def close_db():
+    with app.server.app_context():
+        db = g.pop('db', None)
 
-    if db is not None:
-        db.close()
-
-
+        if db is not None:
+            db.close()
