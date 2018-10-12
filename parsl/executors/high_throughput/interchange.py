@@ -274,14 +274,22 @@ class Interchange(object):
 def start_file_logger(filename, name='parsl.executors.interchange', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
 
-    Args:
-        - filename (string): Name of the file to write logs to
-        - name (string): Logger name
-        - level (logging.LEVEL): Set the logging level.
-        - format_string (string): Set the format string
+    Parameters
+    ---------
 
-    Returns:
-       -  None
+    filename: string
+        Name of the file to write logs to. Required.
+    name: string
+        Logger name. Default="parsl.executors.interchange"
+    level: logging.LEVEL
+        Set the logging level. Default=logging.DEBUG
+        - format_string (string): Set the format string
+    format_string: string
+        Format string to use.
+
+    Returns
+    -------
+        None.
     """
     if format_string is None:
         format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
