@@ -2,13 +2,14 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 from parsl.monitoring.web_app.app import app, init_db
-import sys
-import getopt
+import argparse
 
 
 def web_app(db, port):
     if not init_db(db):
         return
+
+    print(' * Running on http://localhost:' + str(port))
 
     from parsl.monitoring.web_app.apps import sql, workflows, workflow_details
 
@@ -40,35 +41,16 @@ def web_app(db, port):
 
 # TODO Automatically searching for .db files would be a nice touch
 def cli_run():
-    argv = sys.argv[1:]
-    db_name = 'parsl.db'
-    db_dir = './'
-    port = 8050
-    try:
-        opts, args = getopt.getopt(argv,'h',['db_dir=','db_name=','port='])
-    except getopt.GetoptError:
-        print('Invalid argument')
-        print('parsl-visualize --db_dir <db_dir> --db_name <db_name> --port <port>')
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print('parsl-visualize --db_dir <db_dir> --db_name <db_name> --port <port>')
-            sys.exit()
-        elif opt in ('--db_dir', ):
-            db_dir = arg
-        elif opt in ('--db_name', ):
-            db_name = arg
-        elif opt in ('--port', ):
-            if not arg.isdigit():
-                print('Port number must be an integer')
-                sys.exit(2)
-            port = arg
+    parser = argparse.ArgumentParser(description='Parsl visualization tool')
+    parser.add_argument('db', type=str,
+                        help='Database file')
+    parser.add_argument('--db_dir', type=str, metavar='DIR', default='./',
+                        help='Database location')
+    parser.add_argument('--port', type=int, default=8050)
 
-    print('db_name =', db_name)
-    print('db_dir =', db_dir)
-    print('port =', port)
+    args = parser.parse_args()
 
-    web_app(db_dir + db_name, port)
+    web_app(args.db_dir + args.db, args.port)
 
 
 def run(monitoring_config):
@@ -79,7 +61,3 @@ def run(monitoring_config):
     print('Visualization port =', port)
 
     web_app(db, port)
-
-
-if __name__ == '__main__':
-    cli_run()
