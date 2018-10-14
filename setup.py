@@ -20,6 +20,7 @@ setup(
     packages=find_packages(),
     install_requires=install_requires,
     extras_require = {
+        'parsl-visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas', 'sqlite3'],
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
         'jetstream' : ['python-novaclient']
