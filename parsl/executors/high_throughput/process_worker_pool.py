@@ -11,6 +11,7 @@ import time
 import queue
 import uuid
 import zmq
+import math
 
 import multiprocessing
 
@@ -43,7 +44,7 @@ class Manager(object):
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
                  max_queue_size=10,
-                 worker_count=0,
+                 cores_per_worker=1,
                  uid=None,
                  heartbeat_period=30):
         """
@@ -52,8 +53,10 @@ class Manager(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
 
-        worker_count : int,
-             Workers to launch, if set to 0 we launch cores # of workers. 0 is the default
+        cores_per_worker : float
+             cores to be assigned to each worker. Oversubscription is possible
+             by setting cores_per_worker < 1.0. Default=1
+
         """
         logger.info("Manager started")
 
@@ -69,10 +72,8 @@ class Manager(object):
 
         self.uid = uid
 
-        if worker_count == 0:
-            self.worker_count = multiprocessing.cpu_count()
-        else:
-            self.worker_count = worker_count
+        cores_on_node = multiprocessing.cpu_count()
+        self.worker_count = math.floor(cores_on_node / cores_per_worker)
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
         self.pending_task_queue = multiprocessing.Queue(maxsize=self.worker_count + max_queue_size)
@@ -357,8 +358,8 @@ if __name__ == "__main__":
                         help="Parsl worker log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
                         help="Unique identifier string for Manager")
-    parser.add_argument("-w", "--worker_count", default="0",
-                        help="Number of worker processes to launch. If set to '0', launches cores # of workers. Defualt is '0'")
+    parser.add_argument("-c", "--cores_per_worker", default="1.0",
+                        help="Fraction of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-r", "--result_url", required=True,
@@ -381,7 +382,7 @@ if __name__ == "__main__":
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
-                          worker_count=int(args.worker_count))
+                          cores_per_worker=float(args.cores_per_worker))
         manager.start()
     except Exception as e:
         logger.critical("process_worker_pool exiting from an exception")

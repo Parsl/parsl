@@ -97,6 +97,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     managed : Bool
         If this executor is managed by the DFK or externally handled.
+
+    cores_per_worker : float
+        cores to be assigned to each worker. Oversubscription is possible
+        by setting cores_per_worker < 1.0. Default=1
     """
 
     def __init__(self,
@@ -110,6 +114,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  storage_access=None,
                  working_dir=None,
                  engine_debug=False,
+                 cores_per_worker=1.0,
                  managed=True):
 
         logger.debug("Initializing HighThroughputExecutor")
@@ -125,6 +130,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.managed = managed
         self.engines = []
         self.tasks = {}
+        self.cores_per_worker = cores_per_worker
 
         self.public_ip = public_ip
         self.worker_ports = worker_ports
@@ -132,7 +138,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.interchange_port_range = interchange_port_range
 
         if not launch_cmd:
-            self.launch_cmd = """process_worker_pool.py {debug} -w {tasks_per_node} --task_url={task_url} --result_url={result_url}"""
+            self.launch_cmd = """process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"""
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -153,7 +159,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             l_cmd = self.launch_cmd.format(debug=debug_opts,
                                            task_url=self.worker_task_url,
                                            result_url=self.worker_result_url,
-                                           tasks_per_node=self.provider.tasks_per_node,
+                                           cores_per_worker=self.cores_per_worker,
                                            nodes_per_block=self.provider.nodes_per_block)
             self.launch_cmd = l_cmd
             logger.debug("Launch command :{}".format(self.launch_cmd))

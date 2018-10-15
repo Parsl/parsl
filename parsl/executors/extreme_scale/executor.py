@@ -125,7 +125,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                          storage_access=storage_access,
                          working_dir=working_dir,
                          engine_debug=engine_debug,
-                         mock=mock,
                          managed=managed)
 
         if not _mpi_enabled:
