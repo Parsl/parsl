@@ -4,29 +4,38 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 from parsl.monitoring.web_app.app import app, get_db, close_db
+from parsl.monitoring.web_app.utils import dropdown
 
 
-def display_workflow(run_id):
+def display_workflow(workflow_name):
     sql_conn = get_db()
-    df_workflows = pd.read_sql_query('SELECT workflow_name, rundir FROM workflows WHERE run_id=(?)', sql_conn, params=(run_id, ))
+    df_workflows = pd.read_sql_query('SELECT workflow_name, time_began, rundir, run_id FROM workflows WHERE workflow_name=(?)',
+                                     sql_conn, params=(workflow_name, ))
     return html.Div(children=[
-        html.A(id='run_id', children=run_id, hidden=True),
-        html.H2(children=df_workflows['workflow_name'] + '_' + df_workflows['rundir'][0].split('/').pop()),
-        load_radio_items(),
-        dcc.Graph(id='workflow_details'),
-        total_tasks_graph(run_id)
+        html.H2(id='workflow_name', children=df_workflows['workflow_name'][0]),
+        dropdown(id='run_info_dropdown', dataframe=df_workflows.sort_values(by='time_began', ascending=False), field='rundir'),
+        html.Div(id='workflow_content')
         # html.Div(id='tables')
     ])
+
+
+@app.callback(Output('workflow_content', 'children'),
+              [Input('run_info_dropdown', 'value')])
+def workflow(run_id):
+    return [html.A(id='run_id', children=run_id, hidden=True),
+            load_radio_items(),
+            dcc.Graph(id='workflow_details'),
+            total_tasks_graph(run_id)]
 
 
 # TODO: task_resources is not created for all workflows. Throws error
 @app.callback(Output('workflow_details', 'figure'),
               [Input('radio', 'value')],
-              [State('run_id', 'children')])
+              [State('run_info_dropdown', 'value')])
 def workflow_details(field, run_id):
     sql_conn = get_db()
-    df_resources = pd.read_sql_query("SELECT * FROM task_resources WHERE run_id=(?)", sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query("SELECT task_id, task_time_completed FROM task WHERE run_id=(?)", sql_conn, params=(run_id, ))
+    df_resources = pd.read_sql_query('SELECT {field}, timestamp, task_id FROM task_resources WHERE run_id=(?)'.format(field=field), sql_conn, params=(run_id, ))
+    df_task = pd.read_sql_query('SELECT task_id, task_time_completed FROM task WHERE run_id=(?)', sql_conn, params=(run_id, ))
     close_db()
 
     def count_running():
@@ -67,8 +76,8 @@ def workflow_details(field, run_id):
 
 def total_tasks_graph(run_id):
     sql_conn = get_db()
-    df_status = pd.read_sql_query("SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)", sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query("SELECT task_id, task_fn_hash FROM task WHERE run_id=(?)", sql_conn, params=(run_id,))
+    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)', sql_conn, params=(run_id, ))
+    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?)', sql_conn, params=(run_id,))
     close_db()
 
     def count_running(array):

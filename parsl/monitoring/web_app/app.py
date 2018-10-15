@@ -6,7 +6,7 @@ import os
 
 
 app = dash.Dash(__name__)
-app.config['suppress_callback_exceptions']=True
+app.config['suppress_callback_exceptions'] = True
 
 
 def init_db(db):

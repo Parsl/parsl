@@ -9,6 +9,7 @@ def web_app(db, port):
     if not init_db(db):
         return
 
+    print(' * Visualizing ' + db)
     print(' * Running on http://localhost:' + str(port))
 
     from parsl.monitoring.web_app.apps import sql, workflows, workflow_details
@@ -29,7 +30,7 @@ def web_app(db, port):
         elif pathname == '/workflows':
             return workflows.layout
         elif '/workflows' in str(pathname):
-            return workflow_details.display_workflow(run_id=pathname.split('/').pop())
+            return workflow_details.display_workflow(workflow_name=pathname.split('/').pop())
         elif pathname == '/sql':
             return sql.layout
         else:
@@ -56,8 +57,5 @@ def cli_run():
 def run(monitoring_config):
     db = monitoring_config.eng_link.split('/').pop()
     port = monitoring_config.web_app_port + 1
-
-    print('db =', db)
-    print('Visualization port =', port)
 
     web_app(db, port)

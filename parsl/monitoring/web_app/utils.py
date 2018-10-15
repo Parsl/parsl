@@ -5,30 +5,30 @@ from parsl.monitoring.web_app.app import app, get_db
 
 
 # TODO Add parameter to choose column in dataframe instead of hardcoded /workflows/'run_id'
-def dataframe_to_table(id, dataframe):
+def dataframe_to_html_table(id, dataframe, field):
     return html.Table(id=id, children=(
         [html.Tr([html.Th(col) for col in dataframe.columns])] +
 
         # Body
         [html.Tr([
-            html.Td(html.A(children=dataframe.iloc[i][col], href='/workflows/' + dataframe['run_id'].iloc[i])) for col in dataframe.columns
+            html.Td(html.A(children=dataframe.iloc[i][col], href='/workflows/' + dataframe[field].iloc[i])) for col in dataframe.columns
         ]) for i in range(len(dataframe))])
     )
 
 
-def dropdown(id):
-    sql_conn = get_db()
+def dropdown(id, dataframe, field):
+    options = []
 
-    dataframe = pd.read_sql_query("SELECT run_id FROM workflows", sql_conn)
+    latest = dataframe['run_id'][0]
+    options.append({'label': dataframe[field].iloc[0].split('/').pop() + ' (Latest)', 'value': latest})
 
-    options = [{'label': 'Select Workflow', 'value': ''}]
-
-    for i in range(len(dataframe)):
-        run_id = dataframe['run_id'].iloc[i]
-        options.append({'label': run_id, 'value': run_id})
+    for i in range(1, len(dataframe)):
+        run_id = dataframe['run_id'][i]
+        options.append({'label': dataframe[field].iloc[i].split('/').pop(), 'value': run_id})
 
     return dcc.Dropdown(
         id=id,
         options=options,
-        value=''
+        value=latest,
+        style=dict(width='200px', display='inline-block')
     )
