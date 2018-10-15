@@ -12,7 +12,7 @@ else:
 
 from parsl.errors import *
 from parsl.executors.errors import *
-from parsl.executors.high_throughput.htex import HighThroughputExecutor
+from parsl.executors.high_throughput.executor import HighThroughputExecutor
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
