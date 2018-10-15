@@ -174,7 +174,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                         if not engine:
                             raise(ScalingFailed(self.provider.label,
                                                 "Attempts to provision nodes via provider has failed"))
-                        self.engines.extend([engine])
+                        self.blocks.extend([engine])
 
                 except Exception as e:
                     logger.error("Scaling out failed: %s" % e)
@@ -359,7 +359,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         if self.provider:
             r = self.provider.submit(self.launch_cmd)
-            self.engines.extend([r])
+            self.blocks.extend([r])
         else:
             logger.error("No execution provider available")
             r = None
@@ -376,7 +376,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        to_kill = self.engines[:blocks]
+        to_kill = self.blocks[:blocks]
         if self.provider:
             r = self.provider.cancel(to_kill)
         return r
