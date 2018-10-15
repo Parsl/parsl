@@ -9,10 +9,10 @@ import threading
 import inspect
 import sys
 import multiprocessing
+import time
 
 from getpass import getuser
 from uuid import uuid4
-from datetime import datetime
 from socket import gethostname
 from concurrent.futures import Future
 from functools import partial
@@ -107,7 +107,7 @@ class DataFlowKernel(object):
             self.workflow_name = self.monitoring_config.workflow_name
         if self.monitoring_config is not None and self.monitoring_config.version is not None:
             self.workflow_version = self.monitoring_config.version
-        self.time_began = datetime.now()
+        self.time_began = time.time()
         self.time_completed = None
         self.run_id = str(uuid4())
         self.dashboard = self.monitoring_config.dashboard_link if self.monitoring_config is not None else None
@@ -280,7 +280,7 @@ class DataFlowKernel(object):
                 final_state_flag = True
                 self.tasks_failed_count += 1
 
-                self.tasks[task_id]['time_completed'] = str(datetime.now())
+                self.tasks[task_id]['time_completed'] = time.time()
                 if self.monitoring_config is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Retry Failed", extra=task_log_info)
@@ -291,7 +291,7 @@ class DataFlowKernel(object):
             self.tasks_completed_count += 1
 
             logger.info("Task {} completed".format(task_id))
-            self.tasks[task_id]['time_completed'] = str(datetime.now())
+            self.tasks[task_id]['time_completed'] = time.time()
             if self.monitoring_config is not None:
                 task_log_info = self._create_task_log_info(task_id)
                 self.db_logger.info("Task Done", extra=task_log_info)
@@ -409,7 +409,7 @@ class DataFlowKernel(object):
             executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
-        self.tasks[task_id]['time_submitted'] = datetime.now()
+        self.tasks[task_id]['time_submitted'] = time.time()
         if self.monitoring_config is not None:
             task_log_info = self._create_task_log_info(task_id)
             self.db_logger.info("Task Launch", extra=task_log_info)
@@ -758,7 +758,7 @@ class DataFlowKernel(object):
                     executor.scale_in(len(job_ids))
                 executor.shutdown()
 
-        self.time_completed = datetime.now()
+        self.time_completed = time.time()
         self.db_logger.info("DFK end", extra={'tasks_failed_count': self.tasks_failed_count, 'tasks_completed_count': self.tasks_completed_count,
                                               "time_began": str(self.time_began),
                                               'time_completed': str(self.time_completed),
