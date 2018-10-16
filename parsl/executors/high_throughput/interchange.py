@@ -81,13 +81,13 @@ class Interchange(object):
 
         """
         start_file_logger("interchange.log", level=logging_level)
-        logger.debug("Starting Interchange process")
+        logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
         self.interchange_address = interchange_address
         self.identity = uuid.uuid4()
 
-        logger.info("Attempting connection to client at:{} port:{},{}".format(
+        logger.info("Attempting connection to client at {} on ports: {},{}".format(
             client_address, client_ports[0], client_ports[1]))
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
@@ -128,7 +128,7 @@ class Interchange(object):
         self.heartbeat_thresh = heartbeat_period * 2
 
     def get_tasks(self, count, socks):
-        """ Get's a batch of tasks from the task queue.
+        """ Obtains a batch of tasks from the task queue.
 
         Parameters
         ----------
@@ -297,8 +297,9 @@ def start_file_logger(filename, name='parsl.executors.interchange', level=loggin
 
 
 def starter(comm_q, *args, **kwargs):
-    """ The executor is expected to start the interchange process via calling this function
-    to start a new process. The args, kwargs match that of the Interchange.__init__
+    """Start the interchange process
+
+    The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
     """
     # logger = multiprocessing.get_logger()
     ic = Interchange(*args, **kwargs)

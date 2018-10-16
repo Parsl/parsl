@@ -173,7 +173,7 @@ class Manager(object):
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
 
     def start(self):
-        """ Start the Manager process.
+        """ Start the worker processes.
 
         TODO: Move task receiving to a thread
         """
@@ -276,7 +276,7 @@ def worker(worker_id, task_queue, result_queue, worker_queue):
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
         tid = req['task_id']
-        logger.info("Got task : {}".format(tid))
+        logger.info("Got task: {}".format(tid))
 
         try:
             worker_queue.get(worker_id)
@@ -354,12 +354,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
-    parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
-                        help="Parsl worker log directory")
+    parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
+                        help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
                         help="Unique identifier string for Manager")
     parser.add_argument("-c", "--cores_per_worker", default="1.0",
-                        help="Fraction of cores assigned to each worker process. Default=1.0")
+                        help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-r", "--result_url", required=True,
