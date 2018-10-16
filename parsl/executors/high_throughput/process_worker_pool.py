@@ -183,6 +183,7 @@ class Manager(object):
         self.procs = {}
         for worker_id in range(self.worker_count):
             p = multiprocessing.Process(target=worker, args=(worker_id,
+                                                             self.uid,
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
@@ -255,7 +256,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, task_queue, result_queue, worker_queue):
+def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
     """
 
     Put request token into queue
@@ -368,12 +369,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        os.makedirs(args.logdir)
+        os.makedirs(os.path.join(args.logdir, args.uid))
     except FileExistsError:
         pass
 
     try:
-        start_file_logger('{}/process_worker_pool_{}.{}.log'.format(args.logdir, args.uid, 'MAIN'),
+        start_file_logger('{}/{}/manager.log'.format(args.logdir, args.uid),
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
