@@ -95,7 +95,7 @@ class Manager(object):
         logger.debug("Return from heartbeat : {}".format(r))
 
     def pull_tasks(self, kill_event):
-        """ Pulls tasks from the incoming tasks 0mq pipe onto the internal
+        """ Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
 
         Parameters:
@@ -167,13 +167,13 @@ class Manager(object):
                 logger.debug("[RESULT_PUSH_THREAD] Sent result:{}".format(result))
 
             except queue.Empty:
-                logger.debug("[RESULT_PUSH_THREAD] No results to send in past {}seconds".format(timeout))
+                logger.debug("[RESULT_PUSH_THREAD] No results to send in past {} seconds".format(timeout))
 
             except Exception as e:
-                logger.exception("[RESULT_PUSH_THREAD] Got an exception : {}".format(e))
+                logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
 
     def start(self):
-        """ Start the Manager process.
+        """ Start the worker processes.
 
         TODO: Move task receiving to a thread
         """
@@ -183,6 +183,7 @@ class Manager(object):
         self.procs = {}
         for worker_id in range(self.worker_count):
             p = multiprocessing.Process(target=worker, args=(worker_id,
+                                                             self.uid,
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
@@ -255,7 +256,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, task_queue, result_queue, worker_queue):
+def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
     """
 
     Put request token into queue
@@ -263,12 +264,12 @@ def worker(worker_id, task_queue, result_queue, worker_queue):
     Pop request from queue
     Put result into result_queue
     """
-    start_file_logger('{}/process_worker_pool_{}.log'.format(args.logdir, worker_id),
+    start_file_logger('{}/{}/worker_{}.log'.format(args.logdir, pool_id, worker_id),
                       0,
                       level=logging.DEBUG if args.debug is True else logging.INFO)
 
     # Sync worker with master
-    logger.info('Worker ID: {} started'.format(worker_id))
+    logger.info('Worker {} started'.format(worker_id))
 
     while True:
         worker_queue.put(worker_id)
@@ -276,7 +277,7 @@ def worker(worker_id, task_queue, result_queue, worker_queue):
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
         tid = req['task_id']
-        logger.info("Got task : {}".format(tid))
+        logger.info("Received task {}".format(tid))
 
         try:
             worker_queue.get(worker_id)
@@ -292,9 +293,9 @@ def worker(worker_id, task_queue, result_queue, worker_queue):
             logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
-            logger.debug("Result : {}".format(result))
+            logger.debug("Result: {}".format(result))
 
-        logger.info("Completed task : {}".format(tid))
+        logger.info("Completed task {}".format(tid))
         pkl_package = pickle.dumps(result_package)
         result_queue.put(pkl_package)
 
@@ -354,12 +355,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
-    parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
-                        help="Parsl worker log directory")
+    parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
+                        help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
                         help="Unique identifier string for Manager")
     parser.add_argument("-c", "--cores_per_worker", default="1.0",
-                        help="Fraction of cores assigned to each worker process. Default=1.0")
+                        help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-r", "--result_url", required=True,
@@ -368,17 +369,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        os.makedirs(args.logdir)
+        os.makedirs(os.path.join(args.logdir, args.uid))
     except FileExistsError:
         pass
 
-    # set_stream_logger()
     try:
-        start_file_logger('{}/process_worker_pool_{}.{}.log'.format(args.logdir, args.uid, 'MAIN'),
+        start_file_logger('{}/{}/manager.log'.format(args.logdir, args.uid),
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
-        logger.info("Python version :{}".format(sys.version))
+        logger.info("Python version: {}".format(sys.version))
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,

@@ -9,7 +9,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label="htex_Local",
-            engine_debug=True,
+            worker_debug=True,
             cores_per_worker=1,
             provider=LocalProvider(
                 channel=LocalChannel(),

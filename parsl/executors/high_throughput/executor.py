@@ -92,8 +92,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     working_dir : str
         Working dir to be used by the executor.
 
-    engine_debug : Bool
-        Enables engine debug logging.
+    worker_debug : Bool
+        Enables worker debug logging.
 
     managed : Bool
         If this executor is managed by the DFK or externally handled.
@@ -113,7 +113,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  interchange_port_range=(55000, 56000),
                  storage_access=None,
                  working_dir=None,
-                 engine_debug=False,
+                 worker_debug=False,
                  cores_per_worker=1.0,
                  managed=True):
 
@@ -122,13 +122,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.label = label
         self.launch_cmd = launch_cmd
         self.provider = provider
-        self.engine_debug = engine_debug
+        self.worker_debug = worker_debug
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
             raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
         self.managed = managed
-        self.engines = []
+        self.blocks = []
         self.tasks = {}
         self.cores_per_worker = cores_per_worker
 
@@ -152,10 +152,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._start_queue_management_thread()
         self._start_local_queue_process()
 
-        logger.debug("Created management thread : %s", self._queue_management_thread)
+        logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
         if self.provider:
-            debug_opts = "--debug" if self.engine_debug else ""
+            debug_opts = "--debug" if self.worker_debug else ""
             l_cmd = self.launch_cmd.format(debug=debug_opts,
                                            task_url=self.worker_task_url,
                                            result_url=self.worker_result_url,
@@ -169,15 +169,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             if hasattr(self.provider, 'init_blocks'):
                 try:
                     for i in range(self.provider.init_blocks):
-                        engine = self.provider.submit(self.launch_cmd, 1)
-                        logger.debug("Launched block: {0}:{1}".format(i, engine))
-                        if not engine:
+                        block = self.provider.submit(self.launch_cmd, 1)
+                        logger.debug("Launched block {}:{}".format(i, block))
+                        if not block:
                             raise(ScalingFailed(self.provider.label,
                                                 "Attempts to provision nodes via provider has failed"))
-                        self.blocks.extend([engine])
+                        self.blocks.extend([block])
 
                 except Exception as e:
-                    logger.error("Scaling out failed: %s" % e)
+                    logger.error("Scaling out failed: {}".format(e))
                     raise e
 
         else:
@@ -388,7 +388,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         Kwargs:
             - hub (Bool): Whether the hub should be shutdown, Default:True,
-            - targets (list of ints| 'all'): List of engine id's to kill, Default:'all'
+            - targets (list of ints| 'all'): List of block id's to kill, Default:'all'
             - block (Bool): To block for confirmations or not
 
         Raises:

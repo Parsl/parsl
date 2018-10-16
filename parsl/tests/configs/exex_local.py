@@ -9,7 +9,7 @@ config = Config(
     executors=[
         ExtremeScaleExecutor(
             label="Extreme_Local",
-            engine_debug=True,
+            worker_debug=True,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=1,
