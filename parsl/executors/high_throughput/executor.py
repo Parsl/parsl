@@ -351,14 +351,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def scale_out(self, blocks=1):
+    def scale_out(self):
         """Scales out the number of active workers by 1.
 
         Raises:
              NotImplementedError
         """
         if self.provider:
-            r = self.provider.submit(self.launch_cmd)
+            r = self.provider.submit(self.launch_cmd, 1)
             self.blocks.extend([r])
         else:
             logger.error("No execution provider available")
@@ -380,6 +380,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         if self.provider:
             r = self.provider.cancel(to_kill)
         return r
+
+    def status(self):
+        """Return status of all blocks."""
+
+        status = []
+        if self.provider:
+            status = self.provider.status(self.blocks)
+
+        return status
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.
