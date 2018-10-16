@@ -128,7 +128,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
         self.managed = managed
-        self.engines = []
+        self.blocks = []
         self.tasks = {}
         self.cores_per_worker = cores_per_worker
 
@@ -169,12 +169,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             if hasattr(self.provider, 'init_blocks'):
                 try:
                     for i in range(self.provider.init_blocks):
-                        engine = self.provider.submit(self.launch_cmd, 1)
-                        logger.debug("Launched block: {0}:{1}".format(i, engine))
-                        if not engine:
+                        block = self.provider.submit(self.launch_cmd, 1)
+                        logger.debug("Launched block {}:{}".format(i, block))
+                        if not block:
                             raise(ScalingFailed(self.provider.label,
                                                 "Attempts to provision nodes via provider has failed"))
-                        self.blocks.extend([engine])
+                        self.blocks.extend([block])
 
                 except Exception as e:
                     logger.error("Scaling out failed: %s" % e)
