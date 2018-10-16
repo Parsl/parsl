@@ -177,7 +177,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                         self.blocks.extend([block])
 
                 except Exception as e:
-                    logger.error("Scaling out failed: %s" % e)
+                    logger.error("Scaling out failed: {}".format(e))
                     raise e
 
         else:

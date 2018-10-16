@@ -372,13 +372,12 @@ if __name__ == "__main__":
     except FileExistsError:
         pass
 
-    # set_stream_logger()
     try:
         start_file_logger('{}/process_worker_pool_{}.{}.log'.format(args.logdir, args.uid, 'MAIN'),
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
-        logger.info("Python version :{}".format(sys.version))
+        logger.info("Python version: {}".format(sys.version))
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
