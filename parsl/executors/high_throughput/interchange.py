@@ -30,7 +30,7 @@ class WorkerLost(Exception):
         self.tstamp = time.time()
 
     def __repr__(self):
-        return "Task failure due to loss of Worker:{}".format(self.worker_id)
+        return "Task failure due to loss of worker {}".format(self.worker_id)
 
 
 class Interchange(object):
@@ -43,7 +43,7 @@ class Interchange(object):
     5. Be aware of requests worker resource capacity,
        eg. schedule only jobs that fit into walltime.
 
-    TODO : We most likely need a PUB channel to send out global commands, like shutdown
+    TODO: We most likely need a PUB channel to send out global commands, like shutdown
     """
     def __init__(self,
                  client_address="127.0.0.1",
@@ -57,19 +57,19 @@ class Interchange(object):
         """
         Parameters
         ----------
-        client_address: str
+        client_address : str
              The ip address at which the parsl client can be reached. Default: "127.0.0.1"
 
-        interchange_address: str
+        interchange_address : str
              The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
 
-        client_ports: tuple(int, int)
+        client_ports : tuple(int, int)
              The ports at which the client can be reached
 
-        worker_ports: tuple(int, int)
+        worker_ports : tuple(int, int)
              The specific two ports at which workers will connect to the Interchange. Default: None
 
-        worker_port_range: tuple(int, int)
+        worker_port_range : tuple(int, int)
              The interchange picks ports at random from the range which will be used by workers.
              This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
 
@@ -80,10 +80,8 @@ class Interchange(object):
              Logging level as defined in the logging module. Default: logging.INFO (20)
 
         """
-        start_file_logger("interchange.logs", level=logging_level)
-        logger.debug("****************************************")
+        start_file_logger("interchange.log", level=logging_level)
         logger.debug("Starting Interchange process")
-        logger.debug("****************************************")
 
         self.client_address = client_address
         self.interchange_address = interchange_address
@@ -120,7 +118,7 @@ class Interchange(object):
                                                                                 min_port=worker_port_range[0],
                                                                                 max_port=worker_port_range[1], max_tries=100)
 
-        logger.info("Bound to ports:{},{} for incoming worker connections".format(
+        logger.info("Bound to ports {},{} for incoming worker connections".format(
             self.worker_task_port, self.worker_result_port))
 
         self._task_queue = []
@@ -208,7 +206,7 @@ class Interchange(object):
                 tasks_requested = int.from_bytes(message[1], "little")
                 worker = int.from_bytes(message[0], "little")
 
-                logger.debug("[MAIN] Worker[{}] requested {} tasks".format(worker, tasks_requested))
+                logger.debug("[MAIN] Worker {} requested {} tasks".format(worker, tasks_requested))
                 if worker not in self._ready_worker_queue:
                     logger.debug("[MAIN] Adding worker to ready queue")
                     self._ready_worker_queue[worker] = {'last': time.time(),
@@ -240,19 +238,19 @@ class Interchange(object):
                 b_worker, b_message = self.results_incoming.recv_multipart()
                 worker = int.from_bytes(b_worker, "little")
                 if worker not in self._ready_worker_queue:
-                    logger.warning("[MAIN] Received a result from a un-registered worker:{}".format(worker))
+                    logger.warning("[MAIN] Received a result from a un-registered worker: {}".format(worker))
                 else:
                     r = pickle.loads(b_message)
                     logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], worker))
-                    logger.debug("[MAIN] Current tasks : {}".format(self._ready_worker_queue[worker]['tasks']))
+                    logger.debug("[MAIN] Current tasks: {}".format(self._ready_worker_queue[worker]['tasks']))
                     self._ready_worker_queue[worker]['tasks'].remove(r['task_id'])
                     self.results_outgoing.send(b_message)
 
             bad_workers = [worker for worker in self._ready_worker_queue if
                            time.time() - self._ready_worker_queue[worker]['last'] > self.heartbeat_thresh]
             for worker in bad_workers:
-                logger.debug("[MAIN] Last:{} Current:{}".format(self._ready_worker_queue[worker]['last'], time.time()))
-                logger.warning("[MAIN] Too many heartbeats missed for worker:{}".format(worker))
+                logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_worker_queue[worker]['last'], time.time()))
+                logger.warning("[MAIN] Too many heartbeats missed for worker {}".format(worker))
                 e = WorkerLost(worker)
                 for tid in self._ready_worker_queue[worker]['tasks']:
                     result_package = {'task_id': tid, 'exception': serialize_object(e)}
@@ -262,7 +260,7 @@ class Interchange(object):
                 self._ready_worker_queue.pop(worker, 'None')
 
         delta = time.time() - start
-        logger("Received {} tasks in {}seconds".format(count, delta))
+        logger("Received {} tasks in {} seconds".format(count, delta))
 
 
 def start_file_logger(filename, name='parsl.executors.interchange', level=logging.DEBUG, format_string=None):

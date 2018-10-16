@@ -95,7 +95,7 @@ class Manager(object):
         logger.debug("Return from heartbeat : {}".format(r))
 
     def pull_tasks(self, kill_event):
-        """ Pulls tasks from the incoming tasks 0mq pipe onto the internal
+        """ Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
 
         Parameters:
@@ -167,10 +167,10 @@ class Manager(object):
                 logger.debug("[RESULT_PUSH_THREAD] Sent result:{}".format(result))
 
             except queue.Empty:
-                logger.debug("[RESULT_PUSH_THREAD] No results to send in past {}seconds".format(timeout))
+                logger.debug("[RESULT_PUSH_THREAD] No results to send in past {} seconds".format(timeout))
 
             except Exception as e:
-                logger.exception("[RESULT_PUSH_THREAD] Got an exception : {}".format(e))
+                logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
 
     def start(self):
         """ Start the Manager process.
@@ -292,9 +292,9 @@ def worker(worker_id, task_queue, result_queue, worker_queue):
             logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
-            logger.debug("Result : {}".format(result))
+            logger.debug("Result: {}".format(result))
 
-        logger.info("Completed task : {}".format(tid))
+        logger.info("Completed task: {}".format(tid))
         pkl_package = pickle.dumps(result_package)
         result_queue.put(pkl_package)
 

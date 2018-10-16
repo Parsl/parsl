@@ -152,7 +152,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._start_queue_management_thread()
         self._start_local_queue_process()
 
-        logger.debug("Created management thread : %s", self._queue_management_thread)
+        logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
         if self.provider:
             debug_opts = "--debug" if self.engine_debug else ""
