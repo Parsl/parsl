@@ -264,7 +264,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
     Pop request from queue
     Put result into result_queue
     """
-    start_file_logger('{}/process_worker_pool_{}.log'.format(args.logdir, worker_id),
+    start_file_logger('{}/{}/worker_{}.log'.format(args.logdir, pool_id, worker_id),
                       0,
                       level=logging.DEBUG if args.debug is True else logging.INFO)
 
