@@ -95,7 +95,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     working_dir : str
         Working dir to be used by the executor.
 
-    engine_debug : Bool
+    worker_debug : Bool
         Enables engine debug logging.
 
     managed : Bool
@@ -112,7 +112,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  interchange_port_range=(55000, 56000),
                  storage_access=None,
                  working_dir=None,
-                 engine_debug=False,
+                 worker_debug=False,
                  managed=True):
 
         super().__init__(label=label,
@@ -124,7 +124,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                          interchange_port_range=interchange_port_range,
                          storage_access=storage_access,
                          working_dir=working_dir,
-                         engine_debug=engine_debug,
+                         worker_debug=worker_debug,
                          managed=managed)
 
         if not _mpi_enabled:
