@@ -269,7 +269,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
                       level=logging.DEBUG if args.debug is True else logging.INFO)
 
     # Sync worker with master
-    logger.info('Worker ID: {} started'.format(worker_id))
+    logger.info('Worker {} started'.format(worker_id))
 
     while True:
         worker_queue.put(worker_id)
@@ -277,7 +277,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
         tid = req['task_id']
-        logger.info("Got task: {}".format(tid))
+        logger.info("Received task {}".format(tid))
 
         try:
             worker_queue.get(worker_id)
@@ -295,7 +295,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
             result_package = {'task_id': tid, 'result': serialize_object(result)}
             logger.debug("Result: {}".format(result))
 
-        logger.info("Completed task: {}".format(tid))
+        logger.info("Completed task {}".format(tid))
         pkl_package = pickle.dumps(result_package)
         result_queue.put(pkl_package)
 
