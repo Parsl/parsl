@@ -381,6 +381,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             r = self.provider.cancel(to_kill)
         return r
 
+    def status(self):
+        """Return status of all blocks."""
+
+        status = []
+        if self.provider:
+            status = self.provider.status(self.blocks)
+
+        return status
+
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.
 
