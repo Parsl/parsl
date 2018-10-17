@@ -284,7 +284,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                   args=(comm_q,),
                                   kwargs={"client_ports": (self.outgoing_q.port, self.incoming_q.port),
                                           "worker_ports": self.worker_ports,
-                                          "worker_port_range": self.worker_port_range
+                                          "worker_port_range": self.worker_port_range,
+                                          "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
         )
         self.queue_proc.start()
