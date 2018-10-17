@@ -429,7 +429,7 @@ if __name__ == "__main__":
                               rank,
                               level=logging.DEBUG if args.debug is True else logging.INFO)
 
-            logger.info("Python version :{}".format(sys.version))
+            logger.info("Python version: {}".format(sys.version))
             manager = Manager(comm, rank,
                               task_q_url=args.task_url,
                               result_q_url=args.result_url,
