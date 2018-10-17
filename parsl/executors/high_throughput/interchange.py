@@ -21,7 +21,7 @@ class ShutdownRequest(Exception):
         return "Shutdown request received at {}".format(self.tstamp)
 
 
-class WorkerLost(Exception):
+class ManagerLost(Exception):
     ''' Task lost due to worker loss. Worker is considered lost when multiple heartbeats
     have been missed.
     '''
@@ -122,7 +122,7 @@ class Interchange(object):
             self.worker_task_port, self.worker_result_port))
 
         self._task_queue = []
-        self._ready_worker_queue = {}
+        self._ready_manager_queue = {}
         self.max_task_queue_size = 10 ^ 5
 
         self.heartbeat_thresh = heartbeat_period * 2
@@ -202,62 +202,62 @@ class Interchange(object):
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
                 message = self.task_outgoing.recv_multipart()
-                worker = message[0]
+                manager = message[0]
                 tasks_requested = int.from_bytes(message[1], "little")
-                worker = int.from_bytes(message[0], "little")
+                manager = int.from_bytes(message[0], "little")
 
-                logger.debug("[MAIN] Worker {} requested {} tasks".format(worker, tasks_requested))
-                if worker not in self._ready_worker_queue:
-                    logger.debug("[MAIN] Adding worker to ready queue")
-                    self._ready_worker_queue[worker] = {'last': time.time(),
-                                                        # [TODO] Add support for tracking walltimes
-                                                        # 'wtime': 60,
-                                                        'free_slots': tasks_requested,
-                                                        'tasks': []}
+                logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
+                if manager not in self._ready_manager_queue:
+                    logger.debug("[MAIN] Adding manager to ready queue")
+                    self._ready_manager_queue[manager] = {'last': time.time(),
+                                                          # [TODO] Add support for tracking walltimes
+                                                          # 'wtime': 60,
+                                                          'free_capacity': tasks_requested,
+                                                          'tasks': []}
                 else:
-                    self._ready_worker_queue[worker]['last'] = time.time()
-                    self._ready_worker_queue[worker]['free_slots'] = tasks_requested
+                    self._ready_manager_queue[manager]['last'] = time.time()
+                    self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
-            for worker in self._ready_worker_queue:
-                if self._ready_worker_queue[worker]['free_slots']:
-                    tasks = self.get_tasks(self._ready_worker_queue[worker]['free_slots'], self.socks)
+            for manager in self._ready_manager_queue:
+                if self._ready_manager_queue[manager]['free_capacity']:
+                    tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'], self.socks)
                     if tasks:
                         self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
                         count += task_count
                         tids = [t['task_id'] for t in tasks]
-                        logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, worker))
-                        self._ready_worker_queue[worker]['free_slots'] -= task_count
-                        self._ready_worker_queue[worker]['tasks'].extend(tids)
+                        logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, manager))
+                        self._ready_manager_queue[manager]['free_capacity'] -= task_count
+                        self._ready_manager_queue[manager]['tasks'].extend(tids)
                 else:
                     logger.debug("Nothing to send")
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
-                b_worker, b_message = self.results_incoming.recv_multipart()
-                worker = int.from_bytes(b_worker, "little")
-                if worker not in self._ready_worker_queue:
-                    logger.warning("[MAIN] Received a result from a un-registered worker: {}".format(worker))
+                b_manager, b_message = self.results_incoming.recv_multipart()
+                manager = int.from_bytes(b_manager, "little")
+                if manager not in self._ready_manager_queue:
+                    logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:
                     r = pickle.loads(b_message)
-                    logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], worker))
-                    logger.debug("[MAIN] Current tasks: {}".format(self._ready_worker_queue[worker]['tasks']))
-                    self._ready_worker_queue[worker]['tasks'].remove(r['task_id'])
+                    logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
+                    logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
+                    self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
                     self.results_outgoing.send(b_message)
 
-            bad_workers = [worker for worker in self._ready_worker_queue if
-                           time.time() - self._ready_worker_queue[worker]['last'] > self.heartbeat_thresh]
-            for worker in bad_workers:
-                logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_worker_queue[worker]['last'], time.time()))
-                logger.warning("[MAIN] Too many heartbeats missed for worker {}".format(worker))
-                e = WorkerLost(worker)
-                for tid in self._ready_worker_queue[worker]['tasks']:
+            bad_managers = [manager for manager in self._ready_manager_queue if
+                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_thresh]
+            for manager in bad_managers:
+                logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last'], time.time()))
+                logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
+                e = ManagerLost(manager)
+                for tid in self._ready_manager_queue[manager]['tasks']:
                     result_package = {'task_id': tid, 'exception': serialize_object(e)}
                     pkl_package = pickle.dumps(result_package)
                     self.results_outgoing.send(pkl_package)
-                    logger.warning("[MAIN] Sent failure reports, unregistering worker")
-                self._ready_worker_queue.pop(worker, 'None')
+                    logger.warning("[MAIN] Sent failure reports, unregistering manager")
+                self._ready_manager_queue.pop(manager, 'None')
 
         delta = time.time() - start
         logger("Received {} tasks in {} seconds".format(count, delta))
