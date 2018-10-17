@@ -83,7 +83,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         '''
 
-        logging.debug("Checking status of : {0}".format(job_ids))
+        logging.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
 
             if self.resources[job_id]['proc']:
@@ -135,7 +135,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 f.write(script_string)
 
         except KeyError as e:
-            logger.error("Missing keys for submit script : %s", e)
+            logger.error("Missing keys for submit script: %s", e)
             raise (SchedulerMissingArgs(e.args, self.label))
 
         except IOError as e:
@@ -222,7 +222,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         '''
         for job in job_ids:
-            logger.debug("Terminating job/proc_id : {0}".format(job))
+            logger.debug("Terminating job/proc_id: {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
             if self.resources[job]['proc']:
                 proc = self.resources[job]['proc']
