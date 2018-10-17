@@ -76,9 +76,10 @@ class Manager(object):
         self.worker_count = math.floor(cores_on_node / cores_per_worker)
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
-        self.pending_task_queue = multiprocessing.Queue(maxsize=self.worker_count + max_queue_size)
+        self.pending_task_capacity = self.worker_count + max_queue_size
+        # We add additional capacity just to avoid blocking on puts
+        self.pending_task_queue = multiprocessing.Queue(maxsize=self.pending_task_capacity + 100)
         self.pending_result_queue = multiprocessing.Queue(maxsize=10 ^ 4)
-        self.ready_worker_queue = multiprocessing.Queue(maxsize=self.worker_count + 1)
 
         if max_queue_size == 0:
             max_queue_size = self.worker_count
@@ -112,17 +113,17 @@ class Manager(object):
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
-            ready_worker_count = self.ready_worker_queue.qsize()
+            task_queue_deficit = self.pending_task_capacity - self.pending_task_queue.qsize()
 
-            logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
+            logger.debug("[TASK_PULL_THREAD] Task queue deficit: {}".format(task_queue_deficit))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat()
                 last_beat = time.time()
 
-            if ready_worker_count > 0:
-                logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
-                msg = ((ready_worker_count).to_bytes(4, "little"))
+            if task_queue_deficit > 0:
+                logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(task_queue_deficit))
+                msg = ((task_queue_deficit).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
             socks = dict(poller.poll(1))
@@ -186,7 +187,6 @@ class Manager(object):
                                                              self.uid,
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
-                                                             self.ready_worker_queue,
                                                          ))
             p.start()
             self.procs[worker_id] = p
@@ -256,7 +256,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
+def worker(worker_id, pool_id, task_queue, result_queue):
     """
 
     Put request token into queue
@@ -272,18 +272,10 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
     logger.info('Worker {} started'.format(worker_id))
 
     while True:
-        worker_queue.put(worker_id)
-
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
         tid = req['task_id']
         logger.info("Received task {}".format(tid))
-
-        try:
-            worker_queue.get(worker_id)
-        except queue.Empty:
-            logger.warning("Worker ID: {} failed to remove itself from ready_worker_queue".format(worker_id))
-            pass
 
         try:
             result = execute_task(req['buffer'])
