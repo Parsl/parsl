@@ -160,6 +160,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                            task_url=self.worker_task_url,
                                            result_url=self.worker_result_url,
                                            cores_per_worker=self.cores_per_worker,
+                                           # This is here only to support the exex mpiexec call
+                                           tasks_per_node=self.provider.tasks_per_node,
                                            nodes_per_block=self.provider.nodes_per_block)
             self.launch_cmd = l_cmd
             logger.debug("Launch command :{}".format(self.launch_cmd))
