@@ -38,12 +38,6 @@ class AppBadFormatting(ParslError):
 class AppFailure(AppException):
     """An error raised during execution of an app.
 
-    TODO: why does this not deserialise right?
-    BODGE: default value on exitcode... TODO: investigate
-    deserialisation problem. Does deserialisation need an
-    initial that can have no values, or something like
-    that?
-
     What this exception contains depends entirely on context
     Contains:
     reason(string)
