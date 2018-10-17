@@ -93,7 +93,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Working dir to be used by the executor.
 
     worker_debug : Bool
-        Enables engine debug logging.
+        Enables worker debug logging.
 
     managed : Bool
         If this executor is managed by the DFK or externally handled.
@@ -152,7 +152,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._start_queue_management_thread()
         self._start_local_queue_process()
 
-        logger.debug("Created management thread : %s", self._queue_management_thread)
+        logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
         if self.provider:
             debug_opts = "--debug" if self.worker_debug else ""
@@ -160,8 +160,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                            task_url=self.worker_task_url,
                                            result_url=self.worker_result_url,
                                            cores_per_worker=self.cores_per_worker,
-                                           # This is here only to support the exex mpiexec call
-                                           tasks_per_node=self.provider.tasks_per_node,
                                            nodes_per_block=self.provider.nodes_per_block)
             self.launch_cmd = l_cmd
             logger.debug("Launch command :{}".format(self.launch_cmd))
@@ -171,15 +169,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             if hasattr(self.provider, 'init_blocks'):
                 try:
                     for i in range(self.provider.init_blocks):
-                        engine = self.provider.submit(self.launch_cmd, 1)
-                        logger.debug("Launched block: {0}:{1}".format(i, engine))
-                        if not engine:
+                        block = self.provider.submit(self.launch_cmd, 1)
+                        logger.debug("Launched block {}:{}".format(i, block))
+                        if not block:
                             raise(ScalingFailed(self.provider.label,
                                                 "Attempts to provision nodes via provider has failed"))
-                        self.blocks.extend([engine])
+                        self.blocks.extend([block])
 
                 except Exception as e:
-                    logger.error("Scaling out failed: %s" % e)
+                    logger.error("Scaling out failed: {}".format(e))
                     raise e
 
         else:
@@ -354,14 +352,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def scale_out(self, blocks=1):
+    def scale_out(self):
         """Scales out the number of active workers by 1.
 
         Raises:
              NotImplementedError
         """
         if self.provider:
-            r = self.provider.submit(self.launch_cmd)
+            r = self.provider.submit(self.launch_cmd, 1)
             self.blocks.extend([r])
         else:
             logger.error("No execution provider available")
@@ -384,6 +382,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             r = self.provider.cancel(to_kill)
         return r
 
+    def status(self):
+        """Return status of all blocks."""
+
+        status = []
+        if self.provider:
+            status = self.provider.status(self.blocks)
+
+        return status
+
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.
 
@@ -391,7 +398,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         Kwargs:
             - hub (Bool): Whether the hub should be shutdown, Default:True,
-            - targets (list of ints| 'all'): List of engine id's to kill, Default:'all'
+            - targets (list of ints| 'all'): List of block id's to kill, Default:'all'
             - block (Bool): To block for confirmations or not
 
         Raises:
