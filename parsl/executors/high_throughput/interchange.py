@@ -208,7 +208,7 @@ class Interchange(object):
 
                 logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                 if manager not in self._ready_manager_queue:
-                    logger.debug("[MAIN] Adding manager to ready queue")
+                    logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           # [TODO] Add support for tracking walltimes
                                                           # 'wtime': 60,
