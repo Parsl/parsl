@@ -164,7 +164,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                            tasks_per_node=self.provider.tasks_per_node,
                                            nodes_per_block=self.provider.nodes_per_block)
             self.launch_cmd = l_cmd
-            logger.debug("Launch command :{}".format(self.launch_cmd))
+            logger.debug("Launch command: {}".format(self.launch_cmd))
 
             self._scaling_enabled = self.provider.scaling_enabled
             logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
