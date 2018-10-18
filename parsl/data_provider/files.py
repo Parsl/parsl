@@ -36,8 +36,7 @@ class File(str):
 
     """
 
-    def __init__(self, url, dman=None, cache=False, caching_dir="."):
-        # type: (str, DataManager, bool, str) -> None
+    def __init__(self, url: str, dman: DataManager =None, cache: bool =False, caching_dir: str=".") -> None:
         """Construct a File object from a url string.
 
         Args:
