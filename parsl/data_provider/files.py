@@ -21,9 +21,12 @@ class File(str):
     This class captures various attributes of a file, and relies on client-side and
     worker-side systems to enable to appropriate transfer of files.
 
-    Note that an error will be raised if one tries to create a File before
-    loading a config. This is the correct behavior: a File which is not tied
-    to a DataFlowKernel is ill-defined.
+    Note that an error will be raised if one tries to create a File without an
+    associated DataFlowKernel. That DataFlowKernel may be specified explicitly
+    as a parameter to the File constructor, or may be implicitly specified by
+    a previously loaded Parsl config.
+
+    A File which is not associated with a DataFlowKernel is ill-defined.
 
     """
 
