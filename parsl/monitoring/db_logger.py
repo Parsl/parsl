@@ -2,6 +2,7 @@ import logging
 import getpass
 from parsl.monitoring.db_local import DatabaseHandler
 from parsl.monitoring.db_local import RemoteHandler
+from parsl.utils import RepresentationMixin
 
 try:
     from cmreslogging.handlers import CMRESHandler
@@ -32,7 +33,7 @@ class NullHandler(logging.Handler):
         pass
 
 
-class MonitoringConfig():
+class MonitoringConfig(RepresentationMixin):
     """ This is a config class for monitoring. """
     def __init__(self,
                  host=None,

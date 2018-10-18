@@ -25,6 +25,5 @@ __all__ = ['LocalProvider',
            'TorqueProvider',
            'AWSProvider',
            'GoogleCloudProvider',
-           'AzureProvider',
            'JetstreamProvider',
            'KubernetesProvider']

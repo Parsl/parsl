@@ -32,7 +32,6 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     ----------
     provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
         Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
-        :class:`~parsl.providers.azureProvider.azureProvider.AzureProvider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
