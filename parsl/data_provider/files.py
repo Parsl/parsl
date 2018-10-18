@@ -94,7 +94,7 @@ class File(str):
 
         return self.path
 
-    def stage_in(self, executor):
+    def stage_in(self, executor: str) -> DataFuture:
         """Transport file from the input source to the executor.
 
         Args:
