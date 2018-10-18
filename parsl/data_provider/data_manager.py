@@ -48,7 +48,7 @@ class DataManager(ParslExecutor):
     """
 
     @classmethod
-    def get_data_manager(cls, max_threads=None, executors=None):
+    def get_data_manager(cls):
         """Return the DataManager of the currently loaded DataFlowKernel.
 
         Note that an error will be raised if one tries to create a File before
