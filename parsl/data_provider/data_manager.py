@@ -71,7 +71,7 @@ class DataManager(ParslExecutor):
     """
 
     @classmethod
-    def get_data_manager(cls):
+    def get_data_manager(cls) -> DataManager:
         """Return the DataManager of the currently loaded DataFlowKernel.
         """
         from parsl.dataflow.dflow import DataFlowKernelLoader
