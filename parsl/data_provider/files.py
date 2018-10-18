@@ -71,7 +71,7 @@ class File(str):
     def __fspath__(self):
         return self.filepath
 
-    def is_remote(self):
+    def is_remote(self) -> bool:
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
             return True
         elif self.scheme in ['file']:  # TODO: is this enough?
@@ -80,7 +80,7 @@ class File(str):
             raise Exception('Cannot determine if unknown file scheme {} is remote'.format(self.scheme))
 
     @property
-    def filepath(self):
+    def filepath(self) -> str:
         """Return the resolved filepath on the side where it is called from.
 
         The appropriate filepath will be returned when called from within
@@ -88,10 +88,8 @@ class File(str):
 
         What does local_path have to only override this for an enumerated list of schemes? Why can't it override filepath *always*?
 
-        Args:
-            - self
         Returns:
-             - filepath (string)
+             - filepath
         """
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
             if self.local_path is not None:
@@ -101,7 +99,7 @@ class File(str):
 
         return self.path
 
-    def stage_in(self, executor):
+    def stage_in(self, executor: str):
         """Transport file from the input source to the executor.
 
         Args:
