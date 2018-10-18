@@ -50,10 +50,6 @@ class DataManager(ParslExecutor):
     @classmethod
     def get_data_manager(cls):
         """Return the DataManager of the currently loaded DataFlowKernel.
-
-        Note that an error will be raised if one tries to create a File before
-        loading a config. This is the correct behavior: a File which is not tied
-        to a DataFlowKernel is ill-defined.
         """
         from parsl.dataflow.dflow import DataFlowKernelLoader
         dfk = DataFlowKernelLoader.dfk()

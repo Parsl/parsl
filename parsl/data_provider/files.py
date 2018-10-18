@@ -20,6 +20,11 @@ class File(str):
 
     This class captures various attributes of a file, and relies on client-side and
     worker-side systems to enable to appropriate transfer of files.
+
+    Note that an error will be raised if one tries to create a File before
+    loading a config. This is the correct behavior: a File which is not tied
+    to a DataFlowKernel is ill-defined.
+
     """
 
     def __init__(self, url, dman=None, cache=False, caching_dir="."):
