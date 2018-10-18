@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.data_provider.files import File # for mypy
     from parsl.data_provider.files import File
+    from parsl.app.futures import DataFuture
 
 # BUG? both _http_stage_in and _ftp_stage_in take a list of files,
 # but only ever dosomething with the first elemtn of that list - 
@@ -161,7 +162,7 @@ class DataManager(ParslExecutor):
                                 'working_dir': working_dir}
         raise Exception('No executor with a Globus endpoint and working_dir defined')
 
-    def stage_in(self, file, executor):
+    def stage_in(self, file: "File", executor: str) -> DataFuture:
         """Transport the file from the input source to the executor.
 
         This function returns a DataFuture.
