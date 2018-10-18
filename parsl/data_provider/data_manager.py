@@ -3,7 +3,6 @@ import logging
 import requests
 import ftplib
 import concurrent.futures as cf
-
 from parsl.data_provider.scheme import GlobusScheme
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
