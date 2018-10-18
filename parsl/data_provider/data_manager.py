@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from typing import Optional
     from parsl.data_provider.files import File # for mypy
     from parsl.data_provider.files import File
     from parsl.app.futures import DataFuture
@@ -222,7 +223,7 @@ class DataManager(ParslExecutor):
                 file.netloc, globus_ep['endpoint_uuid'],
                 file.path, dst_path)
 
-    def stage_out(self, file, executor):
+    def stage_out(self, file: "File", executor: Optional[str]) -> DataFuture:
         """Transport the file from the local filesystem to the remote Globus endpoint.
 
         This function returns a DataFuture.
