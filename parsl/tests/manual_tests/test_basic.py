@@ -37,25 +37,33 @@ import parsl
 # Tested. Confirmed. local X GridEngine X singleNode
 # from parsl.tests.configs.cc_in2p3_local_single_node import config
 
-from parsl.tests.configs.comet_ipp_multinode import config
+# from parsl.tests.configs.comet_ipp_multinode import config
 
-from parsl.app.app import App
+# from mpix_local import config
+from parsl.tests.configs.htex_local import config
+# from parsl.tests.configs.exex_local import config
+parsl.set_stream_logger()
+
+# from htex_midway import config
+# from htex_swan import config
+
+
+from parsl.app.app import python_app  # , bash_app
 parsl.load(config)
-# parsl.set_stream_logger()
 
 
-@App('python')
+@python_app
 def double(x):
     return x * 2
 
 
-@App('python')
+@python_app
 def echo(x, string, stdout=None):
     print(string)
     return x * 5
 
 
-@App('python')
+@python_app
 def import_echo(x, string, stdout=None):
     import time
     time.sleep(0)
@@ -63,7 +71,7 @@ def import_echo(x, string, stdout=None):
     return x * 5
 
 
-@App('python')
+@python_app
 def platform(sleep=10, stdout=None):
     import platform
     import time

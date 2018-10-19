@@ -27,8 +27,11 @@ import logging
 
 from parsl.version import VERSION
 from parsl.app.app import App
-from parsl.executors.threads import ThreadPoolExecutor
-from parsl.executors.ipp import IPyParallelExecutor
+from parsl.executors import ThreadPoolExecutor
+from parsl.executors import IPyParallelExecutor
+from parsl.executors import HighThroughputExecutor
+from parsl.executors import ExtremeScaleExecutor
+
 from parsl.data_provider.files import File
 
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
@@ -37,8 +40,8 @@ __author__ = 'The Parsl Team'
 __version__ = VERSION
 
 __all__ = [
-    'App', 'DataFlowKernel', 'File', 'ThreadPoolExecutor',
-    'IPyParallelExecutor', 'set_stream_logger', 'set_file_logger'
+    'App', 'DataFlowKernel', 'File', 'set_stream_logger', 'set_file_logger',
+    'ThreadPoolExecutor', 'HighThroughputExecutor', 'ExtremeScaleExecutor', 'IPyParallelExecutor',
 ]
 
 clear = DataFlowKernelLoader.clear
