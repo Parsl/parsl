@@ -280,7 +280,7 @@ class DataFlowKernel(object):
                 final_state_flag = True
                 self.tasks_failed_count += 1
 
-                self.tasks[task_id]['time_completed'] = time.time()
+                self.tasks[task_id]['time_returned'] = time.time()
                 if self.monitoring_config is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Retry Failed", extra=task_log_info)
@@ -291,7 +291,7 @@ class DataFlowKernel(object):
             self.tasks_completed_count += 1
 
             logger.info("Task {} completed".format(task_id))
-            self.tasks[task_id]['time_completed'] = time.time()
+            self.tasks[task_id]['time_returned'] = time.time()
             if self.monitoring_config is not None:
                 task_log_info = self._create_task_log_info(task_id)
                 self.db_logger.info("Task Done", extra=task_log_info)
@@ -394,6 +394,8 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
+        self.tasks[task_id]['time_submitted'] = time.time()
+
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
@@ -409,7 +411,6 @@ class DataFlowKernel(object):
             executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
-        self.tasks[task_id]['time_submitted'] = time.time()
         if self.monitoring_config is not None:
             task_log_info = self._create_task_log_info(task_id)
             self.db_logger.info("Task Launch", extra=task_log_info)
@@ -590,7 +591,7 @@ class DataFlowKernel(object):
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
-                    'time_completed': None,
+                    'time_returned': None,
                     'app_fu': None}
 
         if task_id in self.tasks:
