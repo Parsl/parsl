@@ -579,7 +579,6 @@ class DataFlowKernel(object):
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'callback': None,
-                    'dep_cnt': None,
                     'exec_fu': None,
                     'checkpoint': None,
                     'fail_count': 0,
@@ -602,7 +601,6 @@ class DataFlowKernel(object):
 
         # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._gather_all_deps(args, kwargs)
-        self.tasks[task_id]['dep_cnt'] = dep_cnt
         self.tasks[task_id]['depends'] = depends
 
         # Extract stdout and stderr to pass to AppFuture:
