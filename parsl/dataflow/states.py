@@ -12,6 +12,12 @@ class States(IntEnum):
     dep_fail = 5
     retry = 6
 
+# states from which we will never move to another state
+FINAL_STATES = [States.done, States.failed, States.dep_fail]
+
+# states which are final and which indicate a failure. This must
+# be a subset of FINAL_STATES
+FINAL_FAILURE_STATES = [States.failed, States.dep_fail]
 
 if __name__ == "__main__":
     print(States.pending)
