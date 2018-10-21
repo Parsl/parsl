@@ -327,7 +327,12 @@ class DataFlowKernel(object):
 
     # this should be called by pieces of the DataFlowKernel that think that a task might
     # now be ready to run (although that task does not have to definitely be ready to run).
-    # For example, if the task has just been created, or
+    # For example, if the task has just been created, or a dependency might have been
+    # satisfied
+
+    # IS THIS THREAD SAFE? (probably not)    DOES IT NEED TO BE? (probably)
+    # might be able to take the launch lock around all of this? (which will reduce
+    # performance during lock contention...)
     def launch_if_ready(self, task_id):
             logger.info("launch_if_ready for task {}".format(task_id))
             if self._count_deps(self.tasks[task_id]['depends'], task_id) == 0:
