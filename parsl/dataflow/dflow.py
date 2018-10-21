@@ -439,7 +439,7 @@ class DataFlowKernel(object):
             if isinstance(f, File) and f.is_remote():
                 inputs[idx] = f.stage_in(executor)
 
-    def _count_all_deps(self, task_id, args, kwargs):
+    def _gather_all_deps(self, task_id, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
 
         Args:
@@ -603,7 +603,7 @@ class DataFlowKernel(object):
         self._add_input_deps(executor, args, kwargs)
 
         # Get the dep count and a list of dependencies for the task
-        dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
+        dep_cnt, depends = self._gather_all_deps(task_id, args, kwargs)
         self.tasks[task_id]['dep_cnt'] = dep_cnt
         self.tasks[task_id]['depends'] = depends
 
