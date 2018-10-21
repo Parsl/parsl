@@ -204,7 +204,7 @@ class DataFlowKernel(object):
             task_log_info['task_fail_mode'] = fail_mode
         return task_log_info
 
-    def _count_deps(self, depends, task_id):
+    def _count_deps(self, depends):
         """Internal.
 
         Count the number of unresolved futures in the list depends.
@@ -322,7 +322,7 @@ class DataFlowKernel(object):
             if self.tasks[tid]['status'] != States.pending:
                 continue
 
-            if self._count_deps(self.tasks[tid]['depends'], tid) == 0:
+            if self._count_deps(self.tasks[tid]['depends']) == 0:
                 # We can now launch *task*
                 new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
                                                                       self.tasks[tid]['args'],
