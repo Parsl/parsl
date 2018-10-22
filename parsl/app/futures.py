@@ -175,10 +175,12 @@ class DataFuture(Future):
             return True
 
     def add_done_callback(self, fn):
+        logger.error("BENC: add done callback for self={}".format(self))
         if self.parent:
+            logger.error("BENC: add done callback - adding to parent - for self={} parent={}".format(self, self.parent))
             return self.parent.add_done_callback(fn)
         else:
-            logger.error("BENC: discarding done callback - this might cause a block")
+            logger.error("BENC: discarding done callback - this might cause a block - for self={}".format(self))
             return None
 
     def __repr__(self):
