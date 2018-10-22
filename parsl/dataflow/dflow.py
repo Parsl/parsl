@@ -201,7 +201,7 @@ class DataFlowKernel(object):
             task_log_info['task_fail_mode'] = fail_mode
         return task_log_info
 
-    def _count_deps(self, depends, task_id):
+    def _count_deps(self, depends):
         """Internal.
 
         Count the number of unresolved futures in the list depends.
@@ -331,7 +331,8 @@ class DataFlowKernel(object):
     # might be able to take the launch lock around all of this? (which will reduce
     # performance during lock contention...)
     def launch_if_ready(self, task_id):
-            if self._count_deps(self.tasks[task_id]['depends'], task_id) == 0:
+            if self._count_deps(self.tasks[task_id]['depends']) == 0:
+
                 # We can now launch *task*
                 new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
                                                                       self.tasks[task_id]['args'],
@@ -447,11 +448,10 @@ class DataFlowKernel(object):
             if isinstance(f, File) and f.is_remote():
                 inputs[idx] = f.stage_in(executor)
 
-    def _count_all_deps(self, task_id, args, kwargs):
+    def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
 
         Args:
-            - task_id (uuid string) : Task_id
             - args (List[args]) : The list of args list to the fn
             - kwargs (Dict{kwargs}) : The dict of all kwargs passed to the fn
 
@@ -483,7 +483,6 @@ class DataFlowKernel(object):
                     count += 1
                 depends.extend([dep])
 
-        # logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
@@ -589,7 +588,6 @@ class DataFlowKernel(object):
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'callback': None,
-                    'dep_cnt': None,
                     'exec_fu': None,
                     'checkpoint': None,
                     'fail_count': 0,
@@ -611,8 +609,7 @@ class DataFlowKernel(object):
         self._add_input_deps(executor, args, kwargs)
 
         # Get the dep count and a list of dependencies for the task
-        dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
-        self.tasks[task_id]['dep_cnt'] = dep_cnt
+        dep_cnt, depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
         # Extract stdout and stderr to pass to AppFuture:
