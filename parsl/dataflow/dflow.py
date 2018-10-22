@@ -317,7 +317,7 @@ class DataFlowKernel(object):
                     f.stage_out(self.tasks[task_id]['executor'])
 
         # Identify tasks that have resolved dependencies and launch
-        for tid in list(self.tasks):
+        for tid in []: # DON'T HANDLE DEPS THIS WAY list(self.tasks):
             # Skip all non-pending tasks
             if self.tasks[tid]['status'] != States.pending:
                 continue
@@ -631,6 +631,28 @@ class DataFlowKernel(object):
                                                   stderr=task_stderr)
         self.tasks[task_id]['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
+
+        # at this point add callbacks to all dependencies to do a launch_if_ready
+        # call whenever a dependency completes.
+
+        # we need to be careful about the order of setting the state to pending,
+        # adding the callbacks, and caling launch_if_ready explicitly once always below.
+
+        # I think as long as we call launch_if_ready once after setting pending, then
+        # we can add the callback dependencies at any point: if the callbacks all fire
+        # before then, they won't cause a launch, but the one below will. if they fire
+        # after we set it pending, then the last one will cause a launch, and the
+        # explicit one won't.
+
+        for d in depends:
+            logger.debug("BENC: Adding launch_if_ready callback to launch task {} onto dependency {}".format(task_id, d))
+
+            def callback_adapter(dep_fut):
+                logger.debug("BENC: callback_adapter pre - will try to launch task {}".format(task_id))
+                self.launch_if_ready(task_id)
+                logger.debug("BENC: callback_adapter post - will try to launch task {}".format(task_id))
+              
+            d.add_done_callback(callback_adapter)
 
         self.launch_if_ready(task_id)
 

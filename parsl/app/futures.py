@@ -178,6 +178,7 @@ class DataFuture(Future):
         if self.parent:
             return self.parent.add_done_callback(fn)
         else:
+            logger.error("BENC: discarding done callback - this might cause a block")
             return None
 
     def __repr__(self):

@@ -4,6 +4,8 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
+parsl.set_stream_logger()
+
 parsl.clear()
 dfk = parsl.load(config)
 
@@ -67,7 +69,7 @@ def test_increment_slow(depth=5, dur=0.5):
     futs = {}
     print("**************TYpe : ", type(dur), dur)
     for i in range(1, depth):
-        print("Launching {0} with {1}".format(i, prev))
+        print("Launching {0} with input dependency {1}".format(i, prev))
         fu = slow_increment(dur,
                             # Depend on the future from previous call
                             inputs=[prev],
