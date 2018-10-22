@@ -20,6 +20,14 @@ class File(str):
 
     This class captures various attributes of a file, and relies on client-side and
     worker-side systems to enable to appropriate transfer of files.
+
+    Note that an error will be raised if one tries to create a File without an
+    associated DataManager. That DataManager may be specified explicitly
+    as a parameter to the File constructor, or may be implicitly specified via
+    a previously loaded Parsl config.
+
+    A File which is not associated with a DataManager is ill-defined.
+
     """
 
     def __init__(self, url, dman=None, cache=False, caching_dir="."):
