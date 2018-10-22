@@ -94,7 +94,7 @@ class File(str):
 
         return self.path
 
-    def stage_in(self, executor: str) -> DataFuture:
+    def stage_in(self, executor: str) -> "DataFuture":
         """Transport file from the input source to the executor.
 
         Args:
@@ -104,7 +104,7 @@ class File(str):
 
         return self.dman.stage_in(self, executor)
 
-    def stage_out(self, executor: Optional[str] =None) -> DataFuture:
+    def stage_out(self, executor: Optional[str] =None) -> "DataFuture":
         """Transport file from executor to final output destination."""
         return self.dman.stage_out(self, executor)
 

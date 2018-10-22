@@ -13,11 +13,12 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 from typing import TYPE_CHECKING
+from typing import Optional
+
 if TYPE_CHECKING:
-    from typing import Optional
+    from parsl.app.futures import DataFuture
     from parsl.data_provider.files import File # for mypy
     from parsl.data_provider.files import File
-    from parsl.app.futures import DataFuture
 
 # BUG? both _http_stage_in and _ftp_stage_in take a list of files,
 # but only ever dosomething with the first elemtn of that list - 
@@ -162,7 +163,7 @@ class DataManager(ParslExecutor):
                                 'working_dir': working_dir}
         raise Exception('No executor with a Globus endpoint and working_dir defined')
 
-    def stage_in(self, file: "File", executor: str) -> DataFuture:
+    def stage_in(self, file: "File", executor: str) -> "DataFuture":
         """Transport the file from the input source to the executor.
 
         This function returns a DataFuture.
@@ -223,7 +224,7 @@ class DataManager(ParslExecutor):
                 file.netloc, globus_ep['endpoint_uuid'],
                 file.path, dst_path)
 
-    def stage_out(self, file: "File", executor: Optional[str]) -> DataFuture:
+    def stage_out(self, file: "File", executor: Optional[str]) -> "DataFuture":
         """Transport the file from the local filesystem to the remote Globus endpoint.
 
         This function returns a DataFuture.
