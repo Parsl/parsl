@@ -27,7 +27,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States
+from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
 from parsl.app.errors import RemoteException
@@ -144,10 +144,7 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        data_manager = DataManager.get_data_manager(
-            max_threads=config.data_management_max_threads,
-            executors=config.executors
-        )
+        data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
         self.executors = {e.label: e for e in config.executors + [data_manager]}
         for executor in self.executors.values():
             executor.run_dir = self.run_dir
@@ -212,7 +209,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in depends:
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
+                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
                     count += 1
 
         return count
@@ -457,7 +454,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in args:
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
+                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
                     count += 1
                 depends.extend([dep])
 
@@ -465,14 +462,14 @@ class DataFlowKernel(object):
         for key in kwargs:
             dep = kwargs[key]
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
+                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
                     count += 1
                 depends.extend([dep])
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
+                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
                     count += 1
                 depends.extend([dep])
 
@@ -504,7 +501,7 @@ class DataFlowKernel(object):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                    if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
                         dep_failures.extend([e])
             else:
                 new_args.extend([dep])
@@ -516,7 +513,7 @@ class DataFlowKernel(object):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                    if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
                         dep_failures.extend([e])
 
         # Check for futures in inputs=[<fut>...]
@@ -527,7 +524,7 @@ class DataFlowKernel(object):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                        if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
                             dep_failures.extend([e])
 
                 else:
