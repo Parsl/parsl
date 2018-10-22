@@ -10,7 +10,7 @@ import sys
 import platform
 import multiprocessing as mp
 
-from parsl.dataflow.states import States, FINAL_FAILED_STATES
+from parsl.dataflow.states import FINAL_FAILED_STATES
 from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
