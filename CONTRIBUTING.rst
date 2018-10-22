@@ -112,4 +112,4 @@ Discussion and Support
 
 The best way to discuss development activities is via Git issues.
 
-To get involved in community discussion please `join <https://join.slack.com/t/parsl-project/shared_invite/enQtMzQyNjM2Njk4NTk1LTE2YTY3NjkyZThjZmE5ODk5ZDc1NTQzNTVmYmEyMjVkZTI5MjlhNzljMDQ0Yjg4MTcwMjg2NjBmYjAwOTQxYjE>`_ the Parsl Slack channel. 
+To get involved in community discussion please `join <https://join.slack.com/t/parsl-project/shared_invite/enQtMzg2MDAwNjg2ODY1LTk0ZmYyZWE2NDMwYzVjZThmNTUxOWE0MzNkN2JmYjMyY2QzYzg0YTM3MDEzYjc2ZjcxZGZhMGQ1MzBmOWRiOTM>`_ the Parsl Slack channel.

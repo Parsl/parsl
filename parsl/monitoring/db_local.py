@@ -54,8 +54,10 @@ def create_task_table(meta):
           Column('run_id', Text, sa.ForeignKey('workflows.run_id'), nullable=False),
           Column('task_executor', Text, nullable=False),
           Column('task_fn_hash', Text, nullable=False),
-          Column('task_time_started', Text, nullable=False),
-          Column('task_time_completed', Text, nullable=True),
+          Column('task_func_name', Text, nullable=False),
+          Column('task_func', Text, nullable=False),
+          Column('task_time_submitted', Text, nullable=False),
+          Column('task_time_returned', Text, nullable=True),
           Column('task_memoize', Text, nullable=False),
           Column('task_inputs', Text, nullable=True),
           Column('task_outputs', Text, nullable=True),
@@ -116,9 +118,9 @@ class DatabaseHandler(logging.Handler):
                         up = workflows.update().values(time_completed=info['time_completed']).where(workflows.c.run_id == run_id)
                         con.execute(up)
                         return
-                    if 'task_time_completed' in info.keys() and info['task_time_completed'] is not None:
+                    if 'task_time_returned' in info.keys() and info['task_time_returned'] is not None:
                         workflow = self.meta.tables['task']
-                        up = workflow.update().values(task_time_completed=info['task_time_completed']).where(workflow.c.task_id == info['task_id'])\
+                        up = workflow.update().values(task_time_returned=info['task_time_returned']).where(workflow.c.task_id == info['task_id'])\
                                      .where(workflow.c.run_id == run_id)
                         con.execute(up)
 
