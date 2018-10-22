@@ -334,7 +334,6 @@ class DataFlowKernel(object):
     # might be able to take the launch lock around all of this? (which will reduce
     # performance during lock contention...)
     def launch_if_ready(self, task_id):
-            logger.info("launch_if_ready for task {}".format(task_id))
             if self._count_deps(self.tasks[task_id]['depends'], task_id) == 0:
                 # We can now launch *task*
                 new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
