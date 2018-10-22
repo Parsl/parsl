@@ -172,12 +172,9 @@ class AppFuture(Future):
             return False
 
     def add_done_callback(self, fn):
-        logger.debug("AppFuture: add done callback")
         if self.parent:
-            logger.debug("AppFuture: add done callback - propagating to parent")
             return self.parent.add_done_callback(fn)
         else:
-            logger.debug("AppFuture: add done callback - DANGER - WEIRD CALLBACK PATH")
             super().add_done_callback(fn)
             return None
 

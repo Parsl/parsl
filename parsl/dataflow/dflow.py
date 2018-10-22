@@ -290,7 +290,7 @@ class DataFlowKernel(object):
             final_state_flag = True
             self.tasks_completed_count += 1
 
-            logger.info("Task {} completed - exec_fu is {}".format(task_id, self.tasks[task_id]['exec_fu']))
+            logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             if self.monitoring_config is not None:
                 task_log_info = self._create_task_log_info(task_id)
