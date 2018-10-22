@@ -397,7 +397,7 @@ class DataFlowKernel(object):
                         raise e
             else:
                 logger.info(
-                    "Task {} deferred due to dependency failure".format(task_id))
+                    "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
                 self.tasks[task_id]['status'] = States.dep_fail
                 if self.monitoring_config is not None:
