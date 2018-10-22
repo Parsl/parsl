@@ -9,10 +9,10 @@ import threading
 import inspect
 import sys
 import multiprocessing
+import time
 
 from getpass import getuser
 from uuid import uuid4
-from datetime import datetime
 from socket import gethostname
 from concurrent.futures import Future
 from functools import partial
@@ -107,7 +107,7 @@ class DataFlowKernel(object):
             self.workflow_name = self.monitoring_config.workflow_name
         if self.monitoring_config is not None and self.monitoring_config.version is not None:
             self.workflow_version = self.monitoring_config.version
-        self.time_began = datetime.now()
+        self.time_began = time.time()
         self.time_completed = None
         self.run_id = str(uuid4())
         self.dashboard = self.monitoring_config.dashboard_link if self.monitoring_config is not None else None
@@ -124,7 +124,7 @@ class DataFlowKernel(object):
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
-                "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
+                "time_began": str(self.time_began),
                 'time_completed': str(None),
                 'run_id': self.run_id,
                 'workflow_name': self.workflow_name,
@@ -192,7 +192,7 @@ class DataFlowKernel(object):
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
         task_log_info['tasks_completed_count'] = self.tasks_completed_count
-        task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+        task_log_info['time_began'] = str(self.time_began)
         task_log_info['task_inputs'] = str(self.tasks[task_id]['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(self.tasks[task_id]['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
@@ -277,7 +277,7 @@ class DataFlowKernel(object):
                 final_state_flag = True
                 self.tasks_failed_count += 1
 
-                self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                self.tasks[task_id]['time_returned'] = time.time()
                 if self.monitoring_config is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Retry Failed", extra=task_log_info)
@@ -288,7 +288,7 @@ class DataFlowKernel(object):
             self.tasks_completed_count += 1
 
             logger.info("Task {} completed".format(task_id))
-            self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            self.tasks[task_id]['time_returned'] = time.time()
             if self.monitoring_config is not None:
                 task_log_info = self._create_task_log_info(task_id)
                 self.db_logger.info("Task Done", extra=task_log_info)
@@ -391,6 +391,8 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
+        self.tasks[task_id]['time_submitted'] = time.time()
+
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
@@ -406,7 +408,6 @@ class DataFlowKernel(object):
             executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
-        self.tasks[task_id]['time_started'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         if self.monitoring_config is not None:
             task_log_info = self._create_task_log_info(task_id)
             self.db_logger.info("Task Launch", extra=task_log_info)
@@ -586,8 +587,8 @@ class DataFlowKernel(object):
                     'env': None,
                     'status': States.unsched,
                     'id': task_id,
-                    'time_started': None,
-                    'time_completed': None,
+                    'time_submitted': None,
+                    'time_returned': None,
                     'app_fu': None}
 
         if task_id in self.tasks:
@@ -755,10 +756,10 @@ class DataFlowKernel(object):
                     executor.scale_in(len(job_ids))
                 executor.shutdown()
 
-        self.time_completed = datetime.now()
+        self.time_completed = time.time()
         self.db_logger.info("DFK end", extra={'tasks_failed_count': self.tasks_failed_count, 'tasks_completed_count': self.tasks_completed_count,
-                                              "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
-                                              'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')),
+                                              "time_began": str(self.time_began),
+                                              'time_completed': str(self.time_completed),
                                               'run_id': self.run_id, 'rundir': self.run_dir})
         if self.logging_server is not None:
             self.logging_server.terminate()
