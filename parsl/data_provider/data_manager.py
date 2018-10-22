@@ -13,8 +13,8 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from parsl.data_provider.files import File # for mypy
     from parsl.data_provider.files import File
     from parsl.app.futures import DataFuture
 
@@ -72,7 +72,7 @@ class DataManager(ParslExecutor):
     """
 
     @classmethod
-    def get_data_manager(cls) -> DataManager:
+    def get_data_manager(cls) -> "DataManager":  # quoted because DataManager hasn't finished being defined here (we're in the middle of defining it...?) and that upsets runtime (although not type checking)
         """Return the DataManager of the currently loaded DataFlowKernel.
         """
         from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -162,7 +162,7 @@ class DataManager(ParslExecutor):
                                 'working_dir': working_dir}
         raise Exception('No executor with a Globus endpoint and working_dir defined')
 
-    def stage_in(self, file: "File", executor: str) -> DataFuture:
+    def stage_in(self, file: "File", executor: str) -> "DataFuture":
         """Transport the file from the input source to the executor.
 
         This function returns a DataFuture.
