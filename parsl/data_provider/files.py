@@ -26,10 +26,17 @@ class File(str):
 
     This class captures various attributes of a file, and relies on client-side and
     worker-side systems to enable to appropriate transfer of files.
+
+    Note that an error will be raised if one tries to create a File without an
+    associated DataFlowKernel. That DataFlowKernel may be specified explicitly
+    as a parameter to the File constructor, or may be implicitly specified by
+    a previously loaded Parsl config.
+
+    A File which is not associated with a DataFlowKernel is ill-defined.
+
     """
 
-    def __init__(self, url, dman=None, cache=False, caching_dir="."):
-        # type: (str, DataManager, bool, str) -> None
+    def __init__(self, url: str, dman: DataManager =None, cache: bool =False, caching_dir: str=".") -> None:
         """Construct a File object from a url string.
 
         Args:
@@ -64,7 +71,7 @@ class File(str):
     def __fspath__(self):
         return self.filepath
 
-    def is_remote(self):
+    def is_remote(self) -> bool:
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
             return True
         elif self.scheme in ['file']:  # TODO: is this enough?
@@ -73,7 +80,7 @@ class File(str):
             raise Exception('Cannot determine if unknown file scheme {} is remote'.format(self.scheme))
 
     @property
-    def filepath(self):
+    def filepath(self) -> str:
         """Return the resolved filepath on the side where it is called from.
 
         The appropriate filepath will be returned when called from within
@@ -81,10 +88,8 @@ class File(str):
 
         What does local_path have to only override this for an enumerated list of schemes? Why can't it override filepath *always*?
 
-        Args:
-            - self
         Returns:
-             - filepath (string)
+             - filepath
         """
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
             if self.local_path is not None:
