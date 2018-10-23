@@ -71,14 +71,8 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    # Concurrent.futures errors are also of interest, as exceptions
-    # which propagate out of the top of a callback are logged this way
-    # and then discarded. (see #240)
-    futures_logger = logging.getLogger("concurrent.futures")
-    futures_logger.addHandler(handler)
-
+    all_logger = logging.getLogger("")
+    all_logger.addHandler(handler)
 
 def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
