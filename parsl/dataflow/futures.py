@@ -33,10 +33,35 @@ _STATE_TO_DESCRIPTION_MAP = {
 
 
 class AppFuture(Future):
-    """An AppFuture points at a Future returned from an Executor.
+    """An AppFuture wraps a sequence of Futures which may fail and be retried.
 
-    We are simply wrapping a AppFuture, and adding the specific case where, if the future
-    is resolved i.e file exists, then the DataFuture is assumed to be resolved.
+    TODO: what causes the retries? something in the DFK, not inside here, I guess?
+
+    An AppFuture starts with no parent future. A sequence of parent futures may
+    be assigned by code outside of this class, by passing that new parent future
+    into "update_future".
+
+    TODO: is it an error to update the parent future when we already have a result?
+    It should be, and this class should catch it - in a thread-safe manner.
+
+    The AppFuture will set its result to the result of the parent future, if that
+    parent future completes without an exception. This result setting (should/will/TODO)
+    cause .result(), .exception() and done callbacks to fire as expected when a
+    Future has a result set.
+
+    The AppFuture will not set its result to the result of the parent future, if
+    that parent future completes with an exception, and if that parent future
+    has retries left. In that case, no result(), exception() or done callbacks (should/will/TODO)
+    report a result.
+
+    The AppFuture will set its result to the result of the parent future, if that
+    parent future completes with an exception and if that parent future has no
+    retries left, or if it has no retry field. .result(), .exception() and done callbacks
+    will/should/TODO give a result as expected when a Future has a result set
+
+    The parent future may return a RemoteException as a result (rather than raising it
+    as an exception) and AppFuture will treat this an an exception for the above
+    retry and result handling behaviour.
 
     """
 
@@ -57,18 +82,30 @@ class AppFuture(Future):
         self._tid = tid
         super().__init__()
         self.prev_parent = None
-        self.parent = parent
-        self._parent_update_lock = threading.Lock()
+        self.parent = None
+        self._update_lock = threading.Lock()
         self._parent_update_event = threading.Event()
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
 
+        if parent is not None:
+            self.update_parent(parent)
+
     def parent_callback(self, executor_fu):
-        """Callback from executor future to update the parent.
+        """Callback from a parent future to update the AppFuture.
+
+        Used internally by AppFuture, and should not be called by code using AppFuture.
 
         Args:
-            - executor_fu (Future): Future returned by the executor along with callback
+            - executor_fu (Future): Future returned by the executor along with callback.
+              This may not be the current parent future, as the parent future may have
+              already been updated to point to a retrying execution, and in that case,
+              this is logged.
+
+              In the case that a new parent has been attached, we must immediately discard
+              this result no matter what it contains (although it might be interesting
+              to log if it was successful...)
 
         Returns:
             - None
@@ -76,11 +113,34 @@ class AppFuture(Future):
         Updates the super() with the result() or exception()
         """
         # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
-        if executor_fu.done() is True:
+        with self._update_lock:
+
+            if not executor_fu.done():
+                raise ValueError("done callback called, despite future not reporting itself as done")
+
+            # this is for consistency checking
+            if executor_fu != self.parent:
+                if executor_fu.exception() is None and not isinstance(executor_fu.result(), RemoteException):
+                    # ... then we completed with a value, not an exception or wrapped exception,
+                    # but we've got an updated executor future.
+                    # This is bad - for example, we've started a retry even though we have a result
+
+                    raise ValueError("internal consistency error: AppFuture done callback called without an exception, but parent has been changed since then")
+
             try:
+                res = executor_fu.result()
+                if isinstance(res, RemoteException):
+                    res.reraise()
                 super().set_result(executor_fu.result())
+
             except Exception as e:
-                super().set_exception(e)
+                if executor_fu.retries_left > 0:
+                    # ignore this exception, because assume some later
+                    # parent executor, started external to this class,
+                    # will provide the answer
+                    pass
+                else:
+                    super().set_exception(e)
 
     @property
     def stdout(self):
@@ -105,33 +165,6 @@ class AppFuture(Future):
         fut.add_done_callback(self.parent_callback)
         self._parent_update_event.set()
 
-    def result(self, timeout=None):
-        """Result.
-
-        Waits for the result of the AppFuture
-        KWargs:
-        timeout (int): Timeout in seconds
-        """
-        try:
-            if self.parent:
-                res = self.parent.result(timeout=timeout)
-            else:
-                res = super().result(timeout=timeout)
-            if isinstance(res, RemoteException):
-                res.reraise()
-            return res
-
-        except Exception as e:
-            if self.parent.retries_left > 0:
-                self._parent_update_event.wait()
-                self._parent_update_event.clear()
-                return self.result(timeout=timeout)
-            else:
-                if isinstance(e, RemoteException):
-                    e.reraise()
-                else:
-                    raise
-
     def cancel(self):
         if self.parent:
             return self.parent.cancel
@@ -149,33 +182,6 @@ class AppFuture(Future):
             return self.parent.running()
         else:
             return False
-
-    def done(self):
-        """Check if the future is done.
-
-        If a parent is set, we return the status of the parent.
-        else, there is no parent assigned, meaning the status is False.
-
-        Returns:
-              - True : If the future has successfully resolved.
-              - False : Pending resolution
-        """
-        if self.parent:
-            return self.parent.done()
-        else:
-            return False
-
-    def exception(self, timeout=None):
-        if self.parent:
-            return self.parent.exception(timeout=timeout)
-        else:
-            return False
-
-    def add_done_callback(self, fn):
-        if self.parent:
-            return self.parent.add_done_callback(fn)
-        else:
-            return super().add_done_callback(fn)
 
     @property
     def outputs(self):
