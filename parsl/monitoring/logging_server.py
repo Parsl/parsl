@@ -30,7 +30,7 @@ class MainHandler(tornado.web.RequestHandler):
         arg = json.loads(self.get_body_argument('log'))
         try:
             self.application.logger.info('from tornado task ' + str(arg.get('task_id', 'NO TASK')), extra=arg)
-        except AttributeError as e:
+        except AttributeError:
             self.application.logger = get_db_logger(logger_name='loggingserver', is_logging_server=True, monitoring_config=self.monitoring_config)
             self.application.logger.info('from tornado task ' + str(arg.get('task_id', 'NO TASK')), extra=arg)
 

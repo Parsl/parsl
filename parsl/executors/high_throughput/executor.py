@@ -227,7 +227,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 msgs = self.incoming_q.get(timeout=1)
                 # logger.debug("[MTHREAD] get has returned {}".format(len(msgs)))
 
-            except queue.Empty as e:
+            except queue.Empty:
                 logger.debug("[MTHREAD] queue empty")
                 # Timed out.
                 pass
@@ -254,7 +254,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                         except pickle.UnpicklingError:
                             raise BadMessage("Message received could not be unpickled")
 
-                        except Exception as e:
+                        except Exception:
                             raise BadMessage("Message received does not contain 'task_id' field")
 
                         task_fut = self.tasks[tid]
