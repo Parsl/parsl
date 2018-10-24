@@ -9,10 +9,10 @@ import threading
 import inspect
 import sys
 import multiprocessing
+import time
 
 from getpass import getuser
 from uuid import uuid4
-from datetime import datetime
 from socket import gethostname
 from concurrent.futures import Future
 from functools import partial
@@ -27,7 +27,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States
+from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
 from parsl.app.errors import RemoteException
@@ -107,7 +107,7 @@ class DataFlowKernel(object):
             self.workflow_name = self.monitoring_config.workflow_name
         if self.monitoring_config is not None and self.monitoring_config.version is not None:
             self.workflow_version = self.monitoring_config.version
-        self.time_began = datetime.now()
+        self.time_began = time.time()
         self.time_completed = None
         self.run_id = str(uuid4())
         self.dashboard = self.monitoring_config.dashboard_link if self.monitoring_config is not None else None
@@ -124,7 +124,7 @@ class DataFlowKernel(object):
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
-                "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
+                "time_began": str(self.time_began),
                 'time_completed': str(None),
                 'run_id': self.run_id,
                 'workflow_name': self.workflow_name,
@@ -144,10 +144,7 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        data_manager = DataManager.get_data_manager(
-            max_threads=config.data_management_max_threads,
-            executors=config.executors
-        )
+        data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
         self.executors = {e.label: e for e in config.executors + [data_manager]}
         for executor in self.executors.values():
             executor.run_dir = self.run_dir
@@ -195,7 +192,7 @@ class DataFlowKernel(object):
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
         task_log_info['tasks_completed_count'] = self.tasks_completed_count
-        task_log_info['time_began'] = str(self.time_began.strftime('%Y-%m-%d %H:%M:%S'))
+        task_log_info['time_began'] = str(self.time_began)
         task_log_info['task_inputs'] = str(self.tasks[task_id]['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(self.tasks[task_id]['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
@@ -204,7 +201,7 @@ class DataFlowKernel(object):
             task_log_info['task_fail_mode'] = fail_mode
         return task_log_info
 
-    def _count_deps(self, depends, task_id):
+    def _count_deps(self, depends):
         """Internal.
 
         Count the number of unresolved futures in the list depends.
@@ -212,7 +209,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in depends:
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
+                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
                     count += 1
 
         return count
@@ -280,7 +277,7 @@ class DataFlowKernel(object):
                 final_state_flag = True
                 self.tasks_failed_count += 1
 
-                self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                self.tasks[task_id]['time_returned'] = time.time()
                 if self.monitoring_config is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Retry Failed", extra=task_log_info)
@@ -291,7 +288,7 @@ class DataFlowKernel(object):
             self.tasks_completed_count += 1
 
             logger.info("Task {} completed".format(task_id))
-            self.tasks[task_id]['time_completed'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            self.tasks[task_id]['time_returned'] = time.time()
             if self.monitoring_config is not None:
                 task_log_info = self._create_task_log_info(task_id)
                 self.db_logger.info("Task Done", extra=task_log_info)
@@ -322,7 +319,7 @@ class DataFlowKernel(object):
             if self.tasks[tid]['status'] != States.pending:
                 continue
 
-            if self._count_deps(self.tasks[tid]['depends'], tid) == 0:
+            if self._count_deps(self.tasks[tid]['depends']) == 0:
                 # We can now launch *task*
                 new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
                                                                       self.tasks[tid]['args'],
@@ -394,6 +391,8 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
+        self.tasks[task_id]['time_submitted'] = time.time()
+
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
@@ -409,7 +408,6 @@ class DataFlowKernel(object):
             executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
         exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
-        self.tasks[task_id]['time_started'] = str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         if self.monitoring_config is not None:
             task_log_info = self._create_task_log_info(task_id)
             self.db_logger.info("Task Launch", extra=task_log_info)
@@ -439,11 +437,10 @@ class DataFlowKernel(object):
             if isinstance(f, File) and f.is_remote():
                 inputs[idx] = f.stage_in(executor)
 
-    def _count_all_deps(self, task_id, args, kwargs):
+    def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
 
         Args:
-            - task_id (uuid string) : Task_id
             - args (List[args]) : The list of args list to the fn
             - kwargs (Dict{kwargs}) : The dict of all kwargs passed to the fn
 
@@ -456,7 +453,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in args:
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
+                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
                     count += 1
                 depends.extend([dep])
 
@@ -464,18 +461,17 @@ class DataFlowKernel(object):
         for key in kwargs:
             dep = kwargs[key]
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
+                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
                     count += 1
                 depends.extend([dep])
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in [States.done, States.failed, States.dep_fail]:
+                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
                     count += 1
                 depends.extend([dep])
 
-        # logger.debug("Task:{0}   dep_cnt:{1}  deps:{2}".format(task_id, count, depends))
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
@@ -503,7 +499,7 @@ class DataFlowKernel(object):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                    if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
                         dep_failures.extend([e])
             else:
                 new_args.extend([dep])
@@ -515,7 +511,7 @@ class DataFlowKernel(object):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                    if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
                         dep_failures.extend([e])
 
         # Check for futures in inputs=[<fut>...]
@@ -526,7 +522,7 @@ class DataFlowKernel(object):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        if self.tasks[dep.tid]['status'] in [States.failed, States.dep_fail]:
+                        if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
                             dep_failures.extend([e])
 
                 else:
@@ -581,7 +577,6 @@ class DataFlowKernel(object):
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'callback': None,
-                    'dep_cnt': None,
                     'exec_fu': None,
                     'checkpoint': None,
                     'fail_count': 0,
@@ -589,8 +584,8 @@ class DataFlowKernel(object):
                     'env': None,
                     'status': States.unsched,
                     'id': task_id,
-                    'time_started': None,
-                    'time_completed': None,
+                    'time_submitted': None,
+                    'time_returned': None,
                     'app_fu': None}
 
         if task_id in self.tasks:
@@ -603,8 +598,7 @@ class DataFlowKernel(object):
         self._add_input_deps(executor, args, kwargs)
 
         # Get the dep count and a list of dependencies for the task
-        dep_cnt, depends = self._count_all_deps(task_id, args, kwargs)
-        self.tasks[task_id]['dep_cnt'] = dep_cnt
+        dep_cnt, depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
         # Extract stdout and stderr to pass to AppFuture:
@@ -758,10 +752,10 @@ class DataFlowKernel(object):
                     executor.scale_in(len(job_ids))
                 executor.shutdown()
 
-        self.time_completed = datetime.now()
+        self.time_completed = time.time()
         self.db_logger.info("DFK end", extra={'tasks_failed_count': self.tasks_failed_count, 'tasks_completed_count': self.tasks_completed_count,
-                                              "time_began": str(self.time_began.strftime('%Y-%m-%d %H:%M:%S')),
-                                              'time_completed': str(self.time_completed.strftime('%Y-%m-%d %H:%M:%S')),
+                                              "time_began": str(self.time_began),
+                                              'time_completed': str(self.time_completed),
                                               'run_id': self.run_id, 'rundir': self.run_dir})
         if self.logging_server is not None:
             self.logging_server.terminate()
