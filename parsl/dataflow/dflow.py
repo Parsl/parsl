@@ -331,55 +331,55 @@ class DataFlowKernel(object):
     # might be able to take the launch lock around all of this? (which will reduce
     # performance during lock contention...)
     def launch_if_ready(self, task_id):
-            if self._count_deps(self.tasks[task_id]['depends']) == 0:
+        if self._count_deps(self.tasks[task_id]['depends']) == 0:
 
-                # We can now launch *task*
-                new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
-                                                                      self.tasks[task_id]['args'],
-                                                                      self.tasks[task_id]['kwargs'])
-                self.tasks[task_id]['args'] = new_args
-                self.tasks[task_id]['kwargs'] = kwargs
-                if not exceptions:
-                    # There are no dependency errors
-                    exec_fu = None
-                    # Acquire a lock, retest the state, launch
-                    with self.task_launch_lock:
-                        if self.tasks[task_id]['status'] == States.pending:
-                            self.tasks[task_id]['status'] = States.running  # launch_task also does this though? so maybe unnecessary?
-                            exec_fu = self.launch_task(
-                                task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
+            # We can now launch *task*
+            new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
+                                                                  self.tasks[task_id]['args'],
+                                                                  self.tasks[task_id]['kwargs'])
+            self.tasks[task_id]['args'] = new_args
+            self.tasks[task_id]['kwargs'] = kwargs
+            if not exceptions:
+                # There are no dependency errors
+                exec_fu = None
+                # Acquire a lock, retest the state, launch
+                with self.task_launch_lock:
+                    if self.tasks[task_id]['status'] == States.pending:
+                        self.tasks[task_id]['status'] = States.running  # launch_task also does this though? so maybe unnecessary?
+                        exec_fu = self.launch_task(
+                            task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
-                    if exec_fu:
-                        self.tasks[task_id]['exec_fu'] = exec_fu
-                        try:
-                            self.tasks[task_id]['app_fu'].update_parent(exec_fu)
-                            self.tasks[task_id]['exec_fu'] = exec_fu
-                        except AttributeError as e:
-                            logger.error(
-                                "Task {}: Caught AttributeError at update_parent".format(task_id))
-                            raise e
-                else:
-                    logger.info(
-                        "Task {} deferred due to dependency failure".format(task_id))
-                    # Raise a dependency exception
-                    self.tasks[task_id]['status'] = States.dep_fail
-                    if self.monitoring_config is not None:
-                        task_log_info = self._create_task_log_info(task_id, 'lazy')
-                        self.db_logger.info("Task Dep Fail", extra=task_log_info)
-
+                if exec_fu:
+                    self.tasks[task_id]['exec_fu'] = exec_fu
                     try:
-                        fu = Future()
-                        fu.retries_left = 0
-                        self.tasks[task_id]['exec_fu'] = fu
-                        self.tasks[task_id]['app_fu'].update_parent(fu)
-                        fu.set_exception(DependencyError(exceptions,
-                                                         task_id,
-                                                         None))
-
+                        self.tasks[task_id]['app_fu'].update_parent(exec_fu)
+                        self.tasks[task_id]['exec_fu'] = exec_fu
                     except AttributeError as e:
                         logger.error(
-                            "Task {} AttributeError at update_parent".format(task_id))
+                            "Task {}: Caught AttributeError at update_parent".format(task_id))
                         raise e
+            else:
+                logger.info(
+                    "Task {} deferred due to dependency failure".format(task_id))
+                # Raise a dependency exception
+                self.tasks[task_id]['status'] = States.dep_fail
+                if self.monitoring_config is not None:
+                    task_log_info = self._create_task_log_info(task_id, 'lazy')
+                    self.db_logger.info("Task Dep Fail", extra=task_log_info)
+
+                try:
+                    fu = Future()
+                    fu.retries_left = 0
+                    self.tasks[task_id]['exec_fu'] = fu
+                    self.tasks[task_id]['app_fu'].update_parent(fu)
+                    fu.set_exception(DependencyError(exceptions,
+                                                     task_id,
+                                                     None))
+
+                except AttributeError as e:
+                    logger.error(
+                        "Task {} AttributeError at update_parent".format(task_id))
+                    raise e
 
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
