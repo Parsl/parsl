@@ -254,6 +254,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                         try:
                             msg = pickle.loads(serialized_msg)
                             tid = msg['task_id']
+                        except pickle.UnpicklingError:
+                            raise BadMessage("Message received could not be unpickled")
+
                         except Exception as e:
                             raise BadMessage("Message received does not contain 'task_id' field")
 
