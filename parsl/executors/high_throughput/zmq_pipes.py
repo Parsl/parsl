@@ -3,6 +3,9 @@
 import zmq
 import time
 import pickle
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TasksOutgoing(object):
@@ -24,9 +27,15 @@ class TasksOutgoing(object):
         self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
+        self.poller = zmq.Poller()
+        self.poller.register(self.zmq_socket, zmq.POLLOUT)
 
     def put(self, message):
-        self.zmq_socket.send_pyobj(message)
+        while True:
+            socks = dict(self.poller.poll(timeout=1))
+            if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
+                self.zmq_socket.send_pyobj(message, copy=True)
+                return
 
     def close(self):
         self.zmq_socket.close()
@@ -55,8 +64,7 @@ class ResultsIncoming(object):
                                                               max_port=port_range[1])
 
     def get(self, block=True, timeout=None):
-        result = self.results_receiver.recv_pyobj()
-        return result
+        return self.results_receiver.recv_multipart()
 
     def request_close(self):
         status = self.results_receiver.send(pickle.dumps(None))

@@ -80,8 +80,7 @@ class Manager(object):
         self.pending_result_queue = multiprocessing.Queue(maxsize=10 ^ 4)
         self.ready_worker_queue = multiprocessing.Queue(maxsize=self.worker_count + 1)
 
-        if max_queue_size == 0:
-            max_queue_size = self.worker_count
+        self.max_queue_size = max_queue_size + self.worker_count
 
         self.tasks_per_round = 1
 
@@ -113,14 +112,16 @@ class Manager(object):
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
             ready_worker_count = self.ready_worker_queue.qsize()
+            pending_task_count = self.pending_task_queue.qsize()
 
-            logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
+            logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
+                                                                                        pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat()
                 last_beat = time.time()
 
-            if ready_worker_count > 0:
+            if pending_task_count < self.max_queue_size and ready_worker_count > 0:
                 logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
@@ -135,8 +136,10 @@ class Manager(object):
                     kill_event.set()
                     break
                 else:
-                    logger.debug("[TASK_PULL_THREAD] Got tasks: {}".format(len(tasks)))
                     task_recv_counter += len(tasks)
+                    logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
+                                                                                 task_recv_counter))
+
                     for task in tasks:
                         self.pending_task_queue.put(task)
                         # logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
@@ -155,16 +158,20 @@ class Manager(object):
 
         # We set this timeout so that the thread checks the kill_event and does not
         # block forever on the internal result queue
-        timeout = 0.1
+        timeout = 0.001  # Seconds
         # timer = time.time()
         logger.debug("[RESULT_PUSH_THREAD] Starting thread")
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
+            items = []
             try:
-                result = self.pending_result_queue.get(block=True, timeout=timeout)
-                self.result_outgoing.send(result)
-                logger.debug("[RESULT_PUSH_THREAD] Sent result:{}".format(result))
+                while not self.pending_result_queue.empty():
+                    r = self.pending_result_queue.get(block=True)
+                    items.append(r)
+
+                if items:
+                    self.result_outgoing.send_multipart(items)
 
             except queue.Empty:
                 logger.debug("[RESULT_PUSH_THREAD] No results to send in past {} seconds".format(timeout))
@@ -221,7 +228,7 @@ class Manager(object):
 def execute_task(bufs):
     """Deserialize the buffer and execute the task.
 
-    Returns the serialized result or exception.
+    Returns the result or exception.
     """
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
@@ -242,9 +249,8 @@ def execute_task(bufs):
 
     code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
                                            argname, kwargname)
-
     try:
-        logger.debug("[RUNNER] Executing: {0}".format(code))
+        # logger.debug("[RUNNER] Executing: {0}".format(code))
         exec(code, user_ns, user_ns)
 
     except Exception as e:
@@ -252,7 +258,7 @@ def execute_task(bufs):
         raise e
 
     else:
-        logger.debug("[RUNNER] Result: {0}".format(user_ns.get(resultname)))
+        # logger.debug("[RUNNER] Result: {0}".format(user_ns.get(resultname)))
         return user_ns.get(resultname)
 
 
@@ -265,7 +271,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
     Put result into result_queue
     """
     start_file_logger('{}/{}/worker_{}.log'.format(args.logdir, pool_id, worker_id),
-                      0,
+                      worker_id,
                       level=logging.DEBUG if args.debug is True else logging.INFO)
 
     # Sync worker with master
@@ -280,23 +286,23 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         logger.info("Received task {}".format(tid))
 
         try:
-            worker_queue.get(worker_id)
+            worker_queue.get()
         except queue.Empty:
             logger.warning("Worker ID: {} failed to remove itself from ready_worker_queue".format(worker_id))
             pass
 
         try:
             result = execute_task(req['buffer'])
-
         except Exception as e:
             result_package = {'task_id': tid, 'exception': serialize_object(e)}
-            logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
+            # logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
-            logger.debug("Result: {}".format(result))
+            # logger.debug("Result: {}".format(result))
 
         logger.info("Completed task {}".format(tid))
         pkl_package = pickle.dumps(result_package)
+
         result_queue.put(pkl_package)
 
 
