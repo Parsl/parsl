@@ -221,14 +221,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         The `None` message is a die request.
         """
         logger.debug("[MTHREAD] queue management worker starting")
-        result_counter = 0
 
         while True:
             try:
                 msgs = self.incoming_q.get(timeout=1)
-                result_counter += len(msgs)
                 # logger.debug("[MTHREAD] get has returned {}".format(len(msgs)))
-                # result_counter += 1
 
             except queue.Empty as e:
                 logger.debug("[MTHREAD] queue empty")
