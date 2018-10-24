@@ -131,56 +131,19 @@ class Interchange(object):
 
         self.heartbeat_thresh = heartbeat_period * 2
 
-    def _get_tasks(self, count, socks):
-        """ Obtains a batch of tasks from the task queue.
+    def get_tasks(self, count):
+        """ Obtains a batch of tasks from the internal pending_task_queue
 
         Parameters
         ----------
         count: int
             Count of tasks to get from the queue
-        socks: dict(poll events)
-            Dictionary of socket events from zmq.poller.poll()
 
         Returns
         -------
         List of upto count tasks. May return fewer than count down to an empty list
             eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
-
-        Raises
-        ------
-        ShutdownRequest: If shutdown requested by client.
-            Tasks are moved from Zmq to the internal task_queue only when the queue in not full.
-            As a result the 'STOP' request might be queued in ZMQ and may be processed in a
-            delayed manner.
-
         """
-        # Listen for tasks
-        tasks = []
-        logger.debug("[GET_TASKS] Listening for {} tasks".format(count))
-        for c in range(count):
-            if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                if len(self._task_queue) < self.max_task_queue_size:
-                    # There's an unpickling cost here, could optimize by prepending
-                    # buffer with tid
-                    try:
-                        msg = self.task_incoming.recv_pyobj()
-                    except zmq.Again:
-                        # We just timed out while attempting to receive
-                        logger.debug("There are no more tasks in the incoming queue. Breaking")
-                        break
-                    # msg = self.task_incoming.recv_string()
-                    if msg == 'STOP':
-                        raise ShutdownRequest
-                    else:
-                        tasks.append(msg)
-            else:
-                logger.debug("[GET_TASKS] Returning with {} tasks".format(c))
-                break
-
-        return tasks
-
-    def get_tasks(self, count, socks):
-
         tasks = []
         for i in range(0, count):
             try:
@@ -272,7 +235,7 @@ class Interchange(object):
             # If we had received any requests, check if there are tasks that could be passed
             for manager in self._ready_manager_queue:
                 if self._ready_manager_queue[manager]['free_capacity']:
-                    tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'], self.socks)
+                    tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                     if tasks:
                         self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
