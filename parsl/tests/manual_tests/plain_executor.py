@@ -71,6 +71,6 @@ if __name__ == '__main__':
     # config.executors[0].worker_debug = True
     dfk = parsl.load(config)
 
-    executor = dfk.executors["htex_Local"]
+    executor = dfk.executors["htex_local"]
 
     call_double(int(args.count), executor)
