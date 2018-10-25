@@ -171,7 +171,7 @@ class GoogleCloud():
                 self.delete_instance(job_id)
                 statuses.append(True)
                 self.provisioned_blocks -= 1
-            except Exception as e:
+            except Exception:
                 statuses.append(False)
         return statuses
 

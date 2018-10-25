@@ -31,7 +31,7 @@ def run_checkpointed(n=2, mode="task_exit"):
         items.append(x)
         try:
             x.result()
-        except Exception as e:
+        except Exception:
             print("Ignoring failure of task")
             pass
 

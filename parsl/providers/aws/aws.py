@@ -163,7 +163,7 @@ class AWS(ExecutionProvider, RepresentationMixin):
             self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(label)
             self.read_state_file(self.state_file)
             state_file_exists = True
-        except Exception as e:
+        except Exception:
             logger.info("No state file found. Cannot load previous options. Creating new infrastructure.")
 
         if not state_file_exists:
