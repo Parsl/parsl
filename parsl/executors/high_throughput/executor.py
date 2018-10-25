@@ -3,9 +3,9 @@
 
 from concurrent.futures import Future
 import logging
-import uuid
 import threading
 import queue
+import pickle
 from multiprocessing import Process, Queue
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
@@ -132,6 +132,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.tasks = {}
         self.cores_per_worker = cores_per_worker
 
+        self._task_counter = 0
         self.public_ip = public_ip
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -220,12 +221,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         The `None` message is a die request.
         """
         logger.debug("[MTHREAD] queue management worker starting")
+
         while True:
             try:
-                msg = self.incoming_q.get(timeout=1)
-                logger.debug("[MTHREAD] get has returned")
+                msgs = self.incoming_q.get(timeout=1)
+                # logger.debug("[MTHREAD] get has returned {}".format(len(msgs)))
 
-            except queue.Empty as e:
+            except queue.Empty:
                 logger.debug("[MTHREAD] queue empty")
                 # Timed out.
                 pass
@@ -240,32 +242,37 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
             else:
 
-                if msg is None:
+                if msgs is None:
                     logger.debug("[MTHREAD] Got None, exiting")
                     return
 
                 else:
-                    try:
-                        tid = msg['task_id']
-                    except Exception as e:
-                        raise BadMessage("Message received does not contain 'task_id' field")
-
-                    task_fut = self.tasks[tid]
-
-                    if 'result' in msg:
-                        result, _ = deserialize_object(msg['result'])
-                        task_fut.set_result(result)
-
-                    elif 'exception' in msg:
+                    for serialized_msg in msgs:
                         try:
-                            exception, _ = deserialize_object(msg['exception'])
-                            task_fut.set_exception(exception)
-                        except Exception as e:
-                            # TODO could be a proper wrapped exception?
-                            task_fut.set_exception(
-                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                    else:
-                        raise BadMessage("Message received is neither result or exception")
+                            msg = pickle.loads(serialized_msg)
+                            tid = msg['task_id']
+                        except pickle.UnpicklingError:
+                            raise BadMessage("Message received could not be unpickled")
+
+                        except Exception:
+                            raise BadMessage("Message received does not contain 'task_id' field")
+
+                        task_fut = self.tasks[tid]
+
+                        if 'result' in msg:
+                            result, _ = deserialize_object(msg['result'])
+                            task_fut.set_result(result)
+
+                        elif 'exception' in msg:
+                            try:
+                                exception, _ = deserialize_object(msg['exception'])
+                                task_fut.set_exception(exception)
+                            except Exception as e:
+                                # TODO could be a proper wrapped exception?
+                                task_fut.set_exception(
+                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                        else:
+                            raise BadMessage("Message received is neither result or exception")
 
             if not self.is_alive:
                 break
@@ -331,7 +338,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Returns:
               Future
         """
-        task_id = uuid.uuid4()
+        self._task_counter += 1
+        task_id = self._task_counter
 
         logger.debug("Pushing function {} to queue with args {}".format(func, args))
 

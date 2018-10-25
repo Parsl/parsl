@@ -49,7 +49,7 @@ class SSHInteractiveLoginChannel(SSHChannel):
                 hostname, username=username, password=password, allow_agent=True
             )
 
-        except Exception as e:
+        except Exception:
             logger.debug("Caught the SSHException in SSHInteractive")
             pass
         '''

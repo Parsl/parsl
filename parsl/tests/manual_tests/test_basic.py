@@ -149,7 +149,7 @@ if __name__ == '__main__':
         try:
             exec("import parsl; from {} import config".format(args.sitespec))
             parsl.load(config)
-        except Exception as e:
+        except Exception:
             print("Failed to load the requested config : ", args.sitespec)
             exit(0)
 
