@@ -345,7 +345,6 @@ class DataFlowKernel(object):
                 # Acquire a lock, retest the state, launch
                 with self.task_launch_lock:
                     if self.tasks[task_id]['status'] == States.pending:
-                        self.tasks[task_id]['status'] = States.running  # launch_task also does this though? so maybe unnecessary?
                         exec_fu = self.launch_task(
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
