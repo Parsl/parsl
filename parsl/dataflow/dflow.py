@@ -209,7 +209,7 @@ class DataFlowKernel(object):
         count = 0
         for dep in depends:
             if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
+                if not dep.done():
                     count += 1
 
         return count
