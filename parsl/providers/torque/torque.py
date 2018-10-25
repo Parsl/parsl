@@ -5,7 +5,7 @@ import time
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
 from parsl.providers.torque.template import template_string
-from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.cluster_provider import Cluster
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ translate_table = {
 }  # Suspended
 
 
-class TorqueProvider(ClusterProvider, RepresentationMixin):
+class Torque(Cluster, RepresentationMixin):
     """Torque Execution Provider
 
     This provider uses sbatch to submit, squeue for status, and scancel to cancel

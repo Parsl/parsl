@@ -6,7 +6,7 @@ import time
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
-from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.cluster_provider import Cluster
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ translate_table = {
 }
 
 
-class CondorProvider(RepresentationMixin, ClusterProvider):
+class Condor(RepresentationMixin, Cluster):
     """HTCondor Execution Provider.
 
     Parameters

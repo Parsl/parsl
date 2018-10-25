@@ -4,7 +4,7 @@ import pathlib
 import uuid
 
 from ipyparallel import Client
-from parsl.providers import LocalProvider
+from parsl.providers import Local
 from parsl.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
@@ -25,7 +25,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     Parameters
     ----------
     provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
-        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
+        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
@@ -64,7 +64,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     """
 
     def __init__(self,
-                 provider=LocalProvider(),
+                 provider=Local(),
                  label='ipp',
                  working_dir=None,
                  controller=Controller(),

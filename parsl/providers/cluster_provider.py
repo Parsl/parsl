@@ -8,7 +8,7 @@ from parsl.providers.provider_base import ExecutionProvider
 logger = logging.getLogger(__name__)
 
 
-class ClusterProvider(ExecutionProvider):
+class Cluster(ExecutionProvider):
     """ This class defines behavior common to all cluster/supercompute-style scheduler systems.
 
     Parameters

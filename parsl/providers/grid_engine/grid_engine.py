@@ -3,7 +3,7 @@ import os
 import time
 
 from parsl.channels import LocalChannel
-from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.cluster_provider import Cluster
 from parsl.providers.grid_engine.template import template_string
 from parsl.launchers import SingleNodeLauncher
 from parsl.utils import RepresentationMixin, wtime_to_minutes
@@ -30,7 +30,7 @@ translate_table = {
 }
 
 
-class GridEngineProvider(ClusterProvider, RepresentationMixin):
+class GridEngine(Cluster, RepresentationMixin):
     """A provider for the Grid Engine scheduler.
 
     Parameters

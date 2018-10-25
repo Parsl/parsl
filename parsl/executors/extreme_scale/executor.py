@@ -15,7 +15,7 @@ from parsl.executors.errors import *
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
 
 from parsl.utils import RepresentationMixin
-from parsl.providers import LocalProvider
+from parsl.providers import Local
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     def __init__(self,
                  label='ExtremeScaleExecutor',
-                 provider=LocalProvider(),
+                 provider=Local(),
                  launch_cmd=None,
                  public_ip="127.0.0.1",
                  worker_ports=None,

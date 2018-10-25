@@ -4,7 +4,7 @@ import logging
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.cluster_provider import Cluster
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
@@ -25,7 +25,7 @@ translate_table = {
 }  # (special exit state
 
 
-class SlurmProvider(ClusterProvider, RepresentationMixin):
+class Slurm(Cluster, RepresentationMixin):
     """Slurm Execution Provider
 
     This provider uses sbatch to submit, squeue for status and scancel to cancel

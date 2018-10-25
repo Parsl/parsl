@@ -18,7 +18,7 @@ from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
 
 from parsl.utils import RepresentationMixin
-from parsl.providers import LocalProvider
+from parsl.providers import Local
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     ----------
 
     provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
-       Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
+       Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
@@ -105,7 +105,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     def __init__(self,
                  label='HighThroughputExecutor',
-                 provider=LocalProvider(),
+                 provider=Local(),
                  launch_cmd=None,
                  public_ip="127.0.0.1",
                  worker_ports=None,

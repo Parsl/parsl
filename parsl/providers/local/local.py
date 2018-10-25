@@ -26,7 +26,7 @@ translate_table = {
 }  # (special exit state
 
 
-class LocalProvider(ExecutionProvider, RepresentationMixin):
+class Local(ExecutionProvider, RepresentationMixin):
     """ Local Execution Provider
 
     This provider is used to provide execution resources from the localhost.

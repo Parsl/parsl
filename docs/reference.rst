@@ -22,17 +22,17 @@ Reference guide
     parsl.executors.swift_t.TurbineExecutor
     parsl.channels.local.local.LocalChannel
     parsl.channels.ssh.ssh.SSHChannel
-    parsl.providers.AWSProvider
-    parsl.providers.AzureProvider
-    parsl.providers.CobaltProvider
-    parsl.providers.CondorProvider
-    parsl.providers.GoogleCloudProvider
-    parsl.providers.GridEngineProvider
-    parsl.providers.JetstreamProvider
-    parsl.providers.LocalProvider
-    parsl.providers.GridEngineProvider
-    parsl.providers.SlurmProvider
-    parsl.providers.TorqueProvider
+    parsl.providers.AWS
+    parsl.providers.Azure
+    parsl.providers.Cobalt
+    parsl.providers.Condor
+    parsl.providers.GoogleCloud
+    parsl.providers.GridEngine
+    parsl.providers.Jetstream
+    parsl.providers.Local
+    parsl.providers.GridEngine
+    parsl.providers.Slurm
+    parsl.providers.Torque
     parsl.monitoring.db_logger.MonitoringConfig
 
 .. autosummary::

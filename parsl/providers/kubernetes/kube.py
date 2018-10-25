@@ -15,7 +15,7 @@ except (ImportError, NameError, FileNotFoundError):
     _kubernetes_enabled = False
 
 
-class KubernetesProvider(ExecutionProvider):
+class Kubernetes(ExecutionProvider):
     """ Kubernetes execution provider:
 
         TODO: put in a config

@@ -32,7 +32,7 @@ translate_table = {
 }
 
 
-class AWSProvider(ExecutionProvider, RepresentationMixin):
+class AWS(ExecutionProvider, RepresentationMixin):
     """A provider for using Amazon Elastic Compute Cloud (EC2) resources.
 
     One of 3 methods are required to authenticate: keyfile, profile or environment
@@ -256,27 +256,27 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                     creds = json.load(f)
             except json.JSONDecodeError as e:
                 logger.error(
-                    "EC2Provider '{}': json decode error in credential file {}".format(self.label, credfile)
+                    "EC2 '{}': json decode error in credential file {}".format(self.label, credfile)
                 )
                 raise e
 
             except Exception as e:
                 logger.debug(
-                    "EC2Provider '{0}' caught exception while reading credential file: {1}".format(
+                    "EC2 '{0}' caught exception while reading credential file: {1}".format(
                         self.label, credfile
                     )
                 )
                 raise e
 
-            logger.debug("EC2Provider '{}': Using credential file to create session".format(self.label))
+            logger.debug("EC2 '{}': Using credential file to create session".format(self.label))
             session = boto3.session.Session(region_name=self.region, **creds)
         elif self.profile is not None:
-            logger.debug("EC2Provider '{}': Using profile name to create session".format(self.label))
+            logger.debug("EC2'{}': Using profile name to create session".format(self.label))
             session = boto3.session.Session(
                 profile_name=self.profile, region_name=self.region
             )
         else:
-            logger.debug("EC2Provider '{}': Using environment variables to create session".format(self.label))
+            logger.debug("EC2 '{}': Using environment variables to create session".format(self.label))
             session = boto3.session.Session(region_name=self.region)
 
         return session

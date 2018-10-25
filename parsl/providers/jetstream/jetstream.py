@@ -27,7 +27,7 @@ ipengine --file=ipcontroller-engine.json &>> $LOG
 '''
 
 
-class JetstreamProvider(object):
+class Jetstream(object):
     def __init__(self, config, poolname):
         self.config = config
         self.blocks = {}
