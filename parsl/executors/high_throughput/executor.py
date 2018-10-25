@@ -137,9 +137,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
+        self.run_dir = '.'
 
         if not launch_cmd:
-            self.launch_cmd = """process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"""
+            self.launch_cmd = """process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -163,7 +164,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                            cores_per_worker=self.cores_per_worker,
                                            # This is here only to support the exex mpiexec call
                                            tasks_per_node=self.provider.tasks_per_node,
-                                           nodes_per_block=self.provider.nodes_per_block)
+                                           nodes_per_block=self.provider.nodes_per_block,
+                                           logdir="{}/{}".format(self.run_dir, self.label))
             self.launch_cmd = l_cmd
             logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -292,6 +294,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                   kwargs={"client_ports": (self.outgoing_q.port, self.incoming_q.port),
                                           "worker_ports": self.worker_ports,
                                           "worker_port_range": self.worker_port_range,
+                                          "logdir": "{}/{}".format(self.run_dir, self.label),
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
         )

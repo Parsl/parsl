@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import argparse
 import zmq
-import uuid
+# import uuid
+import os
 import time
 import pickle
 import logging
@@ -54,6 +55,7 @@ class Interchange(object):
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  heartbeat_period=60,
+                 logdir=".",
                  logging_level=logging.INFO,
              ):
         """
@@ -78,16 +80,24 @@ class Interchange(object):
         heartbeat_period : int
              Heartbeat period expected from workers (seconds). Default: 10s
 
+        logdir : str
+             Parsl log directory paths. Logs and temp files go here. Default: '.'
+
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO (20)
 
         """
-        start_file_logger("interchange.log", level=logging_level)
+        self.logdir = logdir
+        try:
+            os.makedirs(self.logdir)
+        except FileExistsError:
+            pass
+
+        start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
         self.interchange_address = interchange_address
-        self.identity = uuid.uuid4()
 
         logger.info("Attempting connection to client at {} on ports: {},{}".format(
             client_address, client_ports[0], client_ports[1]))
