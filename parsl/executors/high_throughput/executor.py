@@ -380,7 +380,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def scale_out(self):
+    def scale_out(self, blocks=1):
         """Scales out the number of active workers by 1.
 
         Raises:
