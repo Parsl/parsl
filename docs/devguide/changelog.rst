@@ -33,7 +33,7 @@ New functionality
   .. code-block:: python
 
     from libsubmit.channels import SSHChannel
-    from libsubmit.providers import SlurmProvider
+    from libsubmit.providers import Slurm
 
     from parsl.config import Config
     from parsl.executors.ipp import IPyParallelExecutor
@@ -42,7 +42,7 @@ New functionality
     config = Config(
         executors=[
             IPyParallelExecutor(
-                provider=SlurmProvider(
+                provider=Slurm(
                     'westmere',
                     channel=SSHChannel(
                         hostname='swift.rcc.uchicago.edu',

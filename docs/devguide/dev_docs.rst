@@ -163,42 +163,42 @@ ExecutionProvider (Base)
 Local
 -----
 
-.. autoclass:: libsubmit.providers.LocalProvider
+.. autoclass:: libsubmit.providers.Local
    :members:
    :special-members:
 
 Slurm
 -----
 
-.. autoclass:: libsubmit.providers.SlurmProvider
+.. autoclass:: libsubmit.providers.Slurm
    :members:
    :special-members:
 
 Cobalt
 ------
 
-.. autoclass:: libsubmit.providers.CobaltProvider
+.. autoclass:: libsubmit.providers.Cobalt
    :members:
    :special-members:
 
 Condor
 ------
 
-.. autoclass:: libsubmit.providers.CondorProvider
+.. autoclass:: libsubmit.providers.Condor
    :members:
    :special-members:
 
 Torque
 ------
 
-.. autoclass:: libsubmit.providers.TorqueProvider
+.. autoclass:: libsubmit.providers.Torque
    :members:
    :special-members:
 
 GridEngine
 ----------
 
-.. autoclass:: libsubmit.providers.GridEngineProvider
+.. autoclass:: libsubmit.providers.GridEngine
    :members:
    :special-members:
 
@@ -206,7 +206,7 @@ GridEngine
 Amazon Web Services
 -------------------
 
-.. autoclass:: libsubmit.providers.AWSProvider
+.. autoclass:: libsubmit.providers.AWS
    :members:
    :special-members:
 
@@ -214,14 +214,14 @@ Amazon Web Services
 Google Cloud Platform
 ---------------------
 
-.. autoclass:: libsubmit.providers.GoogleCloudProvider
+.. autoclass:: libsubmit.providers.GoogleCloud
    :members:  __init__, submit, status, cancel, create_instance, get_correct_zone, delete_instance
 
 
 Kubernetes
 ----------
 
-.. autoclass:: libsubmit.providers.KubernetesProvider
+.. autoclass:: libsubmit.providers.Kubernetes
    :members:
    :special-members:
 

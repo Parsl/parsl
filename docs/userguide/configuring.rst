@@ -29,7 +29,7 @@ Comet (SDSC)
 
 .. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
-The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
+The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `Slurm` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/tests/configs/comet_ipp_multinode.py
 
@@ -50,7 +50,7 @@ Theta (ALCF)
 .. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
 
 The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's **Theta** supercomputer.
-This example uses the `IPythonParallel` executor and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
+This example uses the `IPythonParallel` executor and connects to Theta's Cobalt scheduler using the `Cobalt`. This configuration
 assumes that the script is being executed on the login nodes of Theta.
 
 .. literalinclude:: ../../parsl/tests/configs/theta_local_ipp_multinode.py
@@ -63,7 +63,7 @@ Cooley (ALCF)
 
 The following snippet shows an example configuration for executing remotely on Argonne Leadership Computing Facility's **Cooley** analysis and visualization system.
 The example uses an `SSHInteractiveLoginChannel` to connect remotely to Cooley using ALCF's 2FA token.
-The configuration uses the `CobaltProvider` to interface with Cooley's scheduler.
+The configuration uses the `Cobalt` to interface with Cooley's scheduler.
 
 .. literalinclude:: ../../parsl/tests/configs/cooley_ssh_il_single_node.py
 
@@ -73,7 +73,7 @@ Swan (Cray)
 .. image:: https://www.cray.com/blog/wp-content/uploads/2016/11/XC50-feat-blog.jpg
 
 The following snippet shows an example configuration for executing remotely on Swan, an XC50 machine hosted by the Cray Partner Network.
-The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
+The example uses an `SSHChannel` to connect remotely Swan, uses the `Torque` to interface with the scheduler and the `AprunLauncher`
 to launch workers on the machine
 
 .. literalinclude:: ../../parsl/tests/configs/swan_ipp_multinode.py
@@ -85,8 +85,8 @@ CC-IN2P3
 .. image:: https://cc.in2p3.fr/wp-content/uploads/2017/03/bandeau_accueil.jpg
 
 The snippet below shows an example configuration for executing from a login node on IN2P3's Computing Centre.
-The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
-This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
+The configuration uses the `Local` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
+This system uses Grid Engine which Parsl interfaces with using the `GridEngine`.
 
 .. literalinclude:: ../../parsl/tests/configs/cc_in2p3_local_single_node.py
 
@@ -97,8 +97,8 @@ Midway (RCC, UChicago)
 
 This Midway cluster is a campus cluster hosted by the Research Computing Center at the University of Chicago.
 The snippet below shows an example configuration for executing remotely on Midway.
-The configuration uses the `SSHProvider` to connect remotely to Midway, uses the `SlurmProvider` to interface
-with the scheduler, and uses the `SrunProvider` to launch workers.
+The configuration uses the `SSH` to connect remotely to Midway, uses the `Slurm` to interface
+with the scheduler, and uses the `Srun` to launch workers.
 
 .. literalinclude:: ../../parsl/tests/configs/midway_ipp_multinode.py
 
@@ -110,7 +110,7 @@ Open Science Grid
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
 The snippet below shows an example configuration for executing remotely on OSG.
-The configuration uses the `SSHProvider` to connect remotely to OSG, uses the `CondorProvider` to interface
+The configuration uses the `SSH` to connect remotely to OSG, uses the `Condor` to interface
 with the scheduler.
 
 .. literalinclude:: ../../parsl/tests/configs/osg_ipp_multinode.py
@@ -127,7 +127,7 @@ Amazon Web Services
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
-re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
+re-used in subsequent runs. The configuration uses the `AWS` to connect to AWS
 
 .. literalinclude:: ../../parsl/tests/configs/ec2_single_node.py
 
