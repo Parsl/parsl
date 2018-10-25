@@ -8,6 +8,44 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class CommandClient(object):
+    """ CommandClient
+    """
+    def __init__(self, ip_address, port_range):
+        """
+        Parameters
+        ----------
+
+        ip_address: str
+           IP address of the client (where Parsl runs)
+        port_range: tuple(int, int)
+           Port range for the comms between client and interchange
+
+        """
+        self.context = zmq.Context()
+        self.zmq_socket = self.context.socket(zmq.REQ)
+        self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
+                                                        min_port=port_range[0],
+                                                        max_port=port_range[1])
+
+    def run(self, message):
+        """ This function needs to be fast at the same time aware of the possibility of
+        ZMQ pipes overflowing.
+
+        The timeout increases slowly if contention is detected on ZMQ pipes.
+        We could set copy=False and get slightly better latency but this results
+        in ZMQ sockets reaching a broken state once there are ~10k tasks in flight.
+        This issue can be magnified if each the serialized buffer itself is larger.
+        """
+        self.zmq_socket.send_pyobj(message, copy=True)
+        reply = self.zmq_socket.recv_pyobj()
+        return reply
+
+    def close(self):
+        self.zmq_socket.close()
+        self.context.term()
+
+
 class TasksOutgoing(object):
     """ Outgoing task queue from the executor to the Interchange
     """
