@@ -3,6 +3,9 @@
 import zmq
 import time
 import pickle
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TasksOutgoing(object):
@@ -24,9 +27,28 @@ class TasksOutgoing(object):
         self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
+        self.poller = zmq.Poller()
+        self.poller.register(self.zmq_socket, zmq.POLLOUT)
 
     def put(self, message):
-        self.zmq_socket.send_pyobj(message)
+        """ This function needs to be fast at the same time aware of the possibility of
+        ZMQ pipes overflowing.
+
+        The timeout increases slowly if contention is detected on ZMQ pipes.
+        We could set copy=False and get slightly better latency but this results
+        in ZMQ sockets reaching a broken state once there are ~10k tasks in flight.
+        This issue can be magnified if each the serialized buffer itself is larger.
+        """
+        timeout_ms = 0
+        while True:
+            socks = dict(self.poller.poll(timeout=timeout_ms))
+            if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
+                # The copy option adds latency but reduces the risk of ZMQ overflow
+                self.zmq_socket.send_pyobj(message, copy=True)
+                return
+            else:
+                timeout_ms += 1
+                logger.debug("Not sending due full zmq pipe, timeout: {} ms".format(timeout_ms))
 
     def close(self):
         self.zmq_socket.close()
@@ -55,8 +77,7 @@ class ResultsIncoming(object):
                                                               max_port=port_range[1])
 
     def get(self, block=True, timeout=None):
-        result = self.results_receiver.recv_pyobj()
-        return result
+        return self.results_receiver.recv_multipart()
 
     def request_close(self):
         status = self.results_receiver.send(pickle.dumps(None))

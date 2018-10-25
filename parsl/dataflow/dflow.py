@@ -167,7 +167,7 @@ class DataFlowKernel(object):
                 h, m, s = map(int, config.checkpoint_period.split(':'))
                 checkpoint_period = (h * 3600) + (m * 60) + s
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
-            except Exception as e:
+            except Exception:
                 logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
@@ -303,11 +303,11 @@ class DataFlowKernel(object):
 
         # Submit _*_stage_out tasks for output data futures that correspond with remote files
         if (self.tasks[task_id]['app_fu'] and
-                self.tasks[task_id]['status'] == States.done and
-                self.tasks[task_id]['executor'] != 'data_manager' and
-                self.tasks[task_id]['func_name'] != '_file_stage_in' and
-                self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
-                self.tasks[task_id]['func_name'] != '_http_stage_in'):
+            self.tasks[task_id]['status'] == States.done and
+            self.tasks[task_id]['executor'] != 'data_manager' and
+            self.tasks[task_id]['func_name'] != '_file_stage_in' and
+            self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
+            self.tasks[task_id]['func_name'] != '_http_stage_in'):
             for dfu in self.tasks[task_id]['app_fu'].outputs:
                 f = dfu.file_obj
                 if isinstance(f, File) and f.is_remote():
@@ -402,7 +402,7 @@ class DataFlowKernel(object):
         executor_label = self.tasks[task_id]["executor"]
         try:
             executor = self.executors[executor_label]
-        except Exception as e:
+        except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
         if self.monitoring_config is not None:
             executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
@@ -794,7 +794,7 @@ class DataFlowKernel(object):
             if not os.path.exists(checkpoint_dir):
                 try:
                     os.makedirs(checkpoint_dir)
-                except FileExistsError as e:
+                except FileExistsError:
                     pass
 
             with open(checkpoint_dfk, 'wb') as f:
@@ -886,7 +886,7 @@ class DataFlowKernel(object):
                     checkpoint_file)
                 logger.error(reason)
                 raise BadCheckpoint(reason)
-            except Exception as e:
+            except Exception:
                 reason = "Failed to load checkpoint: {}".format(
                     checkpoint_file)
                 logger.error(reason)

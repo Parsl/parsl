@@ -5,6 +5,8 @@ import uuid
 import time
 import pickle
 import logging
+import queue
+import threading
 
 from ipyparallel.serialize import serialize_object
 
@@ -91,11 +93,13 @@ class Interchange(object):
             client_address, client_ports[0], client_ports[1]))
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
-        self.task_incoming.RCVTIMEO = 100  # in milliseconds
+        self.task_incoming.RCVTIMEO = 10  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
         logger.debug("Connected to client")
+
+        self.pending_task_queue = queue.Queue(maxsize=10 ^ 6)
 
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -127,53 +131,58 @@ class Interchange(object):
 
         self.heartbeat_thresh = heartbeat_period * 2
 
-    def get_tasks(self, count, socks):
-        """ Obtains a batch of tasks from the task queue.
+    def get_tasks(self, count):
+        """ Obtains a batch of tasks from the internal pending_task_queue
 
         Parameters
         ----------
         count: int
             Count of tasks to get from the queue
-        socks: dict(poll events)
-            Dictionary of socket events from zmq.poller.poll()
 
         Returns
         -------
         List of upto count tasks. May return fewer than count down to an empty list
             eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
-
-        Raises
-        ------
-        ShutdownRequest: If shutdown requested by client.
-            Tasks are moved from Zmq to the internal task_queue only when the queue in not full.
-            As a result the 'STOP' request might be queued in ZMQ and may be processed in a
-            delayed manner.
-
         """
-        # Listen for tasks
         tasks = []
-        logger.debug("[GET_TASKS] Listening for {} tasks".format(count))
-        for c in range(count):
-            if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                if len(self._task_queue) < self.max_task_queue_size:
-                    # There's an unpickling cost here, could optimize by prepending
-                    # buffer with tid
-                    try:
-                        msg = self.task_incoming.recv_pyobj()
-                    except zmq.Again:
-                        # We just timed out while attempting to receive
-                        logger.debug("There are no more tasks in the incoming queue. Breaking")
-                        break
-                    # msg = self.task_incoming.recv_string()
-                    if msg == 'STOP':
-                        raise ShutdownRequest
-                    else:
-                        tasks.append(msg)
-            else:
-                logger.debug("[GET_TASKS] Returning with {} tasks".format(c))
+        for i in range(0, count):
+            try:
+                x = self.pending_task_queue.get(block=False)
+            except queue.Empty:
                 break
+            else:
+                tasks.append(x)
 
         return tasks
+
+    def migrate_tasks_to_internal(self, kill_event):
+        """Pull tasks from the incoming tasks 0mq pipe onto the internal
+        pending task queue
+
+        Parameters:
+        -----------
+        kill_event : threading.Event
+              Event to let the thread know when it is time to die.
+        """
+        logger.info("TASK_PULL_THREAD] Starting")
+        task_counter = 0
+        poller = zmq.Poller()
+        poller.register(self.task_incoming, zmq.POLLIN)
+
+        while not kill_event.is_set():
+            try:
+                msg = self.task_incoming.recv_pyobj()
+            except zmq.Again:
+                # We just timed out while attempting to receive
+                continue
+
+            if msg == 'STOP':
+                kill_event.set()
+                break
+            else:
+                self.pending_task_queue.put(msg)
+                task_counter += 1
+                logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
 
     def start(self, poll_period=1):
         """ Start the NeedNameQeueu
@@ -191,8 +200,13 @@ class Interchange(object):
         start = time.time()
         count = 0
 
+        self._kill_event = threading.Event()
+        self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
+                                                    args=(self._kill_event,))
+        self._task_puller_thread.start()
+
         poller = zmq.Poller()
-        poller.register(self.task_incoming, zmq.POLLIN)
+        # poller.register(self.task_incoming, zmq.POLLIN)
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
 
@@ -221,7 +235,7 @@ class Interchange(object):
             # If we had received any requests, check if there are tasks that could be passed
             for manager in self._ready_manager_queue:
                 if self._ready_manager_queue[manager]['free_capacity']:
-                    tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'], self.socks)
+                    tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                     if tasks:
                         self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
@@ -235,16 +249,18 @@ class Interchange(object):
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
-                b_manager, b_message = self.results_incoming.recv_multipart()
+                b_manager, *b_messages = self.results_incoming.recv_multipart()
                 manager = int.from_bytes(b_manager, "little")
                 if manager not in self._ready_manager_queue:
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:
-                    r = pickle.loads(b_message)
-                    logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
+                    logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
+                    for b_message in b_messages:
+                        r = pickle.loads(b_message)
+                        # logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
+                        self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                    self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
-                    self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
-                    self.results_outgoing.send(b_message)
 
             bad_managers = [manager for manager in self._ready_manager_queue if
                             time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_thresh]

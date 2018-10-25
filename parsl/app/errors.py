@@ -152,6 +152,6 @@ def wrap_error(func):
         from parsl.app.errors import RemoteException
         try:
             return func(*args, **kwargs)
-        except Exception as e:
+        except Exception:
             return RemoteException(*sys.exc_info())
     return wrapper

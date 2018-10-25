@@ -240,7 +240,7 @@ class TurbineExecutor(ParslExecutor):
             try:
                 msg = self.incoming_q.get(block=True, timeout=1)
 
-            except queue.Empty as e:
+            except queue.Empty:
                 # Timed out.
                 pass
 
