@@ -53,6 +53,9 @@ class Manager(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
 
+        uid : str
+             string unique identifier
+
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0. Default=1
@@ -62,11 +65,11 @@ class Manager(object):
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
-        self.task_incoming.setsockopt(zmq.IDENTITY, b'00100')
+        self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.task_incoming.connect(task_q_url)
 
         self.result_outgoing = self.context.socket(zmq.DEALER)
-        self.result_outgoing.setsockopt(zmq.IDENTITY, b'00100')
+        self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.connect(result_q_url)
         logger.info("Manager connected")
 
