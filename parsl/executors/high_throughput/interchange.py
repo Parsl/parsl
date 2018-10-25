@@ -266,7 +266,6 @@ class Interchange(object):
                 message = self.task_outgoing.recv_multipart()
                 manager = message[0]
                 tasks_requested = int.from_bytes(message[1], "little")
-                manager = int.from_bytes(message[0], "little")
 
                 logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                 if manager not in self._ready_manager_queue:
@@ -285,7 +284,8 @@ class Interchange(object):
                 if self._ready_manager_queue[manager]['free_capacity']:
                     tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                     if tasks:
-                        self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
+                        # self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
+                        self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
                         count += task_count
                         tids = [t['task_id'] for t in tasks]
@@ -297,8 +297,7 @@ class Interchange(object):
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
-                b_manager, *b_messages = self.results_incoming.recv_multipart()
-                manager = int.from_bytes(b_manager, "little")
+                manager, *b_messages = self.results_incoming.recv_multipart()
                 if manager not in self._ready_manager_queue:
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:
