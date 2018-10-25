@@ -322,15 +322,21 @@ class DataFlowKernel(object):
             self.launch_if_ready(tid)
         return
 
-    # this should be called by pieces of the DataFlowKernel that think that a task might
-    # now be ready to run (although that task does not have to definitely be ready to run).
-    # For example, if the task has just been created, or a dependency might have been
-    # satisfied
-
-    # IS THIS THREAD SAFE? (probably not)    DOES IT NEED TO BE? (probably)
-    # might be able to take the launch lock around all of this? (which will reduce
-    # performance during lock contention...)
     def launch_if_ready(self, task_id):
+        """
+        launch_if_ready will launch the specified task, if it is ready
+        to run (for example, without dependencies, and in pending state).
+
+        This should be called by any piece of the DataFlowKernel that
+        thinks a task may have become ready to run.
+
+        It is not an error to call launch_if_ready on a task that is not
+        ready to run - launch_if_ready will not incorrectly launch that
+        task.
+
+        launch_if_ready is thread safe, so may be called from any thread
+        or callback.
+        """
         if self._count_deps(self.tasks[task_id]['depends']) == 0:
 
             # We can now launch *task*
