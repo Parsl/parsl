@@ -4,24 +4,15 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 from parsl.monitoring.web_app.app import app, get_db, close_db
-from parsl.monitoring.web_app.utils import dropdown
-from datetime import datetime
+from parsl.monitoring.web_app.utils import timestamp_to_int, int_to_timestamp, DB_DATE_FORMAT
 
 
-def display_workflow(workflow_name):
-    sql_conn = get_db()
-    df_workflows = pd.read_sql_query('SELECT workflow_name, time_began, rundir, run_id FROM workflows WHERE workflow_name=(?)',
-                                     sql_conn, params=(workflow_name, ))
-    return html.Div(children=[
-        html.H2(id='workflow_name', children=df_workflows['workflow_name'][0]),
-        dropdown(id='run_number_dropdown', dataframe=df_workflows.sort_values(by='time_began', ascending=False), field='rundir'),
-        html.Div(id='workflow_content')
-    ])
+layout = html.Div(id='workflow_details')
 
 
-@app.callback(Output('workflow_content', 'children'),
+@app.callback(Output('workflow_details', 'children'),
               [Input('run_number_dropdown', 'value')])
-def workflow_content(run_id):
+def workflow_details(run_id):
     return [html.A(id='run_id', children=run_id, hidden=True),
             dcc.RadioItems(
                 id='resource_usage_radio_items',
@@ -35,14 +26,15 @@ def workflow_content(run_id):
             total_tasks_plot(run_id)]
 
 
-# TODO: task_resources is not created for all workflows. Throws error
 @app.callback(Output('resource_usage_plot', 'figure'),
               [Input('resource_usage_radio_items', 'value')],
               [State('run_number_dropdown', 'value')])
 def resource_usage_plot(field, run_id):
     sql_conn = get_db()
-    df_resources = pd.read_sql_query('SELECT {field}, timestamp, task_id FROM task_resources WHERE run_id=(?)'.format(field=field), sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query('SELECT task_id, task_time_completed FROM task WHERE run_id=(?)', sql_conn, params=(run_id, ))
+    df_resources = pd.read_sql_query('SELECT {field}, timestamp, task_id FROM task_resources WHERE run_id=(?)'.format(field=field),
+                                     sql_conn, params=(run_id, ))
+    df_task = pd.read_sql_query('SELECT task_id, task_time_completed FROM task WHERE run_id=(?)',
+                                sql_conn, params=(run_id, ))
     close_db()
 
     def y_axis_setup():
@@ -72,19 +64,26 @@ def resource_usage_plot(field, run_id):
 
         return items
 
-    return go.Figure(
-        data=[go.Scatter(x=df_resources['timestamp'],
-                         y=y_axis_setup(),
-                         name='tasks')],
-        layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S', range=[min(df_resources.timestamp), max(df_resources.timestamp)]),
-                         title="Resource usage")
-    )
+    if len(df_resources) == 0:
+        return html.H3('No resource data found')
+    else:
+        return go.Figure(
+            data=[go.Scatter(x=df_resources['timestamp'],
+                             y=y_axis_setup(),
+                             name='tasks')],
+            layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
+                                        range=[min(df_resources.timestamp), max(df_resources.timestamp)],
+                                        title='Time'),
+                             title="Resource usage")
+        )
 
 
 def tasks_per_app_plot(run_id):
     sql_conn = get_db()
-    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)', sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?)', sql_conn, params=(run_id,))
+    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
+                                  sql_conn, params=(run_id, ))
+    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?)',
+                                sql_conn, params=(run_id,))
     close_db()
 
     def y_axis_setup(array):
@@ -108,7 +107,7 @@ def tasks_per_app_plot(run_id):
         else:
             apps[row['task_fn_hash']] = [row['task_id']]
 
-    return dcc.Graph(id='total_tasks',
+    return dcc.Graph(id='tasks_per_app',
                      figure=go.Figure(
                          data=[go.Scatter(x=df_status[df_status['task_id'].isin(tasks)]['timestamp'],
                                           y=y_axis_setup(df_status[df_status['task_id'].isin(tasks)]['task_status_name'] == 'running'),
@@ -117,34 +116,31 @@ def tasks_per_app_plot(run_id):
                               [go.Scatter(x=df_status['timestamp'],
                                           y=y_axis_setup(df_status['task_status_name'] == 'running'),
                                           name='all')],
-                         layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S', range=[min(df_status['timestamp']), max(df_status['timestamp'])]),
+                         layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
+                                                     range=[min(df_status['timestamp']), max(df_status['timestamp'])],
+                                                     title='Time'),
+                                          yaxis=dict(tickformat= ',d',
+                                                     title='Tasks'),
+                                          hovermode='closest',
                                           title="Tasks per app")
-    ))
+                     ))
 
 
 def total_tasks_plot(run_id):
     sql_conn = get_db()
-    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)', sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?)', sql_conn, params=(run_id,))
+    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
+                                  sql_conn, params=(run_id, ))
     close_db()
 
     columns = 20
-    # 2018-10-09 13:47:03
-
-    def timestamp_to_int(time):
-        return int(datetime.strptime(time, '%Y-%m-%d %H:%M:%S').timestamp())
-
-    def int_to_timestamp(n):
-        return datetime.fromtimestamp(n)
 
     min_time = timestamp_to_int(min(df_status['timestamp']))
     max_time = timestamp_to_int(max(df_status['timestamp']))
     time_step = int((max_time - min_time) / columns)
 
     x_axis = []
-
     for i in range(min_time, max_time, time_step):
-        x_axis.append(int_to_timestamp(i).strftime('%Y-%m-%d %H:%M:%S'))
+        x_axis.append(int_to_timestamp(i).strftime(DB_DATE_FORMAT))
 
     def y_axis_setup(value):
         items = []
@@ -155,26 +151,34 @@ def total_tasks_plot(run_id):
 
         return items
 
-    return dcc.Graph(id='total_tasks_plot',
+
+    return dcc.Graph(id='total_tasks',
                      figure=go.Figure(data=[go.Bar(x=x_axis,
                                                    y=y_axis_setup('done'),
                                                    name='done'),
                                             go.Bar(x=x_axis,
                                                    y=y_axis_setup('failed'),
                                                    name='failed')],
-                                      layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S', range=[min(df_status['timestamp']), max(df_status['timestamp'])]),
+                                      layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
+                                                                  range=[min(df_status['timestamp']), max(df_status['timestamp'])],
+                                                                  title='Time. ' + ' Bin width: ' + int_to_timestamp(time_step).strftime('%Mm%Ss')),
+                                                       yaxis=dict(tickformat= ',d',
+                                                                  title='Tasks'),
                                                        barmode='stack',
                                                        title="Total tasks")))
 
 
 
 
-#
+
+
+
 # @app.callback(
 #     Output('tables', 'children'),
-#     [Input('graph', 'clickData')],
-#     [State('task_id', 'children')])
+#     [Input('tasks_per_app', 'clickData')],
+#     [State('run_id', 'children')])
 # def load_task_table(clicked, task_id):
+#     print(clicked)
 #     if not clicked:
 #         return
 #     sql_conn = get_db()

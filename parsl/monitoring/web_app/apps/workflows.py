@@ -1,8 +1,6 @@
 import pandas as pd
-import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output, State
-from parsl.monitoring.web_app.app import app, get_db, close_db
+from parsl.monitoring.web_app.app import get_db, close_db
 from parsl.monitoring.web_app.utils import dataframe_to_html_table
 
 
@@ -18,8 +16,7 @@ layout = html.Div(children=[
                             .sort_values(
                                 by=['time_began'],
                                 ascending=[False]),
-                            field='workflow_name'),
-    html.Div(id='workflow_details')
+                            field='workflow_name')
 ])
 
 close_db()

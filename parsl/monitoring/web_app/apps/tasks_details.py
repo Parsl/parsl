@@ -1,0 +1,143 @@
+import pandas as pd
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output, State
+import plotly.graph_objs as go
+from parsl.monitoring.web_app.app import app, get_db, close_db
+from parsl.monitoring.web_app.utils import timestamp_to_int, int_to_timestamp, DB_DATE_FORMAT
+
+
+layout = html.Div(id='tasks_details')
+
+
+@app.callback(Output('tasks_details', 'children'),
+              [Input('run_number_dropdown', 'value')])
+def tasks_details(run_id):
+    sql_conn = get_db()
+    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?)',
+                                sql_conn, params=(run_id,))
+    close_db()
+
+    apps = []
+    for app in df_task['task_fn_hash'].unique():
+        apps.append(dict(label=app, value=app))
+
+    return [dcc.Dropdown(
+                id='apps_dropdown',
+                options=apps,
+                value=apps[0],
+                multi=True),
+            dcc.Graph(id='total_tasks_app')
+    ]
+
+
+def tasks_per_app_plot(apps, run_id):
+    sql_conn = get_db()
+    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
+                                  sql_conn, params=(run_id, ))
+    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?) AND task_fn_hash IN (?)',
+                                sql_conn, params=(run_id, apps))
+    close_db()
+
+    def y_axis_setup(array):
+        count = 0
+        items = []
+        for n in array:
+            if n:
+                count += 1
+            elif count > 0:
+                count -= 1
+            items.append(count)
+
+        return items
+
+    # Fill up dict "apps" like: {app1: [#task1, #task2], app2: [#task4], app3: [#task3]}
+    apps = dict()
+    for i in range(len(df_task)):
+        row = df_task.iloc[i]
+        if row['task_fn_hash'] in apps:
+            apps[row['task_fn_hash']].append(row['task_id'])
+        else:
+            apps[row['task_fn_hash']] = [row['task_id']]
+
+    return dcc.Graph(id='tasks_per_app',
+                     figure=go.Figure(
+                         data=[go.Scatter(x=df_status[df_status['task_id'].isin(tasks)]['timestamp'],
+                                          y=y_axis_setup(df_status[df_status['task_id'].isin(tasks)]['task_status_name'] == 'running'),
+                                          name=app)
+                               for app, tasks in apps.items()] +
+                              [go.Scatter(x=df_status['timestamp'],
+                                          y=y_axis_setup(df_status['task_status_name'] == 'running'),
+                                          name='all')],
+                         layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
+                                                     range=[min(df_status['timestamp']), max(df_status['timestamp'])],
+                                                     title='Time'),
+                                          yaxis=dict(tickformat= ',d',
+                                                     title='Tasks'),
+                                          hovermode='closest',
+                                          title="Tasks per app")
+                     ))
+
+
+@app.callback(Output('total_tasks_app', 'children'),
+              [Input('apps_dropdown', 'value')],
+              [State('run_number_dropdown', 'value')])
+def total_tasks_plot(apps, run_id):
+    if type(apps) is dict:
+        apps = [apps['label']]
+
+    print(apps)
+    sql_conn = get_db()
+    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
+                                  sql_conn, params=(run_id, ))
+    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id= ? AND task_fn_hash IN {apps}'.format(apps=tuple(apps)),
+                                sql_conn, params=(run_id, ))
+    close_db()
+
+    columns = 20
+
+    min_time = timestamp_to_int(min(df_status['timestamp']))
+    max_time = timestamp_to_int(max(df_status['timestamp']))
+    time_step = int((max_time - min_time) / columns)
+
+    times = []
+    for i in range(min_time, max_time, time_step):
+        times.append(int_to_timestamp(i).strftime(DB_DATE_FORMAT))
+
+    def axis_setup(value):
+        x_axis = []
+        y_axis = []
+
+        for app, tasks in apps.items():
+            x_axis.append(times)
+            for i in range(len(times) - 1):
+                task = df_status[df_status['task_id'].isin(tasks)]
+                x = task['timestamp'] >= times[i]
+                y = task['timestamp'] < times[i+1]
+                y_axis.append(sum(task.loc[[a and b for a, b in zip(x, y)]]['task_status_name'] == value))
+
+        return (x_axis, y_axis)
+
+    # Fill up dict "apps" like: {app1: [#task1, #task2], app2: [#task4], app3: [#task3]}
+    apps = dict()
+    for i in range(len(df_task)):
+        row = df_task.iloc[i]
+        if row['task_fn_hash'] in apps:
+            apps[row['task_fn_hash']].append(row['task_id'])
+        else:
+            apps[row['task_fn_hash']] = [row['task_id']]
+
+    return dcc.Graph(id='total_tasks',
+                     figure=go.Figure(data=[go.Bar(axis_setup('done'),
+                                                   name='done'),
+                                            go.Bar(axis_setup('failed'),
+                                                   name='failed')],
+                                      layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
+                                                                  range=[min(df_status['timestamp']), max(df_status['timestamp'])],
+                                                                  title='Time. ' + ' Bin width: ' + int_to_timestamp(time_step).strftime('%Mm%Ss')),
+                                                       yaxis=dict(tickformat= ',d',
+                                                                  title='Tasks'),
+                                                       barmode='stack',
+                                                       title="Total tasks")))
+
+

@@ -1,10 +1,11 @@
 import dash_html_components as html
 import dash_core_components as dcc
-import pandas as pd
-from parsl.monitoring.web_app.app import app, get_db
+from datetime import datetime
 
 
-# TODO Add parameter to choose column in dataframe instead of hardcoded /workflows/'run_id'
+DB_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+
 def dataframe_to_html_table(id, dataframe, field):
     return html.Table(id=id, children=(
         [html.Tr([html.Th(col) for col in dataframe.columns])] +
@@ -16,14 +17,22 @@ def dataframe_to_html_table(id, dataframe, field):
     )
 
 
+def timestamp_to_int(time):
+    return int(datetime.strptime(time, DB_DATE_FORMAT).timestamp())
+
+
+def int_to_timestamp(n):
+    return datetime.fromtimestamp(n)
+
+
 def dropdown(id, dataframe, field):
     options = []
 
-    latest = dataframe['run_id'][0]
+    latest = dataframe['run_id'].iloc[0]
     options.append({'label': dataframe[field].iloc[0].split('/').pop() + ' (Latest)', 'value': latest})
 
     for i in range(1, len(dataframe)):
-        run_id = dataframe['run_id'][i]
+        run_id = dataframe['run_id'].iloc[i]
         options.append({'label': dataframe[field].iloc[i].split('/').pop(), 'value': run_id})
 
     return dcc.Dropdown(
@@ -32,3 +41,4 @@ def dropdown(id, dataframe, field):
         value=latest,
         style=dict(width='200px', display='inline-block')
     )
+

@@ -12,7 +12,7 @@ def web_app(db, port):
     print(' * Visualizing ' + db)
     print(' * Running on http://localhost:' + str(port))
 
-    from parsl.monitoring.web_app.apps import sql, workflows, workflow_details
+    from parsl.monitoring.web_app.apps import sql, workflows, tabs
 
     app.layout = html.Div([
         dcc.Location(id='url', refresh=False),
@@ -30,7 +30,7 @@ def web_app(db, port):
         elif pathname == '/workflows':
             return workflows.layout
         elif '/workflows' in str(pathname):
-            return workflow_details.display_workflow(workflow_name=pathname.split('/').pop())
+            return tabs.display_workflow(workflow_name=pathname.split('/').pop())
         elif pathname == '/sql':
             return sql.layout
         else:
