@@ -1,5 +1,5 @@
 from parsl.channels import SSHChannel
-from parsl.providers import SlurmProvider
+from parsl.providers import Slurm
 from parsl.launchers import SingleNodeLauncher
 
 from parsl.config import Config
@@ -18,7 +18,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='midway_ipp_multicore',
-            provider=SlurmProvider(
+            provider=Slurm(
                 'westmere',
                 channel=SSHChannel(
                     hostname='swift.rcc.uchicago.edu',

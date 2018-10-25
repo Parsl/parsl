@@ -8,7 +8,7 @@
 ==================
 """
 from parsl.channels import LocalChannel
-from parsl.providers import GridEngineProvider
+from parsl.providers import GridEngine
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.utils import get_rundir
@@ -24,7 +24,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='cc_in2p3_local_single_node',
-            provider=GridEngineProvider(
+            provider=GridEngine(
                 channel=LocalChannel(),
                 nodes_per_block=1,
                 tasks_per_node=1,

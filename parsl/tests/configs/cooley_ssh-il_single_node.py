@@ -1,6 +1,6 @@
 # Untested
 from parsl.channels import SSHInteractiveLoginChannel
-from parsl.providers import CobaltProvider
+from parsl.providers import Cobalt
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.executors.ipp_controller import Controller
@@ -17,7 +17,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='cooley_ssh_il_local_single_node',
-            provider=CobaltProvider(
+            provider=Cobalt(
                 channel=SSHInteractiveLoginChannel(
                     hostname='cooleylogin1.alcf.anl.gov',
                     username=user_opts['cooley']['username'],

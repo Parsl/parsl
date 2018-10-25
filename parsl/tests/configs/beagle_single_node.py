@@ -8,7 +8,7 @@
 ==================
 """
 from parsl.channels import SSHChannel
-from parsl.providers import TorqueProvider
+from parsl.providers import Torque
 from parsl.launchers import AprunLauncher
 
 from parsl.config import Config
@@ -26,7 +26,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='beagle_multinode_mpi',
-            provider=TorqueProvider(
+            provider=Torque(
                 'debug',
                 channel=SSHChannel(
                     hostname='login4.beagle.ci.uchicago.edu',

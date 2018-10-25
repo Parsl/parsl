@@ -1,6 +1,6 @@
 # Untested
 
-from parsl.providers import CobaltProvider
+from parsl.providers import Cobalt
 from parsl.launchers import SingleNodeLauncher
 
 from parsl.config import Config
@@ -19,7 +19,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='cooley_local_single_node',
-            provider=CobaltProvider(
+            provider=Cobalt(
                 launcher=SingleNodeLauncher(),
                 nodes_per_block=1,
                 tasks_per_node=1,

@@ -2,7 +2,7 @@ import time
 
 import parsl
 from parsl.channels.ssh import SSHChannel
-from parsl.channels.torque import TorqueProvider
+from parsl.channels.torque import Torque
 
 
 def test_1():
@@ -35,7 +35,7 @@ def test_1():
     ec, out, err = channel.execute_wait("which qsub; echo $HOSTNAME; pwd")
     print("Stdout : ", out)
 
-    provider = TorqueProvider(config=torque_config, channel=channel)
+    provider = Torque(config=torque_config, channel=channel)
 
     x = provider.submit('''echo "sleeping"
     sleep 120

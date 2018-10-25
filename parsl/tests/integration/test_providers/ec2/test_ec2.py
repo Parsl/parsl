@@ -1,5 +1,5 @@
 import parsl
-from parsl.channels.aws import EC2Provider as ec2
+from parsl.channels.aws import EC2 as ec2
 import time
 
 

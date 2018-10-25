@@ -1,4 +1,4 @@
-from parsl.providers import LocalProvider
+from parsl.providers import Local
 from parsl.channels import LocalChannel
 
 from parsl.config import Config
@@ -10,7 +10,7 @@ config = Config(
             label="local_ipp",
             jobs_q_url="tcp://127.0.0.1:50005",
             results_q_url="tcp://127.0.0.1:50006",
-            provider=LocalProvider(
+            provider=Local(
                 channel=LocalChannel(),
                 init_blocks=1,
                 max_blocks=1,

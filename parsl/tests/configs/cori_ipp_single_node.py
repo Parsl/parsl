@@ -7,7 +7,7 @@
 | ++++++++++++++ |
 ==================
 """
-from parsl.providers import SlurmProvider
+from parsl.providers import Slurm
 from parsl.channels import SSHChannel
 
 from parsl.config import Config
@@ -26,7 +26,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='cori_ipp_single_node',
-            provider=SlurmProvider(
+            provider=Slurm(
                 'debug',
                 channel=SSHChannel(
                     hostname='cori.nersc.gov',

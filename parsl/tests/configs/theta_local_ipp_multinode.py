@@ -1,4 +1,4 @@
-from parsl.providers import CobaltProvider
+from parsl.providers import Cobalt
 from parsl.launchers import AprunLauncher
 
 from parsl.config import Config
@@ -17,7 +17,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='theta_local_ipp_multinode',
-            provider=CobaltProvider(
+            provider=Cobalt(
                 queue="debug-flat-quad",
                 launcher=AprunLauncher(),
                 walltime="00:30:00",

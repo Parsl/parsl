@@ -1,4 +1,4 @@
-from libsubmit.providers import CobaltProvider
+from libsubmit.providers import Cobalt
 from libsubmit.launchers import SimpleLauncher
 
 from parsl.config import Config
@@ -20,7 +20,7 @@ config = Config(
             launch_cmd='which python3; \
 aprun -b -cc depth -j 1 -n $(($COBALT_PARTSIZE * {tasks_per_node})) -N {tasks_per_node} \
 python3 /home/yadunand/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_url} --result_url={result_url}',
-            provider=CobaltProvider(
+            provider=Cobalt(
                 queue="debug-flat-quad",
                 # queue="default",
                 launcher=SimpleLauncher(),

@@ -1,4 +1,4 @@
-from parsl.providers import LocalProvider
+from parsl.providers import Local
 from parsl.channels import LocalChannel
 from parsl.launchers import SimpleLauncher
 
@@ -11,7 +11,7 @@ config = Config(
             label="htex_Local",
             worker_debug=True,
             cores_per_worker=1,
-            provider=LocalProvider(
+            provider=Local(
                 channel=LocalChannel(),
                 init_blocks=1,
                 max_blocks=1,

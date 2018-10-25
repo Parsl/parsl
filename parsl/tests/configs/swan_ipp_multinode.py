@@ -11,7 +11,7 @@
 """
 from parsl.channels import SSHChannel
 from parsl.launchers import AprunLauncher
-from parsl.providers import TorqueProvider
+from parsl.providers import Torque
 
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
@@ -30,7 +30,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='swan_ipp',
-            provider=TorqueProvider(
+            provider=Torque(
                 channel=SSHChannel(
                     hostname='swan.cray.com',
                     username=user_opts['swan']['username'],

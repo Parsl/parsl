@@ -1,4 +1,4 @@
-from parsl.providers import LocalProvider
+from parsl.providers import Local
 from parsl.channels import LocalChannel
 from parsl.launchers import SimpleLauncher
 
@@ -10,7 +10,7 @@ config = Config(
         ExtremeScaleExecutor(
             label="Extreme_Local",
             worker_debug=True,
-            provider=LocalProvider(
+            provider=Local(
                 channel=LocalChannel(),
                 init_blocks=1,
                 max_blocks=1,

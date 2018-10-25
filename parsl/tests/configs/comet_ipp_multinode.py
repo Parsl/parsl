@@ -1,5 +1,5 @@
 from parsl.channels import SSHChannel
-from parsl.providers import SlurmProvider
+from parsl.providers import Slurm
 from parsl.launchers import SrunLauncher
 
 from parsl.config import Config
@@ -18,7 +18,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='comet_ipp_multinode',
-            provider=SlurmProvider(
+            provider=Slurm(
                 'debug',
                 channel=SSHChannel(
                     hostname='comet.sdsc.xsede.org',
