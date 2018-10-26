@@ -12,7 +12,11 @@ import queue
 import uuid
 import zmq
 import math
+import sys
+import platform
+import json
 
+from parsl.version import VERSION as PARSL_VERSION
 import multiprocessing
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -96,6 +100,20 @@ class Manager(object):
         r = self.task_incoming.send(heartbeat)
         logger.debug("Return from heartbeat: {}".format(r))
 
+    def create_reg_message(self):
+        """ Creates a registration message to identify the worker to the interchange
+        """
+        msg = {'parsl_v': PARSL_VERSION,
+               'python_v': "{}.{}.{}".format(sys.version_info.major,
+                                             sys.version_info.minor,
+                                             sys.version_info.micro),
+               'os': platform.system(),
+               'hname': platform.node(),
+               'dir': os.getcwd(),
+               }
+        b_msg = json.dumps(msg).encode('utf-8')
+        return b_msg
+
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
@@ -108,7 +126,11 @@ class Manager(object):
         logger.info("[TASK PULL THREAD] starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
-        self.heartbeat()
+
+        # Send a registration message
+        msg = self.create_reg_message()
+        logger.debug("Sending registration message: {}".format(msg))
+        self.task_incoming.send(self.create_reg_message())
         last_beat = time.time()
         task_recv_counter = 0
 

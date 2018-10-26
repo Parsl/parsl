@@ -8,6 +8,7 @@ import pickle
 import logging
 import queue
 import threading
+import json
 
 from ipyparallel.serialize import serialize_object
 
@@ -263,17 +264,19 @@ class Interchange(object):
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
                 message = self.task_outgoing.recv_multipart()
                 manager = message[0]
-                tasks_requested = int.from_bytes(message[1], "little")
 
-                logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                 if manager not in self._ready_manager_queue:
+                    msg = json.loads(message[1].decode('utf-8'))
                     logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                     self._ready_manager_queue[manager] = {'last': time.time(),
-                                                          # [TODO] Add support for tracking walltimes
-                                                          # 'wtime': 60,
-                                                          'free_capacity': tasks_requested,
+                                                          'free_capacity': 0,
                                                           'tasks': []}
+                    self._ready_manager_queue[manager].update(msg)
+                    logger.info("Registration info for manager {}: {}".format(manager, msg))
+
                 else:
+                    tasks_requested = int.from_bytes(message[1], "little")
+                    logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
                     self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
@@ -282,7 +285,6 @@ class Interchange(object):
                 if self._ready_manager_queue[manager]['free_capacity']:
                     tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                     if tasks:
-                        # self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
                         self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
                         count += task_count
