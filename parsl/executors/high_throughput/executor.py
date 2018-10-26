@@ -328,15 +328,21 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             logger.debug("Management thread already exists, returning")
 
     @property
+    def kill_worker(self, worker_id):
+        c = self.command_client.run("KILL,{}".format(worker_id))
+        logger.debug("Sent kill request to worker: {}".format(worker_id))
+        return c
+
+    @property
     def outstanding(self):
         outstanding_c = self.command_client.run("OUTSTANDING_C")
-        logger.debug("Got outstanding count : {}".format(outstanding_c))
+        logger.debug("Got outstanding count: {}".format(outstanding_c))
         return outstanding_c
 
     @property
     def connected_workers(self):
         workers = self.command_client.run("MANAGERS")
-        logger.debug("Got managers : {}".format(workers))
+        logger.debug("Got managers: {}".format(workers))
         return workers
 
     def submit(self, func, *args, **kwargs):

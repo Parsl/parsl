@@ -205,7 +205,7 @@ class Interchange(object):
         while not kill_event.is_set():
             try:
                 command_req = self.command_channel.recv_pyobj()
-                logger.debug("[COMMAND] Received command request : {}".format(command_req))
+                logger.debug("[COMMAND] Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
                     outstanding = self.pending_task_queue.qsize()
                     for manager in self._ready_manager_queue:
@@ -219,7 +219,7 @@ class Interchange(object):
                 else:
                     reply = None
 
-                logger.debug("[COMMAND] Reply : {}".format(reply))
+                logger.debug("[COMMAND] Reply: {}".format(reply))
                 self.command_channel.send_pyobj(reply)
 
             except zmq.Again:

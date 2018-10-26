@@ -94,7 +94,7 @@ class Manager(object):
         """
         heartbeat = (0).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
-        logger.debug("Return from heartbeat : {}".format(r))
+        logger.debug("Return from heartbeat: {}".format(r))
 
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
@@ -145,7 +145,7 @@ class Manager(object):
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
-                        # logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
+                        # logger.debug("[TASK_PULL_THREAD] Ready tasks: {}".format(
                         #    [i['task_id'] for i in self.pending_task_queue]))
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
@@ -395,7 +395,7 @@ if __name__ == "__main__":
         manager.start()
     except Exception as e:
         logger.critical("process_worker_pool exiting from an exception")
-        logger.exception("Caught error : {}".format(e))
+        logger.exception("Caught error: {}".format(e))
         raise
     else:
         logger.info("process_worker_pool exiting")
