@@ -53,6 +53,9 @@ class Manager(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
 
+        uid : str
+             string unique identifier
+
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0. Default=1
@@ -62,11 +65,11 @@ class Manager(object):
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
-        self.task_incoming.setsockopt(zmq.IDENTITY, b'00100')
+        self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.task_incoming.connect(task_q_url)
 
         self.result_outgoing = self.context.socket(zmq.DEALER)
-        self.result_outgoing.setsockopt(zmq.IDENTITY, b'00100')
+        self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.connect(result_q_url)
         logger.info("Manager connected")
 
@@ -91,7 +94,7 @@ class Manager(object):
         """
         heartbeat = (0).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
-        logger.debug("Return from heartbeat : {}".format(r))
+        logger.debug("Return from heartbeat: {}".format(r))
 
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
@@ -142,7 +145,7 @@ class Manager(object):
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
-                        # logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
+                        # logger.debug("[TASK_PULL_THREAD] Ready tasks: {}".format(
                         #    [i['task_id'] for i in self.pending_task_queue]))
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
@@ -392,7 +395,7 @@ if __name__ == "__main__":
         manager.start()
     except Exception as e:
         logger.critical("process_worker_pool exiting from an exception")
-        logger.exception("Caught error : {}".format(e))
+        logger.exception("Caught error: {}".format(e))
         raise
     else:
         logger.info("process_worker_pool exiting")

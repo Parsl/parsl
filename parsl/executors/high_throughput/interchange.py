@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import argparse
 import zmq
-import uuid
+# import uuid
+import os
 import time
 import pickle
 import logging
@@ -50,10 +51,11 @@ class Interchange(object):
     def __init__(self,
                  client_address="127.0.0.1",
                  interchange_address="127.0.0.1",
-                 client_ports=(50055, 50056),
+                 client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  heartbeat_period=60,
+                 logdir=".",
                  logging_level=logging.INFO,
              ):
         """
@@ -65,7 +67,7 @@ class Interchange(object):
         interchange_address : str
              The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
 
-        client_ports : tuple(int, int)
+        client_ports : triple(int, int, int)
              The ports at which the client can be reached
 
         worker_ports : tuple(int, int)
@@ -78,26 +80,38 @@ class Interchange(object):
         heartbeat_period : int
              Heartbeat period expected from workers (seconds). Default: 10s
 
+        logdir : str
+             Parsl log directory paths. Logs and temp files go here. Default: '.'
+
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO (20)
 
         """
-        start_file_logger("interchange.log", level=logging_level)
+        self.logdir = logdir
+        try:
+            os.makedirs(self.logdir)
+        except FileExistsError:
+            pass
+
+        start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
         self.interchange_address = interchange_address
-        self.identity = uuid.uuid4()
 
-        logger.info("Attempting connection to client at {} on ports: {},{}".format(
-            client_address, client_ports[0], client_ports[1]))
+        logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
+            client_address, client_ports[0], client_ports[1], client_ports[2]))
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.RCVTIMEO = 10  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
-        logger.debug("Connected to client")
+
+        self.command_channel = self.context.socket(zmq.REP)
+        self.command_channel.RCVTIMEO = 1000  # in milliseconds
+        self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
+        logger.info("Connected to client")
 
         self.pending_task_queue = queue.Queue(maxsize=10 ^ 6)
 
@@ -184,6 +198,34 @@ class Interchange(object):
                 task_counter += 1
                 logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
 
+    def _command_server(self, kill_event):
+        """ Command server to run async command to the interchange
+        """
+        logger.debug("[COMMAND] Command Server Starting")
+        while not kill_event.is_set():
+            try:
+                command_req = self.command_channel.recv_pyobj()
+                logger.debug("[COMMAND] Received command request: {}".format(command_req))
+                if command_req == "OUTSTANDING_C":
+                    outstanding = self.pending_task_queue.qsize()
+                    for manager in self._ready_manager_queue:
+                        outstanding += len(self._ready_manager_queue[manager]['tasks'])
+                    reply = outstanding
+                elif command_req == "MANAGERS":
+                    reply = list(self._ready_manager_queue.keys())
+                elif command_req == "SHUTDOWN":
+                    kill_event.set()
+                    reply = True
+                else:
+                    reply = None
+
+                logger.debug("[COMMAND] Reply: {}".format(reply))
+                self.command_channel.send_pyobj(reply)
+
+            except zmq.Again:
+                logger.debug("[COMMAND] is alive")
+                continue
+
     def start(self, poll_period=1):
         """ Start the NeedNameQeueu
 
@@ -205,12 +247,16 @@ class Interchange(object):
                                                     args=(self._kill_event,))
         self._task_puller_thread.start()
 
+        self._command_thread = threading.Thread(target=self._command_server,
+                                                args=(self._kill_event,))
+        self._command_thread.start()
+
         poller = zmq.Poller()
         # poller.register(self.task_incoming, zmq.POLLIN)
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
 
-        while True:
+        while not self._kill_event.is_set():
             self.socks = dict(poller.poll(timeout=poll_period))
 
             # Listen for requests for work
@@ -218,7 +264,6 @@ class Interchange(object):
                 message = self.task_outgoing.recv_multipart()
                 manager = message[0]
                 tasks_requested = int.from_bytes(message[1], "little")
-                manager = int.from_bytes(message[0], "little")
 
                 logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                 if manager not in self._ready_manager_queue:
@@ -237,7 +282,8 @@ class Interchange(object):
                 if self._ready_manager_queue[manager]['free_capacity']:
                     tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                     if tasks:
-                        self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
+                        # self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
+                        self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
                         count += task_count
                         tids = [t['task_id'] for t in tasks]
@@ -249,8 +295,7 @@ class Interchange(object):
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
-                b_manager, *b_messages = self.results_incoming.recv_multipart()
-                manager = int.from_bytes(b_manager, "little")
+                manager, *b_messages = self.results_incoming.recv_multipart()
                 if manager not in self._ready_manager_queue:
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:

@@ -137,15 +137,17 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
+        self.run_dir = '.'
 
         if not launch_cmd:
-            self.launch_cmd = """process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"""
+            self.launch_cmd = """process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
 
     def start(self):
         """Create the Interchange process and connect to it.
         """
         self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
-        self.incoming_q = zmq_pipes.ResultsIncoming('127.0.0.1', self.interchange_port_range)
+        self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
+        self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
 
         self.is_alive = True
 
@@ -163,7 +165,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                            cores_per_worker=self.cores_per_worker,
                                            # This is here only to support the exex mpiexec call
                                            tasks_per_node=self.provider.tasks_per_node,
-                                           nodes_per_block=self.provider.nodes_per_block)
+                                           nodes_per_block=self.provider.nodes_per_block,
+                                           logdir="{}/{}".format(self.run_dir, self.label))
             self.launch_cmd = l_cmd
             logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -289,9 +292,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         comm_q = Queue(maxsize=10)
         self.queue_proc = Process(target=interchange.starter,
                                   args=(comm_q,),
-                                  kwargs={"client_ports": (self.outgoing_q.port, self.incoming_q.port),
+                                  kwargs={"client_ports": (self.outgoing_q.port,
+                                                           self.incoming_q.port,
+                                                           self.command_client.port),
                                           "worker_ports": self.worker_ports,
                                           "worker_port_range": self.worker_port_range,
+                                          "logdir": "{}/{}".format(self.run_dir, self.label),
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
         )
@@ -320,6 +326,23 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         else:
             logger.debug("Management thread already exists, returning")
+
+    def kill_worker(self, worker_id):
+        c = self.command_client.run("KILL,{}".format(worker_id))
+        logger.debug("Sent kill request to worker: {}".format(worker_id))
+        return c
+
+    @property
+    def outstanding(self):
+        outstanding_c = self.command_client.run("OUTSTANDING_C")
+        logger.debug("Got outstanding count: {}".format(outstanding_c))
+        return outstanding_c
+
+    @property
+    def connected_workers(self):
+        workers = self.command_client.run("MANAGERS")
+        logger.debug("Got managers: {}".format(workers))
+        return workers
 
     def submit(self, func, *args, **kwargs):
         """Submits work to the the outgoing_q.
@@ -362,7 +385,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def scale_out(self):
+    def scale_out(self, blocks=1):
         """Scales out the number of active workers by 1.
 
         Raises:
