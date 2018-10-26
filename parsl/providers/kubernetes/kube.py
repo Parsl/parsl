@@ -1,14 +1,20 @@
 import logging
 import time
+from parsl.providers.kubernetes.template import template_string
+
 logger = logging.getLogger(__name__)
 
+from parsl.providers.error import *
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers.kubernetes.template import template_string
 from parsl.providers.error import OptionalModuleMissing
 
+from parsl.channels import LocalChannel
+from parsl.utils import RepresentationMixin
+
 try:
-    from kubernetes import client
-    from kubernetes import config as kube_config
+    from kubernetes import client, config
+    config.load_kube_config()
     _kubernetes_enabled = True
 except (ImportError, NameError, FileNotFoundError):
     _kubernetes_enabled = False
@@ -16,19 +22,17 @@ except (ImportError, NameError, FileNotFoundError):
 
 class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     """ Kubernetes execution provider
-
     Parameters
     ----------
-
     namespace : str
-        FIXME
+        Kubernetes namespace to create deployments.
     image : str
-        FIXME
+        Docker image to use in the deployment.
     channel : Channel
         Channel for accessing this provider. Possible channels include
-        :class:`~libsubmit.channels.LocalChannel` (the default),
-        :class:`~libsubmit.channels.SSHChannel`, or
-        :class:`~libsubmit.channels.SSHInteractiveLoginChannel`.
+        :class:`~parsl.channels.LocalChannel` (the default),
+        :class:`~parsl.channels.SSHChannel`, or
+        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     tasks_per_node : int
         Tasks to run per node.
     nodes_per_block : int
@@ -44,26 +48,29 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     secret : str
-        FIXME
+        Docker secret to use to pull images
     user_id : str
-        FIXME
+        Unix user id to run the container as.
     group_id : str
-        FIXME
-    run_as_non_root : str
-        FIXME
+        Unix group id to run the container as.
+    run_as_non_root : bool
+        Run as non-root (True) or run as root (False).
     """
 
     def __init__(self,
-                 namespace,
                  image,
-                 channel=LocalChannel(),
+                 namespace='default',
+                 channel=None,
                  tasks_per_node=1,
                  nodes_per_block=1,
                  init_blocks=4,
                  min_blocks=0,
                  max_blocks=10,
                  parallelism=1,
-                 security=None,
+                 overrides="",
+                 user_id=None,
+                 group_id=None,
+                 run_as_non_root=False,
                  secret=None):
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
@@ -78,6 +85,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
         self.parallelism = parallelism
+        self.overrides = overrides
         self.secret = secret
         self.user_id = user_id
         self.group_id = group_id
@@ -90,18 +98,14 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
 
     def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
         """ Submit a job
-
         Args:
              - cmd_string  :(String) - Name of the container to initiate
              - blocksize   :(float) - Number of replicas
-
         Kwargs:
              - job_name (String): Name for job, must be unique
-
         Returns:
              - None: At capacity, cannot provision more
              - job_id: (string) Identifier for the job
-
         """
         if not self.resources:
             job_name = "{0}-{1}".format(job_name, time.time()).split(".")[0]
@@ -109,8 +113,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             self.deployment_name = '{}-{}-deployment'.format(job_name,
                                                              str(time.time()).split('.')[0])
 
-            formatted_cmd = template_string.format(command=cmd_string,
-                                                   overrides=self.config["execution"]["block"]["options"].get("overrides", ''))
+            formatted_cmd = template_string.format(command=cmd_string, 
+                                                   overrides=self.overrides)
 
             print("Creating replicas :", self.init_blocks)
             self.deployment_obj = self._create_deployment_object(job_name,
@@ -128,17 +132,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     def status(self, job_ids):
         """ Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
-
         Args:
              - job_ids (list) : A list of job identifiers
-
         Returns:
              - A list of status from ['PENDING', 'RUNNING', 'CANCELLED', 'COMPLETED',
                'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
-
         Raises:
              - ExecutionProviderExceptions or its subclasses
-
         """
         self._status()
         # This is a hack
@@ -146,10 +146,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
 
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
-
         Args:
         job_ids : [<job_id> ...]
-
         Returns :
         [True/False...] : If the cancel operation fails the entire list will be False.
         """
@@ -165,10 +163,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
 
     def _status(self):
         """ Internal: Do not call. Returns the status list for a list of job_ids
-
         Args:
               self
-
         Returns:
               [status...] : Status list of all jobs
         """
@@ -185,15 +181,12 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                   engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
                                   engine_dir='.'):
         """ Create a kubernetes deployment for the job.
-
         Args:
               - job_name (string) : Name of the job and deployment
               - job_image (string) : Docker image to launch
-
         KWargs:
              - port (integer) : Container port
              - replicas : Number of replica containers to maintain
-
         Returns:
               - True: The deployment object to launch
         """
@@ -201,13 +194,14 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # sorry, quick hack that doesn't pass this stuff through to test it works.
         # TODO it also doesn't only add what is set :(
         security_context = None
-        if 'security' in self.config['execution']:
-            security_context = client.V1SecurityContext(run_as_group=self.group_id,
-                                                        run_as_user=self.user_id,
-                                                        run_as_non_root=self.run_as_non_root)
-            #                    self.user_id = None
-            #                    self.group_id = None
-            #                    self.run_as_non_root = None
+        try:
+            if self.user_id and self.group_id:
+                security_context = client.V1SecurityContext(run_as_group=self.group_id,
+                                                            run_as_user=self.user_id,
+                                                            run_as_non_root=self.run_as_non_root)
+        except:
+            pass
+
         # Create the enviornment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
