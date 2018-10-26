@@ -1,5 +1,7 @@
+from parsl.utils import RepresentationMixin
 
-class GlobusScheme(object):
+
+class GlobusScheme(RepresentationMixin):
     """Specification for accessing data on a remote executor via Globus.
 
     Parameters
