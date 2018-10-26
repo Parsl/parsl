@@ -644,12 +644,9 @@ class DataFlowKernel(object):
         # explicit one won't.
 
         for d in depends:
-            logger.debug("BENC: Adding launch_if_ready callback to launch task {} onto dependency {}".format(task_id, d))
 
             def callback_adapter(dep_fut):
-                logger.debug("BENC: callback_adapter pre - will try to launch task {}".format(task_id))
                 self.launch_if_ready(task_id)
-                logger.debug("BENC: callback_adapter post - will try to launch task {}".format(task_id))
 
             d.add_done_callback(callback_adapter)
 
