@@ -53,9 +53,9 @@ Three different examples of block configurations are shown below.
    .. image:: ../images/N1_T4.png
        :scale: 75%
 
-3. A block comprised of several nodes and executing several tasks. This configuration
-   is generally used by MPI applications and requires support from specific
-   MPI launchers supported by the target system (e.g., aprun, srun, mpirun, mpiexec).
+3. A block comprised of several nodes and executing several tasks, where a task can span multiple nodes. This configuration
+   is generally used by MPI applications. Starting a task requires using a specific
+   MPI launcher that is supported on the target system (e.g., aprun, srun, mpirun, mpiexec).
 
    .. image:: ../images/N4_T2.png
 
