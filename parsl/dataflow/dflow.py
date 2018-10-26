@@ -30,7 +30,6 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
-from parsl.app.errors import RemoteException
 from parsl.monitoring.db_logger import get_db_logger
 from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
@@ -101,10 +100,19 @@ class DataFlowKernel(object):
             self.db_logger = get_db_logger()
         else:
             self.db_logger = get_db_logger(monitoring_config=self.monitoring_config)
-        self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
-        self.workflow_version = None
+        self.workflow_name = None
         if self.monitoring_config is not None and self.monitoring_config.workflow_name is not None:
             self.workflow_name = self.monitoring_config.workflow_name
+        else:
+            for frame in inspect.stack():
+                fname = os.path.basename(str(frame.filename))
+                parsl_file_names = ['dflow.py']
+                # Find first file name not considered a parsl file
+                if fname not in parsl_file_names:
+                    self.workflow_name = fname
+                    break
+
+        self.workflow_version = None
         if self.monitoring_config is not None and self.monitoring_config.version is not None:
             self.workflow_version = self.monitoring_config.version
         self.time_began = time.time()
@@ -931,7 +939,7 @@ class DataFlowKernelLoader(object):
         cls._dfk = None
 
     @classmethod
-    def load(cls, config):
+    def load(cls, config=None):
         """Load a DataFlowKernel.
 
         Args:
@@ -942,7 +950,11 @@ class DataFlowKernelLoader(object):
         """
         if cls._dfk is not None:
             raise RuntimeError('Config has already been loaded')
-        cls._dfk = DataFlowKernel(config)
+
+        if config is None:
+            cls._dfk = DataFlowKernel(Config())
+        else:
+            cls._dfk = DataFlowKernel(config)
 
         return cls._dfk
 
