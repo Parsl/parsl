@@ -30,7 +30,6 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
-from parsl.app.errors import RemoteException
 from parsl.monitoring.db_logger import get_db_logger
 from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
@@ -934,7 +933,7 @@ class DataFlowKernelLoader(object):
         cls._dfk = None
 
     @classmethod
-    def load(cls, config):
+    def load(cls, config=None):
         """Load a DataFlowKernel.
 
         Args:
@@ -945,7 +944,11 @@ class DataFlowKernelLoader(object):
         """
         if cls._dfk is not None:
             raise RuntimeError('Config has already been loaded')
-        cls._dfk = DataFlowKernel(config)
+
+        if config is None:
+            cls._dfk = DataFlowKernel(Config())
+        else:
+            cls._dfk = DataFlowKernel(config)
 
         return cls._dfk
 
