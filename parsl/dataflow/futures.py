@@ -35,29 +35,24 @@ _STATE_TO_DESCRIPTION_MAP = {
 class AppFuture(Future):
     """An AppFuture wraps a sequence of Futures which may fail and be retried.
 
-    TODO: what causes the retries? something in the DFK, not inside here, I guess?
-
     An AppFuture starts with no parent future. A sequence of parent futures may
     be assigned by code outside of this class, by passing that new parent future
     into "update_future".
 
-    TODO: is it an error to update the parent future when we already have a result?
-    It should be, and this class should catch it - in a thread-safe manner.
-
     The AppFuture will set its result to the result of the parent future, if that
-    parent future completes without an exception. This result setting (should/will/TODO)
+    parent future completes without an exception. This result setting should
     cause .result(), .exception() and done callbacks to fire as expected when a
     Future has a result set.
 
     The AppFuture will not set its result to the result of the parent future, if
     that parent future completes with an exception, and if that parent future
-    has retries left. In that case, no result(), exception() or done callbacks (should/will/TODO)
+    has retries left. In that case, no result(), exception() or done callbacks should
     report a result.
 
     The AppFuture will set its result to the result of the parent future, if that
     parent future completes with an exception and if that parent future has no
     retries left, or if it has no retry field. .result(), .exception() and done callbacks
-    will/should/TODO give a result as expected when a Future has a result set
+    should give a result as expected when a Future has a result set
 
     The parent future may return a RemoteException as a result (rather than raising it
     as an exception) and AppFuture will treat this an an exception for the above
