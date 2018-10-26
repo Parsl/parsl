@@ -6,10 +6,6 @@ logger = logging.getLogger(__name__)
 
 from parsl.providers.error import *
 from parsl.providers.provider_base import ExecutionProvider
-from parsl.providers.kubernetes.template import template_string
-from parsl.providers.error import OptionalModuleMissing
-
-from parsl.channels import LocalChannel
 from parsl.utils import RepresentationMixin
 
 try:
@@ -113,7 +109,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             self.deployment_name = '{}-{}-deployment'.format(job_name,
                                                              str(time.time()).split('.')[0])
 
-            formatted_cmd = template_string.format(command=cmd_string, 
+            formatted_cmd = template_string.format(command=cmd_string,
                                                    overrides=self.overrides)
 
             print("Creating replicas :", self.init_blocks)
@@ -194,13 +190,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # sorry, quick hack that doesn't pass this stuff through to test it works.
         # TODO it also doesn't only add what is set :(
         security_context = None
-        try:
-            if self.user_id and self.group_id:
-                security_context = client.V1SecurityContext(run_as_group=self.group_id,
-                                                            run_as_user=self.user_id,
-                                                            run_as_non_root=self.run_as_non_root)
-        except:
-            pass
+        if self.user_id and self.group_id:
+            security_context = client.V1SecurityContext(run_as_group=self.group_id,
+                                                        run_as_user=self.user_id,
+                                                        run_as_non_root=self.run_as_non_root)
 
         # Create the enviornment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
