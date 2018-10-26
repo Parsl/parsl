@@ -247,11 +247,9 @@ class Interchange(object):
                                                     args=(self._kill_event,))
         self._task_puller_thread.start()
 
-        logger.debug("Trying to start the command thread")
         self._command_thread = threading.Thread(target=self._command_server,
                                                 args=(self._kill_event,))
         self._command_thread.start()
-        logger.debug("Done with starting command thread v02")
 
         poller = zmq.Poller()
         # poller.register(self.task_incoming, zmq.POLLIN)

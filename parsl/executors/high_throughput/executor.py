@@ -327,7 +327,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         else:
             logger.debug("Management thread already exists, returning")
 
-    @property
     def kill_worker(self, worker_id):
         c = self.command_client.run("KILL,{}".format(worker_id))
         logger.debug("Sent kill request to worker: {}".format(worker_id))
