@@ -100,10 +100,19 @@ class DataFlowKernel(object):
             self.db_logger = get_db_logger()
         else:
             self.db_logger = get_db_logger(monitoring_config=self.monitoring_config)
-        self.workflow_name = os.path.basename(str(inspect.stack()[1][1]))
-        self.workflow_version = None
+        self.workflow_name = None
         if self.monitoring_config is not None and self.monitoring_config.workflow_name is not None:
             self.workflow_name = self.monitoring_config.workflow_name
+        else:
+            for frame in inspect.stack():
+                fname = os.path.basename(str(frame.filename))
+                parsl_file_names = ['dflow.py']
+                # Find first file name not considered a parsl file
+                if fname not in parsl_file_names:
+                    self.workflow_name = fname
+                    break
+
+        self.workflow_version = None
         if self.monitoring_config is not None and self.monitoring_config.version is not None:
             self.workflow_version = self.monitoring_config.version
         self.time_began = time.time()
