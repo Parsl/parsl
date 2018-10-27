@@ -10,7 +10,6 @@ from parsl.utils import RepresentationMixin
 
 try:
     from kubernetes import client, config
-    config.load_kube_config()
     _kubernetes_enabled = True
 except (ImportError, NameError, FileNotFoundError):
     _kubernetes_enabled = False
@@ -71,6 +70,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
                                         "Kubernetes provider requires kubernetes module and config.")
+        config.load_kube_config()
 
         self.namespace = namespace
         self.image = image
