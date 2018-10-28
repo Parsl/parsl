@@ -9,7 +9,16 @@ sql_conn = get_db()
 layout = html.Div(children=[
     html.H1("Workflows"),
     dataframe_to_html_table(id='workflows_table',
-                            dataframe=pd.read_sql_query("SELECT * FROM workflows", sql_conn)
+                            dataframe=pd.read_sql_query("SELECT run_id, "
+                                                        "workflow_name, "
+                                                        "workflow_version, "
+                                                        "time_began, "
+                                                        "time_completed, "
+                                                        "tasks_completed_count, "
+                                                        "tasks_failed_count, "
+                                                        "user, "
+                                                        "host, "
+                                                        "rundir FROM workflows", sql_conn)
                             .drop_duplicates(
                                 subset=['workflow_name', 'workflow_version'],
                                 keep='last')

@@ -17,8 +17,8 @@ def dataframe_to_html_table(id, dataframe, field):
     )
 
 
-def timestamp_to_int(time):
-    return int(datetime.strptime(time, DB_DATE_FORMAT).timestamp())
+def timestamp_to_int(time, format=DB_DATE_FORMAT):
+    return int(datetime.strptime(time, format).timestamp())
 
 
 def int_to_timestamp(n):
