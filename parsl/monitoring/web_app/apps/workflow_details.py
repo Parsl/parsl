@@ -14,22 +14,28 @@ layout = html.Div(id='workflow_details')
               [Input('run_number_dropdown', 'value')])
 def workflow_details(run_id):
     return [html.A(id='run_id', children=run_id, hidden=True),
-            dcc.RadioItems(
-                id='resource_usage_radio_items',
-                options=[{'label': 'User time', 'value': 'psutil_process_time_user'},
-                         {'label': 'System time', 'value': 'psutil_process_time_system'},
-                         {'label': 'Memory usage', 'value': 'psutil_process_memory_percent'}],
-                value='psutil_process_time_user',
-            ),
-            dcc.Graph(id='resource_usage_plot'),
+            resource_usage_plot(run_id),
             tasks_per_app_plot(run_id),
             total_tasks_plot(run_id)]
 
 
-@app.callback(Output('resource_usage_plot', 'figure'),
+def resource_usage_plot(run_id):
+    return html.Div(id='resource_usage_container',
+                    children=[dcc.RadioItems(id='resource_usage_radio_items',
+                                            options=[{'label': 'User time', 'value': 'psutil_process_time_user'},
+                                                     {'label': 'System time', 'value': 'psutil_process_time_system'},
+                                                     {'label': 'Memory usage', 'value': 'psutil_process_memory_percent'}],
+                                            value='psutil_process_time_user'),
+                              dcc.Graph(id='resource_usage_plot_workflow')])
+
+
+# TODO y_axis labels can't be set with callback from radioitems. Might have to split up the plots
+# TODO return html.H3('No resource data found')
+@app.callback(Output('resource_usage_plot_workflow', 'figure'),
               [Input('resource_usage_radio_items', 'value')],
-              [State('run_number_dropdown', 'value')])
-def resource_usage_plot(field, run_id):
+              [State('resource_usage_radio_items', 'y_axis'),
+               State('run_number_dropdown', 'value')])
+def resource_usage_callback(field, y_axis_label, run_id):
     sql_conn = get_db()
     df_resources = pd.read_sql_query('SELECT {field}, timestamp, task_id FROM task_resources WHERE run_id=(?)'.format(field=field),
                                      sql_conn, params=(run_id, ))
@@ -64,18 +70,16 @@ def resource_usage_plot(field, run_id):
 
         return items
 
-    if len(df_resources) == 0:
-        return html.H3('No resource data found')
-    else:
-        return go.Figure(
-            data=[go.Scatter(x=df_resources['timestamp'],
-                             y=y_axis_setup(),
-                             name='tasks')],
-            layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
-                                        range=[min(df_resources.timestamp), max(df_resources.timestamp)],
-                                        title='Time'),
-                             title="Resource usage")
-        )
+    return go.Figure(
+        data=[go.Scatter(x=df_resources['timestamp'],
+                         y=y_axis_setup(),
+                         name='tasks')],
+        layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
+                                    autorange=True,
+                                    title='Time'),
+                         yaxis=dict(title=y_axis_label),
+                         title='Resource usage')
+    )
 
 
 def tasks_per_app_plot(run_id):
@@ -107,7 +111,7 @@ def tasks_per_app_plot(run_id):
         else:
             apps[row['task_fn_hash']] = [row['task_id']]
 
-    return dcc.Graph(id='tasks_per_app',
+    return dcc.Graph(id='tasks_per_app_plot',
                      figure=go.Figure(
                          data=[go.Scatter(x=df_status[df_status['task_id'].isin(tasks)]['timestamp'],
                                           y=y_axis_setup(df_status[df_status['task_id'].isin(tasks)]['task_status_name'] == 'running'),
@@ -117,30 +121,55 @@ def tasks_per_app_plot(run_id):
                                           y=y_axis_setup(df_status['task_status_name'] == 'running'),
                                           name='all')],
                          layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
-                                                     range=[min(df_status['timestamp']), max(df_status['timestamp'])],
+                                                     autorange=True,
                                                      title='Time'),
                                           yaxis=dict(tickformat= ',d',
                                                      title='Tasks'),
                                           hovermode='closest',
-                                          title="Tasks per app")
+                                          title='Tasks per app')
                      ))
 
 
-def total_tasks_plot(run_id):
+def total_tasks_plot(run_id, columns=20):
     sql_conn = get_db()
     df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
                                   sql_conn, params=(run_id, ))
     close_db()
 
-    columns = 20
+    min_time = timestamp_to_int(min(df_status['timestamp']))
+    max_time = timestamp_to_int(max(df_status['timestamp']))
+
+    time_step = int((max_time - min_time) / columns)
+    minutes = time_step // 60
+    seconds = time_step % 60
+
+    return html.Div(id='total_tasks_container',
+                    children=[html.P('Bin width'),
+                              html.Label(htmlFor='bin_width_minutes', children='Minutes'),
+                              dcc.Input(id='bin_width_minutes', type='number', min=0, value=minutes),
+                              html.Label(htmlFor='bin_width_seconds', children='Seconds'),
+                              dcc.Input(id='bin_width_seconds', type='number', min=0, value=seconds),
+                              dcc.Graph(id='total_tasks_plot_workflow')])
+
+
+@app.callback(Output('total_tasks_plot_workflow', 'figure'),
+              [Input('bin_width_minutes', 'value'),
+               Input('bin_width_seconds', 'value')],
+              [State('run_number_dropdown', 'value')])
+def total_tasks_callback(minutes, seconds, run_id):
+    sql_conn = get_db()
+    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
+                                  sql_conn, params=(run_id, ))
+    close_db()
 
     min_time = timestamp_to_int(min(df_status['timestamp']))
     max_time = timestamp_to_int(max(df_status['timestamp']))
-    time_step = int((max_time - min_time) / columns)
+
+    time_step = 60 * minutes + seconds
 
     x_axis = []
     for i in range(min_time, max_time, time_step):
-        x_axis.append(int_to_timestamp(i).strftime(DB_DATE_FORMAT))
+        x_axis.append(int_to_timestamp(i + time_step / 2).strftime(DB_DATE_FORMAT))
 
     def y_axis_setup(value):
         items = []
@@ -151,21 +180,21 @@ def total_tasks_plot(run_id):
 
         return items
 
+    return go.Figure(data=[go.Bar(x=x_axis[:-1],
+                                  y=y_axis_setup('done'),
+                                  name='done'),
+                           go.Bar(x=x_axis[:-1],
+                                  y=y_axis_setup('failed'),
+                                  name='failed')],
+                     layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
+                                                 autorange=True,
+                                                 title='Time'),
+                                      yaxis=dict(tickformat= ',d',
+                                                 title='Tasks / ' + int_to_timestamp(max_time - min_time).strftime('%Mm%Ss')),
+                                      barmode='stack',
+                                      title='Total tasks')
+                     )
 
-    return dcc.Graph(id='total_tasks',
-                     figure=go.Figure(data=[go.Bar(x=x_axis,
-                                                   y=y_axis_setup('done'),
-                                                   name='done'),
-                                            go.Bar(x=x_axis,
-                                                   y=y_axis_setup('failed'),
-                                                   name='failed')],
-                                      layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
-                                                                  range=[min(df_status['timestamp']), max(df_status['timestamp'])],
-                                                                  title='Time. ' + ' Bin width: ' + int_to_timestamp(time_step).strftime('%Mm%Ss')),
-                                                       yaxis=dict(tickformat= ',d',
-                                                                  title='Tasks'),
-                                                       barmode='stack',
-                                                       title="Total tasks")))
 
 
 
