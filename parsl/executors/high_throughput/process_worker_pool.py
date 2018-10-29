@@ -4,6 +4,8 @@ import argparse
 import logging
 import os
 import sys
+import sys
+import platform
 # import random
 import threading
 import pickle
@@ -12,8 +14,6 @@ import queue
 import uuid
 import zmq
 import math
-import sys
-import platform
 import json
 
 from parsl.version import VERSION as PARSL_VERSION
