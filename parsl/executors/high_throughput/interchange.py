@@ -3,6 +3,8 @@ import argparse
 import zmq
 # import uuid
 import os
+import sys
+import platform
 import time
 import pickle
 import logging
@@ -10,9 +12,10 @@ import queue
 import threading
 import json
 
+from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
-LOOP_SLOWDOWN = 0.0  # in seconds
+LOOP_SLOWDoOWN = 0.0  # in seconds
 
 
 class ShutdownRequest(Exception):
@@ -146,6 +149,14 @@ class Interchange(object):
 
         self.heartbeat_thresh = heartbeat_period * 2
 
+        self.current_platform = {'parsl_v': PARSL_VERSION,
+                                 'python_v': "{}.{}.{}".format(sys.version_info.major,
+                                                               sys.version_info.minor,
+                                                               sys.version_info.micro),
+                                 'os': platform.system(),
+                                 'hname': platform.node(),
+                                 'dir': os.getcwd()}
+
     def get_tasks(self, count):
         """ Obtains a batch of tasks from the internal pending_task_queue
 
@@ -273,6 +284,9 @@ class Interchange(object):
                                                           'tasks': []}
                     self._ready_manager_queue[manager].update(msg)
                     logger.info("Registration info for manager {}: {}".format(manager, msg))
+                    if (msg['python_v'] != self.current_platform['python_v'] or
+                        msg['parsl_v'] != self.current_platform['parsl_v']):
+                        logger.warn("Manager:{} has incompatible version info with the interchange".format(manager))
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")

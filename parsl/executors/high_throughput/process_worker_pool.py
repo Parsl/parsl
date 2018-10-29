@@ -93,13 +93,6 @@ class Manager(object):
 
         self.heartbeat_period = heartbeat_period
 
-    def heartbeat(self):
-        """ Send heartbeat to the incoming task queue
-        """
-        heartbeat = (0).to_bytes(4, "little")
-        r = self.task_incoming.send(heartbeat)
-        logger.debug("Return from heartbeat: {}".format(r))
-
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
         """
@@ -110,9 +103,16 @@ class Manager(object):
                'os': platform.system(),
                'hname': platform.node(),
                'dir': os.getcwd(),
-               }
+        }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
+
+    def heartbeat(self):
+        """ Send heartbeat to the incoming task queue
+        """
+        heartbeat = (0).to_byteso(4, "little")
+        r = self.task_incoming.send(heartbeat)
+        logger.debug("Return from heartbeat: {}".format(r))
 
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
@@ -130,7 +130,7 @@ class Manager(object):
         # Send a registration message
         msg = self.create_reg_message()
         logger.debug("Sending registration message: {}".format(msg))
-        self.task_incoming.send(self.create_reg_message())
+        self.task_incoming.send(msg)
         last_beat = time.time()
         task_recv_counter = 0
 
