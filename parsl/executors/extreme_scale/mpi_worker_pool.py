@@ -47,24 +47,23 @@ class Manager(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
         """
-        logger.info("Manager started v0.5")
+        logger.info("Manager started v0.6")
         self.uid = uid
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
-        self.task_incoming.setsockopt(zmq.IDENTITY, b'00100')
+        self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.task_incoming.connect(task_q_url)
 
         self.result_outgoing = self.context.socket(zmq.DEALER)
-        self.result_outgoing.setsockopt(zmq.IDENTITY, b'00100')
+        self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.connect(result_q_url)
 
         logger.info("Manager connected")
-        if max_queue_size == 0:
-            max_queue_size = comm.size
-        self.pending_task_queue = queue.Queue(maxsize=max_queue_size)
+        self.max_queue_size = max_queue_size + comm.size
+        self.pending_task_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
         self.pending_result_queue = queue.Queue(maxsize=10 ^ 4)
-        self.ready_worker_queue = queue.Queue(maxsize=max_queue_size + 10)
+        self.ready_worker_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
 
         self.tasks_per_round = 1
 
@@ -141,8 +140,39 @@ class Manager(object):
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
             ready_worker_count = self.ready_worker_queue.qsize()
-            logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
+            pending_task_count = self.pending_task_queue.qsize()
 
+            logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
+                                                                                        pending_task_count))
+
+            if time.time() > last_beat + self.heartbeat_period:
+                self.heartbeat()
+                last_beat = time.time()
+
+            if pending_task_count < self.max_queue_size and ready_worker_count > 0:
+                logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
+                msg = ((ready_worker_count).to_bytes(4, "little"))
+                self.task_incoming.send(msg)
+
+            socks = dict(poller.poll(1))
+
+            if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
+                _, pkl_msg = self.task_incoming.recv_multipart()
+                tasks = pickle.loads(pkl_msg)
+                if tasks == 'STOP':
+                    logger.critical("[TASK_PULL_THREAD] Received stop request")
+                    kill_event.set()
+                    break
+                else:
+                    task_recv_counter += len(tasks)
+                    logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
+                                                                                 task_recv_counter))
+
+                    for task in tasks:
+                        self.pending_task_queue.put(task)
+            else:
+                logger.debug("[TASK_PULL_THREAD] No incoming tasks")
+            """
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat()
                 last_beat = time.time()
@@ -174,7 +204,7 @@ class Manager(object):
                         #    [i['task_id'] for i in self.pending_task_queue]))
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
-
+            """
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -192,12 +222,11 @@ class Manager(object):
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
-            items = []
             try:
+                items = []
                 while not self.pending_result_queue.empty():
                     r = self.pending_result_queue.get(block=True)
                     items.append(r)
-
                 if items:
                     self.result_outgoing.send_multipart(items)
 
