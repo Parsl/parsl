@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import sys
+import platform
 # import random
 import threading
 import pickle
@@ -11,9 +12,11 @@ import time
 import queue
 import uuid
 import zmq
+import json
 
 from mpi4py import MPI
 
+from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
 
@@ -69,6 +72,20 @@ class Manager(object):
         self.comm = comm
         self.rank = rank
 
+    def create_reg_message(self):
+        """ Creates a registration message to identify the worker to the interchange
+        """
+        msg = {'parsl_v': PARSL_VERSION,
+               'python_v': "{}.{}.{}".format(sys.version_info.major,
+                                             sys.version_info.minor,
+                                             sys.version_info.micro),
+               'os': platform.system(),
+               'hname': platform.node(),
+               'dir': os.getcwd(),
+        }
+        b_msg = json.dumps(msg).encode('utf-8')
+        return b_msg
+
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
         """
@@ -113,7 +130,11 @@ class Manager(object):
         logger.info("[TASK PULL THREAD] starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
-        self.heartbeat()
+
+        # Send a registration message
+        msg = self.create_reg_message()
+        logger.debug("Sending registration message: {}".format(msg))
+        self.task_incoming.send(msg)
         last_beat = time.time()
         task_recv_counter = 0
 
@@ -171,10 +192,14 @@ class Manager(object):
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
+            items = []
             try:
-                result = self.pending_result_queue.get(block=True, timeout=timeout)
-                self.result_outgoing.send(result)
-                logger.debug("[RESULT_PUSH_THREAD] Sent result:{}".format(result))
+                while not self.pending_result_queue.empty():
+                    r = self.pending_result_queue.get(block=True)
+                    items.append(r)
+
+                if items:
+                    self.result_outgoing.send_multipart(items)
 
             except queue.Empty:
                 logger.debug("[RESULT_PUSH_THREAD] No results to send in past {}seconds".format(timeout))
