@@ -207,6 +207,14 @@ sleep infinity
 """.format(engine_dir, engine_json, container_image, debug_option=self.debug_option, uid=uid)
 
     @property
+    def outstanding(self):
+        return len(self.executor.outstanding)
+
+    @property
+    def connected_workers(self):
+        return self.executor.ids
+
+    @property
     def scaling_enabled(self):
         return self._scaling_enabled
 

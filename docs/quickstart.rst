@@ -48,8 +48,24 @@ Installation using Conda
 
      (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
 
+Installation of Optional Packages
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Parsl supports several optional components that require additional module installations.
+For example support for Amazon Web Services, Extreme Scale Executor etc require additional packages that
+can be installed easily via `pip` using a pip extras option.
 
+Here's a list of the components and their extras option:
+
+* Amazon Web Services (Cloud) : `aws`
+* Google Cloud : `google_cloud`
+* Extreme Scale Executor (Supercomputing) : `extreme_scale`
+* Database logging of monitoring data : `db_logging`
+* Jetstream (NSF Cloud) : `jetstream`
+
+Optional extras can be installed using the following syntax::
+
+     $ python3 -m pip install parsl[<optional_package1>, <optional_package2>]
 
 For Developers
 --------------

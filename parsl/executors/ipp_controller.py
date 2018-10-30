@@ -82,7 +82,7 @@ class Controller(RepresentationMixin):
             ]
             logger.debug("Starting ipcontroller with '{}'".format(' '.join([str(x) for x in opts])))
             self.proc = subprocess.Popen(opts, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             msg = "Could not find ipcontroller. Please make sure that ipyparallel is installed and available in your env"
             logger.error(msg)
             raise ControllerError(msg)

@@ -135,13 +135,3 @@ class Channel(metaclass=ABCMeta):
             Path for which the absolute path will be returned.
         """
         pass
-
-    @property
-    def script_dir(self):
-        return self._script_dir
-
-    @script_dir.setter
-    def script_dir(self, value):
-        if value is not None:
-            value = self.abspath(value)
-        self._script_dir = value
