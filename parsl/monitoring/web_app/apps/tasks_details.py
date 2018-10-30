@@ -5,7 +5,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 from parsl.monitoring.web_app.app import app, get_db, close_db
-from parsl.monitoring.web_app.utils import timestamp_to_int, int_to_timestamp, DB_DATE_FORMAT
+from parsl.monitoring.web_app.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
 
 
 layout = html.Div(id='tasks_details')
@@ -15,12 +15,12 @@ layout = html.Div(id='tasks_details')
               [Input('run_number_dropdown', 'value')])
 def tasks_details(run_id):
     sql_conn = get_db()
-    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?)',
+    df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?)',
                                 sql_conn, params=(run_id,))
     close_db()
 
     apps = []
-    for app in df_task['task_fn_hash'].unique():
+    for app in df_task['task_func_name'].unique():
         apps.append(dict(label=app, value=app))
 
     return [dcc.Dropdown(
@@ -48,7 +48,7 @@ def tasks_per_app_plot_callback(apps, run_id):
     sql_conn = get_db()
     df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
                                   sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?) AND task_fn_hash IN {apps}'.format(apps=tuple(apps)),
+    df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?) AND task_fn_hash IN {apps}'.format(apps=tuple(apps)),
                                 sql_conn, params=(run_id, ))
     close_db()
 
@@ -68,10 +68,10 @@ def tasks_per_app_plot_callback(apps, run_id):
     apps = dict()
     for i in range(len(df_task)):
         row = df_task.iloc[i]
-        if row['task_fn_hash'] in apps:
-            apps[row['task_fn_hash']].append(row['task_id'])
+        if row['task_func_name'] in apps:
+            apps[row['task_func_name']].append(row['task_id'])
         else:
-            apps[row['task_fn_hash']] = [row['task_id']]
+            apps[row['task_func_name']] = [row['task_id']]
 
     return go.Figure(data=[go.Scatter(x=df_status[df_status['task_id'].isin(tasks)]['timestamp'],
                                       y=y_axis_setup(df_status[df_status['task_id'].isin(tasks)]['task_status_name'] == 'running'),
@@ -127,7 +127,7 @@ def total_tasks_plot_tasks(apps, minutes, seconds, run_id):
     sql_conn = get_db()
     df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
                                   sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?) AND task_fn_hash IN {apps}'.format(apps=tuple(apps)),
+    df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?) AND task_fn_hash IN {apps}'.format(apps=tuple(apps)),
                                 sql_conn, params=(run_id, ))
     close_db()
 
@@ -137,16 +137,16 @@ def total_tasks_plot_tasks(apps, minutes, seconds, run_id):
 
     x_axis = []
     for i in range(min_time, max_time, time_step):
-        x_axis.append(int_to_timestamp(i).strftime(DB_DATE_FORMAT))
+        x_axis.append(num_to_timestamp(i).strftime(DB_DATE_FORMAT))
 
     # Fill up dict "apps" like: {app1: [#task1, #task2], app2: [#task4], app3: [#task3]}
     apps_dict = dict()
     for i in range(len(df_task)):
         row = df_task.iloc[i]
-        if row['task_fn_hash'] in apps_dict:
-            apps_dict[row['task_fn_hash']].append(row['task_id'])
+        if row['task_func_name'] in apps_dict:
+            apps_dict[row['task_func_name']].append(row['task_id'])
         else:
-            apps_dict[row['task_fn_hash']] = [row['task_id']]
+            apps_dict[row['task_func_name']] = [row['task_id']]
 
     def y_axis_setup(value):
         items = []
@@ -169,7 +169,7 @@ def total_tasks_plot_tasks(apps, minutes, seconds, run_id):
                                   name='failed')],
                      layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                                  autorange=True,
-                                                 title='Time. ' + ' Bin width: ' + int_to_timestamp(time_step).strftime('%Mm%Ss')),
+                                                 title='Time. ' + ' Bin width: ' + num_to_timestamp(time_step).strftime('%Mm%Ss')),
                                       yaxis=dict(tickformat= ',d',
                                                  title='Tasks'),
                                       barmode='stack',

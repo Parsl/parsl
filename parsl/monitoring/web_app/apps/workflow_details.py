@@ -4,7 +4,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 from parsl.monitoring.web_app.app import app, get_db, close_db
-from parsl.monitoring.web_app.utils import timestamp_to_int, int_to_timestamp, DB_DATE_FORMAT
+from parsl.monitoring.web_app.utils import timestamp_to_float, timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
 
 
 layout = html.Div(id='workflow_details')
@@ -39,7 +39,7 @@ def resource_usage_callback(field, y_axis_label, run_id):
     sql_conn = get_db()
     df_resources = pd.read_sql_query('SELECT {field}, timestamp, task_id FROM task_resources WHERE run_id=(?)'.format(field=field),
                                      sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query('SELECT task_id, task_time_completed FROM task WHERE run_id=(?)',
+    df_task = pd.read_sql_query('SELECT task_id, task_time_returned FROM task WHERE run_id=(?)',
                                 sql_conn, params=(run_id, ))
     close_db()
 
@@ -55,12 +55,12 @@ def resource_usage_callback(field, y_axis_label, run_id):
             if task_id in dic:
                 count -= dic[task_id][0]
 
-            dic[task_id] = (value, df_task[df_task['task_id'] == task_id]['task_time_completed'].iloc[0])
+            dic[task_id] = (value, float(df_task[df_task['task_id'] == task_id]['task_time_returned'].iloc[0]))
             count += value
 
             remove = []
             for k, v in dic.items():
-                if v[1] < df_resources.iloc[i]['timestamp']:
+                if v[1] < timestamp_to_float(df_resources.iloc[i]['timestamp']):
                     count -= v[0]
                     remove.append(k)
 
@@ -86,7 +86,7 @@ def tasks_per_app_plot(run_id):
     sql_conn = get_db()
     df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
                                   sql_conn, params=(run_id, ))
-    df_task = pd.read_sql_query('SELECT task_id, task_fn_hash FROM task WHERE run_id=(?)',
+    df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?)',
                                 sql_conn, params=(run_id,))
     close_db()
 
@@ -106,10 +106,10 @@ def tasks_per_app_plot(run_id):
     apps = dict()
     for i in range(len(df_task)):
         row = df_task.iloc[i]
-        if row['task_fn_hash'] in apps:
-            apps[row['task_fn_hash']].append(row['task_id'])
+        if row['task_func_name'] in apps:
+            apps[row['task_func_name']].append(row['task_id'])
         else:
-            apps[row['task_fn_hash']] = [row['task_id']]
+            apps[row['task_func_name']] = [row['task_id']]
 
     return dcc.Graph(id='tasks_per_app_plot',
                      figure=go.Figure(
@@ -169,7 +169,7 @@ def total_tasks_callback(minutes, seconds, run_id):
 
     x_axis = []
     for i in range(min_time, max_time, time_step):
-        x_axis.append(int_to_timestamp(i + time_step / 2).strftime(DB_DATE_FORMAT))
+        x_axis.append(num_to_timestamp(i + time_step / 2).strftime(DB_DATE_FORMAT))
 
     def y_axis_setup(value):
         items = []
@@ -190,7 +190,7 @@ def total_tasks_callback(minutes, seconds, run_id):
                                                  autorange=True,
                                                  title='Time'),
                                       yaxis=dict(tickformat= ',d',
-                                                 title='Tasks / ' + int_to_timestamp(max_time - min_time).strftime('%Mm%Ss')),
+                                                 title='Tasks / ' + num_to_timestamp(max_time - min_time).strftime('%Mm%Ss')),
                                       barmode='stack',
                                       title='Total tasks')
                      )

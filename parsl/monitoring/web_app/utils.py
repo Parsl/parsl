@@ -17,11 +17,15 @@ def dataframe_to_html_table(id, dataframe, field):
     )
 
 
+def timestamp_to_float(time, format=DB_DATE_FORMAT):
+    return datetime.strptime(time, format).timestamp()
+
+
 def timestamp_to_int(time, format=DB_DATE_FORMAT):
-    return int(datetime.strptime(time, format).timestamp())
+    return int(timestamp_to_float(time))
 
 
-def int_to_timestamp(n):
+def num_to_timestamp(n):
     return datetime.fromtimestamp(n)
 
 
