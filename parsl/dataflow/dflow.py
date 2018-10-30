@@ -233,7 +233,7 @@ class DataFlowKernel(object):
         """
         return self._config
 
-    def handle_update(self, task_id, future, memo_cbk=False):
+    def handle_exec_update(self, task_id, future, memo_cbk=False):
         """This function is called only as a callback from a task being done.
 
         Move done task from runnable -> done
@@ -300,10 +300,29 @@ class DataFlowKernel(object):
             if self.monitoring_config is not None:
                 task_log_info = self._create_task_log_info(task_id)
                 self.db_logger.info("Task Done", extra=task_log_info)
-            if not self.tasks[task_id]['app_fu'].done():
-                logger.error("Internal consistency error: app_fu is not done for task {}".format(task_id))
 
-        if not memo_cbk and final_state_flag is True:
+        # it might be that in the course of the update, we've gone back to being
+        # pending - in which case, we should consider ourself for relaunch
+        if self.tasks[task_id]['status'] == States.pending:
+            self.launch_if_ready(task_id)
+
+        return
+
+    ## this expects status = States.done if the app was successful...
+    ## but i don't believe it is true that the handle_exec_callback has definitely
+    ## fired at this point (we might have fired a callback that sets the app callback, and
+    ## be walking through the app callbacks now)
+    ## if this race happens the wrong way:
+    ## * file stageouts won't be launched - becaues we wont' see the task as done, and instead
+    ##   assume it failed (in this function)
+    ## * in checkpoint, we might make that same assumption and not checkpoint stuff.
+
+    ## however we can probably ask the app_future if it is done as an exception or not now 
+    ## - weirdness with wrapped exceptions should have disappered by the time it becomes an
+    ## app exception.
+    def handle_app_update(self, task_id, future, memo_cbk=False):
+
+        if not memo_cbk:
             # Update the memoizer with the new result if this is not a
             # result from a memo lookup and the task has reached a terminal state.
             self.memoizer.update_memo(task_id, self.tasks[task_id], future)
@@ -313,7 +332,8 @@ class DataFlowKernel(object):
 
         # Submit _*_stage_out tasks for output data futures that correspond with remote files
         if (self.tasks[task_id]['app_fu'] and
-            self.tasks[task_id]['status'] == States.done and
+            self.tasks[task_id]['app_fu'].done() and
+            self.tasks[task_id]['app_fu'].exception() is None and
             self.tasks[task_id]['executor'] != 'data_manager' and
             self.tasks[task_id]['func_name'] != '_file_stage_in' and
             self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
@@ -323,10 +343,6 @@ class DataFlowKernel(object):
                 if isinstance(f, File) and f.is_remote():
                     f.stage_out(self.tasks[task_id]['executor'])
 
-        # it might be that in the course of the update, we've gone back to being
-        # pending - in which case, we should consider ourself for relaunch
-        if self.tasks[task_id]['status'] == States.pending:
-            self.launch_if_ready(task_id)
 
         return
 
@@ -420,7 +436,8 @@ class DataFlowKernel(object):
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
-            self.handle_update(task_id, memo_fu, memo_cbk=True)
+            self.handle_exec_update(task_id, memo_fu, memo_cbk=True)
+            self.handle_app_update(task_id, memo_fu, memo_cbk=True)
             return memo_fu
 
         executor_label = self.tasks[task_id]["executor"]
@@ -437,7 +454,7 @@ class DataFlowKernel(object):
             self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
-        exec_fu.add_done_callback(partial(self.handle_update, task_id))
+        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
@@ -633,9 +650,12 @@ class DataFlowKernel(object):
                                                                                task_def['func_name'],
                                                                                [fu.tid for fu in depends]))
 
-        self.tasks[task_id]['app_fu'] = AppFuture(None, tid=task_id,
-                                                  stdout=task_stdout,
-                                                  stderr=task_stderr)
+        app_fu = AppFuture(None, tid=task_id,
+                           stdout=task_stdout,
+                           stderr=task_stderr)
+
+        self.tasks[task_id]['app_fu'] = app_fu
+        app_fu.add_done_callback(partial(self.handle_app_update, task_id))
         self.tasks[task_id]['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
@@ -767,6 +787,10 @@ class DataFlowKernel(object):
             self.logging_server.join()
         logger.info("DFK cleanup complete")
 
+    ## this checks if task is in status = States.done (opposed to States.failed)
+    ## but at the moment, in handle_app_update, I don't think it is necessarily true
+    ## that the exec level callbacks have fired yet to set state to done...
+
     def checkpoint(self, tasks=None):
         """Checkpoint the dfk incrementally to a checkpoint file.
 
@@ -813,7 +837,8 @@ class DataFlowKernel(object):
             with open(checkpoint_tasks, 'ab') as f:
                 for task_id in checkpoint_queue:
                     if not self.tasks[task_id]['checkpoint'] and \
-                       self.tasks[task_id]['status'] == States.done:
+                       self.tasks[task_id]['app_fu'].done() and \
+                       self.tasks[task_id]['app_fu'].exception() is None:
                         hashsum = self.tasks[task_id]['hashsum']
                         if not hashsum:
                             continue
