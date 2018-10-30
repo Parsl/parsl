@@ -18,7 +18,7 @@ from concurrent.futures import Future
 from functools import partial
 
 import parsl
-
+from parsl.app.errors import RemoteException
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
