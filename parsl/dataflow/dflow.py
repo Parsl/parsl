@@ -714,7 +714,7 @@ class DataFlowKernel(object):
         if not self.cleanup_called:
             self.cleanup()
 
-    def cleanup_wait_for_all_tasks(self):
+    def wait_for_current_tasks(self):
         """Waits for all tasks in the task list to be completed, by waiting for their
         AppFuture to be completed. This method will not necessarily wait for any tasks
         added after cleanup has started (such as data stageout?)
@@ -748,7 +748,7 @@ class DataFlowKernel(object):
             raise Exception("attempt to clean up DFK when it has already been cleaned-up")
         self.cleanup_called = True
 
-        self.cleanup_wait_for_all_tasks()
+        self.wait_for_current_tasks()
 
         self.log_task_states()
 
