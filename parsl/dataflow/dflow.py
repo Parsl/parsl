@@ -649,7 +649,7 @@ class DataFlowKernel(object):
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
-                "Task {0} in pending list".format(task_id))
+                "internal consistency error: Task {0} in pending list".format(task_id))
         else:
             self.tasks[task_id] = task_def
 
