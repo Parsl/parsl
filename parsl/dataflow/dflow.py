@@ -437,8 +437,8 @@ class DataFlowKernel(object):
             self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
-        exec_fu.add_done_callback(partial(self.handle_update, task_id))
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
+        exec_fu.add_done_callback(partial(self.handle_update, task_id))
         return exec_fu
 
     def _add_input_deps(self, executor, args, kwargs):
