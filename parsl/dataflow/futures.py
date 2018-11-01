@@ -60,7 +60,7 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, parent, tid=None, stdout=None, stderr=None):
+    def __init__(self, parent, task_struct, tid=None, stdout=None, stderr=None):
         """Initialize the AppFuture.
 
         Args:
@@ -83,6 +83,7 @@ class AppFuture(Future):
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
+        self._task_struct = task_struct
 
         if parent is not None:
             self.update_parent(parent)
@@ -182,6 +183,21 @@ class AppFuture(Future):
             return self.parent.running()
         else:
             return False
+
+    def task_status(self):
+        """Returns the task state for the task that will
+           provide the value for this future.
+           This may not be in-sync with the Future-state (phrasing?)
+           of the future - for example, task_state might be
+           States.done but self.done() might not be true
+           (which in turn means self.result() and
+           self.exception() might block)
+           ... so caution is advised when rely on the state
+           returned by this.
+
+           Returns: a state from parsl.dataflow.states.State
+        """
+        return self._task_struct['status']
 
     @property
     def outputs(self):

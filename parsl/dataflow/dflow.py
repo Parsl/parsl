@@ -664,10 +664,9 @@ class DataFlowKernel(object):
                                                                                task_def['func_name'],
                                                                                [fu.tid for fu in depends]))
 
-        app_fu = AppFuture(None, tid=task_id,
-                           stdout=task_stdout,
-                           stderr=task_stderr)
-
+        self.tasks[task_id]['app_fu'] = AppFuture(None, self.tasks[task_id], tid=task_id,
+                                                  stdout=task_stdout,
+                                                  stderr=task_stderr)
         self.tasks[task_id]['app_fu'] = app_fu
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
         self.tasks[task_id]['status'] = States.pending
