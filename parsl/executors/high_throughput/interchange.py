@@ -223,11 +223,30 @@ class Interchange(object):
                     for manager in self._ready_manager_queue:
                         outstanding += len(self._ready_manager_queue[manager]['tasks'])
                     reply = outstanding
+
                 elif command_req == "MANAGERS":
-                    reply = list(self._ready_manager_queue.keys())
+                    reply = []
+                    for manager in self._ready_manager_queue:
+                        resp = (manager.decode('utf-8'),
+                                len(self._ready_manager_queue[manager]['tasks']),
+                                self._ready_manager_queue[manager]['active'])
+                        reply.append(resp)
+
+                elif command_req.startswith("HOLD_WORKER"):
+                    cmd, s_manager = command_req.split(';')
+                    manager = s_manager.encode('utf-8')
+                    logger.info("[CMD] Received HOLD_WORKER for {}".format(manager))
+                    if manager in self._ready_manager_queue:
+                        self._ready_manager_queue[manager]['active'] = False
+                        reply = True
+                    else:
+                        reply = False
+
                 elif command_req == "SHUTDOWN":
+                    logger.info("[CMD] Received SHUTDOWN command")
                     kill_event.set()
                     reply = True
+
                 else:
                     reply = None
 
@@ -281,6 +300,7 @@ class Interchange(object):
                     logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           'free_capacity': 0,
+                                                          'active': True,
                                                           'tasks': []}
                     self._ready_manager_queue[manager].update(msg)
                     logger.info("Registration info for manager {}: {}".format(manager, msg))
@@ -296,7 +316,8 @@ class Interchange(object):
 
             # If we had received any requests, check if there are tasks that could be passed
             for manager in self._ready_manager_queue:
-                if self._ready_manager_queue[manager]['free_capacity']:
+                if (self._ready_manager_queue[manager]['free_capacity'] and
+                    self._ready_manager_queue[manager]['active']):
                     tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                     if tasks:
                         self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
