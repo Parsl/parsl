@@ -26,7 +26,6 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     ----------
     provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
         Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
-        :class:`~parsl.providers.azureProvider.azureProvider.AzureProvider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
@@ -206,6 +205,14 @@ at_exit() {{
 trap at_exit SIGTERM SIGINT
 sleep infinity
 """.format(engine_dir, engine_json, container_image, debug_option=self.debug_option, uid=uid)
+
+    @property
+    def outstanding(self):
+        return len(self.executor.outstanding)
+
+    @property
+    def connected_workers(self):
+        return self.executor.ids
 
     @property
     def scaling_enabled(self):

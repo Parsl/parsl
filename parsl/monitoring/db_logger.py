@@ -2,6 +2,7 @@ import logging
 import getpass
 from parsl.monitoring.db_local import DatabaseHandler
 from parsl.monitoring.db_local import RemoteHandler
+from parsl.utils import RepresentationMixin
 
 try:
     from cmreslogging.handlers import CMRESHandler
@@ -10,19 +11,7 @@ except ImportError:
 else:
     _es_logging_enabled = True
 
-
-class OptionalModuleMissing(Exception):
-    ''' Error raised a required module is missing for a optional/extra provider
-    '''
-
-    def __init__(self, module_names, reason):
-        self.module_names = module_names
-        self.reason = reason
-
-    def __repr__(self):
-        return "Unable to initialize logger.Missing:{0},  Reason:{1}".format(
-            self.module_names, self.reason
-        )
+from parsl.errors import OptionalModuleMissing
 
 
 class NullHandler(logging.Handler):
@@ -32,7 +21,7 @@ class NullHandler(logging.Handler):
         pass
 
 
-class MonitoringConfig():
+class MonitoringConfig(RepresentationMixin):
     """ This is a config class for monitoring. """
     def __init__(self,
                  host=None,

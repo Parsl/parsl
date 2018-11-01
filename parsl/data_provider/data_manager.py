@@ -47,13 +47,14 @@ class DataManager(ParslExecutor):
     to it, and DataFutures are returned.
     """
 
-    default_data_manager = None
-
     @classmethod
-    def get_data_manager(cls, max_threads=None, executors=None):
-        if cls.default_data_manager is None:
-            cls.default_data_manager = DataManager(max_threads=max_threads, executors=executors)
-        return cls.default_data_manager
+    def get_data_manager(cls):
+        """Return the DataManager of the currently loaded DataFlowKernel.
+        """
+        from parsl.dataflow.dflow import DataFlowKernelLoader
+        dfk = DataFlowKernelLoader.dfk()
+
+        return dfk.executors['data_manager']
 
     def __init__(self, max_threads=10, executors=None):
         """Initialize the DataManager.
@@ -118,7 +119,10 @@ class DataManager(ParslExecutor):
             if executor_label is None or executor.label == executor_label:
                 for scheme in executor.storage_access:
                     if isinstance(scheme, GlobusScheme):
-                        working_dir = os.path.normpath(executor.working_dir)
+                        if executor.working_dir:
+                            working_dir = os.path.normpath(executor.working_dir)
+                        else:
+                            working_dir = os.getcwd()
                         if scheme.endpoint_path and scheme.local_path:
                             endpoint_path = os.path.normpath(scheme.endpoint_path)
                             local_path = os.path.normpath(scheme.local_path)

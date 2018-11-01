@@ -19,11 +19,15 @@ setup(
     package_data={'': ['LICENSE']},
     packages=find_packages(),
     install_requires=install_requires,
+    scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
+               'parsl/executors/extreme_scale/mpi_worker_pool.py'],
     extras_require = {
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
-        'azure' : ['azure-mgmt>=2.0.0', 'haikunator'],
-        'jetstream' : ['python-novaclient']
+        'jetstream' : ['python-novaclient'],
+        'extreme_scale' : ['mpi4py'],
+        'docs' : ['nbsphinx'],
+        'google_cloud' : ['google-auth', 'google-api-python-client']
         },
     classifiers = [
         # Maturity

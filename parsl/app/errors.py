@@ -32,19 +32,7 @@ class AppException(ParslError):
 
 class AppBadFormatting(ParslError):
     """An error raised during formatting of a bash function.
-
-    What this exception contains depends entirely on context
-    Contains:
-    reason(string)
-    exitcode(int)
-    retries(int/None)
     """
-
-    def __init__(self, reason, exitcode, retries=None):
-        super().__init__(reason)
-        self.reason = reason
-        self.exitcode = exitcode
-        self.retries = retries
 
 
 class AppFailure(AppException):
@@ -58,7 +46,6 @@ class AppFailure(AppException):
     """
 
     def __init__(self, reason, exitcode, retries=None):
-        super().__init__(reason)
         self.reason = reason
         self.exitcode = exitcode
         self.retries = retries
@@ -66,18 +53,7 @@ class AppFailure(AppException):
 
 class AppTimeout(AppException):
     """An error raised during execution of an app when it exceeds its allotted walltime.
-
-    Contains:
-    reason(string)
-    exitcode(int)
-    retries(int/None)
     """
-
-    def __init__(self, reason, exitcode, retries=None):
-        super().__init__(reason)
-        self.reason = reason
-        self.exitcode = -55
-        self.retries = retries
 
 
 class BashAppNoReturn(AppException):
@@ -89,10 +65,10 @@ class BashAppNoReturn(AppException):
     retries(int/None)
     """
 
-    def __init__(self, reason, exitcode, retries=None):
+    def __init__(self, reason, exitcode=-21, retries=None):
         super().__init__(reason)
         self.reason = reason
-        self.exitcode = -21
+        self.exitcode = exitcode
         self.retries = retries
 
 
@@ -176,6 +152,6 @@ def wrap_error(func):
         from parsl.app.errors import RemoteException
         try:
             return func(*args, **kwargs)
-        except Exception as e:
+        except Exception:
             return RemoteException(*sys.exc_info())
     return wrapper

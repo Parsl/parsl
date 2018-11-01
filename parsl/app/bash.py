@@ -37,12 +37,12 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     except AttributeError as e:
         if partial_cmdline is not None:
-            raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e), None)
+            raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e))
         else:
             raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned none - with this exception: {}".format(func_name, e), None)
 
     except IndexError as e:
-        raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e), None)
+        raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e))
     except Exception as e:
         logging.error("Caught exception during formatting of app '{}': {}".format(func_name, e))
         raise e
@@ -72,12 +72,12 @@ def remote_side_bash_executor(func, *args, **kwargs):
         proc.wait(timeout=timeout)
         returncode = proc.returncode
 
-    except subprocess.TimeoutExpired as e:
-        print("Timeout")
-        raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout), e)
+    except subprocess.TimeoutExpired:
+        # print("Timeout")
+        raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout))
 
     except Exception as e:
-        print("Caught exception: ", e)
+        # print("Caught exception: ", e)
         raise pe.AppException("[{}] App caught exception: {}".format(func_name, proc.returncode), e)
 
     if returncode != 0:
