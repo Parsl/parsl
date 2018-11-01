@@ -255,7 +255,7 @@ class DataFlowKernel(object):
             if isinstance(res, RemoteException):
                 res.reraise()
 
-        except Exception as e:
+        except Exception:
             logger.exception("Task {} failed".format(task_id))
 
             # We keep the history separately, since the future itself could be
@@ -269,7 +269,7 @@ class DataFlowKernel(object):
                 if self.monitoring_config is not None:
                     task_log_info = self._create_task_log_info(task_id, 'eager')
                     self.db_logger.info("Task Fail", extra=task_log_info)
-                raise e
+                return
 
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
