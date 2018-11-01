@@ -327,8 +327,19 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         else:
             logger.debug("Management thread already exists, returning")
 
-    def kill_worker(self, worker_id):
-        c = self.command_client.run("KILL,{}".format(worker_id))
+    def hold_worker(self, worker_id):
+        """Puts the workers on hold, preventing scheduling of additional tasks to it.
+
+        This is called "hold" mostly because this is only stops scheduling of tasks,
+        and does not actually kill the workers.
+
+        Parameters
+        ----------
+
+        worker_id : str
+            Worker id to be put on hold
+        """
+        c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
         logger.debug("Sent kill request to worker: {}".format(worker_id))
         return c
 
