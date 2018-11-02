@@ -42,8 +42,6 @@ class GoogleCloudProvider():
         OS project code for Google compute engine.
     os_family : str
         OS family to request.
-    label : str
-        A label for this executor. Default is 'google_cloud'.
     google_version : str
         Google compute engine version to use. Possibilies include 'v1' (default) or 'beta'.
     instance_type: str
@@ -83,7 +81,6 @@ class GoogleCloudProvider():
                  region,
                  os_project,
                  os_family,
-                 label='google_cloud',
                  google_version='v1',
                  instance_type='n1-standard-1',
                  init_blocks=1,
@@ -95,7 +92,7 @@ class GoogleCloudProvider():
         self.zone = self.get_zone(region)
         self.os_project = os_project
         self.os_family = os_family
-        self.label = label
+        self.label =l'google_cloud'
         self.client = googleapiclient.discovery.build('compute', google_version)
         self.instance_type = instance_type
         self.init_blocks = init_blocks
