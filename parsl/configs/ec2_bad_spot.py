@@ -12,7 +12,7 @@ config = Config(
         IPyParallelExecutor(
             label='ec2_bad_spot',
             provider=AWSProvider(
-                'image_id',    # Please replace image_id with your image id, e.g., 'ami-82f4dae7' 
+                'image_id',    # Please replace image_id with your image id, e.g., 'ami-82f4dae7'
                 region='us-east-1',    # Please replace region with your region
                 key_name='KEY',    # Please replace KEY with your key name
                 profile="default",
