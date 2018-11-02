@@ -92,7 +92,7 @@ class GoogleCloudProvider():
         self.zone = self.get_zone(region)
         self.os_project = os_project
         self.os_family = os_family
-        self.label =l'google_cloud'
+        self.label = 'google_cloud'
         self.client = googleapiclient.discovery.build('compute', google_version)
         self.instance_type = instance_type
         self.init_blocks = init_blocks

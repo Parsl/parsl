@@ -76,7 +76,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  launcher=SingleNodeLauncher(),
                  requirements=''):
 
-        label='condor'
+        label = 'condor'
         super().__init__(label,
                          channel,
                          nodes_per_block,

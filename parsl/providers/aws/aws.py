@@ -157,7 +157,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         state_file_exists = False
         try:
-            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(label)
+            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(self.label)
             self.read_state_file(self.state_file)
             state_file_exists = True
         except Exception:

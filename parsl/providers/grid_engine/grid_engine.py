@@ -72,7 +72,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  walltime="00:10:00",
                  overrides='',
                  launcher=SingleNodeLauncher()):
-        label='grid_engine'
+        label = 'grid_engine'
         super().__init__(label,
                          channel,
                          nodes_per_block,

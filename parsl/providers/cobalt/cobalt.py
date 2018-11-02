@@ -69,7 +69,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                  overrides='',
                  launcher=AprunLauncher(),
                  cmd_timeout=10):
-        label='cobalt'
+        label = 'cobalt'
         super().__init__(label,
                          channel=channel,
                          nodes_per_block=nodes_per_block,
