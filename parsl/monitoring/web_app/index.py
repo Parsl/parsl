@@ -9,18 +9,19 @@ def web_app(db, port):
     if not init_db(db):
         return
 
-    print(' * Visualizing ' + db)
-    print(' * Running on http://localhost:' + str(port))
+    print(' * Visualizing ' + db.split('/').pop())
+    print(' * Running on http://localhost:' + str(port) + '/workflows')
 
     from parsl.monitoring.web_app.apps import sql, workflows, tabs
 
     app.layout = html.Div([
         dcc.Location(id='url', refresh=False),
-        html.Nav(children=[
-            dcc.Link('Workflows', href='/workflows'),
-            dcc.Link('SQL', href='/sql')]),
+        # html.Nav(children=[
+        #     dcc.Link('Workflows', href='/workflows'),
+        #     dcc.Link('SQL', href='/sql')]),
         html.Div(id='page-content')
     ])
+
 
     @app.callback(Output('page-content', 'children'),
                   [Input('url', 'pathname')])
