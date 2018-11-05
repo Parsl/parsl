@@ -19,11 +19,12 @@ Reference guide
     parsl.executors.threads.ThreadPoolExecutor
     parsl.executors.ipp.IPyParallelExecutor
     parsl.executors.ipp_controller.Controller
+    parsl.executors.HighThroughputExecutor
+    parsl.executors.ExtremeScaleExecutor
     parsl.executors.swift_t.TurbineExecutor
     parsl.channels.local.local.LocalChannel
     parsl.channels.ssh.ssh.SSHChannel
     parsl.providers.AWSProvider
-    parsl.providers.AzureProvider
     parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
     parsl.providers.GoogleCloudProvider
