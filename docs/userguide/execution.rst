@@ -34,6 +34,20 @@ Parsl currently supports the following executors:
 
 These executors cover a broad range of execution requirements. As with other Parsl components there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
 
+Launchers
+---------
+
+On many traditional batch systems, the user is expected to request a large number of nodes and launch tasks using a system such as `srun <https://slurm.schedmd.com/srun.html>`_ (for slurm), `aprun <https://cug.org/5-publications/proceedings_attendee_lists/2006CD/S06_Proceedings/pages/Authors/Karo-4C/Karo_alps_paper.pdf>`_ (for crays), `mpirun <https://www.open-mpi.org/doc/v2.0/man1/mpirun.1.php>`_ etc.
+Launchers are responsible for abstracting these different task-launch systems to start the appropriate number of workers across cores and nodes. Parsl currently supports the following set of launchers:
+
+1. **SrunLauncher**: Srun based launcher for Slurm based systems
+2. **AprunLauncher**: Aprun based launcher for Crays
+3. **SrunMPILauncher**: Launcher for launching MPI applications with Srun
+4. **GnuParallelLauncher**: Launcher using GNU parallel to launch workers across nodes and cores
+5. **MpiExecLauncher**: Uses Mpiexec to launch
+6. **SimpleLauncher**: The launcher deafult to a single worker launch.
+7. **SingleNodeLauncher**: This launcher launches ``tasks_per_node`` count workers on a single node.
+
 
 Blocks
 ------
