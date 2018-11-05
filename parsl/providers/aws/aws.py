@@ -45,8 +45,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     ----------
     image_id : str
         Identification of the Amazon Machine Image (AMI).
-    label : str
-        Label for this provider.
     overrides : str
         String to append to the Userdata script executed in the cloudinit phase of
         instance initialization.
@@ -97,7 +95,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def __init__(self,
                  image_id,
-                 label='ec2',
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -123,7 +120,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
 
         self.image_id = image_id
-        self.label = label
+        self.label = 'ec2'
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
@@ -160,7 +157,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         state_file_exists = False
         try:
-            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(label)
+            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(self.label)
             self.read_state_file(self.state_file)
             state_file_exists = True
         except Exception:
