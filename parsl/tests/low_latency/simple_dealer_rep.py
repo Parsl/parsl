@@ -101,8 +101,35 @@ def dealer_execute_task(worker_id, port=5560):
         socket.send_multipart(serialize_object(reply))
 
 
-def dealer_executor(num_tasks=10000, port=5560):
+def dealer_interchange(manager_port=5559, worker_port=5560):
+    context = zmq.Context()
+    incoming = context.socket(zmq.ROUTER)
+    outgoing = context.socket(zmq.DEALER)
+
+    incoming.bind("tcp://*:{}".format(manager_port))
+    outgoing.bind("tcp://*:{}".format(worker_port))
+
+    poller = zmq.Poller()
+    poller.register(incoming, zmq.POLLIN)
+    poller.register(outgoing, zmq.POLLIN)
+
+    while True:
+        socks = dict(poller.poll(1))
+
+        if socks.get(incoming) == zmq.POLLIN:
+            message = incoming.recv_multipart()
+            logger.debug("[interchange] New task {}".format(message))
+            outgoing.send_multipart(message)
+    
+        if socks.get(outgoing) == zmq.POLLIN:
+            message = outgoing.recv_multipart()
+            logger.debug("[interchange] New Result {}".format(message))
+            incoming.send_multipart(message)
+
+
+def dealer_executor(num_tasks=10000, port=5559, interchange=True):
     logger.info("Starting executor")
+    label = "DEALER-INTERCHANGE-REP" if interchange else "DEALER-REP"
 
     serialization_times = []
     deserialization_times = []
@@ -112,7 +139,10 @@ def dealer_executor(num_tasks=10000, port=5560):
 
     context = zmq.Context()
     dealer = context.socket(zmq.DEALER)
-    dealer.bind("tcp://*:{}".format(port))
+    if interchange:
+        dealer.connect("tcp://localhost:{}".format(port))
+    else:
+        dealer.bind("tcp://*:{}".format(port))
 
     poller = zmq.Poller()
     poller.register(dealer, zmq.POLLIN)
@@ -153,12 +183,15 @@ def dealer_executor(num_tasks=10000, port=5560):
             if num_recv == num_tasks:
                 break
 
-    print("[SIMPLE-DEALER-REP] Avg serialization time: \t {:=10.4f} us"
-          .format(10 ** 6 * sum(serialization_times) / len(serialization_times)))
-    # print("[SIMPLE-DEALER-REP] Avg deserialization time: {:=10.4f}"
-        #   .format(10 ** 6 * sum(deserialization_times) / len(deserialization_times)))
-    print("[SIMPLE-DEALER-REP] Avg execution time: \t {:=10.4f} us"
-          .format(10 ** 6 * sum(exec_times.values()) / len(exec_times)))
+    print("[{}] Avg serialization time: \t {:=10.4f} us"
+          .format(label, 
+                  10 ** 6 * sum(serialization_times) / len(serialization_times)))
+    # print("[{}] Avg deserialization time: {:=10.4f}"
+        #   .format(label, 
+        #           10 ** 6 * sum(deserialization_times) / len(deserialization_times)))
+    print("[{}] Avg execution time: \t {:=10.4f} us"
+          .format(label, 
+                  10 ** 6 * sum(exec_times.values()) / len(exec_times)))
     
     return results
     
@@ -171,17 +204,42 @@ if __name__ == "__main__":
                         help="Number of workers to use for Dealer-Rep")
     args = parser.parse_args()
 
-    # Using Dealer-Reply
-    manager = Process(target=dealer_executor, args=(args.num_tasks,))
+    # Using Dealer-Reply without Interchange
+    manager = Process(target=dealer_executor, 
+                      kwargs={"num_tasks": args.num_tasks, "port": 5560, 
+                              "interchange": False})
     manager.start()
     workers = []
     for i in range(args.num_workers):
-        worker = Process(target=dealer_execute_task, kwargs={"worker_id": i})
+        worker = Process(target=dealer_execute_task, 
+                         kwargs={"worker_id": i, "port": 5560})
         worker.daemon = True
         worker.start()
         workers.append(worker)
     
     manager.join()
+    for worker in workers:
+        worker.terminate()
+    
+    # Using Dealer-Reply with Interchange
+    manager = Process(target=dealer_executor, 
+                      kwargs={"num_tasks": args.num_tasks, "port": 5559,
+                              "interchange": True})
+    manager.start()
+    interchange = Process(target=dealer_interchange,
+                          kwargs={"manager_port": 5559, "worker_port": 5560})
+    interchange.daemon = True
+    interchange.start()
+    workers = []
+    for i in range(args.num_workers):
+        worker = Process(target=dealer_execute_task, 
+                         kwargs={"worker_id": i, "port": 5560})
+        worker.daemon = True
+        worker.start()
+        workers.append(worker)
+    
+    manager.join()
+    interchange.terminate()
     for worker in workers:
         worker.terminate()
 
