@@ -255,7 +255,7 @@ class DataFlowKernel(object):
             if isinstance(res, RemoteException):
                 res.reraise()
 
-        except Exception as e:
+        except Exception:
             logger.exception("Task {} failed".format(task_id))
 
             # We keep the history separately, since the future itself could be
@@ -269,7 +269,7 @@ class DataFlowKernel(object):
                 if self.monitoring_config is not None:
                     task_log_info = self._create_task_log_info(task_id, 'eager')
                     self.db_logger.info("Task Fail", extra=task_log_info)
-                raise e
+                return
 
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
@@ -441,8 +441,14 @@ class DataFlowKernel(object):
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
-            self.handle_exec_update(task_id, memo_fu)
-            self.handle_app_update(task_id, memo_fu, memo_cbk=True)
+            try:
+                self.handle_exec_update(task_id, memo_fu)
+            except Exception as e:
+                logger.error("handle_exec_update raised an exception {} which will be ignored".format(e))
+            try:
+                self.handle_app_update(task_id, memo_fu, memo_cbk=True)
+            except Exception as e:
+                logger.error("handle_app_update raised an exception {} which will be ignored".format(e))
             return memo_fu
 
         executor_label = self.tasks[task_id]["executor"]
@@ -460,7 +466,10 @@ class DataFlowKernel(object):
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
-        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+        try:
+            exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+        except Exception as e:
+            logger.error("add_done_callback got an exception {} which will be ignored".format(e))
         return exec_fu
 
     def _add_input_deps(self, executor, args, kwargs):
@@ -681,7 +690,10 @@ class DataFlowKernel(object):
             def callback_adapter(dep_fut):
                 self.launch_if_ready(task_id)
 
-            d.add_done_callback(callback_adapter)
+            try:
+                d.add_done_callback(callback_adapter)
+            except Exception as e:
+                logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
         self.launch_if_ready(task_id)
 
