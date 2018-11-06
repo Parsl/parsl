@@ -34,8 +34,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    label : str
-        Label for this provider.
     nodes_per_block : int
         Nodes to provision per block.
     tasks_per_node : int
@@ -59,7 +57,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
     """
     def __init__(self,
                  channel=LocalChannel(),
-                 label='cobalt',
                  nodes_per_block=1,
                  tasks_per_node=1,
                  init_blocks=0,
@@ -72,6 +69,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                  overrides='',
                  launcher=AprunLauncher(),
                  cmd_timeout=10):
+        label = 'cobalt'
         super().__init__(label,
                          channel=channel,
                          nodes_per_block=nodes_per_block,
