@@ -28,11 +28,11 @@ class File(str):
     worker-side systems to enable to appropriate transfer of files.
 
     Note that an error will be raised if one tries to create a File without an
-    associated DataFlowKernel. That DataFlowKernel may be specified explicitly
-    as a parameter to the File constructor, or may be implicitly specified by
+    associated DataManager. That DataManager may be specified explicitly
+    as a parameter to the File constructor, or may be implicitly specified via
     a previously loaded Parsl config.
 
-    A File which is not associated with a DataFlowKernel is ill-defined.
+    A File which is not associated with a DataManager is ill-defined.
 
     """
 

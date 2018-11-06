@@ -27,7 +27,7 @@ if __name__ == "__main__":
     print("Waiting ....")
     try:
         print(results[0].result())
-    except Exception as e:
+    except Exception:
         print("Caught an exception, but this is not a problem")
         pass
     print("STDOUT from 0th run :")

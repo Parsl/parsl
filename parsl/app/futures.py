@@ -179,7 +179,7 @@ class DataFuture(Future):
         if self.parent:
             return self.parent.add_done_callback(fn)
         else:
-            return None
+            raise ValueError("Callback will be discarded because no parent future")
 
     def __repr__(self):
 

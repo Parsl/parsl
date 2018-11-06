@@ -65,10 +65,10 @@ class BashAppNoReturn(AppException):
     retries(int/None)
     """
 
-    def __init__(self, reason, exitcode, retries=None):
+    def __init__(self, reason, exitcode=-21, retries=None):
         super().__init__(reason)
         self.reason = reason
-        self.exitcode = -21
+        self.exitcode = exitcode
         self.retries = retries
 
 
@@ -152,6 +152,6 @@ def wrap_error(func):
         from parsl.app.errors import RemoteException
         try:
             return func(*args, **kwargs)
-        except Exception as e:
+        except Exception:
             return RemoteException(*sys.exc_info())
     return wrapper

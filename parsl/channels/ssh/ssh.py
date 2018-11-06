@@ -259,3 +259,11 @@ class SSHChannel(Channel, RepresentationMixin):
             Path for which the absolute path will be returned.
         """
         return self.sftp_client.normalize(path)
+
+    @property
+    def script_dir(self):
+        return self._script_dir
+
+    @script_dir.setter
+    def script_dir(self, value):
+        self._script_dir = value

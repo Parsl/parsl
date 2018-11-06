@@ -11,8 +11,7 @@ Execution providers
 
 Execution providers are responsible for managing execution resources. In the simplest case a PC could be used for execution. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, HTCondor and Cobalt. Clouds, on the other hand, provide APIs that allow more fine-grained composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
 
-Parsl relies on the ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_) library to provides a common interface to execution providers.
-Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor. New execution providers can be added by implementing Libsubmit's execution provider interface.
+Execution providers define an interface which includes operations such as submission, status, and job management. Currently a variety of providers are supported including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor. New execution providers can be added by implementing the execution provider interface.
 
 Executors
 ---------
@@ -53,9 +52,9 @@ Three different examples of block configurations are shown below.
    .. image:: ../images/N1_T4.png
        :scale: 75%
 
-3. A block comprised of several nodes and executing several tasks. This configuration
-   is generally used by MPI applications and requires support from specific
-   MPI launchers supported by the target system (e.g., aprun, srun, mpirun, mpiexec).
+3. A block comprised of several nodes and executing several tasks, where a task can span multiple nodes. This configuration
+   is generally used by MPI applications. Starting a task requires using a specific
+   MPI launcher that is supported on the target system (e.g., aprun, srun, mpirun, mpiexec).
 
    .. image:: ../images/N4_T2.png
 

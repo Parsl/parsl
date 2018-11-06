@@ -1,13 +1,9 @@
+pyzmq>=17.1.2
 ipyparallel
 globus-sdk
 dill
 tblib
-nbsphinx
 ipykernel
 requests
 paramiko
-boto3
-google-api-python-client
-google-auth
-nbsphinx
 mypy

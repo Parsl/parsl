@@ -19,7 +19,7 @@ def test_error_1():
 def test_error_2():
     try:
         connect_and_list("swift.rcc.uchicago.edu", "mango")
-    except SSHException as e:
+    except SSHException:
         print("Caught the right exception")
     else:
         raise Exception("Expected SSException, got :{0}".format(e))

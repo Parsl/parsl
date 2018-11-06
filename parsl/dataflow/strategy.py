@@ -21,7 +21,7 @@ from typing import Optional
 # of a thing that should be generic
 
 
-from parsl.executors.ipp import IPyParallelExecutor
+from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
 
 
 logger = logging.getLogger(__name__)
@@ -186,7 +186,7 @@ class Strategy(object):
                 continue
 
             # Tasks that are either pending completion
-            active_tasks = executor.executor.outstanding
+            active_tasks = executor.outstanding
 
             status = executor.status()
             self.unset_logging()
@@ -205,16 +205,18 @@ class Strategy(object):
             active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            if isinstance(executor, IPyParallelExecutor):
+            if (isinstance(executor, IPyParallelExecutor) or
+                isinstance(executor, HighThroughputExecutor) or
+                isinstance(executor, ExtremeScaleExecutor)):
                 logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected engines'.format(
-                    label, len(active_tasks), running, submitting, pending, len(executor.executor)))
+                    label, active_tasks, running, submitting, pending, len(executor.connected_workers)))
             else:
                 logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
-                    label, len(active_tasks), running, submitting, pending))
+                    label, active_tasks, running, submitting, pending))
 
             # Case 1
             # No tasks.
-            if len(active_tasks) == 0:
+            if active_tasks == 0:
                 # Case 1a
                 # Fewer blocks that min_blocks
                 if active_blocks <= min_blocks:
@@ -248,7 +250,7 @@ class Strategy(object):
 
             # Case 2
             # More tasks than the available slots.
-            elif (float(active_slots) / len(active_tasks)) < parallelism:
+            elif (float(active_slots) / active_tasks) < parallelism:
                 # Case 2a
                 # We have the max blocks possible
                 if active_blocks >= max_blocks:
@@ -259,12 +261,12 @@ class Strategy(object):
                 # Case 2b
                 else:
                     # logger.debug("Strategy: Case.2b")
-                    excess = math.ceil((len(active_tasks) * parallelism) - active_slots)
+                    excess = math.ceil((active_tasks * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
                     executor.scale_out(excess_blocks)
 
-            elif active_slots == 0 and len(active_tasks) > 0:
+            elif active_slots == 0 and active_tasks > 0:
                 # Case 4
                 # Check if slots are being lost quickly ?
                 logger.debug("Requesting single slot")
