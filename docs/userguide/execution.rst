@@ -22,15 +22,15 @@ Executors represent a particular method via which tasks can be executed. As desc
 
 Parsl currently supports the following executors:
 
-1. **ThreadPoolExecutor**: This executor supports multi-thread execution on local resources.
+1. `ThreadPoolExecutor`: This executor supports multi-thread execution on local resources.
 
-2. **IPyParallelExecutor**: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
+2. `IPyParallelExecutor`: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
 
-3. **HighThroughputExecutor**: [Alpha] The HighThroughputExecutor is designed as a replacement for the IPyParallelExecutor. Implementing hierarchical scheduling and batching, the HighThroughputExecutor delivers higher throughput at higher scale.
+3. `HighThroughputExecutor`: [Alpha] The HighThroughputExecutor is designed as a replacement for the IPyParallelExecutor. Implementing hierarchical scheduling and batching, the HighThroughputExecutor delivers higher throughput at higher scale.
 
-4. **ExtremeScaleExecutor**: [Alpha] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>` to scale over 4000+ nodes. This executor is typically used for executing on Supercomputers.
+4. `ExtremeScaleExecutor`: [Alpha] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>` to scale over 4000+ nodes. This executor is typically used for executing on Supercomputers.
 
-5. **Swift/TurbineExecutor**: [Deprecated] This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
+5. `Swift/TurbineExecutor`: [Deprecated] This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
 
 These executors cover a broad range of execution requirements. As with other Parsl components there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
 
@@ -40,13 +40,13 @@ Launchers
 On many traditional batch systems, the user is expected to request a large number of nodes and launch tasks using a system such as `srun <https://slurm.schedmd.com/srun.html>`_ (for slurm), `aprun <https://cug.org/5-publications/proceedings_attendee_lists/2006CD/S06_Proceedings/pages/Authors/Karo-4C/Karo_alps_paper.pdf>`_ (for crays), `mpirun <https://www.open-mpi.org/doc/v2.0/man1/mpirun.1.php>`_ etc.
 Launchers are responsible for abstracting these different task-launch systems to start the appropriate number of workers across cores and nodes. Parsl currently supports the following set of launchers:
 
-1. **SrunLauncher**: Srun based launcher for Slurm based systems
-2. **AprunLauncher**: Aprun based launcher for Crays
-3. **SrunMPILauncher**: Launcher for launching MPI applications with Srun
-4. **GnuParallelLauncher**: Launcher using GNU parallel to launch workers across nodes and cores
-5. **MpiExecLauncher**: Uses Mpiexec to launch
-6. **SimpleLauncher**: The launcher deafult to a single worker launch.
-7. **SingleNodeLauncher**: This launcher launches ``tasks_per_node`` count workers on a single node.
+1. `SrunLauncher`: Srun based launcher for Slurm based systems
+2. `AprunLauncher`: Aprun based launcher for Crays
+3. `SrunMPILauncher`: Launcher for launching MPI applications with Srun
+4. `GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores
+5. `MpiExecLauncher`: Uses Mpiexec to launch
+6. `SimpleLauncher`: The launcher deafult to a single worker launch.
+7. `SingleNodeLauncher`: This launcher launches ``tasks_per_node`` count workers on a single node.
 
 
 Blocks
