@@ -31,7 +31,7 @@ Comet (SDSC)
 
 The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/tests/configs/comet_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/comet_ipp_multinode.py
 
 
 Cori (NERSC)
@@ -41,7 +41,7 @@ Cori (NERSC)
 
 The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
-.. literalinclude:: ../../parsl/tests/configs/cori_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/cori_ipp_multinode.py
 
 
 Theta (ALCF)
@@ -53,7 +53,7 @@ The following snippet shows an example configuration for executing on Argonne Le
 This example uses the `IPythonParallel` executor and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
 assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/tests/configs/theta_local_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/theta_local_ipp_multinode.py
 
 
 Cooley (ALCF)
@@ -65,7 +65,7 @@ The following snippet shows an example configuration for executing remotely on A
 The example uses an `SSHInteractiveLoginChannel` to connect remotely to Cooley using ALCF's 2FA token.
 The configuration uses the `CobaltProvider` to interface with Cooley's scheduler.
 
-.. literalinclude:: ../../parsl/tests/configs/cooley_ssh_il_single_node.py
+.. literalinclude:: ../../parsl/configs/cooley_ssh_il_single_node.py
 
 Swan (Cray)
 -----------
@@ -76,7 +76,7 @@ The following snippet shows an example configuration for executing remotely on S
 The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
 to launch workers on the machine
 
-.. literalinclude:: ../../parsl/tests/configs/swan_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/swan_ipp_multinode.py
 
 
 CC-IN2P3
@@ -88,7 +88,7 @@ The snippet below shows an example configuration for executing from a login node
 The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
 This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
 
-.. literalinclude:: ../../parsl/tests/configs/cc_in2p3_local_single_node.py
+.. literalinclude:: ../../parsl/configs/cc_in2p3_local_single_node.py
 
 Midway (RCC, UChicago)
 ----------------------
@@ -100,7 +100,7 @@ The snippet below shows an example configuration for executing remotely on Midwa
 The configuration uses the `SSHProvider` to connect remotely to Midway, uses the `SlurmProvider` to interface
 with the scheduler, and uses the `SrunProvider` to launch workers.
 
-.. literalinclude:: ../../parsl/tests/configs/midway_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/midway_ipp_multinode.py
 
 
 Open Science Grid
@@ -113,7 +113,7 @@ The snippet below shows an example configuration for executing remotely on OSG.
 The configuration uses the `SSHProvider` to connect remotely to OSG, uses the `CondorProvider` to interface
 with the scheduler.
 
-.. literalinclude:: ../../parsl/tests/configs/osg_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/osg_ipp_multinode.py
 
 Amazon Web Services
 -------------------
@@ -129,7 +129,7 @@ The snippet below shows an example configuration for provisioning nodes from the
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
 re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
 
-.. literalinclude:: ../../parsl/tests/configs/ec2_single_node.py
+.. literalinclude:: ../../parsl/configs/ec2_single_node.py
 
 
 Further help
