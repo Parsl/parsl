@@ -467,7 +467,7 @@ class DataFlowKernel(object):
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         try:
-            exec_fu.add_done_callback(partial(self.handle_update, task_id))
+            exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
         except Exception as e:
             logger.error("add_done_callback got an exception {} which will be ignored".format(e))
         return exec_fu
