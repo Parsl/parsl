@@ -297,10 +297,12 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
     """
     start_file_logger('{}/{}/worker_{}.log'.format(args.logdir, pool_id, worker_id),
                       worker_id,
-                      level=logging.DEBUG if args.debug is True else logging.INFO)
+                      name="worker_log",
+                      level=logging.DEBUG if args.debug else logging.INFO)
 
     # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
+    logger.debug("Debug logging enabled")
 
     while True:
         worker_queue.put(worker_id)
@@ -410,6 +412,13 @@ if __name__ == "__main__":
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
         logger.info("Python version: {}".format(sys.version))
+        logger.info("Debug logging?: {}".format(args.debug))
+        logger.info("Log dir: {}".format(args.logdir))
+        logger.info("Manager ID: {}".format(args.uid))
+        logger.info("cores_per_worker: {}".format(args.cores_per_worker))
+        logger.info("task_url: {}".format(args.task_url))
+        logger.info("result_url: {}".format(args.result_url))
+
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
