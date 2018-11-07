@@ -110,7 +110,7 @@ class Manager(object):
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
         """
-        heartbeat = (0).to_byteso(4, "little")
+        heartbeat = (0).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
         logger.debug("Return from heartbeat: {}".format(r))
 
