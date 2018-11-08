@@ -134,6 +134,8 @@ class Manager(object):
         last_beat = time.time()
         task_recv_counter = 0
 
+        poll_timer = 1
+
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
             ready_worker_count = self.ready_worker_queue.qsize()
@@ -151,9 +153,10 @@ class Manager(object):
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
-            socks = dict(poller.poll(1))
+            socks = dict(poller.poll(poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
+                poll_timer = 1
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 if tasks == 'STOP':
@@ -171,6 +174,7 @@ class Manager(object):
                         #    [i['task_id'] for i in self.pending_task_queue]))
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
+                poll_timer = poll_timer * 2
 
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
