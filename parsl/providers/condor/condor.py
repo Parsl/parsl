@@ -31,8 +31,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    label : str
-        Label for this provider.
     nodes_per_block : int
         Nodes to provision per block.
     tasks_per_node : int
@@ -64,7 +62,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     """
     def __init__(self,
                  channel=None,
-                 label='condor',
                  nodes_per_block=1,
                  tasks_per_node=1,
                  init_blocks=1,
@@ -79,6 +76,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  launcher=SingleNodeLauncher(),
                  requirements=''):
 
+        label = 'condor'
         super().__init__(label,
                          channel,
                          nodes_per_block,

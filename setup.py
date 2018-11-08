@@ -26,7 +26,7 @@ setup(
         'aws' : ['boto3'],
         'jetstream' : ['python-novaclient'],
         'extreme_scale' : ['mpi4py'],
-        'docs' : ['nbsphinx'],
+        'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
         'google_cloud' : ['google-auth', 'google-api-python-client']
         },
     classifiers = [

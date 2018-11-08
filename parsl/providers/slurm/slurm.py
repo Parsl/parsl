@@ -36,8 +36,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     ----------
     partition : str
         Slurm partition to request blocks from.
-    label : str
-        Label for this provider.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
@@ -68,7 +66,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
     def __init__(self,
                  partition,
-                 label='slurm',
                  channel=LocalChannel(),
                  nodes_per_block=1,
                  tasks_per_node=1,
@@ -80,6 +77,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  overrides='',
                  cmd_timeout=10,
                  launcher=SingleNodeLauncher()):
+        label = 'slurm'
         super().__init__(label,
                          channel,
                          nodes_per_block,
