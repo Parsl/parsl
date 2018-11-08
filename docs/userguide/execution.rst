@@ -213,14 +213,10 @@ How-to Configure
 ----------------
 
 The configuration provided to Parsl dictates the shape and limits of various resources to be provisioned
-for the workflow. As a result it is important to carefully evaluate certain aspects of the workflow and
+for the workflow. Therefore it is important to carefully evaluate certain aspects of the workflow and
 the planned compute resources to determine an ideal configuration match.
 
 Here are a series of question to help formulate a suitable configuration:
-
-
-
-
 
 
 1. ``Where would you like the tasks that comprise the workflow to execute?``
@@ -306,7 +302,7 @@ Here are a series of question to help formulate a suitable configuration:
 +---------------------+--------------------------+------------------------------------+
 
 .. note:: If you are on a Cray system, you most likely need the `AprunLauncher` to launch workers unless you
-          are on a **native Slurm** system like Cori.
+          are on a **native Slurm** system like :ref:`configuring_nersc_cori`
 
 
 4. ``Where will you run the workflow vs the tasks?``

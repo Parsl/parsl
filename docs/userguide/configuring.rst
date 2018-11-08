@@ -34,6 +34,8 @@ The following snippet shows an example configuration for executing remotely on S
 .. literalinclude:: ../../parsl/tests/configs/comet_ipp_multinode.py
 
 
+.. _configuring_nersc_cori:
+
 Cori (NERSC)
 ------------
 
