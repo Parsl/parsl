@@ -26,7 +26,8 @@ config = Config(
                     script_dir=user_opts['comet']['script_dir']
                 ),
                 launcher=SrunLauncher(),
-                overrides=user_opts['comet']['overrides'],
+                scheduler_options=user_opts['comet']['scheduler_options'],
+                worker_init=user_opts['comet']['worker_init'],
                 walltime="00:10:00",
                 init_blocks=1,
                 max_blocks=1,

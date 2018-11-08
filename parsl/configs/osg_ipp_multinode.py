@@ -22,8 +22,8 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=4,
                 max_blocks=4,
-                overrides='Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
-                worker_setup='WORKER_SETUP',     # Please replace WORKER_SETUP with your worker setup
+                scheduler_options='Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
+                worker_init='WORKER_init',     # Please replace WORKER_INIT with your worker_init
                 walltime="01:00:00"
             ),
             controller=Controller(public_ip='PUBLIC_IP'),    # Please replace PUBLIC_IP with your public ip

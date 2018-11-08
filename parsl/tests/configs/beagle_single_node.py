@@ -38,7 +38,8 @@ config = Config(
                 init_blocks=1,
                 max_blocks=1,
                 launcher=AprunLauncher,
-                overrides=user_opts['beagle']['overrides'],
+                scheduler_options=user_opts['beagle']['scheduler_options'],
+                worker_init=user_opts['beagle']['worker_init'],
             )
         )
 

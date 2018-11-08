@@ -33,7 +33,8 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                overrides='OVERRIDES',     # Please replace OVERRIDES with your overrides
+                scheduler_options='SCHEDULER_OPTIONS',     # Please replace SCHEDULER_OPTIONS with your scheduler_options
+                worker_init='WORKER_INIT',     # Please replace WORKER_INIT with your worker_init
             ),
             controller=Controller(public_ip='PUBLIC_IP'),    # Please replace PUBLIC_IP with your public ip
         )

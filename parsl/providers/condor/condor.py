@@ -50,9 +50,9 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         running a task.
     project : str
         Project which the job will be charged against
-    overrides : str
+    scheduler_options : str
         String to add specific condor attributes to the HTCondor submit script.
-    worker_setup : str
+    worker_init : str
         Command to be run before running a task.
     requirements : str
         Condor requirements.
@@ -70,9 +70,9 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  parallelism=1,
                  environment=None,
                  project='',
-                 overrides='',
+                 scheduler_options='',
                  walltime="00:10:00",
-                 worker_setup='',
+                 worker_init='',
                  launcher=SingleNodeLauncher(),
                  requirements=''):
 
@@ -100,8 +100,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                 pass
 
         self.project = project
-        self.overrides = overrides
-        self.worker_setup = worker_setup
+        self.scheduler_options = scheduler_options
+        self.worker_init = worker_init
         self.requirements = requirements
 
     def _status(self):
@@ -199,8 +199,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["project"] = self.project
         job_config["nodes"] = self.nodes_per_block
-        job_config["overrides"] = self.overrides
-        job_config["worker_setup"] = self.worker_setup
+        job_config["scheduler_options"] = self.scheduler_options
+        job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
         job_config["tasks_per_node"] = self.tasks_per_node
         job_config["requirements"] = self.requirements
@@ -213,7 +213,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                                         self.nodes_per_block)
 
         with open(userscript_path, 'w') as f:
-            f.write(job_config["worker_setup"] + '\n' + wrapped_command)
+            f.write(job_config["worker_init"] + '\n' + wrapped_command)
 
         user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
         job_config["input_files"] = user_script_path

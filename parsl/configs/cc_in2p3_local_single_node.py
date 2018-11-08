@@ -27,7 +27,8 @@ config = Config(
                 init_blocks=1,
                 max_blocks=1,
                 walltime="00:20:00",
-                overrides='OVERRIDES',     # Please replace OVERRIDES with your overrides
+                scheduler_options='SCHEDULER_OPTIONS',     # Please replace SCHEDULER_OPTIONS with your scheduler_options
+                worker_init='WORKER_INIT',     # Please replace WORKER_INIT with your worker_init
             ),
             engine_debug_level='DEBUG',
         )
