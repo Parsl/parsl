@@ -218,84 +218,116 @@ the planned compute resources to determine an ideal configuration match.
 
 Here are a series of question to help formulate a suitable configuration:
 
-1. ``What is the target compute system ?``
-
-   a) **Laptop/Workstation** -> Check the `parsl.configs.local_threads` config.
-
-   b) **Cloud Resources**
-
-      i) *Amazon Web Services*
-
-         * Pick executor from (`IPyParallelExecutor`, `HighThroughputExecutor`)
-         * use `AWSProvider` as provider
-         * use `SingleNodeLauncher` if using `IPyParallelExecutor` as launcher
-
-      ii) *Google Cloud*
-
-         * Pick executor from (`IPyParallelExecutor`, `HighThroughputExecutor`)
-         * use `GoogleCloudProvider` as provider
-         * use `SingleNodeLauncher` if using `IPyParallelExecutor` as launcher
-
-   c) **Cluster / SuperComputer**
-
-      ``What scheduler does your system use ?``
-
-      i) *Slurm* based cluster:
-
-         * Pick executor from (`IPyParallelExecutor`, `HighThroughputExecutor`, `ExtremeScaleExecutor`)
-         * use `SlurmProvider` as provider
-
-         ``Will you use more than 1 node per block ?``
-         * If YES ``What task launch system does your cluster use ?``
-
-             + Srun -> use `SrunLauncher` as launcher
-             + Aprun -> use `AprunLauncher` as launcher
-
-         * If No, use `SingleNodeLauncher` if using `IPyParallelExecutor` as launcher
-
-      ii) *Torque/PBS* based cluster:
-
-         * Pick executor from (`IPyParallelExecutor`, `HighThroughputExecutor`, `ExtremeScaleExecutor`)
-         * use `TorqueProvider` as provider
-
-         ``Will you use more than 1 node per block ?``
-           * If YES ``What task launch system does your cluster use ?``
-             + Srun -> use `SrunLauncher` as launcher
-             + Aprun -> use `AprunLauncher` as launcher
-           * If No, use `SingleNodeLauncher` if using `IPyParallelExecutor` as launcher
-
-      iii) *Cobalt* based cluster:
-
-         * Pick executor from (`IPyParallelExecutor`, `HighThroughputExecutor`, `ExtremeScaleExecutor`)
-         * use `CobaltProvider` as provider
-
-         ``Will you use more than 1 node per block ?``
-           * If YES ``What task launch system does your cluster use ?``
-             + Srun -> use `SrunLauncher` as launcher
-             + Aprun -> use `AprunLauncher` as launcher
-           * If No, use `SingleNodeLauncher` if using `IPyParallelExecutor` as launcher
-
-   d) **Grid**
-
-      i) *Grid Engine* based system:
-         * Pick executor from (`IPyParallelExecutor`, `HighThroughputExecutor`)
-         * use `GridEngineProvider` as provider
-         * use `SingleNodeLauncher` if using `IPyParallelExecutor` as launcher
-
-      ii) *Condor* based system:
-         * Pick executor from (`IPyParallelExecutor`, `HighThroughputExecutor`)
-         * use `CondorProvider` as provider
-         * use `SingleNodeLauncher` if using `IPyParallelExecutor` as launcher
-
-2. ``Where will you run worflow script ?``
-
-   a) Laptop
-      
-   b) Login Node
 
 
-         Multi-executor
-----------
+
+
+
+1. ``Where would you like the tasks that comprise the workflow to execute?``
+
+
++---------------------+----------------------------+------------------------+
+| Target              | Executor                   | Provider               |
++=====================+============================+========================+
+| Laptop/Workstation  | * `ThreadPoolExecutor`     | `LocalProvider`        |
+|                     | * `IPyParallelExecutor`    |                        |
+|                     | * `HighThroughputExecutor` |                        |
+|                     | * `ExtremeScaleExecutor`   |                        |
++---------------------+----------------------------+------------------------+
+| Amazon Web Services | * `IPyParallelExecutor`    | `AWSProvider`          |
+|                     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+| Google Cloud        | * `IPyParallelExecutor`    | `GoogleCloudProvider`  |
+|                     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+| Slurm based cluster | * `IPyParallelExecutor`    | `SlurmProvider`        |
+| or supercomputer    | * `HighThroughputExecutor` |                        |
+|                     | * `ExtremeScaleExecutor`   |                        |
++---------------------+----------------------------+------------------------+
+| Torque/PBS based    | * `IPyParallelExecutor`    | `TorqueProvider`       |
+| cluster or          | * `HighThroughputExecutor` |                        |
+| supercomputer       | * `ExtremeScaleExecutor`   |                        |
++---------------------+----------------------------+------------------------+
+| Cobalt based cluster| * `IPyParallelExecutor`    | `CobaltProvider`       |
+| or supercomputer    | * `HighThroughputExecutor` |                        |
+|                     | * `ExtremeScaleExecutor`   |                        |
++---------------------+----------------------------+------------------------+
+| GridEngine based    | * `IPyParallelExecutor`    | `GridEngineProvider`   |
+| cluster or grid     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+| Condor based        | * `IPyParallelExecutor`    | `CondorProvider`       |
+| cluster or grid     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+| Kubernetes cluster  | * `IPyParallelExecutor`    | `KubernetesProvider`   |
+|                     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+
+2. ``How many and how long are the tasks? and how many nodes do you have to execute them ?``
+
++---------------------+---------------------+--------------------+----------------------------+
+| Node scale          | Task Duration       |  Task Count        | Suitable Executor          |
++=====================+=====================+====================+============================+
+| Nodes=1             | <1s - minutes       |  0-100K            | * `ThreadPoolExecutor`     |
+|                     |                     |                    | * `HighThroughputExecutor` |
++---------------------+---------------------+--------------------+----------------------------+
+| 1<=Nodes<=1000      | <1s - minutes       |  0-1M              | * `ThreadPoolExecutor`     |
+|                     |                     |                    | * `IPyParallelExecutor`    |
+|                     |                     |                    | * `HighThroughputExecutor` |
++---------------------+---------------------+--------------------+----------------------------+
+| Nodes>1000          |  >minutes           |  0-1M              | * `ExtremeScaleExecutor`   |
++---------------------+---------------------+--------------------+----------------------------+
+
+3. ``If you are running on a cluster or supercomputer, will you request multiple nodes per block/job?``
+
++----------------------------------------------------------------------------+
+| If nodes_per_block = 1                                                     |
++---------------------+--------------------------+---------------------------+
+| Provider            | Executor choice          | Suitable Launchers        |
++=====================+==========================+===========================+
+| Any except systems  | Any                      | * `SingleNodeLauncher`    |
+| using Aprun         |                          | * `SimpleLauncher`        |
++---------------------+--------------------------+---------------------------+
+| Aprun based systems | Any                      | * `AprunLauncher`         |
+|                     |                          |                           |
++---------------------+--------------------------+---------------------------+
+
++-------------------------------------------------------------------------------------+
+| If nodes_per_block > 1                                                              |
++---------------------+--------------------------+------------------------------------+
+| Provider            | Executor choice          | Suitable Launchers                 |
++=====================+==========================+====================================+
+| `PBSProvider`       | Any                      | * `AprunLauncher`                  |
+|                     |                          | * `MpiExecLauncher`                |
++---------------------+--------------------------+------------------------------------+
+| `CobaltProvider`    | Any                      | * `AprunLauncher`                  |
++---------------------+--------------------------+------------------------------------+
+| `SlurmProvider`     | Any                      | * `SrunLauncher`  if native slurm  |
+|                     |                          | * `AprunLauncher`, otherwise       |
++---------------------+--------------------------+------------------------------------+
+
+.. note:: If you are on a Cray system, you most likely need the `AprunLauncher` to launch workers unless you
+          are on a **native Slurm** system like Cori.
+
+
+4. ``Where will you run the workflow vs the tasks?``
+
++---------------------+--------------------------+------------------------------------+
+| Worflow location    | Execution target         | Suitable channel                   |
++=====================+==========================+====================================+
+| Laptop/Workstation  | Laptop/Workstation       | `LocalChannel`                     |
++---------------------+--------------------------+------------------------------------+
+| Laptop/Workstation  | Cloud Resources          | None         `                     |
++---------------------+--------------------------+------------------------------------+
+| Laptop/Workstation  | Clusters with no 2FA     | `SSHChannel`                       |
++---------------------+--------------------------+------------------------------------+
+| Laptop/Workstation  | Clusters with 2FA        | `SSHInteractiveLoginChannel`       |
++---------------------+--------------------------+------------------------------------+
+| Login node          | Cluster/Supercomputer    | `LocalChannel`                     |
++---------------------+--------------------------+------------------------------------+
+
+
+Multi-executor
+--------------
 
 Parsl supports the definition of any number of executors in the configuration,
 as well as specifying which of these executors can execute specific apps.
