@@ -265,7 +265,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                         if tid == -1 and 'exception' in msg:
                             logger.warning("Executor shutting down due to version mismatch in interchange")
                             self._executor_exception, _ = deserialize_object(msg['exception'])
-                            logger.exception("Exception : {}".format(self._executor_exception))
+                            logger.exception("Exception: {}".format(self._executor_exception))
                             # Set bad state to prevent new tasks from being submitted
                             self._executor_bad_state.set()
                             # We set all current tasks to this exception to make sure that
@@ -344,7 +344,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def hold_worker(self, worker_id):
         """Puts the workers on hold, preventing scheduling of additional tasks to it.
 
-        This is called "hold" mostly because this is only stops scheduling of tasks,
+        This is called "hold" mostly because this only stops scheduling of tasks,
         and does not actually kill the workers.
 
         Parameters

@@ -306,7 +306,7 @@ class Interchange(object):
                     logger.info("Registration info for manager {}: {}".format(manager, msg))
                     if (msg['python_v'] != self.current_platform['python_v'] or
                         msg['parsl_v'] != self.current_platform['parsl_v']):
-                        logger.warn("Manager:{} has incompatible version info with the interchange".format(manager))
+                        logger.warn("Manager {} has incompatible version info with the interchange".format(manager))
                         logger.debug("Setting kill event")
                         self._kill_event.set()
                         e = ManagerLost(manager)

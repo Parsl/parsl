@@ -175,8 +175,8 @@ class Manager(object):
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
                 # Limit poll duration to heartbeat_period
-                if poll_timer * 2 < self.heartbeat_period:
-                    poll_timer = poll_timer * 2
+                # heartbeat_period is in s vs poll_timer in ms
+                poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
 
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
@@ -419,7 +419,7 @@ if __name__ == "__main__":
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
         logger.info("Python version: {}".format(sys.version))
-        logger.info("Debug logging?: {}".format(args.debug))
+        logger.info("Debug logging: {}".format(args.debug))
         logger.info("Log dir: {}".format(args.logdir))
         logger.info("Manager ID: {}".format(args.uid))
         logger.info("cores_per_worker: {}".format(args.cores_per_worker))
