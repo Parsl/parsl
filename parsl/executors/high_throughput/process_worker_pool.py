@@ -153,7 +153,7 @@ class Manager(object):
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
-            socks = dict(poller.poll(poll_timer))
+            socks = dict(poller.poll(timeout=poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
                 poll_timer = 1
@@ -174,7 +174,9 @@ class Manager(object):
                         #    [i['task_id'] for i in self.pending_task_queue]))
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
-                poll_timer = poll_timer * 2
+                # Limit poll duration to heartbeat_period
+                if poll_timer * 2 < self.heartbeat_period:
+                    poll_timer = poll_timer * 2
 
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
@@ -306,7 +308,8 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
 
     # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
-    logger.debug("Debug logging enabled")
+    if args.debug:
+        logger.debug("Debug logging enabled")
 
     while True:
         worker_queue.put(worker_id)

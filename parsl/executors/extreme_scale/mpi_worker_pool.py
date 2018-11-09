@@ -47,7 +47,6 @@ class Manager(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
         """
-        logger.info("Manager started v0.6")
         self.uid = uid
 
         self.context = zmq.Context()
@@ -61,6 +60,9 @@ class Manager(object):
 
         logger.info("Manager connected")
         self.max_queue_size = max_queue_size + comm.size
+
+        # Creating larger queues to avoid queues blocking
+        # These can be updated after queue limits are better understood
         self.pending_task_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
         self.pending_result_queue = queue.Queue(maxsize=10 ^ 4)
         self.ready_worker_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
@@ -172,39 +174,7 @@ class Manager(object):
                         self.pending_task_queue.put(task)
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
-            """
-            if time.time() > last_beat + self.heartbeat_period:
-                self.heartbeat()
-                last_beat = time.time()
 
-            if ready_worker_count > 0:
-
-                ready_worker_count = 4
-                logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
-                msg = ((ready_worker_count).to_bytes(4, "little"))
-                self.task_incoming.send(msg)
-
-            # start = time.time()
-            socks = dict(poller.poll(1))
-            # delta = time.time() - start
-
-            if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                _, pkl_msg = self.task_incoming.recv_multipart()
-                tasks = pickle.loads(pkl_msg)
-                if tasks == 'STOP':
-                    logger.critical("[TASK_PULL_THREAD] Received stop request")
-                    kill_event.set()
-                    break
-                else:
-                    logger.debug("[TASK_PULL_THREAD] Got tasks: {}".format(len(tasks)))
-                    task_recv_counter += len(tasks)
-                    for task in tasks:
-                        self.pending_task_queue.put(task)
-                        # logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
-                        #    [i['task_id'] for i in self.pending_task_queue]))
-            else:
-                logger.debug("[TASK_PULL_THREAD] No incoming tasks")
-            """
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
