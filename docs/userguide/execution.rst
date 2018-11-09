@@ -56,7 +56,7 @@ Launchers are responsible for abstracting these different task-launch systems to
 3. `SrunMPILauncher`: Launcher for launching MPI applications with Srun
 4. `GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores
 5. `MpiExecLauncher`: Uses Mpiexec to launch
-6. `SimpleLauncher`: The launcher deafult to a single worker launch.
+6. `SimpleLauncher`: The launcher default to a single worker launch.
 7. `SingleNodeLauncher`: This launcher launches ``tasks_per_node`` count workers on a single node.
 
 
