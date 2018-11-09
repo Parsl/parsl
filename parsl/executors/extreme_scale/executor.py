@@ -136,4 +136,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         logger.debug("Initializing ExtremeScaleExecutor")
 
         if not launch_cmd:
-            self.launch_cmd = """mpiexec -np {tasks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url}"""
+            self.launch_cmd = """mpiexec -np {tasks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
+
+        self.worker_debug = worker_debug

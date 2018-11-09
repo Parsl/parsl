@@ -75,11 +75,10 @@ class DataFlowKernel(object):
                     'Expected `Config` class, received dictionary. For help, '
                     'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
-        logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         self.run_dir = make_rundir(config.run_dir)
         parsl.set_file_logger("{}/parsl.log".format(self.run_dir),
                               level=logging.DEBUG)
-
+        logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         logger.info("Parsl version: {}".format(get_version()))
 
         self.checkpoint_lock = threading.Lock()

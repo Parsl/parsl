@@ -151,6 +151,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self.is_alive = True
 
+        self._executor_bad_state = threading.Event()
+        self._executor_exception = None
         self._queue_management_thread = None
         self._start_queue_management_thread()
         self._start_local_queue_process()
@@ -225,7 +227,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         logger.debug("[MTHREAD] queue management worker starting")
 
-        while True:
+        while not self._executor_bad_state.is_set():
             try:
                 msgs = self.incoming_q.get(timeout=1)
                 # logger.debug("[MTHREAD] get has returned {}".format(len(msgs)))
@@ -259,6 +261,18 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
                         except Exception:
                             raise BadMessage("Message received does not contain 'task_id' field")
+
+                        if tid == -1 and 'exception' in msg:
+                            logger.warning("Executor shutting down due to version mismatch in interchange")
+                            self._executor_exception, _ = deserialize_object(msg['exception'])
+                            logger.exception("Exception: {}".format(self._executor_exception))
+                            # Set bad state to prevent new tasks from being submitted
+                            self._executor_bad_state.set()
+                            # We set all current tasks to this exception to make sure that
+                            # this is raised in the main context.
+                            for task in self.tasks:
+                                self.tasks[task].set_exception(self._executor_exception)
+                            break
 
                         task_fut = self.tasks[tid]
 
@@ -327,9 +341,20 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         else:
             logger.debug("Management thread already exists, returning")
 
-    def kill_worker(self, worker_id):
-        c = self.command_client.run("KILL,{}".format(worker_id))
-        logger.debug("Sent kill request to worker: {}".format(worker_id))
+    def hold_worker(self, worker_id):
+        """Puts the workers on hold, preventing scheduling of additional tasks to it.
+
+        This is called "hold" mostly because this only stops scheduling of tasks,
+        and does not actually kill the workers.
+
+        Parameters
+        ----------
+
+        worker_id : str
+            Worker id to be put on hold
+        """
+        c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
+        logger.debug("Sent hold request to worker: {}".format(worker_id))
         return c
 
     @property
@@ -361,6 +386,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Returns:
               Future
         """
+        if self._executor_bad_state.is_set():
+            raise self._executor_exception
+
         self._task_counter += 1
         task_id = self._task_counter
 

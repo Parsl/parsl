@@ -3,12 +3,16 @@ import argparse
 import zmq
 # import uuid
 import os
+import sys
+import platform
 import time
 import pickle
 import logging
 import queue
 import threading
+import json
 
+from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
 LOOP_SLOWDOWN = 0.0  # in seconds
@@ -145,6 +149,14 @@ class Interchange(object):
 
         self.heartbeat_thresh = heartbeat_period * 2
 
+        self.current_platform = {'parsl_v': PARSL_VERSION,
+                                 'python_v': "{}.{}.{}".format(sys.version_info.major,
+                                                               sys.version_info.minor,
+                                                               sys.version_info.micro),
+                                 'os': platform.system(),
+                                 'hname': platform.node(),
+                                 'dir': os.getcwd()}
+
     def get_tasks(self, count):
         """ Obtains a batch of tasks from the internal pending_task_queue
 
@@ -211,11 +223,30 @@ class Interchange(object):
                     for manager in self._ready_manager_queue:
                         outstanding += len(self._ready_manager_queue[manager]['tasks'])
                     reply = outstanding
+
                 elif command_req == "MANAGERS":
-                    reply = list(self._ready_manager_queue.keys())
+                    reply = []
+                    for manager in self._ready_manager_queue:
+                        resp = (manager.decode('utf-8'),
+                                len(self._ready_manager_queue[manager]['tasks']),
+                                self._ready_manager_queue[manager]['active'])
+                        reply.append(resp)
+
+                elif command_req.startswith("HOLD_WORKER"):
+                    cmd, s_manager = command_req.split(';')
+                    manager = s_manager.encode('utf-8')
+                    logger.info("[CMD] Received HOLD_WORKER for {}".format(manager))
+                    if manager in self._ready_manager_queue:
+                        self._ready_manager_queue[manager]['active'] = False
+                        reply = True
+                    else:
+                        reply = False
+
                 elif command_req == "SHUTDOWN":
+                    logger.info("[CMD] Received SHUTDOWN command")
                     kill_event.set()
                     reply = True
+
                 else:
                     reply = None
 
@@ -263,26 +294,39 @@ class Interchange(object):
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
                 message = self.task_outgoing.recv_multipart()
                 manager = message[0]
-                tasks_requested = int.from_bytes(message[1], "little")
 
-                logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                 if manager not in self._ready_manager_queue:
+                    msg = json.loads(message[1].decode('utf-8'))
                     logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                     self._ready_manager_queue[manager] = {'last': time.time(),
-                                                          # [TODO] Add support for tracking walltimes
-                                                          # 'wtime': 60,
-                                                          'free_capacity': tasks_requested,
+                                                          'free_capacity': 0,
+                                                          'active': True,
                                                           'tasks': []}
+                    self._ready_manager_queue[manager].update(msg)
+                    logger.info("Registration info for manager {}: {}".format(manager, msg))
+                    if (msg['python_v'] != self.current_platform['python_v'] or
+                        msg['parsl_v'] != self.current_platform['parsl_v']):
+                        logger.warn("Manager {} has incompatible version info with the interchange".format(manager))
+                        logger.debug("Setting kill event")
+                        self._kill_event.set()
+                        e = ManagerLost(manager)
+                        result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                        pkl_package = pickle.dumps(result_package)
+                        self.results_outgoing.send(pkl_package)
+                        logger.warning("[MAIN] Sent failure reports, unregistering manager")
+
                 else:
+                    tasks_requested = int.from_bytes(message[1], "little")
+                    logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
                     self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
             for manager in self._ready_manager_queue:
-                if self._ready_manager_queue[manager]['free_capacity']:
+                if (self._ready_manager_queue[manager]['free_capacity'] and
+                    self._ready_manager_queue[manager]['active']):
                     tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                     if tasks:
-                        # self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
                         self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
                         count += task_count
@@ -321,7 +365,8 @@ class Interchange(object):
                 self._ready_manager_queue.pop(manager, 'None')
 
         delta = time.time() - start
-        logger("Received {} tasks in {} seconds".format(count, delta))
+        logger.info("Processed {} tasks in {} seconds".format(count, delta))
+        logger.warning("Exiting")
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
