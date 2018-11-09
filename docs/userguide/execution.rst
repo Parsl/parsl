@@ -24,7 +24,6 @@ Parsl currently supports the following providers:
 9. `JetstreamProvider`: This provider allows you to provision and manage cloud nodes from Jetstream (NSF Cloud)
 10. `KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster
 
-
 Executors
 ---------
 

@@ -46,7 +46,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
     def __init__(self,
                  channel=LocalChannel(),
-                 label='local',
                  tasks_per_node=1,
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
@@ -56,7 +55,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  walltime="00:15:00",
                  parallelism=1):
         self.channel = channel
-        self.label = label
+        self.label = 'local'
         self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.tasks_per_node = tasks_per_node

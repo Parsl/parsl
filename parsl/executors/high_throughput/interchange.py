@@ -15,7 +15,7 @@ import json
 from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
-LOOP_SLOWDoOWN = 0.0  # in seconds
+LOOP_SLOWDOWN = 0.0  # in seconds
 
 
 class ShutdownRequest(Exception):
@@ -306,7 +306,14 @@ class Interchange(object):
                     logger.info("Registration info for manager {}: {}".format(manager, msg))
                     if (msg['python_v'] != self.current_platform['python_v'] or
                         msg['parsl_v'] != self.current_platform['parsl_v']):
-                        logger.warn("Manager:{} has incompatible version info with the interchange".format(manager))
+                        logger.warn("Manager {} has incompatible version info with the interchange".format(manager))
+                        logger.debug("Setting kill event")
+                        self._kill_event.set()
+                        e = ManagerLost(manager)
+                        result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                        pkl_package = pickle.dumps(result_package)
+                        self.results_outgoing.send(pkl_package)
+                        logger.warning("[MAIN] Sent failure reports, unregistering manager")
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
@@ -358,7 +365,8 @@ class Interchange(object):
                 self._ready_manager_queue.pop(manager, 'None')
 
         delta = time.time() - start
-        logger("Received {} tasks in {} seconds".format(count, delta))
+        logger.info("Processed {} tasks in {} seconds".format(count, delta))
+        logger.warning("Exiting")
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):

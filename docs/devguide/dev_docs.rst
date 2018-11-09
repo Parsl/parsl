@@ -1,4 +1,4 @@
-`Developer Guide
+Developer Guide
 ****************
 
 .. automodule:: parsl
@@ -171,7 +171,7 @@ provider abstracts these types of resources and provides a single uniform interf
 ExecutionProvider (Base)
 ------------------------
 
-.. autoclass:: libsubmit.providers.provider_base.ExecutionProvider
+.. autoclass:: parsl.providers.provider_base.ExecutionProvider
    :members:
    :special-members:
 
@@ -179,42 +179,42 @@ ExecutionProvider (Base)
 Local
 -----
 
-.. autoclass:: libsubmit.providers.LocalProvider
+.. autoclass:: parsl.providers.LocalProvider
    :members:
    :special-members:
 
 Slurm
 -----
 
-.. autoclass:: libsubmit.providers.SlurmProvider
+.. autoclass:: parsl.providers.SlurmProvider
    :members:
    :special-members:
 
 Cobalt
 ------
 
-.. autoclass:: libsubmit.providers.CobaltProvider
+.. autoclass:: parsl.providers.CobaltProvider
    :members:
    :special-members:
 
 Condor
 ------
 
-.. autoclass:: libsubmit.providers.CondorProvider
+.. autoclass:: parsl.providers.CondorProvider
    :members:
    :special-members:
 
 Torque
 ------
 
-.. autoclass:: libsubmit.providers.TorqueProvider
+.. autoclass:: parsl.providers.TorqueProvider
    :members:
    :special-members:
 
 GridEngine
 ----------
 
-.. autoclass:: libsubmit.providers.GridEngineProvider
+.. autoclass:: parsl.providers.GridEngineProvider
    :members:
    :special-members:
 
@@ -222,7 +222,7 @@ GridEngine
 Amazon Web Services
 -------------------
 
-.. autoclass:: libsubmit.providers.AWSProvider
+.. autoclass:: parsl.providers.AWSProvider
    :members:
    :special-members:
 
@@ -230,14 +230,14 @@ Amazon Web Services
 Google Cloud Platform
 ---------------------
 
-.. autoclass:: libsubmit.providers.GoogleCloudProvider
+.. autoclass:: parsl.providers.GoogleCloudProvider
    :members:  __init__, submit, status, cancel, create_instance, get_correct_zone, delete_instance
 
 
 Kubernetes
 ----------
 
-.. autoclass:: libsubmit.providers.KubernetesProvider
+.. autoclass:: parsl.providers.KubernetesProvider
    :members:
    :special-members:
 
@@ -252,28 +252,28 @@ two-factor authentication. Channels are simple abstractions that enable the Exec
 to the resource managers of compute facilities. The simplest Channel, *LocalChannel*, simply executes commands
 locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
-.. autoclass:: libsubmit.channels.channel_base.Channel
+.. autoclass:: parsl.channels.channel_base.Channel
    :members:
    :special-members:
 
 
 LocalChannel
 ------------
-.. autoclass:: libsubmit.channels.LocalChannel
+.. autoclass:: parsl.channels.LocalChannel
    :members:
    :special-members:
 
 
 SshChannel
 ----------
-.. autoclass:: libsubmit.channels.SSHChannel
+.. autoclass:: parsl.channels.SSHChannel
    :members:
    :special-members:
 
 
 SSH Interactive Login Channel
 -----------------------------
-.. autoclass:: libsubmit.channels.SSHInteractiveLoginChannel
+.. autoclass:: parsl.channels.SSHInteractiveLoginChannel
    :members:
    :special-members:
 
@@ -283,44 +283,44 @@ ExecutionProviders
 An execution provider is basically an adapter to various types of execution resources. The providers abstract
 away the interfaces provided by various systems to request, monitor, and cancel computate resources.
 
-.. autoclass:: libsubmit.execution_provider_base.ExecutionProvider
+.. autoclass:: parsl.execution_provider_base.ExecutionProvider
    :members:  __init__, submit, status, cancel, scaling_enabled, channels_required
 
 
 Slurm
 ^^^^^
 
-.. autoclass:: libsubmit.providers.slurm.slurm.Slurm
+.. autoclass:: parsl.providers.slurm.slurm.Slurm
    :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
 Cobalt
 ^^^^^^
 
-.. autoclass:: libsubmit.providers.cobalt.cobalt.Cobalt
+.. autoclass:: parsl.providers.cobalt.cobalt.Cobalt
    :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
 Condor
 ^^^^^^
 
-.. autoclass:: libsubmit.providers.condor.condor.Condor
+.. autoclass:: parsl.providers.condor.condor.Condor
    :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
 Torque
 ^^^^^^
 
-.. autoclass:: libsubmit.providers.torque.torque.Torque
+.. autoclass:: parsl.providers.torque.torque.Torque
    :members:  __init__, submit, status, cancel, _status, scaling_enabled, _write_submit_script, current_capacity, channels_required
 
 Local
 ^^^^^
 
-.. autoclass:: libsubmit.providers.local.local.Local
+.. autoclass:: parsl.providers.local.local.Local
    :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required
 
 AWS
 ^^^
 
-.. autoclass:: libsubmit.providers.aws.aws.EC2Provider
+.. autoclass:: parsl.providers.aws.aws.EC2Provider
    :members:  __init__, submit, status, cancel, scaling_enabled, current_capacity, channels_required, create_vpc, read_state_file, write_state_file, create_session, security_group
 
 
@@ -335,22 +335,22 @@ two factor authentication. Channels are simple abstractions that enable the Exec
 to the resource managers of compute facilities. The simplest Channel, *LocalChannel* simply executes commands
 locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
-.. autoclass:: libsubmit.channels.channel_base.Channel
+.. autoclass:: parsl.channels.channel_base.Channel
    :members:  execute_wait, script_dir, execute_no_wait, push_file, close
 
 LocalChannel
 ^^^^^^^^^^^^
-.. autoclass:: libsubmit.channels.local.local.LocalChannel
+.. autoclass:: parsl.channels.local.local.LocalChannel
    :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
 
-SshChannel
+SSHChannel
 ^^^^^^^^^^^^
-.. autoclass:: libsubmit.channels.ssh.ssh.SshChannel
+.. autoclass:: parsl.channels.ssh.ssh.SshChannel
    :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
 
-SshILChannel
+SSHILChannel
 ^^^^^^^^^^^^
-.. autoclass:: libsubmit.channels.ssh_il.ssh_il.SshILChannel
+.. autoclass:: parsl.channels.ssh_il.ssh_il.SshILChannel
    :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
 
 
@@ -364,7 +364,7 @@ a specific execution resource.
 SimpleLauncher
 --------------
 
-.. autoclass:: libsubmit.launchers.SimpleLauncher
+.. autoclass:: parsl.launchers.SimpleLauncher
    :members:
 
 
@@ -372,26 +372,26 @@ SimpleLauncher
 SingleNodeLauncher
 ------------------
 
-.. autoclass:: libsubmit.launchers.SingleNodeLauncher
+.. autoclass:: parsl.launchers.SingleNodeLauncher
    :members:
 
 AprunLauncher
 ------------------
 
-.. autoclass:: libsubmit.launchers.AprunLauncher
+.. autoclass:: parsl.launchers.AprunLauncher
    :members:
 
 
 SrunLauncher
 ------------
 
-.. autoclass:: libsubmit.launchers.SrunLauncher
+.. autoclass:: parsl.launchers.SrunLauncher
    :members:
 
 SrunMPILauncher
 ---------------
 
-.. autoclass:: libsubmit.launchers.SrunMPILauncher
+.. autoclass:: parsl.launchers.SrunMPILauncher
    :members:
 
 

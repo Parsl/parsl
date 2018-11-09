@@ -24,6 +24,7 @@ Reference guide
     parsl.executors.swift_t.TurbineExecutor
     parsl.channels.local.local.LocalChannel
     parsl.channels.ssh.ssh.SSHChannel
+    parsl.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel
     parsl.providers.AWSProvider
     parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
