@@ -209,7 +209,7 @@ TASKBLOCKS={1}
 srun --ntasks $TASKBLOCKS -l bash {2}/cmd_$SLURM_JOB_NAME.sh
 
 echo "Done"
-'''.format(command, task_blocks, script_path)
+'''.format(command, task_blocks, script_path + ".d")
         return x
 
 
