@@ -198,6 +198,7 @@ echo "SrunLauncher: Found nodes: $NODES"
 echo "SrunLauncher: script_path: {2}"
 WORKERCOUNT={1}
 
+mkdir -p {2}
 cat << SLURM_EOF > {2}/cmd_$SLURM_JOB_NAME.sh
 {0}
 SLURM_EOF
