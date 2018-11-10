@@ -218,7 +218,7 @@ the planned compute resources to determine an ideal configuration match.
 Here are a series of question to help formulate a suitable configuration:
 
 
-1. ``Where would you like the tasks that comprise the workflow to execute?``
+1. Where would you like the tasks that comprise the workflow to execute?
 
 
 +---------------------+----------------------------+------------------------+
@@ -257,7 +257,7 @@ Here are a series of question to help formulate a suitable configuration:
 |                     | * `HighThroughputExecutor` |                        |
 +---------------------+----------------------------+------------------------+
 
-2. ``How many and how long are the tasks? and how many nodes do you have to execute them ?``
+2. How many and how long are the tasks? How many nodes do you have to execute them ?
 
 +---------------------+---------------------+--------------------+----------------------------+
 | Node scale          | Task Duration       |  Task Count        | Suitable Executor          |
@@ -272,10 +272,11 @@ Here are a series of question to help formulate a suitable configuration:
 | Nodes>1000          |  >minutes           |  0-1M              | * `ExtremeScaleExecutor`   |
 +---------------------+---------------------+--------------------+----------------------------+
 
-3. ``If you are running on a cluster or supercomputer, will you request multiple nodes per block/job?``
+3. If you are running on a cluster or supercomputer, will you request multiple nodes per block ?
+   Note that in this case a block is equivalent to a batch job.
 
 +----------------------------------------------------------------------------+
-| If nodes_per_block = 1                                                     |
+| ``nodes_per_block = 1``                                                    |
 +---------------------+--------------------------+---------------------------+
 | Provider            | Executor choice          | Suitable Launchers        |
 +=====================+==========================+===========================+
@@ -287,7 +288,7 @@ Here are a series of question to help formulate a suitable configuration:
 +---------------------+--------------------------+---------------------------+
 
 +-------------------------------------------------------------------------------------+
-| If nodes_per_block > 1                                                              |
+| ``nodes_per_block > 1``                                                             |
 +---------------------+--------------------------+------------------------------------+
 | Provider            | Executor choice          | Suitable Launchers                 |
 +=====================+==========================+====================================+
@@ -304,14 +305,14 @@ Here are a series of question to help formulate a suitable configuration:
           are on a **native Slurm** system like :ref:`configuring_nersc_cori`
 
 
-4. ``Where will you run the workflow vs the tasks?``
+4. Where will you run the main parsl process vs the tasks?
 
 +---------------------+--------------------------+------------------------------------+
-| Worflow location    | Execution target         | Suitable channel                   |
+| Workflow location   | Execution target         | Suitable channel                   |
 +=====================+==========================+====================================+
 | Laptop/Workstation  | Laptop/Workstation       | `LocalChannel`                     |
 +---------------------+--------------------------+------------------------------------+
-| Laptop/Workstation  | Cloud Resources          | None         `                     |
+| Laptop/Workstation  | Cloud Resources          | None                               |
 +---------------------+--------------------------+------------------------------------+
 | Laptop/Workstation  | Clusters with no 2FA     | `SSHChannel`                       |
 +---------------------+--------------------------+------------------------------------+
