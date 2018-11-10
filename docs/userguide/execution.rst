@@ -13,16 +13,16 @@ Execution providers are responsible for managing execution resources. In the sim
 
 Parsl currently supports the following providers:
 
-1. `LocalProvider`: The provider allows you to run locally on your laptop or workstation
-2. `CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler
-3. `SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler
-4. `CondorProvider`: This provider allows you to schedule resources via the Condor scheduler
-5. `GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler
-6. `TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler
-7. `AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services
-8. `GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud
-9. `JetstreamProvider`: This provider allows you to provision and manage cloud nodes from Jetstream (NSF Cloud)
-10. `KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster
+1. `LocalProvider`: The provider allows you to run locally on your laptop or workstation.
+2. `CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler.
+3. `SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
+4. `CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
+5. `GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
+6. `TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler.
+7. `AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
+8. `GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
+9. `JetstreamProvider`: This provider allows you to provision and manage cloud nodes from Jetstream (NSF Cloud).
+10. `KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
 
 Executors
 ---------
@@ -50,11 +50,11 @@ Launchers
 On many traditional batch systems, the user is expected to request a large number of nodes and launch tasks using a system such as `srun <https://slurm.schedmd.com/srun.html>`_ (for slurm), `aprun <https://cug.org/5-publications/proceedings_attendee_lists/2006CD/S06_Proceedings/pages/Authors/Karo-4C/Karo_alps_paper.pdf>`_ (for crays), `mpirun <https://www.open-mpi.org/doc/v2.0/man1/mpirun.1.php>`_ etc.
 Launchers are responsible for abstracting these different task-launch systems to start the appropriate number of workers across cores and nodes. Parsl currently supports the following set of launchers:
 
-1. `SrunLauncher`: Srun based launcher for Slurm based systems
-2. `AprunLauncher`: Aprun based launcher for Crays
-3. `SrunMPILauncher`: Launcher for launching MPI applications with Srun
-4. `GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores
-5. `MpiExecLauncher`: Uses Mpiexec to launch
+1. `SrunLauncher`: Srun based launcher for Slurm based systems.
+2. `AprunLauncher`: Aprun based launcher for Crays.
+3. `SrunMPILauncher`: Launcher for launching MPI applications with Srun.
+4. `GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores.
+5. `MpiExecLauncher`: Uses Mpiexec to launch.
 6. `SimpleLauncher`: The launcher default to a single worker launch.
 7. `SingleNodeLauncher`: This launcher launches ``tasks_per_node`` count workers on a single node.
 
