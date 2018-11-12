@@ -124,13 +124,29 @@ ThreadPoolExecutor
 ------------------
 
 .. autoclass:: parsl.executors.threads.ThreadPoolExecutor
-   :members:  __init__, submit, scale_out, scale_in, scaling_enabled
+   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled
 
 IPyParallelExecutor
 -------------------
 
 .. autoclass:: parsl.executors.ipp.IPyParallelExecutor
-   :members:  __init__, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd
+   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd
+
+HighThroughputExecutor
+----------------------
+
+.. autoclass:: parsl.executors.HighThroughputExecutor
+   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd,
+              _start_queue_management_thread, _start_local_queue_process,
+              hold_worker, outstanding, connected_workers
+
+ExtremeScaleExecutor
+--------------------
+
+.. autoclass:: parsl.executors.HighThroughputExecutor
+   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd,
+              _start_queue_management_thread, _start_local_queue_process,
+              hold_worker, outstanding, connected_workers
 
 
 Swift/Turbine Executor
