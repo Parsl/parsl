@@ -75,11 +75,10 @@ class DataFlowKernel(object):
                     'Expected `Config` class, received dictionary. For help, '
                     'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
-        logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         self.run_dir = make_rundir(config.run_dir)
         parsl.set_file_logger("{}/parsl.log".format(self.run_dir),
                               level=logging.DEBUG)
-
+        logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         logger.info("Parsl version: {}".format(get_version()))
 
         self.checkpoint_lock = threading.Lock()
@@ -187,7 +186,7 @@ class DataFlowKernel(object):
         self.task_count = 0
         self.fut_task_lookup = {}
         self.tasks = {}
-        self.task_launch_lock = threading.Lock()
+        self.submitter_lock = threading.Lock()
 
         atexit.register(self.atexit_cleanup)
 
@@ -378,7 +377,7 @@ class DataFlowKernel(object):
                 # There are no dependency errors
                 exec_fu = None
                 # Acquire a lock, retest the state, launch
-                with self.task_launch_lock:
+                with self.tasks[task_id]['task_launch_lock']:
                     if self.tasks[task_id]['status'] == States.pending:
                         exec_fu = self.launch_task(
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
@@ -458,7 +457,8 @@ class DataFlowKernel(object):
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
         if self.monitoring_config is not None:
             executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
-        exec_fu = executor.submit(executable, *args, **kwargs)
+        with self.submitter_lock:
+            exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
         if self.monitoring_config is not None:
             task_log_info = self._create_task_log_info(task_id)
@@ -664,9 +664,11 @@ class DataFlowKernel(object):
                                                                                task_def['func_name'],
                                                                                [fu.tid for fu in depends]))
 
-        self.tasks[task_id]['app_fu'] = AppFuture(None, self.tasks[task_id], tid=task_id,
-                                                  stdout=task_stdout,
-                                                  stderr=task_stderr)
+        self.tasks[task_id]['task_launch_lock'] = threading.Lock()
+        app_fu = AppFuture(None, self.tasks[task_id], tid=task_id,
+                           stdout=task_stdout,
+                           stderr=task_stderr)
+
         self.tasks[task_id]['app_fu'] = app_fu
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
         self.tasks[task_id]['status'] = States.pending
