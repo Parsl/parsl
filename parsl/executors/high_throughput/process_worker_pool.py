@@ -4,6 +4,8 @@ import argparse
 import logging
 import os
 import sys
+import sys
+import platform
 # import random
 import threading
 import pickle
@@ -12,7 +14,9 @@ import queue
 import uuid
 import zmq
 import math
+import json
 
+from parsl.version import VERSION as PARSL_VERSION
 import multiprocessing
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -89,6 +93,20 @@ class Manager(object):
 
         self.heartbeat_period = heartbeat_period
 
+    def create_reg_message(self):
+        """ Creates a registration message to identify the worker to the interchange
+        """
+        msg = {'parsl_v': PARSL_VERSION,
+               'python_v': "{}.{}.{}".format(sys.version_info.major,
+                                             sys.version_info.minor,
+                                             sys.version_info.micro),
+               'os': platform.system(),
+               'hname': platform.node(),
+               'dir': os.getcwd(),
+        }
+        b_msg = json.dumps(msg).encode('utf-8')
+        return b_msg
+
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
         """
@@ -108,9 +126,15 @@ class Manager(object):
         logger.info("[TASK PULL THREAD] starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
-        self.heartbeat()
+
+        # Send a registration message
+        msg = self.create_reg_message()
+        logger.debug("Sending registration message: {}".format(msg))
+        self.task_incoming.send(msg)
         last_beat = time.time()
         task_recv_counter = 0
+
+        poll_timer = 1
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
@@ -129,9 +153,10 @@ class Manager(object):
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
-            socks = dict(poller.poll(1))
+            socks = dict(poller.poll(timeout=poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
+                poll_timer = 1
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 if tasks == 'STOP':
@@ -149,6 +174,9 @@ class Manager(object):
                         #    [i['task_id'] for i in self.pending_task_queue]))
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
+                # Limit poll duration to heartbeat_period
+                # heartbeat_period is in s vs poll_timer in ms
+                poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
 
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
@@ -275,10 +303,13 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
     """
     start_file_logger('{}/{}/worker_{}.log'.format(args.logdir, pool_id, worker_id),
                       worker_id,
-                      level=logging.DEBUG if args.debug is True else logging.INFO)
+                      name="worker_log",
+                      level=logging.DEBUG if args.debug else logging.INFO)
 
     # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
+    if args.debug:
+        logger.debug("Debug logging enabled")
 
     while True:
         worker_queue.put(worker_id)
@@ -388,6 +419,13 @@ if __name__ == "__main__":
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
         logger.info("Python version: {}".format(sys.version))
+        logger.info("Debug logging: {}".format(args.debug))
+        logger.info("Log dir: {}".format(args.logdir))
+        logger.info("Manager ID: {}".format(args.uid))
+        logger.info("cores_per_worker: {}".format(args.cores_per_worker))
+        logger.info("task_url: {}".format(args.task_url))
+        logger.info("result_url: {}".format(args.result_url))
+
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
