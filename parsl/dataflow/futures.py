@@ -185,19 +185,27 @@ class AppFuture(Future):
             return False
 
     def task_status(self):
-        """Returns the task state for the task that will
-           provide the value for this future.
-           This may not be in-sync with the Future-state (phrasing?)
-           of the future - for example, task_state might be
-           States.done but self.done() might not be true
-           (which in turn means self.result() and
-           self.exception() might block)
-           ... so caution is advised when rely on the state
-           returned by this.
+        """Returns the status of the task that will provide the value
+           for this future.  This may not be in-sync with the result state
+           of this future - for example, task_status might return 'done' but
+           self.done() might not be true (which in turn means self.result()
+           and self.exception() might block).
 
-           Returns: a state from parsl.dataflow.states.State
+           The actual status description strings returned by this method are
+           likely to change over subsequent versions of parsl, as use-cases
+           and infrastructure are worked out.
+
+           It is expected that the status values will be from a limited set
+           of strings (so that it makes sense, for example, to group and
+           count statuses from many futures).
+
+           It is expected that might be a non-trivial cost in acquiring the
+           status in future (for example, by communicating with a remote
+           worker).
+
+           Returns: str
         """
-        return self._task_struct['status']
+        return self._task_struct['status'].name
 
     @property
     def outputs(self):
