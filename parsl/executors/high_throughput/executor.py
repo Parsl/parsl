@@ -186,6 +186,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
                 except Exception as e:
                     logger.error("Scaling out failed: {}".format(e))
+                    logger.error(e, exc_info=True)
                     raise e
 
         else:

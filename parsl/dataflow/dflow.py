@@ -158,6 +158,9 @@ class DataFlowKernel(object):
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                    logger.error("BENC: executor = {}".format(executor))
+                    logger.error("BENC: executor.provider = {}".format(executor.provider))
+                    logger.error("BENC: executor.provider.channel = {}".format(executor.provider.channel))
                     if executor.provider.channel.script_dir is None:
                         executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                         if not executor.provider.channel.isdir(self.run_dir):
