@@ -35,6 +35,14 @@ Reference guide
     parsl.providers.GridEngineProvider
     parsl.providers.SlurmProvider
     parsl.providers.TorqueProvider
+    parsl.providers.KubernetesProvider
+    parsl.launchers.SimpleLauncher
+    parsl.launchers.SingleNodeLauncher
+    parsl.launchers.SrunLauncher
+    parsl.launchers.AprunLauncher
+    parsl.launchers.SrunMPILauncher
+    parsl.launchers.GnuParallelLauncher
+    parsl.launchers.MpiExecLauncher
     parsl.monitoring.db_logger.MonitoringConfig
 
 .. autosummary::
