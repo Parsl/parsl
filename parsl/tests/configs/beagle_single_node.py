@@ -37,7 +37,7 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                launcher=AprunLauncher,
+                launcher=AprunLauncher(),
                 scheduler_options=user_opts['beagle']['scheduler_options'],
                 worker_init=user_opts['beagle']['worker_init'],
             )

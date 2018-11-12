@@ -53,7 +53,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     scheduler_options : str
         String to add specific condor attributes to the HTCondor submit script.
     worker_init : str
-        Command to be run before running a task.
+        Command to be run before starting a worker.
     requirements : str
         Condor requirements.
     launcher : Launcher

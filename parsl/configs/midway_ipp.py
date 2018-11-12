@@ -25,8 +25,8 @@ config = Config(
                 nodes_per_block=1,
                 tasks_per_node=4,
                 parallelism=0.5,
-                scheduler_options='SCHEDULER_OPTIONS',     # Please replace SCHEDULER_OPTIONS with your scheduler_options
-                worker_init='WORKER_INIT',     # Please replace WORKER_INIT with your worker_init
+                scheduler_options='',     # Input your scheduler_options if needed
+                worker_init='',     # Input your worker_init if needed
             ),
             label='midway_ipp',
             controller=Controller(public_ip='PUBLIC_IP'),    # Please replace PUBLIC_IP with your public ip

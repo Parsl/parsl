@@ -22,8 +22,8 @@ config = Config(
                     script_dir='/scratch/midway2/USERNAME/parsl_scripts',    # Please replace USERNAME with your username
                 ),
                 launcher=SrunLauncher(),
-                scheduler_options='SCHEDULER_OPTIONS',     # Please replace SCHEDULER_OPTIONS with your scheduler_options
-                worker_init='WORKER_INIT',     # Please replace WORKER_INIT with your worker_init
+                scheduler_options='',     # Input your scheduler_options if needed
+                worker_init='',     # Input your worker_init if needed
                 walltime="00:05:00",
                 init_blocks=1,
                 max_blocks=1,

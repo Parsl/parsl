@@ -42,7 +42,7 @@ config = Config(
                 max_blocks=1,
                 scheduler_options=user_opts['cori']['scheduler_options'],
                 worker_init=user_opts['cori']['worker_init'],
-                launcher=SrunLauncher,
+                launcher=SrunLauncher(),
             ),
             controller=Controller(public_ip=user_opts['public_ip']),
         )

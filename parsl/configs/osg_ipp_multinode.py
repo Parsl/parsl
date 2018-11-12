@@ -23,7 +23,7 @@ config = Config(
                 init_blocks=4,
                 max_blocks=4,
                 scheduler_options='Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
-                worker_init='WORKER_init',     # Please replace WORKER_INIT with your worker_init
+                worker_init='',     # Input your worker_init if needed
                 walltime="01:00:00"
             ),
             controller=Controller(public_ip='PUBLIC_IP'),    # Please replace PUBLIC_IP with your public ip

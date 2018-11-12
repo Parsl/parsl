@@ -57,7 +57,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
     scheduler_options : str
         String to prepend to the #$$ blocks in the submit script to the scheduler.
     worker_init : str
-        Command to be run before running a task, such as 'module load Anaconda; source activate env'.
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
