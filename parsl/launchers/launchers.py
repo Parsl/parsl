@@ -180,47 +180,7 @@ class SrunLauncher(Launcher):
     def __init__(self):
         pass
 
-    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
-        """
-        Args:
-        - command (string): The command string to be launched
-        - task_block (string) : bash evaluated string.
-
-        KWargs:
-        - walltime (int) : This is not used by this launcher.
-        """
-        task_blocks = tasks_per_node * nodes_per_block
-        x = '''export CORES=$SLURM_CPUS_ON_NODE
-export NODES=$SLURM_JOB_NUM_NODES
-
-echo "SrunLauncher: Found cores: $CORES"
-echo "SrunLauncher: Found nodes: $NODES"
-echo "SrunLauncher: script_path: {2}"
-WORKERCOUNT={1}
-
-mkdir -p {2}
-cat << SLURM_EOF > {2}/cmd_$SLURM_JOB_NAME.sh
-{0}
-SLURM_EOF
-chmod a+x {2}/cmd_$SLURM_JOB_NAME.sh
-
-TASKBLOCKS={1}
-
-srun --ntasks $TASKBLOCKS -l bash {2}/cmd_$SLURM_JOB_NAME.sh
-
-echo "Done"
-'''.format(command, task_blocks, script_path + ".d")
-        return x
-
-
-class SrunMPILauncher(Launcher):
-    """Launches as many workers as MPI tasks to be executed concurrently within a block.
-
-    Use this launcher instead of SrunLauncher if each block will execute multiple MPI applications
-    at the same time. Workers should be launched with independent Srun calls so as to setup the
-    environment for MPI application launch.
-    """
-    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
         """
         Args:
         - command (string): The command string to be launched
@@ -237,7 +197,45 @@ echo "Found cores : $CORES"
 echo "Found nodes : $NODES"
 WORKERCOUNT={1}
 
-cat << SLURM_EOF > {2}/cmd_$SLURM_JOB_NAME.sh
+cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
+{0}
+SLURM_EOF
+chmod a+x cmd_$SLURM_JOB_NAME.sh
+
+TASKBLOCKS={1}
+
+srun --ntasks $TASKBLOCKS -l bash cmd_$SLURM_JOB_NAME.sh
+
+echo "Done"
+'''.format(command, task_blocks)
+        return x
+
+
+class SrunMPILauncher(Launcher):
+    """Launches as many workers as MPI tasks to be executed concurrently within a block.
+
+    Use this launcher instead of SrunLauncher if each block will execute multiple MPI applications
+    at the same time. Workers should be launched with independent Srun calls so as to setup the
+    environment for MPI application launch.
+    """
+    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+        """
+        Args:
+        - command (string): The command string to be launched
+        - task_block (string) : bash evaluated string.
+
+        KWargs:
+        - walltime (int) : This is not used by this launcher.
+        """
+        task_blocks = tasks_per_node * nodes_per_block
+        x = '''export CORES=$SLURM_CPUS_ON_NODE
+export NODES=$SLURM_JOB_NUM_NODES
+
+echo "Found cores : $CORES"
+echo "Found nodes : $NODES"
+WORKERCOUNT={1}
+
+cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
 {0}
 SLURM_EOF
 chmod a+x cmd_$SLURM_JOB_NAME.sh
@@ -268,7 +266,7 @@ fi
 
 
 echo "Done"
-'''.format(command, task_blocks, script_path)
+'''.format(command, task_blocks)
         return x
 
 
