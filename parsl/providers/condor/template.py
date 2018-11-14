@@ -13,8 +13,7 @@ requirements            = ${requirements}
 +projectname            = ${project}
 leave_in_queue          = TRUE
 environment             = "${environment}"
-
-${overrides}
+${scheduler_options}
 
 queue
 

@@ -28,7 +28,8 @@ config = Config(
                 init_blocks=1,
                 max_blocks=1,
                 walltime="00:05:00",
-                overrides=user_opts['cooley']['overrides'],
+                scheduler_options=user_opts['cooley']['scheduler_options'],
+                worker_init=user_opts['cooley']['worker_init'],
                 queue='debug',
                 account=user_opts['cooley']['account']
             ),

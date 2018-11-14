@@ -24,7 +24,8 @@ config = Config(
                 init_blocks=1,
                 max_blocks=1,
                 walltime="00:05:00",
-                overrides='OVERRIDES',     # Please replace OVERRIDES with your overrides
+                scheduler_options='',     # Input your scheduler_options if needed
+                worker_init='',     # Input your worker_init if needed
                 queue='debug',
                 account='ALCF_ALLOCATION',    # Please replace ALCF_ALLOCATION with your ALCF allocation
             ),

@@ -45,7 +45,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     ----------
     image_id : str
         Identification of the Amazon Machine Image (AMI).
-    overrides : str
+    worker_init : str
         String to append to the Userdata script executed in the cloudinit phase of
         instance initialization.
     walltime : str
@@ -102,7 +102,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  nodes_per_block=1,
                  parallelism=1,
 
-                 overrides='',
+                 worker_init='',
                  instance_type='t2.small',
                  region='us-east-2',
                  spot_max_bid=0,
@@ -129,7 +129,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.max_nodes = max_blocks * nodes_per_block
         self.parallelism = parallelism
 
-        self.overrides = overrides
+        self.worker_init = worker_init
         self.instance_type = instance_type
         self.region = region
         self.spot_max_bid = spot_max_bid
@@ -452,7 +452,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         command = Template(template_string).substitute(jobname=job_name,
                                                        user_script=command,
                                                        linger=str(self.linger).lower(),
-                                                       overrides=self.overrides)
+                                                       worker_init=self.worker_init)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
         ami_id = self.image_id

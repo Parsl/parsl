@@ -25,7 +25,8 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                overrides=user_opts['theta']['overrides'],
+                scheduler_options=user_opts['theta']['scheduler_options'],
+                worker_init=user_opts['theta']['worker_init'],
                 account=user_opts['theta']['account'],
                 cmd_timeout=60
             ),
