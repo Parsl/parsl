@@ -54,8 +54,10 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     walltime : str
         Walltime requested per block in HH:MM:SS.
-    overrides : str
-        String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+    scheduler_options : str
+        String to prepend to the #$$ blocks in the submit script to the scheduler.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
@@ -70,7 +72,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  max_blocks=10,
                  parallelism=1,
                  walltime="00:10:00",
-                 overrides='',
+                 scheduler_options='',
+                 worker_init='',
                  launcher=SingleNodeLauncher()):
         label = 'grid_engine'
         super().__init__(label,
@@ -83,7 +86,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                          parallelism,
                          walltime,
                          launcher)
-        self.overrides = overrides
+        self.scheduler_options = scheduler_options
+        self.worker_init = worker_init
 
         if launcher in ['srun', 'srun_mpi']:
             logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
@@ -99,7 +103,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["walltime"] = wtime_to_minutes(self.walltime)
-        job_config["overrides"] = self.overrides
+        job_config["scheduler_options"] = self.scheduler_options
+        job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
 
         job_config["user_script"] = self.launcher(command,

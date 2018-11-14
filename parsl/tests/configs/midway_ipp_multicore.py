@@ -25,7 +25,8 @@ config = Config(
                     username=user_opts['midway']['username'],
                     script_dir=user_opts['midway']['script_dir']
                 ),
-                overrides=user_opts['midway']['overrides'],
+                scheduler_options=user_opts['midway']['scheduler_options'],
+                worker_init=user_opts['midway']['worker_init'],
                 nodes_per_block=1,
                 tasks_per_node=4,
                 walltime="00:05:00",

@@ -26,7 +26,7 @@ python3 /home/yadunand/parsl/parsl/executors/mpix/fabric.py -d --task_url={task_
                 tasks_per_node=32,
                 init_blocks=1,
                 max_blocks=1,
-                overrides="""module load intelpython35/2017.0.035
+                worker_init="""module load intelpython35/2017.0.035
 source activate parsl_intel_py3.5
 module swap cray-mpich cray-mpich-abi
 export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:$LD_LIBRARY_PATH

@@ -56,8 +56,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     walltime : str
         Walltime requested per block in HH:MM:SS.
-    overrides : str
-        String to prepend to the Torque submit script.
+    scheduler_options : str
+        String to prepend to the #PBS blocks in the submit script to the scheduler.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.AprunLauncher` (the default), or
@@ -68,7 +70,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  channel=LocalChannel(),
                  account=None,
                  queue=None,
-                 overrides='',
+                 scheduler_options='',
+                 worker_init='',
                  nodes_per_block=1,
                  tasks_per_node=1,
                  init_blocks=1,
@@ -91,7 +94,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         self.account = account
         self.queue = queue
-        self.overrides = overrides
+        self.scheduler_options = scheduler_options
+        self.worker_init = worker_init
         self.provisioned_blocks = 0
 
         # Dictionary that keeps track of jobs, keyed on job_id
@@ -179,7 +183,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         job_config["nodes_per_block"] = self.nodes_per_block
         job_config["tasks_per_node"] = self.tasks_per_node
         job_config["walltime"] = self.walltime
-        job_config["overrides"] = self.overrides
+        job_config["scheduler_options"] = self.scheduler_options
+        job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
 
         # Wrap the command
