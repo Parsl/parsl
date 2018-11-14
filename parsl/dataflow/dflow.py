@@ -8,6 +8,7 @@ import random
 import threading
 import inspect
 import sys
+import signal
 import multiprocessing
 import time
 
