@@ -786,8 +786,6 @@ class DataFlowKernel(object):
             raise Exception("attempt to clean up DFK when it has already been cleaned-up")
         self.cleanup_called = True
 
-        self.wait_for_current_tasks()
-
         self.log_task_states()
 
         # Checkpointing takes priority over the rest of the tasks
@@ -1014,6 +1012,10 @@ class DataFlowKernelLoader(object):
             cls._dfk = DataFlowKernel(config)
 
         return cls._dfk
+
+    @classmethod
+    def wait_for_current_tasks(cls):
+        dfk().wait_for_current_tasks()
 
     @classmethod
     def dfk(cls):
