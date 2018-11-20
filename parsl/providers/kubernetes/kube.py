@@ -42,6 +42,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
+    worker_init : str
+        Command to be run first for the workers, such as `python start.py`.
     secret : str
         Docker secret to use to pull images
     user_id : str
@@ -62,7 +64,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  min_blocks=0,
                  max_blocks=10,
                  parallelism=1,
-                 overrides="",
+                 worker_init="",
                  user_id=None,
                  group_id=None,
                  run_as_non_root=False,
@@ -81,7 +83,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
         self.parallelism = parallelism
-        self.overrides = overrides
+        self.worker_init = worker_init
         self.secret = secret
         self.user_id = user_id
         self.group_id = group_id
@@ -110,7 +112,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                              str(time.time()).split('.')[0])
 
             formatted_cmd = template_string.format(command=cmd_string,
-                                                   overrides=self.overrides)
+                                                   worker_init=self.worker_init)
 
             print("Creating replicas :", self.init_blocks)
             self.deployment_obj = self._create_deployment_object(job_name,

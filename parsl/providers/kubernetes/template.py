@@ -1,4 +1,4 @@
-template_string = """{overrides}
+template_string = """{worker_init}
 
 {command}
 """

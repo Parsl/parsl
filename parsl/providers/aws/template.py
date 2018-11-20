@@ -4,7 +4,7 @@ cd ~
 apt-get update -y
 apt-get install -y python3 python3-pip libffi-dev g++ libssl-dev
 pip3 install numpy scipy parsl
-$overrides
+$worker_init
 
 $user_script
 

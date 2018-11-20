@@ -28,7 +28,8 @@ config = Config(
                 nodes_per_block=1,
                 tasks_per_node=4,
                 parallelism=0.5,
-                overrides=user_opts['midway']['overrides']
+                scheduler_options=user_opts['midway']['scheduler_options'],
+                worker_init=user_opts['midway']['worker_init'],
             ),
             label='midway_ipp',
             controller=Controller(public_ip=user_opts['public_ip']),
