@@ -8,7 +8,6 @@ import sys
 import platform
 # import random
 import threading
-import traceback
 import pickle
 import time
 import queue
@@ -330,13 +329,11 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
 
         try:
             result = execute_task(req['buffer'])
-            serialized_result = serialize_object(result) # ... this might also throw an exception... especially because result might actually be some kind of wrapped up exception....
+            serialized_result = serialize_object(result)
         except Exception as e:
-            ei = sys.exc_info()
-            ptb = traceback.format_exc()
-            result_package = {'task_id': tid, 'exception': serialize_object("Exception (which we cannot send the full exception object back for): {} with info {} and with printed traceback {}".format(e, ei, ptb))}
-            ## Exceptions can't be pickled by this serialisation mechansm....
-            ## result_package = {'task_id': tid, 'exception': serialize_object(e)}
+            result_package = {'task_id': tid, 'exception': serialize_object("Exception which we cannot send the full exception object back for: {}".format(e))}
+            # Exceptions can't be pickled by this serialisation mechansm....
+            # result_package = {'task_id': tid, 'exception': serialize_object(e)}
             # logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialized_result}
