@@ -330,7 +330,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
 
         try:
             result = execute_task(req['buffer'])
-            serialized_result = serialize_object(result) # ... this might also throw an exception
+            serialized_result = serialize_object(result) # ... this might also throw an exception... especially because result might actually be some kind of wrapped up exception....
         except Exception as e:
             ei = sys.exc_info()
             ptb = traceback.format_exc()

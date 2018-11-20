@@ -135,7 +135,9 @@ class DependencyError(ParslError):
         return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
 
 
-class RemoteException(ParslError):
+# removed RemoteException from being an actual exception so
+# that we might have some better chance at serialising it.
+class RemoteException:
     def __init__(self, e_type, e_value, traceback):
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
