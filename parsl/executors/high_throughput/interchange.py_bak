@@ -16,7 +16,7 @@ from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
 LOOP_SLOWDOWN = 0.0  # in seconds
-HEARTBEAT_CODE = (2 ** 32) - 1
+
 
 class ShutdownRequest(Exception):
     ''' Exception raised when any async component receives a ShutdownRequest
@@ -107,9 +107,12 @@ class Interchange(object):
             client_address, client_ports[0], client_ports[1], client_ports[2]))
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
+        self.task_incoming.set_hwm(0)
         self.task_incoming.RCVTIMEO = 10  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
+
         self.results_outgoing = self.context.socket(zmq.DEALER)
+        self.results_outgoing.set_hwm(0)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
 
         self.command_channel = self.context.socket(zmq.REP)
@@ -123,7 +126,10 @@ class Interchange(object):
         self.worker_port_range = worker_port_range
 
         self.task_outgoing = self.context.socket(zmq.ROUTER)
+        self.task_outgoing.set_hwm(0)
         self.results_incoming = self.context.socket(zmq.ROUTER)
+        self.results_incoming.RCVTIMEO = 100 # in milliseconds
+        self.results_incoming.set_hwm(0)
 
         if self.worker_ports:
             self.worker_task_port = self.worker_ports[0]
@@ -200,7 +206,6 @@ class Interchange(object):
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("[TASK_PULL_THREAD] {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
             if msg == 'STOP':
@@ -320,10 +325,7 @@ class Interchange(object):
                     tasks_requested = int.from_bytes(message[1], "little")
                     logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
-                    if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
-                    else:
-                        self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
+                    self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
             for manager in self._ready_manager_queue:
@@ -342,18 +344,26 @@ class Interchange(object):
                     logger.debug("Nothing to send")
 
             # Receive any results and forward to client
+            result_fetch_begin = time.time()
+            event_counter = 0
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
-                manager, *b_messages = self.results_incoming.recv_multipart()
-                if manager not in self._ready_manager_queue:
-                    logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
-                else:
-                    logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
-                    for b_message in b_messages:
-                        r = pickle.loads(b_message)
-                        # logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
-                        self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
-                    self.results_outgoing.send_multipart(b_messages)
-                    logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
+                while time.time() < result_fetch_begin + 0.010:
+                    try:
+                        manager, *b_messages = self.results_incoming.recv_multipart()
+                        event_count += 1
+                    except zmq.Again:
+                        break
+                    if manager not in self._ready_manager_queue:
+                        logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
+                    else:
+                        logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
+                        for b_message in b_messages:
+                            r = pickle.loads(b_message)
+                            # logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
+                            self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                            self.results_outgoing.send_multipart(b_messages)
+                logger.debug("[MAIN] Processed {} result events".format(event_counter))
+                logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
 
             bad_managers = [manager for manager in self._ready_manager_queue if
                             time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_thresh]

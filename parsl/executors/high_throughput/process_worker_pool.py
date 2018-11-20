@@ -25,8 +25,9 @@ from ipyparallel.serialize import serialize_object
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
-LOOP_SLOWDOWN = 0.0  # in seconds
+LOOP_SLOWDOWN = 0.01  # in seconds
 
+HEARTBEAT_CODE = (2 ** 32) - 1
 
 class Manager(object):
     """ Manager manages task execution by the workers
@@ -110,7 +111,7 @@ class Manager(object):
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
         """
-        heartbeat = (0).to_bytes(4, "little")
+        heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
         logger.debug("Return from heartbeat: {}".format(r))
 
