@@ -139,10 +139,19 @@ class RemoteException(ParslError):
     def __init__(self, e_type, e_value, traceback):
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
-        self.traceback = dill.dumps(traceback)
+
+        # what can we do with the traceback? I'd like it to appear
+        # remotely? perhaps at the point that the RemoteException is
+        # re-raised we could output it somehow? 
+        # or maybe we don't try to pass back exactly the same exception
+        # class?
+
+        # or look at tblib... which is already there but somehow not working
+        # as might have been intended?
+        # self.traceback = dill.dumps(traceback)
 
     def reraise(self):
-        reraise(dill.loads(self.e_type), dill.loads(self.e_value), dill.loads(self.traceback))
+        reraise(dill.loads(self.e_type), dill.loads(self.e_value))
 
 
 def wrap_error(func):
