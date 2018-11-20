@@ -26,7 +26,8 @@ config = Config(
                     script_dir=user_opts['midway']['script_dir']
                 ),
                 launcher=SrunLauncher(),
-                overrides=user_opts['midway']['overrides'],
+                scheduler_options=user_opts['midway']['scheduler_options'],
+                worker_init=user_opts['midway']['worker_init'],
                 walltime="00:05:00",
                 init_blocks=1,
                 max_blocks=1,

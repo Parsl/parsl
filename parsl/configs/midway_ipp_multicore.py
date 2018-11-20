@@ -21,7 +21,8 @@ config = Config(
                     username='USERNAME',     # Please replace USERNAME with your username
                     script_dir='/scratch/midway2/USERNAME/parsl_scripts',    # Please replace USERNAME with your username
                 ),
-                overrides='OVERRIDES',     # Please replace OVERRIDES with your overrides
+                scheduler_options='',     # Input your scheduler_options if needed
+                worker_init='',     # Input your worker_init if needed
                 nodes_per_block=1,
                 tasks_per_node=4,
                 walltime="00:05:00",

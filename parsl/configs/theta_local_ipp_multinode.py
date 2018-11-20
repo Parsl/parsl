@@ -21,7 +21,8 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                overrides='OVERRIDES',     # Please replace OVERRIDES with your overrides
+                scheduler_options='',     # Input your scheduler_options if needed
+                worker_init='',     # Input your worker_init if needed
                 account='ALCF_ALLOCATION',    # Please replace ALCF_ALLOCATION with your ALCF allocation
                 cmd_timeout=60
             ),

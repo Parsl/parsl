@@ -55,8 +55,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     walltime : str
         Walltime requested per block in HH:MM:SS.
-    overrides : str
+    scheduler_options : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
@@ -74,7 +76,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  max_blocks=10,
                  parallelism=1,
                  walltime="00:10:00",
-                 overrides='',
+                 scheduler_options='',
+                 worker_init='',
                  cmd_timeout=10,
                  launcher=SingleNodeLauncher()):
         label = 'slurm'
@@ -90,7 +93,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                          cmd_timeout=cmd_timeout,
                          launcher=launcher)
         self.partition = partition
-        self.overrides = overrides
+        self.scheduler_options = scheduler_options
+        self.worker_init = worker_init
 
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
@@ -159,7 +163,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config["nodes"] = self.nodes_per_block
         job_config["tasks_per_node"] = self.tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
-        job_config["overrides"] = self.overrides
+        job_config["scheduler_options"] = self.scheduler_options
+        job_config["worker_init"] = self.worker_init
         job_config["partition"] = self.partition
         job_config["user_script"] = command
 
