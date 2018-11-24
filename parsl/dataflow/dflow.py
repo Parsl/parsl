@@ -200,7 +200,6 @@ class DataFlowKernel(object):
         Create the dictionary that will be included in the log.
         """
         task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
-
         task_log_info['run_id'] = self.run_id
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count

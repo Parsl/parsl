@@ -1,19 +1,31 @@
+import sys
 import argparse
 
-from parsl.errors import OptionalModuleMissing
-from parsl.monitoring.web_app.app import app, init_db
 
 try:
+    import sqlite3
+    import pandas
     import dash_core_components as dcc
     import dash_html_components as html
     from dash.dependencies import Input, Output
 except ImportError:
-    raise OptionalModuleMissing(
-        ['dash_core_components'], "Visualization tool requires dash_core_components module")
+    viz_tool_enabled = False
+else:
+    sql3 = sqlite3
+    pd = pandas
+    viz_tool_enabled = True
 
 
 def web_app(db, port):
+    if not viz_tool_enabled:
+        print("Missing modules for the optional feature monitoring. Please run pip install parsl[monitoring]", file=sys.stderr)
+        return
+
+    from parsl.monitoring.web_app.app import app, init_db
+
+    # TODO Find out if db is created after script finalizes or during its execution. If the latter, this is a race condition that needs a fix
     if not init_db(db):
+        print("Visualization tool failed to initialize. " + db + " hasn't been created yet", file=sys.stderr)
         return
 
     print(' * Visualizing ' + db.split('/').pop())
