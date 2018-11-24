@@ -9,6 +9,7 @@ sql_conn = get_db()
 layout = html.Div(children=[
     html.H1("Workflows"),
     dataframe_to_html_table(id='workflows_table',
+                            field='workflow_name',
                             dataframe=pd.read_sql_query("SELECT run_id, "
                                                         "workflow_name, "
                                                         "workflow_version, "
@@ -19,13 +20,12 @@ layout = html.Div(children=[
                                                         "user, "
                                                         "host, "
                                                         "rundir FROM workflows", sql_conn)
-                            .drop_duplicates(
-                                subset=['workflow_name', 'workflow_version'],
-                                keep='last')
-                            .sort_values(
-                                by=['time_began'],
-                                ascending=[False]),
-                            field='workflow_name')
+                                        .sort_values(
+                                            by=['time_began'],
+                                            ascending=[False])
+                                        .drop_duplicates(
+                                            subset=['workflow_name', 'workflow_version'],
+                                            keep='last'))
 ])
 
 close_db()

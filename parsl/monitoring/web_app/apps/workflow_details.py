@@ -1,4 +1,3 @@
-import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from parsl.monitoring.web_app.app import app
@@ -31,23 +30,3 @@ plots = [resource_usage_plot, tasks_per_app_plot, total_tasks_plot]
               [Input('run_number_dropdown', 'value')])
 def workflow_details(run_id):
     return [html.A(id='run_id', children=run_id, hidden=True)] + [plot.html for plot in plots]
-
-
-
-# @app.callback(
-#     Output('tables', 'children'),
-#     [Input('tasks_per_app', 'clickData')],
-#     [State('run_id', 'children')])
-# def load_task_table(clicked, task_id):
-#     print(clicked)
-#     if not clicked:
-#         return
-#     sql_conn = get_db()
-#
-#     df_resources = pd.read_sql_query("SELECT * FROM task_resources WHERE run_id=(?)", sql_conn, params=(task_id, ))
-#     df_task = pd.read_sql_query("SELECT * FROM task WHERE run_id=(?)", sql_conn, params=(task_id, ))
-#
-#     return [html.Table(
-#         [html.Tr([html.Th(col) for col in df_resources.columns])] + \
-#         [html.Tr([html.Td(html.A(df_resources.loc[df_resources['task_id'] == str(point['curveNumber'])].iloc[i][col])) for col in df_resources.loc[df_resources['task_id'] == str(point['curveNumber'])].columns]) for i in range(len(df_resources.loc[df_resources['task_id'] == str(point['curveNumber'])]))]) for point in clicked['points']]
-#

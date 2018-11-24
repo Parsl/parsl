@@ -1,9 +1,19 @@
-import dash
 from flask import request, g
 import requests
-import sqlite3
 import os
+from parsl.errors import OptionalModuleMissing
 
+try:
+    import dash
+except ImportError:
+    raise OptionalModuleMissing(
+        ['dash'], "Visualization tool requires dash module")
+
+try:
+    import sqlite3
+except ImportError:
+    raise OptionalModuleMissing(
+        ['sqlite3'], "Visualization tool requires sqlite3 module")
 
 app = dash.Dash(__name__)
 app.config['suppress_callback_exceptions'] = True

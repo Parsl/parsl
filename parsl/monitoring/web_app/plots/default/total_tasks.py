@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objs as go
 import dash_core_components as dcc
 import dash_html_components as html
-from parsl.monitoring.web_app.utils import timestamp_to_float, timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
+from parsl.monitoring.web_app.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
 from parsl.monitoring.web_app.app import get_db, close_db
 from parsl.monitoring.web_app.plots.base_plot import BasePlot
 
@@ -13,7 +13,6 @@ class TotalTasksPlot(BasePlot):
         super().__init__(plot_id, setup_args, plot_args)
 
     def setup(self, run_id, columns=20):
-        print('hi TOTALTASKS')
         sql_conn = get_db()
         df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
                                       sql_conn, params=(run_id, ))
@@ -75,7 +74,7 @@ class TotalTasksPlot(BasePlot):
                 for i in range(len(x_axis) - 1):
                     task = df_status[df_status['task_id'].isin(tasks)]
                     x = task['timestamp'] >= x_axis[i]
-                    y = task['timestamp'] < x_axis[i+1]
+                    y = task['timestamp'] < x_axis[i + 1]
                     tmp.append(sum(task.loc[[a and b for a, b in zip(x, y)]]['task_status_name'] == value))
                 items = np.sum([items, tmp], axis=0)
 
@@ -90,7 +89,7 @@ class TotalTasksPlot(BasePlot):
                          layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                                      autorange=True,
                                                      title='Time. ' + ' Bin width: ' + num_to_timestamp(time_step).strftime('%Mm%Ss')),
-                                          yaxis=dict(tickformat= ',d',
+                                          yaxis=dict(tickformat=',d',
                                                      title='Tasks'),
                                           barmode='stack',
                                           title="Total tasks"))

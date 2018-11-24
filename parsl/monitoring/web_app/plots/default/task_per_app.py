@@ -60,7 +60,7 @@ class TaskPerAppPlot(BasePlot):
                          layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                                      autorange=True,
                                                      title='Time'),
-                                          yaxis=dict(tickformat= ',d',
+                                          yaxis=dict(tickformat=',d',
                                                      title='Tasks'),
                                           hovermode='closest',
                                           title='Tasks per app')

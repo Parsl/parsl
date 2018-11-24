@@ -6,7 +6,7 @@ from datetime import datetime
 DB_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-def dataframe_to_html_table(id, dataframe, field):
+def dataframe_to_html_table(id, field, dataframe):
     return html.Table(id=id, children=(
         [html.Tr([html.Th(col) for col in dataframe.columns])] +
 
@@ -45,4 +45,3 @@ def dropdown(id, dataframe, field):
         value=latest,
         style=dict(width='200px', display='inline-block')
     )
-

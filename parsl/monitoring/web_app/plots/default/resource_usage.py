@@ -48,7 +48,8 @@ class ResourceUsagePlot(BasePlot):
                         count -= v[0]
                         remove.append(k)
 
-                for k in remove: del dic[k]
+                for k in remove:
+                    del dic[k]
 
                 items.append(count)
 

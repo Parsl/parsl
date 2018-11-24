@@ -1,8 +1,15 @@
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output
-from parsl.monitoring.web_app.app import app, init_db
 import argparse
+
+from parsl.errors import OptionalModuleMissing
+from parsl.monitoring.web_app.app import app, init_db
+
+try:
+    import dash_core_components as dcc
+    import dash_html_components as html
+    from dash.dependencies import Input, Output
+except ImportError:
+    raise OptionalModuleMissing(
+        ['dash_core_components'], "Visualization tool requires dash_core_components module")
 
 
 def web_app(db, port):
@@ -16,17 +23,13 @@ def web_app(db, port):
 
     app.layout = html.Div([
         dcc.Location(id='url', refresh=False),
-        # html.Nav(children=[
-        #     dcc.Link('Workflows', href='/workflows'),
-        #     dcc.Link('SQL', href='/sql')]),
         html.Div(id='page-content')
     ])
-
 
     @app.callback(Output('page-content', 'children'),
                   [Input('url', 'pathname')])
     def display_page(pathname):
-        if pathname == '/': # TODO Redirect to workflows or show special page
+        if pathname == '/':  # TODO Redirect to workflows or show special page
             pass
         elif pathname == '/workflows':
             return workflows.layout

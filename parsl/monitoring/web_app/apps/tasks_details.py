@@ -20,8 +20,8 @@ def tasks_details(run_id):
     close_db()
 
     apps = []
-    for app in df_task['task_func_name'].unique():
-        apps.append(dict(label=app, value=app))
+    for _app in df_task['task_func_name'].unique():
+        apps.append(dict(label=_app, value=_app))
 
     return [dcc.Dropdown(
         id='apps_dropdown',
@@ -75,12 +75,12 @@ def tasks_per_app_plot_callback(apps, run_id):
 
     return go.Figure(data=[go.Scatter(x=df_status[df_status['task_id'].isin(tasks)]['timestamp'],
                                       y=y_axis_setup(df_status[df_status['task_id'].isin(tasks)]['task_status_name'] == 'running'),
-                                      name=app)
-                           for app, tasks in apps.items()],
+                                      name=_app)
+                           for _app, tasks in apps.items()],
                      layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                                  range=[min(df_status['timestamp']), max(df_status['timestamp'])],
                                                  title='Time'),
-                                      yaxis=dict(tickformat= ',d',
+                                      yaxis=dict(tickformat=',d',
                                                  title='Tasks'),
                                       hovermode='closest',
                                       title="Tasks per app")
@@ -150,12 +150,12 @@ def total_tasks_plot_tasks(apps, minutes, seconds, run_id):
 
     def y_axis_setup(value):
         items = []
-        for app, tasks in apps_dict.items():
+        for _app, tasks in apps_dict.items():
             tmp = []
             for i in range(len(x_axis) - 1):
                 task = df_status[df_status['task_id'].isin(tasks)]
                 x = task['timestamp'] >= x_axis[i]
-                y = task['timestamp'] < x_axis[i+1]
+                y = task['timestamp'] < x_axis[i + 1]
                 tmp.append(sum(task.loc[[a and b for a, b in zip(x, y)]]['task_status_name'] == value))
             items = np.sum([items, tmp], axis=0)
 
@@ -170,54 +170,7 @@ def total_tasks_plot_tasks(apps, minutes, seconds, run_id):
                      layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                                  autorange=True,
                                                  title='Time. ' + ' Bin width: ' + num_to_timestamp(time_step).strftime('%Mm%Ss')),
-                                      yaxis=dict(tickformat= ',d',
+                                      yaxis=dict(tickformat=',d',
                                                  title='Tasks'),
                                       barmode='stack',
                                       title="Total tasks"))
-
-# import pandas as pd
-# import dash_core_components as dcc
-# import dash_html_components as html
-# from dash.dependencies import Input, Output, State
-# from parsl.monitoring.web_app.app import app, get_db, close_db
-# from parsl.monitoring.web_app.plots.default.task_per_app import TaskPerAppPlot
-# from parsl.monitoring.web_app.plots.default.total_tasks import TotalTasksPlot
-#
-#
-# layout = html.Div(id='tasks_details')
-#
-# # FIXME Run id should be passed as State.
-# # It is passed as Input because it needs to be before apps_dropdown due to the default parameter issue in plot()
-# tasks_per_app_plot = TaskPerAppPlot('task_per_app_plot_tasks',
-#                                     setup_args=None,
-#                                     plot_args=([Input('run_id', 'children'),
-#                                                 Input('apps_dropdown', 'value')], []))
-#
-# total_tasks_plot = TotalTasksPlot('total_tasks_plot_tasks',
-#                                   setup_args=None,
-#                                   plot_args=([Input('bin_width_minutes', 'value'),
-#                                               Input('bin_width_seconds', 'value'),
-#                                               Input('run_id', 'children'),
-#                                               Input('apps_dropdown', 'value')], []))
-#
-# plots = [tasks_per_app_plot, total_tasks_plot]
-#
-#
-# @app.callback(Output('tasks_details', 'children'),
-#               [Input('run_number_dropdown', 'value')])
-# def tasks_details(run_id):
-#     sql_conn = get_db()
-#     df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?)',
-#                                 sql_conn, params=(run_id,))
-#     close_db()
-#
-#     apps = []
-#     for app in df_task['task_func_name'].unique():
-#         apps.append(dict(label=app, value=app))
-#
-#     return [dcc.Dropdown(
-#         id='apps_dropdown',
-#         options=apps,
-#         value=apps[0],
-#         multi=True),
-#                html.A(id='run_id', children=run_id, hidden=True)] + [plot.html for plot in plots]

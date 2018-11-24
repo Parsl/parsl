@@ -5,7 +5,6 @@ import logging
 root_logger = logging.getLogger()
 root_logger.addHandler(logging.NullHandler())
 
-
 import tornado.ioloop
 import tornado.web
 from parsl.monitoring.db_logger import get_db_logger

@@ -34,7 +34,6 @@ from parsl.monitoring.db_logger import get_db_logger
 from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
 from parsl.monitoring.web_app import index
-from parsl.monitoring.web_app.app import shutdown_web_app
 
 
 logger = logging.getLogger(__name__)
@@ -200,7 +199,7 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-        task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}\
+        task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
 
         task_log_info['run_id'] = self.run_id
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
@@ -773,7 +772,6 @@ class DataFlowKernel(object):
             self.logging_server.join()
 
         if self.web_app is not None:
-            # shutdown_web_app(self.monitoring_config.web_app_host, self.monitoring_config.web_app_port + 1)
             self.web_app.terminate()
             self.web_app.join()
 
