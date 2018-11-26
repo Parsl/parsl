@@ -25,7 +25,6 @@ TASK_REQUEST_TAG = 11
 
 LOOP_SLOWDOWN = 0.0  # in seconds
 
-HEARTBEAT_CODE = (2 ** 32) - 1
 
 class Manager(object):
     """ Orchestrates the flow of tasks and results to and from the workers
@@ -91,7 +90,7 @@ class Manager(object):
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
         """
-        heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
+        heartbeat = (0).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
         logger.debug("Return from heartbeat : {}".format(r))
 
