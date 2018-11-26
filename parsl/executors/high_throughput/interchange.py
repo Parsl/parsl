@@ -16,7 +16,7 @@ from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
 LOOP_SLOWDOWN = 0.0  # in seconds
-HEARTBEAT_CODE = (2 ** 32) - 1
+
 
 class ShutdownRequest(Exception):
     ''' Exception raised when any async component receives a ShutdownRequest
@@ -200,7 +200,6 @@ class Interchange(object):
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("[TASK_PULL_THREAD] {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
             if msg == 'STOP':
@@ -320,10 +319,7 @@ class Interchange(object):
                     tasks_requested = int.from_bytes(message[1], "little")
                     logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
-                    if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
-                    else:
-                        self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
+                    self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
             for manager in self._ready_manager_queue:
