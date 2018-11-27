@@ -81,7 +81,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This can be either a hostname as returned by `hostname` or a public
+        workers will be running. This can be either a hostname as returned by `hostname` or an
         IP address. Most login nodes on clusters have several network interfaces available, only
         some of which can be reached from the compute nodes.  Some trial and error might be
         necessary to indentify what addresses are reachable from compute nodes.
