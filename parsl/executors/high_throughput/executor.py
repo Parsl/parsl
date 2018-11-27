@@ -76,8 +76,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     launch_cmd : str
         Command line string to launch the process_worker_pool from the provider.
 
-    public_ip : string
-        Set the public ip of the machine on which Parsl is executing.
+    address : string
+        A hostname string as returned by `hostname` or IP address, that is reachable from
+        the network in which workers will be running. Most login nodes on clusters have
+        several network interfaces available, only some of which can be reached from the compute nodes.
+        Some trial and error might be necessary to indentify what addresses are reachable from compute nodes.
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -107,7 +110,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  label='HighThroughputExecutor',
                  provider=LocalProvider(),
                  launch_cmd=None,
-                 public_ip="127.0.0.1",
+                 address="127.0.0.1",
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  interchange_port_range=(55000, 56000),
@@ -133,7 +136,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.cores_per_worker = cores_per_worker
 
         self._task_counter = 0
-        self.public_ip = public_ip
+        self.address = address
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
@@ -326,8 +329,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
-        self.worker_task_url = "tcp://{}:{}".format(self.public_ip, worker_task_port)
-        self.worker_result_url = "tcp://{}:{}".format(self.public_ip, worker_result_port)
+        self.worker_task_url = "tcp://{}:{}".format(self.address, worker_task_port)
+        self.worker_result_url = "tcp://{}:{}".format(self.address, worker_result_port)
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.

@@ -79,8 +79,11 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     launch_cmd : str
         Command line string to launch the mpi_worker_pool from the provider.
 
-    public_ip : string
-        Set the public ip of the machine on which Parsl is executing.
+    address : string
+        A hostname string as returned by `hostname` or IP address, that is reachable from
+        the network in which workers will be running. Most login nodes on clusters have
+        several network interfaces available, only some of which can be reached from the compute nodes.
+        Some trial and error might be necessary to indentify what addresses are reachable from compute nodes.
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -106,7 +109,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  label='ExtremeScaleExecutor',
                  provider=LocalProvider(),
                  launch_cmd=None,
-                 public_ip="127.0.0.1",
+                 address="127.0.0.1",
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  interchange_port_range=(55000, 56000),
@@ -118,7 +121,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         super().__init__(label=label,
                          provider=provider,
                          launch_cmd=launch_cmd,
-                         public_ip=public_ip,
+                         address=address,
                          worker_ports=worker_ports,
                          worker_port_range=worker_port_range,
                          interchange_port_range=interchange_port_range,
