@@ -16,6 +16,7 @@ from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
 LOOP_SLOWDOWN = 0.0  # in seconds
+HEARTBEAT_CODE = (2 ** 32) - 1
 
 
 class ShutdownRequest(Exception):
@@ -107,9 +108,11 @@ class Interchange(object):
             client_address, client_ports[0], client_ports[1], client_ports[2]))
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
+        self.task_incoming.set_hwm(0)
         self.task_incoming.RCVTIMEO = 10  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
+        self.results_outgoing.set_hwm(0)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
 
         self.command_channel = self.context.socket(zmq.REP)
@@ -123,7 +126,9 @@ class Interchange(object):
         self.worker_port_range = worker_port_range
 
         self.task_outgoing = self.context.socket(zmq.ROUTER)
+        self.task_outgoing.set_hwm(0)
         self.results_incoming = self.context.socket(zmq.ROUTER)
+        self.results_incoming.set_hwm(0)
 
         if self.worker_ports:
             self.worker_task_port = self.worker_ports[0]
@@ -200,6 +205,7 @@ class Interchange(object):
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
+                logger.debug("[TASK_PULL_THREAD] {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
             if msg == 'STOP':
@@ -319,7 +325,10 @@ class Interchange(object):
                     tasks_requested = int.from_bytes(message[1], "little")
                     logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
-                    self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
+                    if tasks_requested == HEARTBEAT_CODE:
+                        logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
+                    else:
+                        self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
             for manager in self._ready_manager_queue:
