@@ -59,13 +59,13 @@ def web_app(db, port):
 # TODO Automatically searching for .db files would be a nice touch
 def cli_run():
     parser = argparse.ArgumentParser(description='Parsl visualization tool')
-    parser.add_argument('db', type=str,
+    parser.add_argument('db_path', type=str,
                         help='Database path')
     parser.add_argument('--port', type=int, default=8050)
 
     args = parser.parse_args()
 
-    web_app(args.db, args.port)
+    web_app(args.db_path, args.port)
 
 
 def run(monitoring_config):
