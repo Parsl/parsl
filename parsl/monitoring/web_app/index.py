@@ -2,22 +2,14 @@ import sys
 import argparse
 
 
-try:
-    import sqlite3
-    import pandas
-    import dash_core_components as dcc
-    import dash_html_components as html
-    from dash.dependencies import Input, Output
-except ImportError:
-    viz_tool_enabled = False
-else:
-    sql3 = sqlite3
-    pd = pandas
-    viz_tool_enabled = True
-
-
 def web_app(db, port):
-    if not viz_tool_enabled:
+    try:
+        import sqlite3  # noqa # pylint: disable=unused-import
+        import pandas  # noqa # pylint: disable=unused-import
+        import dash_core_components as dcc
+        import dash_html_components as html
+        from dash.dependencies import Input, Output
+    except ImportError:
         print("Missing modules for the optional feature monitoring. Please run pip install parsl[monitoring]", file=sys.stderr)
         return
 
@@ -31,7 +23,7 @@ def web_app(db, port):
     print(' * Visualizing ' + db.split('/').pop())
     print(' * Running on http://localhost:' + str(port) + '/workflows')
 
-    from parsl.monitoring.web_app.apps import sql, workflows, tabs
+    from parsl.monitoring.web_app.apps import workflows, tabs
 
     app.layout = html.Div([
         dcc.Location(id='url', refresh=False),
@@ -47,8 +39,6 @@ def web_app(db, port):
             return workflows.layout
         elif '/workflows' in str(pathname):
             return tabs.display_workflow(workflow_name=pathname.split('/').pop())
-        elif pathname == '/sql':
-            return sql.layout
         else:
             return '404'
 
