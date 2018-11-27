@@ -80,10 +80,11 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         Command line string to launch the mpi_worker_pool from the provider.
 
     address : string
-        A hostname string as returned by `hostname` or IP address, that is reachable from
-        the network in which workers will be running. Most login nodes on clusters have
-        several network interfaces available, only some of which can be reached from the compute nodes.
-        Some trial and error might be necessary to indentify what addresses are reachable from compute nodes.
+        An address to connect to the main Parsl process which is reachable from the network in which
+        workers will be running. This can be either a hostname as returned by `hostname` or a public
+        IP address. Most login nodes on clusters have several network interfaces available, only
+        some of which can be reached from the compute nodes.  Some trial and error might be
+        necessary to indentify what addresses are reachable from compute nodes.
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
