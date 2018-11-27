@@ -18,6 +18,7 @@ from ipyparallel.serialize import serialize_object
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
 
+
 class ShutdownRequest(Exception):
     ''' Exception raised when any async component receives a ShutdownRequest
     '''

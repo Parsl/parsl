@@ -29,6 +29,7 @@ LOOP_SLOWDOWN = 0.01  # in seconds
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
+
 class Manager(object):
     """ Manager manages task execution by the workers
 
