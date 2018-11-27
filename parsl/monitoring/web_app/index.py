@@ -60,14 +60,12 @@ def web_app(db, port):
 def cli_run():
     parser = argparse.ArgumentParser(description='Parsl visualization tool')
     parser.add_argument('db', type=str,
-                        help='Database file')
-    parser.add_argument('--db_dir', type=str, metavar='DIR', default='./',
-                        help='Database location')
+                        help='Database path')
     parser.add_argument('--port', type=int, default=8050)
 
     args = parser.parse_args()
 
-    web_app(args.db_dir + args.db, args.port)
+    web_app(args.db, args.port)
 
 
 def run(monitoring_config):
