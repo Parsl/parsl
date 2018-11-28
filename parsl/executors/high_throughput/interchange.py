@@ -5,6 +5,7 @@ import zmq
 import os
 import sys
 import platform
+import random
 import time
 import pickle
 import logging
@@ -331,7 +332,9 @@ class Interchange(object):
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
-            for manager in self._ready_manager_queue:
+            shuffled_managers = random.shuffle(list(self._ready_manager_queue.keys()))
+            # for manager in self._ready_manager_queue:
+            for manager in shuffled_managers:
                 if (self._ready_manager_queue[manager]['free_capacity'] and
                     self._ready_manager_queue[manager]['active']):
                     tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
