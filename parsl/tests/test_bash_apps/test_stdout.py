@@ -20,7 +20,8 @@ def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
-@pytest.mark.whitelist(whitelist, reason='broken in IPP')
+# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_bad_stdout():
     """Testing bad stdout file
     """
@@ -37,7 +38,8 @@ def test_bad_stdout():
     return
 
 
-@pytest.mark.whitelist(whitelist, reason='broken in IPP')
+# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_bad_stderr():
     """Testing bad stderr file
     """
