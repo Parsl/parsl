@@ -332,22 +332,26 @@ class Interchange(object):
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
-            shuffled_managers = random.shuffle(list(self._ready_manager_queue.keys()))
-            # for manager in self._ready_manager_queue:
-            for manager in shuffled_managers:
-                if (self._ready_manager_queue[manager]['free_capacity'] and
-                    self._ready_manager_queue[manager]['active']):
-                    tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
-                    if tasks:
-                        self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
-                        task_count = len(tasks)
-                        count += task_count
-                        tids = [t['task_id'] for t in tasks]
-                        logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, manager))
-                        self._ready_manager_queue[manager]['free_capacity'] -= task_count
-                        self._ready_manager_queue[manager]['tasks'].extend(tids)
-                else:
-                    logger.debug("Nothing to send")
+            logger.debug("Managers: {}".format(self._ready_manager_queue))
+            if self._ready_manager_queue:
+                shuffled_managers = list(self._ready_manager_queue.keys())
+                random.shuffle(shuffled_managers)
+                logger.debug("Shuffled : {}".format(shuffled_managers))
+                # for manager in self._ready_manager_queue:
+                for manager in shuffled_managers:
+                    if (self._ready_manager_queue[manager]['free_capacity'] and
+                        self._ready_manager_queue[manager]['active']):
+                        tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
+                        if tasks:
+                            self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
+                            task_count = len(tasks)
+                            count += task_count
+                            tids = [t['task_id'] for t in tasks]
+                            logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, manager))
+                            self._ready_manager_queue[manager]['free_capacity'] -= task_count
+                            self._ready_manager_queue[manager]['tasks'].extend(tids)
+                    else:
+                        logger.debug("Nothing to send")
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
