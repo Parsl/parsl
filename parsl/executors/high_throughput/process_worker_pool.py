@@ -25,7 +25,7 @@ from ipyparallel.serialize import serialize_object
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
-LOOP_SLOWDOWN = 0.01  # in seconds
+LOOP_SLOWDOWN = 0.00  # in seconds
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
@@ -136,10 +136,10 @@ class Manager(object):
         last_beat = time.time()
         task_recv_counter = 0
 
-        poll_timer = 1
+        poll_timer = 0
 
         while not kill_event.is_set():
-            time.sleep(LOOP_SLOWDOWN)
+            # time.sleep(LOOP_SLOWDOWN)
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
@@ -158,7 +158,7 @@ class Manager(object):
             socks = dict(poller.poll(timeout=poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                poll_timer = 1
+                poll_timer = 0
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 if tasks == 'STOP':
@@ -178,6 +178,8 @@ class Manager(object):
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
                 # Limit poll duration to heartbeat_period
                 # heartbeat_period is in s vs poll_timer in ms
+                if not poll_timer:
+                    poll_timer = 1
                 poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
 
     def push_results(self, kill_event):
@@ -189,10 +191,6 @@ class Manager(object):
               Event to let the thread know when it is time to die.
         """
 
-        # We set this timeout so that the thread checks the kill_event and does not
-        # block forever on the internal result queue
-        timeout = 0.001  # Seconds
-        # timer = time.time()
         logger.debug("[RESULT_PUSH_THREAD] Starting thread")
 
         while not kill_event.is_set():
@@ -207,7 +205,7 @@ class Manager(object):
                     self.result_outgoing.send_multipart(items)
 
             except queue.Empty:
-                logger.debug("[RESULT_PUSH_THREAD] No results to send in past {} seconds".format(timeout))
+                pass
 
             except Exception as e:
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
