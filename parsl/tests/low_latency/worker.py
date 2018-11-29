@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 from constants import CLIENT_IP_FILE, INTERCHANGE_IP_FILE
-
+from utils import ping_time
 
 def execute_task(f, args, kwargs, user_ns):
     """
@@ -85,6 +85,7 @@ if __name__ == "__main__":
         with open(ip_file, "r") as fh:
             ip = fh.read().strip()
         print("Read IP {} from file {}".format(ip, ip_file))
+        print("Ping time to IP {}: {} us".format(ip, ping_time(ip)))
     else:
         ip = "localhost"
 
