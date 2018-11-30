@@ -104,6 +104,9 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     managed : Bool
         If this executor is managed by the DFK or externally handled.
+
+    ranks_per_node : int
+        Specify the ranks to be launched per node.
     """
 
     def __init__(self,
@@ -117,6 +120,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  storage_access=None,
                  working_dir=None,
                  worker_debug=False,
+                 ranks_per_node=1,
                  managed=True):
 
         super().__init__(label=label,
@@ -137,9 +141,34 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
             # This is only to stop flake8 from complaining
             logger.debug("MPI version :{}".format(mpi4py.__version__))
 
+        self.ranks_per_node = ranks_per_node
+
         logger.debug("Initializing ExtremeScaleExecutor")
 
         if not launch_cmd:
-            self.launch_cmd = """mpiexec -np {tasks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
-
+            self.launch_cmd = """mpiexec -np {ranks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
         self.worker_debug = worker_debug
+
+    def initialize_scaling(self):
+
+        debug_opts = "--debug" if self.worker_debug else ""
+        l_cmd = self.launch_cmd.format(debug=debug_opts,
+                                       task_url=self.worker_task_url,
+                                       result_url=self.worker_result_url,
+                                       cores_per_worker=self.cores_per_worker,
+                                       # This is here only to support the exex mpiexec call
+                                       ranks_per_node=self.ranks_per_node,
+                                       nodes_per_block=self.provider.nodes_per_block,
+                                       logdir="{}/{}".format(self.run_dir, self.label))
+        self.launch_cmd = l_cmd
+        logger.debug("Launch command: {}".format(self.launch_cmd))
+
+        self._scaling_enabled = self.provider.scaling_enabled
+        logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        if hasattr(self.provider, 'init_blocks'):
+            try:
+                self.scale_out(blocks=self.provider.init_blocks)
+
+            except Exception as e:
+                logger.error("Scaling out failed: {}".format(e))
+                raise e

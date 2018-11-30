@@ -177,7 +177,15 @@ class Strategy(object):
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            tasks_per_node = executor.provider.tasks_per_node
+            if isinstance(executor, IPyParallelExecutor):
+                tasks_per_node = executor.workers_per_node
+            elif isinstance(executor, HighThroughputExecutor):
+                # This is probably wrong calculation, we need this to come from the executor
+                # since we can't know slots ahead of time.
+                tasks_per_node = 1
+            elif isinstance(executor, ExtremeScaleExecutor):
+                tasks_per_node = executor.ranks_per_node
+
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 

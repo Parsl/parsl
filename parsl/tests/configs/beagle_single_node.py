@@ -26,6 +26,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='beagle_multinode_mpi',
+            workers_per_node=1,
             provider=TorqueProvider(
                 'debug',
                 channel=SSHChannel(
@@ -34,7 +35,6 @@ config = Config(
                     script_dir="/lustre/beagle2/{}/parsl_scripts".format(user_opts['beagle']['username'])
                 ),
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
                 launcher=AprunLauncher(),

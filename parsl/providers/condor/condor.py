@@ -33,8 +33,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
-    tasks_per_node : int
-        Workers to start per node
     init_blocks : int
         Number of blocks to provision at time of initialization
     min_blocks : int
@@ -63,7 +61,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     def __init__(self,
                  channel=None,
                  nodes_per_block=1,
-                 tasks_per_node=1,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -80,7 +77,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         super().__init__(label,
                          channel,
                          nodes_per_block,
-                         tasks_per_node,
                          init_blocks,
                          min_blocks,
                          max_blocks,
@@ -141,7 +137,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    def submit(self, command, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         """Submits the command onto an Local Resource Manager job of blocksize parallel elements.
 
         example file with the complex case of multiple submits per job:
@@ -168,7 +164,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             Number of blocks to request.
         job_name : str
             Job name prefix.
-
+        tasks_per_node : int
+            command invocations to be launched per node
         Returns
         -------
         None or str
@@ -202,14 +199,14 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
-        job_config["tasks_per_node"] = self.tasks_per_node
+        job_config["tasks_per_node"] = tasks_per_node
         job_config["requirements"] = self.requirements
         job_config["environment"] = ' '.join(['{}={}'.format(key, value) for key, value in self.environment.items()])
 
         # Move the user script
         # This is where the command should be wrapped by the launchers.
         wrapped_command = self.launcher(command,
-                                        self.tasks_per_node,
+                                        tasks_per_node,
                                         self.nodes_per_block)
 
         with open(userscript_path, 'w') as f:

@@ -23,7 +23,6 @@ config = Config(
                     script_dir=user_opts['osg']['script_dir']
                 ),
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=4,
                 max_blocks=4,
                 scheduler_options='Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
