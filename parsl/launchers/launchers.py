@@ -212,9 +212,11 @@ echo "Done"
 
 
 class SrunMPILauncher(Launcher):
-    """Worker launcher that wraps the user's command with the SRUN launch framework
-    to launch multiple cmd invocations in parallel on a single job allocation.
+    """Launches as many workers as MPI tasks to be executed concurrently within a block.
 
+    Use this launcher instead of SrunLauncher if each block will execute multiple MPI applications
+    at the same time. Workers should be launched with independent Srun calls so as to setup the
+    environment for MPI application launch.
     """
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
         """

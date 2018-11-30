@@ -37,7 +37,8 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                overrides=user_opts['cori']['overrides']
+                scheduler_options=user_opts['cori']['scheduler_options'],
+                worker_init=user_opts['cori']['worker_init'],
             ),
             controller=Controller(public_ip=user_opts['public_ip']),
         )

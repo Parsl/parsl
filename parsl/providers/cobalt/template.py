@@ -1,5 +1,7 @@
 template_string = '''#!/bin/bash -e
-$overrides
+${scheduler_options}
+
+${worker_init}
 
 echo "Starting Cobalt job script"
 

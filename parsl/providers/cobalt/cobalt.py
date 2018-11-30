@@ -34,8 +34,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    label : str
-        Label for this provider.
     nodes_per_block : int
         Nodes to provision per block.
     tasks_per_node : int
@@ -50,8 +48,10 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         Account that the job will be charged against.
     queue : str
         Torque queue to request blocks from.
-    overrides : str
-        String to append to the Torque submit script on the scheduler.
+    scheduler_options : str
+        String to prepend to the submit script to the scheduler.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.AprunLauncher` (the default) or,
@@ -59,7 +59,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
     """
     def __init__(self,
                  channel=LocalChannel(),
-                 label='cobalt',
                  nodes_per_block=1,
                  tasks_per_node=1,
                  init_blocks=0,
@@ -69,9 +68,11 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                  walltime="00:10:00",
                  account=None,
                  queue=None,
-                 overrides='',
+                 scheduler_options='',
+                 worker_init='',
                  launcher=AprunLauncher(),
                  cmd_timeout=10):
+        label = 'cobalt'
         super().__init__(label,
                          channel=channel,
                          nodes_per_block=nodes_per_block,
@@ -86,7 +87,8 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
 
         self.account = account
         self.queue = queue
-        self.overrides = overrides
+        self.scheduler_options = scheduler_options
+        self.worker_init = worker_init
 
     def _status(self):
         """ Internal: Do not call. Returns the status list for a list of job_ids
@@ -170,7 +172,8 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         script_path = os.path.abspath(script_path)
 
         job_config = {}
-        job_config["overrides"] = self.overrides
+        job_config["scheduler_options"] = self.scheduler_options
+        job_config["worker_init"] = self.worker_init
 
         logger.debug("Requesting blocksize:%s nodes_per_block:%s tasks_per_node:%s",
                      blocksize, self.nodes_per_block, self.tasks_per_node)
