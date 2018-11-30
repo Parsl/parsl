@@ -57,6 +57,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
+    exclusive : bool (Default = True)
+        Requests nodes which are not shared with other running jobs.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
@@ -76,6 +78,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  scheduler_options='',
                  worker_init='',
                  cmd_timeout=10,
+                 exclusive=True,
                  launcher=SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
@@ -88,8 +91,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                          walltime,
                          cmd_timeout=cmd_timeout,
                          launcher=launcher)
+
         self.partition = partition
-        self.scheduler_options = scheduler_options
+        if exclusive:
+            self.scheduler_options = "#SBATCH --exclusive\n" + scheduler_options
+        else:
+            self.scheduler_options = scheduler_options
         self.worker_init = worker_init
 
     def _status(self):

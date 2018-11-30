@@ -261,14 +261,15 @@ class Manager(object):
 def execute_task(bufs):
     """Deserialize the buffer and execute the task.
 
-    Returns the result or exception.
+    Returns the result or throws exception.
     """
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
     f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
-    fname = getattr(f, '__name__', 'f')
+    # We might need to look into callability of the function from itself
+    # since we change it's name in the new namespace
     prefix = "parsl_"
     fname = prefix + "f"
     argname = prefix + "args"
@@ -287,7 +288,7 @@ def execute_task(bufs):
         exec(code, user_ns, user_ns)
 
     except Exception as e:
-        logger.warning("Caught exception; will raise it: {}".format(e))
+        logger.warning("Caught exception; will raise it: {}".format(e), exc_info=True)
         raise e
 
     else:
@@ -329,11 +330,11 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
 
         try:
             result = execute_task(req['buffer'])
+            serialized_result = serialize_object(result)
         except Exception as e:
-            result_package = {'task_id': tid, 'exception': serialize_object(e)}
-            # logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
+            result_package = {'task_id': tid, 'exception': serialize_object("Exception which we cannot send the full exception object back for: {}".format(e))}
         else:
-            result_package = {'task_id': tid, 'result': serialize_object(result)}
+            result_package = {'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
 
         logger.info("Completed task {}".format(tid))
