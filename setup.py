@@ -24,7 +24,8 @@ setup(
     extras_require = {
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
-        'jetstream' : ['python-novaclient'],
+        # Jetstream is deprecated since the interface has not been maintained.
+        # 'jetstream' : ['python-novaclient'],
         'extreme_scale' : ['mpi4py'],
         'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
         'google_cloud' : ['google-auth', 'google-api-python-client']
