@@ -3,7 +3,7 @@ import time
 
 import parsl
 # Tested. Confirmed. Local X Local X SingleNodeLauncher
-# from parsl.tests.configs.local_ipp import config
+from parsl.tests.configs.local_ipp import config
 
 # Tested. Confirmed. ssh X Slurm X SingleNodeLauncher
 # from parsl.tests.configs.midway_ipp import config
@@ -38,8 +38,7 @@ import parsl
 
 # from parsl.tests.configs.comet_ipp_multinode import config
 
-# from mpix_local import config
-from parsl.tests.configs.htex_local import config
+# from parsl.tests.configs.htex_local import config
 # from parsl.tests.configs.exex_local import config
 parsl.set_stream_logger()
 
