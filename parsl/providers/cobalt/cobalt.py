@@ -36,8 +36,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
-    tasks_per_node : int
-        Tasks to run per node.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
@@ -60,7 +58,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
     def __init__(self,
                  channel=LocalChannel(),
                  nodes_per_block=1,
-                 tasks_per_node=1,
                  init_blocks=0,
                  min_blocks=0,
                  max_blocks=10,
@@ -76,7 +73,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         super().__init__(label,
                          channel=channel,
                          nodes_per_block=nodes_per_block,
-                         tasks_per_node=tasks_per_node,
                          init_blocks=init_blocks,
                          min_blocks=min_blocks,
                          max_blocks=max_blocks,
@@ -130,7 +126,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['RUNNING', 'KILLING', 'EXITING']:
                 self.resources[missing_job]['status'] = translate_table['EXITING']
 
-    def submit(self, command, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         """ Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -145,6 +141,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         Args:
              - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float)
+             - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
              - job_name (String): Name for job, must be unique
@@ -176,10 +173,10 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         job_config["worker_init"] = self.worker_init
 
         logger.debug("Requesting blocksize:%s nodes_per_block:%s tasks_per_node:%s",
-                     blocksize, self.nodes_per_block, self.tasks_per_node)
+                     blocksize, self.nodes_per_block, tasks_per_node)
 
         # Wrap the command
-        job_config["user_script"] = self.launcher(command, self.tasks_per_node, self.nodes_per_block)
+        job_config["user_script"] = self.launcher(command, tasks_per_node, self.nodes_per_block)
 
         queue_opt = '-q {}'.format(self.queue) if self.queue is not None else ''
 

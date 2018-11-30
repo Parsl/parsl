@@ -18,6 +18,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='comet_ipp_multinode',
+            workers_per_node=1,
             provider=SlurmProvider(
                 'debug',
                 channel=SSHChannel(
@@ -32,7 +33,6 @@ config = Config(
                 init_blocks=1,
                 max_blocks=1,
                 nodes_per_block=2,
-                tasks_per_node=1,
             ),
             controller=Controller(public_ip=user_opts['public_ip']),
         )

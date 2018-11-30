@@ -43,8 +43,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
-    tasks_per_node : int
-        Tasks to run per node.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
@@ -72,7 +70,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  partition,
                  channel=LocalChannel(),
                  nodes_per_block=1,
-                 tasks_per_node=1,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -87,7 +84,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         super().__init__(label,
                          channel,
                          nodes_per_block,
-                         tasks_per_node,
                          init_blocks,
                          min_blocks,
                          max_blocks,
@@ -136,7 +132,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    def submit(self, command, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         """Submit the command as a slurm job of blocksize parallel elements.
 
         Parameters
@@ -145,9 +141,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             Command to be made on the remote side.
         blocksize : int
             Not implemented.
+        tasks_per_node : int
+            Command invocations to be launched per node
         job_name : str
             Name for the job (must be unique).
-
         Returns
         -------
         None or str
@@ -168,7 +165,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config = {}
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["nodes"] = self.nodes_per_block
-        job_config["tasks_per_node"] = self.tasks_per_node
+        job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
@@ -177,7 +174,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
-                                                  self.tasks_per_node,
+                                                  tasks_per_node,
                                                   self.nodes_per_block)
 
         logger.debug("Writing submit script")
