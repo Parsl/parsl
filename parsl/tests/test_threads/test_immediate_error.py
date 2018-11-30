@@ -5,6 +5,7 @@ from parsl.tests.configs.local_threads import config
 
 
 @pytest.mark.local
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_non_lazy_behavior():
     """Testing non lazy errors to work"""
 

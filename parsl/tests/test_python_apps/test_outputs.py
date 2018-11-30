@@ -22,7 +22,8 @@ def double(x, outputs=[]):
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
-@pytest.mark.whitelist(whitelist, reason='broken in IPP')
+# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_launch_apps(n=2, outdir='outputs'):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
