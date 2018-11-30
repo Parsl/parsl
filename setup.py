@@ -22,7 +22,7 @@ setup(
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py'],
     extras_require = {
-        'parsl-visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas', 'sqlite3'],
+        'parsl-visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
         'jetstream' : ['python-novaclient'],
