@@ -268,8 +268,8 @@ def execute_task(bufs):
 
     f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
-    # unused?
-    # fname = getattr(f, '__name__', 'f')
+    # We might need to look into callability of the function from itself
+    # since we change it's name in the new namespace
     prefix = "parsl_"
     fname = prefix + "f"
     argname = prefix + "args"
@@ -288,8 +288,7 @@ def execute_task(bufs):
         exec(code, user_ns, user_ns)
 
     except Exception as e:
-        logger.warning("BENC238: Caught exception; will raise it: {}".format(e), exc_info=True)
-        logger.warning("BENC238: code was: {}".format(code))
+        logger.warning("Caught exception; will raise it: {}".format(e), exc_info=True)
         raise e
 
     else:
@@ -334,9 +333,6 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
             serialized_result = serialize_object(result)
         except Exception as e:
             result_package = {'task_id': tid, 'exception': serialize_object("Exception which we cannot send the full exception object back for: {}".format(e))}
-            # Exceptions can't be pickled by this serialisation mechansm....
-            # result_package = {'task_id': tid, 'exception': serialize_object(e)}
-            # logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
