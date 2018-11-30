@@ -60,8 +60,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     exclusive : bool (Default = True)
-        Requests nodes which are not shared with other running jobs. Executors such as HighThroughputExecutor
-        and ExtremeScaleExecutor assume that the nodes are exclusive.
+        Requests nodes which are not shared with other running jobs.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
