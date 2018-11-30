@@ -137,13 +137,7 @@ class DependencyError(ParslError):
         return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
 
 
-# removed RemoteException from being an actual exception so
-# that we might have some better chance at serialising it.
-# specifically, an Exception has a traceback, and I don't want
-# that to exist except as explicitly managed here.
-# TODO: maybe rename RemoteException to go with that parent
-# class change?
-class RemoteException:
+class RemoteExceptionWrapper:
     def __init__(self, e_type, e_value, traceback):
 
         self.e_type = dill.dumps(e_type)
@@ -159,9 +153,9 @@ def wrap_error(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         import sys
-        from parsl.app.errors import RemoteException
+        from parsl.app.errors import RemoteExceptionWrapper
         try:
             return func(*args, **kwargs)
         except Exception:
-            return RemoteException(*sys.exc_info())
+            return RemoteExceptionWrapper(*sys.exc_info())
     return wrapper
