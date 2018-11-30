@@ -17,6 +17,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='cooley_ssh_il_local_single_node',
+            workers_per_node=1,
             provider=CobaltProvider(
                 channel=SSHInteractiveLoginChannel(
                     hostname='cooleylogin1.alcf.anl.gov',
@@ -24,7 +25,6 @@ config = Config(
                     script_dir="/home/{}/parsl_scripts/".format(user_opts['cooley']['username'])
                 ),
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
                 walltime="00:05:00",
