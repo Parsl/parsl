@@ -46,7 +46,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
     def __init__(self,
                  channel=LocalChannel(),
-                 tasks_per_node=1,
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
                  init_blocks=4,
@@ -58,7 +57,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.label = 'local'
         self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
-        self.tasks_per_node = tasks_per_node
         self.launcher = launcher
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
@@ -127,7 +125,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return True
 
-    def submit(self, command, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -143,6 +141,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Args:
              - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float) - Not really used for local
+             - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
              - job_name (String): Name for job, must be unique
@@ -159,7 +158,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_command = self.launcher(command, self.tasks_per_node, self.nodes_per_block)
+        wrap_command = self.launcher(command, tasks_per_node, self.nodes_per_block)
 
         self._write_submit_script(wrap_command, script_path)
 
@@ -177,7 +176,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Returns :
         [True/False...] : If the cancel operation fails the entire list will be False.
         '''
-
         for job in job_ids:
             logger.debug("Terminating job/proc_id : {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's

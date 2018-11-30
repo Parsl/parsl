@@ -14,7 +14,6 @@ config = Config(
             engine_dir='engines',
             provider=LocalProvider(
                 nodes_per_block=1,
-                tasks_per_node=1,
                 walltime="00:15:00",
                 init_blocks=4,
             )
@@ -24,7 +23,6 @@ config = Config(
             engine_dir='engines',
             provider=LocalProvider(
                 nodes_per_block=1,
-                tasks_per_node=1,
                 walltime="00:15:00",
                 init_blocks=2,
             )
