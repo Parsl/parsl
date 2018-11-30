@@ -18,7 +18,7 @@ from concurrent.futures import Future
 from functools import partial
 
 import parsl
-from parsl.app.errors import RemoteException
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -251,7 +251,7 @@ class DataFlowKernel(object):
 
         try:
             res = future.result()
-            if isinstance(res, RemoteException):
+            if isinstance(res, RemoteExceptionWrapper):
                 res.reraise()
 
         except Exception:
