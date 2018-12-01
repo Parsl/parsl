@@ -18,6 +18,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='midway_ipp_multicore',
+            workers_per_node=4,
             provider=SlurmProvider(
                 'westmere',
                 channel=SSHChannel(
@@ -28,7 +29,6 @@ config = Config(
                 scheduler_options=user_opts['midway']['scheduler_options'],
                 worker_init=user_opts['midway']['worker_init'],
                 nodes_per_block=1,
-                tasks_per_node=4,
                 walltime="00:05:00",
                 init_blocks=1,
                 max_blocks=1,

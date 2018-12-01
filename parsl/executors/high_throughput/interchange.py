@@ -59,7 +59,7 @@ class Interchange(object):
                  client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
-                 heartbeat_period=60,
+                 heartbeat_threshold=60,
                  logdir=".",
                  logging_level=logging.INFO,
              ):
@@ -82,8 +82,8 @@ class Interchange(object):
              The interchange picks ports at random from the range which will be used by workers.
              This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
 
-        heartbeat_period : int
-             Heartbeat period expected from workers (seconds). Default: 10s
+        heartbeat_threshold : int
+             Number of seconds since the last heartbeat after which worker is considered lost.
 
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
@@ -152,7 +152,7 @@ class Interchange(object):
         self._ready_manager_queue = {}
         self.max_task_queue_size = 10 ^ 5
 
-        self.heartbeat_thresh = heartbeat_period * 2
+        self.heartbeat_threshold = heartbeat_threshold
 
         self.current_platform = {'parsl_v': PARSL_VERSION,
                                  'python_v': "{}.{}.{}".format(sys.version_info.major,
@@ -361,7 +361,7 @@ class Interchange(object):
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
 
             bad_managers = [manager for manager in self._ready_manager_queue if
-                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_thresh]
+                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
             for manager in bad_managers:
                 logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last'], time.time()))
                 logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))

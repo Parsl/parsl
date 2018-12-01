@@ -15,6 +15,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='ec2_bad_spot',
+            workers_per_node=1,
             provider=AWSProvider(
                 user_opts['ec2']['image_id'],
                 region=user_opts['ec2']['region'],
@@ -23,7 +24,6 @@ config = Config(
                 state_file='awsproviderstate.json',
                 spot_max_bid='0.001',
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
                 min_blocks=0,
