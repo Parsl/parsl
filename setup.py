@@ -16,12 +16,13 @@ setup(
     author_email='parsl@googlegroups.com',
     license='Apache 2.0',
     download_url='https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
-    package_data={'': ['LICENSE']},
+    include_package_data=True,
     packages=find_packages(),
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py'],
     extras_require = {
+        'parsl-visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
         # Jetstream is deprecated since the interface has not been maintained.
@@ -48,4 +49,5 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     keywords=['Workflows', 'Scientific computing'],
+    entry_points={'console_scripts': ['parsl-visualize=parsl.monitoring.web_app.index:cli_run']}
 )

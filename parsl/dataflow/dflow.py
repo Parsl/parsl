@@ -33,6 +33,7 @@ from parsl.utils import get_version
 from parsl.monitoring.db_logger import get_db_logger
 from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
+from parsl.monitoring.web_app import index
 
 
 logger = logging.getLogger(__name__)
@@ -126,8 +127,11 @@ class DataFlowKernel(object):
         if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database':
             self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'monitoring_config': self.monitoring_config})
             self.logging_server.start()
+            self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config})
+            self.web_app.start()
         else:
             self.logging_server = None
+            self.web_app = None
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
@@ -819,6 +823,11 @@ class DataFlowKernel(object):
         if self.logging_server is not None:
             self.logging_server.terminate()
             self.logging_server.join()
+
+        if self.web_app is not None:
+            self.web_app.terminate()
+            self.web_app.join()
+
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
