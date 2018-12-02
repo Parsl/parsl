@@ -46,7 +46,3 @@ td a {
     text-decoration: none;
     text-overflow: ellipsis;
 }
-
-#workflows_table tr > *:nth-child(1) {
-    display: none;
-}

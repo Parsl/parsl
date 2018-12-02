@@ -6,17 +6,6 @@ from datetime import datetime
 DB_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-def dataframe_to_html_table(id, field, dataframe):
-    return html.Table(id=id, children=(
-        [html.Tr([html.Th(col) for col in dataframe.columns])] +
-
-        # Body
-        [html.Tr([
-            html.Td(html.A(children=dataframe.iloc[i][col], href='/workflows/' + dataframe[field].iloc[i])) for col in dataframe.columns
-        ]) for i in range(len(dataframe))])
-    )
-
-
 def timestamp_to_float(time, format=DB_DATE_FORMAT):
     return datetime.strptime(time, format).timestamp()
 
