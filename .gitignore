@@ -6,6 +6,11 @@ parsl.egg-info/*
 .*err
 *log
 .ipynb_checkpoints
+tutorials/*
+venv/*
+web/*
+api/*
+.idea/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

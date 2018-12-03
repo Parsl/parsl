@@ -76,8 +76,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     launch_cmd : str
         Command line string to launch the process_worker_pool from the provider.
 
-    public_ip : string
-        Set the public ip of the machine on which Parsl is executing.
+    address : string
+        An address to connect to the main Parsl process which is reachable from the network in which
+        workers will be running. This can be either a hostname as returned by `hostname` or an
+        IP address. Most login nodes on clusters have several network interfaces available, only
+        some of which can be reached from the compute nodes.  Some trial and error might be
+        necessary to indentify what addresses are reachable from compute nodes.
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -107,7 +111,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  label='HighThroughputExecutor',
                  provider=LocalProvider(),
                  launch_cmd=None,
-                 public_ip="127.0.0.1",
+                 address="127.0.0.1",
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  interchange_port_range=(55000, 56000),
@@ -133,7 +137,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.cores_per_worker = cores_per_worker
 
         self._task_counter = 0
-        self.public_ip = public_ip
+        self.address = address
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
@@ -141,6 +145,32 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         if not launch_cmd:
             self.launch_cmd = """process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
+
+    def initialize_scaling(self):
+        """ Compose the launch command and call the scale_out
+
+        This should be implemented in the child classes to take care of
+        executor specific oddities.
+        """
+        debug_opts = "--debug" if self.worker_debug else ""
+        l_cmd = self.launch_cmd.format(debug=debug_opts,
+                                       task_url=self.worker_task_url,
+                                       result_url=self.worker_result_url,
+                                       cores_per_worker=self.cores_per_worker,
+                                       nodes_per_block=self.provider.nodes_per_block,
+                                       logdir="{}/{}".format(self.run_dir, self.label))
+        self.launch_cmd = l_cmd
+        logger.debug("Launch command: {}".format(self.launch_cmd))
+
+        self._scaling_enabled = self.provider.scaling_enabled
+        logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        if hasattr(self.provider, 'init_blocks'):
+            try:
+                self.scale_out(blocks=self.provider.init_blocks)
+            except Exception as e:
+                logger.error("Scaling out failed: {}".format(e))
+                logger.error(e, exc_info=True)
+                raise e
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -160,35 +190,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
         if self.provider:
-            debug_opts = "--debug" if self.worker_debug else ""
-            l_cmd = self.launch_cmd.format(debug=debug_opts,
-                                           task_url=self.worker_task_url,
-                                           result_url=self.worker_result_url,
-                                           cores_per_worker=self.cores_per_worker,
-                                           # This is here only to support the exex mpiexec call
-                                           tasks_per_node=self.provider.tasks_per_node,
-                                           nodes_per_block=self.provider.nodes_per_block,
-                                           logdir="{}/{}".format(self.run_dir, self.label))
-            self.launch_cmd = l_cmd
-            logger.debug("Launch command: {}".format(self.launch_cmd))
-
-            self._scaling_enabled = self.provider.scaling_enabled
-            logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
-            if hasattr(self.provider, 'init_blocks'):
-                try:
-                    for i in range(self.provider.init_blocks):
-                        block = self.provider.submit(self.launch_cmd, 1)
-                        logger.debug("Launched block {}:{}".format(i, block))
-                        if not block:
-                            raise(ScalingFailed(self.provider.label,
-                                                "Attempts to provision nodes via provider has failed"))
-                        self.blocks.extend([block])
-
-                except Exception as e:
-                    logger.error("Scaling out failed: {}".format(e))
-                    logger.error(e, exc_info=True)
-                    raise e
-
+            self.initialize_scaling()
         else:
             self._scaling_enabled = False
             logger.debug("Starting HighThroughputExecutor with no provider")
@@ -283,7 +285,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
                         elif 'exception' in msg:
                             try:
-                                exception, _ = deserialize_object(msg['exception'])
+                                s, _ = deserialize_object(msg['exception'])
+                                exception = ValueError("Remote exception description: {}".format(s))
                                 task_fut.set_exception(exception)
                             except Exception as e:
                                 # TODO could be a proper wrapped exception?
@@ -327,8 +330,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
-        self.worker_task_url = "tcp://{}:{}".format(self.public_ip, worker_task_port)
-        self.worker_result_url = "tcp://{}:{}".format(self.public_ip, worker_result_port)
+        self.worker_task_url = "tcp://{}:{}".format(self.address, worker_task_port)
+        self.worker_result_url = "tcp://{}:{}".format(self.address, worker_result_port)
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
@@ -419,18 +422,23 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         return self._scaling_enabled
 
     def scale_out(self, blocks=1):
-        """Scales out the number of active workers by 1.
+        """Scales out the number of blocks by "blocks"
 
         Raises:
              NotImplementedError
         """
-        if self.provider:
-            r = self.provider.submit(self.launch_cmd, 1)
-            self.blocks.extend([r])
-        else:
-            logger.error("No execution provider available")
-            r = None
-
+        r = []
+        for i in range(blocks):
+            if self.provider:
+                block = self.provider.submit(self.launch_cmd, 1, 1)
+                logger.debug("Launched block {}:{}".format(i, block))
+                if not block:
+                    raise(ScalingFailed(self.provider.label,
+                                        "Attempts to provision nodes via provider has failed"))
+                self.blocks.extend([block])
+            else:
+                logger.error("No execution provider available")
+                r = None
         return r
 
     def scale_in(self, blocks):

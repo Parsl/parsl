@@ -29,6 +29,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='cori_ipp_multinode',
+            workers_per_node=2,
             provider=SlurmProvider(
                 'debug',
                 channel=SSHChannel(
@@ -37,7 +38,6 @@ config = Config(
                     script_dir=user_opts['cori']['script_dir']
                 ),
                 nodes_per_block=2,
-                tasks_per_node=2,
                 init_blocks=1,
                 max_blocks=1,
                 scheduler_options=user_opts['cori']['scheduler_options'],
