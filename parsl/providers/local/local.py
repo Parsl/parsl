@@ -52,12 +52,14 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  min_blocks=0,
                  max_blocks=10,
                  walltime="00:15:00",
+                 worker_init='',
                  parallelism=1):
         self.channel = channel
         self.label = 'local'
         self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
+        self.worker_init = worker_init
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
@@ -81,16 +83,30 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         logging.debug("Checking status of : {0}".format(job_ids))
         for job_id in self.resources:
-            poll_code = self.resources[job_id]['proc'].poll()
-            if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
-                continue
 
-            if poll_code is None:
-                self.resources[job_id]['status'] = 'RUNNING'
-            elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
-                self.resources[job_id]['status'] = 'COMPLETED'
-            elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
-                self.resources[job_id]['status'] = 'FAILED'
+            if self.resources[job_id]['proc']:
+
+                poll_code = self.resources[job_id]['proc'].poll()
+                if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
+                    continue
+
+                if poll_code is None:
+                    self.resources[job_id]['status'] = 'RUNNING'
+                elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
+                    self.resources[job_id]['status'] = 'COMPLETED'
+                elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
+                    self.resources[job_id]['status'] = 'FAILED'
+
+            elif self.resources[job_id]['remote_pid']:
+
+                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" ', 3)
+                for line in stdout.split('\n'):
+                    if line.startswith("STATUS:"):
+                        status = line.split("STATUS:")[1].strip()
+                        if status == "0":
+                            self.resources[job_id]['status'] = 'RUNNING'
+                        else:
+                            self.resources[job_id]['status'] = 'FAILED'
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
@@ -158,12 +174,35 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_command = self.launcher(command, tasks_per_node, self.nodes_per_block)
+        wrap_command = self.worker_init + '\n' + self.launcher(command, tasks_per_node, self.nodes_per_block)
 
         self._write_submit_script(wrap_command, script_path)
 
-        job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), 3)
-        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING', 'blocksize': blocksize, 'proc': proc}
+        proc = None
+        remote_pid = None
+        if not isinstance(self.channel, LocalChannel):
+            logger.debug("Not a localChannel, files need to be moved")
+            script_path = self.channel.push_file(script_path, self.channel.script_dir)
+            cmd = 'bash {0} & \necho "PID:$!" '.format(script_path)
+            retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
+            logger.debug("Stdout : {}".format(stdout))
+            logger.debug("Stderr : {}".format(stderr))
+            for line in stdout.split('\n'):
+                if line.startswith("PID:"):
+                    remote_pid = line.split("PID:")[1].strip()
+                    job_id = remote_pid
+        else:
+
+            try:
+                job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), 3)
+            except Exception as e:
+                logger.debug("Channel execute failed for:{}, {}".format(self.channel, e))
+                raise
+
+        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
+                                  'blocksize': blocksize,
+                                  'remote_pid': remote_pid,
+                                  'proc': proc}
 
         return job_id
 
