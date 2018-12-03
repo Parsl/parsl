@@ -5,8 +5,8 @@ from parsl.monitoring.web_app.plots.base_plot import BasePlot
 
 
 class TaskPerAppPlot(BasePlot):
-    def __init__(self, plot_id, setup_args, plot_args):
-        super().__init__(plot_id, setup_args, plot_args)
+    def __init__(self, plot_id, plot_args):
+        super().__init__(plot_id=plot_id, plot_args=plot_args)
 
     def setup(self, args):
         return []
@@ -23,9 +23,11 @@ class TaskPerAppPlot(BasePlot):
                 apps.append('')
             df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?) AND task_func_name IN {apps}'.format(apps=tuple(apps)),
                                         sql_conn, params=(run_id, ))
-        else:
+        elif apps is None:
             df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?)',
                                         sql_conn, params=(run_id, ))
+        else :
+            df_task = []
 
         close_db()
 

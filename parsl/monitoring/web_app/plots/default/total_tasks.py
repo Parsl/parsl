@@ -10,7 +10,7 @@ from parsl.monitoring.web_app.plots.base_plot import BasePlot
 
 class TotalTasksPlot(BasePlot):
     def __init__(self, plot_id, setup_args, plot_args):
-        super().__init__(plot_id, setup_args, plot_args)
+        super().__init__(plot_id=plot_id, setup_args=setup_args, plot_args=plot_args)
 
     def setup(self, run_id, columns=20):
         sql_conn = get_db()
@@ -25,6 +25,7 @@ class TotalTasksPlot(BasePlot):
         minutes = time_step // 60
         seconds = time_step % 60
 
+        print('setting up total tasks')
         return [html.P('Bin width'),
                 html.Label(htmlFor='bin_width_minutes', children='Minutes'),
                 dcc.Input(id='bin_width_minutes', type='number', min=0, value=minutes),
@@ -88,8 +89,8 @@ class TotalTasksPlot(BasePlot):
                                       name='failed')],
                          layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                                      autorange=True,
-                                                     title='Time. ' + ' Bin width: ' + num_to_timestamp(time_step).strftime('%Mm%Ss')),
+                                                     title='Time'),
                                           yaxis=dict(tickformat=',d',
-                                                     title='Tasks'),
+                                                     title='Running tasks.' ' Bin width: ' + num_to_timestamp(time_step).strftime('%Mm%Ss')),
                                           barmode='stack',
                                           title="Total tasks"))

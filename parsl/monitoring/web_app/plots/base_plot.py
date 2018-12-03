@@ -7,11 +7,11 @@ from parsl.monitoring.web_app.app import app
 
 
 class BasePlot(metaclass=ABCMeta):
-    def __init__(self, plot_id, setup_args, plot_args):
+    def __init__(self, plot_id, setup_args=None, plot_args=None):
         if not setup_args:
-            setup_args = ([Input('run_number_dropdown', 'value')], [])
+            setup_args = ([Input('tabs', 'value')], [])
         if not plot_args:
-            plot_args = ([Input('run_number_dropdown', 'value')], [])
+            plot_args = ([Input(plot_id + '_components', 'children')], [])
 
         self._plot_id = plot_id
 

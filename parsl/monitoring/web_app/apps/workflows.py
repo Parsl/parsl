@@ -13,8 +13,8 @@ def dataframe_to_html_table(id, dataframe):
             [html.Tr([
                 html.Td(html.A(children=dataframe.iloc[i]['workflow_name'], href='/workflows/' + dataframe['workflow_name'].iloc[i])),
                 html.Td(html.A(children=dataframe.iloc[i]['workflow_version'], href='/workflows/' + dataframe['workflow_name'].iloc[i])),
-                html.Td(html.A(children=num_to_timestamp(float(dataframe.iloc[i]['time_began'])).strftime(DB_DATE_FORMAT), href='/workflows/' + dataframe['workflow_name'].iloc[i])),
-                html.Td(html.A(children=num_to_timestamp(float(dataframe.iloc[i]['time_completed'])).strftime(DB_DATE_FORMAT), href='/workflows/' + dataframe['workflow_name'].iloc[i])),
+                html.Td(html.A(children=num_to_timestamp(float(dataframe.iloc[i]['time_began'])).strftime(DB_DATE_FORMAT) if dataframe.iloc[i]['time_began'] != 'None' else 'None', href='/workflows/' + dataframe['workflow_name'].iloc[i])),
+                html.Td(html.A(children=num_to_timestamp(float(dataframe.iloc[i]['time_completed'])).strftime(DB_DATE_FORMAT) if dataframe.iloc[i]['time_completed'] != 'None' else 'None', href='/workflows/' + dataframe['workflow_name'].iloc[i])),
                 html.Td(html.A(children=dataframe.iloc[i]['tasks_completed_count'], href='/workflows/' + dataframe['workflow_name'].iloc[i])),
                 html.Td(html.A(children=dataframe.iloc[i]['tasks_failed_count'], href='/workflows/' + dataframe['workflow_name'].iloc[i])),
                 html.Td(html.A(children=dataframe.iloc[i]['user'], href='/workflows/' + dataframe['workflow_name'].iloc[i])),
@@ -43,7 +43,10 @@ layout = html.Div(children=[
                                             ascending=[True])
                                         .drop_duplicates(
                                             subset=['workflow_name', 'workflow_version'],
-                                            keep='last'))
+                                            keep='last')
+                                        .sort_values(
+                                            by=['time_began'],
+                                            ascending=[False])),
 ])
 
 

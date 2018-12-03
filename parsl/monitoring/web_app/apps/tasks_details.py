@@ -81,7 +81,7 @@ def tasks_per_app_plot_callback(apps, run_id):
                                                  range=[min(df_status['timestamp']), max(df_status['timestamp'])],
                                                  title='Time'),
                                       yaxis=dict(tickformat=',d',
-                                                 title='Tasks'),
+                                                 title='Running tasks'),
                                       hovermode='closest',
                                       title="Tasks per app")
                      )
@@ -169,8 +169,8 @@ def total_tasks_plot_tasks(apps, minutes, seconds, run_id):
                                   name='failed')],
                      layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                                  autorange=True,
-                                                 title='Time. ' + ' Bin width: ' + num_to_timestamp(time_step).strftime('%Mm%Ss')),
+                                                 title='Time'),
                                       yaxis=dict(tickformat=',d',
-                                                 title='Tasks'),
+                                                 title='Tasks.' + ' Bin width: ' + num_to_timestamp(time_step).strftime('%Mm%Ss')),
                                       barmode='stack',
                                       title="Total tasks"))
