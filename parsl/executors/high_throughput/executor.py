@@ -169,6 +169,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
                 logger.error("Scaling out failed: {}".format(e))
+                logger.error(e, exc_info=True)
                 raise e
 
     def start(self):
