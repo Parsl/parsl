@@ -93,6 +93,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                          launcher=launcher)
 
         self.partition = partition
+        self.exclusive = exclusive
         if exclusive:
             self.scheduler_options = "#SBATCH --exclusive\n" + scheduler_options
         else:
