@@ -53,6 +53,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  max_blocks=10,
                  walltime="00:15:00",
                  worker_init='',
+                 cmd_timeout=30,
                  parallelism=1):
         self.channel = channel
         self.label = 'local'
@@ -66,6 +67,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.parallelism = parallelism
         self.walltime = walltime
         self.script_dir = None
+        self.cmd_timeout = cmd_timeout
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -99,7 +101,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
             elif self.resources[job_id]['remote_pid']:
 
-                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" ', 3)
+                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" ',
+                                                                    self.cmd_timeout)
                 for line in stdout.split('\n'):
                     if line.startswith("STATUS:"):
                         status = line.split("STATUS:")[1].strip()
@@ -178,23 +181,26 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         self._write_submit_script(wrap_command, script_path)
 
+        job_id = None
         proc = None
         remote_pid = None
         if not isinstance(self.channel, LocalChannel):
             logger.debug("Not a localChannel, files need to be moved")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
-            cmd = 'bash {0} & \necho "PID:$!" '.format(script_path)
-            retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
-            logger.debug("Stdout : {}".format(stdout))
-            logger.debug("Stderr : {}".format(stderr))
+
+            # Bash would return until the streams are closed. So we redirect to a outs file
+            cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
+            retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
             for line in stdout.split('\n'):
                 if line.startswith("PID:"):
                     remote_pid = line.split("PID:")[1].strip()
                     job_id = remote_pid
+            if job_id is None:
+                logger.warning("Channel failed to start remote command/retrieve PID")
         else:
 
             try:
-                job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), 3)
+                job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
             except Exception as e:
                 logger.debug("Channel execute failed for:{}, {}".format(self.channel, e))
                 raise
@@ -218,11 +224,18 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         for job in job_ids:
             logger.debug("Terminating job/proc_id : {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
-            proc = self.resources[job]['proc']
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            self.resources[job]['status'] = 'CANCELLED'
-        rets = [True for i in job_ids]
+            if self.resouces[job]['proc'] :
+                proc = self.resources[job]['proc']
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                self.resources[job]['status'] = 'CANCELLED'
+            elif self.resource[job]['remote_pid']:
+                cmd = "kill -- -$(ps -o pgid={} | grep -o '[0-9]*')".format(self.resource[job]['remote_pid'])
+                retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+                if retcode != 0:
+                    logger.warning("Failed to kill PID:{} and child processes on {}".format(self.resource[job]['remote_pid'],
+                                                                                            self.label))
 
+        rets = [True for i in job_ids]
         return rets
 
     @property
