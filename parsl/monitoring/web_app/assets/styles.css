@@ -46,3 +46,13 @@ td a {
     text-decoration: none;
     text-overflow: ellipsis;
 }
+
+#run_number_dropdown {
+    top: 10%;
+}
+
+#select_version {
+    display: inline-block;
+    height: 30px;
+    margin: 10px;
+}

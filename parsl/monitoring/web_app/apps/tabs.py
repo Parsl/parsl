@@ -14,6 +14,7 @@ def display_workflow(workflow_name):
     close_db()
     return html.Div(children=[
         html.H2(id='workflow_name', children=df_workflows['workflow_name'][0]),
+        html.H3(id='select_version', children='Select version:'),
         dropdown(id='run_number_dropdown', dataframe=df_workflows.sort_values(by='time_began', ascending=False), field='rundir'),
         dcc.Tabs(id="tabs", value='workflow', children=[
             dcc.Tab(label='Workflow', value='workflow'),
