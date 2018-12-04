@@ -1,6 +1,5 @@
 from parsl.providers import LocalProvider
 from parsl.channels import SSHChannel
-from parsl.launchers import SingleNodeLauncher
 from parsl.executors import HighThroughputExecutor
 
 from parsl.config import Config

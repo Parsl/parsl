@@ -224,7 +224,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         for job in job_ids:
             logger.debug("Terminating job/proc_id : {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
-            if self.resources[job]['proc'] :
+            if self.resources[job]['proc']:
                 proc = self.resources[job]['proc']
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
                 self.resources[job]['status'] = 'CANCELLED'

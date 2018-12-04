@@ -1,6 +1,5 @@
 from parsl.providers import LocalProvider
 from parsl.channels import SSHChannel
-from parsl.launchers import SingleNodeLauncher
 from parsl.executors.ipp_controller import Controller
 from parsl.executors.ipp import IPyParallelExecutor
 
