@@ -10,7 +10,7 @@ remotes = ['midway2-login1.rcc.uchicago.edu', 'midway2-login2.rcc.uchicago.edu']
 config = Config(
     executors=[
         HighThroughputExecutor(
-            label='remote_ipp_{}'.format(m),
+            label='remote_htex_{}'.format(m),
             cores_per_worker=4,
             worker_debug=False,
             address="128.135.112.73",
