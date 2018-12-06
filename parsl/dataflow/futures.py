@@ -80,7 +80,7 @@ class AppFuture(Future):
         self._stdout = stdout
         self._stderr = stderr
 
-    def parent_callback(self, executor_fu):
+    def set_result_from_parent(self, executor_fu):
         """Callback from a parent future to update the AppFuture.
 
         Used internally by AppFuture, and should not be called by code using AppFuture.
@@ -150,7 +150,7 @@ class AppFuture(Future):
         self.parent = fut
 
         try:
-            fut.add_done_callback(self.parent_callback)
+            fut.add_done_callback(self.set_result_from_parent)
         except Exception as e:
             logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
