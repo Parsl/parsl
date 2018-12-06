@@ -253,6 +253,8 @@ class DataFlowKernel(object):
              that does not require additional memo updates.
         """
 
+        self.tasks[task_id]['app_fu'].set_result_from_parent(future)
+
         try:
             res = future.result()
             if isinstance(res, RemoteExceptionWrapper):
@@ -413,6 +415,8 @@ class DataFlowKernel(object):
                     fu.retries_left = 0
                     self.tasks[task_id]['exec_fu'] = fu
                     self.tasks[task_id]['app_fu'].update_parent(fu)
+                    ### fu.add_done_callback(partial(self.handle_exec_update, task_id))
+#XXX
                     fu.set_exception(DependencyError(exceptions,
                                                      task_id,
                                                      None))
