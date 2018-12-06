@@ -76,7 +76,6 @@ class AppFuture(Future):
         """
         self._tid = tid
         super().__init__()
-        self.prev_parent = None
         self.parent = None
         self._update_lock = threading.Lock()
         self._outputs = []
