@@ -45,6 +45,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Label for this executor instance.
     controller : :class:`~parsl.executors.ipp_controller.Controller`
         Which Controller instance to use. Default is `Controller()`.
+    workers_per_node : int
+        Number of workers to be launched per node. Default=1
     container_image : str
         Launch tasks in a container using this docker image. If set to None, no container is used.
         Default is None.
@@ -75,10 +77,11 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                  working_dir: Optional[str] =None,
                  controller: Controller =Controller(),
                  container_image: Optional[str] =None,
-                 engine_dir: str='.',
+                 engine_dir: str =None,
                  storage_access: List[Any] =None,
                  engine_debug_level: str =None,
-                 managed: bool =True) -> None:
+                 workers_per_node: int=1,
+                 managed: bool=True) -> None:
         self.provider = provider
         self.label = label
         self.working_dir = working_dir
@@ -86,6 +89,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.engine_debug_level = engine_debug_level
         self.container_image = container_image
         self.engine_dir = engine_dir
+        self.workers_per_node = workers_per_node
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
             raise ConfigurationError('Multiple storage access schemes are not yet supported')
@@ -126,14 +130,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
             logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
             if hasattr(self.provider, 'init_blocks'):
                 try:
-                    for i in range(self.provider.init_blocks):
-                        engine = self.provider.submit(self.launch_cmd, 1)
-                        logger.debug("Launched block: {0}:{1}".format(i, engine))
-                        if not engine:
-                            raise(ScalingFailed(self.provider.label,
-                                                "Attempt to provision nodes via provider has failed"))
-                        self.engines.extend([engine])
-
+                    self.scale_out(blocks=self.provider.init_blocks)
                 except Exception as e:
                     logger.error("Scaling out failed: %s" % e)
                     raise e
@@ -240,18 +237,34 @@ sleep infinity
         """
         return self.lb_view.apply_async(*args, **kwargs)
 
-    def scale_out(self, *args, **kwargs) -> None:
-        """Scales out the number of active workers by 1
+    def scale_out(self, blocks: int=1) -> None:
+        """Scales out the number of active workers by 1.
 
+        Parameters:
+            blocks : int
+               Number of blocks to be provisioned.
+
+        Returns either None or a list. What's the difference between
+        an empty list and a None?
+
+        This doesn't match the return type of ParslExecutor, which is 
+        None, and the return value doesn't seem used anywhere from this
+        scale_out?
         """
-        if self.provider:
-            r = self.provider.submit(self.launch_cmd, *args, **kwargs)
-            self.engines.extend([r])
+        r = [] # type: List[Any]
+        for i in range(blocks):
+            if self.provider:
+                block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
+                logger.debug("Launched block {}:{}".format(i, block))
+                if not block:
+                    raise(ScalingFailed(self.provider.label,
+                                        "Attempts to provision nodes via provider has failed"))
+                self.engines.extend([block])
+                r.extend([block])
         else:
             logger.error("No execution provider available")
-            r = None
 
-        return r
+        return None
 
     def scale_in(self, blocks: int) -> None:
         """Scale in the number of active blocks by the specified number.

@@ -49,6 +49,7 @@ __all__ = [
 clear = DataFlowKernelLoader.clear
 load = DataFlowKernelLoader.load
 dfk = DataFlowKernelLoader.dfk
+wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):

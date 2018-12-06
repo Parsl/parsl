@@ -30,6 +30,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='swan_ipp',
+            workers_per_node=2,
             provider=TorqueProvider(
                 channel=SSHChannel(
                     hostname='swan.cray.com',
@@ -37,11 +38,11 @@ config = Config(
                     script_dir=user_opts['swan']['script_dir'],
                 ),
                 nodes_per_block=2,
-                tasks_per_node=2,
                 init_blocks=1,
                 max_blocks=1,
                 launcher=AprunLauncher(),
-                overrides=user_opts['swan']['overrides']
+                scheduler_options=user_opts['swan']['scheduler_options'],
+                worker_init=user_opts['swan']['worker_init'],
             ),
             controller=Controller(public_ip=user_opts['public_ip']),
         )

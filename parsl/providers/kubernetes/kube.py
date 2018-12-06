@@ -28,8 +28,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    tasks_per_node : int
-        Tasks to run per node.
     nodes_per_block : int
         Nodes to provision per block.
     init_blocks : int
@@ -42,6 +40,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
+    worker_init : str
+        Command to be run first for the workers, such as `python start.py`.
     secret : str
         Docker secret to use to pull images
     user_id : str
@@ -56,13 +56,12 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  image,
                  namespace='default',
                  channel=None,
-                 tasks_per_node=1,
                  nodes_per_block=1,
                  init_blocks=4,
                  min_blocks=0,
                  max_blocks=10,
                  parallelism=1,
-                 overrides="",
+                 worker_init="",
                  user_id=None,
                  group_id=None,
                  run_as_non_root=False,
@@ -75,13 +74,12 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.namespace = namespace
         self.image = image
         self.channel = channel
-        self.tasks_per_node = tasks_per_node
         self.nodes_per_block = nodes_per_block
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
         self.parallelism = parallelism
-        self.overrides = overrides
+        self.worker_init = worker_init
         self.secret = secret
         self.user_id = user_id
         self.group_id = group_id
@@ -92,11 +90,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl.auto"):
         """ Submit a job
         Args:
              - cmd_string  :(String) - Name of the container to initiate
              - blocksize   :(float) - Number of replicas
+             - tasks_per_node (int) : command invocations to be launched per node
+
         Kwargs:
              - job_name (String): Name for job, must be unique
         Returns:
@@ -110,7 +110,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                              str(time.time()).split('.')[0])
 
             formatted_cmd = template_string.format(command=cmd_string,
-                                                   overrides=self.overrides)
+                                                   worker_init=self.worker_init)
 
             print("Creating replicas :", self.init_blocks)
             self.deployment_obj = self._create_deployment_object(job_name,

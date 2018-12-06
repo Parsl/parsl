@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import sys
+import platform
 # import random
 import threading
 import pickle
@@ -11,9 +12,11 @@ import time
 import queue
 import uuid
 import zmq
+import json
 
 from mpi4py import MPI
 
+from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
 
@@ -21,6 +24,8 @@ RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
 LOOP_SLOWDOWN = 0.0  # in seconds
+
+HEARTBEAT_CODE = (2 ** 32) - 1
 
 
 class Manager(object):
@@ -44,24 +49,25 @@ class Manager(object):
         worker_url : str
              Worker url on which workers will attempt to connect back
         """
-        logger.info("Manager started v0.5")
         self.uid = uid
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
-        self.task_incoming.setsockopt(zmq.IDENTITY, b'00100')
+        self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.task_incoming.connect(task_q_url)
 
         self.result_outgoing = self.context.socket(zmq.DEALER)
-        self.result_outgoing.setsockopt(zmq.IDENTITY, b'00100')
+        self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.connect(result_q_url)
 
         logger.info("Manager connected")
-        if max_queue_size == 0:
-            max_queue_size = comm.size
-        self.pending_task_queue = queue.Queue(maxsize=max_queue_size)
+        self.max_queue_size = max_queue_size + comm.size
+
+        # Creating larger queues to avoid queues blocking
+        # These can be updated after queue limits are better understood
+        self.pending_task_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
         self.pending_result_queue = queue.Queue(maxsize=10 ^ 4)
-        self.ready_worker_queue = queue.Queue(maxsize=max_queue_size + 10)
+        self.ready_worker_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
 
         self.tasks_per_round = 1
 
@@ -69,10 +75,24 @@ class Manager(object):
         self.comm = comm
         self.rank = rank
 
+    def create_reg_message(self):
+        """ Creates a registration message to identify the worker to the interchange
+        """
+        msg = {'parsl_v': PARSL_VERSION,
+               'python_v': "{}.{}.{}".format(sys.version_info.major,
+                                             sys.version_info.minor,
+                                             sys.version_info.micro),
+               'os': platform.system(),
+               'hname': platform.node(),
+               'dir': os.getcwd(),
+        }
+        b_msg = json.dumps(msg).encode('utf-8')
+        return b_msg
+
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
         """
-        heartbeat = (0).to_bytes(4, "little")
+        heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
         logger.debug("Return from heartbeat : {}".format(r))
 
@@ -113,29 +133,34 @@ class Manager(object):
         logger.info("[TASK PULL THREAD] starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
-        self.heartbeat()
+
+        # Send a registration message
+        msg = self.create_reg_message()
+        logger.debug("Sending registration message: {}".format(msg))
+        self.task_incoming.send(msg)
         last_beat = time.time()
         task_recv_counter = 0
+
+        poll_timer = 1
 
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
             ready_worker_count = self.ready_worker_queue.qsize()
-            logger.debug("[TASK_PULL_THREAD] ready worker queue size: {}".format(ready_worker_count))
+            pending_task_count = self.pending_task_queue.qsize()
+
+            logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
+                                                                                        pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat()
                 last_beat = time.time()
 
-            if ready_worker_count > 0:
-
-                ready_worker_count = 4
+            if pending_task_count < self.max_queue_size and ready_worker_count > 0:
                 logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
-            # start = time.time()
-            socks = dict(poller.poll(1))
-            # delta = time.time() - start
+            socks = dict(poller.poll(timeout=poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
                 _, pkl_msg = self.task_incoming.recv_multipart()
@@ -145,14 +170,17 @@ class Manager(object):
                     kill_event.set()
                     break
                 else:
-                    logger.debug("[TASK_PULL_THREAD] Got tasks: {}".format(len(tasks)))
                     task_recv_counter += len(tasks)
+                    logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
+                                                                                 task_recv_counter))
+
                     for task in tasks:
                         self.pending_task_queue.put(task)
-                        # logger.debug("[TASK_PULL_THREAD] Ready tasks : {}".format(
-                        #    [i['task_id'] for i in self.pending_task_queue]))
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
+                # Limit poll duration to heartbeat_period
+                # heartbeat_period is in s vs poll_timer in ms
+                poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
 
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
@@ -172,9 +200,12 @@ class Manager(object):
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
             try:
-                result = self.pending_result_queue.get(block=True, timeout=timeout)
-                self.result_outgoing.send(result)
-                logger.debug("[RESULT_PUSH_THREAD] Sent result:{}".format(result))
+                items = []
+                while not self.pending_result_queue.empty():
+                    r = self.pending_result_queue.get(block=True)
+                    items.append(r)
+                if items:
+                    self.result_outgoing.send_multipart(items)
 
             except queue.Empty:
                 logger.debug("[RESULT_PUSH_THREAD] No results to send in past {}seconds".format(timeout))

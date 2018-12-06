@@ -3,15 +3,20 @@ import argparse
 import zmq
 # import uuid
 import os
+import sys
+import platform
 import time
 import pickle
 import logging
 import queue
 import threading
+import json
 
+from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
 LOOP_SLOWDOWN = 0.0  # in seconds
+HEARTBEAT_CODE = (2 ** 32) - 1
 
 
 class ShutdownRequest(Exception):
@@ -54,7 +59,7 @@ class Interchange(object):
                  client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
-                 heartbeat_period=60,
+                 heartbeat_threshold=60,
                  logdir=".",
                  logging_level=logging.INFO,
              ):
@@ -77,8 +82,8 @@ class Interchange(object):
              The interchange picks ports at random from the range which will be used by workers.
              This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
 
-        heartbeat_period : int
-             Heartbeat period expected from workers (seconds). Default: 10s
+        heartbeat_threshold : int
+             Number of seconds since the last heartbeat after which worker is considered lost.
 
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
@@ -103,9 +108,11 @@ class Interchange(object):
             client_address, client_ports[0], client_ports[1], client_ports[2]))
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
+        self.task_incoming.set_hwm(0)
         self.task_incoming.RCVTIMEO = 10  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
+        self.results_outgoing.set_hwm(0)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
 
         self.command_channel = self.context.socket(zmq.REP)
@@ -119,7 +126,9 @@ class Interchange(object):
         self.worker_port_range = worker_port_range
 
         self.task_outgoing = self.context.socket(zmq.ROUTER)
+        self.task_outgoing.set_hwm(0)
         self.results_incoming = self.context.socket(zmq.ROUTER)
+        self.results_incoming.set_hwm(0)
 
         if self.worker_ports:
             self.worker_task_port = self.worker_ports[0]
@@ -143,7 +152,15 @@ class Interchange(object):
         self._ready_manager_queue = {}
         self.max_task_queue_size = 10 ^ 5
 
-        self.heartbeat_thresh = heartbeat_period * 2
+        self.heartbeat_threshold = heartbeat_threshold
+
+        self.current_platform = {'parsl_v': PARSL_VERSION,
+                                 'python_v': "{}.{}.{}".format(sys.version_info.major,
+                                                               sys.version_info.minor,
+                                                               sys.version_info.micro),
+                                 'os': platform.system(),
+                                 'hname': platform.node(),
+                                 'dir': os.getcwd()}
 
     def get_tasks(self, count):
         """ Obtains a batch of tasks from the internal pending_task_queue
@@ -188,6 +205,7 @@ class Interchange(object):
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
+                logger.debug("[TASK_PULL_THREAD] {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
             if msg == 'STOP':
@@ -211,11 +229,30 @@ class Interchange(object):
                     for manager in self._ready_manager_queue:
                         outstanding += len(self._ready_manager_queue[manager]['tasks'])
                     reply = outstanding
+
                 elif command_req == "MANAGERS":
-                    reply = list(self._ready_manager_queue.keys())
+                    reply = []
+                    for manager in self._ready_manager_queue:
+                        resp = (manager.decode('utf-8'),
+                                len(self._ready_manager_queue[manager]['tasks']),
+                                self._ready_manager_queue[manager]['active'])
+                        reply.append(resp)
+
+                elif command_req.startswith("HOLD_WORKER"):
+                    cmd, s_manager = command_req.split(';')
+                    manager = s_manager.encode('utf-8')
+                    logger.info("[CMD] Received HOLD_WORKER for {}".format(manager))
+                    if manager in self._ready_manager_queue:
+                        self._ready_manager_queue[manager]['active'] = False
+                        reply = True
+                    else:
+                        reply = False
+
                 elif command_req == "SHUTDOWN":
+                    logger.info("[CMD] Received SHUTDOWN command")
                     kill_event.set()
                     reply = True
+
                 else:
                     reply = None
 
@@ -263,26 +300,42 @@ class Interchange(object):
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
                 message = self.task_outgoing.recv_multipart()
                 manager = message[0]
-                tasks_requested = int.from_bytes(message[1], "little")
 
-                logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                 if manager not in self._ready_manager_queue:
+                    msg = json.loads(message[1].decode('utf-8'))
                     logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                     self._ready_manager_queue[manager] = {'last': time.time(),
-                                                          # [TODO] Add support for tracking walltimes
-                                                          # 'wtime': 60,
-                                                          'free_capacity': tasks_requested,
+                                                          'free_capacity': 0,
+                                                          'active': True,
                                                           'tasks': []}
+                    self._ready_manager_queue[manager].update(msg)
+                    logger.info("Registration info for manager {}: {}".format(manager, msg))
+                    if (msg['python_v'] != self.current_platform['python_v'] or
+                        msg['parsl_v'] != self.current_platform['parsl_v']):
+                        logger.warn("Manager {} has incompatible version info with the interchange".format(manager))
+                        logger.debug("Setting kill event")
+                        self._kill_event.set()
+                        e = ManagerLost(manager)
+                        result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                        pkl_package = pickle.dumps(result_package)
+                        self.results_outgoing.send(pkl_package)
+                        logger.warning("[MAIN] Sent failure reports, unregistering manager")
+
                 else:
+                    tasks_requested = int.from_bytes(message[1], "little")
+                    logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
-                    self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
+                    if tasks_requested == HEARTBEAT_CODE:
+                        logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
+                    else:
+                        self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
             for manager in self._ready_manager_queue:
-                if self._ready_manager_queue[manager]['free_capacity']:
+                if (self._ready_manager_queue[manager]['free_capacity'] and
+                    self._ready_manager_queue[manager]['active']):
                     tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                     if tasks:
-                        # self.task_outgoing.send_multipart([message[0], b'', pickle.dumps(tasks)])
                         self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
                         count += task_count
@@ -308,7 +361,7 @@ class Interchange(object):
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
 
             bad_managers = [manager for manager in self._ready_manager_queue if
-                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_thresh]
+                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
             for manager in bad_managers:
                 logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last'], time.time()))
                 logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
@@ -321,7 +374,8 @@ class Interchange(object):
                 self._ready_manager_queue.pop(manager, 'None')
 
         delta = time.time() - start
-        logger("Received {} tasks in {} seconds".format(count, delta))
+        logger.info("Processed {} tasks in {} seconds".format(count, delta))
+        logger.warning("Exiting")
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
