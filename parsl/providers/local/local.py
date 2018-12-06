@@ -56,7 +56,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  cmd_timeout=30,
                  parallelism=1):
         self.channel = channel
-        self.label = 'local'
+        self._label = 'local'
         self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
@@ -246,6 +246,10 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     @property
     def current_capacity(self):
         return len(self.resources)
+
+    @property
+    def label(self):
+        return self._label
 
 
 if __name__ == "__main__":
