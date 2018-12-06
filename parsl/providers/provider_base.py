@@ -45,11 +45,6 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         pass
 
-    # a better way to do this is probably require label to be set in
-    # the superclass constructor, so that we know it really is being
-    # set
-    label = "NO_LABEL_SUPPLIED" # type: str
-
     @abstractmethod
     def status(self, job_ids):
         ''' Get the status of a list of jobs identified by the job identifiers
