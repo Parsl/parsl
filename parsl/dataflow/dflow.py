@@ -445,13 +445,9 @@ class DataFlowKernel(object):
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
             try:
-                self.handle_exec_update(task_id, memo_fu)
+                memo_fu.add_done_callback(partial(self.handle_exec_update, task_id))
             except Exception as e:
-                logger.error("handle_exec_update raised an exception {} which will be ignored".format(e))
-            try:
-                self.handle_app_update(task_id, memo_fu, memo_cbk=True)
-            except Exception as e:
-                logger.error("handle_app_update raised an exception {} which will be ignored".format(e))
+                logger.error("add_done_callback got an exception {} which will be ignored".format(e))
             return memo_fu
 
         executor_label = self.tasks[task_id]["executor"]
