@@ -107,7 +107,6 @@ class AppFuture(Future):
 
         Updates the super() with the result() or exception()
         """
-        # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
         with self._update_lock:
 
             if not executor_fu.done():
@@ -155,7 +154,6 @@ class AppFuture(Future):
         This handles the case where the user has called result on the AppFuture
         before the parent exists.
         """
-        # with self._parent_update_lock:
         self.parent = fut
 
         try:
