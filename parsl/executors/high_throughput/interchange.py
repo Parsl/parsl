@@ -17,6 +17,7 @@ from ipyparallel.serialize import serialize_object
 
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
+PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 
 
 class ShutdownRequest(Exception):
@@ -60,6 +61,7 @@ class Interchange(object):
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  heartbeat_threshold=60,
+                 heartbeat_period=30,
                  logdir=".",
                  logging_level=logging.INFO,
              ):
@@ -81,6 +83,9 @@ class Interchange(object):
         worker_port_range : tuple(int, int)
              The interchange picks ports at random from the range which will be used by workers.
              This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
+
+        heartbeat_period : int
+             Not used.
 
         heartbeat_threshold : int
              Number of seconds since the last heartbeat after which worker is considered lost.
@@ -327,6 +332,7 @@ class Interchange(object):
                     self._ready_manager_queue[manager]['last'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
                         logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
+                        self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
@@ -434,8 +440,29 @@ if __name__ == '__main__':
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-r", "--result_url",
                         help="REQUIRED: ZMQ url for posting results")
+    parser.add_argument("--worker_ports", default=None,
+                        help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
 
     args = parser.parse_args()
 
-    ic = Interchange()
+    # Setup logging
+    global logger
+    format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+
+    logger = logging.getLogger("interchange")
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setLevel('DEBUG' if args.debug is True else 'INFO')
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    logger.debug("Starting Interchange")
+
+    optionals = {}
+    if args.worker_ports:
+        optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
+    ic = Interchange(**optionals)
     ic.start()
