@@ -79,7 +79,6 @@ class AppFuture(Future):
         self.prev_parent = None
         self.parent = None
         self._update_lock = threading.Lock()
-        self._parent_update_event = threading.Event()
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
@@ -160,8 +159,6 @@ class AppFuture(Future):
             fut.add_done_callback(self.parent_callback)
         except Exception as e:
             logger.error("add_done_callback got an exception {} which will be ignored".format(e))
-
-        self._parent_update_event.set()
 
     def cancel(self):
         if self.parent:
