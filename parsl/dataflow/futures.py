@@ -149,11 +149,6 @@ class AppFuture(Future):
         """
         self.parent = fut
 
-        try:
-            fut.add_done_callback(self.set_result_from_parent)
-        except Exception as e:
-            logger.error("add_done_callback got an exception {} which will be ignored".format(e))
-
     def cancel(self):
         if self.parent:
             return self.parent.cancel
