@@ -367,6 +367,12 @@ class DataFlowKernel(object):
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
                 if exec_fu:
+
+                    try:
+                        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                    except Exception as e:
+                        logger.error("add_done_callback got an exception {} which will be ignored".format(e))
+
                     self.tasks[task_id]['exec_fu'] = exec_fu
                     try:
                         self.tasks[task_id]['app_fu'].update_parent(exec_fu)
@@ -424,10 +430,6 @@ class DataFlowKernel(object):
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
-            try:
-                memo_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-            except Exception as e:
-                logger.error("add_done_callback got an exception {} which will be ignored".format(e))
             return memo_fu
 
         executor_label = self.tasks[task_id]["executor"]
@@ -452,10 +454,6 @@ class DataFlowKernel(object):
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
-        try:
-            exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-        except Exception as e:
-            logger.error("add_done_callback got an exception {} which will be ignored".format(e))
         return exec_fu
 
     def _add_input_deps(self, executor, args, kwargs):
