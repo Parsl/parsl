@@ -387,12 +387,6 @@ class DataFlowKernel(object):
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
                 if exec_fu:
-
-                    try:
-                        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-                    except Exception as e:
-                        logger.error("add_done_callback got an exception {} which will be ignored".format(e))
-
                     self.tasks[task_id]['exec_fu'] = exec_fu
                     try:
                         self.tasks[task_id]['app_fu'].update_parent(exec_fu)
@@ -401,6 +395,10 @@ class DataFlowKernel(object):
                         logger.error(
                             "Task {}: Caught AttributeError at update_parent".format(task_id))
                         raise e
+                    try:
+                        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                    except Exception as e:
+                        logger.error("add_done_callback got an exception {} which will be ignored".format(e))
             else:
                 logger.info(
                     "Task {} deferred due to dependency failure".format(task_id))
