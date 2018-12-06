@@ -101,16 +101,10 @@ class AppFuture(Future):
         self.parent = fut
 
     def cancel(self):
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise ValueError("Cancel not implemented")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        return False
 
     def running(self):
         if self.parent:
