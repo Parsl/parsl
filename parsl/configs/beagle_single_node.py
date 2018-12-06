@@ -33,8 +33,9 @@ config = Config(
                 tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                launcher=AprunLauncher,
-                overrides='OVERRIDES',     # Please replace OVERRIDES with your overrides
+                launcher=AprunLauncher(),
+                scheduler_options='',     # Input your scheduler_options if needed
+                worker_init='',     # Input your worker_init if needed
             )
         )
 

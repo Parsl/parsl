@@ -10,7 +10,7 @@ from concurrent.futures import Future
 import logging
 import threading
 
-from parsl.app.errors import RemoteException
+from parsl.app.errors import RemoteExceptionWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +54,8 @@ class AppFuture(Future):
     retries left, or if it has no retry field. .result(), .exception() and done callbacks
     should give a result as expected when a Future has a result set
 
-    The parent future may return a RemoteException as a result (rather than raising it
-    as an exception) and AppFuture will treat this an an exception for the above
+    The parent future may return a RemoteExceptionWrapper as a result
+    and AppFuture will treat this an an exception for the above
     retry and result handling behaviour.
 
     """
@@ -116,7 +116,7 @@ class AppFuture(Future):
 
             # this is for consistency checking
             if executor_fu != self.parent:
-                if executor_fu.exception() is None and not isinstance(executor_fu.result(), RemoteException):
+                if executor_fu.exception() is None and not isinstance(executor_fu.result(), RemoteExceptionWrapper):
                     # ... then we completed with a value, not an exception or wrapped exception,
                     # but we've got an updated executor future.
                     # This is bad - for example, we've started a retry even though we have a result
@@ -125,7 +125,7 @@ class AppFuture(Future):
 
             try:
                 res = executor_fu.result()
-                if isinstance(res, RemoteException):
+                if isinstance(res, RemoteExceptionWrapper):
                     res.reraise()
                 super().set_result(executor_fu.result())
 

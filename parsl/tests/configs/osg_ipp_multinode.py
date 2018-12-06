@@ -23,11 +23,10 @@ config = Config(
                     script_dir=user_opts['osg']['script_dir']
                 ),
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=4,
                 max_blocks=4,
-                overrides='Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
-                worker_setup=user_opts['osg']['worker_setup'],
+                scheduler_options='Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
+                worker_init=user_opts['osg']['worker_init'],
                 walltime="01:00:00"
             ),
             controller=Controller(public_ip=user_opts['public_ip'])

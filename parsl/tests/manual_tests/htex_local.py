@@ -16,10 +16,10 @@ config = Config(
                 channel=LocalChannel(),
                 init_blocks=1,
                 max_blocks=1,
-                tasks_per_node=1,  # For HighThroughputExecutor, this option should in most cases be 1
+                # tasks_per_node=1,  # For HighThroughputExecutor, this option should in most cases be 1
                 launcher=SingleNodeLauncher(),
             ),
         )
     ],
-    # strategy=None,
+    strategy=None,
 )

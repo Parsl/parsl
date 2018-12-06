@@ -46,26 +46,28 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
     def __init__(self,
                  channel=LocalChannel(),
-                 tasks_per_node=1,
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
                  init_blocks=4,
                  min_blocks=0,
                  max_blocks=10,
                  walltime="00:15:00",
+                 worker_init='',
+                 cmd_timeout=30,
                  parallelism=1):
         self.channel = channel
         self.label = 'local'
         self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
-        self.tasks_per_node = tasks_per_node
         self.launcher = launcher
+        self.worker_init = worker_init
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
         self.parallelism = parallelism
         self.walltime = walltime
         self.script_dir = None
+        self.cmd_timeout = cmd_timeout
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -83,16 +85,31 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         logging.debug("Checking status of : {0}".format(job_ids))
         for job_id in self.resources:
-            poll_code = self.resources[job_id]['proc'].poll()
-            if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
-                continue
 
-            if poll_code is None:
-                self.resources[job_id]['status'] = 'RUNNING'
-            elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
-                self.resources[job_id]['status'] = 'COMPLETED'
-            elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
-                self.resources[job_id]['status'] = 'FAILED'
+            if self.resources[job_id]['proc']:
+
+                poll_code = self.resources[job_id]['proc'].poll()
+                if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
+                    continue
+
+                if poll_code is None:
+                    self.resources[job_id]['status'] = 'RUNNING'
+                elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
+                    self.resources[job_id]['status'] = 'COMPLETED'
+                elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
+                    self.resources[job_id]['status'] = 'FAILED'
+
+            elif self.resources[job_id]['remote_pid']:
+
+                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" ',
+                                                                    self.cmd_timeout)
+                for line in stdout.split('\n'):
+                    if line.startswith("STATUS:"):
+                        status = line.split("STATUS:")[1].strip()
+                        if status == "0":
+                            self.resources[job_id]['status'] = 'RUNNING'
+                        else:
+                            self.resources[job_id]['status'] = 'FAILED'
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
@@ -127,7 +144,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return True
 
-    def submit(self, command, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -143,6 +160,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Args:
              - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float) - Not really used for local
+             - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
              - job_name (String): Name for job, must be unique
@@ -159,12 +177,38 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_command = self.launcher(command, self.tasks_per_node, self.nodes_per_block)
+        wrap_command = self.worker_init + '\n' + self.launcher(command, tasks_per_node, self.nodes_per_block)
 
         self._write_submit_script(wrap_command, script_path)
 
-        job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), 3)
-        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING', 'blocksize': blocksize, 'proc': proc}
+        job_id = None
+        proc = None
+        remote_pid = None
+        if not isinstance(self.channel, LocalChannel):
+            logger.debug("Not a localChannel, files need to be moved")
+            script_path = self.channel.push_file(script_path, self.channel.script_dir)
+
+            # Bash would return until the streams are closed. So we redirect to a outs file
+            cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
+            retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+            for line in stdout.split('\n'):
+                if line.startswith("PID:"):
+                    remote_pid = line.split("PID:")[1].strip()
+                    job_id = remote_pid
+            if job_id is None:
+                logger.warning("Channel failed to start remote command/retrieve PID")
+        else:
+
+            try:
+                job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
+            except Exception as e:
+                logger.debug("Channel execute failed for:{}, {}".format(self.channel, e))
+                raise
+
+        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
+                                  'blocksize': blocksize,
+                                  'remote_pid': remote_pid,
+                                  'proc': proc}
 
         return job_id
 
@@ -177,15 +221,22 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Returns :
         [True/False...] : If the cancel operation fails the entire list will be False.
         '''
-
         for job in job_ids:
             logger.debug("Terminating job/proc_id : {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
-            proc = self.resources[job]['proc']
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            self.resources[job]['status'] = 'CANCELLED'
-        rets = [True for i in job_ids]
+            if self.resources[job]['proc']:
+                proc = self.resources[job]['proc']
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                self.resources[job]['status'] = 'CANCELLED'
 
+            elif self.resources[job]['remote_pid']:
+                cmd = "kill -- -$(ps -o pgid={} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
+                retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+                if retcode != 0:
+                    logger.warning("Failed to kill PID:{} and child processes on {}".format(self.resources[job]['remote_pid'],
+                                                                                            self.label))
+
+        rets = [True for i in job_ids]
         return rets
 
     @property

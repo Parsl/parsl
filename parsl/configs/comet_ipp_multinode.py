@@ -22,7 +22,8 @@ config = Config(
                     script_dir='/home/USERNAME/parsl_scripts',    # Please replace USERNAME with your username
                 ),
                 launcher=SrunLauncher(),
-                overrides='OVERRIDES',     # Please replace OVERRIDES with your overrides
+                scheduler_options='',     # Input your scheduler_options if needed
+                worker_init='',     # Input your worker_init if needed
                 walltime="00:10:00",
                 init_blocks=1,
                 max_blocks=1,

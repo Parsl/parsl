@@ -42,8 +42,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         Torque queue to request blocks from.
     nodes_per_block : int
         Nodes to provision per block.
-    tasks_per_node : int
-        Tasks to run per node.
     init_blocks : int
         Number of blocks to provision at the start of the run. Default is 1.
     min_blocks : int
@@ -56,8 +54,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     walltime : str
         Walltime requested per block in HH:MM:SS.
-    overrides : str
-        String to prepend to the Torque submit script.
+    scheduler_options : str
+        String to prepend to the #PBS blocks in the submit script to the scheduler.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.AprunLauncher` (the default), or
@@ -68,9 +68,9 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  channel=LocalChannel(),
                  account=None,
                  queue=None,
-                 overrides='',
+                 scheduler_options='',
+                 worker_init='',
                  nodes_per_block=1,
-                 tasks_per_node=1,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=100,
@@ -81,7 +81,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         super().__init__(label,
                          channel,
                          nodes_per_block,
-                         tasks_per_node,
                          init_blocks,
                          min_blocks,
                          max_blocks,
@@ -91,7 +90,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         self.account = account
         self.queue = queue
-        self.overrides = overrides
+        self.scheduler_options = scheduler_options
+        self.worker_init = worker_init
         self.provisioned_blocks = 0
 
         # Dictionary that keeps track of jobs, keyed on job_id
@@ -127,7 +127,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = translate_table['E']
 
-    def submit(self, command, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -142,6 +142,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         Args:
              - command  :(String) Commandline invocation to be made on the remote side.
              - blocksize   :(float)
+             - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
              - job_name (String): Name for job, must be unique
@@ -169,22 +170,23 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         script_path = os.path.abspath(script_path)
 
         logger.debug("Requesting blocksize:%s nodes_per_block:%s tasks_per_node:%s", blocksize, self.nodes_per_block,
-                     self.tasks_per_node)
+                     tasks_per_node)
 
         job_config = {}
         # TODO : script_path might need to change to accommodate script dir set via channels
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["nodes"] = self.nodes_per_block
-        job_config["task_blocks"] = self.nodes_per_block * self.tasks_per_node
+        job_config["task_blocks"] = self.nodes_per_block * tasks_per_node
         job_config["nodes_per_block"] = self.nodes_per_block
-        job_config["tasks_per_node"] = self.tasks_per_node
+        job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = self.walltime
-        job_config["overrides"] = self.overrides
+        job_config["scheduler_options"] = self.scheduler_options
+        job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
 
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
-                                                  self.tasks_per_node,
+                                                  tasks_per_node,
                                                   self.nodes_per_block)
 
         logger.debug("Writing submit script")

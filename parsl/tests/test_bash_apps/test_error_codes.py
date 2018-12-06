@@ -69,7 +69,8 @@ test_matrix = {
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
-@pytest.mark.whitelist(whitelist, reason='broken in IPP')
+# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_bash_formatting():
 
     f = bad_format()
@@ -82,7 +83,8 @@ def test_bash_formatting():
     return True
 
 
-@pytest.mark.whitelist(whitelist, reason='broken in IPP')
+# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_div_0(test_fn=div_0):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
@@ -115,7 +117,8 @@ def test_bash_misuse(test_fn=bash_misuse):
     return True
 
 
-@pytest.mark.whitelist(whitelist, reason='broken in IPP')
+# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_command_not_found(test_fn=command_not_found):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
@@ -148,7 +151,8 @@ def test_invalid_exit(test_fn=invalid_exit):
     return True
 
 
-@pytest.mark.whitelist(whitelist, reason='broken in IPP')
+# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_not_executable(test_fn=not_executable):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()

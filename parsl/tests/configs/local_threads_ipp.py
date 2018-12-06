@@ -16,10 +16,10 @@ config = Config(
         IPyParallelExecutor(
             label='local_ipp',
             engine_dir='engines',
+            workers_per_node=1,
             provider=LocalProvider(
                 walltime="00:05:00",
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=4
             )
         )

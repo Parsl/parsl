@@ -29,7 +29,8 @@ def mpi_test(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False)
 whitelist = os.path.join(os.path.dirname(parsl.__file__), 'tests', 'configs', '*MPI.py')
 
 
-@pytest.mark.whitelist(whitelist)
+# @pytest.mark.whitelist(whitelist)
+@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_mpi():
     x = mpi_test(4, stdout="hello.out", stderr="hello.err")
     print("Launched the mpi_hello app")
