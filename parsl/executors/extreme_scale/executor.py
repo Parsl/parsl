@@ -159,7 +159,13 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         logger.debug("Initializing ExtremeScaleExecutor")
 
         if not launch_cmd:
-            self.launch_cmd = """mpiexec -np {ranks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url} --logdir={logdir} --hb_period={heartbeat_period} --hb_threshold={heartbeat_threshold}"""
+            self.launch_cmd = ("mpiexec -np {ranks_per_node} mpi_worker_pool.py"
+                               "{debug}"
+                               "--task_url={task_url}"
+                               "--result_url={result_url}"
+                               "--logdir={logdir}"
+                               "--hb_period={heartbeat_period}"
+                               "--hb_threshold={heartbeat_threshold}")
         self.worker_debug = worker_debug
 
     def initialize_scaling(self):
