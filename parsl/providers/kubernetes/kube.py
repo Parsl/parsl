@@ -272,3 +272,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     @property
     def channels_required(self):
         return False
+
+    @property
+    def label(self):
+        return "kubernetes"
