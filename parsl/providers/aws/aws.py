@@ -117,7 +117,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
 
         self.image_id = image_id
-        self.label = 'ec2'
+        self._label = 'ec2'
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
@@ -691,6 +691,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     @property
     def scaling_enabled(self):
         return True
+
+    @property
+    def label(self):
+        return self._label
 
     @property
     def current_capacity(self):
