@@ -35,6 +35,7 @@ script:
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - flake8 parsl/
+    - mypy typecheck-root.py
     - (for test in parsl/tests/test*/test*; do pytest $test --config local ; export X=$? ; echo X is $X ; if [[ "$X" != 0 ]] && [[ "$X" != 5 ]]; then exit 1; fi; done ) ;
       # allow exit code 5; this means pytest did not run a test in the
       # specified file

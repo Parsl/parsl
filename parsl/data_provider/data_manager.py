@@ -8,31 +8,57 @@ from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
 from parsl.app.app import python_app
 
+from typing import List
+
 logger = logging.getLogger(__name__)
 
+from typing import TYPE_CHECKING
+from typing import Optional
 
-def _http_stage_in(working_dir, outputs=[]):
+if TYPE_CHECKING:
+    from parsl.app.futures import DataFuture
+    from parsl.data_provider.files import File # for mypy
+    from parsl.data_provider.files import File
+
+# BUG? both _http_stage_in and _ftp_stage_in take a list of files,
+# but only ever dosomething with the first elemtn of that list - 
+# not handling the multiple element (or 0 element) case
+
+
+# In both _http_stage_in and _ftp_stage_in the handling of
+# file.local_path is rearranged: file.local_path is an optional
+# string, so even though we are setting it, it is still optional
+# and so cannot be used as a parameter to open.
+
+def _http_stage_in(working_dir: str, outputs: "List[File]" =[]) -> None:
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
-        file.local_path = os.path.join(working_dir, file.filename)
+        local_path = os.path.join(working_dir, file.filename)
     else:
-        file.local_path = file.filename
+        local_path = file.filename
+
+    file.local_path = local_path
+
     resp = requests.get(file.url, stream=True)
-    with open(file.local_path, 'wb') as f:
+
+    with open(local_path, 'wb') as f:
         for chunk in resp.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
 
 
-def _ftp_stage_in(working_dir, outputs=[]):
+def _ftp_stage_in(working_dir: str, outputs: "List[File]"=[]) -> None:
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
-        file.local_path = os.path.join(working_dir, file.filename)
+        local_path = os.path.join(working_dir, file.filename)
     else:
-        file.local_path = file.filename
-    with open(file.local_path, 'wb') as f:
+        local_path = file.filename
+
+    file.local_path = local_path
+
+    with open(local_path, 'wb') as f:
         ftp = ftplib.FTP(file.netloc)
         ftp.login()
         ftp.cwd(os.path.dirname(file.path))
@@ -48,7 +74,7 @@ class DataManager(ParslExecutor):
     """
 
     @classmethod
-    def get_data_manager(cls):
+    def get_data_manager(cls) -> "DataManager":  # quoted because DataManager hasn't finished being defined here (we're in the middle of defining it...?) and that upsets runtime (although not type checking)
         """Return the DataManager of the currently loaded DataFlowKernel.
         """
         from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -56,7 +82,7 @@ class DataManager(ParslExecutor):
 
         return dfk.executors['data_manager']
 
-    def __init__(self, max_threads=10, executors=None):
+    def __init__(self, max_threads=10, executors=None) -> None:
         """Initialize the DataManager.
 
         Kwargs:
@@ -70,18 +96,18 @@ class DataManager(ParslExecutor):
             executors = []
         self.executors = {e.label: e for e in executors}
         self.max_threads = max_threads
-        self.files = []
+        self.files = [] # type: List[File]
         self.globus = None
         self.managed = True
 
-    def start(self):
+    def start(self) -> None:
         self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads)
 
     def submit(self, *args, **kwargs):
         """Submit a staging app. All optimization should be here."""
         return self.executor.submit(*args, **kwargs)
 
-    def scale_in(self, blocks, *args, **kwargs):
+    def scale_in(self, blocks) -> None:
         pass
 
     def scale_out(self, *args, **kwargs):
@@ -102,7 +128,7 @@ class DataManager(ParslExecutor):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def add_file(self, file):
+    def add_file(self, file: "File") -> None:
         if file.scheme == 'globus':
             if not self.globus:
                 self.globus = get_globus()
@@ -138,7 +164,7 @@ class DataManager(ParslExecutor):
                                 'working_dir': working_dir}
         raise Exception('No executor with a Globus endpoint and working_dir defined')
 
-    def stage_in(self, file, executor):
+    def stage_in(self, file: "File", executor: str) -> "DataFuture":
         """Transport the file from the input source to the executor.
 
         This function returns a DataFuture.
@@ -199,7 +225,7 @@ class DataManager(ParslExecutor):
                 file.netloc, globus_ep['endpoint_uuid'],
                 file.path, dst_path)
 
-    def stage_out(self, file, executor):
+    def stage_out(self, file: "File", executor: Optional[str]) -> "DataFuture":
         """Transport the file from the local filesystem to the remote Globus endpoint.
 
         This function returns a DataFuture.

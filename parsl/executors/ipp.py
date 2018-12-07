@@ -5,6 +5,7 @@ import uuid
 
 from ipyparallel import Client
 from parsl.providers import LocalProvider
+from parsl.providers.provider_base import ExecutionProvider # for mypy
 from parsl.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
@@ -12,6 +13,11 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import *
 from parsl.executors.ipp_controller import Controller
 from parsl.utils import wait_for_file
+
+from typing import Any
+from typing import List
+from typing import Optional
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +54,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Directory where engine logs and configuration files will be stored.
     working_dir : str
         Directory where input data should be staged to.
-    storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
+    storage_access : list of :class:`~parsl.data_provider.scheme.GlobusScheme` (or perhaps Any at the moment, because I don't know what the semantics actually are...)
         Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
@@ -66,16 +72,16 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     """
 
     def __init__(self,
-                 provider=LocalProvider(),
-                 label='ipp',
-                 working_dir=None,
-                 controller=Controller(),
-                 container_image=None,
-                 engine_dir=None,
-                 storage_access=None,
-                 engine_debug_level=None,
-                 workers_per_node=1,
-                 managed=True):
+                 provider: ExecutionProvider =LocalProvider(),
+                 label: str ='ipp',
+                 working_dir: Optional[str] =None,
+                 controller: Controller =Controller(),
+                 container_image: Optional[str] =None,
+                 engine_dir: str =None,
+                 storage_access: List[Any] =None,
+                 engine_debug_level: str =None,
+                 workers_per_node: int=1,
+                 managed: bool=True) -> None:
         self.provider = provider
         self.label = label
         self.working_dir = working_dir
@@ -119,14 +125,19 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []
 
-        self._scaling_enabled = self.provider.scaling_enabled
-        logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Scaling out failed: %s" % e)
-                raise e
+        if self.provider:
+            self._scaling_enabled = self.provider.scaling_enabled
+            logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
+            if hasattr(self.provider, 'init_blocks'):
+                try:
+                    self.scale_out(blocks=self.provider.init_blocks)
+                except Exception as e:
+                    logger.error("Scaling out failed: %s" % e)
+                    raise e
+
+        else:
+            self._scaling_enabled = False
+            logger.debug("Starting IpyParallelExecutor with no provider")
 
         self.lb_view = self.executor.load_balanced_view()
         logger.debug("Starting executor")
@@ -218,7 +229,7 @@ sleep infinity
     def submit(self, *args, **kwargs):
         """Submits work to the thread pool.
 
-        This method is simply pass through and behaves like a submit call as described
+        This method is simply pass through [not entirely true seeing as it goes via lb_view...] and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         Returns:
@@ -226,16 +237,21 @@ sleep infinity
         """
         return self.lb_view.apply_async(*args, **kwargs)
 
-    def scale_out(self, blocks=1):
+    def scale_out(self, blocks: int=1) -> None:
         """Scales out the number of active workers by 1.
-
-        This method is notImplemented for threads and will raise the error if called.
 
         Parameters:
             blocks : int
                Number of blocks to be provisioned.
+
+        Returns either None or a list. What's the difference between
+        an empty list and a None?
+
+        This doesn't match the return type of ParslExecutor, which is 
+        None, and the return value doesn't seem used anywhere from this
+        scale_out?
         """
-        r = []
+        r = [] # type: List[Any]
         for i in range(blocks):
             if self.provider:
                 block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
@@ -247,11 +263,10 @@ sleep infinity
                 r.extend([block])
         else:
             logger.error("No execution provider available")
-            r = None
 
-        return r
+        return None
 
-    def scale_in(self, blocks):
+    def scale_in(self, blocks: int) -> None:
         """Scale in the number of active blocks by the specified number.
 
         """
@@ -278,14 +293,14 @@ sleep infinity
 
         return status
 
-    def shutdown(self, hub=True, targets='all', block=False):
+    # what the correct general signature for shutdown is, i don't know.
+    # perhaps there are different ones? or perhaps they should all have targets and block?
+    def shutdown(self, block: bool =False) -> bool:
         """Shutdown the executor, including all workers and controllers.
 
         The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
 
         Kwargs:
-            - hub (Bool): Whether the hub should be shutdown, Default:True,
-            - targets (list of ints| 'all'): List of engine id's to kill, Default:'all'
             - block (Bool): To block for confirmations or not
 
         Raises:

@@ -11,6 +11,12 @@ import logging
 from urllib.parse import urlparse
 from parsl.data_provider.data_manager import DataManager
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from parsl.app.futures import DataFuture
+
+from typing import Dict
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +36,7 @@ class File(str):
 
     """
 
-    def __init__(self, url, dman=None, cache=False, caching_dir="."):
+    def __init__(self, url: str, dman: DataManager =None, cache: bool =False, caching_dir: str=".") -> None:
         """Construct a File object from a url string.
 
         Args:
@@ -48,7 +54,8 @@ class File(str):
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
-        self.data_future = {}
+        self.data_future = {} # type: Dict[str, DataFuture]
+        self.local_path = None # type: Optional[str]
         if self.scheme == 'globus':
             self.dman.add_file(self)
 
@@ -64,7 +71,7 @@ class File(str):
     def __fspath__(self):
         return self.filepath
 
-    def is_remote(self):
+    def is_remote(self) -> bool:
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
             return True
         elif self.scheme in ['file']:  # TODO: is this enough?
@@ -73,27 +80,26 @@ class File(str):
             raise Exception('Cannot determine if unknown file scheme {} is remote'.format(self.scheme))
 
     @property
-    def filepath(self):
+    def filepath(self) -> str:
         """Return the resolved filepath on the side where it is called from.
 
         The appropriate filepath will be returned when called from within
         an app running remotely as well as regular python on the client side.
 
-        Args:
-            - self
+        What does local_path have to only override this for an enumerated list of schemes? Why can't it override filepath *always*?
+
         Returns:
-             - filepath (string)
+             - filepath
         """
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            # The path returned here has to match exactly with where the
-            if hasattr(self, 'local_path'):
+            if self.local_path is not None:
                 return self.local_path
             else:
                 return self.filename
 
         return self.path
 
-    def stage_in(self, executor):
+    def stage_in(self, executor: str) -> "DataFuture":
         """Transport file from the input source to the executor.
 
         Args:
@@ -103,7 +109,7 @@ class File(str):
 
         return self.dman.stage_in(self, executor)
 
-    def stage_out(self, executor=None):
+    def stage_out(self, executor: Optional[str] =None) -> "DataFuture":
         """Transport file from executor to final output destination."""
         return self.dman.stage_out(self, executor)
 

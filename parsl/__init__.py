@@ -25,6 +25,8 @@ However the following helper functions are provided for logging:
 """
 import logging
 
+from typing import Optional
+
 from parsl.version import VERSION
 from parsl.app.app import App
 from parsl.executors import ThreadPoolExecutor
@@ -51,6 +53,7 @@ wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
 def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
+    # type: (str, int, Optional[str]) -> None
     """Add a stream log handler.
 
     Args:
@@ -75,6 +78,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     all_logger.addHandler(handler)
 
 def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
+    # type: (str, str, int, Optional[str]) -> None
     """Add a stream log handler.
 
     Args:

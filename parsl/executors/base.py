@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
+from typing import Any
 
 class ParslExecutor(metaclass=ABCMeta):
     """Define the strict interface for all Executor classes.
@@ -16,7 +17,7 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def start(self, *args, **kwargs):
+    def start(self) -> None:
         """Start the executor.
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
@@ -30,11 +31,28 @@ class ParslExecutor(metaclass=ABCMeta):
         We haven't yet decided on what the args to this can be,
         whether it should just be func, args, kwargs or be the partially evaluated
         fn
+
+        BENC: based on how ipp uses this, this follows the semantics of async_apply from ipyparallel.
+        Based on how the thread executor works, its:
+
+            https://docs.python.org/3/library/concurrent.futures.html
+            Schedules the callable, fn, to be executed as fn(*args **kwargs) and returns a Future object representing the execution of the callable.
+
+        These are consistent
+
+        The value returned must be some kind of future that I'm a bit vague on the
+        strict requirements for:
+
+             it must be possible to assign a retries_left member slot to that object.
+             it's referred to as exec_fu - but it's whatever the underlying executor returns (ipp, thread pools, whatever) which has some Future-like behaviour
+                  - so is it always the case that we can add retries_left? (I guess the python model permits that but it's a bit type-ugly)
+
+
         """
         pass
 
     @abstractmethod
-    def scale_out(self, *args, **kwargs):
+    def scale_out(self, blocks: int) -> None:
         """Scale out method.
 
         We should have the scale out method simply take resource object
@@ -44,7 +62,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_in(self, count):
+    def scale_in(self, amount: int) -> None:
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
@@ -56,7 +74,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def shutdown(self, *args, **kwargs):
+    def shutdown(self, block: bool) -> bool:
         """Shutdown the executor.
 
         This includes all attached resources such as workers and controllers.

@@ -550,7 +550,7 @@ class DataFlowKernel(object):
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
-    def _add_input_deps(self, executor, args, kwargs):
+    def _add_input_deps(self, executor, args, kwargs) -> None:
         """Look for inputs of the app that are remote files. Submit stage_in
         apps for such files and replace the file objects in the inputs list with
         corresponding DataFuture objects.
@@ -846,7 +846,7 @@ class DataFlowKernel(object):
                 fut.exception()
         logger.info("All remaining tasks completed")
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """DataFlowKernel cleanup.
 
         This involves killing resources explicitly and sending die messages to IPP workers.
@@ -1125,7 +1125,7 @@ class DataFlowKernelLoader(object):
     need to instantiate this class.
     """
 
-    _dfk = None
+    _dfk = None # type: DataFlowKernel
 
     @classmethod
     def clear(cls):

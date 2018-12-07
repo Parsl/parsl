@@ -6,6 +6,7 @@ We have two basic types of futures:
 """
 import os
 import logging
+import typing
 from concurrent.futures import Future
 
 from parsl.dataflow.futures import AppFuture
@@ -237,7 +238,7 @@ if __name__ == "__main__":
         for item in nums:
             testfile.write("{0}\n".format(item))
 
-    foo = Future()
+    foo = Future() # type: Future[str]
     df = DataFuture(foo, './shuffled.txt')
     dx = DataFuture(foo, '~/shuffled.txt')
 

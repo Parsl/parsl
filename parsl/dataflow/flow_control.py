@@ -5,6 +5,11 @@ import time
 
 from parsl.dataflow.strategy import Strategy
 
+from typing import List
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from parsl.dataflow.dflow import DataFlowKernel
+
 logger = logging.getLogger(__name__)
 
 
@@ -15,7 +20,7 @@ class FlowNoControl(object):
 
     """
 
-    def __init__(self, dfk, *args, threshold=2, interval=2):
+    def __init__(self, dfk: "DataFlowKernel", *args, threshold: int =2, interval: int =2) -> None:
         """Initialize the flowcontrol object. This does nothing.
 
         Args:
@@ -70,7 +75,7 @@ class FlowControl(object):
     from a duplicate logger being added by the thread.
     """
 
-    def __init__(self, dfk, *args, threshold=20, interval=5):
+    def __init__(self, dfk: "DataFlowKernel", *args, threshold: int =20, interval: int =5) -> None:
         """Initialize the flowcontrol object.
 
         We start the timer thread here
@@ -90,7 +95,7 @@ class FlowControl(object):
         self.callback = self.strategy.strategize
         self._handle = None
         self._event_count = 0
-        self._event_buffer = []
+        self._event_buffer = [] # type: List[str]
         self._wake_up_time = time.time() + 1
         self._kill_event = threading.Event()
         self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,))
@@ -120,7 +125,7 @@ class FlowControl(object):
             else:
                 print("Sleeping a bit more")
 
-    def notify(self, event_id):
+    def notify(self, event_id: str) -> None:
         """Let the FlowControl system know that there is an event."""
         self._event_buffer.extend([event_id])
         self._event_count += 1
@@ -128,7 +133,7 @@ class FlowControl(object):
             logger.debug("Eventcount >= threshold")
             self.make_callback(kind="event")
 
-    def make_callback(self, kind=None):
+    def make_callback(self, kind: str =None) -> None:
         """Makes the callback and resets the timer.
 
         KWargs:

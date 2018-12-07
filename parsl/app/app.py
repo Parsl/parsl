@@ -9,6 +9,14 @@ from inspect import signature
 
 from parsl.app.errors import InvalidAppTypeError
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Type
+    from typing import Dict
+    from typing import Any
+    from parsl.dataflow.dflow import DataFlowKernel
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,7 +28,7 @@ class AppBase(object):
 
     """
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False):
+    def __init__(self, func, data_flow_kernel: "DataFlowKernel" =None, walltime: int =60, executors='all', cache: bool =False) -> None:
         """Construct the App object.
 
         Args:
@@ -61,7 +69,7 @@ class AppBase(object):
 
         params = signature(func).parameters
 
-        self.kwargs = {}
+        self.kwargs = {} # type: Dict[str, Any]
         if 'stdout' in params:
             self.kwargs['stdout'] = params['stdout'].default
         if 'stderr' in params:
@@ -85,7 +93,7 @@ def app_wrapper(func):
     return wrapper
 
 
-def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+def App(apptype, data_flow_kernel: "DataFlowKernel" =None, walltime: int =60, cache: bool =False, executors='all'):
     """The App decorator function.
 
     Args:
@@ -111,7 +119,7 @@ def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all
     logger.warning("The 'App' decorator will be depreciated in Parsl 0.8. Please use 'python_app' or 'bash_app' instead.")
 
     if apptype is 'python':
-        app_class = PythonApp
+        app_class = PythonApp # type: Type
     elif apptype is 'bash':
         app_class = BashApp
     else:
@@ -126,7 +134,7 @@ def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all
     return wrapper
 
 
-def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+def python_app(function=None, data_flow_kernel: "DataFlowKernel" =None, walltime:int =60, cache: bool =False, executors='all'):
     """Decorator function for making python apps.
 
     Parameters
@@ -161,7 +169,7 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, e
     return decorator
 
 
-def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+def bash_app(function=None, data_flow_kernel: "DataFlowKernel" =None, walltime:int =60, cache:bool =False, executors='all'):
     """Decorator function for making bash apps.
 
     Parameters
