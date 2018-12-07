@@ -185,7 +185,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         proc = None
         remote_pid = None
         if not isinstance(self.channel, LocalChannel):
-            logger.debug("Not a localChannel, files need to be moved")
+            logger.debug("Not a LocalChannel, files need to be moved")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
             # Bash would return until the streams are closed. So we redirect to a outs file
