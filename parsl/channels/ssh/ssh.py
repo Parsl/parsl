@@ -9,6 +9,10 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
+class HostAuthSSHClient(paramiko.SSHClient):
+    def _auth(self, username, *args):
+        self._transport.auth_none(username)
+        return
 
 class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
@@ -20,7 +24,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, host_auth=False, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -43,9 +47,12 @@ class SSHChannel(Channel, RepresentationMixin):
         self.kwargs = kwargs
         self.script_dir = script_dir
 
-        self.ssh_client = paramiko.SSHClient()
-        self.ssh_client.load_system_host_keys()
-        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        if host_auth:
+            self.ssh_client = HostAuthSSHClient()
+        else:
+            self.ssh_client = paramiko.SSHClient()
+            self.ssh_client.load_system_host_keys()
+            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         self.envs = {}
         if envs is not None:
