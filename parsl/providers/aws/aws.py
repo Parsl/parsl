@@ -184,7 +184,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         """Read the state file, if it exists.
 
         If this script has been run previously, resource IDs will have been written to a
-        state file On starting a run, a state file will be looked for before creating new
+        state file. On starting a run, a state file will be looked for before creating new
         infrastructure. Information on VPCs, security groups, and subnets are saved, as
         well as running instances and their states.
 

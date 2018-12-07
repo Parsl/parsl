@@ -73,7 +73,7 @@ class LocalChannel(Channel, RepresentationMixin):
             retcode = proc.returncode
 
         except Exception as e:
-            print("Caught exception : {0}".format(e))
+            print("Caught exception: {0}".format(e))
             logger.warn("Execution of command [%s] failed due to \n %s ", cmd, e)
             # Set retcode to non-zero so that this can be handled in the provider.
             if retcode == 0:
