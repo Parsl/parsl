@@ -1,5 +1,7 @@
+import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
+import dash_core_components as dcc
 from parsl.monitoring.web_app.utils import timestamp_to_float
 from parsl.monitoring.web_app.app import get_db, close_db
 from parsl.monitoring.web_app.plots.base_plot import BasePlot
@@ -60,6 +62,65 @@ class UserTimePlot(BasePlot):
                              title='User time'))
 
 
+class UserTimeDistributionPlot(BasePlot):
+    def __init__(self, plot_id, plot_args):
+        super().__init__(plot_id=plot_id, plot_args=plot_args)
+
+    def setup(self, args):
+        return [dcc.RadioItems(id='user_time_distribution_radio_items',
+                               options=[{'label': 'Average', 'value': 'avg'},
+                                        {'label': 'Max', 'value': 'max'}],
+                               value='avg')]
+
+    def plot(self, option, run_id):
+        sql_conn = get_db()
+        df_resources = pd.read_sql_query('SELECT psutil_process_time_user, timestamp, task_id FROM task_resources WHERE run_id=(?)',
+                                         sql_conn, params=(run_id, ))
+        df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?)',
+                                    sql_conn, params=(run_id, ))
+        close_db()
+
+        min_range = float(min(df_resources['psutil_process_time_user']))
+        max_range = float(max(df_resources['psutil_process_time_user']))
+        time_step = (max_range - min_range) / 20
+
+        x_axis = []
+        for i in np.arange(min_range, max_range + time_step, time_step):
+            x_axis.append(i)
+
+        apps_dict = dict()
+        for i in range(len(df_task)):
+            row = df_task.iloc[i]
+            apps_dict[row['task_id']] = []
+
+        def y_axis_setup():
+            items = []
+
+            for app, tasks in apps_dict.items():
+                tmp = []
+                if option == 'avg':
+                    task = df_resources[df_resources['task_id'] == app]['psutil_process_time_user'].astype('float').mean()
+                elif option == 'max':
+                    task = max(df_resources[df_resources['task_id'] == app]['psutil_process_time_user'].astype('float'))
+
+                for i in range(len(x_axis) - 1):
+                    a = task >= x_axis[i]
+                    b = task < x_axis[i + 1]
+                    tmp.append(a & b)
+                items = np.sum([items, tmp], axis=0)
+            print(sum(items))
+            return items
+
+        return go.Figure(
+            data=[go.Bar(x=x_axis[:-1],
+                         y=y_axis_setup(),
+                         name='tasks')],
+            layout=go.Layout(xaxis=dict(autorange=True,
+                                        title='Duration (seconds)'),
+                             yaxis=dict(title='Tasks'),
+                             title='User Time Distribution'))
+
+
 class SystemTimePlot(BasePlot):
     def __init__(self, plot_id, plot_args):
         super().__init__(plot_id=plot_id, plot_args=plot_args)
@@ -114,6 +175,46 @@ class SystemTimePlot(BasePlot):
                              title='System time'))
 
 
+class SystemTimeDistributionPlot(BasePlot):
+    def __init__(self, plot_id, plot_args):
+        super().__init__(plot_id=plot_id, plot_args=plot_args)
+
+    def setup(self, args):
+        return []
+
+    def plot(self, run_id):
+        sql_conn = get_db()
+        df_resources = pd.read_sql_query('SELECT psutil_process_time_system, timestamp, task_id FROM task_resources WHERE run_id=(?)',
+                                         sql_conn, params=(run_id, ))
+        close_db()
+
+        min_range = float(min(df_resources['psutil_process_time_system']))
+        max_range = float(max(df_resources['psutil_process_time_system']))
+        time_step = (max_range - min_range) / 20
+
+        x_axis = []
+        for i in np.arange(min_range, max_range + time_step, time_step):
+            x_axis.append(i)
+
+        def y_axis_setup():
+            items = []
+            for i in range(len(x_axis) - 1):
+                x = df_resources['psutil_process_time_system'].astype('float') >= x_axis[i]
+                y = df_resources['psutil_process_time_system'].astype('float') < x_axis[i + 1]
+                items.append(sum(x & y))
+
+            return items
+
+        return go.Figure(
+            data=[go.Bar(x=x_axis[:-1],
+                         y=y_axis_setup(),
+                         name='tasks')],
+            layout=go.Layout(xaxis=dict(autorange=True,
+                                        title='Duration (seconds)'),
+                             yaxis=dict(title='Tasks'),
+                             title='System Time Distribution'))
+
+
 class MemoryUsagePlot(BasePlot):
     def __init__(self, plot_id, plot_args):
         super().__init__(plot_id=plot_id, plot_args=plot_args)
@@ -166,3 +267,46 @@ class MemoryUsagePlot(BasePlot):
                                         title='Time'),
                              yaxis=dict(title='Usage (%)'),
                              title='Memory usage'))
+
+
+class MemoryUsageDistributionPlot(BasePlot):
+    def __init__(self, plot_id, plot_args):
+        super().__init__(plot_id=plot_id, plot_args=plot_args)
+
+    def setup(self, args):
+        return []
+
+    def plot(self, run_id):
+        sql_conn = get_db()
+        df_resources = pd.read_sql_query('SELECT psutil_process_memory_percent, timestamp, task_id FROM task_resources WHERE run_id=(?)',
+                                         sql_conn, params=(run_id, ))
+        close_db()
+
+        min_range = float(min(df_resources['psutil_process_memory_percent']))
+        max_range = float(max(df_resources['psutil_process_memory_percent']))
+        time_step = (max_range - min_range) / 20
+
+        x_axis = []
+        for i in np.arange(min_range, max_range + time_step, time_step):
+            x_axis.append(i)
+
+        def y_axis_setup():
+            items = []
+
+            for i in range(len(x_axis) - 1):
+                x = df_resources['psutil_process_memory_percent'].astype('float') >= x_axis[i]
+                y = df_resources['psutil_process_memory_percent'].astype('float') < x_axis[i + 1]
+
+                items.append(sum(x & y))
+
+            return items
+
+        return go.Figure(
+            data=[go.Bar(x=x_axis[:-1],
+                         y=y_axis_setup(),
+                         name='tasks')],
+            layout=go.Layout(xaxis=dict(autorange=True,
+                                        title='Usage (%)'),
+                             yaxis=dict(title='Tasks'),
+                             title='Memory Usage Distribution'))
+
