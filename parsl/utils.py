@@ -102,20 +102,6 @@ def get_last_checkpoint(rundir="runinfo"):
     return [last_checkpoint]
 
 
-def timeout(seconds=None):
-    def decorator(func, *args, **kwargs):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            t = threading.Thread(target=func, args=args, kwargs=kwargs)
-            t.start()
-            result = t.join(seconds)
-            if t.is_alive():
-                raise RuntimeError('timed out in {}'.format(func))
-            return result
-        return wrapper
-    return decorator
-
-
 @contextmanager
 def wait_for_file(path, seconds=10):
     for i in range(0, int(seconds * 100)):
