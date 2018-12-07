@@ -47,6 +47,7 @@ def test_loading_checkpoint(n=2):
 
 if __name__ == '__main__':
 
+    parsl.set_stream_logger()
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",
                         help="Count of apps to launch")

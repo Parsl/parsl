@@ -253,6 +253,8 @@ class DataFlowKernel(object):
              that does not require additional memo updates.
         """
 
+        self.set_result_from_parent(self.tasks[task_id]['app_fu'], future)
+
         try:
             res = future.result()
             if isinstance(res, RemoteExceptionWrapper):
@@ -395,6 +397,10 @@ class DataFlowKernel(object):
                         logger.error(
                             "Task {}: Caught AttributeError at update_parent".format(task_id))
                         raise e
+                    try:
+                        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                    except Exception as e:
+                        logger.error("add_done_callback got an exception {} which will be ignored".format(e))
             else:
                 logger.info(
                     "Task {} deferred due to dependency failure".format(task_id))
@@ -409,6 +415,8 @@ class DataFlowKernel(object):
                     fu.retries_left = 0
                     self.tasks[task_id]['exec_fu'] = fu
                     self.tasks[task_id]['app_fu'].update_parent(fu)
+                    ### fu.add_done_callback(partial(self.handle_exec_update, task_id))
+#XXX
                     fu.set_exception(DependencyError(exceptions,
                                                      task_id,
                                                      None))
@@ -444,14 +452,6 @@ class DataFlowKernel(object):
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
-            try:
-                self.handle_exec_update(task_id, memo_fu)
-            except Exception as e:
-                logger.error("handle_exec_update raised an exception {} which will be ignored".format(e))
-            try:
-                self.handle_app_update(task_id, memo_fu, memo_cbk=True)
-            except Exception as e:
-                logger.error("handle_app_update raised an exception {} which will be ignored".format(e))
             return memo_fu
 
         executor_label = self.tasks[task_id]["executor"]
@@ -470,10 +470,6 @@ class DataFlowKernel(object):
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
-        try:
-            exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-        except Exception as e:
-            logger.error("add_done_callback got an exception {} which will be ignored".format(e))
         return exec_fu
 
     def _add_input_deps(self, executor, args, kwargs):
@@ -669,7 +665,7 @@ class DataFlowKernel(object):
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(None, tid=task_id,
+        app_fu = AppFuture(tid=task_id,
                            stdout=task_stdout,
                            stderr=task_stderr)
 
@@ -986,6 +982,57 @@ class DataFlowKernel(object):
             raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
 
         return self._load_checkpoints(checkpointDirs)
+
+
+    def set_result_from_parent(self, app_fu, executor_fu):
+        """Callback from a parent future to update the AppFuture.
+
+        Used internally by AppFuture, and should not be called by code using AppFuture.
+
+        Args:
+            - executor_fu (Future): Future returned by the executor along with callback.
+              This may not be the current parent future, as the parent future may have
+              already been updated to point to a retrying execution, and in that case,
+              this is logged.
+
+              In the case that a new parent has been attached, we must immediately discard
+              this result no matter what it contains (although it might be interesting
+              to log if it was successful...)
+
+        Returns:
+            - None
+
+        Updates the super() with the result() or exception()
+        """
+
+        with app_fu._update_lock:
+
+            if not executor_fu.done():
+                raise ValueError("done callback called, despite future not reporting itself as done")
+
+            # this is for consistency checking
+            if executor_fu != app_fu.parent:
+                if executor_fu.exception() is None and not isinstance(executor_fu.result(), RemoteExceptionWrapper):
+                    # ... then we completed with a value, not an exception or wrapped exception,
+                    # but we've got an updated executor future.
+                    # This is bad - for example, we've started a retry even though we have a result
+
+                    raise ValueError("internal consistency error: AppFuture done callback called without an exception, but parent has been changed since then")
+
+            try:
+                res = executor_fu.result()
+                if isinstance(res, RemoteExceptionWrapper):
+                    res.reraise()
+                app_fu.set_result(executor_fu.result())
+
+            except Exception as e:
+                if executor_fu.retries_left > 0:
+                    # ignore this exception, because assume some later
+                    # parent executor, started external to this class,
+                    # will provide the answer
+                    pass
+                else:
+                    app_fu.set_exception(e)
 
 
 class DataFlowKernelLoader(object):

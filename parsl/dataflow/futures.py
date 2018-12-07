@@ -60,12 +60,10 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, parent, tid=None, stdout=None, stderr=None):
+    def __init__(self, tid=None, stdout=None, stderr=None):
         """Initialize the AppFuture.
 
         Args:
-             - parent (Future) : The parent future if one exists
-               A default value of None should be passed in if app is not launched
 
         KWargs:
              - tid (Int) : Task id should be any unique identifier. Now Int.
@@ -76,66 +74,11 @@ class AppFuture(Future):
         """
         self._tid = tid
         super().__init__()
-        self.prev_parent = None
         self.parent = None
         self._update_lock = threading.Lock()
-        self._parent_update_event = threading.Event()
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
-
-        if parent is not None:
-            self.update_parent(parent)
-
-    def parent_callback(self, executor_fu):
-        """Callback from a parent future to update the AppFuture.
-
-        Used internally by AppFuture, and should not be called by code using AppFuture.
-
-        Args:
-            - executor_fu (Future): Future returned by the executor along with callback.
-              This may not be the current parent future, as the parent future may have
-              already been updated to point to a retrying execution, and in that case,
-              this is logged.
-
-              In the case that a new parent has been attached, we must immediately discard
-              this result no matter what it contains (although it might be interesting
-              to log if it was successful...)
-
-        Returns:
-            - None
-
-        Updates the super() with the result() or exception()
-        """
-        # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
-        with self._update_lock:
-
-            if not executor_fu.done():
-                raise ValueError("done callback called, despite future not reporting itself as done")
-
-            # this is for consistency checking
-            if executor_fu != self.parent:
-                if executor_fu.exception() is None and not isinstance(executor_fu.result(), RemoteExceptionWrapper):
-                    # ... then we completed with a value, not an exception or wrapped exception,
-                    # but we've got an updated executor future.
-                    # This is bad - for example, we've started a retry even though we have a result
-
-                    raise ValueError("internal consistency error: AppFuture done callback called without an exception, but parent has been changed since then")
-
-            try:
-                res = executor_fu.result()
-                if isinstance(res, RemoteExceptionWrapper):
-                    res.reraise()
-                super().set_result(executor_fu.result())
-
-            except Exception as e:
-                if executor_fu.retries_left > 0:
-                    # ignore this exception, because assume some later
-                    # parent executor, started external to this class,
-                    # will provide the answer
-                    pass
-                else:
-                    super().set_exception(e)
 
     @property
     def stdout(self):
@@ -155,27 +98,13 @@ class AppFuture(Future):
         This handles the case where the user has called result on the AppFuture
         before the parent exists.
         """
-        # with self._parent_update_lock:
         self.parent = fut
 
-        try:
-            fut.add_done_callback(self.parent_callback)
-        except Exception as e:
-            logger.error("add_done_callback got an exception {} which will be ignored".format(e))
-
-        self._parent_update_event.set()
-
     def cancel(self):
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise ValueError("Cancel not implemented")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        return False
 
     def running(self):
         if self.parent:
