@@ -113,8 +113,8 @@ class LocalChannel(Channel, RepresentationMixin):
             pid = proc.pid
 
         except Exception as e:
-            print("Caught exception : {0}".format(e))
             logger.warn("Execution of command [%s] failed due to \n %s ", (cmd, e))
+            raise
 
         return pid, proc
 
