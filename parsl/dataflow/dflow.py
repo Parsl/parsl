@@ -743,7 +743,7 @@ class DataFlowKernel(object):
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(tid=task_id,
+        app_fu = AppFuture(self.tasks[task_id], tid=task_id,
                            stdout=task_stdout,
                            stderr=task_stderr)
 
