@@ -9,6 +9,7 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
+from typing import Any
 
 class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
@@ -108,7 +109,7 @@ class SSHChannel(Channel, RepresentationMixin):
         exit_status = stdout.channel.recv_exit_status()
         return exit_status, stdout.read().decode("utf-8"), stderr.read().decode("utf-8")
 
-    def execute_no_wait(self, cmd, walltime=2, envs={}):
+    def execute_no_wait(self, cmd, walltime=2, envs={}) -> Any:
         ''' Execute asynchronousely without waiting for exitcode
 
         Args:

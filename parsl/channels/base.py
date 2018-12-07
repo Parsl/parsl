@@ -1,5 +1,8 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Any
 
 class Channel(metaclass=ABCMeta):
     """ Define the interface to all channels. Channels are usually called via the execute_wait function.
@@ -55,7 +58,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def execute_no_wait(self, cmd, walltime, envs={}, *args, **kwargs):
+    def execute_no_wait(self, cmd, walltime, envs={}) -> Any:
         ''' Optional. THis is infrequently used.
 
         Args:
@@ -66,7 +69,7 @@ class Channel(metaclass=ABCMeta):
             - envs (dict) : Environment variables to push to the remote side
 
         Returns:
-            - (exit_code(None), stdout, stderr) (int, io_thing, io_thing)
+            - channel specific information
         '''
         pass
 

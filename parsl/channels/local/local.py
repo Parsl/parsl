@@ -10,6 +10,7 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
+from typing import Tuple, Optional
 
 class LocalChannel(Channel, RepresentationMixin):
     ''' This is not even really a channel, since opening a local shell is not heavy
@@ -82,7 +83,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
-    def execute_no_wait(self, cmd, walltime, envs={}):
+    def execute_no_wait(self, cmd, walltime, envs={}) -> Optional[Tuple[int, subprocess.Popen]]:
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
@@ -116,6 +117,7 @@ class LocalChannel(Channel, RepresentationMixin):
         except Exception as e:
             print("Caught exception : {0}".format(e))
             logger.warn("Execution of command [%s] failed due to \n %s ", (cmd, e))
+            return None
 
         return pid, proc
 
