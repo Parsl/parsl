@@ -446,9 +446,9 @@ if __name__ == "__main__":
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
-    parser.add_argument("--hb_period", default=None,
+    parser.add_argument("--hb_period", default=30,
                         help="Heartbeat period in seconds. Uses manager default unless set")
-    parser.add_argument("--hb_threshold", default=None,
+    parser.add_argument("--hb_threshold", default=120,
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
     parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
@@ -474,17 +474,12 @@ if __name__ == "__main__":
         logger.info("task_url: {}".format(args.task_url))
         logger.info("result_url: {}".format(args.result_url))
 
-        optionals = {}
-        if args.hb_period:
-            optionals['heartbeat_period'] = int(args.hb_period)
-        if args.hb_threshold:
-            optionals['heartbeat_threshold'] = int(args.hb_threshold)
-
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
                           cores_per_worker=float(args.cores_per_worker),
-                          **optionals)
+                          heartbeat_threshold=int(args.hb_threshold),
+                          heartbeat_period=int(args.hb_period))
         manager.start()
 
     except Exception as e:

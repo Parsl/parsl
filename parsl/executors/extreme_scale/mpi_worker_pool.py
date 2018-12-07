@@ -469,9 +469,9 @@ if __name__ == "__main__":
                         help="Unique identifier string for Manager")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
-    parser.add_argument("--hb_period", default=None,
+    parser.add_argument("--hb_period", default=30,
                         help="Heartbeat period in seconds. Uses manager default unless set")
-    parser.add_argument("--hb_threshold", default=None,
+    parser.add_argument("--hb_threshold", default=120,
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
     parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
@@ -495,17 +495,13 @@ if __name__ == "__main__":
                               level=logging.DEBUG if args.debug is True else logging.INFO)
 
             logger.info("Python version: {}".format(sys.version))
-            optionals = {}
-            if args.hb_period:
-                optionals['heartbeat_period'] = int(args.hb_period)
-            if args.hb_threshold:
-                optionals['heartbeat_threshold'] = int(args.hb_threshold)
 
             manager = Manager(comm, rank,
                               task_q_url=args.task_url,
                               result_q_url=args.result_url,
                               uid=args.uid,
-                              **optionals)
+                              heartbeat_threshold=int(args.hb_threshold),
+                              heartbeat_period=int(args.hb_period))
             manager.start()
             logger.debug("Finalizing MPI Comm")
             comm.Abort()
