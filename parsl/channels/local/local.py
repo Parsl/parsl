@@ -89,11 +89,10 @@ class LocalChannel(Channel, RepresentationMixin):
             - cmd (string) : Commandline string to execute
             - walltime (int) : walltime in seconds, this is not really used now.
 
-        Returns:
+        Returns a tuple containing:
 
-           - retcode : Return code from the execution, -1 on fail
-           - stdout  : stdout string
-           - stderr  : stderr string
+           - pid : process id
+           - proc : a subprocess.Popen object
 
         Raises:
          None.
