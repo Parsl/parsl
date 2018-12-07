@@ -155,6 +155,8 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
+        self._fast_abort = False
+
         data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
         self.executors = {e.label: e for e in config.executors + [data_manager]}
         for executor in self.executors.values():
@@ -193,6 +195,71 @@ class DataFlowKernel(object):
         self.submitter_lock = threading.Lock()
 
         atexit.register(self.atexit_cleanup)
+
+    def fast_abort(self):
+        """
+        Trigger a fast abort. this method should return fast and be
+        threadsafe, so that it is easy to call from anywhere inside or
+        outside of the DFK.
+
+        This will be triggered inside the DFK by an app failing when
+        non-lazy failures (rename that...) are enabled; but we should
+        expect other places to want to trigger this behaviour. Examples:
+          i) ctrl-C should not cause the dfk cleanup to wait for a long
+             time
+          ii) sometimes executors will fail so badly they want to shut
+              down the workflow (@yadudoc)
+
+        The fast abort flag can only move from False to True. Once
+        a fast abort has started, it cannot be cancelled.
+        What does "fast abort" mean? It doesn't mean that the DFK
+        will shutdown absolutely as fast as it can. It means that: (?)
+        i) no more tasks will be launched.
+        ii) DFK cleanup will not wait for appfutures to complete/tasks
+            to finish. DONE
+        iii) what will happen with executor cleanup? This can take a
+             moderate amount of time. But I think we *do* want to do
+             enough cleanup to kill running tasks right now (rather than
+             either abandoning them to keep running, or waiting for
+             them to end) TODO
+        iv) checkpointing will not happen TODO / done in cleanup. Is checkpointing "expensive"? if so we should not do it. if it is "cheap" we should do it.
+        v) fast abort *does not* exit the process: it means that the DFK
+           should clean itself up fairly fast, and that parsl operations
+           involving this DFK should throw an exception if they cannot
+           be completed immediately (for example, all unset AppFutures
+           should get an exception status immediately)
+        """
+        logger.warn("Fast-abort activated")
+        self._fast_abort=True
+        # what needs to happen here in addition to the rest of the
+        # DFK failing fast as it notices?
+
+    def set_termination_handler(self):
+        """
+        By default parsl will wait for all jobs to complete at exit. This
+        happens even if execution is aborted with ctrl-c or a termination
+        signal. This behaviour is often undesirable - ctrl-c should cause
+        a python program to exit quite fast, but still tidy up after itself.
+
+        This method will install signal handlers that will set this DFK
+        to fast fail mode when SIGTERM and SIGINT signals are called,
+        and then exit the process.
+
+        In more elaborate workflows, this may not be the desired termination
+        behaviour.
+
+        some notes: https://vorpus.org/blog/control-c-handling-in-python-and-trio/
+        """
+
+        logger.debug("Setting termination handler")
+        signal.signal(signal.SIGTERM, self.signal_termination_handler)
+        signal.signal(signal.SIGINT, self.signal_termination_handler)
+
+    def signal_termination_handler(self, signum, frame):
+        logger.debug("In SIGTERM/SIGINT handler: setting fast abort mode")
+        self.fast_abort()
+        logger.debug("In SIGTERM/SIGINT handler: exiting process")
+        sys.exit(1)
 
     def _create_task_log_info(self, task_id, fail_mode=None):
         """
@@ -274,6 +341,7 @@ class DataFlowKernel(object):
                 if self.monitoring_config is not None:
                     task_log_info = self._create_task_log_info(task_id, 'eager')
                     self.db_logger.info("Task Fail", extra=task_log_info)
+                self.fast_abort()
                 return
 
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
@@ -371,6 +439,17 @@ class DataFlowKernel(object):
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
+
+        if self._fast_abort and not self.tasks['app_fu'].done():
+            # races to do with setting app fu here? maybe it doesn't
+            # matter if we race with setting a real result... we'll
+            # finish either way.
+            logger.debug("Fast aborting task {}".format(task_id))  
+            # TODO: better exception here (like dependency exception)
+            self.tasks['status']=States.failed
+            self.tasks['app_fu'].set_exception(ValueError("Fast abort"))
+            return
+
         if self._count_deps(self.tasks[task_id]['depends']) == 0:
 
             # We can now launch *task*
@@ -791,7 +870,12 @@ class DataFlowKernel(object):
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
         if self.checkpoint_mode is not None:
-            self.checkpoint()
+
+            # controversial in benc's mind
+            if not self._fast_abort:
+                self.checkpoint()
+            else:
+                logger.debug("In fast abort mode: not checkpointing")
 
             if self._checkpoint_timer:
                 logger.info("Stopping checkpoint timer")
