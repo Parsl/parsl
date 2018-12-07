@@ -105,6 +105,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     cores_per_worker : float
         cores to be assigned to each worker. Oversubscription is possible
         by setting cores_per_worker < 1.0. Default=1
+
+    heartbeat_threshold : int
+        Seconds since the last message from the counterpart in the communication pair:
+        (interchange, manager) after which the counterpart is assumed to be un-available. Default:120s
+
+    heartbeat_period : int
+        Number of seconds after which a heartbeat message indicating liveness is sent to the
+        counterpart (interchange, manager). Default:30s
     """
 
     def __init__(self,
@@ -119,6 +127,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  working_dir=None,
                  worker_debug=False,
                  cores_per_worker=1.0,
+                 heartbeat_threshold=120,
+                 heartbeat_period=30,
                  managed=True):
 
         logger.debug("Initializing HighThroughputExecutor")
@@ -141,10 +151,18 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
+        self.heartbeat_threshold = heartbeat_threshold
+        self.heartbeat_period = heartbeat_period
         self.run_dir = '.'
 
         if not launch_cmd:
-            self.launch_cmd = """process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
+            self.launch_cmd = ("process_worker_pool.py {debug}"
+                               "-c {cores_per_worker}"
+                               "--task_url={task_url}"
+                               "--result_url={result_url}"
+                               "--logdir={logdir}"
+                               "--hb_period={heartbeat_period}"
+                               "--hb_threshold={heartbeat_threshold}")
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
@@ -158,6 +176,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        result_url=self.worker_result_url,
                                        cores_per_worker=self.cores_per_worker,
                                        nodes_per_block=self.provider.nodes_per_block,
+                                       heartbeat_period=self.heartbeat_period,
+                                       heartbeat_threshold=self.heartbeat_threshold,
                                        logdir="{}/{}".format(self.run_dir, self.label))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
@@ -319,6 +339,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                           "worker_ports": self.worker_ports,
                                           "worker_port_range": self.worker_port_range,
                                           "logdir": "{}/{}".format(self.run_dir, self.label),
+                                          "heartbeat_threshold": self.heartbeat_threshold,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
         )

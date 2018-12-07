@@ -148,7 +148,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         """
         for job in job_ids:
-            logger.debug("Terminating job/proc_id : {0}".format(job))
+            logger.debug("Terminating job/proc_id: {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
             self._delete_deployment(job)
 
@@ -272,3 +272,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     @property
     def channels_required(self):
         return False
+
+    @property
+    def label(self):
+        return "kubernetes"
