@@ -14,7 +14,7 @@ class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
-    test on the commandline should work :
+    test on the commandline should work:
 
     >>> ssh <username>@<hostname>
 
