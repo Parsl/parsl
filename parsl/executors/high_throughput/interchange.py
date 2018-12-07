@@ -61,7 +61,6 @@ class Interchange(object):
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  heartbeat_threshold=60,
-                 heartbeat_period=30,
                  logdir=".",
                  logging_level=logging.INFO,
              ):
@@ -83,9 +82,6 @@ class Interchange(object):
         worker_port_range : tuple(int, int)
              The interchange picks ports at random from the range which will be used by workers.
              This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
-
-        heartbeat_period : int
-             Not used.
 
         heartbeat_threshold : int
              Number of seconds since the last heartbeat after which worker is considered lost.

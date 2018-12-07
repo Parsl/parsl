@@ -285,9 +285,10 @@ class Manager(object):
         self._result_pusher_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
-            self.procs[proc_id].join()
             logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
                                                               self.procs[proc_id].is_alive()))
+            self.procs[proc_id].join()
+            logger.debug("Worker:{} joined successfully".format(self.procs[proc_id]))
 
         self.task_incoming.close()
         self.result_outgoing.close()
