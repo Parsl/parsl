@@ -104,7 +104,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.engine_file = self.controller.engine_file
 
         with wait_for_file(self.controller.client_file, seconds=120):
-            logger.debug("Waiting for {0}".format(self.controller.client_file))
+            logger.debug("Waiting for controller client file {0} to appear".format(self.controller.client_file))
 
         if not os.path.exists(self.controller.client_file):
             raise Exception("Controller client file is missing at {0}".format(self.controller.client_file))
@@ -114,7 +114,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.executor = Client(url_file=self.controller.client_file)
         if self.container_image:
             command_composer = self.compose_containerized_launch_cmd
-            logger.info("Launching IPP with Docker:{0}".format(self.container_image))
+            logger.info("Launching IPP with Docker: {0}".format(self.container_image))
 
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []

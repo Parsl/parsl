@@ -38,7 +38,8 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         self.managed = managed
 
     def start(self):
-        if sys.version_info > (3, 6):
+        # tests if we're on 3.6 or later - BENC NOTE: although > (3,6) seems to work, it's because there is other stuff in the sys.version_info tuple, and this seems a little bit unclear for future readers? so changing to >= is semantically more correct (although not changing anythign in practice)
+        if sys.version_info >= (3, 6):
             self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
                                                   thread_name_prefix=self.thread_name_prefix)
         else:

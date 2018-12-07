@@ -135,7 +135,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 f.write(script_string)
 
         except KeyError as e:
-            logger.error("Missing keys for submit script : %s", e)
+            logger.error("Missing keys for submit script: %s", e)
             raise (SchedulerMissingArgs(e.args, self.label))
 
         except IOError as e:
@@ -185,7 +185,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         proc = None
         remote_pid = None
         if not isinstance(self.channel, LocalChannel):
-            logger.debug("Not a localChannel, files need to be moved")
+            logger.debug("Not a LocalChannel, files need to be moved")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
             # Bash would return until the streams are closed. So we redirect to a outs file
@@ -202,7 +202,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             try:
                 job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
             except Exception as e:
-                logger.debug("Channel execute failed for:{}, {}".format(self.channel, e))
+                logger.debug("Channel execute failed for: {}, {}".format(self.channel, e))
                 raise
 
         self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
@@ -222,7 +222,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         '''
         for job in job_ids:
-            logger.debug("Terminating job/proc_id : {0}".format(job))
+            logger.debug("Terminating job/proc_id: {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
             if self.resources[job]['proc']:
                 proc = self.resources[job]['proc']
@@ -233,7 +233,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 cmd = "kill -- -$(ps -o pgid={} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
                 retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
                 if retcode != 0:
-                    logger.warning("Failed to kill PID:{} and child processes on {}".format(self.resources[job]['remote_pid'],
+                    logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
                                                                                             self.label))
 
         rets = [True for i in job_ids]

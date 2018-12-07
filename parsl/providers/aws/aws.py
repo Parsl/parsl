@@ -184,7 +184,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         """Read the state file, if it exists.
 
         If this script has been run previously, resource IDs will have been written to a
-        state file On starting a run, a state file will be looked for before creating new
+        state file. On starting a run, a state file will be looked for before creating new
         infrastructure. Information on VPCs, security groups, and subnets are saved, as
         well as running instances and their states.
 
@@ -292,6 +292,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 CidrBlock='10.0.0.0/16',
                 AmazonProvidedIpv6CidrBlock=False,
             )
+            self.ec2.create_tags(Resources=[vpc.id], Tags=[{'Key': 'Name', 'Value': 'parsl'}])
+
         except Exception as e:
             # This failure will cause a full abort
             logger.error("{}\n".format(e))
@@ -315,8 +317,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             if zone['State'] == "available":
 
                 # Create a large subnet (4000 max nodes)
+                cidr_block = '10.0.{}.0/20'.format(16 * num)
+                logger.debug("will create subnet with cidr_block {}".format(cidr_block))
                 subnet = vpc.create_subnet(
-                    CidrBlock='10.0.{}.0/20'.format(16 * num), AvailabilityZone=zone['ZoneName']
+                    CidrBlock=cidr_block, AvailabilityZone=zone['ZoneName']
                 )
 
                 # Make subnet accessible
@@ -445,6 +449,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             Name associated with the instances.
         """
 
+        logger.debug("Spinning up instance 0001")
+
         command = Template(template_string).substitute(jobname=job_name,
                                                        user_script=command,
                                                        linger=str(self.linger).lower(),
@@ -465,6 +471,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             }
         else:
             spot_options = {}
+        logger.debug("Spinning up instance 0002")
 
         if total_instances > self.max_nodes:
             logger.warn("Exceeded instance limit ({}). Cannot continue\n".format(self.max_nodes))
@@ -495,10 +502,16 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.error("Request for EC2 resources failed : {0}".format(e))
             return [None]
 
+        logger.debug("Spinning up instance 0003")
         self.instances.append(instance[0].id)
+        # BENC: alas, that public ip address field is set to None at this
+        # point (at least on my machine...) - perhaps it doesn't appear
+        # till later or perhaps we need to request something else to get
+        # the structure fleshed out properly?
         logger.info(
-            "Started up 1 instance {} . Instance type:{}".format(instance[0].id, instance_type)
+            "Started up 1 instance {} of type {} with public IP address {}".format(instance[0].id, instance_type, instance[0].public_ip_address)
         )
+        logger.debug("Spinning up instance 0004")
         return instance
 
     def shut_down_instance(self, instances=None):
@@ -584,6 +597,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         None or str
             If at capacity, None will be returned. Otherwise, the job identifier will be returned.
         """
+
+        logger.debug("In AWS submit")
 
         job_name = "parsl.auto.{0}".format(time.time())
         wrapped_cmd = self.launcher(command,
