@@ -1,8 +1,7 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from typing import Any
+from typing import Any
 
 class Channel(metaclass=ABCMeta):
     """ Define the interface to all channels. Channels are usually called via the execute_wait function.
