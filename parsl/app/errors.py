@@ -1,4 +1,4 @@
-"""Exceptions raise by Apps."""
+"""Exceptions raised by Apps."""
 from functools import wraps
 
 import dill

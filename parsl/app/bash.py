@@ -1,6 +1,7 @@
 import logging
 
 from inspect import signature, Parameter
+from parsl.app.errors import wrap_error
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -138,7 +139,7 @@ class BashApp(AppBase):
         if self.data_flow_kernel is None:
             self.data_flow_kernel = DataFlowKernelLoader.dfk()
 
-        app_fut = self.data_flow_kernel.submit(remote_side_bash_executor, self.func, *args,
+        app_fut = self.data_flow_kernel.submit(wrap_error(remote_side_bash_executor), self.func, *args,
                                                executors=self.executors,
                                                fn_hash=self.func_hash,
                                                cache=self.cache,
