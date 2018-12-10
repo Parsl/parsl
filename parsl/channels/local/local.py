@@ -73,7 +73,7 @@ class LocalChannel(Channel, RepresentationMixin):
             retcode = proc.returncode
 
         except Exception as e:
-            print("Caught exception : {0}".format(e))
+            print("Caught exception: {0}".format(e))
             logger.warn("Execution of command [%s] failed due to \n %s ", cmd, e)
             # Set retcode to non-zero so that this can be handled in the provider.
             if retcode == 0:
@@ -89,11 +89,10 @@ class LocalChannel(Channel, RepresentationMixin):
             - cmd (string) : Commandline string to execute
             - walltime (int) : walltime in seconds, this is not really used now.
 
-        Returns:
+        Returns a tuple containing:
 
-           - retcode : Return code from the execution, -1 on fail
-           - stdout  : stdout string
-           - stderr  : stderr string
+           - pid : process id
+           - proc : a subprocess.Popen object
 
         Raises:
          None.
@@ -114,8 +113,8 @@ class LocalChannel(Channel, RepresentationMixin):
             pid = proc.pid
 
         except Exception as e:
-            print("Caught exception : {0}".format(e))
             logger.warn("Execution of command [%s] failed due to \n %s ", (cmd, e))
+            raise
 
         return pid, proc
 
