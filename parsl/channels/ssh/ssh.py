@@ -10,7 +10,7 @@ from parsl.utils import RepresentationMixin
 logger = logging.getLogger(__name__)
 
 
-class HostAuthSSHClient(paramiko.SSHClient):
+class NoAuthSSHClient(paramiko.SSHClient):
     def _auth(self, username, *args):
         self._transport.auth_none(username)
         return
@@ -26,7 +26,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, host_auth=False, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, skip_auth=False, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -48,10 +48,10 @@ class SSHChannel(Channel, RepresentationMixin):
         self.password = password
         self.kwargs = kwargs
         self.script_dir = script_dir
-        self.host_auth = host_auth
+        self.skip_auth = skip_auth
 
-        if host_auth:
-            self.ssh_client = HostAuthSSHClient()
+        if self.skip_auth:
+            self.ssh_client = NoAuthSSHClient()
         else:
             self.ssh_client = paramiko.SSHClient()
         self.ssh_client.load_system_host_keys()
