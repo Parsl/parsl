@@ -484,8 +484,10 @@ Bug Fixes
 * Initial release, no listed bugs.
 
 
-Changelog
-=========
+Libsubmit Changelog
+===================
+
+As of Parsl 0.7.0 the libsubmit repository has been merged into Parsl.
 
 Libsubmit 0.4.1
 ---------------
