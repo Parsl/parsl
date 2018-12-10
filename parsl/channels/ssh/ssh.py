@@ -9,10 +9,12 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
+
 class HostAuthSSHClient(paramiko.SSHClient):
     def _auth(self, username, *args):
         self._transport.auth_none(username)
         return
+
 
 class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
