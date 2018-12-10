@@ -48,6 +48,7 @@ class SSHChannel(Channel, RepresentationMixin):
         self.password = password
         self.kwargs = kwargs
         self.script_dir = script_dir
+        self.host_auth = host_auth
 
         if host_auth:
             self.ssh_client = HostAuthSSHClient()
