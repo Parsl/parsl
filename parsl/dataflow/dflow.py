@@ -18,7 +18,7 @@ from concurrent.futures import Future
 from functools import partial
 
 import parsl
-from parsl.app.errors import RemoteException
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -33,6 +33,7 @@ from parsl.utils import get_version
 from parsl.monitoring.db_logger import get_db_logger
 from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
+from parsl.monitoring.web_app import index
 
 
 logger = logging.getLogger(__name__)
@@ -126,8 +127,11 @@ class DataFlowKernel(object):
         if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database':
             self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'monitoring_config': self.monitoring_config})
             self.logging_server.start()
+            self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config})
+            self.web_app.start()
         else:
             self.logging_server = None
+            self.web_app = None
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
@@ -251,7 +255,7 @@ class DataFlowKernel(object):
 
         try:
             res = future.result()
-            if isinstance(res, RemoteException):
+            if isinstance(res, RemoteExceptionWrapper):
                 res.reraise()
 
         except Exception:
@@ -393,7 +397,7 @@ class DataFlowKernel(object):
                         raise e
             else:
                 logger.info(
-                    "Task {} deferred due to dependency failure".format(task_id))
+                    "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
                 self.tasks[task_id]['status'] = States.dep_fail
                 if self.monitoring_config is not None:
@@ -645,7 +649,7 @@ class DataFlowKernel(object):
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
-                "Task {0} in pending list".format(task_id))
+                "internal consistency error: Task {0} already exists in task list".format(task_id))
         else:
             self.tasks[task_id] = task_def
 
@@ -786,8 +790,6 @@ class DataFlowKernel(object):
             raise Exception("attempt to clean up DFK when it has already been cleaned-up")
         self.cleanup_called = True
 
-        self.wait_for_current_tasks()
-
         self.log_task_states()
 
         # Checkpointing takes priority over the rest of the tasks
@@ -821,6 +823,11 @@ class DataFlowKernel(object):
         if self.logging_server is not None:
             self.logging_server.terminate()
             self.logging_server.join()
+
+        if self.web_app is not None:
+            self.web_app.terminate()
+            self.web_app.join()
+
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
@@ -1014,6 +1021,14 @@ class DataFlowKernelLoader(object):
             cls._dfk = DataFlowKernel(config)
 
         return cls._dfk
+
+    @classmethod
+    def wait_for_current_tasks(cls):
+        """Waits for all tasks in the task list to be completed, by waiting for their
+        AppFuture to be completed. This method will not necessarily wait for any tasks
+        added after cleanup has started such as data stageout.
+        """
+        cls.dfk().wait_for_current_tasks()
 
     @classmethod
     def dfk(cls):

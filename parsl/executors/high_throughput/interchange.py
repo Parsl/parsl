@@ -18,6 +18,7 @@ from ipyparallel.serialize import serialize_object
 
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
+PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 
 
 class ShutdownRequest(Exception):
@@ -60,7 +61,7 @@ class Interchange(object):
                  client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
-                 heartbeat_period=60,
+                 heartbeat_threshold=60,
                  logdir=".",
                  logging_level=logging.INFO,
              ):
@@ -83,8 +84,8 @@ class Interchange(object):
              The interchange picks ports at random from the range which will be used by workers.
              This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
 
-        heartbeat_period : int
-             Heartbeat period expected from workers (seconds). Default: 10s
+        heartbeat_threshold : int
+             Number of seconds since the last heartbeat after which worker is considered lost.
 
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
@@ -153,7 +154,7 @@ class Interchange(object):
         self._ready_manager_queue = {}
         self.max_task_queue_size = 10 ^ 5
 
-        self.heartbeat_thresh = heartbeat_period * 2
+        self.heartbeat_threshold = heartbeat_threshold
 
         self.current_platform = {'parsl_v': PARSL_VERSION,
                                  'python_v': "{}.{}.{}".format(sys.version_info.major,
@@ -328,6 +329,7 @@ class Interchange(object):
                     self._ready_manager_queue[manager]['last'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
                         logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
+                        self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
@@ -368,7 +370,7 @@ class Interchange(object):
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
 
             bad_managers = [manager for manager in self._ready_manager_queue if
-                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_thresh]
+                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
             for manager in bad_managers:
                 logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last'], time.time()))
                 logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
@@ -441,8 +443,29 @@ if __name__ == '__main__':
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-r", "--result_url",
                         help="REQUIRED: ZMQ url for posting results")
+    parser.add_argument("--worker_ports", default=None,
+                        help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
 
     args = parser.parse_args()
 
-    ic = Interchange()
+    # Setup logging
+    global logger
+    format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+
+    logger = logging.getLogger("interchange")
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setLevel('DEBUG' if args.debug is True else 'INFO')
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    logger.debug("Starting Interchange")
+
+    optionals = {}
+    if args.worker_ports:
+        optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
+    ic = Interchange(**optionals)
     ic.start()

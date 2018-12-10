@@ -28,8 +28,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    tasks_per_node : int
-        Tasks to run per node.
     nodes_per_block : int
         Nodes to provision per block.
     init_blocks : int
@@ -58,7 +56,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  image,
                  namespace='default',
                  channel=None,
-                 tasks_per_node=1,
                  nodes_per_block=1,
                  init_blocks=4,
                  min_blocks=0,
@@ -77,7 +74,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.namespace = namespace
         self.image = image
         self.channel = channel
-        self.tasks_per_node = tasks_per_node
         self.nodes_per_block = nodes_per_block
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
@@ -94,11 +90,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl.auto"):
         """ Submit a job
         Args:
              - cmd_string  :(String) - Name of the container to initiate
              - blocksize   :(float) - Number of replicas
+             - tasks_per_node (int) : command invocations to be launched per node
+
         Kwargs:
              - job_name (String): Name for job, must be unique
         Returns:
@@ -150,7 +148,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         """
         for job in job_ids:
-            logger.debug("Terminating job/proc_id : {0}".format(job))
+            logger.debug("Terminating job/proc_id: {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
             self._delete_deployment(job)
 
@@ -274,3 +272,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     @property
     def channels_required(self):
         return False
+
+    @property
+    def label(self):
+        return "kubernetes"
