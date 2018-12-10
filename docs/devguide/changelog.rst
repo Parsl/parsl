@@ -1,6 +1,84 @@
 Changelog
 =========
 
+
+Parsl 0.7.0
+-----------
+
+Tentative Dec 21st, 2018
+
+
+New functionality
+^^^^^^^^^^^^^^^^^
+
+
+* `HighThroughputExecutor`: a new executor replacing `IPyParallelExecutor` is now available.
+  This new executor addresses several limitations of `IPyParallelExecutor` such as:
+
+  * Scale beyond the demonstrated 300 worker limitation of IPP.
+  * Multi-processing manager supports execution on all cores of a single node.
+  * Improved version, system info and status reporting.
+  * Supports failure detection and cleaner manager shutdown.
+
+  Here's a sample configuration for using this executor locally:
+
+   .. code-block:: python
+
+        from parsl.providers import LocalProvider
+        from parsl.channels import LocalChannel
+
+        from parsl.config import Config
+        from parsl.executors import HighThroughputExecutor
+
+        config = Config(
+            executors=[
+                HighThroughputExecutor(
+                    label="htex_local",
+                    cores_per_worker=1,
+                    provider=LocalProvider(
+                        channel=LocalChannel(),
+                        init_blocks=1,
+                        max_blocks=1,
+                    ),
+                )
+            ],
+        )
+
+* `ExtremeScaleExecutor` a new executor targetting Super Computer scale runs is now available.
+
+* Libsubmit repository has been merged with Parsl to reduce overheads on maintenance w.r.t documentation,
+  testing, and release synchronization. Since the merge the API has undergone several updates to support
+  the growing collection of executors, and as a result Parsl 0.7.0+ will not be backwards compatible with
+  the standalone libsubmit repos. The major components of libsubmit are now available through Parsl, and
+  require the following changes to import lines to migrate scripts to 0.7.0:
+
+    * `from libsubmit.providers import <ProviderName>`  is now `from parsl.providers import <ProviderName>`
+    * `from libsubmit.channels import <ChannelName>`  is now `from parsl.channels import <ChannelName>`
+    * `from libsubmit.launchers import <LauncherName>`  is now `from parsl.launchers import <LauncherName>`
+
+
+* Implicit Data Staging `issue#281 <https://github.com/Parsl/parsl/issues/281>`_
+
+  .. code-block:: python
+    # create an remote Parsl file
+    inp = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+
+    # create a local Parsl file
+    out = File('file:///tmp/ARIN-STATS-FORMAT-CHANGE.txt')
+
+    # call the convert app with the Parsl file
+    f = convert(inputs=[inp], outputs=[out])
+    f.result()
+
+Bug Fixes
+^^^^^^^^^
+
+* Fixing ManagerLost error in HTEX/EXEX `issue#577 <https://github.com/Parsl/parsl/issues/577>`_
+* Write all debug logs to rundir by default in HTEX/EXEX `issue#574 <https://github.com/Parsl/parsl/issues/574>`_
+* Write one log per HTEX worker `issue#572 <https://github.com/Parsl/parsl/issues/572>`_
+* Fixing ManagerLost error in HTEX/EXEX `issue#577 <https://github.com/Parsl/parsl/issues/577>`_
+  
+
 Parsl 0.6.1
 -----------
 
