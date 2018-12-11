@@ -4,8 +4,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
 
 
 @App('python')
@@ -34,6 +32,8 @@ def test_fibonacci(num=3):
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    parsl.load(config)
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--num", default="5",
                         action="store", dest="a", type=int)
