@@ -11,6 +11,12 @@ logger = logging.getLogger(__name__)
 
 from typing import Any
 
+class NoAuthSSHClient(paramiko.SSHClient):
+    def _auth(self, username, *args):
+        self._transport.auth_none(username)
+        return
+
+
 class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
@@ -21,7 +27,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, skip_auth=False, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -43,8 +49,12 @@ class SSHChannel(Channel, RepresentationMixin):
         self.password = password
         self.kwargs = kwargs
         self.script_dir = script_dir
+        self.skip_auth = skip_auth
 
-        self.ssh_client = paramiko.SSHClient()
+        if self.skip_auth:
+            self.ssh_client = NoAuthSSHClient()
+        else:
+            self.ssh_client = paramiko.SSHClient()
         self.ssh_client.load_system_host_keys()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 

@@ -397,7 +397,7 @@ class DataFlowKernel(object):
                         raise e
             else:
                 logger.info(
-                    "Task {} deferred due to dependency failure".format(task_id))
+                    "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
                 self.tasks[task_id]['status'] = States.dep_fail
                 if self.monitoring_config is not None:
@@ -649,7 +649,7 @@ class DataFlowKernel(object):
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
-                "Task {0} in pending list".format(task_id))
+                "internal consistency error: Task {0} already exists in task list".format(task_id))
         else:
             self.tasks[task_id] = task_def
 

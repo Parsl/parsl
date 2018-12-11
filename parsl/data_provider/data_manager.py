@@ -6,7 +6,7 @@ import concurrent.futures as cf
 from parsl.data_provider.scheme import GlobusScheme
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
-from parsl.app.app import App
+from parsl.app.app import python_app
 
 from typing import List
 
@@ -201,19 +201,19 @@ class DataManager(ParslExecutor):
             raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
 
     def _file_stage_in_app(self):
-        return App("python", executors=['data_manager'])(self._file_stage_in)
+        return python_app(executors=['data_manager'])(self._file_stage_in)
 
     def _file_stage_in(self, outputs=[]):
         pass
 
     def _ftp_stage_in_app(self, executor):
-        return App("python", executors=[executor])(_ftp_stage_in)
+        return python_app(executors=[executor])(_ftp_stage_in)
 
     def _http_stage_in_app(self, executor):
-        return App("python", executors=[executor])(_http_stage_in)
+        return python_app(executors=[executor])(_http_stage_in)
 
     def _globus_stage_in_app(self):
-        return App("python", executors=['data_manager'])(self._globus_stage_in)
+        return python_app(executors=['data_manager'])(self._globus_stage_in)
 
     def _globus_stage_in(self, globus_ep, outputs=[]):
         file = outputs[0]
@@ -254,13 +254,13 @@ class DataManager(ParslExecutor):
             raise Exception('Staging out with unknown file scheme {} is not supported'.format(file.scheme))
 
     def _file_stage_out_app(self):
-        return App("python", executors=['data_manager'])(self._file_stage_out)
+        return python_app(executors=['data_manager'])(self._file_stage_out)
 
     def _file_stage_out(self):
         pass
 
     def _globus_stage_out_app(self):
-        return App("python", executors=['data_manager'])(self._globus_stage_out)
+        return python_app(executors=['data_manager'])(self._globus_stage_out)
 
     def _globus_stage_out(self, globus_ep, inputs=[]):
         file = inputs[0]

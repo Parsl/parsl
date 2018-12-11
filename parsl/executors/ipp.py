@@ -120,7 +120,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.executor = Client(url_file=self.controller.client_file)
         if self.container_image:
             command_composer = self.compose_containerized_launch_cmd
-            logger.info("Launching IPP with Docker:{0}".format(self.container_image))
+            logger.info("Launching IPP with Docker image: {0}".format(self.container_image))
 
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []
