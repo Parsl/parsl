@@ -8,8 +8,6 @@ from parsl.app.app import App
 
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-dfk = parsl.load(config)
 
 
 @App('bash')
@@ -89,6 +87,8 @@ def test_parallel_for(n=3):
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    dfk = parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",
