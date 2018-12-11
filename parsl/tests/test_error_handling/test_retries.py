@@ -6,8 +6,6 @@ from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 config.retries = 2
 
-parsl.clear()
-parsl.load(config)
 
 
 @App('python')
@@ -100,6 +98,8 @@ def test_retry():
 
 
 if __name__ == "__main__":
+    parsl.clear()
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",
