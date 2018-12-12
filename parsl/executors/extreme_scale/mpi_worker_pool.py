@@ -490,7 +490,7 @@ if __name__ == "__main__":
     # set_stream_logger()
     try:
         if rank == 0:
-            start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
+            start_file_logger('{}/manager.mpi_rank_{}.log'.format(args.logdir, rank),
                               rank,
                               level=logging.DEBUG if args.debug is True else logging.INFO)
 
@@ -506,7 +506,7 @@ if __name__ == "__main__":
             logger.debug("Finalizing MPI Comm")
             comm.Abort()
         else:
-            start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
+            start_file_logger('{}/worker.mpi_rank_{}.log'.format(args.logdir, rank),
                               rank,
                               level=logging.DEBUG if args.debug is True else logging.INFO)
             worker(comm, rank)
