@@ -65,6 +65,9 @@ def dealer_worker(worker_id, ip="localhost", port=5560):
         logger.debug("Worker result: {}".format(result))
         reply = {"result": result, "worker_id": worker_id}
         socket.send_multipart([bufs[0]] + serialize_object(reply))
+    
+        print("Worker {} received {} tasks"
+            .format(worker_id, len(task_ids_received)))
 
 
 if __name__ == "__main__":
