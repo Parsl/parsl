@@ -319,7 +319,7 @@ class Manager(object):
                 task = self.pending_task_queue.get()
                 comm.send(task, dest=worker_rank, tag=worker_rank)
                 task_sent_counter += 1
-                logger.debug("Assigning Worker:{} task:{}".format(worker_rank, task['task_id']))
+                logger.debug("Assigning worker:{} task:{}".format(worker_rank, task['task_id']))
 
             if not start:
                 start = time.time()
@@ -393,7 +393,7 @@ def worker(comm, rank):
         req = comm.recv(source=0, tag=rank)
         logger.debug("Got req: {}".format(req))
         tid = req['task_id']
-        logger.debug("Got task : {}".format(tid))
+        logger.debug("Got task: {}".format(tid))
 
         try:
             result = execute_task(req['buffer'])
@@ -402,7 +402,7 @@ def worker(comm, rank):
             logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
-            logger.debug("Result : {}".format(result))
+            logger.debug("Result: {}".format(result))
 
         pkl_package = pickle.dumps(result_package)
         comm.send(pkl_package, dest=0, tag=RESULT_TAG)
@@ -480,7 +480,7 @@ if __name__ == "__main__":
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    print("Start rank :", rank)
+    print("Starting rank: {}".format(rank))
 
     try:
         os.makedirs(args.logdir)
@@ -512,7 +512,7 @@ if __name__ == "__main__":
             worker(comm, rank)
     except Exception as e:
         logger.critical("mpi_worker_pool exiting from an exception")
-        logger.exception("Caught error : {}".format(e))
+        logger.exception("Caught error: {}".format(e))
         raise
     else:
         logger.info("mpi_worker_pool exiting")
