@@ -7,10 +7,9 @@ Parsl 0.7.0
 
 Tentative Dec 21st, 2018
 
-Parsl v0.7.0 includes 110 closed issues with contributions from 
-@annawoodard, @benc, @ConnorPigg, @yadudoc, @ryanchard, @ZhuozhaoLi, @kylechard
-
-And error reports from @sdustrud, @gordonwatts, @
+Parsl v0.7.0 includes 110 closed issues with contributions from:
+@annawoodard, @benc, @ConnorPigg, @yadudoc, @ryanchard, @ZhuozhaoLi,
+@kylechard, @sdustrud and @gordonwatts
 
 New functionality
 ^^^^^^^^^^^^^^^^^
@@ -88,21 +87,21 @@ New functionality
   the standalone libsubmit repos. The major components of libsubmit are now available through Parsl, and
   require the following changes to import lines to migrate scripts to 0.7.0:
 
-    * `from libsubmit.providers import <ProviderName>`  is now `from parsl.providers import <ProviderName>`
-    * `from libsubmit.channels import <ChannelName>`  is now `from parsl.channels import <ChannelName>`
-    * `from libsubmit.launchers import <LauncherName>`  is now `from parsl.launchers import <LauncherName>`
+    * ``from libsubmit.providers import <ProviderName>``  is now ``from parsl.providers import <ProviderName>``
+    * ``from libsubmit.channels import <ChannelName>``  is now ``from parsl.channels import <ChannelName>``
+    * ``from libsubmit.launchers import <LauncherName>``  is now ``from parsl.launchers import <LauncherName>``
 
 
     .. warning::
        This is a breaking change from Parsl v0.6.0
 
-* To support resource based requests for workers and to maintain uniformity across interfaces, `tasks_per_node` is
+* To support resource based requests for workers and to maintain uniformity across interfaces, ``tasks_per_node`` is
   no longer a **provider** option. Instead, executor specific options will now be provided, for eg:
 
-    * `IPyParallelExecutor` provides `workers_per_node`
-    * `HighThroughputExecutor` provides `cores_per_worker` to allow for worker launches to be determined based on
+    * `IPyParallelExecutor` provides ``workers_per_node``
+    * `HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
       the number of cores on the compute node.
-    * `ExtermeScaleExecutor` uses `ranks_per_node` to specify the ranks to launch per node.
+    * `ExtermeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
 
     .. warning::
        This is a breaking change from Parsl v0.6.0
@@ -116,12 +115,11 @@ New functionality
 * Determining the right IP address/interface given network firewall rules is often a nuisance. To simplify this
   three new methods are now supported:
 
-    * `parsl.addresses.address_by_route`
-    * `parsl.addresses.address_by_query`
-    * `parsl.addresses.address_by_hostname`
+    * ``parsl.addresses.address_by_route``
+    * ``parsl.addresses.address_by_query``
+    * ``parsl.addresses.address_by_hostname``
 
-* `AprunLauncher` now supports `overrides` option that allows arbitrary strings to be added to the aprun launcher call.
-
+* `AprunLauncher` now supports ``overrides`` option that allows arbitrary strings to be added to the aprun launcher call.
 
 
 Bug Fixes
