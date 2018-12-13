@@ -2,9 +2,19 @@ Roadmap
 =======
 
 
-Sufficient capabilities to use Parsl in many common situations already exist.  This document indicates where Parsl is going; it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold, with the release in which they were added marked for releases since 0.3.0. Help in providing any of the yet-to-be-developed capabilities is welcome.
+Before diving into the roadmap, a quick retrospective look at the evolution of workflow
+solutions that came before Parsl from the workflows group at UChicago and Argonne National Laboratory.
 
-The upcoming release is Parsl-0.6.0 and features in preparation are documented via Github `issues <https://github.com/Parsl/parsl/issues>`_ and `milestones <https://github.com/Parsl/parsl/milestone/4>`_.
+.. image:: ../images/swift-e-timeline_trimmed.png
+
+
+Sufficient capabilities to use Parsl in many common situations already exist.  This document indicates where Parsl is going;
+it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold, with the release
+in which they were added marked for releases since 0.3.0. Help in providing any of the yet-to-be-developed capabilities is welcome.
+
+The upcoming release is Parsl-0.8.0 and features in preparation are documented via Github
+`issues <https://github.com/Parsl/parsl/issues>`_ and `milestones <https://github.com/Parsl/parsl/milestone/7>`_.
+
 
 Core Functionality
 ---------------------
@@ -45,12 +55,13 @@ Execution core and parallelism (DFK)
 * **Internal (dynamically created/updated) task/data dependency graph that enables asynchronous execution ordered by data dependencies and throttled by resource limits.**
 * **Well-defined state transition model for task lifecycle. (v0.5.0)**
 * Add data staging to task state transition model.
-* More efficient algorithms for managing dependency resolution.
+* **More efficient algorithms for managing dependency resolution. (v0.7.0)**
 * Scheduling and allocation algorithms that determine job placement based on job and data requirements (including deadlines) as well as site capabilities.
 * **Directing jobs to a specific set of sites.(v0.4.0)**
 * **Logic to manage (provision, resize) execution resource block based on job requirements, and running multiple tasks per resource block (v0.4.0).**
 * **Retry logic to support recovery and fault tolerance**
 * **Workflow level checkpointing and restart (v0.4.0)**
+* **Transition away from IPP to in-house executors (HighThroughputExecutor and ExtremeScaleExecutor v0.7.0)**
 
 Resource provisioning and execution
 -----------------------------------
@@ -74,13 +85,13 @@ Resource provisioning and execution
 * Support for remote execution using **SSH** and OAuth-based authentication (SSH execution support added in 0.3.0)
 * **Utilizing multiple sites for a single script’s execution (v0.4.0)**
 * Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
-* IPP workers to support multiple threads of execution per node.
+* **IPP workers to support multiple threads of execution per node. (v0.7.0 adds support via replacement executors)**
 * Smarter serialization with caching frequently used objects.
 * **Support for user-defined containers as Parsl apps and orchestration of workflows comprised of containers (v0.5.0)**
     * **Docker (locally)**
     * Shifter (NERSC, Blue Waters)
     * Singularity (ALCF)
-    
+
 Visualization, debugging, fault tolerance
 -----------------------------------------
 
@@ -91,6 +102,7 @@ Visualization, debugging, fault tolerance
 * Support for visualizing dead/dying parts of the task graph and retrying with updates to the task.
 * **Retry model to selectively re-execute only the failed branches of a workflow graph**
 * **Fault tolerance support for individual task execution**
+* **Support for saving monitoring information to local DB (sqlite) and remote DB (elasticsearch) (v0.6.0 and v0.7.0)**
 
 Authentication and authorization
 --------------------------------
