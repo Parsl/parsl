@@ -3,14 +3,13 @@ from parsl.monitoring.handler import DatabaseHandler
 from parsl.monitoring.handler import RemoteHandler
 from parsl.utils import RepresentationMixin
 
-from parsl.errors import OptionalModuleMissing
-
 
 class NullHandler(logging.Handler):
     """Setup default logging to /dev/null since this is library."""
 
     def emit(self, record):
         pass
+
 
 class MonitoringStore(RepresentationMixin):
 
@@ -26,8 +25,8 @@ class MonitoringStore(RepresentationMixin):
                 The port for the visualization interface
         """
 
-        self.host=host
-        self.port=port
+        self.host = host
+        self.port = port
 
 
 class Database(MonitoringStore, RepresentationMixin):
@@ -43,7 +42,8 @@ class Database(MonitoringStore, RepresentationMixin):
             database inside the rundir.
         """
 
-        self.connection_string=connection_string
+        self.connection_string = connection_string
+
 
 class LoggingServer(RepresentationMixin):
 
@@ -62,8 +62,9 @@ class LoggingServer(RepresentationMixin):
         self.host = host
         self.port = port
 
+
 class VisualizationServer(RepresentationMixin):
-    
+
     def __init__(self,
                  host='http://localhost',
                  port=8899):
@@ -76,8 +77,9 @@ class VisualizationServer(RepresentationMixin):
             The port for the visualization interface
         """
 
-        self.host=host
-        self.port=port
+        self.host = host
+        self.port = port
+
 
 class Monitoring(RepresentationMixin):
     """ This is a config class for monitoring. """

@@ -107,7 +107,6 @@ class DatabaseHandler(logging.Handler):
                     create_workflows_table(self.meta)
                     self.meta.create_all(con)
         except Exception as e:
-            print (e)
             logger.error(
                 "Failed to create monitoring tables. Error: {}".format(str(e)))
 

@@ -34,15 +34,15 @@ class MainHandler(tornado.web.RequestHandler):
             self.application.logger.info('from tornado task ' + str(arg.get('task_id', 'NO TASK')), extra=arg)
         except AttributeError:
             self.application.logger = get_parsl_logger(logger_name='loggingserver',
-                                                    is_logging_server=True,
-                                                    monitoring_config=self.monitoring_config)
+                                                       is_logging_server=True,
+                                                       monitoring_config=self.monitoring_config)
             self.application.logger.info('from tornado task ' + str(arg.get('task_id', 'NO TASK')), extra=arg)
 
 
 def run(monitoring_config):
-    """ Set up the logging server according to configurations the user specified. This is the function launched as a separate process from the DFK in order to
-    start logging. """
-    print ("starting logging server on %s" % monitoring_config.logging_server.port)
+    """ Set up the logging server according to configurations the user specified. This is the function launched as a
+    separate process from the DFK in order to start logging.
+    """
     # Assumtion that monitoring_config is not none because if it were this server should not have been started
     app = tornado.web.Application([(r"/", MainHandler, dict(monitoring_config=monitoring_config))])
     app.listen(monitoring_config.logging_server.port)
