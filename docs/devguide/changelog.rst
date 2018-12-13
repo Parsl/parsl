@@ -7,6 +7,10 @@ Parsl 0.7.0
 
 Tentative Dec 21st, 2018
 
+Parsl v0.7.0 includes 110 closed issues with contributions from 
+@annawoodard, @benc, @ConnorPigg, @yadudoc, @ryanchard, @ZhuozhaoLi, @kylechard
+
+And error reports from @sdustrud, @gordonwatts, @
 
 New functionality
 ^^^^^^^^^^^^^^^^^
@@ -15,9 +19,9 @@ New functionality
 * `HighThroughputExecutor`: a new executor replacing `IPyParallelExecutor` is now available.
   This new executor addresses several limitations of `IPyParallelExecutor` such as:
 
-  * Scale beyond the demonstrated 300 worker limitation of IPP.
+  * Scale beyond the ~300 worker limitation of IPP.
   * Multi-processing manager supports execution on all cores of a single node.
-  * Improved version, system info and status reporting.
+  * Improved worker side reporting of version, system and status info.
   * Supports failure detection and cleaner manager shutdown.
 
   Here's a sample configuration for using this executor locally:
@@ -44,7 +48,39 @@ New functionality
             ],
         )
 
-* `ExtremeScaleExecutor` a new executor targetting Super Computer scale runs is now available.
+   More information on configuring is available in the :ref:`configuration-section` section.
+
+* `ExtremeScaleExecutor` a new executor targetting SuperComputer scale (>1000 nodes) workflows is now available.
+
+  Here's a sample configuration for using this executor locally:
+
+   .. code-block:: python
+
+        from parsl.providers import LocalProvider
+        from parsl.channels import LocalChannel
+        from parsl.launchers import SimpleLauncher
+
+        from parsl.config import Config
+        from parsl.executors import ExtremeScaleExecutor
+
+        config = Config(
+            executors=[
+                ExtremeScaleExecutor(
+                    label="extreme_local",
+                    ranks_per_node=4,
+                    provider=LocalProvider(
+                        channel=LocalChannel(),
+                        init_blocks=0,
+                        max_blocks=1,
+                        launcher=SimpleLauncher(),
+                    )
+                )
+            ],
+            strategy=None,
+        )
+
+  More information on configuring is available in the :ref:`configuration-section` section.
+
 
 * Libsubmit repository has been merged with Parsl to reduce overheads on maintenance w.r.t documentation,
   testing, and release synchronization. Since the merge the API has undergone several updates to support
@@ -57,18 +93,36 @@ New functionality
     * `from libsubmit.launchers import <LauncherName>`  is now `from parsl.launchers import <LauncherName>`
 
 
-* Implicit Data Staging `issue#281 <https://github.com/Parsl/parsl/issues/281>`_
+    .. warning::
+       This is a breaking change from Parsl v0.6.0
 
-  .. code-block:: python
-    # create an remote Parsl file
-    inp = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+* To support resource based requests for workers and to maintain uniformity across interfaces, `tasks_per_node` is
+  no longer a **provider** option. Instead, executor specific options will now be provided, for eg:
 
-    # create a local Parsl file
-    out = File('file:///tmp/ARIN-STATS-FORMAT-CHANGE.txt')
+    * `IPyParallelExecutor` provides `workers_per_node`
+    * `HighThroughputExecutor` provides `cores_per_worker` to allow for worker launches to be determined based on
+      the number of cores on the compute node.
+    * `ExtermeScaleExecutor` uses `ranks_per_node` to specify the ranks to launch per node.
 
-    # call the convert app with the Parsl file
-    f = convert(inputs=[inp], outputs=[out])
-    f.result()
+    .. warning::
+       This is a breaking change from Parsl v0.6.0
+
+
+* Major upgrades to the monitoring infrastructure.
+    * Monitoring information can now be written to a SQLite database, created on the fly by Parsl
+    * Web based monitoring to track workflow progress
+
+
+* Determining the right IP address/interface given network firewall rules is often a nuisance. To simplify this
+  three new methods are now supported:
+
+    * `parsl.addresses.address_by_route`
+    * `parsl.addresses.address_by_query`
+    * `parsl.addresses.address_by_hostname`
+
+* `AprunLauncher` now supports `overrides` option that allows arbitrary strings to be added to the aprun launcher call.
+
+
 
 Bug Fixes
 ^^^^^^^^^
