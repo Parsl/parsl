@@ -30,7 +30,8 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
-from parsl.monitoring.db_logger import get_db_logger
+
+from parsl.monitoring.monitoring_base import get_parsl_logger
 from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
 from parsl.monitoring.web_app import index
@@ -87,22 +88,19 @@ class DataFlowKernel(object):
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
 
-        # ES logging
+        # Monitoring
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
-        self.monitoring_config = config.monitoring_config
-        if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database'\
-                and self.monitoring_config.eng_link is None:
-            # uses the rundir as the default location.
-            logger.info('Local monitoring database can be found inside the run_dir at: {}'.format(self.run_dir))
-            self.monitoring_config.eng_link = "sqlite:///{}".format(os.path.join(os.path.abspath(self.run_dir), 'monitoring.db'))
-        if self.monitoring_config is None:
-            self.db_logger = get_db_logger()
+        self.monitoring = config.monitoring
+
+        if self.monitoring is None:
+            self.db_logger = get_parsl_logger()
         else:
-            self.db_logger = get_db_logger(monitoring_config=self.monitoring_config)
+            self.db_logger = get_parsl_logger(monitoring_config=self.monitoring)
+
         self.workflow_name = None
-        if self.monitoring_config is not None and self.monitoring_config.workflow_name is not None:
-            self.workflow_name = self.monitoring_config.workflow_name
+        if self.monitoring.workflow_name is not None:
+            self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
@@ -113,25 +111,32 @@ class DataFlowKernel(object):
                     break
 
         self.workflow_version = None
-        if self.monitoring_config is not None and self.monitoring_config.version is not None:
-            self.workflow_version = self.monitoring_config.version
+        if self.monitoring.version is not None:
+            self.workflow_version = self.monitoring.version
+
         self.time_began = time.time()
         self.time_completed = None
         self.run_id = str(uuid4())
-        self.dashboard = self.monitoring_config.dashboard_link if self.monitoring_config is not None else None
+
+        self.dashboard = self.monitoring.dashboard_link if self.monitoring is not None else None
         # TODO: make configurable
         logger.info("Run id is: " + self.run_id)
         if self.dashboard is not None:
             logger.info("Dashboard is found at " + self.dashboard)
+
+        self.logging_server = None
+        self.web_app = None
         # start tornado logging server
-        if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database':
-            self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'monitoring_config': self.monitoring_config})
+        if self.monitoring is not None:
+            self.logging_server = multiprocessing.Process(target=logging_server.run,
+                                                          kwargs={'monitoring_config': self.monitoring})
             self.logging_server.start()
-            self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config})
-            self.web_app.start()
-        else:
-            self.logging_server = None
-            self.web_app = None
+
+            if self.monitoring.visualization_server is not None:
+                self.web_app = multiprocessing.Process(target=index.run,
+                    kwargs={'monitoring_config': self.monitoring})
+                self.web_app.start()
+
         workflow_info = {
                 'python_version': sys.version_info,
                 'parsl_version': get_version(),
@@ -269,7 +274,7 @@ class DataFlowKernel(object):
             if not self._config.lazy_errors:
                 logger.debug("Eager fail, skipping retry logic")
                 self.tasks[task_id]['status'] = States.failed
-                if self.monitoring_config is not None:
+                if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'eager')
                     self.db_logger.info("Task Fail", extra=task_log_info)
                 return
@@ -277,7 +282,7 @@ class DataFlowKernel(object):
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
-                if self.monitoring_config is not None:
+                if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Retry", extra=task_log_info)
 
@@ -288,7 +293,7 @@ class DataFlowKernel(object):
                 self.tasks_failed_count += 1
 
                 self.tasks[task_id]['time_returned'] = time.time()
-                if self.monitoring_config is not None:
+                if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Retry Failed", extra=task_log_info)
 
@@ -298,7 +303,7 @@ class DataFlowKernel(object):
 
             logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_returned'] = time.time()
-            if self.monitoring_config is not None:
+            if self.monitoring is not None:
                 task_log_info = self._create_task_log_info(task_id)
                 self.db_logger.info("Task Done", extra=task_log_info)
 
@@ -400,7 +405,7 @@ class DataFlowKernel(object):
                     "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
                 self.tasks[task_id]['status'] = States.dep_fail
-                if self.monitoring_config is not None:
+                if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.db_logger.info("Task Dep Fail", extra=task_log_info)
 
@@ -459,12 +464,12 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
-        if self.monitoring_config is not None:
-            executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
+        if self.monitoring is not None:
+            executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring, self.run_id)
         with self.submitter_lock:
             exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
-        if self.monitoring_config is not None:
+        if self.monitoring is not None:
             task_log_info = self._create_task_log_info(task_id)
             self.db_logger.info("Task Launch", extra=task_log_info)
         exec_fu.retries_left = self._config.retries - \

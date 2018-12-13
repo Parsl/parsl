@@ -1,7 +1,7 @@
 import time
 from multiprocessing import Process
 import os
-from parsl.monitoring.db_logger import get_db_logger
+from parsl.monitoring.monitoring_base import get_parsl_logger
 
 
 def monitor(pid, task_id, monitoring_config, run_id):
@@ -11,9 +11,9 @@ def monitor(pid, task_id, monitoring_config, run_id):
     import psutil
 
     if monitoring_config is None:
-        logger = get_db_logger()
+        logger = get_parsl_logger()
     else:
-        logger = get_db_logger(logger_name=run_id + str(task_id), monitoring_config=monitoring_config)
+        logger = get_parsl_logger(logger_name=run_id + str(task_id), monitoring_config=monitoring_config)
 
     sleep_duration = monitoring_config.resource_loop_sleep_duration
     time.sleep(sleep_duration)
@@ -67,7 +67,8 @@ def monitor(pid, task_id, monitoring_config, run_id):
 
 def monitor_wrapper(f, task_id, monitoring_config, run_id):
     """ Internal
-    Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
+    Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task
+    begins.
     """
     def wrapped(*args, **kwargs):
         p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_config, run_id))
@@ -75,7 +76,8 @@ def monitor_wrapper(f, task_id, monitoring_config, run_id):
         try:
             return f(*args, **kwargs)
         finally:
-            # Note: I believe finally blocks are not called if the python parsl process is killed with certain SIGs which may leave the monitor as a zombie
+            # Note: I believe finally blocks are not called if the python parsl process is killed with certain SIGs
+            # which may leave the monitor as a zombie
             p.terminate()
             p.join()
     return wrapped

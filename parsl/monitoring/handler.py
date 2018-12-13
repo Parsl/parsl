@@ -88,17 +88,34 @@ def create_task_resource_table(meta):
 
 class DatabaseHandler(logging.Handler):
     """ The handler that takes a log record and puts it into an SQL database. Needs to be a bit fast. """
+
     def __init__(self, elink):
         """ Set up the handler to link it to the database specified by elink. """
+
         logging.Handler.__init__(self)
         self.eng = sa.create_engine(elink)
         self.meta = sa.MetaData()
         self.meta.reflect(bind=self.eng)
 
+        # TODO: Check if database exists
+        try:
+            with self.eng.connect() as con:
+                if 'workflows' not in self.meta.tables.keys():
+                    create_task_resource_table(self.meta)
+                    create_task_status_table(self.meta)
+                    create_task_table(self.meta)
+                    create_workflows_table(self.meta)
+                    self.meta.create_all(con)
+        except Exception as e:
+            print (e)
+            logger.error(
+                "Failed to create monitoring tables. Error: {}".format(str(e)))
+
     def emit(self, record):
         """ Take a task record and insert or update information in the SQL database. Creates the necessary tables if needed.
         Allow multiple tries since originally this was erroneous and used concurrently. Squashes errors/exceptions.
         This handler is added to a logger that is returned by get_db_logger when requested. """
+
         self.eng.dispose()
         trys = 3
         info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
@@ -124,10 +141,6 @@ class DatabaseHandler(logging.Handler):
                                      .where(workflow.c.run_id == run_id)
                         con.execute(up)
 
-                    # create workflows table if this is a new database without one
-                    if 'workflows' not in self.meta.tables.keys():
-                        workflows = create_workflows_table(self.meta)
-                        self.meta.create_all(con)
                     # if this is the first sight of the workflow, add it to the workflows table
                     if len(con.execute(self.meta.tables['workflows'].select(self.meta.tables['workflows'].c.run_id == run_id)).fetchall()) == 0:
                         workflows = self.meta.tables['workflows']
@@ -144,11 +157,6 @@ class DatabaseHandler(logging.Handler):
                         up = workflows.update().values(tasks_failed_count=info['tasks_failed_count']).where(workflows.c.run_id == run_id)
                         con.execute(up)
 
-                    # create task table if this is a new run without one
-                    if 'task' not in self.meta.tables.keys():
-                        workflow = create_task_table(self.meta)
-                        self.meta.create_all(con)
-
                     # check to make sure it is a task log and not just a workflow overview log
                     if info.get('task_id', None) is not None:
                         # if this is the first sight of the task in the workflow, add it to the workflow table
@@ -163,27 +171,13 @@ class DatabaseHandler(logging.Handler):
                             con.execute(ins)
 
                         if 'task_status' in info.keys():
-                            # if this is the first sight of a task, create a task_status_table to hold this task's updates
-                            if 'task_status' not in self.meta.tables.keys():
-                                task_status_table = create_task_status_table(self.meta)
-                                self.meta.create_all(con)
-                                con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
-                            # if this status table already exists, just insert the update
-                            else:
-                                task_status_table = self.meta.tables['task_status']
-                                con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
+                            task_status_table = self.meta.tables['task_status']
+                            con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
                             return
 
                         if 'psutil_process_pid' in info.keys():
-                            # if this is a task resource update then handle that, if the resource table DNE then create it
-                            if 'task_resources' not in self.meta.tables.keys():
-                                task_resource_table = create_task_resource_table(self.meta)
-                                self.meta.create_all(con)
-                                con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
-                            # if this resource table already exists, just insert the update
-                            else:
-                                task_resource_table = self.meta.tables['task_resources']
-                                con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
+                            task_resource_table = self.meta.tables['task_resources']
+                            con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
                             return
 
             except Exception as e:
@@ -197,6 +191,7 @@ class DatabaseHandler(logging.Handler):
 class RemoteHandler(logging.Handler):
     """ Handler used to pass a log to the logging server for it to be written to the database.
     This handler is added to a logger that is returned by get_db_logger when requested. """
+
     def __init__(self, web_app_host, web_app_port, request_timeout=40, retries=3, on_fail_sleep_duration=5):
         """ Set up various behavior of the attempt to connect to the logging server. Not currently configurable. """
         logging.Handler.__init__(self)
