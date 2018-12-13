@@ -7,9 +7,9 @@ Parsl 0.7.0
 
 Tentative Dec 21st, 2018
 
-Parsl v0.7.0 includes 110 closed issues with contributions from:
-@annawoodard, @benc, @ConnorPigg, @yadudoc, @ryanchard, @ZhuozhaoLi,
-@kylechard, @sdustrud and @gordonwatts
+Parsl v0.7.0 includes 110 closed issues with contributions (code, tests, reviews and reports)
+from: @annawoodard, @benc, @ConnorPigg, @garri1105, @yadudoc, @ryanchard, @ZhuozhaoLi,
+@lukaszlacinski, @jmjwozniak,  @danielskatz, @kylechard, @EiffL, @sdustrud and @gordonwatts
 
 New functionality
 ^^^^^^^^^^^^^^^^^
@@ -96,12 +96,13 @@ New functionality
        This is a breaking change from Parsl v0.6.0
 
 * To support resource based requests for workers and to maintain uniformity across interfaces, ``tasks_per_node`` is
-  no longer a **provider** option. Instead, executor specific options will now be provided, for eg:
+  no longer a **provider** option. Instead, the notion of ``tasks_per_node`` is defined via executor specific options,
+  for eg:
 
     * `IPyParallelExecutor` provides ``workers_per_node``
     * `HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
       the number of cores on the compute node.
-    * `ExtermeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
+    * `ExtremeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
 
     .. warning::
        This is a breaking change from Parsl v0.6.0
@@ -112,24 +113,72 @@ New functionality
     * Web based monitoring to track workflow progress
 
 
-* Determining the right IP address/interface given network firewall rules is often a nuisance. To simplify this
-  three new methods are now supported:
+* Determining the right IP address/interface given network firewall rules is often a nuisance.
+  To simplify this three new methods are now supported:
 
     * ``parsl.addresses.address_by_route``
     * ``parsl.addresses.address_by_query``
     * ``parsl.addresses.address_by_hostname``
 
-* `AprunLauncher` now supports ``overrides`` option that allows arbitrary strings to be added to the aprun launcher call.
+* `AprunLauncher` now supports ``overrides`` option that allows arbitrary strings to be added
+  to the aprun launcher call.
 
+* `DataFlowKernel` has a new method ``wait_for_current_tasks()``
+
+* `DataFlowKernel` now uses per-task locks and an improved mechanism to handle task completions
+  improving performance for workflows with large number of tasks.
+
+*
 
 Bug Fixes
 ^^^^^^^^^
 
+* Ctlr+C should cause fast DFK cleanup `issue#641 <https://github.com/Parsl/parsl/issues/641>`_
+* Fix to avoid padding in ``wtime_to_minutes()`` `issue#522 <https://github.com/Parsl/parsl/issues/522>`_
+* Updates to block semantics `issue#557 <https://github.com/Parsl/parsl/issues/557>`_
+* Updates ``public_ip`` to ``address`` for clarity `issue#557 <https://github.com/Parsl/parsl/issues/557>`_
+* Improvements to launcher docs `issue#424 <https://github.com/Parsl/parsl/issues/424>`_
+* Fixes for inconsistencies between stream_logger and file_logger `issue#629 <https://github.com/Parsl/parsl/issues/629>`_
+* Fixes to DFK discarding some un-executed tasks at end of workflow `issue#222 <https://github.com/Parsl/parsl/issues/222>`_
+* Implement per-task locks to avoid deadlocks `issue#591 <https://github.com/Parsl/parsl/issues/591>`_
+* Fixes to internal consistency errors `issue#604 <https://github.com/Parsl/parsl/issues/604>`_
+* Removed unnecessary provider labels `issue#440 <https://github.com/Parsl/parsl/issues/440>`_
+* Fixes to `TorqueProvider` to work on NSCC `issue#489 <https://github.com/Parsl/parsl/issues/489>`_
+* Several fixes and updates to monitoring subsystem `issue#471 <https://github.com/Parsl/parsl/issues/471>`_
+* DataManager calls wrong DFK `issue#412 <https://github.com/Parsl/parsl/issues/412>`_
+* Config isn't reloading properly in notebooks `issue#549 <https://github.com/Parsl/parsl/issues/549>`_
+* Cobalt provider ``partition`` should be ``queue`` `issue#353 <https://github.com/Parsl/parsl/issues/353>`_
+* bash AppFailure exceptions contain useful but un-displayed information `issue#384 <https://github.com/Parsl/parsl/issues/384>`_
+* Do not CD to engine_dir `issue#543 <https://github.com/Parsl/parsl/issues/543>`_
+* Parsl install fails without kubernetes config file `issue#527 <https://github.com/Parsl/parsl/issues/527>`_
+* Fix import error `issue#533  <https://github.com/Parsl/parsl/issues/533>`_
+* Change Local Database Strategy from Many Writers to a Single Writer `issue#472 <https://github.com/Parsl/parsl/issues/472>`_
+* All run-related working files should go in the rundir unless otherwise configured `issue#457 <https://github.com/Parsl/parsl/issues/457>`_
+* Fix concurrency issue with many engines accessing the same IPP config `issue#469 <https://github.com/Parsl/parsl/issues/469>`_
+* Ensure we are not caching failed tasks `issue#368 <https://github.com/Parsl/parsl/issues/368>`_
+* File staging of unknown schemes fails silently `issue#382 <https://github.com/Parsl/parsl/issues/382>`_
+* Inform user checkpointed results are being used `issue#494 <https://github.com/Parsl/parsl/issues/494>`_
+* Fix IPP + python 3.5 failure `issue#490 <https://github.com/Parsl/parsl/issues/490>`_
+* File creation fails if no executor has been loaded `issue#482 <https://github.com/Parsl/parsl/issues/482>`_
+* Make sure tasks in `dep_fail` state are retried `issue#473 <https://github.com/Parsl/parsl/issues/473>`_
+* Hard requirement for CMRESHandler `issue#422 <https://github.com/Parsl/parsl/issues/422>`_
+* Log error Globus events to stderr `issue#436 <https://github.com/Parsl/parsl/issues/436>`_
+* Take 'slots' out of logging `issue#411 <https://github.com/Parsl/parsl/issues/411>`_
+* Remove redundant logging `issue#267 <https://github.com/Parsl/parsl/issues/267>`_
+* Zombie ipcontroller processes - Process cleanup in case of interruption `issue#460 <https://github.com/Parsl/parsl/issues/460>`_
+* IPyparallel failure when submitting several apps in parallel threads `issue#451 <https://github.com/Parsl/parsl/issues/451>`_
+* `SlurmProvider` + `SingleNodeLauncher` starts all engines on a single core `issue#454 <https://github.com/Parsl/parsl/issues/454>`_
+* IPP ``engine_dir`` has no effect if indicated dir does not exist `issue#446 <https://github.com/Parsl/parsl/issues/446>`_
+* Clarify AppBadFormatting error `issue#433 <https://github.com/Parsl/parsl/issues/433>`_
+* confusing error message with simple configs `issue#379 <https://github.com/Parsl/parsl/issues/379>`_
+* Error due to missing kubernetes config file `issue#432 <https://github.com/Parsl/parsl/issues/432>`_
+* ``parsl.configs`` and ``parsl.tests.configs`` missing init files `issue#409 <https://github.com/Parsl/parsl/issues/409>`_
+* Error when Python versions differ `issue#62 <https://github.com/Parsl/parsl/issues/62>`_
 * Fixing ManagerLost error in HTEX/EXEX `issue#577 <https://github.com/Parsl/parsl/issues/577>`_
 * Write all debug logs to rundir by default in HTEX/EXEX `issue#574 <https://github.com/Parsl/parsl/issues/574>`_
 * Write one log per HTEX worker `issue#572 <https://github.com/Parsl/parsl/issues/572>`_
 * Fixing ManagerLost error in HTEX/EXEX `issue#577 <https://github.com/Parsl/parsl/issues/577>`_
-  
+
 
 Parsl 0.6.1
 -----------
@@ -656,4 +705,3 @@ Bug Fixes
 * Worker launches on Cori seem to fail from broken ENV `issue#27 <https://github.com/Parsl/libsubmit/issues/27>`_
 
 * EC2 provider throwing an exception at initial run `issue#46 <https://github.com/Parsl/parsl/issues/46>`_
-
