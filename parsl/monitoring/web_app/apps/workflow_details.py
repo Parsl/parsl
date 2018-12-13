@@ -12,20 +12,22 @@ user_time_plot = UserTimePlot('user_time_plot_workflow',
                               plot_args=([Input('run_id', 'children')], []))
 
 user_time_distribution_plot = UserTimeDistributionPlot('user_time_distribution_plot_workflow',
-                                                       plot_args=([Input('user_time_distribution_radio_items', 'value'),
-                                                                   Input('run_id', 'children')], []))
+                                                       plot_args=([Input('user_time_distribution_radio_items', 'value')],
+                                                                  [State('run_id', 'children')]))
 
 system_time_plot = SystemTimePlot('system_time_plot_workflow',
                                   plot_args=([Input('run_id', 'children')], []))
 
 system_time_distribution_plot = SystemTimeDistributionPlot('system_time_distribution_plot_workflow',
-                                  plot_args=([Input('run_id', 'children')], []))
+                                                           plot_args=([Input('system_time_distribution_radio_items', 'value')],
+                                                                      [State('run_id', 'children')]))
 
 memory_usage_plot = MemoryUsagePlot('memory_usage_plot_workflow',
                                     plot_args=([Input('run_id', 'children')], []))
 
 memory_usage_distribution_plot = MemoryUsageDistributionPlot('memory_usage_distribution_plot_workflow',
-                                  plot_args=([Input('run_id', 'children')], []))
+                                                             plot_args=([Input('memory_usage_distribution_radio_items', 'value')],
+                                                                        [State('run_id', 'children')]))
 
 tasks_per_app_plot = TaskPerAppPlot('task_per_app_plot_workflow',
                                     plot_args=([Input('run_id', 'children')], []))

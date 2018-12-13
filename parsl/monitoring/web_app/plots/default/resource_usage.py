@@ -180,12 +180,17 @@ class SystemTimeDistributionPlot(BasePlot):
         super().__init__(plot_id=plot_id, plot_args=plot_args)
 
     def setup(self, args):
-        return []
+        return [dcc.RadioItems(id='system_time_distribution_radio_items',
+                               options=[{'label': 'Average', 'value': 'avg'},
+                                        {'label': 'Max', 'value': 'max'}],
+                               value='avg')]
 
-    def plot(self, run_id):
+    def plot(self, option, run_id):
         sql_conn = get_db()
         df_resources = pd.read_sql_query('SELECT psutil_process_time_system, timestamp, task_id FROM task_resources WHERE run_id=(?)',
                                          sql_conn, params=(run_id, ))
+        df_task = pd.read_sql_query('SELECT task_id, task_time_returned FROM task WHERE run_id=(?)',
+                                    sql_conn, params=(run_id, ))
         close_db()
 
         min_range = float(min(df_resources['psutil_process_time_system']))
@@ -196,14 +201,29 @@ class SystemTimeDistributionPlot(BasePlot):
         for i in np.arange(min_range, max_range + time_step, time_step):
             x_axis.append(i)
 
+        apps_dict = dict()
+        for i in range(len(df_task)):
+            row = df_task.iloc[i]
+            apps_dict[row['task_id']] = []
+
         def y_axis_setup():
             items = []
-            for i in range(len(x_axis) - 1):
-                x = df_resources['psutil_process_time_system'].astype('float') >= x_axis[i]
-                y = df_resources['psutil_process_time_system'].astype('float') < x_axis[i + 1]
-                items.append(sum(x & y))
 
+            for app, tasks in apps_dict.items():
+                tmp = []
+                if option == 'avg':
+                    task = df_resources[df_resources['task_id'] == app]['psutil_process_time_system'].astype('float').mean()
+                elif option == 'max':
+                    task = max(df_resources[df_resources['task_id'] == app]['psutil_process_time_system'].astype('float'))
+
+                for i in range(len(x_axis) - 1):
+                    a = task >= x_axis[i]
+                    b = task < x_axis[i + 1]
+                    tmp.append(a & b)
+                items = np.sum([items, tmp], axis=0)
+            print(sum(items))
             return items
+
 
         return go.Figure(
             data=[go.Bar(x=x_axis[:-1],
@@ -274,12 +294,17 @@ class MemoryUsageDistributionPlot(BasePlot):
         super().__init__(plot_id=plot_id, plot_args=plot_args)
 
     def setup(self, args):
-        return []
+        return [dcc.RadioItems(id='memory_usage_distribution_radio_items',
+                               options=[{'label': 'Average', 'value': 'avg'},
+                                        {'label': 'Max', 'value': 'max'}],
+                               value='avg')]
 
-    def plot(self, run_id):
+    def plot(self, option, run_id):
         sql_conn = get_db()
         df_resources = pd.read_sql_query('SELECT psutil_process_memory_percent, timestamp, task_id FROM task_resources WHERE run_id=(?)',
                                          sql_conn, params=(run_id, ))
+        df_task = pd.read_sql_query('SELECT task_id, task_time_returned FROM task WHERE run_id=(?)',
+                                    sql_conn, params=(run_id, ))
         close_db()
 
         min_range = float(min(df_resources['psutil_process_memory_percent']))
@@ -290,16 +315,29 @@ class MemoryUsageDistributionPlot(BasePlot):
         for i in np.arange(min_range, max_range + time_step, time_step):
             x_axis.append(i)
 
+        apps_dict = dict()
+        for i in range(len(df_task)):
+            row = df_task.iloc[i]
+            apps_dict[row['task_id']] = []
+
         def y_axis_setup():
             items = []
 
-            for i in range(len(x_axis) - 1):
-                x = df_resources['psutil_process_memory_percent'].astype('float') >= x_axis[i]
-                y = df_resources['psutil_process_memory_percent'].astype('float') < x_axis[i + 1]
+            for app, tasks in apps_dict.items():
+                tmp = []
+                if option == 'avg':
+                    task = df_resources[df_resources['task_id'] == app]['psutil_process_memory_percent'].astype('float').mean()
+                elif option == 'max':
+                    task = max(df_resources[df_resources['task_id'] == app]['psutil_process_memory_percent'].astype('float'))
 
-                items.append(sum(x & y))
-
+                for i in range(len(x_axis) - 1):
+                    a = task >= x_axis[i]
+                    b = task < x_axis[i + 1]
+                    tmp.append(a & b)
+                items = np.sum([items, tmp], axis=0)
+            print(sum(items))
             return items
+
 
         return go.Figure(
             data=[go.Bar(x=x_axis[:-1],
