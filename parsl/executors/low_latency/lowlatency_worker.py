@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
 import argparse
 import logging
-
+import os
+import uuid
 # import zmq
 from multiprocessing import Process
 
@@ -43,8 +45,46 @@ def execute_task(f, args, kwargs, user_ns):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, task_url, result_url):
-    """ TODO: docstring """
+def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
+    """Add a stream log handler.
+
+    Args:
+        - filename (string): Name of the file to write logs to
+        - name (string): Logger name
+        - level (logging.LEVEL): Set the logging level.
+        - format_string (string): Set the format string
+
+    Returns:
+       -  None
+    """
+
+    try:
+        os.makedirs(os.path.dirname(filename), 511, True)
+    except Exception as e:
+        print("Caught exception with trying to make log dirs: {}".format(e))
+
+    if format_string is None:
+        format_string = "%(asctime)s %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
+    global logger
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(filename)
+    handler.setLevel(level)
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
+def worker(worker_id, task_url, result_url, debug=True, logdir="workers", uid="1"):
+    """ TODO: docstring
+
+    TODO : Cleanup debug, logdir and uid to function correctly
+    """
+
+    start_file_logger('{}/{}/worker_{}.log'.format(logdir, uid, worker_id),
+                      0,
+                      level=logging.DEBUG if debug is True else logging.INFO)
+
     logger.info("Starting worker {}".format(worker_id))
 
     task_ids_received = []
@@ -66,14 +106,19 @@ def worker(worker_id, task_url, result_url):
 
         reply = {"result": result, "worker_id": worker_id}
         result_q.put(task_id, serialize_object(reply))
+        logger.debug("Result sent")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--workers_per_node", default=1, type=int,
                         help="Number of workers to kick off. Default=1")
+    parser.add_argument("-l", "--logdir", default="lowlatency_worker_logs",
+                        help="LowLatency worker log directory")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
+    parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
+                        help="Unique identifier string for Manager")
     parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
 
@@ -81,10 +126,13 @@ if __name__ == "__main__":
 
     workers = []
     for i in range(args.workers_per_node):
-        worker = Process(target=worker, 
-                         kwargs={"worker_id": i, 
+        worker = Process(target=worker,
+                         kwargs={"worker_id": i,
                                  "task_url": args.task_url,
-                                 "result_url": args.result_url})
+                                 "result_url": args.result_url,
+                                 "logdir":args.logdir,
+                                 "uid":args.uid,
+                         })
         worker.daemon = True
         worker.start()
         workers.append(worker)

@@ -65,7 +65,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
 
         # TODO: add debugging, logdir, other functionality to workers
         if not launch_cmd:
-            self.launch_cmd = """lowlatency_worker.py -n {workers_per_node} --task_url={task_url} --result_url={result_url}"""
+            self.launch_cmd = """lowlatency_worker.py -n {workers_per_node} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -85,9 +85,10 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         if self.provider:
             # debug_opts = "--debug" if self.worker_debug else ""
             l_cmd = self.launch_cmd.format(  # debug=debug_opts,
-                                           task_url=self.worker_task_url,
-                                           result_url=self.worker_result_url,
-                                           workers_per_node=self.workers_per_node)
+                task_url=self.worker_task_url,
+                result_url=self.worker_result_url,
+                workers_per_node=self.workers_per_node,
+                logdir="{}/{}".format(self.run_dir, self.label))
             self.launch_cmd = l_cmd
             logger.debug("Launch command: {}".format(self.launch_cmd))
 
