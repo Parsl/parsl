@@ -11,8 +11,18 @@ Execution providers
 
 Execution providers are responsible for managing execution resources. In the simplest case a PC could be used for execution. For larger resources a Local Resource Manager (LRM) is usually used to manage access to resources. For instance, campus clusters and supercomputers generally use LRMs (schedulers) such as Slurm, Torque/PBS, HTCondor and Cobalt. Clouds, on the other hand, provide APIs that allow more fine-grained composition of an execution environment. Parsl's execution provider abstracts these different resource types and provides a single uniform interface.
 
-Parsl relies on the ``libsubmit`` (`https://github.com/Parsl/libsubmit <https://github.com/Parsl/libsubmit>`_) library to provides a common interface to execution providers.
-Libsubmit defines a simple interface which includes operations such as submission, status, and job management. It currently supports a variety of providers including Amazon Web Services, Azure, and Jetstream clouds as well as Cobalt, Slurm, Torque, GridEngine, and HTCondor. New execution providers can be added by implementing Libsubmit's execution provider interface.
+Parsl currently supports the following providers:
+
+1. `LocalProvider`: The provider allows you to run locally on your laptop or workstation.
+2. `CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler.
+3. `SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
+4. `CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
+5. `GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
+6. `TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler.
+7. `AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
+8. `GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
+9. `JetstreamProvider`: This provider allows you to provision and manage cloud nodes from Jetstream (NSF Cloud).
+10. `KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
 
 Executors
 ---------
@@ -22,13 +32,32 @@ Executors represent a particular method via which tasks can be executed. As desc
 
 Parsl currently supports the following executors:
 
-1. **ThreadPoolExecutor**: This executor supports multi-thread execution on local resources.
+1. `ThreadPoolExecutor`: This executor supports multi-thread execution on local resources.
 
-2. **IPyParallelExecutor**: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
+2. `IPyParallelExecutor`: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
 
-3. **Swift/TurbineExecutor**: This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
+3. `HighThroughputExecutor`: [_Alpha_] The HighThroughputExecutor is designed as a replacement for the IPyParallelExecutor. Implementing hierarchical scheduling and batching, the HighThroughputExecutor delivers higher throughput at higher scale.
+
+4. `ExtremeScaleExecutor`: [_Alpha_] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>` to scale over 4000+ nodes. This executor is typically used for executing on Supercomputers.
+
+5. `Swift/TurbineExecutor`: [_Deprecated_] This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
 
 These executors cover a broad range of execution requirements. As with other Parsl components there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
+
+Launchers
+---------
+
+On many traditional batch systems, the user is expected to request a large number of nodes and launch tasks using a system such as `srun <https://slurm.schedmd.com/srun.html>`_ (for slurm), `aprun <https://cug.org/5-publications/proceedings_attendee_lists/2006CD/S06_Proceedings/pages/Authors/Karo-4C/Karo_alps_paper.pdf>`_ (for crays), `mpirun <https://www.open-mpi.org/doc/v2.0/man1/mpirun.1.php>`_ etc.
+Launchers are responsible for abstracting these different task-launch systems to start the appropriate number of workers across cores and nodes. Parsl currently supports the following set of launchers:
+
+1. `SrunLauncher`: Srun based launcher for Slurm based systems.
+2. `AprunLauncher`: Aprun based launcher for Crays.
+3. `SrunMPILauncher`: Launcher for launching MPI applications with Srun.
+4. `GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores.
+5. `MpiExecLauncher`: Uses Mpiexec to launch.
+6. `SimpleLauncher`: The launcher default to a single worker launch.
+7. `SingleNodeLauncher`: This launcher launches ``tasks_per_node`` count workers on a single node.
+
 
 Blocks
 ------
@@ -180,7 +209,7 @@ tasks.
 
 
 Multi-executor
-----------
+--------------
 
 Parsl supports the definition of any number of executors in the configuration,
 as well as specifying which of these executors can execute specific apps.

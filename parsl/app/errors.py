@@ -1,7 +1,9 @@
-"""Exceptions raise by Apps."""
+"""Exceptions raised by Apps."""
 from functools import wraps
 
 import dill
+from tblib import Traceback
+
 from six import reraise
 
 
@@ -135,23 +137,25 @@ class DependencyError(ParslError):
         return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
 
 
-class RemoteException(ParslError):
+class RemoteExceptionWrapper:
     def __init__(self, e_type, e_value, traceback):
+
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
-        self.traceback = dill.dumps(traceback)
+        self.e_traceback = Traceback(traceback)
 
     def reraise(self):
-        reraise(dill.loads(self.e_type), dill.loads(self.e_value), dill.loads(self.traceback))
+
+        reraise(dill.loads(self.e_type), dill.loads(self.e_value), self.e_traceback.as_traceback())
 
 
 def wrap_error(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         import sys
-        from parsl.app.errors import RemoteException
+        from parsl.app.errors import RemoteExceptionWrapper
         try:
             return func(*args, **kwargs)
         except Exception:
-            return RemoteException(*sys.exc_info())
+            return RemoteExceptionWrapper(*sys.exc_info())
     return wrapper

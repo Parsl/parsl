@@ -61,6 +61,7 @@ class MonitoringConfig(RepresentationMixin):
             Used with local database logging, how to access the tornado logging server that is spawned by Parsl.
         web_app_port : int, optional
             Used with local database logging, how to access the tornado logging server that is spawned by Parsl.
+            Additionally, used with web app visualization. Opens a new port at web_app_host:(web_app_port + 1).
         resource_loop_sleep_duration : float, optional
             The amount of time in seconds to sleep in between resource monitoring logs per task.
         workflow_name : str, optional

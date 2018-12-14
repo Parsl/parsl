@@ -10,7 +10,8 @@ CORES_PER_WORKER = 1
 EXPECTED_WORKERS = math.floor(CORES / CORES_PER_WORKER)
 
 
-from parsl.tests.configs.htex_local import config
+# from parsl.tests.configs.htex_local import config
+from htex_local import config
 config.executors[0].cores_per_worker = CORES_PER_WORKER
 config.executors[0].provider.init_blocks = 1
 parsl.set_stream_logger()
@@ -26,6 +27,8 @@ parsl.load(config)
 @python_app
 def slow_pid(sleep=1):
     import os
+    import time
+    time.sleep(sleep)
     return os.getppid(), os.getpid()
 
 

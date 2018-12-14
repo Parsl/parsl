@@ -18,6 +18,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='comet_ipp_multinode',
+            workers_per_node=1,
             provider=SlurmProvider(
                 'debug',
                 channel=SSHChannel(
@@ -26,12 +27,12 @@ config = Config(
                     script_dir=user_opts['comet']['script_dir']
                 ),
                 launcher=SrunLauncher(),
-                overrides=user_opts['comet']['overrides'],
+                scheduler_options=user_opts['comet']['scheduler_options'],
+                worker_init=user_opts['comet']['worker_init'],
                 walltime="00:10:00",
                 init_blocks=1,
                 max_blocks=1,
                 nodes_per_block=2,
-                tasks_per_node=1,
             ),
             controller=Controller(public_ip=user_opts['public_ip']),
         )

@@ -56,7 +56,7 @@ class Channel(metaclass=ABCMeta):
 
     @abstractmethod
     def execute_no_wait(self, cmd, walltime, envs={}, *args, **kwargs):
-        ''' Optional. THis is infrequently used.
+        ''' Optional. This is infrequently used.
 
         Args:
             - cmd (string): Command string to execute over the channel

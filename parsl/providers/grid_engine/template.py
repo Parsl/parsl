@@ -4,7 +4,9 @@ template_string = """#!/bin/bash
 #$$ -e ${submit_script_dir}/${jobname}.submit.stderr
 #$$ -cwd
 #$$ -l h_rt=${walltime}
-$overrides
+${scheduler_options}
+
+${worker_init}
 
 export JOBNAME="${jobname}"
 
