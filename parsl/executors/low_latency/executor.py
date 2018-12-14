@@ -43,7 +43,6 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                  managed=True
                 ):
         logger.debug("Initializing LowLatencyExecutor")
-
         self.label = label
         self.launch_cmd = launch_cmd
         self.provider = provider
@@ -66,7 +65,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
 
         # TODO: add debugging, logdir, other functionality to workers
         if not launch_cmd:
-            self.launch_cmd = """process_worker_pool.py -n {workers_per_node} --task_url={task_url} --result_url={result_url}"""
+            self.launch_cmd = """lowlatency_worker.py -n {workers_per_node} --task_url={task_url} --result_url={result_url}"""
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -97,7 +96,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
             if hasattr(self.provider, 'init_blocks'):
                 try:
                     for i in range(self.provider.init_blocks):
-                        block = self.provider.submit(self.launch_cmd, 1)
+                        block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
                         logger.debug("Launched block {}:{}".format(i, block))
                         if not block:
                             raise(ScalingFailed(self.provider.label,
@@ -110,7 +109,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         else:
             self._scaling_enabled = False
             logger.debug("Starting LowLatencyExecutor with no provider")
-    
+
     def _start_local_queue_process(self):
         """ TODO: docstring """
 
@@ -127,7 +126,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
 
         try:
             (worker_task_port, worker_result_port) = comm_q.get(block=True, timeout=120)
-            print("Got worker ports {} and {} from interchange".format(worker_task_port, worker_result_port))
+            logger.debug("Got worker ports {} and {} from interchange".format(worker_task_port, worker_result_port))
         except queue.Empty:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
@@ -150,7 +149,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
     def _queue_management_worker(self):
         """ TODO: docstring """
         logger.debug("[MTHREAD] queue management worker starting")
-        
+
         while True:
             task_id, buf = self.incoming_q.get()
             msg = deserialize_object(buf)[0]
@@ -159,22 +158,21 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
 
             if "result" in msg:
                 task_fut.set_result(msg["result"])
-            
+
             elif "exception" in msg:
                 # TODO: handle exception
                 pass
-            
-            else: 
+
+            else:
                 raise BadMessage("Message received is neither result nor exception")
-            
+
             if not self.is_alive:
                 break
-        
+
         logger.info("[MTHREAD] queue management worker finished")
 
     def submit(self, func, *args, **kwargs):
         """ TODO: docstring """
-        print("submitting something")
         self._task_counter += 1
         task_id = self._task_counter
 
@@ -202,7 +200,19 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        raise NotImplementedError
+        r = []
+        for i in range(blocks):
+            if self.provider:
+                block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
+                logger.debug("Launched block {}:{}".format(i, block))
+                if not block:
+                    raise(ScalingFailed(self.provider.label,
+                                        "Attempts to provision nodes via provider has failed"))
+                self.blocks.extend([block])
+            else:
+                logger.error("No execution provider available")
+                r = None
+        return r
 
     def scale_in(self, blocks):
         """Scale in the number of active blocks by specified amount.
@@ -214,7 +224,10 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        raise NotImplementedError
+        to_kill = self.blocks[:blocks]
+        if self.provider:
+            r = self.provider.cancel(to_kill)
+        return r
 
     def status(self):
         """Return status of all blocks."""
@@ -245,4 +258,3 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         self.queue_proc.terminate()
         logger.warning("Finished HighThroughputExecutor shutdown attempt")
         return True
-
