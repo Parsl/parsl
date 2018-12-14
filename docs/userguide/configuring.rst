@@ -172,7 +172,7 @@ assumes that the script is being executed on the login nodes of Theta.
 
 
 Cooley (ALCF)
-------------
+-------------
 
 .. image:: https://today.anl.gov/wp-content/uploads/sites/44/2015/06/Cray-Cooley.jpg
 
@@ -259,7 +259,7 @@ for each node, using the `LocalProvider` with `SSHChannel` to identify the node 
 Here's an example configuration using the 2 login nodes from the Midway cluster as a proxy for
 an ad-hoc cluster.
 
-.. literalinclude:: ../../parsl/configs/
+.. literalinclude:: ../../parsl/configs/ad_hoc.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
