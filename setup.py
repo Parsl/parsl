@@ -20,7 +20,9 @@ setup(
     packages=find_packages(),
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
-               'parsl/executors/extreme_scale/mpi_worker_pool.py'],
+               'parsl/executors/extreme_scale/mpi_worker_pool.py',
+               'parsl/executors/low_latency/lowlatency_worker.py',
+    ],
     extras_require = {
         'visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
