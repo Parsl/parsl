@@ -496,6 +496,14 @@ class DataFlowKernel(object):
             if isinstance(f, File) and f.is_remote():
                 inputs[idx] = f.stage_in(executor)
 
+        for kwarg, potential_f in kwargs.items():
+            if isinstance(potential_f, File) and potential_f.is_remote():
+                kwargs[kwarg] = potential_f.stage_in(executor)
+
+        for idx, f in enumerate(args):
+            if isinstance(f, File) and f.is_remote():
+                args[idx] = f.stage_in(executor)
+
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
 
