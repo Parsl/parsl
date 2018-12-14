@@ -66,13 +66,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    from htex_local import config
-    # from llex_local import config
-    # parsl.set_stream_logger()
+    parsl.set_stream_logger()
+    # from htex_local import config
+    from llex_local import config
+
     # config.executors[0].worker_debug = True
     dfk = parsl.load(config)
 
-    executor = dfk.executors["htex_local"]
+    executor = dfk.executors["llex_local"]
     # executor = dfk.executors["llex_local"]
 
     call_double(int(args.count), executor)
