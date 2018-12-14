@@ -189,6 +189,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
         else:
             logger.debug("not moving files")
+            channel_script_path = script_path
 
         retcode, stdout, stderr = super().execute_wait("sbatch {0}".format(channel_script_path))
 
