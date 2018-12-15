@@ -32,7 +32,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                  provider=LocalProvider(),
                  launch_cmd=None,
                  public_ip="127.0.0.1",
-                 worker_ports=None,
+                 worker_port=None,
                  worker_port_range=(54000, 55000),
                  interchange_port_range=(55000, 56000),
                  #  storage_access=None,
@@ -58,14 +58,14 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
 
         self._task_counter = 0
         self.public_ip = public_ip
-        self.worker_ports = worker_ports
+        self.worker_port = worker_port
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
         self.run_dir = '.'
 
         # TODO: add debugging, logdir, other functionality to workers
         if not launch_cmd:
-            self.launch_cmd = """lowlatency_worker.py -n {workers_per_node} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
+            self.launch_cmd = """lowlatency_worker.py -n {workers_per_node} --task_url={task_url} --logdir={logdir}"""
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -85,10 +85,9 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         if self.provider:
             # debug_opts = "--debug" if self.worker_debug else ""
             l_cmd = self.launch_cmd.format(  # debug=debug_opts,
-                task_url=self.worker_task_url,
-                result_url=self.worker_result_url,
-                workers_per_node=self.workers_per_node,
-                logdir="{}/{}".format(self.run_dir, self.label))
+                        task_url=self.worker_task_url,
+                        workers_per_node=self.workers_per_node,
+                        logdir="{}/{}".format(self.run_dir, self.label))
             self.launch_cmd = l_cmd
             logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -119,21 +118,20 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                                   args=(comm_q,),
                                   kwargs={"client_ports": (self.outgoing_q.port,
                                                            self.incoming_q.port),
-                                          "worker_ports": self.worker_ports,
+                                          "worker_port": self.worker_port,
                                           "worker_port_range": self.worker_port_range
                                           # TODO: logdir and logging level
                                   })
         self.queue_proc.start()
 
         try:
-            (worker_task_port, worker_result_port) = comm_q.get(block=True, timeout=120)
-            logger.debug("Got worker ports {} and {} from interchange".format(worker_task_port, worker_result_port))
+            worker_port = comm_q.get(block=True, timeout=120)
+            logger.debug("Got worker port {} from interchange".format(worker_port))
         except queue.Empty:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
-        self.worker_task_url = "tcp://{}:{}".format(self.public_ip, worker_task_port)
-        self.worker_result_url = "tcp://{}:{}".format(self.public_ip, worker_result_port)
+        self.worker_task_url = "tcp://{}:{}".format(self.public_ip, worker_port)
 
     def _start_queue_management_thread(self):
         """ TODO: docstring """
@@ -152,10 +150,11 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         logger.debug("[MTHREAD] queue management worker starting")
 
         while True:
-            task_id, buf = self.incoming_q.get()
+            task_id, buf = self.incoming_q.get()  # TODO: why does this hang?
             msg = deserialize_object(buf)[0]
             # TODO: handle exceptions
             task_fut = self.tasks[task_id]
+            logger.debug("Got response for task id {}".format(task_id))
 
             if "result" in msg:
                 task_fut.set_result(msg["result"])

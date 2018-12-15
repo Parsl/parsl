@@ -12,6 +12,7 @@ class TasksOutgoing(object):
         """ TODO: docstring """
         self.context = zmq.Context()
         self.zmq_socket = self.context.socket(zmq.DEALER)
+        self.zmq_socket.set_hwm(0)
         self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
@@ -51,14 +52,31 @@ class ResultsIncoming(object):
         """ TODO: docstring """
         self.context = zmq.Context()
         self.zmq_socket = self.context.socket(zmq.DEALER)
-        self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
-                                                        min_port=port_range[0],
-                                                        max_port=port_range[1])
+        self.zmq_socket.set_hwm(0)
+        self.port = self.zmq_socket.bind_to_random_port(
+                        "tcp://{}".format(ip_address),
+                        min_port=port_range[0],
+                        max_port=port_range[1])
+
+        # self.poller = zmq.Poller()
+        # self.poller.register(self.zmq_socket, zmq.POLLIN)
 
     def get(self):
-        print("ResultsIncoming.get called")
+
+        # while True:
+        #     try:
+        #         socks = dict(self.poller.poll(1))
+        #         if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLIN:
+        #             print("ResultsIncoming POLLIN triggered")
+        #             result = self.zmq_socket.recv_multipart()
+        #             task_id = int.from_bytes(result[1], "little")
+        #             buffer = result[2:]
+        #             return task_id, buffer
+        #     except Exception as e:
+        #         logger.error("Caught exception : {}".format(e))
+        #         raise
+
         result = self.zmq_socket.recv_multipart()
-        print("Got something!")
         task_id = int.from_bytes(result[1], "little")
         buffer = result[2:]
         return task_id, buffer
@@ -68,7 +86,7 @@ class ResultsIncoming(object):
         self.context.term()
 
 
-class TasksIncoming(object):
+class WorkerMessages(object):
     """ TODO: docstring """
     def __init__(self, tasks_url):
         self.context = zmq.Context()
@@ -79,18 +97,6 @@ class TasksIncoming(object):
         bufs = self.zmq_socket.recv_multipart()
         task_id = int.from_bytes(bufs[0], "little")
         return task_id, bufs[1:]
-
-    def close(self):
-        self.zmq_socket.close()
-        self.context.term()
-
-
-class ResultsOutgoing(object):
-    """ TODO: docstring """
-    def __init__(self, results_url):
-        self.context = zmq.Context()
-        self.zmq_socket = self.context.socket(zmq.REP)
-        self.zmq_socket.connect(results_url)
 
     def put(self, task_id, buffer):
         task_id_bytes = task_id.to_bytes(4, "little")

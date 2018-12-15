@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import argparse
 import logging
 import os
@@ -75,7 +76,7 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
-def worker(worker_id, task_url, result_url, debug=True, logdir="workers", uid="1"):
+def worker(worker_id, task_url, debug=True, logdir="workers", uid="1"):
     """ TODO: docstring
 
     TODO : Cleanup debug, logdir and uid to function correctly
@@ -89,11 +90,11 @@ def worker(worker_id, task_url, result_url, debug=True, logdir="workers", uid="1
 
     task_ids_received = []
 
-    task_q = zmq_pipes.TasksIncoming(task_url)
-    result_q = zmq_pipes.ResultsOutgoing(result_url)
+    message_q = zmq_pipes.WorkerMessages(task_url)
 
     while True:
-        task_id, buf = task_q.get()
+        print("Worker loop iteration starting")
+        task_id, buf = message_q.get()
         task_ids_received.append(task_id)
 
         user_ns = locals()
@@ -105,7 +106,7 @@ def worker(worker_id, task_url, result_url, debug=True, logdir="workers", uid="1
         logger.debug("Worker {} completed task {}".format(worker_id, task_id))
 
         reply = {"result": result, "worker_id": worker_id}
-        result_q.put(task_id, serialize_object(reply))
+        message_q.put(task_id, serialize_object(reply))
         logger.debug("Result sent")
 
 
@@ -119,8 +120,6 @@ if __name__ == "__main__":
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
                         help="Unique identifier string for Manager")
-    parser.add_argument("-r", "--result_url", required=True,
-                        help="REQUIRED: ZMQ url for posting results")
 
     args = parser.parse_args()
 
@@ -129,9 +128,8 @@ if __name__ == "__main__":
         worker = Process(target=worker,
                          kwargs={"worker_id": i,
                                  "task_url": args.task_url,
-                                 "result_url": args.result_url,
-                                 "logdir":args.logdir,
-                                 "uid":args.uid,
+                                 "logdir": args.logdir,
+                                 "uid": args.uid
                          })
         worker.daemon = True
         worker.start()
