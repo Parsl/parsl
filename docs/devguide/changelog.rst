@@ -15,7 +15,7 @@ New functionality
 ^^^^^^^^^^^^^^^^^
 
 
-* `HighThroughputExecutor`: a new executor replacing `IPyParallelExecutor` is now available.
+* `HighThroughputExecutor`: a new executor intended to replace the `IPyParallelExecutor` is now available.
   This new executor addresses several limitations of `IPyParallelExecutor` such as:
 
   * Scale beyond the ~300 worker limitation of IPP.
@@ -81,7 +81,7 @@ New functionality
   More information on configuring is available in the :ref:`configuration-section` section.
 
 
-* Libsubmit repository has been merged with Parsl to reduce overheads on maintenance w.r.t documentation,
+* The libsubmit repository has been merged with Parsl to reduce overheads on maintenance w.r.t documentation,
   testing, and release synchronization. Since the merge the API has undergone several updates to support
   the growing collection of executors, and as a result Parsl 0.7.0+ will not be backwards compatible with
   the standalone libsubmit repos. The major components of libsubmit are now available through Parsl, and
@@ -130,8 +130,9 @@ New functionality
 
 *
 
-Bug Fixes
-^^^^^^^^^
+Bug Fixes (highlights)
+^^^^^^^^^^^^^^^^^^^^^^
+
 
 * Ctlr+C should cause fast DFK cleanup `issue#641 <https://github.com/Parsl/parsl/issues/641>`_
 * Fix to avoid padding in ``wtime_to_minutes()`` `issue#522 <https://github.com/Parsl/parsl/issues/522>`_
