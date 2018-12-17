@@ -304,24 +304,28 @@ class Interchange(object):
                 manager = message[0]
 
                 if manager not in self._ready_manager_queue:
-                    msg = json.loads(message[1].decode('utf-8'))
-                    logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
-                    self._ready_manager_queue[manager] = {'last': time.time(),
-                                                          'free_capacity': 0,
-                                                          'active': True,
-                                                          'tasks': []}
-                    self._ready_manager_queue[manager].update(msg)
-                    logger.info("Registration info for manager {}: {}".format(manager, msg))
-                    if (msg['python_v'] != self.current_platform['python_v'] or
-                        msg['parsl_v'] != self.current_platform['parsl_v']):
-                        logger.warn("Manager {} has incompatible version info with the interchange".format(manager))
-                        logger.debug("Setting kill event")
-                        self._kill_event.set()
-                        e = ManagerLost(manager)
-                        result_package = {'task_id': -1, 'exception': serialize_object(e)}
-                        pkl_package = pickle.dumps(result_package)
-                        self.results_outgoing.send(pkl_package)
-                        logger.warning("[MAIN] Sent failure reports, unregistering manager")
+                    try:
+                        msg = json.loads(message[1].decode('utf-8'))
+                        logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
+                        self._ready_manager_queue[manager] = {'last': time.time(),
+                                                              'free_capacity': 0,
+                                                              'active': True,
+                                                              'tasks': []}
+                        self._ready_manager_queue[manager].update(msg)
+                        logger.info("Registration info for manager {}: {}".format(manager, msg))
+                        if (msg['python_v'] != self.current_platform['python_v'] or
+                            msg['parsl_v'] != self.current_platform['parsl_v']):
+                            logger.warn("Manager {} has incompatible version info with the interchange".format(manager))
+                            logger.debug("Setting kill event")
+                            self._kill_event.set()
+                            e = ManagerLost(manager)
+                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                            pkl_package = pickle.dumps(result_package)
+                            self.results_outgoing.send(pkl_package)
+                            logger.warning("[MAIN] Sent failure reports, unregistering manager")
+
+                    except Exception as e:
+                        logger.warning("[MAIN] Failed to process message:\n{}\n".format(message[1]))
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
