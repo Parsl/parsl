@@ -203,7 +203,8 @@ class Manager(object):
                 # Limit poll duration to heartbeat_period
                 # heartbeat_period is in s vs poll_timer in ms
                 if not poll_timer:
-                    poll_timer = 1
+                    poll_timer = 5000 # if we got no tasks, back off by at least 5s, rather than 1ms as before. that fits this scale better.
+                        # maybe this should be tweakable to go with scale? if changing it helps.
                 poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
 
                 # Only check if no messages were received.

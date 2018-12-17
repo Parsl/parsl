@@ -349,11 +349,11 @@ class Interchange(object):
                             task_count = len(tasks)
                             count += task_count
                             tids = [t['task_id'] for t in tasks]
-                            logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, manager))
+                            logger.debug("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
                             self._ready_manager_queue[manager]['free_capacity'] -= task_count
                             self._ready_manager_queue[manager]['tasks'].extend(tids)
                     else:
-                        logger.debug("Nothing to send")
+                        logger.debug("Nothing to send to manager {}".format(manager))
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
