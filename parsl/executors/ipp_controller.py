@@ -26,8 +26,9 @@ class Controller(RepresentationMixin):
         Port on which the iPython hub listens for registration. If set to `None`, the IPython default will be used. Default
         is None.
     port_range : str, optional
-        The minimum and maximum port value, in the format '<min>,<max>' (for example: '50000,60000'. If this does not equal
-        None, a random port in `port_range` will be selected.
+        The minimum and maximum port values to use, in the format '<min>,<max>' (for example: '50000,60000').
+        If this does not equal None, random ports in `port_range` will be selected for all HubFactory listening services.
+        This option overrides the port setting value for registration.
     reuse : bool, optional
         Reuse an existing controller.
     ipython_dir : str, optional
@@ -45,9 +46,17 @@ class Controller(RepresentationMixin):
         self.interfaces = interfaces
         self.port = port
         self.port_range = port_range
+
         if port_range is not None:
             port_min, port_max = [int(x) for x in port_range.split(',')]
-            self.port = random.randint(port_min, port_max)
+            (
+                self.port,
+                self.hb_ping, self.hb_pong,
+                self.control_client, self.control_engine,
+                self.mux_client, self.mux_engine,
+                self.task_client, self.task_engine
+            ) = random.sample(range(port_min, port_max), 9)
+
         self.reuse = reuse
         self.log = log
         self.ipython_dir = ipython_dir
@@ -77,9 +86,16 @@ class Controller(RepresentationMixin):
                 self.interfaces if self.interfaces is not None else '--ip=*',
                 '' if self.profile is 'default' else '--profile={0}'.format(self.profile),
                 '--reuse' if self.reuse else '',
-                '--port={}'.format(self.port) if self.port is not None else '',
-                '--location={}'.format(self.public_ip) if self.public_ip else ''
+                '--location={}'.format(self.public_ip) if self.public_ip else '',
+                '--port={}'.format(self.port) if self.port is not None else ''
             ]
+            if self.port_range is not None:
+                opts += [
+                    '--HubFactory.hb={0},{1}'.format(self.hb_ping, self.hb_pong),
+                    '--HubFactory.control={0},{1}'.format(self.control_client, self.control_engine),
+                    '--HubFactory.mux={0},{1}'.format(self.mux_client, self.mux_engine),
+                    '--HubFactory.task={0},{1}'.format(self.task_client, self.task_engine)
+                ]
             logger.debug("Starting ipcontroller with '{}'".format(' '.join([str(x) for x in opts])))
             self.proc = subprocess.Popen(opts, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
         except FileNotFoundError:
