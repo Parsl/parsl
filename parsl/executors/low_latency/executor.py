@@ -27,6 +27,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
     """
     TODO: docstring for LowLatencyExecutor
     """
+
     def __init__(self,
                  label='LowLatencyExecutor',
                  provider=LocalProvider(),
@@ -41,7 +42,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                  workers_per_node=1,
                  #  cores_per_worker=1.0,
                  managed=True
-                ):
+                 ):
         logger.debug("Initializing LowLatencyExecutor")
         self.label = label
         self.launch_cmd = launch_cmd
@@ -49,7 +50,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         self.worker_debug = worker_debug
         # self.storage_access = storage_access if storage_access is not None else []
         # if len(self.storage_access) > 1:
-            # raise ConfigurationError('Multiple storage access schemes are not supported')
+        # raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = []
@@ -70,8 +71,10 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
     def start(self):
         """Create the Interchange process and connect to it.
         """
-        self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
-        self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
+        self.outgoing_q = zmq_pipes.TasksOutgoing(
+            "127.0.0.1", self.interchange_port_range)
+        self.incoming_q = zmq_pipes.ResultsIncoming(
+            "127.0.0.1", self.interchange_port_range)
 
         self.is_alive = True
 
@@ -85,18 +88,20 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         if self.provider:
             # debug_opts = "--debug" if self.worker_debug else ""
             l_cmd = self.launch_cmd.format(  # debug=debug_opts,
-                        task_url=self.worker_task_url,
-                        workers_per_node=self.workers_per_node,
-                        logdir="{}/{}".format(self.run_dir, self.label))
+                task_url=self.worker_task_url,
+                workers_per_node=self.workers_per_node,
+                logdir="{}/{}".format(self.run_dir, self.label))
             self.launch_cmd = l_cmd
             logger.debug("Launch command: {}".format(self.launch_cmd))
 
             self._scaling_enabled = self.provider.scaling_enabled
-            logger.debug("Starting LowLatencyExecutor with provider:\n%s", self.provider)
+            logger.debug(
+                "Starting LowLatencyExecutor with provider:\n%s", self.provider)
             if hasattr(self.provider, 'init_blocks'):
                 try:
                     for i in range(self.provider.init_blocks):
-                        block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
+                        block = self.provider.submit(
+                            self.launch_cmd, 1, self.workers_per_node)
                         logger.debug("Launched block {}:{}".format(i, block))
                         if not block:
                             raise(ScalingFailed(self.provider.label,
@@ -121,23 +126,27 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                                           "worker_port": self.worker_port,
                                           "worker_port_range": self.worker_port_range
                                           # TODO: logdir and logging level
-                                  })
+                                          })
         self.queue_proc.start()
 
         try:
             worker_port = comm_q.get(block=True, timeout=120)
-            logger.debug("Got worker port {} from interchange".format(worker_port))
+            logger.debug(
+                "Got worker port {} from interchange".format(worker_port))
         except queue.Empty:
-            logger.error("Interchange has not completed initialization in 120s. Aborting")
+            logger.error(
+                "Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
-        self.worker_task_url = "tcp://{}:{}".format(self.public_ip, worker_port)
+        self.worker_task_url = "tcp://{}:{}".format(
+            self.public_ip, worker_port)
 
     def _start_queue_management_thread(self):
         """ TODO: docstring """
         if self._queue_management_thread is None:
             logger.debug("Starting queue management thread")
-            self._queue_management_thread = threading.Thread(target=self._queue_management_worker)
+            self._queue_management_thread = threading.Thread(
+                target=self._queue_management_worker)
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
             logger.debug("Started queue management thread")
@@ -164,7 +173,8 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                 pass
 
             else:
-                raise BadMessage("Message received is neither result nor exception")
+                raise BadMessage(
+                    "Message received is neither result nor exception")
 
             if not self.is_alive:
                 break
@@ -176,7 +186,8 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         self._task_counter += 1
         task_id = self._task_counter
 
-        logger.debug("Pushing function {} to queue with args {}".format(func, args))
+        logger.debug(
+            "Pushing function {} to queue with args {}".format(func, args))
 
         self.tasks[task_id] = Future()
 
@@ -203,7 +214,8 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         r = []
         for i in range(blocks):
             if self.provider:
-                block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
+                block = self.provider.submit(
+                    self.launch_cmd, 1, self.workers_per_node)
                 logger.debug("Launched block {}:{}".format(i, block))
                 if not block:
                     raise(ScalingFailed(self.provider.label,

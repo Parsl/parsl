@@ -2,17 +2,18 @@
 
 import logging
 import zmq
-import time
+# import time
 
 
 class Interchange(object):
     """ TODO: docstring """
+
     def __init__(self,
                  client_address="127.0.0.1",
                  client_ports=(50055, 50056),
                  worker_port=None,
                  worker_port_range=(54000, 55000)
-                ):
+                 ):
         global logger
         start_file_logger("interchange.log")
         logger.info("Init Interchange")
@@ -21,10 +22,10 @@ class Interchange(object):
         self.task_incoming = self.context.socket(zmq.ROUTER)
         self.result_outgoing = self.context.socket(zmq.DEALER)
         self.worker_messages = self.context.socket(zmq.DEALER)
-        
+
         self.result_outgoing.set_hwm(0)
 
-        task_address ="tcp://{}:{}".format(client_address, client_ports[0])
+        task_address = "tcp://{}:{}".format(client_address, client_ports[0])
         result_address = "tcp://{}:{}".format(client_address, client_ports[1])
         self.task_incoming.connect(task_address)
         self.result_outgoing.connect(result_address)
@@ -39,14 +40,15 @@ class Interchange(object):
             worker_task_address = "tcp://*:{}".format(self.worker_port)
             self.worker_messages.bind(worker_task_address)
             logger.debug("Worker task address: {}".format(worker_task_address))
-            
+
         else:
             self.worker_port = self.worker_messages.bind_to_random_port(
                 'tcp://*',
                 min_port=worker_port_range[0],
                 max_port=worker_port_range[1], max_tries=100)
 
-            logger.debug("Worker task address: tcp://*:{}".format(self.worker_port))
+            logger.debug(
+                "Worker task address: tcp://*:{}".format(self.worker_port))
 
         self.poller = zmq.Poller()
         self.poller.register(self.task_incoming, zmq.POLLIN)
@@ -56,19 +58,19 @@ class Interchange(object):
     def start(self):
         """ TODO: docstring """
         logger.info("Starting interchange")
-        last = time.time()
+        # last = time.time()
 
         while True:
-            active_flag = False
+            # active_flag = False
             socks = dict(self.poller.poll(1))
 
             if socks.get(self.task_incoming) == zmq.POLLIN:
-                message = self.task_incoming.recv_multipart()                
+                message = self.task_incoming.recv_multipart()
                 logger.debug("Got new task from client")
                 self.worker_messages.send_multipart(message)
                 logger.debug("Sent task to worker")
                 # active_flag = True
-                last = time.time()
+                # last = time.time()
 
             if socks.get(self.worker_messages) == zmq.POLLIN:
                 message = self.worker_messages.recv_multipart()
@@ -78,13 +80,11 @@ class Interchange(object):
 
                 logger.debug("Sent result to client")
                 # active_flag = True
-                last = time.time()
+                # last = time.time()
 
-            """
-            if not active_flag and last + 1 < time.time():
-                logger.debug("Nothing in the past 1s round")
-                last = time.time()
-            """
+            # if not active_flag and last + 1 < time.time():
+            #    logger.debug("Nothing in the past 1s round")
+            #    last = time.time()
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):

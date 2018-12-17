@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 class TasksOutgoing(object):
     """ TODO: docstring """
+
     def __init__(self, ip_address, port_range):
         """ TODO: docstring """
         self.context = zmq.Context()
@@ -34,15 +35,16 @@ class TasksOutgoing(object):
 
 class ResultsIncoming(object):
     """ TODO: docstring """
+
     def __init__(self, ip_address, port_range):
         """ TODO: docstring """
         self.context = zmq.Context()
         self.zmq_socket = self.context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)
         self.port = self.zmq_socket.bind_to_random_port(
-                        "tcp://{}".format(ip_address),
-                        min_port=port_range[0],
-                        max_port=port_range[1])
+            "tcp://{}".format(ip_address),
+            min_port=port_range[0],
+            max_port=port_range[1])
 
     def get(self):
 
@@ -58,6 +60,7 @@ class ResultsIncoming(object):
 
 class WorkerMessages(object):
     """ TODO: docstring """
+
     def __init__(self, tasks_url):
         self.context = zmq.Context()
         self.zmq_socket = self.context.socket(zmq.REP)

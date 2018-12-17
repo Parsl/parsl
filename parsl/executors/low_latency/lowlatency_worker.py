@@ -65,7 +65,8 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
         print("Caught exception with trying to make log dirs: {}".format(e))
 
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
+        format_string = "%(asctime)s %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(
+            rank)
     global logger
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -130,7 +131,7 @@ if __name__ == "__main__":
                                  "task_url": args.task_url,
                                  "logdir": args.logdir,
                                  "uid": args.uid
-                         })
+                                 })
         worker.daemon = True
         worker.start()
         workers.append(worker)
