@@ -38,7 +38,7 @@ def web_app(db, port):
         elif pathname == '/workflows':
             return workflows.layout
         elif '/workflows' in str(pathname):
-            return tabs.display_workflow(workflow_name=pathname.split('/').pop())
+            return tabs.display_workflow(run_id=pathname.split('/').pop())
         else:
             return '404'
 
