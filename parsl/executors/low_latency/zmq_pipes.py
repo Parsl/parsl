@@ -21,25 +21,11 @@ class TasksOutgoing(object):
 
     def put(self, task_id, buffer):
         """ TODO: docstring """
-        print("TasksOutgoing.put called")
         task_id_bytes = task_id.to_bytes(4, "little")
         message = [b"", task_id_bytes] + buffer
 
-        timeout_ms = 0
-        while True:
-            try:
-                socks = dict(self.poller.poll(timeout=timeout_ms))
-                if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
-                    self.zmq_socket.send_multipart(message)
-                    logger.debug("Sent task {}".format(task_id))
-                    return
-                else:
-                    timeout_ms += 1
-                    print("Not sending due full zmq pipe, timeout: {} ms"
-                                 .format(timeout_ms))
-            except Exception as e:
-                logger.error("Caught exception : {}".format(e))
-                raise
+        self.zmq_socket.send_multipart(message)
+        logger.debug("Sent task {}".format(task_id))
 
     def close(self):
         self.zmq_socket.close()
@@ -58,23 +44,7 @@ class ResultsIncoming(object):
                         min_port=port_range[0],
                         max_port=port_range[1])
 
-        # self.poller = zmq.Poller()
-        # self.poller.register(self.zmq_socket, zmq.POLLIN)
-
     def get(self):
-
-        # while True:
-        #     try:
-        #         socks = dict(self.poller.poll(1))
-        #         if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLIN:
-        #             print("ResultsIncoming POLLIN triggered")
-        #             result = self.zmq_socket.recv_multipart()
-        #             task_id = int.from_bytes(result[1], "little")
-        #             buffer = result[2:]
-        #             return task_id, buffer
-        #     except Exception as e:
-        #         logger.error("Caught exception : {}".format(e))
-        #         raise
 
         result = self.zmq_socket.recv_multipart()
         task_id = int.from_bytes(result[1], "little")
