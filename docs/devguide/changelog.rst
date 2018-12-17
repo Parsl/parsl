@@ -8,8 +8,9 @@ Parsl 0.7.0
 Tentative Dec 21st, 2018
 
 Parsl v0.7.0 includes 110 closed issues with contributions (code, tests, reviews and reports)
-from: @annawoodard, @benc, @ConnorPigg, @garri1105, @yadudoc, @ryanchard, @ZhuozhaoLi,
-@lukaszlacinski, @jmjwozniak,  @danielskatz, @kylechard, @EiffL, @sdustrud and @gordonwatts
+from: @ahayschi, @annawoodard, @benc, @ConnorPigg, @daheise, @danielskatz, @djf604, @EiffL,
+@garri1105, @gordonwatts, @jmjwozniak, @jmoon1506, @khurtado, @kylechard, @lukaszlacinski,
+@madduri, @mgovoni-devel, @reidmcy, @ryanchard, @sdustrud, @yadudoc and @ZhuozhaoLi
 
 New functionality
 ^^^^^^^^^^^^^^^^^
