@@ -338,7 +338,7 @@ class Interchange(object):
             if self._ready_manager_queue:
                 shuffled_managers = list(self._ready_manager_queue.keys())
                 random.shuffle(shuffled_managers)
-                logger.debug("Shuffled : {}".format(shuffled_managers))
+                logger.debug("Shuffled: {}".format(shuffled_managers))
                 # for manager in self._ready_manager_queue:
                 for manager in shuffled_managers:
                     if (self._ready_manager_queue[manager]['free_capacity'] and
