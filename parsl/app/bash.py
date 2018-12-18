@@ -139,7 +139,7 @@ class BashApp(AppBase):
         if self.data_flow_kernel is None:
             dfk = DataFlowKernelLoader.dfk()
         else:
-            dfk = DataFlowKernelLoader.dfk()
+            dfk = self.data_flow_kernel
 
         app_fut = dfk.submit(wrap_error(remote_side_bash_executor), self.func, *args,
                              executors=self.executors,
