@@ -51,6 +51,7 @@ class Manager(object):
                  result_q_url="tcp://127.0.0.1:50098",
                  max_queue_size=10,
                  cores_per_worker=1,
+                 max_workers=99999,
                  uid=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30):
@@ -66,6 +67,10 @@ class Manager(object):
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0. Default=1
+
+        max_workers : int
+             caps the maximum number of workers that can be launched.
+             default: 99999
 
         heartbeat_threshold : int
              Seconds since the last message from the interchange after which the
@@ -97,7 +102,9 @@ class Manager(object):
         self.uid = uid
 
         cores_on_node = multiprocessing.cpu_count()
-        self.worker_count = math.floor(cores_on_node / cores_per_worker)
+        self.max_workers = max_workers
+        self.worker_count = min(max_workers,
+                                math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
         self.pending_task_queue = multiprocessing.Queue(maxsize=self.worker_count + max_queue_size)
@@ -444,6 +451,8 @@ if __name__ == "__main__":
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
+    parser.add_argument("--max_workers", default=99999,
+                        help="Caps the maximum workers that can be launched, default:99999")
     parser.add_argument("--hb_period", default=30,
                         help="Heartbeat period in seconds. Uses manager default unless set")
     parser.add_argument("--hb_threshold", default=120,
@@ -471,11 +480,13 @@ if __name__ == "__main__":
         logger.info("cores_per_worker: {}".format(args.cores_per_worker))
         logger.info("task_url: {}".format(args.task_url))
         logger.info("result_url: {}".format(args.result_url))
+        logger.info("max_workers: {}".format(args.max_workers))
 
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
                           cores_per_worker=float(args.cores_per_worker),
+                          max_workers=int(args.max_workers),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period))
         manager.start()
