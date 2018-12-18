@@ -197,7 +197,7 @@ class Interchange(object):
         kill_event : threading.Event
               Event to let the thread know when it is time to die.
         """
-        logger.info("TASK_PULL_THREAD] Starting")
+        logger.info("[TASK_PULL_THREAD] Starting")
         task_counter = 0
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
