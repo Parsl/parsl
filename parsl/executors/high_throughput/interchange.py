@@ -122,7 +122,9 @@ class Interchange(object):
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
-        self.pending_task_queue = queue.Queue(maxsize=10 ^ 6)
+        # qms = 10 ^ 6
+        # logger.debug("pending_task_queue max size {}".format(qms))
+        self.pending_task_queue = queue.Queue()
 
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -189,34 +191,50 @@ class Interchange(object):
         return tasks
 
     def migrate_tasks_to_internal(self, kill_event):
-        """Pull tasks from the incoming tasks 0mq pipe onto the internal
-        pending task queue
+      """Pull tasks from the incoming tasks 0mq pipe onto the internal
+      pending task queue
 
-        Parameters:
-        -----------
-        kill_event : threading.Event
-              Event to let the thread know when it is time to die.
-        """
-        logger.info("TASK_PULL_THREAD] Starting")
+      Parameters:
+      -----------
+      kill_event : threading.Event
+            Event to let the thread know when it is time to die.
+      """
+      logger.info("TASK_PULL_THREAD] Starting")
+      try:
         task_counter = 0
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
 
         while not kill_event.is_set():
             try:
+                logger.debug("[TASK_PULL_THREAD] entering recv")
                 msg = self.task_incoming.recv_pyobj()
+                logger.debug("[TASK_PULL_THREAD] left recv")
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("[TASK_PULL_THREAD] {} tasks in internal queue".format(self.pending_task_queue.qsize()))
+                logger.debug("[TASK_PULL_THREAD] No task received. {} tasks in internal queue".format(self.pending_task_queue.qsize()))
+                time.sleep(1) # for imsim we don't need fast task dispatch. we'll still loop fast as long as we're receiving stuff each iteration
                 continue
 
             if msg == 'STOP':
+                logger.debug("[TASK_PULL_THREAD] received STOP message")
                 kill_event.set()
                 break
             else:
-                self.pending_task_queue.put(msg)
-                task_counter += 1
-                logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
+                try:
+                  logger.debug("[TASK_PULL_THREAD] putting onto pending task queue")
+                  self.pending_task_queue.put(msg, block=False) # benc seeing this apparently block after a small number of tasks at startup
+                  logger.debug("[TASK_PULL_THREAD] finished putting onto pending task queue")
+                  task_counter += 1
+                  logger.debug("[TASK_PULL_THREAD] Fetched task: {}".format(task_counter))
+                except Exception as e:
+                  logger.error("[TASK_PULL_THREAD] exception when putting onto pending_task_queue - dropping this exception and task. {}".format(e))
+                  # don't re-raise because I want to ignore
+            logger.debug("[TASK_PULL_THREAD] normal end of loop iteration")
+      except Exception as e:
+        logger.error("[TASK_PULL_THREAD] thread ending due to exception {}".format(e))
+        raise
+
 
     def _command_server(self, kill_event):
         """ Command server to run async command to the interchange
@@ -265,7 +283,7 @@ class Interchange(object):
                 logger.debug("[COMMAND] is alive")
                 continue
 
-    def start(self, poll_period=1):
+    def start(self, poll_period=1500):
         """ Start the NeedNameQeueu
 
         Parameters:
