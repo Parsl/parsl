@@ -91,7 +91,6 @@ class DatabaseHandler(logging.Handler):
 
     def __init__(self, elink):
         """ Set up the handler to link it to the database specified by elink. """
-
         logging.Handler.__init__(self)
         self.eng = sa.create_engine(elink)
         self.meta = sa.MetaData()

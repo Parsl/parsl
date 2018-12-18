@@ -15,7 +15,7 @@ def monitor(pid, task_id, monitoring_config, run_id):
     else:
         logger = get_parsl_logger(logger_name=run_id + str(task_id), monitoring_config=monitoring_config)
 
-    sleep_duration = monitoring_config.resource_loop_sleep_duration
+    sleep_duration = monitoring_config.monitoring_interval
     time.sleep(sleep_duration)
     # these values are simple to log. Other information is available in special formats such as memory below.
     simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']

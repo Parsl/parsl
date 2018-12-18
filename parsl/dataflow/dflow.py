@@ -125,6 +125,7 @@ class DataFlowKernel(object):
 
         self.logging_server = None
         self.web_app = None
+
         # start tornado logging server
         if self.monitoring is not None:
             self.logging_server = multiprocessing.Process(target=logging_server.run,
@@ -151,7 +152,7 @@ class DataFlowKernel(object):
                 'host': gethostname(),
         }
         self.db_logger.info("DFK start", extra=workflow_info)
-        # ES logging end
+        # logging end
 
         checkpoints = self.load_checkpoints(config.checkpoint_files)
         self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
