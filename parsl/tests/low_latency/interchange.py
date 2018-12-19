@@ -10,7 +10,7 @@ from utils import get_ip_address
 logger = logging.getLogger(__name__)
 
 
-def dealer_interchange(manager_ip="localhost", manager_port=5559, 
+def dealer_interchange(manager_ip="localhost", manager_port=5559,
                        worker_port=5560):
     context = zmq.Context()
     incoming = context.socket(zmq.ROUTER)
@@ -30,7 +30,7 @@ def dealer_interchange(manager_ip="localhost", manager_port=5559,
             message = incoming.recv_multipart()
             logger.debug("[interchange] New task {}".format(message))
             outgoing.send_multipart(message)
-    
+
         if socks.get(outgoing) == zmq.POLLIN:
             message = outgoing.recv_multipart()
             logger.debug("[interchange] New result {}".format(message))
@@ -56,15 +56,14 @@ if __name__ == "__main__":
         with open(INTERCHANGE_IP_FILE, "w") as fh:
             fh.write(interchange_ip)
         print("Wrote IP address {} to file {}"
-            .format(interchange_ip, INTERCHANGE_IP_FILE))
+              .format(interchange_ip, INTERCHANGE_IP_FILE))
     else:
         client_ip = "localhost"
 
     interchange = Process(target=dealer_interchange,
                           kwargs={"manager_ip": client_ip,
-                                  "manager_port": args.client_port, 
+                                  "manager_port": args.client_port,
                                   "worker_port": args.worker_port})
     interchange.daemon = True
     interchange.start()
     interchange.join()
-    

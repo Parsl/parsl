@@ -48,6 +48,7 @@ def test_launch_latency(n=2):
     print("[TEST STATMS] test_parallel_for [SUCCESS]")
     return d
 
+
 def test_total_latency(n=100):
     d = {}
 
@@ -66,7 +67,6 @@ def test_total_latency(n=100):
         d[i].result()
         delta = time.time() - start
         launch_latency.append(delta * 1000)
-
 
     print("[{}] Latency min:{:=10.3f}ms max:{:=10.3f}ms avg:{:=10.3f}ms".format(name,
                                                                                 min(launch_latency),

@@ -23,7 +23,7 @@ def simple_executor(f_all, args_all, kwargs_all, num_tasks):
     for i in range(num_tasks):
         task_id = i
         start_time = time.time()
-        buf = pack_apply_message(f=next(f_all), args=next(args_all), 
+        buf = pack_apply_message(f=next(f_all), args=next(args_all),
                                  kwargs=next(kwargs_all),
                                  buffer_threshold=1024 * 1024,
                                  item_threshold=1024)
@@ -35,23 +35,24 @@ def simple_executor(f_all, args_all, kwargs_all, num_tasks):
         f, args, kwargs = unpack_apply_message(buf, user_ns, copy=False)
         result = execute_task(f, args, kwargs, user_ns)
         exec_times.append(time.time() - start_time)
-        
+
         results.append(result)
-    
-    avg_serialization_time = sum(serialization_times) / len(serialization_times) * 10 ** 6
+
+    avg_serialization_time = sum(
+        serialization_times) / len(serialization_times) * 10 ** 6
     avg_execution_time = sum(exec_times) / len(exec_times) * 10 ** 6
-        
+
     return {
-        "avg_serialization_time": avg_serialization_time, 
-        "avg_execution_time": avg_execution_time, 
+        "avg_serialization_time": avg_serialization_time,
+        "avg_execution_time": avg_execution_time,
         "results": results
     }
 
 
 def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
                     port=5559, interchange=True, warmup=10):
-    logger.info("Starting executor")
     label = "DEALER-INTERCHANGE-REP" if interchange else "DEALER-REP"
+    logger.info("Starting executor:{}".format(label))
 
     serialization_times = []
     deserialization_times = []
@@ -75,7 +76,7 @@ def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
             task_id = num_send
             task_id_bytes = task_id.to_bytes(4, "little")
             start_time = time.time()
-            buf = pack_apply_message(f=next(f_all), args=next(args_all), 
+            buf = pack_apply_message(f=next(f_all), args=next(args_all),
                                      kwargs=next(kwargs_all),
                                      buffer_threshold=1024 * 1024,
                                      item_threshold=1024)
@@ -85,7 +86,7 @@ def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
             send_times[task_id] = time.time()
             dealer.send_multipart([b"", task_id_bytes] + buf)
             num_send += 1
-        
+
         if dealer in socks and socks[dealer] == zmq.POLLIN:
             buf = dealer.recv_multipart()
             recv_time = time.time()
@@ -93,7 +94,7 @@ def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
             start_time = time.time()
             msg = deserialize_object(buf[2:])[0]
             deserialization_times.append(time.time() - start_time)
-            
+
             logger.debug("Got message {}".format(msg))
             task_id = int.from_bytes(buf[1], "little")
             results.append(msg["result"])
@@ -106,17 +107,18 @@ def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
             logger.debug("Dealer received result {}".format(task_id))
             if num_recv == num_tasks:
                 break
-    
-    avg_serialization_time = sum(serialization_times) / len(serialization_times) * 10 ** 6
+
+    avg_serialization_time = sum(
+        serialization_times) / len(serialization_times) * 10 ** 6
     avg_execution_time = sum(exec_times.values()) / len(exec_times) * 10 ** 6
-    
+
     return_dict["avg_serialization_time"] = avg_serialization_time
     return_dict["avg_execution_time"] = avg_execution_time
     return_dict["results"] = results
 
 
 def double(x):
-    return 2*x
+    return 2 * x
 
 
 if __name__ == "__main__":
@@ -143,9 +145,14 @@ if __name__ == "__main__":
         print("Wrote IP address {} to file {}".format(ip, CLIENT_IP_FILE))
 
     # Parameters for worker requests
-    f_all = lambda: (double for _ in range(args.num_tasks))
-    args_all = lambda: ([i] for i in range(args.num_tasks))
-    kwargs_all = lambda: ({} for _ in range(args.num_tasks))
+    def f_all():
+        return (double for _ in range(args.num_tasks))
+
+    def args_all():
+        return ([i] for i in range(args.num_tasks))
+
+    def kwargs_all():
+        return ({} for _ in range(args.num_tasks))
 
     serialization_times = []
     execution_times = []
@@ -154,12 +161,12 @@ if __name__ == "__main__":
     for _ in range(args.num_trials):
         m = Manager()
         return_dict = m.dict()
-        manager = Process(target=dealer_executor, 
-                          kwargs={"f_all": f_all(), "args_all": args_all(), 
-                                  "kwargs_all": kwargs_all(), 
-                                  "num_tasks": args.num_tasks, 
+        manager = Process(target=dealer_executor,
+                          kwargs={"f_all": f_all(), "args_all": args_all(),
+                                  "kwargs_all": kwargs_all(),
+                                  "num_tasks": args.num_tasks,
                                   "port": args.client_port,
-                                  "interchange": args.interchange, 
+                                  "interchange": args.interchange,
                                   "warmup": args.warmup,
                                   "return_dict": return_dict})
         manager.start()

@@ -10,9 +10,11 @@ import parsl
 # from parsl.providers.slurm.slurm import SlurmProvider
 # from parsl.launchers import SimpleLauncher
 
+
 def sleep(seconds):
     import time
     time.sleep(seconds)
+
 
 def double(x):
     return x * 2
@@ -53,9 +55,10 @@ def call_double(size, executor):
         task.result()
 
     delta = time.time() - start
-    
+
     print("Time to complete {} tasks: {:8.3f} s".format(args.count, delta))
     print("Throughput : {:8.3f} Tasks/s".format(int(args.count) / delta))
+
 
 def measure_latency(size, executor):
     print("Priming ....")
@@ -82,57 +85,29 @@ def measure_latency(size, executor):
 
     print("Time to complete {} tasks: {:8.3f} s".format(args.count, delta_all))
     print("Latency avg:{:8.3f}ms  min:{:8.3f}ms  max:{:8.3f}ms".format(
-        1000*sum(tasks)/len(tasks),
-        1000*min(tasks),
-        1000*max(tasks)))
-
+        1000 * sum(tasks) / len(tasks),
+        1000 * min(tasks),
+        1000 * max(tasks)))
 
 
 if __name__ == '__main__':
 
-
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-c", "--count", default="1000",
-
                         help="Count of apps to launch")
 
     parser.add_argument("-d", "--debug", action='store_true',
-
                         help="Count of apps to launch")
 
-
-
     args = parser.parse_args()
-
-
-
     parsl.set_stream_logger()
-
-
-
     from htex_local import config
 
-    #from llex_local import config
-
-
-
+    # from llex_local import config
     dfk = parsl.load(config)
-
-
-
     executor = dfk.executors["htex_local"]
-
-    #executor = dfk.executors["llex_local"]
-
-
-
+    # executor = dfk.executors["llex_local"]
     # config.executors[0].worker_debug = True
-
-
-
     # call_double(int(args.count), executor)
-
     measure_latency(int(args.count), executor)
-
