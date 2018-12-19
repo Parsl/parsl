@@ -27,6 +27,7 @@ parsl.providers.LocalProvider
    .. autosummary::
    
       ~LocalProvider.current_capacity
+      ~LocalProvider.label
       ~LocalProvider.scaling_enabled
    
    

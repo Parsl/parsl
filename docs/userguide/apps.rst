@@ -48,7 +48,7 @@ Special Keyword Arguments
 
 Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_app`` decorator) can use the following special reserved keyword arguments.
 
-1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures`. Parsl will establish a dependency on these inputs and wait for the results of these futures to be resolved before execution. This is useful if one wishes to pass in an arbitrary number of futures at call
+1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures`. Parsl will establish a dependency on these inputs and wait for the results of these futures to be resolved before execution.    This is useful if one wishes to pass in an arbitrary number of futures at call
    time; note that if :ref:`label-futures` are passed as positional arguments, they will also be resolved before execution.
 2. outputs: (list) This keyword argument defines a list of output :ref:`label-futures` that
    will be produced by this app. Parsl will track these files and ensure they are correctly created.
