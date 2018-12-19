@@ -53,7 +53,7 @@ New functionality
 
    More information on configuring is available in the :ref:`configuration-section` section.
 
-* `ExtremeScaleExecutor` a new executor targetting SuperComputer scale (>1000 nodes) workflows is now available.
+* `ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
 
   Here's a sample configuration for using this executor locally:
 
@@ -85,8 +85,8 @@ New functionality
   More information on configuring is available in the :ref:`configuration-section` section.
 
 
-* The libsubmit repository has been merged with Parsl to reduce overheads on maintenance w.r.t documentation,
-  testing, and release synchronization. Since the merge the API has undergone several updates to support
+* The libsubmit repository has been merged with Parsl to reduce overheads on maintenance with respect to documentation,
+  testing, and release synchronization. Since the merge, the API has undergone several updates to support
   the growing collection of executors, and as a result Parsl 0.7.0+ will not be backwards compatible with
   the standalone libsubmit repos. The major components of libsubmit are now available through Parsl, and
   require the following changes to import lines to migrate scripts to 0.7.0:
@@ -99,7 +99,7 @@ New functionality
     .. warning::
        This is a breaking change from Parsl v0.6.0
 
-* To support resource based requests for workers and to maintain uniformity across interfaces, ``tasks_per_node`` is
+* To support resource-based requests for workers and to maintain uniformity across interfaces, ``tasks_per_node`` is
   no longer a **provider** option. Instead, the notion of ``tasks_per_node`` is defined via executor specific options,
   for eg:
 
@@ -114,11 +114,11 @@ New functionality
 
 * Major upgrades to the monitoring infrastructure.
     * Monitoring information can now be written to a SQLite database, created on the fly by Parsl
-    * Web based monitoring to track workflow progress
+    * Web-based monitoring to track workflow progress
 
 
-* Determining the right IP address/interface given network firewall rules is often a nuisance.
-  To simplify this three new methods are now supported:
+* Determining the correct IP address/interface given network firewall rules is often a nuisance.
+  To simplify this, three new methods are now supported:
 
     * ``parsl.addresses.address_by_route``
     * ``parsl.addresses.address_by_query``
@@ -132,9 +132,8 @@ New functionality
 * `DataFlowKernel` now uses per-task locks and an improved mechanism to handle task completions
   improving performance for workflows with large number of tasks.
 
-*
 
-Bug Fixes (highlights)
+Bug fixes (highlights)
 ^^^^^^^^^^^^^^^^^^^^^^
 
 

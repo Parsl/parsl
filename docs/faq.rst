@@ -73,8 +73,8 @@ Workers do not connect back to Parsl
 
 If you are running via ssh to a remote system from your local machine, or from the
 login node of a cluster/supercomputer, it is necessary to have a public IP to which
-the workers can connect back. While our remote execution systems, can identify the
-IP address automatically on certain systems, it is safer to specify the address explicitly.
+the workers can connect back. While our remote execution systems can identify the
+IP address automatically in certain cases, it is safer to specify the address explicitly.
 Parsl provides a few heuristic based address resolution methods that could be useful,
 however with complex networks some trial and error might be necessary to find the
 right address or network interface to use.
@@ -110,7 +110,7 @@ as shown below :
        ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
 
 For the `HighThroughputExecutor` as well as the `ExtremeScaleExecutor`, ``address`` is a keyword argument
-taken at initialization. The example below is for the `HighThroughputExecutor`
+taken at initialization. Here is an example for the `HighThroughputExecutor`:
 
 .. code-block:: python
 
