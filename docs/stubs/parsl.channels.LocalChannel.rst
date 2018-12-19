@@ -1,7 +1,7 @@
-parsl.channels.local.local.LocalChannel
-=======================================
+parsl.channels.LocalChannel
+===========================
 
-.. currentmodule:: parsl.channels.local.local
+.. currentmodule:: parsl.channels
 
 .. autoclass:: LocalChannel
 
@@ -14,9 +14,12 @@ parsl.channels.local.local.LocalChannel
    .. autosummary::
    
       ~LocalChannel.__init__
+      ~LocalChannel.abspath
       ~LocalChannel.close
       ~LocalChannel.execute_no_wait
       ~LocalChannel.execute_wait
+      ~LocalChannel.isdir
+      ~LocalChannel.makedirs
       ~LocalChannel.push_file
    
    

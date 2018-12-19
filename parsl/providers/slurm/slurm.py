@@ -64,6 +64,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
+     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
     def __init__(self,
@@ -79,6 +80,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  worker_init='',
                  cmd_timeout=10,
                  exclusive=True,
+                 move_files=True,
                  launcher=SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
@@ -94,6 +96,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         self.partition = partition
         self.exclusive = exclusive
+        self.move_files = move_files
         if exclusive:
             self.scheduler_options = "#SBATCH --exclusive\n" + scheduler_options
         else:
@@ -181,7 +184,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
+        if self.move_files:
+            logger.debug("moving files")
+            channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
+        else:
+            logger.debug("not moving files")
+            channel_script_path = script_path
 
         retcode, stdout, stderr = super().execute_wait("sbatch {0}".format(channel_script_path))
 
