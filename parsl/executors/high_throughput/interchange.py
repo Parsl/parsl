@@ -154,7 +154,7 @@ class Interchange(object):
 
         self._task_queue = []
         self._ready_manager_queue = {}
-        self.max_task_queue_size = 10 ^ 5
+        self.max_task_queue_size = 100000
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -314,7 +314,9 @@ class Interchange(object):
         poller.register(self.results_incoming, zmq.POLLIN)
 
         while not self._kill_event.is_set():
+            logger.debug("[MAIN] starting poll")
             self.socks = dict(poller.poll(timeout=poll_period))
+            logger.debug("[MAIN] ended poll")
 
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
@@ -356,26 +358,33 @@ class Interchange(object):
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
-            logger.debug("Managers: {}".format(self._ready_manager_queue))
+
+            # even rendering the list here is maybe expensive, even if not written out
+            # logger.debug("Managers: {}".format(self._ready_manager_queue))
+            logger.debug("Managers count: {}".format(len(self._ready_manager_queue)))
+
             if self._ready_manager_queue:
                 shuffled_managers = list(self._ready_manager_queue.keys())
                 random.shuffle(shuffled_managers)
-                logger.debug("Shuffled : {}".format(shuffled_managers))
+                # see above
+                # logger.debug("Shuffled : {}".format(shuffled_managers))
                 # for manager in self._ready_manager_queue:
                 for manager in shuffled_managers:
                     if (self._ready_manager_queue[manager]['free_capacity'] and
                         self._ready_manager_queue[manager]['active']):
                         tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                         if tasks:
+                            logger.info("[MAIN] Sending tasks: {} to manager {}".format(tids, manager))
                             self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                             task_count = len(tasks)
                             count += task_count
                             tids = [t['task_id'] for t in tasks]
-                            logger.debug("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
                             self._ready_manager_queue[manager]['free_capacity'] -= task_count
                             self._ready_manager_queue[manager]['tasks'].extend(tids)
+                            logger.info("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
                     else:
-                        logger.debug("Nothing to send to manager {}".format(manager))
+                        pass
+                        # logger.debug("Nothing to send to manager {}".format(manager)) 
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
