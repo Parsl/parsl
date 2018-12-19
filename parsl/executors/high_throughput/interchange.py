@@ -295,6 +295,12 @@ class Interchange(object):
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
 
+        # These are managers which we should examine in an iteration
+        # for scheduling a job (or maybe any other attention?).
+        # Anything altering the state of the manager should add it
+        # onto this list.
+        interesting_managers = set()
+
         while not self._kill_event.is_set():
             logger.debug("[MAIN] starting one main loop iteration")
             logger.debug("[MAIN] entering poll")
@@ -314,6 +320,8 @@ class Interchange(object):
                                                           'free_capacity': 0,
                                                           'active': True,
                                                           'tasks': []}
+                    interesting_managers.add(manager)
+                    logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                     self._ready_manager_queue[manager].update(msg)
                     logger.info("Registration info for manager {}: {}".format(manager, msg))
                     if (msg['python_v'] != self.current_platform['python_v'] or
@@ -336,20 +344,28 @@ class Interchange(object):
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
+                        interesting_managers.add(manager)
                 logger.debug("[MAIN] leaving task_outgoing section")
 
             # If we had received any requests, check if there are tasks that could be passed
-            logger.debug("Managers: {}".format(self._ready_manager_queue))
-            if self._ready_manager_queue:
+
+            # even rendering the list here is maybe expensive, even if not written out
+            # logger.debug("Managers: {}".format(self._ready_manager_queue))
+            logger.debug("Managers count: {}".format(len(self._ready_manager_queue)))
+            logger.debug("Interesting managers count: {}".format(len(interesting_managers)))
+
+            # some managers will still be interesting after this pass... accumulate them here
+            new_interesting_managers=set()
+            if interesting_managers and not self.pending_task_queue.empty():
                 logger.debug("[MAIN] entering _ready_manager_queue section")
                 logger.debug("[MAIN]   copying manager list to shuffle")
-                shuffled_managers = list(self._ready_manager_queue.keys())
+                shuffled_managers = list(interesting_managers)
                 logger.debug("[MAIN]   shuffling list")
                 random.shuffle(shuffled_managers)
                 logger.debug("[MAIN]   shuffled list")
                 # logger.debug("Shuffled : {}".format(shuffled_managers))
                 # for manager in self._ready_manager_queue:
-                for manager in shuffled_managers:
+                for manager in shuffled_managers: # this for loop should only really proceed as long as there are also tasks in queue? otherwise this is still quite expensive to process if we're allocating just around single task this main-loop iteration?
                     if (self._ready_manager_queue[manager]['free_capacity'] and
                         self._ready_manager_queue[manager]['active']):
                         tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
@@ -361,11 +377,17 @@ class Interchange(object):
                             logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, manager))
                             self._ready_manager_queue[manager]['free_capacity'] -= task_count
                             self._ready_manager_queue[manager]['tasks'].extend(tids)
+                            logger.info("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
+                            if self._ready_manager_queue[manager]['free_capacity'] > 0:
+                                logger.info("[MAIN] Manager {} still has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
+                                new_interesting_managers.add(manager)
                     else:
                         pass
                         # logger.debug("Nothing to send to manager {}".format(manager)) 
-                logger.debug("[MAIN] leaving _ready_manager_queue section")
-
+                interesting_managers = new_interesting_managers
+                logger.debug("[MAIN] leaving _ready_manager_queue section, with {} managers still interesting".format(len(interesting_managers)))
+            else:
+                logger.debug("[MAIN] either no interesting managers or no tasks, so skipping manager pass")
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
                 logger.debug("[MAIN] entering results_incoming section")
@@ -395,7 +417,7 @@ class Interchange(object):
                     self.results_outgoing.send(pkl_package)
                     logger.warning("[MAIN] Sent failure reports, unregistering manager")
                 self._ready_manager_queue.pop(manager, 'None')
-            logger.debug("[MAIN] entering bad_managers section")
+            logger.debug("[MAIN] leaving bad_managers section")
             logger.debug("[MAIN] ending one main loop iteration")
 
         delta = time.time() - start
