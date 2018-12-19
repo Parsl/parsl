@@ -296,10 +296,14 @@ class Interchange(object):
         poller.register(self.results_incoming, zmq.POLLIN)
 
         while not self._kill_event.is_set():
+            logger.debug("[MAIN] starting one main loop iteration")
+            logger.debug("[MAIN] entering poll")
             self.socks = dict(poller.poll(timeout=poll_period))
+            logger.debug("[MAIN] leaving poll")
 
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
+                logger.debug("[MAIN] starting task_outgoing section")
                 message = self.task_outgoing.recv_multipart()
                 manager = message[0]
 
@@ -332,13 +336,18 @@ class Interchange(object):
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
+                logger.debug("[MAIN] leaving task_outgoing section")
 
             # If we had received any requests, check if there are tasks that could be passed
             logger.debug("Managers: {}".format(self._ready_manager_queue))
             if self._ready_manager_queue:
+                logger.debug("[MAIN] entering _ready_manager_queue section")
+                logger.debug("[MAIN]   copying manager list to shuffle")
                 shuffled_managers = list(self._ready_manager_queue.keys())
+                logger.debug("[MAIN]   shuffling list")
                 random.shuffle(shuffled_managers)
-                logger.debug("Shuffled: {}".format(shuffled_managers))
+                logger.debug("[MAIN]   shuffled list")
+                # logger.debug("Shuffled : {}".format(shuffled_managers))
                 # for manager in self._ready_manager_queue:
                 for manager in shuffled_managers:
                     if (self._ready_manager_queue[manager]['free_capacity'] and
@@ -353,10 +362,13 @@ class Interchange(object):
                             self._ready_manager_queue[manager]['free_capacity'] -= task_count
                             self._ready_manager_queue[manager]['tasks'].extend(tids)
                     else:
-                        logger.debug("Nothing to send")
+                        pass
+                        # logger.debug("Nothing to send to manager {}".format(manager)) 
+                logger.debug("[MAIN] leaving _ready_manager_queue section")
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
+                logger.debug("[MAIN] entering results_incoming section")
                 manager, *b_messages = self.results_incoming.recv_multipart()
                 if manager not in self._ready_manager_queue:
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
@@ -368,7 +380,9 @@ class Interchange(object):
                         self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
                     self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
+                logger.debug("[MAIN] leaving results_incoming section")
 
+            logger.debug("[MAIN] entering bad_managers section")
             bad_managers = [manager for manager in self._ready_manager_queue if
                             time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
             for manager in bad_managers:
@@ -381,6 +395,8 @@ class Interchange(object):
                     self.results_outgoing.send(pkl_package)
                     logger.warning("[MAIN] Sent failure reports, unregistering manager")
                 self._ready_manager_queue.pop(manager, 'None')
+            logger.debug("[MAIN] entering bad_managers section")
+            logger.debug("[MAIN] ending one main loop iteration")
 
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(count, delta))
@@ -408,14 +424,15 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
         None.
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s %(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+
 
     global logger
     logger = logging.getLogger(name)
     logger.setLevel(level)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S,uuu')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -452,13 +469,13 @@ if __name__ == '__main__':
 
     # Setup logging
     global logger
-    format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+    format_string = "%(asctime)s %(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger("interchange")
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     handler.setLevel('DEBUG' if args.debug is True else 'INFO')
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S,uuu')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
