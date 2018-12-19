@@ -416,7 +416,7 @@ class Interchange(object):
                         self._ready_manager_queue[manager]['active']):
                         tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
                         if tasks:
-                            logger.info("[MAIN] Sending tasks: {} to manager {}".format(tids, manager))
+                            logger.info("[MAIN] Processing tasks for manager {}".format(manager))
                             self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                             task_count = len(tasks)
                             count += task_count
