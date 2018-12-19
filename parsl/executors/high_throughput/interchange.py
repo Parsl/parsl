@@ -43,6 +43,19 @@ class ManagerLost(Exception):
         return "Task failure due to loss of worker {}".format(self.worker_id)
 
 
+class BadRegistration(Exception):
+    ''' A new Manager tried to join the executor with a BadRegistration message
+    '''
+    def __init__(self, worker_id, critical=False):
+        self.worker_id = worker_id
+        self.tstamp = time.time()
+        self.handled = "critical" if critical is True else "suppressed"
+
+    def __repr__(self):
+        return "Manager:{} caused a {} failure".format(self.worker_id,
+                                                       self.handled)
+
+
 class Interchange(object):
     """ Interchange is a task orchestrator for distributed systems.
 
@@ -64,6 +77,7 @@ class Interchange(object):
                  heartbeat_threshold=60,
                  logdir=".",
                  logging_level=logging.INFO,
+                 suppress_failure=False,
              ):
         """
         Parameters
@@ -93,6 +107,9 @@ class Interchange(object):
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO (20)
 
+        suppress_failure : Bool
+             When set to True, the interchange will attempt to suppress failures. Default: False
+
         """
         self.logdir = logdir
         try:
@@ -105,6 +122,7 @@ class Interchange(object):
 
         self.client_address = client_address
         self.interchange_address = interchange_address
+        self.suppress_failure = suppress_failure
 
         logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
             client_address, client_ports[0], client_ports[1], client_ports[2]))
@@ -324,24 +342,52 @@ class Interchange(object):
                 manager = message[0]
 
                 if manager not in self._ready_manager_queue:
-                    msg = json.loads(message[1].decode('utf-8'))
-                    logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
+                    reg_flag = False
+
+                    try:
+                        msg = json.loads(message[1].decode('utf-8'))
+                        reg_flag = True
+                    except Exception:
+                        logger.warning("[MAIN] Got a non-json registration message from manager:{}".format(
+                            manager))
+                        logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
+
+                    # By default we set up to ignore bad nodes/registration messages.
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           'free_capacity': 0,
                                                           'active': True,
                                                           'tasks': []}
-                    self._ready_manager_queue[manager].update(msg)
-                    logger.info("Registration info for manager {}: {}".format(manager, msg))
-                    if (msg['python_v'] != self.current_platform['python_v'] or
-                        msg['parsl_v'] != self.current_platform['parsl_v']):
-                        logger.warn("Manager {} has incompatible version info with the interchange".format(manager))
-                        logger.debug("Setting kill event")
-                        self._kill_event.set()
-                        e = ManagerLost(manager)
-                        result_package = {'task_id': -1, 'exception': serialize_object(e)}
-                        pkl_package = pickle.dumps(result_package)
-                        self.results_outgoing.send(pkl_package)
-                        logger.warning("[MAIN] Sent failure reports, unregistering manager")
+                    if reg_flag is True:
+                        logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
+                        self._ready_manager_queue[manager].update(msg)
+                        logger.info("[MAIN] Registration info for manager {}: {}".format(manager, msg))
+
+                        if (msg['python_v'] != self.current_platform['python_v'] or
+                            msg['parsl_v'] != self.current_platform['parsl_v']):
+                            logger.warn("[MAIN] Manager {} has incompatible version info with the interchange".format(manager))
+
+                            if self.suppress_failure is False:
+                                logger.debug("Setting kill event")
+                                self._kill_event.set()
+                                e = ManagerLost(manager)
+                                result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                                pkl_package = pickle.dumps(result_package)
+                                self.results_outgoing.send(pkl_package)
+                                logger.warning("[MAIN] Sent failure reports, unregistering manager")
+                            else:
+                                logger.debug("[MAIN] Suppressing shutdown due to version incompatibility")
+
+                    else:
+                        # Registration has failed.
+                        if self.suppress_failure is False:
+                            self._kill_event.set()
+                            e = BadRegistration(manager, critical=True)
+                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                            pkl_package = pickle.dumps(result_package)
+                            self.results_outgoing.send(pkl_package)
+                        else:
+                            logger.debug("[MAIN] Suppressing bad registration from manager:{}".format(
+                                manager))
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
@@ -472,6 +518,8 @@ if __name__ == '__main__':
                         help="REQUIRED: ZMQ url for posting results")
     parser.add_argument("--worker_ports", default=None,
                         help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
+    parser.add_argument("--suppress_failure", action='store_true',
+                        help="Enables suppression of failures")
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
 
@@ -492,6 +540,8 @@ if __name__ == '__main__':
     logger.debug("Starting Interchange")
 
     optionals = {}
+    optionals['suppress_failure'] = args.suppress_failure
+
     if args.worker_ports:
         optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
     ic = Interchange(**optionals)
