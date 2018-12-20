@@ -138,7 +138,7 @@ The configuration options for specifying elasticity bounds are:
 
 The configuration options for specifying the shape of each block are:
 
-1. ``workers_per_node``: Number of tasks that can execute concurrently per node (which corresponds to the number of workers started per node).
+1. ``workers_per_node``: Number of workers started per node, which corresponds to the number of tasks that can execute concurrently on a node.
 2. ``nodes_per_block``: Number of nodes requested per block.
 
 Parallelism
