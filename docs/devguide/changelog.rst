@@ -5,7 +5,7 @@ Changelog
 Parsl 0.7.0
 -----------
 
-Tentative Dec 21st, 2018
+Released on Dec 20st, 2018
 
 Parsl v0.7.0 includes 110 closed issues with contributions (code, tests, reviews and reports)
 from: Alex Hays @ahayschi, Anna Woodard @annawoodard, Ben Clifford @benc, Connor Pigg @ConnorPigg,
