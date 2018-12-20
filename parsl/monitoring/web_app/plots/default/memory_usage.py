@@ -173,7 +173,7 @@ class VirtualMemoryUsageDistributionPlot(BasePlot):
             return items
 
         return go.Figure(
-            data=[go.Bar(x=[num/1000000000 for num in x_axis[:-1]],
+            data=[go.Bar(x=[num / 1000000000 for num in x_axis[:-1]],
                          y=y_axis_setup(),
                          name='tasks')],
             layout=go.Layout(xaxis=dict(autorange=True,
@@ -233,7 +233,7 @@ class ResidentMemoryUsageDistributionPlot(BasePlot):
             return items
 
         return go.Figure(
-            data=[go.Bar(x=[num/1000000000 for num in x_axis[:-1]],
+            data=[go.Bar(x=[num / 1000000000 for num in x_axis[:-1]],
                          y=y_axis_setup(),
                          name='tasks')],
             layout=go.Layout(xaxis=dict(autorange=True,
