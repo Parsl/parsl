@@ -63,7 +63,7 @@ Launchers are responsible for abstracting these different task-launch systems to
 4. `GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores.
 5. `MpiExecLauncher`: Uses Mpiexec to launch.
 6. `SimpleLauncher`: The launcher default to a single worker launch.
-7. `SingleNodeLauncher`: This launcher launches ``tasks_per_node`` count workers on a single node.
+7. `SingleNodeLauncher`: This launcher launches ``workers_per_node`` count workers on a single node.
 
 
 Blocks
@@ -138,7 +138,7 @@ The configuration options for specifying elasticity bounds are:
 
 The configuration options for specifying the shape of each block are:
 
-1. ``tasks_per_node``: Number of tasks that can execute concurrently per node (which corresponds to the number of workers started per node).
+1. ``workers_per_node``: Number of tasks that can execute concurrently per node (which corresponds to the number of workers started per node).
 2. ``nodes_per_block``: Number of nodes requested per block.
 
 Parallelism
@@ -171,7 +171,7 @@ For example:
 .. code-block:: python
 
    blocks = min(max_blocks,
-                ceil((running_tasks + available_tasks) / (tasks_per_node * nodes_per_block))
+                ceil((running_tasks + available_tasks) / (workers_per_node * nodes_per_block))
 
 - When p = 1/2: Stack up to 2 tasks before overflowing and requesting a new block.
 
