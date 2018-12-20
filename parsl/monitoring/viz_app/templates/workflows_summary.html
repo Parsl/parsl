@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+  <br />
+  <h2>Workflows</h2>
+
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Owner</th>
+        <th>Status</th>
+        <th>Runtime</th>
+        <th>Tasks</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key,value in df.iterrows() %}
+          <tr>
+        <td><a href="workflow/{{ value['run_id'] }}">{{ value['workflow_name'] }}</a></td>
+        <td>Kyle</td>
+        <td>Running</td>
+        <td>1:30</td>
+        <td>
+             <span class="task task-running">25</span>
+             <span class="task task-complete">10</span>
+             <span class="task task-failed">1</span>
+
+        </td>
+        <td>
+            <span class="fas fa-chart-bar"></span>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}

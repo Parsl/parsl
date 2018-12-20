@@ -34,7 +34,7 @@ from parsl.utils import get_version
 from parsl.monitoring.monitoring_base import get_parsl_logger
 from parsl.monitoring import app_monitor
 from parsl.monitoring import logging_server
-from parsl.monitoring.web_app import index
+from parsl.monitoring.viz_app import viz_app
 
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class DataFlowKernel(object):
             self.logging_server.start()
 
             if self.monitoring.visualization_server is not None:
-                self.web_app = multiprocessing.Process(target=index.run,
+                self.web_app = multiprocessing.Process(target=viz_app.run,
                                                        kwargs={'monitoring_config': self.monitoring})
                 self.web_app.start()
 
