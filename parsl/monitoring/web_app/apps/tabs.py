@@ -3,7 +3,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 from parsl.monitoring.web_app.app import app, get_db, close_db
-from parsl.monitoring.web_app.apps import workflow_details, tasks_details
+from parsl.monitoring.web_app.apps import workflow_details, apps_details, tasks_details
 
 
 def display_workflow(run_id):
@@ -25,6 +25,7 @@ def display_workflow(run_id):
         dropdown(dataframe=df_workflows.sort_values(by='time_began', ascending=False)),
         dcc.Tabs(id="tabs", value='workflow', children=[
             dcc.Tab(label='Workflow', value='workflow'),
+            dcc.Tab(label='Apps', value='apps'),
             dcc.Tab(label='Tasks', value='tasks'),
         ]),
         html.Div(id='tabs_content')
@@ -36,6 +37,8 @@ def display_workflow(run_id):
 def render_content(tab):
     if tab == 'workflow':
         return workflow_details.layout
+    elif tab == 'apps':
+        return apps_details.layout
     elif tab == 'tasks':
         return tasks_details.layout
 

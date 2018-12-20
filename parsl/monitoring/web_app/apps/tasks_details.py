@@ -2,23 +2,39 @@ import pandas as pd
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+from parsl.monitoring.web_app.plots.default.task_time_series import \
+    TimeSeriesUserTimePerTaskPlot, \
+    TimeSeriesSystemTimePerTaskPlot, \
+    TimeSeriesResidentMemoryUsagePerTaskPlot, \
+    TimeSeriesVirtualMemoryUsagePerTaskPlot
 from parsl.monitoring.web_app.app import app, get_db, close_db
-from parsl.monitoring.web_app.plots.default.task_per_app import TaskPerAppMultiplePlot
-from parsl.monitoring.web_app.plots.default.total_tasks import TotalTasksMultiplePlot
 
 layout = html.Div(id='tasks_details')
 
-tasks_per_app_multiple_plot = TaskPerAppMultiplePlot('task_per_app_multiple_plot_tasks',
-                                                     plot_args=([Input('apps_dropdown', 'value')],
-                                                                [State('run_id', 'children')]))
+user_time_time_series_per_task = \
+    TimeSeriesUserTimePerTaskPlot('user_time_time_series_per_task',
+                                  plot_args=([Input('tasks_dropdown', 'value')],
+                                             [State('run_id', 'children')]))
 
-total_tasks_multiple_plot = TotalTasksMultiplePlot('total_tasks_multiple_plot_tasks',
-                                                   plot_args=([Input('bin_width_minutes', 'value'),
-                                                               Input('bin_width_seconds', 'value'),
-                                                               Input('apps_dropdown', 'value')],
-                                                              [State('run_id', 'children')]))
+system_time_time_series_per_task = \
+    TimeSeriesSystemTimePerTaskPlot('system_time_time_series_per_task',
+                                    plot_args=([Input('tasks_dropdown', 'value')],
+                                               [State('run_id', 'children')]))
 
-plots = [tasks_per_app_multiple_plot, total_tasks_multiple_plot]
+resident_memory_usage_time_series_per_task = \
+    TimeSeriesResidentMemoryUsagePerTaskPlot('resident_memory_usage_time_series_per_task',
+                                             plot_args=([Input('tasks_dropdown', 'value')],
+                                                        [State('run_id', 'children')]))
+
+virtual_memory_usage_time_series_per_task = \
+    TimeSeriesVirtualMemoryUsagePerTaskPlot('virtual_memory_usage_time_series_per_task',
+                                            plot_args=([Input('tasks_dropdown', 'value')],
+                                                       [State('run_id', 'children')]))
+
+plots = [user_time_time_series_per_task,
+         system_time_time_series_per_task,
+         resident_memory_usage_time_series_per_task,
+         virtual_memory_usage_time_series_per_task]
 
 
 @app.callback(Output('tasks_details', 'children'),
@@ -29,13 +45,12 @@ def tasks_details(run_id):
                                 sql_conn, params=(run_id,))
     close_db()
 
-    apps = []
-    for _app in df_task['task_func_name'].unique():
-        apps.append(dict(label=_app, value=_app))
+    tasks = []
+    for task_id in df_task['task_id']:
+        tasks.append({'label': task_id, 'value': task_id})
 
     return [dcc.Dropdown(
-        id='apps_dropdown',
-        options=apps,
-        value=apps[0],
-        multi=True)] + [plot.html(run_id) for plot in plots]
-
+        id='tasks_dropdown',
+        options=tasks,
+        value=df_task['task_id'][0],
+        style=dict(width='200px', display='inline-block'))] + [plot.html(run_id) for plot in plots]
