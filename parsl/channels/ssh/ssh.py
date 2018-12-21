@@ -26,7 +26,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, skip_auth=False, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -66,7 +66,9 @@ class SSHChannel(Channel, RepresentationMixin):
                 hostname,
                 username=username,
                 password=password,
-                allow_agent=True
+                allow_agent=True,
+                gss_auth=gssapi_auth,
+                gss_kex=gssapi_auth,
             )
             t = self.ssh_client.get_transport()
             self.sftp_client = paramiko.SFTPClient.from_transport(t)
