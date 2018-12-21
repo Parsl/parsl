@@ -30,12 +30,14 @@ setup(
         'extreme_scale' : ['mpi4py'],
         'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
         'google_cloud' : ['google-auth', 'google-api-python-client'],
+        'gssapi' : ['python-gssapi'],
         'all' : ['CMRESHandler', 'psutil', 'sqlalchemy',
                  'dash', 'dash-html-components', 'dash-core-components', 'pandas',
                  'boto3',
                  'mpi4py',
                  'nbsphinx', 'sphinx_rtd_theme',
-                 'google-auth', 'google-api-python-client']
+                 'google-auth', 'google-api-python-client',
+                 'python-gssapi']
 
         },
     classifiers = [
