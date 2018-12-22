@@ -1,2 +1,4 @@
 include LICENSE
-include parsl/monitoring/web_app/assets/*.css
+include parsl/monitoring/web_app/assets/parsl-logo.png
+include parsl/monitoring/web_app/assets/caret-down.png
+include parsl/monitoring/web_app/assets/styles.css

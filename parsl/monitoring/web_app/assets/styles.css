@@ -3,6 +3,10 @@
     --parsl-light-blue: #83B0DC;
 }
 
+#page_content {
+    font-family: sans-serif;
+}
+
 table {
     border-collapse: collapse;
 }
@@ -58,7 +62,7 @@ td a {
     color: black;
     padding: 14px 16px;
     background-color: inherit;
-    font-family: inherit;
+    font-size: 0.9em;
     margin: 0;
 }
 
@@ -68,7 +72,8 @@ td a {
     background-color: #f9f9f9;
     min-width: 160px;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1;
+    overflow: auto;
+    height: 133px;
 }
 
 .dropdown-content a {
@@ -85,6 +90,11 @@ td a {
     color: white;
 }
 
+.dropdown .dropbtn img {
+    margin-left: 10px;
+    width: 12px;
+}
+
 .dropdown-content a:hover {
     background-color: #ddd;
     color: black;
@@ -93,3 +103,70 @@ td a {
 .dropdown:hover .dropdown-content {
     display: block;
 }
+
+.flex_container {
+    position: sticky;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.title_container {
+    margin: 0 20px;
+}
+
+.title_container h3 {
+    border-bottom: 1px black solid;
+}
+
+.title_container p {
+    font-size: 0.9em;
+}
+
+.dropdown_container {
+    justify-self: flex-end;
+}
+
+.parsl_logo {
+    justify-self: flex-start;
+    width: 100px;
+    height: 100%;
+}
+
+.view_title {
+    padding-top: 20px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.8em;
+}
+
+.plot_container {
+    border: 1px solid lightgray;
+}
+
+.plot_components {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    margin: 20px 20px 0 0;
+}
+
+.plot_components * {
+    margin-left: 20px;
+}
+
+#select_task_id, #select_apps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#tasks_dropdown, #apps_dropdown {
+    margin-left: 20px;
+    width: 250px;
+}
+
+/*#apps_dropdown {*/
+    /*margin-left: 20px;*/
+/*}*/

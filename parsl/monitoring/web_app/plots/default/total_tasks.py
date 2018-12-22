@@ -25,11 +25,11 @@ class TotalTasksPlot(BasePlot):
         minutes = time_step // 60
         seconds = time_step % 60
 
-        return [html.P('Bin width'),
-                html.Label(htmlFor='bin_width_minutes', children='Minutes'),
-                dcc.Input(id='bin_width_minutes', type='number', min=0, value=minutes),
-                html.Label(htmlFor='bin_width_seconds', children='Seconds'),
-                dcc.Input(id='bin_width_seconds', type='number', min=0, value=seconds)]
+        return [html.H4('Bin width'),
+                html.Div(children=[html.Label(htmlFor='bin_width_minutes', children='Minutes'),
+                                   dcc.Input(id='bin_width_minutes', type='number', min=0, value=minutes)]),
+                html.Div(children=[html.Label(htmlFor='bin_width_seconds', children='Seconds'),
+                                   dcc.Input(id='bin_width_seconds', type='number', min=0, value=seconds)])]
 
     def plot(self, minutes, seconds, run_id):
         sql_conn = get_db()
@@ -123,11 +123,11 @@ class TotalTasksMultiplePlot(BasePlot):
         minutes = time_step // 60
         seconds = time_step % 60
 
-        return [html.P('Bin width'),
-                html.Label(htmlFor='bin_width_minutes', children='Minutes'),
-                dcc.Input(id='bin_width_minutes', type='number', min=0, value=minutes),
-                html.Label(htmlFor='bin_width_seconds', children='Seconds'),
-                dcc.Input(id='bin_width_seconds', type='number', min=0, value=seconds)]
+        return [html.H4('Bin width'),
+                html.Div(children=[html.Label(htmlFor='bin_width_minutes', children='Minutes'),
+                                   dcc.Input(id='bin_width_minutes', type='number', min=0, value=minutes)]),
+                html.Div(children=[html.Label(htmlFor='bin_width_seconds', children='Seconds'),
+                                   dcc.Input(id='bin_width_seconds', type='number', min=0, value=seconds)])]
 
     def plot(self, minutes, seconds, apps, run_id):
         sql_conn = get_db()
