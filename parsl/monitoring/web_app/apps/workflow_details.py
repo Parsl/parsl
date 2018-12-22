@@ -64,4 +64,4 @@ plots = [tasks_per_app_plot,
 @app.callback(Output('workflow_details', 'children'),
               [Input('run_id', 'children')])
 def workflow_details(run_id):
-    return [plot.html(run_id) for plot in plots]
+    return [html.P(className='view_title', children='Workflow view')] + [plot.html(run_id) for plot in plots]

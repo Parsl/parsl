@@ -33,8 +33,14 @@ def tasks_details(run_id):
     for _app in df_task['task_func_name'].unique():
         apps.append(dict(label=_app, value=_app))
 
-    return [dcc.Dropdown(
-        id='apps_dropdown',
-        options=apps,
-        value=apps[0],
-        multi=True)] + [plot.html(run_id) for plot in plots]
+    return [html.P(className='view_title', children='Apps view'),
+            html.Div(id='select_apps',
+                     children=[
+                         html.H4('Select apps'),
+                         dcc.Dropdown(
+                             id='apps_dropdown',
+                             options=apps,
+                             value=apps[0],
+                             multi=True)
+                     ])
+            ] + [plot.html(run_id) for plot in plots]

@@ -8,7 +8,7 @@ from parsl.monitoring.web_app.app import get_db, close_db
 def dataframe_to_html_table(id, dataframe):
 
     def href(i):
-        return '/workflows/' + dataframe['run_id'].iloc[i]
+        return '/workflows/' + dataframe['run_id'].iloc[i] + '/workflow-view'
 
     return html.Table(id=id, children=(
             [html.Tr([html.Th(" ".join([x.capitalize() for x in col.split('_')])) for col in dataframe.columns[1:]])] +

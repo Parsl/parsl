@@ -38,8 +38,9 @@ plots = [user_time_time_series_per_task,
 
 
 @app.callback(Output('tasks_details', 'children'),
-              [Input('run_id', 'children')])
-def tasks_details(run_id):
+              [Input('run_id', 'children')],
+              [State('url', 'pathname')])
+def tasks_details(run_id, pathname):
     sql_conn = get_db()
     df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?)',
                                 sql_conn, params=(run_id,))
@@ -49,8 +50,13 @@ def tasks_details(run_id):
     for task_id in df_task['task_id']:
         tasks.append({'label': task_id, 'value': task_id})
 
-    return [dcc.Dropdown(
-        id='tasks_dropdown',
-        options=tasks,
-        value=df_task['task_id'][0],
-        style=dict(width='200px', display='inline-block'))] + [plot.html(run_id) for plot in plots]
+    return [html.P(className='view_title', children='Tasks view'),
+            html.Div(id='select_task_id',
+                     children=[
+                         html.H4('Select Task ID'),
+                         dcc.Dropdown(
+                             id='tasks_dropdown',
+                             options=tasks,
+                             value=pathname.split('/').pop())
+                     ])
+            ] + [plot.html(run_id) for plot in plots]

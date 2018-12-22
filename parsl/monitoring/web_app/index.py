@@ -1,5 +1,8 @@
+import re
 import sys
 import argparse
+
+from parsl.monitoring.web_app.utils import RUN_ID_REGEX
 
 
 def web_app(db, port):
@@ -23,14 +26,14 @@ def web_app(db, port):
     print(' * Visualizing ' + db.split('/').pop())
     print(' * Running on http://localhost:' + str(port) + '/workflows')
 
-    from parsl.monitoring.web_app.apps import workflows, tabs
+    from parsl.monitoring.web_app.apps import workflows, nav_bar
 
     app.layout = html.Div([
         dcc.Location(id='url', refresh=False),
-        html.Div(id='page-content')
+        html.Div(id='page_content')
     ])
 
-    @app.callback(Output('page-content', 'children'),
+    @app.callback(Output('page_content', 'children'),
                   [Input('url', 'pathname')])
     def display_page(pathname):
         if pathname == '/':  # TODO Redirect to workflows or show special page
@@ -38,7 +41,12 @@ def web_app(db, port):
         elif pathname == '/workflows':
             return workflows.layout
         elif '/workflows' in str(pathname):
-            return tabs.display_workflow(run_id=pathname.split('/').pop())
+            pathname_split = pathname.split('/')
+            run_id = pathname_split[pathname_split.index('workflows') + 1]
+            if run_id and re.fullmatch(RUN_ID_REGEX, run_id):
+                return nav_bar.display_workflow(run_id=run_id)
+            else:
+                return'Invalid run id'
         else:
             return '404'
 
