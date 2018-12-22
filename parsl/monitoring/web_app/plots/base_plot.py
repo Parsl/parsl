@@ -35,6 +35,6 @@ class BasePlot(metaclass=ABCMeta):
     def html(self, run_id):
         return html.Div(className='plot_container',
                         children=[html.Div(className='plot_components',
-                                           children=self.setup(run_id))] +
-                                 [html.Div(className='plot_figure',
+                                           children=self.setup(run_id)),
+                                  html.Div(className='plot_figure',
                                            children=dcc.Graph(id=self._plot_id))])
