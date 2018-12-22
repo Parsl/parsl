@@ -106,7 +106,7 @@ def version_dropdown(dataframe):
                 children=[
                     'Version',
                     html.Img(className='',
-                             src='../../assets/caret-down.png'),
+                             src='../../../assets/caret-down.png'),
                 ]
             ),
 
