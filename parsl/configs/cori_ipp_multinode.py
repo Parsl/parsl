@@ -33,7 +33,6 @@ config = Config(
                     script_dir='/global/homes/y/USERNAME/parsl_scripts',    # Please replace USERNAME with your username
                 ),
                 nodes_per_block=2,
-                tasks_per_node=2,
                 init_blocks=1,
                 max_blocks=1,
                 scheduler_options='',     # Input your scheduler_options if needed
