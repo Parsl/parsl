@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+<h2>Workflow: {{ workflow_name }} ({{ workflow_id }}) </h2>
+
+<p>
+    Owner: {{ owner }}
+
+    Rundir: {{ rundir }}
+</p>
+
+
+<h3 style="display: inline-block">Task #: {{task_id}}</h3>
+<select id="select_task" onchange="location = this.value;">
+    <option value="" disabled selected>Select task</option>
+    {% for task in tasks %}
+    <option value="{{task['task_id']}}">{{task['task_id']}}</option>
+    {% endfor %}
+</select>
+
+{{ time_series_user_time|safe }}
+{{ time_series_system_time|safe }}
+{{ time_series_virtual_memory_usage|safe }}
+{{ time_series_resident_memory_usage|safe }}
+
+{% endblock %}

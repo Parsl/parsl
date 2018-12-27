@@ -10,12 +10,11 @@ def viz_app(db, port):
         print("Missing modules for the optional feature monitoring. Please run pip install parsl[visualization]", file=sys.stderr)
         return
 
-    from parsl.monitoring.viz_app.views import app
-    from parsl.monitoring.viz_app.utils import init_db
+    from parsl.monitoring.viz_app.views import app, init_db
 
     # TODO Find out if db is created after script finalizes or during its execution.
     #  If the latter, this is a race condition that needs a fix
-    if not init_db(app, db):
+    if not init_db(db):
         print("Visualization tool failed to initialize. " + db + " hasn't been created yet", file=sys.stderr)
         return
 
@@ -41,4 +40,4 @@ def run(monitoring_config):
 
 
 if __name__ == '__main__':
-    viz_app(sys.argv[1], 5555)
+    viz_app('../../../api/DB3.db', 5555)
