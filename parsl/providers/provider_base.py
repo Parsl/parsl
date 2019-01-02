@@ -90,3 +90,8 @@ class ExecutionProvider(metaclass=ABCMeta):
         '''
 
         pass
+
+    @abstractproperty
+    def label(self):
+        ''' Provides the label for this provider '''
+        pass

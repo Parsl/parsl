@@ -11,9 +11,9 @@ config = Config(
         IPyParallelExecutor(
             label='local_ipp_1',
             engine_dir='engines',
+            workers_per_node=1,
             provider=LocalProvider(
                 nodes_per_block=1,
-                tasks_per_node=1,
                 walltime="00:15:00",
                 init_blocks=4,
             )
@@ -21,9 +21,9 @@ config = Config(
         IPyParallelExecutor(
             label='local_ipp_2',
             engine_dir='engines',
+            workers_per_node=1,
             provider=LocalProvider(
                 nodes_per_block=1,
-                tasks_per_node=1,
                 walltime="00:15:00",
                 init_blocks=2,
             )

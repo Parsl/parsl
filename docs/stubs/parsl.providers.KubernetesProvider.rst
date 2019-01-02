@@ -27,6 +27,7 @@ parsl.providers.KubernetesProvider
    .. autosummary::
    
       ~KubernetesProvider.channels_required
+      ~KubernetesProvider.label
       ~KubernetesProvider.scaling_enabled
    
    

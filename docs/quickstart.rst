@@ -77,7 +77,9 @@ For Developers
 2. Install::
 
     $ cd parsl
-    $ python3 setup.py install
+    $ pip install .
+    ( To install specific extra options from the source :)
+    $ pip install .[<optional_pacakge1>...]
 
 3. Use Parsl!
 

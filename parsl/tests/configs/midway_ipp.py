@@ -15,6 +15,7 @@ from .user_opts import user_opts
 config = Config(
     executors=[
         IPyParallelExecutor(
+            workers_per_node=4,
             provider=SlurmProvider(
                 'westmere',
                 channel=SSHChannel(
@@ -26,7 +27,6 @@ config = Config(
                 min_blocks=1,
                 max_blocks=2,
                 nodes_per_block=1,
-                tasks_per_node=4,
                 parallelism=0.5,
                 scheduler_options=user_opts['midway']['scheduler_options'],
                 worker_init=user_opts['midway']['worker_init'],

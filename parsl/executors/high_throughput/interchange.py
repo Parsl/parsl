@@ -5,6 +5,7 @@ import zmq
 import os
 import sys
 import platform
+import random
 import time
 import pickle
 import logging
@@ -17,6 +18,7 @@ from ipyparallel.serialize import serialize_object
 
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
+PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 
 
 class ShutdownRequest(Exception):
@@ -120,7 +122,7 @@ class Interchange(object):
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
-        self.pending_task_queue = queue.Queue(maxsize=10 ^ 6)
+        self.pending_task_queue = queue.Queue()
 
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -150,7 +152,7 @@ class Interchange(object):
 
         self._task_queue = []
         self._ready_manager_queue = {}
-        self.max_task_queue_size = 10 ^ 5
+        self.max_task_queue_size = 10 ** 5
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -327,24 +329,31 @@ class Interchange(object):
                     self._ready_manager_queue[manager]['last'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
                         logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
+                        self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
 
             # If we had received any requests, check if there are tasks that could be passed
-            for manager in self._ready_manager_queue:
-                if (self._ready_manager_queue[manager]['free_capacity'] and
-                    self._ready_manager_queue[manager]['active']):
-                    tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
-                    if tasks:
-                        self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
-                        task_count = len(tasks)
-                        count += task_count
-                        tids = [t['task_id'] for t in tasks]
-                        logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, manager))
-                        self._ready_manager_queue[manager]['free_capacity'] -= task_count
-                        self._ready_manager_queue[manager]['tasks'].extend(tids)
-                else:
-                    logger.debug("Nothing to send")
+            logger.debug("Managers: {}".format(self._ready_manager_queue))
+            if self._ready_manager_queue:
+                shuffled_managers = list(self._ready_manager_queue.keys())
+                random.shuffle(shuffled_managers)
+                logger.debug("Shuffled : {}".format(shuffled_managers))
+                # for manager in self._ready_manager_queue:
+                for manager in shuffled_managers:
+                    if (self._ready_manager_queue[manager]['free_capacity'] and
+                        self._ready_manager_queue[manager]['active']):
+                        tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
+                        if tasks:
+                            self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
+                            task_count = len(tasks)
+                            count += task_count
+                            tids = [t['task_id'] for t in tasks]
+                            logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, manager))
+                            self._ready_manager_queue[manager]['free_capacity'] -= task_count
+                            self._ready_manager_queue[manager]['tasks'].extend(tids)
+                    else:
+                        logger.debug("Nothing to send")
 
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
@@ -434,8 +443,29 @@ if __name__ == '__main__':
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-r", "--result_url",
                         help="REQUIRED: ZMQ url for posting results")
+    parser.add_argument("--worker_ports", default=None,
+                        help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Count of apps to launch")
 
     args = parser.parse_args()
 
-    ic = Interchange()
+    # Setup logging
+    global logger
+    format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+
+    logger = logging.getLogger("interchange")
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setLevel('DEBUG' if args.debug is True else 'INFO')
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    logger.debug("Starting Interchange")
+
+    optionals = {}
+    if args.worker_ports:
+        optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
+    ic = Interchange(**optionals)
     ic.start()
