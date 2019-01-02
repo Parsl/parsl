@@ -35,6 +35,50 @@ def test_implicit_staging_https():
     f.result()
 
 
+@App('python')
+def sort_strings_kw(x=None, outputs=[]):
+    with open(x.filepath, 'r') as u:
+        strs = u.readlines()
+        strs.sort()
+        with open(outputs[0].filepath, 'w') as s:
+            for e in strs:
+                s.write(e)
+
+
+@pytest.mark.local
+def test_implicit_staging_https_kwargs():
+
+    unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+
+    # Create a local file for output data
+    sorted_file = File('sorted.txt')
+
+    f = sort_strings_kw(x=unsorted_file, outputs=[sorted_file])
+    f.result()
+
+
+@App('python')
+def sort_strings_arg(x, outputs=[]):
+    with open(x.filepath, 'r') as u:
+        strs = u.readlines()
+        strs.sort()
+        with open(outputs[0].filepath, 'w') as s:
+            for e in strs:
+                s.write(e)
+
+
+@pytest.mark.local
+def test_implicit_staging_https_args():
+
+    unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+
+    # Create a local file for output data
+    sorted_file = File('sorted.txt')
+
+    f = sort_strings_arg(unsorted_file, outputs=[sorted_file])
+    f.result()
+
+
 if __name__ == "__main__":
 
     import argparse
