@@ -276,12 +276,9 @@ sleep infinity
         to_kill = [engine for engine in status if status[engine] == "RUNNING"][:blocks]
 
         if self.provider:
-            r = self.provider.cancel(to_kill)
+            self.provider.cancel(to_kill)
         else:
             logger.error("No execution provider available")
-            r = None
-
-        return r
 
     def status(self):
         """Returns the status of the executor via probing the execution providers."""
