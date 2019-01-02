@@ -140,8 +140,6 @@ class Interchange(object):
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
-        # qms = 10 ^ 6
-        # logger.debug("pending_task_queue max size {}".format(qms))
         self.pending_task_queue = queue.Queue()
 
         self.worker_ports = worker_ports
@@ -172,7 +170,7 @@ class Interchange(object):
 
         self._task_queue = []
         self._ready_manager_queue = {}
-        self.max_task_queue_size = 100000
+        self.max_task_queue_size = 10 ** 5
 
         self.heartbeat_threshold = heartbeat_threshold
 

@@ -18,7 +18,6 @@ config = Config(
             provider=CobaltProvider(
                 launcher=SingleNodeLauncher(),
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
                 walltime="00:05:00",
