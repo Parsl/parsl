@@ -240,7 +240,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
                 if retcode != 0:
                     logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
-                                                                                            self.label))
+                                                                                             self.label))
 
         rets = [True for i in job_ids]
         return rets
