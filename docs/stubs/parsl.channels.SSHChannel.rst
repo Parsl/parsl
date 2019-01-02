@@ -1,7 +1,7 @@
-parsl.channels.ssh.ssh.SSHChannel
-=================================
+parsl.channels.SSHChannel
+=========================
 
-.. currentmodule:: parsl.channels.ssh.ssh
+.. currentmodule:: parsl.channels
 
 .. autoclass:: SSHChannel
 
@@ -14,9 +14,12 @@ parsl.channels.ssh.ssh.SSHChannel
    .. autosummary::
    
       ~SSHChannel.__init__
+      ~SSHChannel.abspath
       ~SSHChannel.close
       ~SSHChannel.execute_no_wait
       ~SSHChannel.execute_wait
+      ~SSHChannel.isdir
+      ~SSHChannel.makedirs
       ~SSHChannel.prepend_envs
       ~SSHChannel.pull_file
       ~SSHChannel.push_file

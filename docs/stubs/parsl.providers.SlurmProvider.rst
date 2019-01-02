@@ -28,6 +28,7 @@ parsl.providers.SlurmProvider
    .. autosummary::
    
       ~SlurmProvider.current_capacity
+      ~SlurmProvider.label
       ~SlurmProvider.scaling_enabled
    
    
