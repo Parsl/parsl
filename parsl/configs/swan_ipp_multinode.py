@@ -26,6 +26,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='swan_ipp',
+            workers_per_node=2,
             provider=TorqueProvider(
                 channel=SSHChannel(
                     hostname='swan.cray.com',
@@ -33,7 +34,6 @@ config = Config(
                     script_dir='/home/users/USERNAME/parsl_scripts',    # Please replace USERNAME with your username
                 ),
                 nodes_per_block=2,
-                tasks_per_node=2,
                 init_blocks=1,
                 max_blocks=1,
                 launcher=AprunLauncher(),

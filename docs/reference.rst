@@ -16,15 +16,15 @@ Reference guide
     parsl.data_provider.data_manager.DataManager
     parsl.data_provider.files.File
     parsl.executors.base.ParslExecutor
-    parsl.executors.threads.ThreadPoolExecutor
-    parsl.executors.ipp.IPyParallelExecutor
+    parsl.executors.ThreadPoolExecutor
+    parsl.executors.IPyParallelExecutor
     parsl.executors.ipp_controller.Controller
     parsl.executors.HighThroughputExecutor
     parsl.executors.ExtremeScaleExecutor
     parsl.executors.swift_t.TurbineExecutor
-    parsl.channels.local.local.LocalChannel
-    parsl.channels.ssh.ssh.SSHChannel
-    parsl.channels.ssh_il.ssh_il.SSHInteractiveLoginChannel
+    parsl.channels.LocalChannel
+    parsl.channels.SSHChannel
+    parsl.channels.SSHInteractiveLoginChannel
     parsl.providers.AWSProvider
     parsl.providers.CobaltProvider
     parsl.providers.CondorProvider

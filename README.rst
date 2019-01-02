@@ -3,7 +3,7 @@ Parsl - Parallel Scripting Library
 |licence| |build-status| |docs|
 
 Parsl is a parallel scripting library that enables easy parallelism and workflow design.
-The latest version available on PyPi is v0.6.1.
+The latest version available on PyPi is v0.7.0.
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
