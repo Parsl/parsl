@@ -208,7 +208,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             try:
                 job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
             except Exception as e:
-                logger.debug("Channel execute failed for:{}, {}".format(self.channel, e))
+                logger.debug("Channel execute failed for: {}, {}".format(self.channel, e))
                 raise
 
         self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
@@ -239,8 +239,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 cmd = "kill -- -$(ps -o pgid={} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
                 retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
                 if retcode != 0:
-                    logger.warning("Failed to kill PID:{} and child processes on {}".format(self.resources[job]['remote_pid'],
-                                                                                            self.label))
+                    logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
+                                                                                             self.label))
 
         rets = [True for i in job_ids]
         return rets
