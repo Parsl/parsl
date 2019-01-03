@@ -588,7 +588,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         job_name = "parsl.auto.{0}".format(time.time())
         wrapped_cmd = self.launcher(command,
                                     tasks_per_node,
-                                    self.nodes_per_block)
+                                    self.nodes_per_block,
+                                    "./")
         [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
 
         if not instance:

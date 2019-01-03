@@ -176,7 +176,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                      blocksize, self.nodes_per_block, tasks_per_node)
 
         # Wrap the command
-        job_config["user_script"] = self.launcher(command, tasks_per_node, self.nodes_per_block)
+        job_config["user_script"] = self.launcher(command, tasks_per_node, self.nodes_per_block, script_path)
 
         queue_opt = '-q {}'.format(self.queue) if self.queue is not None else ''
 

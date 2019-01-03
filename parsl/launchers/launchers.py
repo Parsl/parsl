@@ -7,7 +7,7 @@ class Launcher(RepresentationMixin, metaclass=ABCMeta):
     """ Launcher base class to enforce launcher interface
     """
     @abstractmethod
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
         """ Wraps the command with the Launcher calls.
         *MUST* be implemented by the concrete child classes
         """
@@ -18,7 +18,7 @@ class SimpleLauncher(Launcher):
     """ Does no wrapping. Just returns the command as-is
     """
 
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
         """
         Args:
         - command (string): The command string to be launched
@@ -37,7 +37,7 @@ class SingleNodeLauncher(Launcher):
     task_blocks to an integer or to a bash expression the number of invocations
     of the command to be launched can be controlled.
     """
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
         """
         Args:
         - command (string): The command string to be launched
@@ -79,7 +79,7 @@ class GnuParallelLauncher(Launcher):
       target nodes.
     - The provider makes available the $PBS_NODEFILE environment variable
     """
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
         """
         Args:
         - command (string): The command string to be launched
@@ -137,7 +137,7 @@ class MpiExecLauncher(Launcher):
     - mpiexec is installed and can be located in $PATH
     - The provider makes available the $PBS_NODEFILE environment variable
     """
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
         """
         Args:
         - command (string): The command string to be launched
@@ -180,7 +180,7 @@ class SrunLauncher(Launcher):
     def __init__(self):
         pass
 
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
         """
         Args:
         - command (string): The command string to be launched
@@ -218,7 +218,7 @@ class SrunMPILauncher(Launcher):
     at the same time. Workers should be launched with independent Srun calls so as to setup the
     environment for MPI application launch.
     """
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
         """
         Args:
         - command (string): The command string to be launched
@@ -278,7 +278,7 @@ class AprunLauncher(Launcher):
     def __init__(self, overrides=''):
         self.overrides = overrides
 
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block, script_path, walltime=None):
         """
         Args:
         - command (string): The command string to be launched
@@ -312,5 +312,5 @@ echo "Done"
 if __name__ == '__main__':
 
     s = SingleNodeLauncher()
-    wrapped = s("hello", 1, 1)
+    wrapped = s("hello", 1, 1, ".")
     print(wrapped)

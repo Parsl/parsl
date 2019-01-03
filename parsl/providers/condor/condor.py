@@ -207,7 +207,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         # This is where the command should be wrapped by the launchers.
         wrapped_command = self.launcher(command,
                                         tasks_per_node,
-                                        self.nodes_per_block)
+                                        self.nodes_per_block,
+                                        script_path)
 
         with open(userscript_path, 'w') as f:
             f.write(job_config["worker_init"] + '\n' + wrapped_command)

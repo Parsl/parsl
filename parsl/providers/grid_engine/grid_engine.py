@@ -89,7 +89,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
             logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
                            "Recommended options include 'single_node' or 'aprun'.".format(launcher))
 
-    def get_configs(self, command, tasks_per_node):
+    def get_configs(self, command, tasks_per_node, script_path):
         """Compose a dictionary with information for writing the submit script."""
 
         logger.debug("Requesting one block with {} nodes per block and {} tasks per node".format(
@@ -105,7 +105,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         job_config["user_script"] = self.launcher(command,
                                                   tasks_per_node,
-                                                  self.nodes_per_block)
+                                                  self.nodes_per_block,
+                                                  script_path)
         return job_config
 
     def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
@@ -140,7 +141,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        job_config = self.get_configs(command, tasks_per_node)
+        job_config = self.get_configs(command, tasks_per_node, script_path)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
