@@ -20,13 +20,13 @@ class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
-    test on the commandline should work :
+    test on the commandline should work:
 
     >>> ssh <username>@<hostname>
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, skip_auth=False, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -49,6 +49,7 @@ class SSHChannel(Channel, RepresentationMixin):
         self.kwargs = kwargs
         self.script_dir = script_dir
         self.skip_auth = skip_auth
+        self.gssapi_auth = gssapi_auth
 
         if self.skip_auth:
             self.ssh_client = NoAuthSSHClient()
@@ -66,7 +67,9 @@ class SSHChannel(Channel, RepresentationMixin):
                 hostname,
                 username=username,
                 password=password,
-                allow_agent=True
+                allow_agent=True,
+                gss_auth=gssapi_auth,
+                gss_kex=gssapi_auth,
             )
             t = self.ssh_client.get_transport()
             self.sftp_client = paramiko.SFTPClient.from_transport(t)
@@ -139,7 +142,6 @@ class SSHChannel(Channel, RepresentationMixin):
         stdin, stdout, stderr = self.ssh_client.exec_command(
             self.prepend_envs(cmd, envs), bufsize=-1, timeout=walltime
         )
-        # Block on exit status from the command
         return None, stdout, stderr
 
     def push_file(self, local_source, remote_dir):
