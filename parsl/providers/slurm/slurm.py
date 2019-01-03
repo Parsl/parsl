@@ -8,6 +8,8 @@ from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
+from typing import Optional
+
 logger = logging.getLogger(__name__)
 
 translate_table = {
@@ -136,7 +138,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto") -> Optional[str]:
         """Submit the command as a slurm job of blocksize parallel elements.
 
         Parameters
