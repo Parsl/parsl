@@ -109,9 +109,7 @@ class Manager(object):
 
         self.pending_task_queue = multiprocessing.Queue()
         self.pending_result_queue = multiprocessing.Queue()
-        self.pending_result_queue = multiprocessing.Queue()
-
-        self.ready_worker_queue = multiprocessing.Queue(maxsize=self.worker_count + 1)
+        self.ready_worker_queue = multiprocessing.Queue()
 
         self.max_queue_size = max_queue_size + self.worker_count
 
