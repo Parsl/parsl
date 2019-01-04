@@ -365,7 +365,7 @@ class Interchange(object):
                 logger.debug("[MAIN]   shuffled list")
                 # logger.debug("Shuffled : {}".format(shuffled_managers))
                 # for manager in self._ready_manager_queue:
-                for manager in shuffled_managers: # this for loop should only really proceed as long as there are also tasks in queue? otherwise this is still quite expensive to process if we're allocating just around single task this main-loop iteration?
+                for manager in shuffled_managers: # TODO: this for loop should only really proceed as long as there are also tasks in queue? otherwise this is still quite expensive to process if we're allocating just around single task this main-loop iteration?
                     if (self._ready_manager_queue[manager]['free_capacity'] and
                         self._ready_manager_queue[manager]['active']):
                         tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
