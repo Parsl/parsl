@@ -16,7 +16,7 @@ setup(
     author_email='parsl@googlegroups.com',
     license='Apache 2.0',
     download_url='https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
-    include_package_data=True,
+    # include_package_data=True,
     packages=find_packages(),
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
