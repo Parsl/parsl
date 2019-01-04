@@ -39,7 +39,6 @@ class PythonApp(AppBase):
                    App_fut
 
         """
-        dfk = self.data_flow_kernel
 
         if self.data_flow_kernel is None:
             dfk = DataFlowKernelLoader.dfk()
