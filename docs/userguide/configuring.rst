@@ -237,7 +237,7 @@ Amazon Web Services
 
 .. note::
    Please note that **boto3** library is a requirement to use AWS with Parsl.
-   This can be installed via ``python3 -m pip install libsubmit[aws]``
+   This can be installed via ``python3 -m pip install parsl[aws]``
 
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
