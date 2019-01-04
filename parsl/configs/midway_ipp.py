@@ -12,6 +12,7 @@ from parsl.executors.ipp_controller import Controller
 config = Config(
     executors=[
         IPyParallelExecutor(
+            workers_per_node=4,
             provider=SlurmProvider(
                 'westmere',
                 channel=SSHChannel(
@@ -23,7 +24,6 @@ config = Config(
                 min_blocks=1,
                 max_blocks=2,
                 nodes_per_block=1,
-                tasks_per_node=4,
                 parallelism=0.5,
                 scheduler_options='',     # Input your scheduler_options if needed
                 worker_init='',     # Input your worker_init if needed

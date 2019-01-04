@@ -35,8 +35,16 @@ script:
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - flake8 parsl/
-    - (for test in parsl/tests/test*/test*; do pytest $test --config local ; export X=$? ; echo X is $X ; if [[ "$X" != 0 ]] && [[ "$X" != 5 ]]; then exit 1; fi; done ) ;
+
+      # do this before any testing, but not in-between tests
+    - rm -f .coverage
+
+    - (for test in parsl/tests/test*/test*; do pytest $test --config local --cov=parsl --cov-append --cov-report= ; export X=$? ; echo X is $X ; if [[ "$X" != 0 ]] && [[ "$X" != 5 ]]; then exit 1; fi; done ) ;
       # allow exit code 5; this means pytest did not run a test in the
       # specified file
+
+    - coverage report
+      # prints report of coverage data stored in .coverage
+
     # - pytest parsl/tests --config parsl/tests/configs/local_threads.py
     # - pytest parsl/tests --config parsl/tests/configs/local_ipp.py

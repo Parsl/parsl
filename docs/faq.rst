@@ -73,32 +73,69 @@ Workers do not connect back to Parsl
 
 If you are running via ssh to a remote system from your local machine, or from the
 login node of a cluster/supercomputer, it is necessary to have a public IP to which
-the workers can connect back. While our pilot job system, IPyParallel,
-can identify the IP address automatically on certain systems,
-it is safer to specify the address explicitly.
+the workers can connect back. While our remote execution systems can identify the
+IP address automatically in certain cases, it is safer to specify the address explicitly.
+Parsl provides a few heuristic based address resolution methods that could be useful,
+however with complex networks some trial and error might be necessary to find the
+right address or network interface to use.
 
-To specify the address in the :class:`~parsl.config.Config` (note this is an example
-using the :class:`libsubmit.providers.Cobalt`; any other provider could
-be substituted below):
+
+
+For `IPyParallelExecutor` the address is specified in the :class:`~parsl.config.Config`
+as shown below :
 
 .. code-block:: python
 
-    from libsubmit.providers import Cobalt
+    # THIS IS A CONFIG FRAGMENT FOR ILLUSTRATION
     from parsl.config import Config
-    from parsl.executors.ipp import IPyParallelExecutor
+    from parsl.executors import IPyParallelExecutor
     from parsl.executors.ipp_controller import Controller
-
+    from parsl.addresses import address_by_route, address_by_query, address_by_hostname
     config = Config(
         executors=[
             IPyParallelExecutor(
                 label='ALCF_theta_local',
-                provider=Cobalt(),
-                controller=Controller(public_ip='<AA.BB.CC.DD>')  # specify public ip here
+                controller=Controller(public_ip='<AA.BB.CC.DD>')          # specify public ip here
+                # controller=Controller(public_ip=address_by_route())     # Alternatively you can try this
+                # controller=Controller(public_ip=address_by_query())     # Alternatively you can try this
+                # controller=Controller(public_ip=address_by_hostname())  # Alternatively you can try this
             )
         ],
     )
 
-Another possibility that can cause workers not to connect back to Parsl is an incompatibility between the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
+
+    .. note::
+       Another possibility that can cause workers not to connect back to Parsl is an incompatibility between
+       the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
+       ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
+
+For the `HighThroughputExecutor` as well as the `ExtremeScaleExecutor`, ``address`` is a keyword argument
+taken at initialization. Here is an example for the `HighThroughputExecutor`:
+
+.. code-block:: python
+
+    # THIS IS A CONFIG FRAGMENT FOR ILLUSTRATION
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.addresses import address_by_route, address_by_query, address_by_hostname
+
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                label='NERSC_Cori',
+                address='<AA.BB.CC.DD>'          # specify public ip here
+                # address=address_by_route()     # Alternatively you can try this
+                # address=address_by_query()     # Alternatively you can try this
+                # address=address_by_hostname()  # Alternatively you can try this
+            )
+        ],
+    )
+
+
+.. note::
+   On certain systems such as the Midway RCC cluster at UChicago, some network interfaces have an active
+   intrusion detection system that drops connections that persist beyond a specific duration (~20s).
+   If you get repeated ``ManagerLost`` exceptions, it would warrant taking a closer look at networking.
 
 .. _pyversion:
 
