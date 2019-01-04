@@ -454,7 +454,7 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
     logger.setLevel(level)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S,uuu')
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -497,7 +497,7 @@ if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     handler.setLevel('DEBUG' if args.debug is True else 'INFO')
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S,uuu')
+    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
