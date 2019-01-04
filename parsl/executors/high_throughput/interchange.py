@@ -355,7 +355,7 @@ class Interchange(object):
             logger.debug("Interesting managers count: {}".format(len(interesting_managers)))
 
             # some managers will still be interesting after this pass... accumulate them here
-            new_interesting_managers=set()
+            new_interesting_managers = set()
             if interesting_managers and not self.pending_task_queue.empty():
                 logger.debug("[MAIN] entering _ready_manager_queue section")
                 logger.debug("[MAIN]   copying manager list to shuffle")
@@ -365,7 +365,11 @@ class Interchange(object):
                 logger.debug("[MAIN]   shuffled list")
                 # logger.debug("Shuffled : {}".format(shuffled_managers))
                 # for manager in self._ready_manager_queue:
-                for manager in shuffled_managers: # TODO: this for loop should only really proceed as long as there are also tasks in queue? otherwise this is still quite expensive to process if we're allocating just around single task this main-loop iteration?
+                for manager in shuffled_managers:
+                    # TODO: this for loop should only really proceed as long as
+                    # there are also tasks in queue? otherwise this is still
+                    # quite expensive to process if we're allocating just
+                    # around single task this main-loop iteration?
                     if (self._ready_manager_queue[manager]['free_capacity'] and
                         self._ready_manager_queue[manager]['active']):
                         tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
@@ -383,7 +387,7 @@ class Interchange(object):
                                 new_interesting_managers.add(manager)
                     else:
                         pass
-                        # logger.debug("Nothing to send to manager {}".format(manager)) 
+                        # logger.debug("Nothing to send to manager {}".format(manager))
                 interesting_managers = new_interesting_managers
                 logger.debug("[MAIN] leaving _ready_manager_queue section, with {} managers still interesting".format(len(interesting_managers)))
             else:
@@ -447,7 +451,6 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
     """
     if format_string is None:
         format_string = "%(asctime)s %(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
 
     global logger
     logger = logging.getLogger(name)
