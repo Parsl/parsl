@@ -119,7 +119,7 @@ class Manager(object):
         """
         info = MPI.Status()
         result = self.comm.recv(source=MPI.ANY_SOURCE, tag=RESULT_TAG, status=info)
-        logger.debug("Received result from workers: {}".format(result))
+        # logger.debug("Received result from workers: {}".format(result))
         return result
 
     def recv_task_request_from_workers(self):
@@ -198,6 +198,10 @@ class Manager(object):
                                                                                  task_recv_counter))
                     for task in tasks:
                         self.pending_task_queue.put(task)
+
+                # Reset the poll timer
+                poll_timer = 1
+
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
                 # Limit poll duration to heartbeat_period
