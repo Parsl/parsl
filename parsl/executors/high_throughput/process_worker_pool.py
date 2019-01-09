@@ -51,7 +51,7 @@ class Manager(object):
                  result_q_url="tcp://127.0.0.1:50098",
                  max_queue_size=10,
                  cores_per_worker=1,
-                 max_workers=99999,
+                 max_workers=float(inf),
                  uid=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30):
@@ -70,7 +70,7 @@ class Manager(object):
 
         max_workers : int
              caps the maximum number of workers that can be launched.
-             default: 99999
+             default: infinity
 
         heartbeat_threshold : int
              Seconds since the last message from the interchange after which the
@@ -451,8 +451,8 @@ if __name__ == "__main__":
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
-    parser.add_argument("--max_workers", default=99999,
-                        help="Caps the maximum workers that can be launched, default:99999")
+    parser.add_argument("--max_workers", default=float(int),
+                        help="Caps the maximum workers that can be launched, default:infinity")
     parser.add_argument("--hb_period", default=30,
                         help="Heartbeat period in seconds. Uses manager default unless set")
     parser.add_argument("--hb_threshold", default=120,
