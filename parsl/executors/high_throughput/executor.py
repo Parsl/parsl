@@ -110,7 +110,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         by setting cores_per_worker < 1.0. Default=1
 
     max_workers : int
-        Caps the number of workers launched by the manager. Default: 99999
+        Caps the number of workers launched by the manager. Default: infinity
 
     suppress_failure : Bool
         If set, the interchange will suppress failures rather than terminate early. Default: False
@@ -136,7 +136,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  working_dir=None,
                  worker_debug=False,
                  cores_per_worker=1.0,
-                 max_workers=99999,
+                 max_workers=float(inf),
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  suppress_failure=False,
@@ -184,7 +184,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         executor specific oddities.
         """
         debug_opts = "--debug" if self.worker_debug else ""
-        max_workers = "" if self.max_workers == 99999 else "--max_workers={}".format(self.max_workers)
+        max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        task_url=self.worker_task_url,
