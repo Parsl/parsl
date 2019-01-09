@@ -32,7 +32,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                  label='LowLatencyExecutor',
                  provider=LocalProvider(),
                  launch_cmd=None,
-                 public_ip="127.0.0.1",
+                 address="127.0.0.1",
                  worker_port=None,
                  worker_port_range=(54000, 55000),
                  interchange_port_range=(55000, 56000),
@@ -58,7 +58,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         self.workers_per_node = workers_per_node
 
         self._task_counter = 0
-        self.public_ip = public_ip
+        self.address = address
         self.worker_port = worker_port
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
@@ -139,7 +139,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
             raise Exception("Interchange failed to start")
 
         self.worker_task_url = "tcp://{}:{}".format(
-            self.public_ip, worker_port)
+            self.address, worker_port)
 
     def _start_queue_management_thread(self):
         """ TODO: docstring """
