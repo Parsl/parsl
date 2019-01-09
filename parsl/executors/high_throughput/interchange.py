@@ -49,7 +49,7 @@ class BadRegistration(Exception):
     def __init__(self, worker_id, critical=False):
         self.worker_id = worker_id
         self.tstamp = time.time()
-        self.handled = "critical" if critical is True else "suppressed"
+        self.handled = "critical" if critical else "suppressed"
 
     def __repr__(self):
         return "Manager:{} caused a {} failure".format(self.worker_id,
