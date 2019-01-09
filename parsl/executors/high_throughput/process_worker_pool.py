@@ -101,7 +101,7 @@ class Manager(object):
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
         self.pending_task_queue = multiprocessing.Queue(maxsize=self.worker_count + max_queue_size)
-        self.pending_result_queue = multiprocessing.Queue(maxsize=10 ^ 4)
+        self.pending_result_queue = multiprocessing.Queue()
         self.ready_worker_queue = multiprocessing.Queue(maxsize=self.worker_count + 1)
 
         self.max_queue_size = max_queue_size + self.worker_count

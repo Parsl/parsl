@@ -5,6 +5,9 @@ Parsl scripts can be executed on different execution providers (e.g., PCs, clust
 Parsl separates the code from the configuration that specifies which execution provider(s) and executor(s) to use.
 Parsl provides a high level abstraction, called a *block*, for providing a uniform description of a resource configuration irrespective of the specific execution provider.
 
+.. note::
+   Refer to :ref:`configuration-section` for information on how to configure the various subsystems described
+   below for your workflow's resource requirements.
 
 Execution providers
 -------------------
@@ -36,13 +39,17 @@ Parsl currently supports the following executors:
 
 2. `IPyParallelExecutor`: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
 
-3. `HighThroughputExecutor`: [_Alpha_] The HighThroughputExecutor is designed as a replacement for the IPyParallelExecutor. Implementing hierarchical scheduling and batching, the HighThroughputExecutor delivers higher throughput at higher scale.
+3. `HighThroughputExecutor`: [**Beta**] The HighThroughputExecutor is designed as a replacement for the IPyParallelExecutor. Implementing hierarchical scheduling and batching, the HighThroughputExecutor consistently delivers high throughput task execution on the order of 1000 Nodes.
 
-4. `ExtremeScaleExecutor`: [_Alpha_] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>` to scale over 4000+ nodes. This executor is typically used for executing on Supercomputers.
+4. `ExtremeScaleExecutor`: [**Beta**] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>` to scale over 4000+ nodes. This executor is typically used for executing on Supercomputers.
 
-5. `Swift/TurbineExecutor`: [_Deprecated_] This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
+5. `Swift/TurbineExecutor`: [**Deprecated**] This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
 
 These executors cover a broad range of execution requirements. As with other Parsl components there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
+
+.. note::
+   Refer to :ref:`configuration-section` for information on how to configure these executors.
+
 
 Launchers
 ---------
@@ -56,7 +63,7 @@ Launchers are responsible for abstracting these different task-launch systems to
 4. `GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores.
 5. `MpiExecLauncher`: Uses Mpiexec to launch.
 6. `SimpleLauncher`: The launcher default to a single worker launch.
-7. `SingleNodeLauncher`: This launcher launches ``tasks_per_node`` count workers on a single node.
+7. `SingleNodeLauncher`: This launcher launches ``workers_per_node`` count workers on a single node.
 
 
 Blocks
@@ -131,7 +138,7 @@ The configuration options for specifying elasticity bounds are:
 
 The configuration options for specifying the shape of each block are:
 
-1. ``tasks_per_node``: Number of tasks that can execute concurrently per node (which corresponds to the number of workers started per node).
+1. ``workers_per_node``: Number of workers started per node, which corresponds to the number of tasks that can execute concurrently on a node.
 2. ``nodes_per_block``: Number of nodes requested per block.
 
 Parallelism
@@ -164,7 +171,7 @@ For example:
 .. code-block:: python
 
    blocks = min(max_blocks,
-                ceil((running_tasks + available_tasks) / (tasks_per_node * nodes_per_block))
+                ceil((running_tasks + available_tasks) / (workers_per_node * nodes_per_block))
 
 - When p = 1/2: Stack up to 2 tasks before overflowing and requesting a new block.
 
@@ -187,11 +194,11 @@ block will be requested (up to 2 possible blocks). An example :class:`~parsl.con
         executors=[
             IPyParallelExecutor(
                 label='local_ipp',
+                workers_per_node=2,
                 provider=Local(
                     min_blocks=1,
                     init_blocks=1,
                     max_blocks=4,
-                    tasks_per_node=2,
                     nodes_per_block=1,
                     parallelism=0.5
                 )

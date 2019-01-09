@@ -78,6 +78,9 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     launch_cmd : str
         Command line string to launch the mpi_worker_pool from the provider.
+        The command line string will be formatted with appropriate values for the following values (debug, task_url, result_url,
+        ranks_per_node, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For eg:
+        launch_cmd="mpiexec -np {ranks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url}"
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which

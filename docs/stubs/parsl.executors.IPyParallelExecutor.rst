@@ -1,7 +1,7 @@
-parsl.executors.ipp.IPyParallelExecutor
-=======================================
+parsl.executors.IPyParallelExecutor
+===================================
 
-.. currentmodule:: parsl.executors.ipp
+.. currentmodule:: parsl.executors
 
 .. autoclass:: IPyParallelExecutor
 
@@ -31,6 +31,9 @@ parsl.executors.ipp.IPyParallelExecutor
 
    .. autosummary::
    
+      ~IPyParallelExecutor.connected_workers
+      ~IPyParallelExecutor.outstanding
+      ~IPyParallelExecutor.run_dir
       ~IPyParallelExecutor.scaling_enabled
    
    

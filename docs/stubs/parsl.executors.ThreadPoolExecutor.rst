@@ -1,7 +1,7 @@
-parsl.executors.threads.ThreadPoolExecutor
-==========================================
+parsl.executors.ThreadPoolExecutor
+==================================
 
-.. currentmodule:: parsl.executors.threads
+.. currentmodule:: parsl.executors
 
 .. autoclass:: ThreadPoolExecutor
 
@@ -28,6 +28,7 @@ parsl.executors.threads.ThreadPoolExecutor
 
    .. autosummary::
    
+      ~ThreadPoolExecutor.run_dir
       ~ThreadPoolExecutor.scaling_enabled
    
    

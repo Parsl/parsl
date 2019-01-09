@@ -1,7 +1,7 @@
-parsl.channels.ssh\_il.ssh\_il.SSHInteractiveLoginChannel
-=========================================================
+parsl.channels.SSHInteractiveLoginChannel
+=========================================
 
-.. currentmodule:: parsl.channels.ssh_il.ssh_il
+.. currentmodule:: parsl.channels
 
 .. autoclass:: SSHInteractiveLoginChannel
 

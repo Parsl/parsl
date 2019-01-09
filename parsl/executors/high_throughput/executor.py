@@ -74,7 +74,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Label for this executor instance.
 
     launch_cmd : str
-        Command line string to launch the process_worker_pool from the provider.
+        Command line string to launch the process_worker_pool from the provider. The command line string
+        will be formatted with appropriate values for the following values (debug, task_url, result_url,
+        cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For eg:
+        launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
@@ -370,10 +373,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             logger.debug("Management thread already exists, returning")
 
     def hold_worker(self, worker_id):
-        """Puts the workers on hold, preventing scheduling of additional tasks to it.
+        """Puts a worker on hold, preventing scheduling of additional tasks to it.
 
         This is called "hold" mostly because this only stops scheduling of tasks,
-        and does not actually kill the workers.
+        and does not actually kill the worker.
 
         Parameters
         ----------

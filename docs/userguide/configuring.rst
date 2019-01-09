@@ -1,4 +1,4 @@
-.. _configuration_section:
+.. _configuration-section:
 
 Configuration
 =============
@@ -20,7 +20,7 @@ Parsl workflows are developed completely independently from their execution envi
 .. contents:: Configuration How-To and Examples:
 
 .. note::
-   Please note that all configuration examples below import a `user_opts` file where all user specific
+   Please note that all configuration examples below import a ``user_opts`` file where all user specific
    options are defined. To use the configuration, these options **must** be defined either by creating
    a user_opts file, or explicitly edit the configuration with user specific information.
 
@@ -107,7 +107,7 @@ Here are a series of question to help formulate a suitable configuration:
 +---------------------+--------------------------+------------------------------------+
 | Provider            | Executor choice          | Suitable Launchers                 |
 +=====================+==========================+====================================+
-| `PBSProvider`       | Any                      | * `AprunLauncher`                  |
+| `TorqueProvider`    | Any                      | * `AprunLauncher`                  |
 |                     |                          | * `MpiExecLauncher`                |
 +---------------------+--------------------------+------------------------------------+
 | `CobaltProvider`    | Any                      | * `AprunLauncher`                  |
@@ -165,14 +165,14 @@ Theta (ALCF)
 .. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
 
 The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's **Theta** supercomputer.
-This example uses the `IPythonParallel` executor and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
+This example uses the `IPyParallelExecutor` and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
 assumes that the script is being executed on the login nodes of Theta.
 
 .. literalinclude:: ../../parsl/configs/theta_local_ipp_multinode.py
 
 
 Cooley (ALCF)
-------------
+-------------
 
 .. image:: https://today.anl.gov/wp-content/uploads/sites/44/2015/06/Cray-Cooley.jpg
 
@@ -212,8 +212,8 @@ Midway (RCC, UChicago)
 
 This Midway cluster is a campus cluster hosted by the Research Computing Center at the University of Chicago.
 The snippet below shows an example configuration for executing remotely on Midway.
-The configuration uses the `SSHProvider` to connect remotely to Midway, uses the `SlurmProvider` to interface
-with the scheduler, and uses the `SrunProvider` to launch workers.
+The configuration uses the `SSHChannel` to connect remotely to Midway, uses the `SlurmProvider` to interface
+with the scheduler, and uses the `SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/midway_ipp_multinode.py
 
@@ -225,7 +225,7 @@ Open Science Grid
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
 The snippet below shows an example configuration for executing remotely on OSG.
-The configuration uses the `SSHProvider` to connect remotely to OSG, uses the `CondorProvider` to interface
+The configuration uses the `SSHChannel` to connect remotely to OSG, uses the `CondorProvider` to interface
 with the scheduler.
 
 .. literalinclude:: ../../parsl/configs/osg_ipp_multinode.py
@@ -236,8 +236,8 @@ Amazon Web Services
 .. image:: ./aws_image.png
 
 .. note::
-   Please note that `boto3` library is a requirement to use AWS with Parsl.
-   This can be installed via `python3 -m pip install libsubmit+aws`
+   Please note that **boto3** library is a requirement to use AWS with Parsl.
+   This can be installed via ``python3 -m pip install parsl[aws]``
 
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
@@ -245,6 +245,27 @@ The first run would configure a Virtual Private Cloud and other networking and s
 re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
 
 .. literalinclude:: ../../parsl/configs/ec2_single_node.py
+
+
+Ad-Hoc Clusters
+---------------
+
+Any collection of compute nodes without a scheduler setup for task scheduling can be considered an
+ad-hoc cluster. Often these machines have a shared-filesystem such as NFS or Lustre.
+In order to use these resources with Parsl, they need to set-up for password-less SSH access.
+
+In order to use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
+for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname.
+Here's an example configuration using the 2 login nodes from the Midway cluster as a proxy for
+an ad-hoc cluster.
+
+.. literalinclude:: ../../parsl/configs/ad_hoc.py
+
+.. note::
+   Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
+
+
+
 
 
 Further help

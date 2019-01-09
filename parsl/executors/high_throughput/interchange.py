@@ -122,7 +122,7 @@ class Interchange(object):
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
-        self.pending_task_queue = queue.Queue(maxsize=10 ^ 6)
+        self.pending_task_queue = queue.Queue()
 
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -152,7 +152,7 @@ class Interchange(object):
 
         self._task_queue = []
         self._ready_manager_queue = {}
-        self.max_task_queue_size = 10 ^ 5
+        self.max_task_queue_size = 10 ** 5
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -197,7 +197,7 @@ class Interchange(object):
         kill_event : threading.Event
               Event to let the thread know when it is time to die.
         """
-        logger.info("TASK_PULL_THREAD] Starting")
+        logger.info("[TASK_PULL_THREAD] Starting")
         task_counter = 0
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
@@ -338,7 +338,7 @@ class Interchange(object):
             if self._ready_manager_queue:
                 shuffled_managers = list(self._ready_manager_queue.keys())
                 random.shuffle(shuffled_managers)
-                logger.debug("Shuffled : {}".format(shuffled_managers))
+                logger.debug("Shuffled: {}".format(shuffled_managers))
                 # for manager in self._ready_manager_queue:
                 for manager in shuffled_managers:
                     if (self._ready_manager_queue[manager]['free_capacity'] and

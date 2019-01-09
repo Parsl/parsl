@@ -28,6 +28,7 @@ parsl.providers.CondorProvider
    .. autosummary::
    
       ~CondorProvider.current_capacity
+      ~CondorProvider.label
       ~CondorProvider.scaling_enabled
    
    
