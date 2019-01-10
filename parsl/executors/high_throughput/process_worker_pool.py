@@ -51,7 +51,7 @@ class Manager(object):
                  result_q_url="tcp://127.0.0.1:50098",
                  max_queue_size=10,
                  cores_per_worker=1,
-                 max_workers=float(inf),
+                 max_workers=float('inf'),
                  uid=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30):
