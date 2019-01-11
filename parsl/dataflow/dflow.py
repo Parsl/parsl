@@ -61,7 +61,7 @@ class DataFlowKernel(object):
 
     """
 
-    def __init__(self, config=Config()) -> None:
+    def __init__(self, config: Config =Config()) -> None:
         """Initialize the DataFlowKernel.
 
         Parameters
@@ -178,9 +178,15 @@ class DataFlowKernel(object):
 
         if self.checkpoint_mode == "periodic":
             try:
-                h, m, s = map(int, config.checkpoint_period.split(':'))
-                checkpoint_period = (h * 3600) + (m * 60) + s
-                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
+                if config.checkpoint_period is None:
+                    raise ValueError("Checkpoint period cannot be none with periodic checkpoint mode")
+                    # TODO: a more type driven approach to this would be to make a single checkpoint
+                    # configuration super-type, where a 'periodic' subtype would contain the
+                    # period time data, but the other subtypes would not.
+                else:
+                    h, m, s = map(int, config.checkpoint_period.split(':'))
+                    checkpoint_period = (h * 3600) + (m * 60) + s
+                    self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
             except Exception:
                 logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
