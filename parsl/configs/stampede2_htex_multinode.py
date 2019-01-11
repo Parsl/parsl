@@ -25,8 +25,8 @@ config = Config(
                 min_blocks=1,
                 max_blocks=1,
                 partition='PARTITION',  # Replace with partition name
-                scheduler_options='',	# Enter scheduler_options if needed
-                worker_init='',	        # Enter worker_init if needed
+                scheduler_options='',   # Enter scheduler_options if needed
+                worker_init='',         # Enter worker_init if needed
                 walltime='00:30:00'
             ),
             storage_access=[GlobusScheme(
