@@ -18,7 +18,7 @@ from concurrent.futures import Future
 from functools import partial
 
 # only for type checking:
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
@@ -598,7 +598,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, *args, executors='all', fn_hash=None, cache=False, **kwargs) -> AppFuture:
+    def submit(self, func, *args, executors: Union[str, List[str]] ='all', fn_hash: str =None, cache: bool =False, **kwargs) -> AppFuture:
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -653,7 +653,7 @@ class DataFlowKernel(object):
                     'id': task_id,
                     'time_submitted': None,
                     'time_returned': None,
-                    'app_fu': None}
+                    'app_fu': None} # type: Dict[str, Any]
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
