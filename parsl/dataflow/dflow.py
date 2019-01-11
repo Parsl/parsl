@@ -500,9 +500,12 @@ class DataFlowKernel(object):
             if isinstance(potential_f, File) and potential_f.is_remote():
                 kwargs[kwarg] = potential_f.stage_in(executor)
 
-        for idx, f in enumerate(args):
+        newargs = list(args)
+        for idx, f in enumerate(newargs):
             if isinstance(f, File) and f.is_remote():
-                args[idx] = f.stage_in(executor)
+                newargs[idx] = f.stage_in(executor)
+
+        return tuple(newargs), kwargs
 
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
@@ -635,6 +638,9 @@ class DataFlowKernel(object):
             choices = executors
         executor = random.choice(choices)
 
+        # Transform remote input files to data futures
+        args, kwargs = self._add_input_deps(executor, args, kwargs)
+
         task_def = {'depends': None,
                     'executor': executor,
                     'func': func,
@@ -660,9 +666,6 @@ class DataFlowKernel(object):
                 "internal consistency error: Task {0} already exists in task list".format(task_id))
         else:
             self.tasks[task_id] = task_def
-
-        # Transform remote input files to data futures
-        self._add_input_deps(executor, args, kwargs)
 
         # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._gather_all_deps(args, kwargs)
