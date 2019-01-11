@@ -216,7 +216,13 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         return self._scaling_enabled
 
     def scale_out(self, blocks=1):
-        """Scales out the number of active workers by 1.
+        """Scales out the number of active workers by the number of blocks specified.
+
+        Parameters
+        ----------
+
+        blocks : int
+             # of blocks to scale out. Default=1
 
         Raises:
              NotImplementedError
@@ -274,9 +280,9 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
              NotImplementedError
         """
 
-        logger.warning("Attempting HighThroughputExecutor shutdown")
+        logger.warning("Attempting LowLatencyExecutor shutdown")
         # self.outgoing_q.close()
         # self.incoming_q.close()
         self.queue_proc.terminate()
-        logger.warning("Finished HighThroughputExecutor shutdown attempt")
+        logger.warning("Finished LowLatencyExecutor shutdown attempt")
         return True
