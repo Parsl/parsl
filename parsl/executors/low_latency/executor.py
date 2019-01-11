@@ -171,6 +171,16 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
             elif "exception" in msg:
                 # TODO: handle exception
                 pass
+            elif 'exception' in msg:
+                logger.warning("Task: {} has returned with an exception")
+                try:
+                    s, _ = deserialize_object(msg['exception'])
+                    exception = ValueError("Remote exception description: {}".format(s))
+                    task_fut.set_exception(exception)
+                except Exception as e:
+                    # TODO could be a proper wrapped exception?
+                    task_fut.set_exception(
+                        DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
 
             else:
                 raise BadMessage(
