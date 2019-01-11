@@ -284,13 +284,13 @@ How can I start a Jupyter notebook over SSH?
 
 Run
 
-.. code-block::
+.. code-block:: bash
 
     jupyter notebook --no-browser --ip=`/sbin/ip route get 8.8.8.8 | awk '{print $NF;exit}'`
 
 for a Jupyter notebook, or 
 
-.. code-block::
+.. code-block:: bash
 
     jupyter lab --no-browser --ip=`/sbin/ip route get 8.8.8.8 | awk '{print $NF;exit}'`
 
