@@ -8,8 +8,8 @@ The latest version available on PyPi is v0.7.0.
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
    :alt: Apache Licence V2.0
-.. |build-status| image:: https://travis-ci.org/Parsl/parsl.svg?branch=master
-   :target: https://travis-ci.org/Parsl/parsl
+   .. |build-status| image:: https://travis-ci.com/Parsl/parsl.svg?branch=master
+   :target: https://travis-ci.com/Parsl/parsl
    :alt: Build status
 .. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=stable
    :target: http://parsl.readthedocs.io/en/stable/?badge=stable
