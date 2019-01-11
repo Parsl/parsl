@@ -17,6 +17,9 @@ from socket import gethostname
 from concurrent.futures import Future
 from functools import partial
 
+# only for type checking:
+from typing import Any, Dict, Optional, Union
+
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.config import Config
@@ -58,7 +61,7 @@ class DataFlowKernel(object):
 
     """
 
-    def __init__(self, config=Config()):
+    def __init__(self, config=Config()) -> None:
         """Initialize the DataFlowKernel.
 
         Parameters
@@ -116,7 +119,7 @@ class DataFlowKernel(object):
         if self.monitoring_config is not None and self.monitoring_config.version is not None:
             self.workflow_version = self.monitoring_config.version
         self.time_began = time.time()
-        self.time_completed = None
+        self.time_completed = None # type: Optional[float]
         self.run_id = str(uuid4())
         self.dashboard = self.monitoring_config.dashboard_link if self.monitoring_config is not None else None
         # TODO: make configurable
@@ -125,9 +128,9 @@ class DataFlowKernel(object):
             logger.info("Dashboard is found at " + self.dashboard)
         # start tornado logging server
         if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database':
-            self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'monitoring_config': self.monitoring_config})
+            self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'monitoring_config': self.monitoring_config}) # type: Optional[multiprocessing.Process]
             self.logging_server.start()
-            self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config})
+            self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config}) # type: Optional[multiprocessing.Process]
             self.web_app.start()
         else:
             self.logging_server = None
@@ -183,12 +186,12 @@ class DataFlowKernel(object):
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
         if any([x.managed for x in config.executors]):
-            self.flowcontrol = FlowControl(self)
+            self.flowcontrol = FlowControl(self) # type: Union[FlowControl, FlowNoControl] # TODO: there should be a class based interface definition for what FlowControl means
         else:
             self.flowcontrol = FlowNoControl(self)
 
         self.task_count = 0
-        self.tasks = {}
+        self.tasks = {} # type: Dict[int, Dict[str, Any]]
         self.submitter_lock = threading.Lock()
 
         atexit.register(self.atexit_cleanup)
