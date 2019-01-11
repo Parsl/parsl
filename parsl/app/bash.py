@@ -137,13 +137,15 @@ class BashApp(AppBase):
         self.kwargs.update(kwargs)
 
         if self.data_flow_kernel is None:
-            self.data_flow_kernel = DataFlowKernelLoader.dfk()
+            dfk = DataFlowKernelLoader.dfk()
+        else:
+            dfk = self.data_flow_kernel
 
-        app_fut = self.data_flow_kernel.submit(wrap_error(remote_side_bash_executor), self.func, *args,
-                                               executors=self.executors,
-                                               fn_hash=self.func_hash,
-                                               cache=self.cache,
-                                               **self.kwargs)
+        app_fut = dfk.submit(wrap_error(remote_side_bash_executor), self.func, *args,
+                             executors=self.executors,
+                             fn_hash=self.func_hash,
+                             cache=self.cache,
+                             **self.kwargs)
 
         out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
                     for o in kwargs.get('outputs', [])]
