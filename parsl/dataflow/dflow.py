@@ -701,7 +701,7 @@ class DataFlowKernel(object):
 
         self.launch_if_ready(task_id)
 
-        return task_def['app_fu']
+        return app_fu
 
     # it might also be interesting to assert that all DFK
     # tasks are in a "final" state (3,4,5) when the DFK
