@@ -451,7 +451,7 @@ if __name__ == "__main__":
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
-    parser.add_argument("--max_workers", default=float(int),
+    parser.add_argument("--max_workers", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
     parser.add_argument("--hb_period", default=30,
                         help="Heartbeat period in seconds. Uses manager default unless set")
@@ -486,7 +486,7 @@ if __name__ == "__main__":
                           result_q_url=args.result_url,
                           uid=args.uid,
                           cores_per_worker=float(args.cores_per_worker),
-                          max_workers=int(args.max_workers),
+                          max_workers=args.max_workers,
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period))
         manager.start()
