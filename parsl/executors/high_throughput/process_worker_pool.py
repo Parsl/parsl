@@ -472,7 +472,6 @@ if __name__ == "__main__":
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
-        set_stream_logger()
         logger.info("Python version: {}".format(sys.version))
         logger.info("Debug logging: {}".format(args.debug))
         logger.info("Log dir: {}".format(args.logdir))
