@@ -493,7 +493,7 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
         None.
     """
     if format_string is None:
-        format_string = "%(asctime)s %(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     global logger
     logger = logging.getLogger(name)
@@ -539,7 +539,7 @@ if __name__ == '__main__':
 
     # Setup logging
     global logger
-    format_string = "%(asctime)s %(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger("interchange")
     logger.setLevel(logging.DEBUG)
