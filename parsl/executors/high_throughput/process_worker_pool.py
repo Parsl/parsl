@@ -53,6 +53,7 @@ class Manager(object):
                  cores_per_worker=1,
                  max_workers=float('inf'),
                  uid=None,
+                 block_id=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30):
         """
@@ -63,6 +64,9 @@ class Manager(object):
 
         uid : str
              string unique identifier
+
+        block_id : str
+             Block identifier that maps managers to the provider blocks they belong to.
 
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
@@ -100,6 +104,7 @@ class Manager(object):
         logger.info("Manager connected")
 
         self.uid = uid
+        self.block_id = block_id
 
         cores_on_node = multiprocessing.cpu_count()
         self.max_workers = max_workers
@@ -125,6 +130,8 @@ class Manager(object):
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
+               'block_id': self.block_id,
+               'worker_count': self.worker_count,
                'os': platform.system(),
                'hname': platform.node(),
                'dir': os.getcwd(),
@@ -447,6 +454,8 @@ if __name__ == "__main__":
                         help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
                         help="Unique identifier string for Manager")
+    parser.add_argument("-b", "--block_id", default=None,
+                        help="Block identifier for Manager")
     parser.add_argument("-c", "--cores_per_worker", default="1.0",
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
@@ -480,12 +489,14 @@ if __name__ == "__main__":
         logger.info("task_url: {}".format(args.task_url))
         logger.info("result_url: {}".format(args.result_url))
         logger.info("max_workers: {}".format(args.max_workers))
+        logger.info("Block ID: {}".format(args.block_id))
 
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
                           cores_per_worker=float(args.cores_per_worker),
                           max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
+                          block_id=args.block_id,
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period))
         manager.start()
