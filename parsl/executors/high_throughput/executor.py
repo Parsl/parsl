@@ -162,7 +162,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
         self.managed = managed
-        self.blocks = []  # type: List[Any]
+        self.blocks = {}  # type: Dict[str, str]
         self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
         self.max_workers = max_workers
@@ -185,6 +185,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                "--task_url={task_url} "
                                "--result_url={result_url} "
                                "--logdir={logdir} "
+                               "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
                                "--hb_threshold={heartbeat_threshold} ")
 
@@ -421,14 +422,30 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     @property
     def outstanding(self):
         outstanding_c = self.command_client.run("OUTSTANDING_C")
-        logger.debug("Got outstanding count: {}".format(outstanding_c))
+        # logger.debug("Got outstanding count: {}".format(outstanding_c))
         return outstanding_c
 
     @property
     def connected_workers(self):
         workers = self.command_client.run("MANAGERS")
-        logger.debug("Got managers: {}".format(workers))
+        # logger.debug("Got managers: {}".format(workers))
         return workers
+
+    def _hold_block(self, block_id):
+        """ Sends hold command to all managers which are in a specific block
+
+        Parameters
+        ----------
+        block_id : str
+             Block identifier of the block to be put on hold
+        """
+
+        managers = self.connected_workers
+
+        for manager in managers:
+            if manager['block_id'] == block_id:
+                logger.debug("[HOLD_BLOCK]: Sending hold to manager:{}".format(manager['manager']))
+                self.hold_worker(manager['manager'])
 
     def submit(self, func, *args, **kwargs):
         """Submits work to the the outgoing_q.
@@ -483,30 +500,52 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         r = []
         for i in range(blocks):
             if self.provider:
-                block = self.provider.submit(self.launch_cmd, 1, 1)
-                logger.debug("Launched block {}:{}".format(i, block))
-                if not block:
+                external_block_id = len(self.blocks)
+                launch_cmd = self.launch_cmd.format(block_id=external_block_id)
+                internal_block = self.provider.submit(launch_cmd, 1, 1)
+                logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
+                if not internal_block:
                     raise(ScalingFailed(self.provider.label,
                                         "Attempts to provision nodes via provider has failed"))
-                self.blocks.extend([block])
+                r.extend([str(external_block_id)])
+                self.blocks[str(external_block_id)] = internal_block
             else:
                 logger.error("No execution provider available")
                 r = None
         return r
 
-    def scale_in(self, blocks):
+    def scale_in(self, blocks, block_ids=[]):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
         the opportunity to finish current tasks or cleanup. This is tracked
         in issue #530
 
+        Parameters
+        ----------
+
+        blocks : int
+             Number of blocks to terminate and scale_in by
+
+        block_ids : list
+             List of specific block ids to terminate. Optional
+
         Raises:
              NotImplementedError
         """
-        to_kill = self.blocks[:blocks]
+        logger.debug("YADU: SCALE_IN, self.blocks: {}".format(self.blocks))
+        for block_id in block_ids:
+            self._hold_block(block_id)
+
+        if block_ids:
+            to_kill = [self.blocks.pop(bid) for bid in block_ids]
+        else:
+            to_kill = [self.blocks.pop(bid) for bid in list(self.blocks.keys())[:blocks]]
+
+        logger.debug("YADU: SCALE_IN, trying to scale_in: {}".format(to_kill))
         if self.provider:
             r = self.provider.cancel(to_kill)
+
         return r
 
     def status(self):
@@ -514,7 +553,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         status = []
         if self.provider:
-            status = self.provider.status(self.blocks)
+            status = self.provider.status(self.blocks.values())
 
         return status
 

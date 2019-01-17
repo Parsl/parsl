@@ -52,6 +52,7 @@ class Manager(object):
                  cores_per_worker=1,
                  max_workers=float('inf'),
                  uid=None,
+                 block_id=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  poll_period=10):
@@ -63,6 +64,9 @@ class Manager(object):
 
         uid : str
              string unique identifier
+
+        block_id : str
+             Block identifier that maps managers to the provider blocks they belong to.
 
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
@@ -103,6 +107,7 @@ class Manager(object):
         logger.info("Manager connected")
 
         self.uid = uid
+        self.block_id = block_id
 
         cores_on_node = multiprocessing.cpu_count()
         self.max_workers = max_workers
@@ -455,6 +460,8 @@ if __name__ == "__main__":
                         help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
                         help="Unique identifier string for Manager")
+    parser.add_argument("-b", "--block_id", default=None,
+                        help="Block identifier for Manager")
     parser.add_argument("-c", "--cores_per_worker", default="1.0",
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-t", "--task_url", required=True,
