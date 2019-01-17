@@ -93,7 +93,7 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
