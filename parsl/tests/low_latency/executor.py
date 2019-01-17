@@ -9,7 +9,7 @@ from ipyparallel.serialize import pack_apply_message, unpack_apply_message
 from ipyparallel.serialize import deserialize_object
 
 from constants import CLIENT_IP_FILE
-from utils import get_ip_address
+from parsl.addresses import address_by_interface
 from worker import execute_task
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     # Write IP address to file so that workers can access it
     if not args.localhost:
-        ip = get_ip_address("eth0")
+        ip = address_by_interface("eth0")
         with open(CLIENT_IP_FILE, "w") as fh:
             fh.write(ip)
         print("Wrote IP address {} to file {}".format(ip, CLIENT_IP_FILE))

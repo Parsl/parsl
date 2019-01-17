@@ -5,7 +5,7 @@ from multiprocessing import Process
 import zmq
 
 from constants import CLIENT_IP_FILE, INTERCHANGE_IP_FILE
-from utils import get_ip_address
+from parsl.addresses import address_by_interface
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
             client_ip = fh.read().strip()
         print("Read IP {} from file {}".format(client_ip, CLIENT_IP_FILE))
 
-        interchange_ip = get_ip_address("eth0")
+        interchange_ip = address_by_interface("eth0")
         with open(INTERCHANGE_IP_FILE, "w") as fh:
             fh.write(interchange_ip)
         print("Wrote IP address {} to file {}"
