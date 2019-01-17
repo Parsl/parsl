@@ -39,13 +39,17 @@ class PythonApp(AppBase):
                    App_fut
 
         """
+
         if self.data_flow_kernel is None:
-            self.data_flow_kernel = DataFlowKernelLoader.dfk()
-        app_fut = self.data_flow_kernel.submit(self.func, *args,
-                                               executors=self.executors,
-                                               fn_hash=self.func_hash,
-                                               cache=self.cache,
-                                               **kwargs)
+            dfk = DataFlowKernelLoader.dfk()
+        else:
+            dfk = self.data_flow_kernel
+
+        app_fut = dfk.submit(self.func, *args,
+                             executors=self.executors,
+                             fn_hash=self.func_hash,
+                             cache=self.cache,
+                             **kwargs)
 
         # logger.debug("App[{}] assigned Task[{}]".format(self.func.__name__,
         #                                                 app_fut.tid))
