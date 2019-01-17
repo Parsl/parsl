@@ -77,6 +77,7 @@ class Interchange(object):
                  heartbeat_threshold=60,
                  logdir=".",
                  logging_level=logging.INFO,
+                 poll_period=1,
                  suppress_failure=False,
              ):
         """
@@ -107,6 +108,9 @@ class Interchange(object):
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO (20)
 
+        poll_period : int
+             The main thread polling period, in milliseconds
+
         suppress_failure : Bool
              When set to True, the interchange will attempt to suppress failures. Default: False
 
@@ -123,6 +127,7 @@ class Interchange(object):
         self.client_address = client_address
         self.interchange_address = interchange_address
         self.suppress_failure = suppress_failure
+        self.poll_period = poll_period
 
         logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
             client_address, client_ports[0], client_ports[1], client_ports[2]))
@@ -283,14 +288,11 @@ class Interchange(object):
                 logger.debug("[COMMAND] is alive")
                 continue
 
-    def start(self, poll_period=1):
+    def start(self):
         """ Start the NeedNameQeueu
 
         Parameters:
         ----------
-
-        poll_period : int
-              Poll period in milliseconds
 
         TODO: Move task receiving to a thread
         """
@@ -313,8 +315,12 @@ class Interchange(object):
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
 
+        logger.info("[MAIN] poll period is {}".format(self.poll_period))
+        logger.info("[MAIN] poll period type is {}".format(type(self.poll_period)))
         while not self._kill_event.is_set():
-            self.socks = dict(poller.poll(timeout=poll_period))
+            logger.info("BENC: start poll")
+            self.socks = dict(poller.poll(timeout=self.poll_period))
+            logger.info("BENC: end poll")
 
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
@@ -489,6 +495,8 @@ if __name__ == '__main__':
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("-r", "--result_url",
                         help="REQUIRED: ZMQ url for posting results")
+    parser.add_argument("-p", "--poll_period",
+                        help="REQUIRED: poll period used for main thread")
     parser.add_argument("--worker_ports", default=None,
                         help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
     parser.add_argument("--suppress_failure", action='store_true',
@@ -517,5 +525,6 @@ if __name__ == '__main__':
 
     if args.worker_ports:
         optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
+
     ic = Interchange(**optionals)
     ic.start()

@@ -122,6 +122,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     heartbeat_period : int
         Number of seconds after which a heartbeat message indicating liveness is sent to the
         counterpart (interchange, manager). Default:30s
+
+    poll_period : int
+        Number of milliseconds for the interchange main loop pool period. (TODO: should this be seconds to be consistent with heartbeat parameters?)
+        Default: 1ms
     """
 
     def __init__(self,
@@ -139,6 +143,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  max_workers=float('inf'),
                  heartbeat_threshold=120,
                  heartbeat_period=30,
+                 poll_period=1,
                  suppress_failure=False,
                  managed=True):
 
@@ -165,6 +170,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
+        self.poll_period = poll_period
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
 
@@ -175,7 +181,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                "--result_url={result_url} "
                                "--logdir={logdir} "
                                "--hb_period={heartbeat_period} "
-                               "--hb_threshold={heartbeat_threshold} ")
+                               "--hb_threshold={heartbeat_threshold} "
+                               "--poll_period={poll_period} ")
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
@@ -194,6 +201,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
+                                       poll_period=self.poll_period,
                                        logdir="{}/{}".format(self.run_dir, self.label))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
