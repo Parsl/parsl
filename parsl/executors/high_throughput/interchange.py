@@ -409,7 +409,7 @@ class Interchange(object):
                 logger.debug("[MAIN]   shuffled list")
                 # logger.debug("Shuffled : {}".format(shuffled_managers))
                 # for manager in self._ready_manager_queue:
-                while shuffled_managers and not self.pending_task_queue.empty(): # cf. the if statement above...
+                while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
                     manager = shuffled_managers.pop()
                     if (self._ready_manager_queue[manager]['free_capacity'] and
                         self._ready_manager_queue[manager]['active']):
