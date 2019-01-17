@@ -8,9 +8,11 @@ from llex_local import config
 from parsl.app.app import python_app  # , bash_app
 parsl.load(config)
 
+
 @python_app
 def double(x):
     return x * 2
+
 
 @python_app
 def import_echo(x, string, stdout=None):
@@ -19,9 +21,11 @@ def import_echo(x, string, stdout=None):
     print(string)
     return x * 5
 
+
 @python_app
 def math_error(x):
-    return x/0
+    return x / 0
+
 
 def test_simple(n=2):
     start = time.time()
@@ -34,6 +38,7 @@ def test_simple(n=2):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
+
 def test_imports(n=2):
     start = time.time()
     x = import_echo(n, "hello world")
@@ -45,11 +50,11 @@ def test_imports(n=2):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
+
 def test_failure(n=2):
-    start = time.time()
     error = None
-    try :
-        x = math_error(10).result()
+    try:
+        math_error(10).result()
     except ZeroDivisionError as e:
         error = e
         pass
