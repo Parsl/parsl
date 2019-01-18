@@ -181,8 +181,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                "--result_url={result_url} "
                                "--logdir={logdir} "
                                "--hb_period={heartbeat_period} "
-                               "--hb_threshold={heartbeat_threshold} "
-                               "--poll_period={poll_period} ")
+                               "--hb_threshold={heartbeat_threshold} ")
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
@@ -201,7 +200,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
-                                       poll_period=self.poll_period,
                                        logdir="{}/{}".format(self.run_dir, self.label))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
@@ -365,6 +363,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                           "logdir": "{}/{}".format(self.run_dir, self.label),
                                           "suppress_failure": self.suppress_failure,
                                           "heartbeat_threshold": self.heartbeat_threshold,
+                                          "poll_period": self.poll_period,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
         )
