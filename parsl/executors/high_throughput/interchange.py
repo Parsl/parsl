@@ -288,7 +288,7 @@ class Interchange(object):
                 logger.debug("[COMMAND] is alive")
                 continue
 
-    def start(self):
+    def start(self, poll_period=1):
         """ Start the NeedNameQeueu
 
         Parameters:
@@ -318,9 +318,10 @@ class Interchange(object):
         logger.info("[MAIN] poll period is {}".format(self.poll_period))
         logger.info("[MAIN] poll period type is {}".format(type(self.poll_period)))
         while not self._kill_event.is_set():
-            logger.info("BENC: start poll")
-            self.socks = dict(poller.poll(timeout=self.poll_period))
-            logger.info("BENC: end poll")
+            # logger.info("BENC: start poll")
+            self.socks = dict(poller.poll(timeout=poll_period))
+            # self.socks = dict(poller.poll(timeout=self.poll_period))
+            # logger.info("BENC: end poll")
 
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
