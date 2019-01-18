@@ -78,9 +78,9 @@ class Manager(object):
 
         # Creating larger queues to avoid queues blocking
         # These can be updated after queue limits are better understood
-        self.pending_task_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
-        self.pending_result_queue = queue.Queue(maxsize=10 ^ 4)
-        self.ready_worker_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
+        self.pending_task_queue = queue.Queue()
+        self.pending_result_queue = queue.Queue()
+        self.ready_worker_queue = queue.Queue()
 
         self.tasks_per_round = 1
 
@@ -191,10 +191,11 @@ class Manager(object):
                     logger.debug("Got heartbeat from interchange")
 
                 else:
+                    # Reset timer on receiving message
+                    poll_timer = 1
                     task_recv_counter += len(tasks)
                     logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
                                                                                  task_recv_counter))
-
                     for task in tasks:
                         self.pending_task_queue.put(task)
             else:
