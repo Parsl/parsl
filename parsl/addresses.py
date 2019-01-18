@@ -30,7 +30,7 @@ def address_by_hostname():
     return addr
 
 
-def address_by_hostname(ifname):
+def address_by_interface(ifname):
     """Returns the IP address of the given interface name, e.g. 'eth0'
 
     Parameters
