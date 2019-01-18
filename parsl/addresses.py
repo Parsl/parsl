@@ -46,5 +46,3 @@ def address_by_hostname(ifname):
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', bytes(ifname[:15], 'utf-8'))
     )[20:24])
-
-
