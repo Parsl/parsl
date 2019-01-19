@@ -4,7 +4,7 @@ Changelog
 Parsl 0.7.1
 -----------
 
-Released on Jan 18th, 2018
+Released on Jan 18th, 2019
 
 New Functionality
 ^^^^^^^^^^^^^^^^^
