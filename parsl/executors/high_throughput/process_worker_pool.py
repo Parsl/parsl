@@ -52,6 +52,7 @@ class Manager(object):
                  max_queue_size=10,
                  cores_per_worker=1,
                  max_workers=float('inf'),
+                 prefetch_capacity=100,
                  uid=None,
                  block_id=None,
                  heartbeat_threshold=120,
@@ -75,6 +76,11 @@ class Manager(object):
         max_workers : int
              caps the maximum number of workers that can be launched.
              default: infinity
+
+        prefetch_capacity : int
+             Number of tasks that could be prefetched over available worker capacity. Default:100.
+             When there are a few tasks (<100) or when tasks are long running, this option should
+             be set to 0 for better load balancing.
 
         heartbeat_threshold : int
              Seconds since the last message from the interchange after which the
@@ -108,6 +114,7 @@ class Manager(object):
 
         cores_on_node = multiprocessing.cpu_count()
         self.max_workers = max_workers
+        self.prefetch_capacity = prefetch_capacity
         self.worker_count = min(max_workers,
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
@@ -132,6 +139,8 @@ class Manager(object):
                                              sys.version_info.micro),
                'block_id': self.block_id,
                'worker_count': self.worker_count,
+               'prefetch_capacity': self.prefetch_capacity,
+               'max_capacity': self.worker_count + self.prefetch_capacity,
                'os': platform.system(),
                'hname': platform.node(),
                'dir': os.getcwd(),
@@ -462,6 +471,8 @@ if __name__ == "__main__":
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("--max_workers", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
+    parser.add_argument("-p", "--prefetch_capacity", default=100,
+                        help="Number of tasks that can be prefetched to the manager. default:100")
     parser.add_argument("--hb_period", default=30,
                         help="Heartbeat period in seconds. Uses manager default unless set")
     parser.add_argument("--hb_threshold", default=120,
@@ -490,12 +501,14 @@ if __name__ == "__main__":
         logger.info("result_url: {}".format(args.result_url))
         logger.info("max_workers: {}".format(args.max_workers))
         logger.info("Block ID: {}".format(args.block_id))
+        logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
 
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
                           cores_per_worker=float(args.cores_per_worker),
                           max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
+                          prefetch_capacity=int(args.prefetch_capacity),
                           block_id=args.block_id,
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period))

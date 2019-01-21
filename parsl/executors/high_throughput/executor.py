@@ -112,6 +112,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     max_workers : int
         Caps the number of workers launched by the manager. Default: infinity
 
+    prefetch_capacity : int
+        Number of tasks that could be prefetched over available worker capacity. Default:100.
+        When there are a few tasks (<100) or when tasks are long running, this option should
+        be set to 0 for better load balancing.
+
     suppress_failure : Bool
         If set, the interchange will suppress failures rather than terminate early. Default: False
 
@@ -137,6 +142,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  worker_debug=False,
                  cores_per_worker=1.0,
                  max_workers=float('inf'),
+                 prefetch_capacity=100,
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  suppress_failure=False,
@@ -157,6 +163,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.tasks = {}
         self.cores_per_worker = cores_per_worker
         self.max_workers = max_workers
+        self.prefetch_capacity = prefetch_capacity
 
         self._task_counter = 0
         self.address = address
@@ -170,6 +177,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
+                               "-p {prefetch_capacity} "
                                "-c {cores_per_worker} "
                                "--task_url={task_url} "
                                "--result_url={result_url} "
@@ -187,7 +195,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
+        logger.debug("YADU : {}/{}".format(self.run_dir, self.label))
         l_cmd = self.launch_cmd.format(debug=debug_opts,
+                                       prefetch_capacity=self.prefetch_capacity,
                                        task_url=self.worker_task_url,
                                        result_url=self.worker_result_url,
                                        cores_per_worker=self.cores_per_worker,
