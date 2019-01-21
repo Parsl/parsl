@@ -55,6 +55,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  max_blocks=10,
                  walltime="00:15:00",
                  worker_init='',
+                 worker_env=None,
                  cmd_timeout=30,
                  parallelism=1,
                  move_files=None):
@@ -63,7 +64,12 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
-        self.worker_init = worker_init
+        self.worker_env = worker_env
+        set_env = ''
+        if worker_env is not None:
+            envs = ' '.join(["{k}={v}".format(k=str(k), v=str(v)) for k, v in worker_env.items()])
+            set_env = 'export ' + envs
+        self.worker_init = set_env + worker_init
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
