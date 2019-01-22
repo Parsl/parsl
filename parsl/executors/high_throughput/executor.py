@@ -166,6 +166,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.prefetch_capacity = prefetch_capacity
 
         self._task_counter = 0
+        self._provider_blocks = 0
         self.address = address
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -494,15 +495,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         r = []
         for i in range(blocks):
             if self.provider:
-                external_block_id = len(self.blocks)
-                launch_cmd = self.launch_cmd.format(block_id=external_block_id)
+                launch_cmd = self.launch_cmd.format(block_id=self._provider_blocks)
                 internal_block = self.provider.submit(launch_cmd, 1, 1)
-                logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
+                logger.debug("Launched block {}->{}".format(self._provider_blocks, internal_block))
                 if not internal_block:
                     raise(ScalingFailed(self.provider.label,
                                         "Attempts to provision nodes via provider has failed"))
-                r.extend([str(external_block_id)])
-                self.blocks[str(external_block_id)] = internal_block
+                r.extend([str(self._provider_blocks)])
+                self.blocks[str(self._provider_blocks)] = internal_block
+                self._provider_blocks += 1
             else:
                 logger.error("No execution provider available")
                 r = None
