@@ -6,11 +6,9 @@ from parsl import App
 from parsl.providers import LocalProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
-from parsl.executors.threads import ThreadPoolExecutor
 
 config = Config(
     executors=[
-        ThreadPoolExecutor(max_threads=4, label='local_threads'),
         IPyParallelExecutor(
             label='local_ipp',
             engine_dir='engines',
