@@ -37,7 +37,7 @@ def get_all_env():
 
 @App('python')
 def get_word_env_subprocess():
-    return subprocess.run('echo $word', shell=True, capture_output=True).stdout.decode().strip()
+    return subprocess.run('echo $word', shell=True, stdout=subprocess.PIPE).stdout.decode().strip()
 
 
 @pytest.mark.local
