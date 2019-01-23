@@ -67,8 +67,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.worker_env = worker_env
         set_env = ''
         if worker_env is not None:
-            envs = ' '.join(["{k}={v}".format(k=str(k), v=str(v)) for k, v in worker_env.items()])
-            set_env = 'export ' + envs
+            envs = ' '.join(['{k}="{v}"'.format(k=str(k), v=str(v)) for k, v in worker_env.items()])
+            set_env = 'export ' + envs + ';'
         self.worker_init = set_env + worker_init
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks

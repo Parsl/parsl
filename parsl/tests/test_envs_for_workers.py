@@ -17,7 +17,7 @@ config = Config(
             provider=LocalProvider(
                 walltime="00:05:00",
                 nodes_per_block=1,
-                worker_env={'word': 'bird', 'drink': '"some coffee"', 'x': 3},
+                worker_env={'word': 'bird', 'drink': 'some coffee', 'x': 3},
                 init_blocks=4
             )
         )
