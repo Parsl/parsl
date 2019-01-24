@@ -40,7 +40,7 @@ def monitor(pid, task_id, monitoring_config, run_id):
             try:
                 d['psutil_process_disk_write'] = pm.io_counters().write_bytes
                 d['psutil_process_disk_read'] = pm.io_counters().read_bytes
-            except psutil._exceptions.AccessDenied:
+            except (psutil._exceptions.AccessDenied, NotImplementedError):
                 # occassionally pid temp files that hold this information are unvailable to be read so set to zero
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0
@@ -54,11 +54,11 @@ def monitor(pid, task_id, monitoring_config, run_id):
                 try:
                     d['psutil_process_disk_write'] += child.io_counters().write_bytes
                     d['psutil_process_disk_read'] += child.io_counters().read_bytes
-                except psutil._exceptions.AccessDenied:
+                except (psutil._exceptions.AccessDenied, NotImplementedError):
                     # occassionally pid temp files that hold this information are unvailable to be read so add zero
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
-
+            d['current_time'] = time.time()
         finally:
             logger.info("task resource update", extra=d)
             sleep_duration = monitoring_config.resource_loop_sleep_duration

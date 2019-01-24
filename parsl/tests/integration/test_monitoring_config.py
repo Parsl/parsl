@@ -1,20 +1,30 @@
 import parsl
 from parsl import *
+from parsl.app.app import python_app
 from parsl.monitoring.db_logger import MonitoringConfig
 
 threads_config = parsl.config.Config(executors=[parsl.executors.threads.ThreadPoolExecutor(label='threads', max_threads=4)],
                                      monitoring_config=MonitoringConfig(database_type='local_database', logger_name='parsl_db_logger',
-                                     eng_link='sqlite:///parsl.db', web_app_host='http://localhost', web_app_port=8899, resource_loop_sleep_duration=15))
-dfk = DataFlowKernel(config=threads_config)
+                                     eng_link='sqlite:///parsl.db', web_app_host='http://localhost', web_app_port=8899, resource_loop_sleep_duration=1))
 
+ipp_config = parsl.config.Config(executors=[
+                                    parsl.executors.ipp.IPyParallelExecutor()
+                                 ],
+                                 monitoring_config=MonitoringConfig(database_type='local_database', logger_name='parsl_db_logger',
+                                     eng_link='sqlite:///parsl.db', web_app_host='http://localhost', web_app_port=8899, resource_loop_sleep_duration=1)
+)
 
-@App('python', dfk)
+#dfk = DataFlowKernel(config=threads_config)
+dfk = parsl.load(threads_config)
+#dfk = parsl.load(ipp_config)
+
+@python_app
 def cpu_stress_fail(workers=1, timeout=10, inputs=[], stdout='stdout_for_fail.txt', stderr='stderr_for_fail.txt'):
     raise AssertionError("Just an Error")
     cpu_stress()
 
 
-@App('python', dfk)
+@python_app
 def cpu_stress(workers=1, timeout=10, inputs=[], outputs=[]):
     s = 0
     for i in range(10**8):

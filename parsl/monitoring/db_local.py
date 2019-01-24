@@ -85,21 +85,19 @@ def create_task_resource_table(meta):
           Column('psutil_process_status', Text, nullable=True),
     )
 
-
 class DatabaseHandler(logging.Handler):
     """ The handler that takes a log record and puts it into an SQL database. Needs to be a bit fast. """
-    def __init__(self, elink):
+    def __init__(self, db_engine):
         """ Set up the handler to link it to the database specified by elink. """
         logging.Handler.__init__(self)
-        self.eng = sa.create_engine(elink)
-        self.meta = sa.MetaData()
-        self.meta.reflect(bind=self.eng)
-
+        self.eng = db_engine
+        self.meta = sa.MetaData(self.eng, reflect=True)
+            
     def emit(self, record):
         """ Take a task record and insert or update information in the SQL database. Creates the necessary tables if needed.
         Allow multiple tries since originally this was erroneous and used concurrently. Squashes errors/exceptions.
         This handler is added to a logger that is returned by get_db_logger when requested. """
-        self.eng.dispose()
+        #self.eng.dispose()
         trys = 3
         info = {key: value for key, value in record.__dict__.items() if not key.startswith("__")}
         for t in range(trys):
@@ -116,8 +114,9 @@ class DatabaseHandler(logging.Handler):
                     if 'time_completed' in info.keys() and info['time_completed'] != 'None':
                         workflows = self.meta.tables['workflows']
                         up = workflows.update().values(time_completed=info['time_completed']).where(workflows.c.run_id == run_id)
-                        con.execute(up)
+                        con.execute(up)    
                         return
+
                     if 'task_time_returned' in info.keys() and info['task_time_returned'] is not None:
                         workflow = self.meta.tables['task']
                         up = workflow.update().values(task_time_returned=info['task_time_returned']).where(workflow.c.task_id == info['task_id'])\
@@ -125,9 +124,9 @@ class DatabaseHandler(logging.Handler):
                         con.execute(up)
 
                     # create workflows table if this is a new database without one
-                    if 'workflows' not in self.meta.tables.keys():
-                        workflows = create_workflows_table(self.meta)
-                        self.meta.create_all(con)
+    #                     if 'workflows' not in self.meta.tables.keys():
+    #                         workflows = create_workflows_table(self.meta)
+    #                         self.meta.create_all(con)
                     # if this is the first sight of the workflow, add it to the workflows table
                     if len(con.execute(self.meta.tables['workflows'].select(self.meta.tables['workflows'].c.run_id == run_id)).fetchall()) == 0:
                         workflows = self.meta.tables['workflows']
@@ -145,9 +144,9 @@ class DatabaseHandler(logging.Handler):
                         con.execute(up)
 
                     # create task table if this is a new run without one
-                    if 'task' not in self.meta.tables.keys():
-                        workflow = create_task_table(self.meta)
-                        self.meta.create_all(con)
+    #                     if 'task' not in self.meta.tables.keys():
+    #                         workflow = create_task_table(self.meta)
+    #                         self.meta.create_all(con)
 
                     # check to make sure it is a task log and not just a workflow overview log
                     if info.get('task_id', None) is not None:
@@ -163,27 +162,27 @@ class DatabaseHandler(logging.Handler):
                             con.execute(ins)
 
                         if 'task_status' in info.keys():
-                            # if this is the first sight of a task, create a task_status_table to hold this task's updates
-                            if 'task_status' not in self.meta.tables.keys():
-                                task_status_table = create_task_status_table(self.meta)
-                                self.meta.create_all(con)
-                                con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
-                            # if this status table already exists, just insert the update
-                            else:
-                                task_status_table = self.meta.tables['task_status']
-                                con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
+                             # if this is the first sight of a task, create a task_status_table to hold this task's updates
+    #                             if 'task_status' not in self.meta.tables.keys():
+    #                                 task_status_table = create_task_status_table(self.meta)
+    #                                 self.meta.create_all(con)
+    #                                 con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
+    #                             # if this status table already exists, just insert the update
+    #                             else:
+                            task_status_table = self.meta.tables['task_status']
+                            con.execute(task_status_table.insert().values(**{k: v for k, v in info.items() if k in task_status_table.c}))
                             return
 
                         if 'psutil_process_pid' in info.keys():
                             # if this is a task resource update then handle that, if the resource table DNE then create it
-                            if 'task_resources' not in self.meta.tables.keys():
-                                task_resource_table = create_task_resource_table(self.meta)
-                                self.meta.create_all(con)
-                                con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
-                            # if this resource table already exists, just insert the update
-                            else:
-                                task_resource_table = self.meta.tables['task_resources']
-                                con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
+    #                             if 'task_resources' not in self.meta.tables.keys():
+    #                                 task_resource_table = create_task_resource_table(self.meta)
+    #                                 self.meta.create_all(con)
+    #                                 con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))
+    #                             # if this resource table already exists, just insert the update
+    #                             else:
+                            task_resource_table = self.meta.tables['task_resources']
+                            con.execute(task_resource_table.insert().values(**{k: v for k, v in info.items() if k in task_resource_table.c}))  
                             return
 
             except Exception as e:
@@ -192,8 +191,7 @@ class DatabaseHandler(logging.Handler):
                 time.sleep(5)
             if not failed:
                 return
-
-
+           
 class RemoteHandler(logging.Handler):
     """ Handler used to pass a log to the logging server for it to be written to the database.
     This handler is added to a logger that is returned by get_db_logger when requested. """
@@ -215,7 +213,13 @@ class RemoteHandler(logging.Handler):
             try:
                 info = {k: str(v) for k, v in record.__dict__.items() if not k.startswith('__') and k not in standard_log_info}
                 bod = 'log={}'.format(json.dumps(info))
-                self.http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
+#                 print(bod)
+#                start = time.time()
+                a = self.http_client.fetch(self.addr, method='POST', body=bod, request_timeout=self.request_timeout)
+                #print("The response is {}".format(a.body))
+#                 end = time.time()
+#                 elapsed = end - start
+#                 print("zhuozhao: remotehandler: {}".format(elapsed))
             except Exception as e:
                 # Other errors are possible, such as IOError.
                 logger.error(str(e))
