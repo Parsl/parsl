@@ -32,6 +32,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.executors.base import ParslExecutor # for mypy
 from parsl.utils import get_version
 from parsl.monitoring.db_logger import get_db_logger
 from parsl.monitoring import app_monitor
@@ -159,7 +160,7 @@ class DataFlowKernel(object):
         self.checkpoint_mode = config.checkpoint_mode
 
         data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
-        self.executors = {e.label: e for e in config.executors + [data_manager]}
+        self.executors = {e.label: e for e in config.executors + [data_manager]} # type: Dict[str, ParslExecutor]
         for executor in self.executors.values():
             executor.run_dir = self.run_dir
             if hasattr(executor, 'provider'):
