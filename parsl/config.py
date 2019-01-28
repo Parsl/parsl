@@ -51,19 +51,18 @@ class Config(RepresentationMixin):
         Enable usage tracking. Default is True.
     """
     def __init__(self,
-                 executors=None,
-                 app_cache=True,
-                 checkpoint_files=None,
-                 checkpoint_mode=None,
-                 checkpoint_period=None,
-                 data_management_max_threads=10,
-                 lazy_errors=True,
-                 retries=0,
-                 run_dir='runinfo',
-                 strategy='simple',
-                 monitoring_config=None,
-                 usage_tracking=True):
-        # type: (Optional[List[ParslExecutor]], Optional[bool], Optional[List[str]], Optional[str], Optional[str], Optional[int], Optional[bool], Optional[int], Optional[str], Optional[str], Optional[Any], Optional[bool]) -> None
+                 executors: Optional[List[ParslExecutor]] =None,
+                 app_cache: Optional[bool] =True,
+                 checkpoint_files: Optional[List[str]] =None,
+                 checkpoint_mode: Optional[str] =None,
+                 checkpoint_period: Optional[str]=None,
+                 data_management_max_threads: Optional[int] =10,
+                 lazy_errors: Optional[bool] =True,
+                 retries: Optional[int] =0,
+                 run_dir: Optional[str] ='runinfo',
+                 strategy: Optional[str] ='simple',
+                 monitoring_config: Optional[Any] =None,
+                 usage_tracking: Optional[bool] =True) -> None:
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
