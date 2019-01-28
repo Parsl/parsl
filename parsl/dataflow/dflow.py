@@ -18,7 +18,7 @@ from concurrent.futures import Future
 from functools import partial
 
 # only for type checking:
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, Optional, Union, List, Tuple
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
@@ -484,7 +484,7 @@ class DataFlowKernel(object):
             logger.error("add_done_callback got an exception {} which will be ignored".format(e))
         return exec_fu
 
-    def _add_input_deps(self, executor, args, kwargs) -> None:
+    def _add_input_deps(self, executor, args, kwargs) -> Tuple[Tuple[Any, ...], Any]:
         """Look for inputs of the app that are remote files. Submit stage_in
         apps for such files and replace the file objects in the inputs list with
         corresponding DataFuture objects.
