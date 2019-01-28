@@ -394,21 +394,12 @@ class Interchange(object):
 
             # If we had received any requests, check if there are tasks that could be passed
 
-            # even rendering the list here is maybe expensive, even if not written out
-            # logger.debug("Managers: {}".format(self._ready_manager_queue))
-            logger.debug("Managers count: {}".format(len(self._ready_manager_queue)))
-            logger.debug("Interesting managers count: {}".format(len(interesting_managers)))
+            logger.debug("Managers count (total/interesting): {}/{}".format(len(self._ready_manager_queue),
+                                                                            len(interesting_managers)))
 
-            # some managers will still be interesting after this pass... accumulate them here
             if interesting_managers and not self.pending_task_queue.empty():
-                logger.debug("[MAIN] entering _ready_manager_queue section")
-                logger.debug("[MAIN]   copying manager list to shuffle")
                 shuffled_managers = list(interesting_managers)
-                logger.debug("[MAIN]   shuffling list")
                 random.shuffle(shuffled_managers)
-                logger.debug("[MAIN]   shuffled list")
-                # logger.debug("Shuffled : {}".format(shuffled_managers))
-                # for manager in self._ready_manager_queue:
                 while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
                     manager = shuffled_managers.pop()
                     if (self._ready_manager_queue[manager]['free_capacity'] and
