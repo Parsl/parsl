@@ -73,7 +73,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def push_file(self, source, dest_dir):
+    def push_file(self, source, dest_dir) -> str:
         ''' Channel will take care of moving the file from source to the destination
         directory
 

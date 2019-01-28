@@ -3,6 +3,7 @@ import time
 import logging
 
 from parsl.channels import LocalChannel
+from parsl.channels.base import Channel # for mypy
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.slurm.template import template_string
@@ -71,7 +72,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
     def __init__(self,
                  partition,
-                 channel=LocalChannel(),
+                 channel: Channel =LocalChannel(),
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
@@ -83,7 +84,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  cmd_timeout=10,
                  exclusive=True,
                  move_files=True,
-                 launcher=SingleNodeLauncher()):
+                 launcher=SingleNodeLauncher()) -> None:
         label = 'slurm'
         super().__init__(label,
                          channel,

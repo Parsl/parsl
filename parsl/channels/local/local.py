@@ -119,7 +119,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return pid, proc
 
-    def push_file(self, source, dest_dir):
+    def push_file(self, source, dest_dir) -> str:
         ''' If the source files dirpath is the same as dest_dir, a copy
         is not necessary, and nothing is done. Else a copy is made.
 
