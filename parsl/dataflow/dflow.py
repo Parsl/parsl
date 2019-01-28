@@ -498,7 +498,7 @@ class DataFlowKernel(object):
 
         # Return if the task is _*_stage_in
         if executor == 'data_manager':
-            return
+            return args, kwargs
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
