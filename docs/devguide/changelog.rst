@@ -1,6 +1,28 @@
 Changelog
 =========
 
+Parsl 0.7.1
+-----------
+
+Released on Jan 18th, 2019
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* `LowLatencyExecutor`: a new executor designed to address use-cases with tight latency requirements
+  such as model serving (Machine Learning), function serving and interactive analyses is now available.
+* New options in `HighThroughputExecutor`:
+     * `suppress_failure`: Enable suppression of worker rejoin errors.
+     * `max_workers`: Limit workers spawned by manager
+* Late binding of DFK, allows apps to pick DFK dynamically at call time. This functionality adds safety
+  to cases where a new config is loaded and a new DFK is created.
+
+Bug fixes
+^^^^^^^^^
+
+* A critical bug in `HighThroughputExecutor` that led to debug logs overflowing channels and terminating
+  blocks of resource is fixed `issue#738 <https://github.com/Parsl/parsl/issues/738>`_
+
 
 Parsl 0.7.0
 -----------
