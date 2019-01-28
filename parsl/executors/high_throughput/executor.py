@@ -109,6 +109,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         cores to be assigned to each worker. Oversubscription is possible
         by setting cores_per_worker < 1.0. Default=1
 
+    max_workers : int
+        Caps the number of workers launched by the manager. Default: infinity
+
+    suppress_failure : Bool
+        If set, the interchange will suppress failures rather than terminate early. Default: False
+
     heartbeat_threshold : int
         Seconds since the last message from the counterpart in the communication pair:
         (interchange, manager) after which the counterpart is assumed to be un-available. Default:120s
@@ -130,8 +136,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  working_dir=None,
                  worker_debug=False,
                  cores_per_worker=1.0,
+                 max_workers=float('inf'),
                  heartbeat_threshold=120,
                  heartbeat_period=30,
+                 suppress_failure=False,
                  managed=True):
 
         logger.debug("Initializing HighThroughputExecutor")
@@ -148,6 +156,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.blocks = []
         self.tasks = {}
         self.cores_per_worker = cores_per_worker
+        self.max_workers = max_workers
 
         self._task_counter = 0
         self.address = address
@@ -156,10 +165,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
+        self.suppress_failure = suppress_failure
         self.run_dir = '.'
 
         if not launch_cmd:
-            self.launch_cmd = ("process_worker_pool.py {debug} "
+            self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-c {cores_per_worker} "
                                "--task_url={task_url} "
                                "--result_url={result_url} "
@@ -174,10 +184,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         executor specific oddities.
         """
         debug_opts = "--debug" if self.worker_debug else ""
+        max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
+
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        task_url=self.worker_task_url,
                                        result_url=self.worker_result_url,
                                        cores_per_worker=self.cores_per_worker,
+                                       max_workers=max_workers,
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
@@ -342,6 +355,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                           "worker_ports": self.worker_ports,
                                           "worker_port_range": self.worker_port_range,
                                           "logdir": "{}/{}".format(self.run_dir, self.label),
+                                          "suppress_failure": self.suppress_failure,
                                           "heartbeat_threshold": self.heartbeat_threshold,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
