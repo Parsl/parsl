@@ -343,6 +343,10 @@ class DataFlowKernel(object):
             self.tasks[task_id]['app_fu'].done() and
             self.tasks[task_id]['app_fu'].exception() is None and
             self.tasks[task_id]['executor'] != 'data_manager' and
+            # TODO: do the below tests for stage_in names need to be
+            # checked here or is being 'data_manager' executor sufficient?
+            # what about _*_stage_out jobs? What about globus staging jobs
+            # as this list does not include those?
             self.tasks[task_id]['func_name'] != '_file_stage_in' and
             self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
             self.tasks[task_id]['func_name'] != '_http_stage_in'):
@@ -350,6 +354,12 @@ class DataFlowKernel(object):
                 f = dfu.file_obj
                 if isinstance(f, File) and f.is_remote():
                     f.stage_out(self.tasks[task_id]['executor'])
+                # TODO: what are the non-file cases for stuff being in
+                # outputs here?
+                # `isinstance File and not f.is_remote` - that's a reasonable one
+                # what about when f is not a file? is that ever meaningful?
+                # i think probably not? and so should either not check, or error
+                # out. typechecking in mypy should be used to enforce that harder.
 
         return
 

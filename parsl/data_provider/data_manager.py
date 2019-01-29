@@ -70,7 +70,7 @@ class DataManager(ParslExecutor):
             executors = []
         self.executors = {e.label: e for e in executors}
         self.max_threads = max_threads
-        self.files = []
+        # self.files = []
         self.globus = None
         self.managed = True
 
@@ -102,12 +102,19 @@ class DataManager(ParslExecutor):
     def scaling_enabled(self):
         return self._scaling_enabled
 
+    # this seems to be special-cased to globus
+    # because... something special happens for globus?
+    # what is that?
+    # keeping files in a list will inhibit GC
+    # local path will be set for globus files but
+    # not for any other file - why?
+
     def add_file(self, file):
         if file.scheme == 'globus':
             if not self.globus:
                 self.globus = get_globus()
             # keep a list of all remote files for optimization purposes (TODO)
-            self.files.append(file)
+            # self.files.append(file)
             self._set_local_path(file)
 
     def _set_local_path(self, file):
