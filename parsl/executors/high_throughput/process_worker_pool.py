@@ -15,6 +15,7 @@ import uuid
 import zmq
 import math
 import json
+import importlib
 
 from parsl.version import VERSION as PARSL_VERSION
 import multiprocessing
@@ -310,6 +311,7 @@ def execute_task(bufs):
     """
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
+    user_ns.update(importlib.import_module('time').__dict__)
 
     f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
