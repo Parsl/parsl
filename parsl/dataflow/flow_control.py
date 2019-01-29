@@ -1,9 +1,6 @@
-import sys
 import threading
 import logging
 import time
-
-from parsl.dataflow.strategy import Strategy
 
 logger = logging.getLogger(__name__)
 
@@ -97,4 +94,3 @@ if __name__ == "__main__":
     time.sleep(60)
     timer.close()
     exit(0)
-
