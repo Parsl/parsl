@@ -23,7 +23,7 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.error import *
-from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
+from parsl.dataflow.flow_control import Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -181,11 +181,6 @@ class DataFlowKernel(object):
             except Exception:
                 logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
-
-        if any([x.managed for x in config.executors]):
-            self.flowcontrol = FlowControl(self)
-        else:
-            self.flowcontrol = FlowNoControl(self)
 
         self.task_count = 0
         self.tasks = {}
@@ -814,9 +809,6 @@ class DataFlowKernel(object):
         # Send final stats
         self.usage_tracker.send_message()
         self.usage_tracker.close()
-
-        logger.info("Terminating flow_control and strategy threads")
-        self.flowcontrol.close()
 
         for executor in self.executors.values():
             if executor.managed:
