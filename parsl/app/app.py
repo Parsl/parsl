@@ -110,19 +110,19 @@ def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all
 
     logger.warning("The 'App' decorator will be deprecated in Parsl 0.8. Please use 'python_app' or 'bash_app' instead.")
 
-    if apptype is 'python':
+    if apptype == 'python':
         app_class = PythonApp
-    elif apptype is 'bash':
+    elif apptype == 'bash':
         app_class = BashApp
     else:
         raise InvalidAppTypeError("Invalid apptype requested {}; must be 'python' or 'bash'".format(apptype))
 
     def wrapper(f):
-            return app_class(f,
-                             data_flow_kernel=data_flow_kernel,
-                             walltime=walltime,
-                             cache=cache,
-                             executors=executors)
+        return app_class(f,
+                         data_flow_kernel=data_flow_kernel,
+                         walltime=walltime,
+                         cache=cache,
+                         executors=executors)
     return wrapper
 
 
