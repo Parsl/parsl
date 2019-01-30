@@ -118,11 +118,11 @@ def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all
         raise InvalidAppTypeError("Invalid apptype requested {}; must be 'python' or 'bash'".format(apptype))
 
     def wrapper(f):
-            return app_class(f,
-                             data_flow_kernel=data_flow_kernel,
-                             walltime=walltime,
-                             cache=cache,
-                             executors=executors)
+        return app_class(f,
+                         data_flow_kernel=data_flow_kernel,
+                         walltime=walltime,
+                         cache=cache,
+                         executors=executors)
     return wrapper
 
 
