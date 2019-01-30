@@ -335,7 +335,7 @@ class DataFlowKernel(object):
             # result from a memo lookup and the task has reached a terminal state.
             self.memoizer.update_memo(task_id, self.tasks[task_id], future)
 
-            if self.checkpoint_mode is 'task_exit':
+            if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
         # Submit _*_stage_out tasks for output data futures that correspond with remote files
