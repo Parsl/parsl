@@ -58,7 +58,8 @@ To run tests with a timeout limit of one minute, run::
 
   $ pytest tests --basic --timeout=60
 
-Several parsl-specific decorators are available for specifying certain configurations to test with; see ``pytest --markers`` for more details.
+Several parsl-specific decorators are available for specifying certain configurations to test with; see ``pytest --markers parsl/tests/`` for more details.
+
 
 Development Process
 -------------------
