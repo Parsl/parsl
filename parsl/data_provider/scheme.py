@@ -14,7 +14,7 @@ class GlobusScheme(RepresentationMixin):
     local_path : str, optional
         FIXME
     """
-    def __init__(self, endpoint_uuid, endpoint_path=None, local_path=None):
+    def __init__(self, endpoint_uuid: str, endpoint_path: str =None, local_path: str =None) -> None:
         self.endpoint_uuid = endpoint_uuid
         self.endpoint_path = endpoint_path
         self.local_path = local_path
