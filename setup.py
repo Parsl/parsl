@@ -27,6 +27,7 @@ setup(
         'visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
         'aws' : ['boto3'],
+        'kubernetes' : ['kubernetes'],
         # Jetstream is deprecated since the interface has not been maintained.
         # 'jetstream' : ['python-novaclient'],
         'extreme_scale' : ['mpi4py'],
@@ -36,6 +37,7 @@ setup(
         'all' : ['CMRESHandler', 'psutil', 'sqlalchemy',
                  'dash', 'dash-html-components', 'dash-core-components', 'pandas',
                  'boto3',
+                 'kubernetes',
                  'mpi4py',
                  'nbsphinx', 'sphinx_rtd_theme',
                  'google-auth', 'google-api-python-client',
