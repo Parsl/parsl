@@ -156,9 +156,9 @@ procedure involving your web browser. You can authorize without having to
 run a script (for example, if you're running your script in a batch system
 where it will be unattended) by running this command line:
 
-.. code-blokc::
+.. code-block:: bash
 
-        $ python3 parsl/data_provider/globus.py
+        $ parsl-globus-auth
         Parsl Globus command-line authoriser
         If authorisation to Globus is necessary, the library will prompt you now.
         Otherwise it will do nothing
