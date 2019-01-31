@@ -22,6 +22,7 @@ setup(
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
+               'parsl/data_provider/parsl-globus-auth.py',
     ],
     extras_require = {
         'visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
@@ -54,5 +55,8 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     keywords=['Workflows', 'Scientific computing'],
-    entry_points={'console_scripts': ['parsl-visualize=parsl.monitoring.web_app.index:cli_run']}
+    entry_points={'console_scripts':
+      ['parsl-visualize=parsl.monitoring.web_app.index:cli_run',
+       'parsl-globus-auth=parsl.data_provider.globus:cli_run'
+      ]}
 )
