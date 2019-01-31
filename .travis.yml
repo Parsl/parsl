@@ -39,13 +39,13 @@ script:
       # do this before any testing, but not in-between tests
     - rm -f .coverage
 
-    - (for test in parsl/tests/test*/test*; do pytest $test --config local --cov=parsl --cov-append --cov-report= ; export X=$? ; echo X is $X ; if [[ "$X" != 0 ]] && [[ "$X" != 5 ]]; then exit 1; fi; done ) ;
+    - (for test in parsl/tests/test*/test*; do pytest $test --config local --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
       # allow exit code 5; this means pytest did not run a test in the
       # specified file
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
-    - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 20
+    - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
 
     - coverage report
       # prints report of coverage data stored in .coverage
