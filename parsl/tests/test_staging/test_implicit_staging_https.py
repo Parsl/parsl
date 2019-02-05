@@ -26,7 +26,9 @@ def test_implicit_staging_https():
     Create a remote input file (https) that points to unsorted.txt.
     """
 
-    unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+    # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+    unsorted_file = File('https://gist.githubusercontent.com/yadudoc/7f21dd15e64a421990a46766bfa5359c/'
+                         'raw/7fe04978ea44f807088c349f6ecb0f6ee350ec49/unsorted.txt')
 
     # Create a local file for output data
     sorted_file = File('sorted.txt')
@@ -48,7 +50,9 @@ def sort_strings_kw(x=None, outputs=[]):
 @pytest.mark.local
 def test_implicit_staging_https_kwargs():
 
-    unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+    # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+    unsorted_file = File('https://gist.githubusercontent.com/yadudoc/7f21dd15e64a421990a46766bfa5359c/'
+                         'raw/7fe04978ea44f807088c349f6ecb0f6ee350ec49/unsorted.txt')
 
     # Create a local file for output data
     sorted_file = File('sorted.txt')
@@ -70,7 +74,9 @@ def sort_strings_arg(x, outputs=[]):
 @pytest.mark.local
 def test_implicit_staging_https_args():
 
-    unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+    # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
+    unsorted_file = File('https://gist.githubusercontent.com/yadudoc/7f21dd15e64a421990a46766bfa5359c/'
+                         'raw/7fe04978ea44f807088c349f6ecb0f6ee350ec49/unsorted.txt')
 
     # Create a local file for output data
     sorted_file = File('sorted.txt')
