@@ -7,6 +7,9 @@ from parsl.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
+from typing import Any, Dict
+from parsl.channels.base import Channel
+from parsl.launchers.launchers import Launcher
 
 class ClusterProvider(ExecutionProvider):
     """ This class defines behavior common to all cluster/supercompute-style scheduler systems.
@@ -46,16 +49,16 @@ class ClusterProvider(ExecutionProvider):
     """
 
     def __init__(self,
-                 label,
-                 channel,
-                 nodes_per_block,
-                 init_blocks,
-                 min_blocks,
-                 max_blocks,
-                 parallelism,
-                 walltime,
-                 launcher,
-                 cmd_timeout=10):
+                 label: str,
+                 channel: Channel,
+                 nodes_per_block: int,
+                 init_blocks: int,
+                 min_blocks: int,
+                 max_blocks: int,
+                 parallelism: float, # nb. the member field for this is used by strategy, so maybe this should be exposed at the layer above as a property?
+                 walltime: str,
+                 launcher: Launcher,
+                 cmd_timeout: int =10) -> None:
 
         self._scaling_enabled = True
         self._label = label
@@ -69,6 +72,8 @@ class ClusterProvider(ExecutionProvider):
         self.launcher = launcher
         self.walltime = walltime
         self.cmd_timeout = cmd_timeout
+
+        # TODO: this test should be for being a launcher, not being callable
         if not callable(self.launcher):
             raise(BadLauncher(self.launcher,
                               "Launcher for executor:{} is of type:{}. Expects a parsl.launcher.launcher.Launcher or callable".format(
@@ -77,7 +82,7 @@ class ClusterProvider(ExecutionProvider):
         self.script_dir = None
 
         # Dictionary that keeps track of jobs, keyed on job_id
-        self.resources = {}
+        self.resources = {} # type: Dict[Any, Any]
 
     def execute_wait(self, cmd, timeout=None):
         t = self.cmd_timeout
