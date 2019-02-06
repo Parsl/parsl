@@ -164,3 +164,11 @@ class Globus(object):
             event = events.data[0]
             raise Exception('Globus transfer {}, from {}{} to {}{} failed due to error: "{}"'.format(
                 task['task_id'], src_ep, src_path, dst_ep, dst_path, event['details']))
+
+
+def cli_run():
+    print("Parsl Globus command-line authoriser")
+    print("If authorisation to Globus is necessary, the library will prompt you now.")
+    print("Otherwise it will do nothing")
+    get_globus()
+    print("Authorization complete")
