@@ -7,7 +7,7 @@ from parsl.providers.provider_base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 from parsl.channels.base import Channel
 from parsl.launchers.launchers import Launcher
 
@@ -83,6 +83,14 @@ class ClusterProvider(ExecutionProvider):
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {} # type: Dict[Any, Any]
+
+    # This annotation breaks slurm:
+    # parsl/providers/slurm/slurm.py:201: error: Item "None" of "Optional[str]" has no attribute "split"
+    # parsl/providers/slurm/slurm.py:207: error: Item "None" of "Optional[str]" has no attribute "strip"
+    # Theres a dependent type at work here which I can't describe in the type system:
+    # the optional strs are None when int != 0, for some providers.
+    # and when int == 0, the optional strs are strs
+    # def execute_wait(self, cmd, timeout=None) -> Tuple[int, Optional[str], Optional[str]]:
 
     def execute_wait(self, cmd, timeout=None):
         t = self.cmd_timeout
