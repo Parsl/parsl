@@ -76,7 +76,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  max_blocks=100,
                  parallelism=1,
                  launcher=AprunLauncher(),
-                 walltime="00:20:00"):
+                 walltime="00:20:00",
+                 cmd_timeout=10):
         label = 'torque'
         super().__init__(label,
                          channel,
@@ -86,7 +87,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
+                         launcher,
+                         cmd_timeout=cmd_timeout)
 
         self.account = account
         self.queue = queue
