@@ -50,6 +50,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Unix group id to run the container as.
     run_as_non_root : bool
         Run as non-root (True) or run as root (False).
+    persistent_volumes: list[(str, str)]
+        List of tuples describing persistent volumes to be mounted in the pod.
+        The tuples consist of (PVC Name, Mount Directory).
     """
 
     def __init__(self,
@@ -65,7 +68,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  user_id=None,
                  group_id=None,
                  run_as_non_root=False,
-                 secret=None):
+                 secret=None,
+                 persistent_volumes=[]):
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
                                         "Kubernetes provider requires kubernetes module and config.")
@@ -84,6 +88,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.user_id = user_id
         self.group_id = group_id
         self.run_as_non_root = run_as_non_root
+        self.persistent_volumes = persistent_volumes
 
         self.kube_client = client.ExtensionsV1beta1Api()
 
@@ -117,7 +122,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                                  self.image,
                                                                  self.deployment_name,
                                                                  cmd_string=formatted_cmd,
-                                                                 replicas=self.init_blocks)
+                                                                 replicas=self.init_blocks,
+                                                                 volumes=self.persistent_volumes)
             logger.debug("Deployment name :{}".format(self.deployment_name))
             self._create_deployment(self.deployment_obj)
             self.resources[self.deployment_name] = {'status': 'RUNNING',
@@ -175,7 +181,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                   replicas=1,
                                   cmd_string=None,
                                   engine_json_file='~/.ipython/profile_default/security/ipcontroller-engine.json',
-                                  engine_dir='.'):
+                                  engine_dir='.',
+                                  volumes=[]):
         """ Create a kubernetes deployment for the job.
         Args:
               - job_name (string) : Name of the job and deployment
@@ -201,6 +208,11 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         launch_args = ["-c", "{0}; /app/deploy.sh;".format(cmd_string)]
         print(launch_args)
 
+        volume_mounts = []
+        # Create mount paths for the volumes
+        for volume in volumes:
+            volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
+                                                      name=volume[0]))
         # Configureate Pod template container
         container = None
         if security_context:
@@ -208,6 +220,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                 name=job_name,
                 image=job_image,
                 ports=[client.V1ContainerPort(container_port=port)],
+                volume_mounts=volume_mounts,
                 command=['/bin/bash'],
                 args=launch_args,
                 env=[environment_vars],
@@ -217,6 +230,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                 name=job_name,
                 image=job_image,
                 ports=[client.V1ContainerPort(container_port=port)],
+                volume_mounts=volume_mounts,
                 command=['/bin/bash'],
                 args=launch_args,
                 env=[environment_vars])
@@ -225,10 +239,20 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         if self.secret:
             secret = client.V1LocalObjectReference(name=self.secret)
 
+        # Create list of volumes from (pvc, mount) tuples
+        volume_defs = []
+        for volume in volumes:
+            volume_defs.append(client.V1Volume(name=volume[0],
+                                               persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
+                                                   claim_name=volume[0])))
+
         # Create and configurate a spec section
         template = client.V1PodTemplateSpec(
             metadata=client.V1ObjectMeta(labels={"app": job_name}),
-            spec=client.V1PodSpec(containers=[container], image_pull_secrets=[secret]))
+            spec=client.V1PodSpec(containers=[container],
+                                  image_pull_secrets=[secret],
+                                  volumes=volume_defs
+                                  ))
 
         # Create the specification of deployment
         spec = client.ExtensionsV1beta1DeploymentSpec(replicas=replicas,
