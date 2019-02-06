@@ -9,7 +9,7 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
-from typing import Any
+from typing import Any, Tuple, Optional
 
 class NoAuthSSHClient(paramiko.SSHClient):
     def _auth(self, username, *args):
@@ -95,7 +95,7 @@ class SSHChannel(Channel, RepresentationMixin):
             return 'env {0} {1}'.format(env_vars, cmd)
         return cmd
 
-    def execute_wait(self, cmd, walltime=2, envs={}):
+    def execute_wait(self, cmd, walltime=2, envs={}) -> Tuple[int, Optional[str], Optional[str]]:
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
