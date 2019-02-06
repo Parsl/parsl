@@ -10,7 +10,7 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
-from typing import Tuple, Optional
+from typing import Dict, Tuple, Optional
 
 class LocalChannel(Channel, RepresentationMixin):
     ''' This is not even really a channel, since opening a local shell is not heavy
@@ -33,7 +33,7 @@ class LocalChannel(Channel, RepresentationMixin):
         self._envs.update(envs)
         self.script_dir = script_dir
 
-    def execute_wait(self, cmd, walltime, envs={}) -> Tuple[int, Optional[str], Optional[str]]:
+    def execute_wait(self, cmd: str, walltime: int, envs: Dict[str,str] ={}) -> Tuple[int, Optional[str], Optional[str]]:
         ''' Synchronously execute a commandline string on the shell.
 
         Args:

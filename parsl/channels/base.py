@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from typing import TYPE_CHECKING
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 class Channel(metaclass=ABCMeta):
     """ Define the interface to all channels. Channels are usually called via the execute_wait function.
@@ -27,12 +27,12 @@ class Channel(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def execute_wait(self, cmd, walltime, envs={}) -> Tuple[int, Optional[str], Optional[str]]:
+    def execute_wait(self, cmd: str, walltime: int, envs: Dict[str,str] ={}) -> Tuple[int, Optional[str], Optional[str]]:
         ''' Executes the cmd, with a defined walltime.
 
         Args:
             - cmd (string): Command string to execute over the channel
-            - walltime (int) : Timeout in seconds
+            - walltime (int) : Timeout in seconds - TODO: or string? check this
 
         KWargs:
             - envs (dict) : Environment variables to push to the remote side
