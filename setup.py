@@ -56,5 +56,8 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     keywords=['Workflows', 'Scientific computing'],
-    entry_points={'console_scripts': ['parsl-visualize=parsl.monitoring.web_app.index:cli_run']}
+    entry_points={'console_scripts':
+      ['parsl-visualize=parsl.monitoring.web_app.index:cli_run',
+       'parsl-globus-auth=parsl.data_provider.globus:cli_run'
+      ]}
 )
