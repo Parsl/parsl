@@ -77,7 +77,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  parallelism=1,
                  launcher=AprunLauncher(),
                  walltime="00:20:00",
-                 cmd_timeout=60):
+                 cmd_timeout=120):
         label = 'torque'
         super().__init__(label,
                          channel,
