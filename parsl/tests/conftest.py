@@ -132,7 +132,11 @@ def load_dfk(config):
             module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
             parsl.clear()
             dfk = parsl.load(module.config)
+
             yield
+
+            if(parsl.dfk() != dfk):
+                raise ValueError("DFK was changed during test run which means the test might not have used to pytest-specified DFK: parsl.dfk={}  local dfk={}".format(parsl.dfk(), dfk))
             dfk.cleanup()
         except KeyError:
             pytest.skip('options in user_opts.py not configured for {}'.format(config))
