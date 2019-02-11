@@ -6,7 +6,6 @@ from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
 
-
 @App('python')
 def import_echo(x, string, sleep=0, stdout=None):
     import time

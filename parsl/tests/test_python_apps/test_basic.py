@@ -59,6 +59,7 @@ def test_imports(n=2):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
+
 def test_parallel_for(n=2):
     d = {}
     start = time.time()

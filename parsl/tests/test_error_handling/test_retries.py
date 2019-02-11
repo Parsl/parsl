@@ -10,6 +10,7 @@ from parsl.tests.configs.local_threads import config
 # can't do this if something else is preparing the config.
 # config.retries = 2
 
+
 @App('python')
 def sleep_then_fail(inputs=[], sleep_dur=0.1):
     import time
@@ -37,6 +38,7 @@ def succeed_on_retry(filename, success_on=2, stdout="succeed.out"):
         exit 5
     fi
     """
+
 
 @App('python')
 def sleep(sleep_dur=0.1):
