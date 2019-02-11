@@ -30,7 +30,7 @@ class File(str):
 
     """
 
-    def __init__(self, url, dman=None, cache=False, caching_dir="."):
+    def __init__(self, url, dman=None, cache=False):
         """Construct a File object from a url string.
 
         Args:
@@ -53,7 +53,6 @@ class File(str):
             self.dman.add_file(self)
 
         self.cache = cache
-        self.caching_dir = caching_dir
 
     def __str__(self):
         return self.filepath
