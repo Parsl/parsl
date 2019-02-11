@@ -52,7 +52,8 @@ def WorkQueueThread(tasks={},
             function_data_loc_remote = function_data_loc.split("/")[-1]
            
             # TODO Make this general 
-            full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl//executors/workqueue/workqueue_worker.py"
+            full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
+            
             script_name = full_script_name.split("/")[-1]
             command_str = launch_cmd.format(input_file = function_data_loc,
                                             output_file = function_result_loc)
@@ -150,6 +151,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.master_thread = threading.Thread(target = WorkQueueThread,
                                     name = "master_thread", 
                                     kwargs = thread_kwargs)
+        self.master_thread.daemon = True
         self.master_thread.start()
  
     def submit(self, func, *args, **kwargs):
