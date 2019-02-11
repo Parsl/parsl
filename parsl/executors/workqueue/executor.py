@@ -21,7 +21,7 @@ def WorkQueueThread(tasks={},
                     launch_cmd = None,
                     data_dir="."):
     
-    print("spin up the thread")
+    #print("spin up the thread")
 
     wq_to_parsl = {}
 
@@ -57,17 +57,17 @@ def WorkQueueThread(tasks={},
             script_name = full_script_name.split("/")[-1]
             command_str = launch_cmd.format(input_file = function_data_loc,
                                             output_file = function_result_loc)
-            print(command_str)
+            #print(command_str)
             t = Task(command_str)
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache = True)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache = False)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache = False)
             wq_id = q.submit(t)
             wq_to_parsl[wq_id] = parsl_id
-            print(str(wq_id)+" submitted")
+            #print(str(wq_id)+" submitted")
 
         if continue_running == False:
-           print("exiting while loop")
+           #print("exiting while loop")
            break
 
         # Wait for Tasks
@@ -77,7 +77,7 @@ def WorkQueueThread(tasks={},
             if t == None:
                 task_found = False
             else:
-                print(t.id)
+                #print(t.id)
                 wq_tid = t.id
                 status = t.return_status
                 if status != 0:
@@ -100,7 +100,7 @@ def WorkQueueThread(tasks={},
     for wq_task in wq_to_parsl:
         q.cancel_by_taskid(wq_task)
 
-    print("returning")
+    #print("returning")
     return
 
 class WorkQueueExecutor(ParslExecutor):
@@ -129,7 +129,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.port = port
         self.task_counter = 0
         self.scaling_enabled = False
-        print("init for wq Executed")
+        #print("init for wq Executed")
 
         self.launch_cmd = ("python3 workqueue_worker.py {input_file} {output_file}")
 
@@ -215,7 +215,7 @@ class WorkQueueExecutor(ParslExecutor):
 
         This includes all attached resources such as workers and controllers.
         """
-        print("shutdown")
+        #print("shutdown")
         msg = {"task_id": -1,
                "data_loc": None,
                "result_loc": None}
