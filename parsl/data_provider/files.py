@@ -30,7 +30,7 @@ class File(str):
 
     """
 
-    def __init__(self, url, dman=None, cache=False):
+    def __init__(self, url, dman=None):
         """Construct a File object from a url string.
 
         Args:
@@ -51,8 +51,6 @@ class File(str):
         self.data_future = {}
         if self.scheme == 'globus':
             self.dman.add_file(self)
-
-        self.cache = cache
 
     def __str__(self):
         return self.filepath
