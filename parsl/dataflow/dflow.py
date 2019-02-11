@@ -6,9 +6,8 @@ import pathlib
 import pickle
 import random
 import threading
-import inspect
 import sys
-import multiprocessing
+# import multiprocessing
 import time
 
 from getpass import getuser
@@ -30,10 +29,10 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
-from parsl.monitoring.db_logger import get_db_logger
-from parsl.monitoring import app_monitor
-from parsl.monitoring import logging_server
-from parsl.monitoring.web_app import index
+from parsl.monitoring.monitoring import MessageType
+# from parsl.monitoring import app_monitor
+# from parsl.monitoring import logging_server
+# from parsl.monitoring.web_app import index
 
 
 logger = logging.getLogger(__name__)
@@ -90,37 +89,36 @@ class DataFlowKernel(object):
         # ES logging
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
-        self.monitoring_config = config.monitoring_config
+
+        self.monitoring = config.monitoring
+        if self.monitoring:
+            if self.monitoring.logdir is None:
+                self.monitoring.logdir = self.run_dir
+            self.monitoring.start()
+        self.monitoring_config = None
+        """
         if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database'\
                 and self.monitoring_config.eng_link is None:
             # uses the rundir as the default location.
             logger.info('Local monitoring database can be found inside the run_dir at: {}'.format(self.run_dir))
             self.monitoring_config.eng_link = "sqlite:///{}".format(os.path.join(os.path.abspath(self.run_dir), 'monitoring.db'))
-        if self.monitoring_config is None:
-            self.db_logger = get_db_logger()
-        else:
-            self.db_logger = get_db_logger(monitoring_config=self.monitoring_config)
-        self.workflow_name = None
-        if self.monitoring_config is not None and self.monitoring_config.workflow_name is not None:
-            self.workflow_name = self.monitoring_config.workflow_name
-        else:
-            for frame in inspect.stack():
-                fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py']
-                # Find first file name not considered a parsl file
-                if fname not in parsl_file_names:
-                    self.workflow_name = fname
-                    break
 
-        self.workflow_version = None
-        if self.monitoring_config is not None and self.monitoring_config.version is not None:
-            self.workflow_version = self.monitoring_config.version
+        if self.monitoring_config is None:
+            self.monitor = None
+        else:
+            #self.monitor_hub = parsl.monitoring.
+            self.monitor = parsl.monitoring.monitoring.UDPRadio("udp://{}:{}".format(self.monitoring_config))
+        """
+
         self.time_began = time.time()
         self.time_completed = None
         self.run_id = str(uuid4())
         self.dashboard = self.monitoring_config.dashboard_link if self.monitoring_config is not None else None
+
         # TODO: make configurable
         logger.info("Run id is: " + self.run_id)
+
+        """
         if self.dashboard is not None:
             logger.info("Dashboard is found at " + self.dashboard)
         # start tornado logging server
@@ -132,22 +130,28 @@ class DataFlowKernel(object):
         else:
             self.logging_server = None
             self.web_app = None
+        """
+
         workflow_info = {
-                'python_version': sys.version_info,
+                'python_version': "{}.{}.{}".format(sys.version_info.major,
+                                                    sys.version_info.minor,
+                                                    sys.version_info.micro),
                 'parsl_version': get_version(),
                 "time_began": str(self.time_began),
                 'time_completed': str(None),
                 'run_id': self.run_id,
-                'workflow_name': self.workflow_name,
-                'workflow_version': self.workflow_version,
+                # 'workflow_name': self.workflow_name,
+                # 'workflow_version': self.workflow_version,
                 'rundir': self.run_dir,
                 'tasks_completed_count': self.tasks_completed_count,
                 'tasks_failed_count': self.tasks_failed_count,
                 'user': getuser(),
                 'host': gethostname(),
         }
-        self.db_logger.info("DFK start", extra=workflow_info)
-        # ES logging end
+
+        if self.monitoring:
+            self.monitoring.send(MessageType.WORKFLOW_INFO,
+                                 workflow_info)
 
         checkpoints = self.load_checkpoints(config.checkpoint_files)
         self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
@@ -197,7 +201,11 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-        task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
+
+        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'checkpoint', 'fail_count',
+                           'fail_history', 'status', 'id', 'time_submitted', 'time_returned']
+
+        task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
@@ -268,28 +276,21 @@ class DataFlowKernel(object):
             if not self._config.lazy_errors:
                 logger.debug("Eager fail, skipping retry logic")
                 self.tasks[task_id]['status'] = States.failed
-                if self.monitoring_config is not None:
+                if self.monitoring:
                     task_log_info = self._create_task_log_info(task_id, 'eager')
-                    self.db_logger.info("Task Fail", extra=task_log_info)
+                    self.monitoring.send(MessageType.TASK_REG, task_log_info)
                 return
 
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
-                if self.monitoring_config is not None:
-                    task_log_info = self._create_task_log_info(task_id, 'lazy')
-                    self.db_logger.info("Task Retry", extra=task_log_info)
 
             else:
                 logger.info("Task {} failed after {} retry attempts".format(task_id,
                                                                             self._config.retries))
                 self.tasks[task_id]['status'] = States.failed
                 self.tasks_failed_count += 1
-
                 self.tasks[task_id]['time_returned'] = time.time()
-                if self.monitoring_config is not None:
-                    task_log_info = self._create_task_log_info(task_id, 'lazy')
-                    self.db_logger.info("Task Retry Failed", extra=task_log_info)
 
         else:
             self.tasks[task_id]['status'] = States.done
@@ -297,9 +298,10 @@ class DataFlowKernel(object):
 
             logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_returned'] = time.time()
-            if self.monitoring_config is not None:
-                task_log_info = self._create_task_log_info(task_id)
-                self.db_logger.info("Task Done", extra=task_log_info)
+
+        if self.monitoring:
+            task_log_info = self._create_task_log_info(task_id, 'lazy')
+            self.monitoring.send(MessageType.TASK_REG, task_log_info)
 
         # it might be that in the course of the update, we've gone back to being
         # pending - in which case, we should consider ourself for relaunch
@@ -399,9 +401,9 @@ class DataFlowKernel(object):
                     "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
                 self.tasks[task_id]['status'] = States.dep_fail
-                if self.monitoring_config is not None:
+                if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
-                    self.db_logger.info("Task Dep Fail", extra=task_log_info)
+                    self.monitoring.send(MessageType.TASK_REG, task_log_info)
 
                 try:
                     fu = Future()
@@ -458,14 +460,21 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
-        if self.monitoring_config is not None:
-            executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
+        if self.monitoring is not None:
+            # executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
+            executable = self.monitoring.monitor_wrapper(executable, task_id,
+                                                         self.monitoring.monitoring_hub_url,
+                                                         self.run_id,
+                                                         self.monitoring.resource_poll_period)
+            print("Wrapper initialized")
+
         with self.submitter_lock:
             exec_fu = executor.submit(executable, *args, **kwargs)
         self.tasks[task_id]['status'] = States.running
-        if self.monitoring_config is not None:
-            task_log_info = self._create_task_log_info(task_id)
-            self.db_logger.info("Task Launch", extra=task_log_info)
+        if self.monitoring is not None:
+            task_log_info = self._create_task_log_info(task_id, 'lazy')
+            self.monitoring.send(MessageType.TASK_REG, task_log_info)
+
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
@@ -826,10 +835,18 @@ class DataFlowKernel(object):
                 executor.shutdown()
 
         self.time_completed = time.time()
-        self.db_logger.info("DFK end", extra={'tasks_failed_count': self.tasks_failed_count, 'tasks_completed_count': self.tasks_completed_count,
-                                              "time_began": str(self.time_began),
-                                              'time_completed': str(self.time_completed),
-                                              'run_id': self.run_id, 'rundir': self.run_dir})
+
+        if self.monitoring:
+            self.monitoring.send(MessageType.WORKFLOW_INFO,
+                                 {'tasks_failed_count': self.tasks_failed_count,
+                                  'tasks_completed_count': self.tasks_completed_count,
+                                  "time_began": str(self.time_began),
+                                  'time_completed': str(self.time_completed),
+                                  'run_id': self.run_id, 'rundir': self.run_dir})
+
+            self.monitoring.close()
+
+        """
         if self.logging_server is not None:
             self.logging_server.terminate()
             self.logging_server.join()
@@ -837,7 +854,7 @@ class DataFlowKernel(object):
         if self.web_app is not None:
             self.web_app.terminate()
             self.web_app.join()
-
+        """
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
