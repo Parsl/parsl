@@ -57,6 +57,7 @@ class Config(RepresentationMixin):
                  run_dir='runinfo',
                  strategy='simple',
                  monitoring_config=None,
+                 monitoring=None,
                  usage_tracking=True):
         if executors is None:
             executors = [ThreadPoolExecutor()]
@@ -83,6 +84,7 @@ class Config(RepresentationMixin):
         self.strategy = strategy
         self.usage_tracking = usage_tracking
         self.monitoring_config = monitoring_config
+        self.monitoring = monitoring
 
     @property
     def executors(self):
