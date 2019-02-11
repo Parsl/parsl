@@ -11,7 +11,7 @@ parsl.load(config)
 @pytest.mark.local
 def test_explicit_staging():
     unsorted_file = File(
-        "globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt")
+        "globus://03d7d06a-cb6b-11e8-8c6a-0a1d4c5c824a/unsorted.txt")
 
     print("File plain ", unsorted_file)
     print("Filepath before stage_in ", unsorted_file.filepath)

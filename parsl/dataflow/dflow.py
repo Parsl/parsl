@@ -188,7 +188,6 @@ class DataFlowKernel(object):
             self.flowcontrol = FlowNoControl(self)
 
         self.task_count = 0
-        self.fut_task_lookup = {}
         self.tasks = {}
         self.submitter_lock = threading.Lock()
 
@@ -336,7 +335,7 @@ class DataFlowKernel(object):
             # result from a memo lookup and the task has reached a terminal state.
             self.memoizer.update_memo(task_id, self.tasks[task_id], future)
 
-            if self.checkpoint_mode is 'task_exit':
+            if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
         # Submit _*_stage_out tasks for output data futures that correspond with remote files
@@ -489,12 +488,23 @@ class DataFlowKernel(object):
 
         # Return if the task is _*_stage_in
         if executor == 'data_manager':
-            return
+            return args, kwargs
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             if isinstance(f, File) and f.is_remote():
                 inputs[idx] = f.stage_in(executor)
+
+        for kwarg, potential_f in kwargs.items():
+            if isinstance(potential_f, File) and potential_f.is_remote():
+                kwargs[kwarg] = potential_f.stage_in(executor)
+
+        newargs = list(args)
+        for idx, f in enumerate(newargs):
+            if isinstance(f, File) and f.is_remote():
+                newargs[idx] = f.stage_in(executor)
+
+        return tuple(newargs), kwargs
 
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
@@ -631,6 +641,9 @@ class DataFlowKernel(object):
             choices = executors
         executor = random.choice(choices)
 
+        # Transform remote input files to data futures
+        args, kwargs = self._add_input_deps(executor, args, kwargs)
+
         task_def = {'depends': None,
                     'executor': executor,
                     'func': func,
@@ -656,9 +669,6 @@ class DataFlowKernel(object):
                 "internal consistency error: Task {0} already exists in task list".format(task_id))
         else:
             self.tasks[task_id] = task_def
-
-        # Transform remote input files to data futures
-        self._add_input_deps(executor, args, kwargs)
 
         # Get the dep count and a list of dependencies for the task
         dep_cnt, depends = self._gather_all_deps(args, kwargs)

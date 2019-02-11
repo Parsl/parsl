@@ -20,9 +20,8 @@ Parsl workflows are developed completely independently from their execution envi
 .. contents:: Configuration How-To and Examples:
 
 .. note::
-   Please note that all configuration examples below import a ``user_opts`` file where all user specific
-   options are defined. To use the configuration, these options **must** be defined either by creating
-   a user_opts file, or explicitly edit the configuration with user specific information.
+   Please note that all configuration examples below require customization for your account, 
+   allocation, Python environment, etc. 
 
 How-to Configure
 ----------------
@@ -80,7 +79,7 @@ Here are a series of question to help formulate a suitable configuration:
 | Nodes=1             | <1s - minutes       |  0-100K            | * `ThreadPoolExecutor`     |
 |                     |                     |                    | * `HighThroughputExecutor` |
 +---------------------+---------------------+--------------------+----------------------------+
-| 1<=Nodes<=1000      | <1s - minutes       |  0-1M              | * `ThreadPoolExecutor`     |
+| Nodes<=1000         | <1s - minutes       |  0-1M              | * `ThreadPoolExecutor`     |
 |                     |                     |                    | * `IPyParallelExecutor`    |
 |                     |                     |                    | * `HighThroughputExecutor` |
 +---------------------+---------------------+--------------------+----------------------------+
@@ -95,8 +94,8 @@ Here are a series of question to help formulate a suitable configuration:
 +---------------------+--------------------------+---------------------------+
 | Provider            | Executor choice          | Suitable Launchers        |
 +=====================+==========================+===========================+
-| Any except systems  | Any                      | * `SingleNodeLauncher`    |
-| using Aprun         |                          | * `SimpleLauncher`        |
+| Systems that don't  | Any                      | * `SingleNodeLauncher`    |
+| use Aprun           |                          | * `SimpleLauncher`        |
 +---------------------+--------------------------+---------------------------+
 | Aprun based systems | Any                      | * `AprunLauncher`         |
 |                     |                          |                           |
@@ -157,6 +156,16 @@ Cori (NERSC)
 The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
 .. literalinclude:: ../../parsl/configs/cori_ipp_multinode.py
+
+
+Stampede2 (TACC)
+------------
+
+.. image:: https://www.tacc.utexas.edu/documents/1084364/1413880/stampede2-0717.jpg/
+
+The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
+
+.. literalinclude:: ../../parsl/configs/stampede2_htex_multinode.py
 
 
 Theta (ALCF)
@@ -237,7 +246,7 @@ Amazon Web Services
 
 .. note::
    Please note that **boto3** library is a requirement to use AWS with Parsl.
-   This can be installed via ``python3 -m pip install libsubmit[aws]``
+   This can be installed via ``python3 -m pip install parsl[aws]``
 
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
