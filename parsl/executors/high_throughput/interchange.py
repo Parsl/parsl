@@ -168,9 +168,7 @@ class Interchange(object):
         logger.info("Bound to ports {},{} for incoming worker connections".format(
             self.worker_task_port, self.worker_result_port))
 
-        self._task_queue = []
         self._ready_manager_queue = {}
-        self.max_task_queue_size = 10 ** 5
 
         self.heartbeat_threshold = heartbeat_threshold
 
