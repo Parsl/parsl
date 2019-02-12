@@ -246,6 +246,9 @@ class Hub(object):
                  hub_port=None,
                  hub_port_range=(55050, 56000),
 
+                 database=None,              # Zhuozhao, can you put in the right default here?
+                 visualization_server=None,  # Zhuozhao, can you put in the right default here?
+
                  client_address="127.0.0.1",
                  client_port=None,
 
@@ -292,6 +295,8 @@ class Hub(object):
 
         self.hub_port = hub_port
         self.hub_address = hub_address
+        self.database = database
+        self.visualization_server = visualization_server
 
         self.loop_freq = 10.0  # milliseconds
 
