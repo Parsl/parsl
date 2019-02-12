@@ -5,8 +5,6 @@ from parsl.app.app import App
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
 
 
 @App('bash')
@@ -80,6 +78,8 @@ def test_increment(depth=5):
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    parsl.load(config)
 
     test_files()
     test_increment()
