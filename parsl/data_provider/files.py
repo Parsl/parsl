@@ -15,7 +15,7 @@ from parsl.data_provider.data_manager import DataManager
 logger = logging.getLogger(__name__)
 
 
-class File(str):
+class File(object):
     """The Parsl File Class.
 
     This class captures various attributes of a file, and relies on client-side and
