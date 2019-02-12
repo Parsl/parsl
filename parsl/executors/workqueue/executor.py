@@ -15,18 +15,18 @@ from work_queue import *
 
 def WorkQueueThread(tasks={},
                     task_queue=deque,
-                    queue_lock = threading.Lock(),
-                    tasks_lock = threading.Lock(), 
-                    port = 50000,
-                    launch_cmd = None,
+                    queue_lock=threading.Lock(),
+                    tasks_lock=threading.Lock(),
+                    port=50000,
+                    launch_cmd=None,
                     data_dir="."):
-    
-    #print("spin up the thread")
+
+    # print("spin up the thread")
 
     wq_to_parsl = {}
 
     q = WorkQueue(port)
-    
+
     continue_running = True
     while(continue_running):
         # Monitor the Task Queue
@@ -34,12 +34,12 @@ def WorkQueueThread(tasks={},
         place_holder_queue = []
 
         queue_lock.acquire()
-        queue_len = len(task_queue) 
+        queue_len = len(task_queue)
         while queue_len > 0:
             place_holder_queue.append(task_queue.pop())
             queue_len -= 1
         queue_lock.release()
-            
+
         # Submit Tasks
         for item in place_holder_queue:
             parsl_id = item["task_id"]
@@ -50,34 +50,34 @@ def WorkQueueThread(tasks={},
             function_result_loc = item["result_loc"]
             function_result_loc_remote = function_result_loc.split("/")[-1]
             function_data_loc_remote = function_data_loc.split("/")[-1]
-           
-            # TODO Make this general 
+
+            # TODO Make this general
             full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
-            
+
             script_name = full_script_name.split("/")[-1]
-            command_str = launch_cmd.format(input_file = function_data_loc,
-                                            output_file = function_result_loc)
-            #print(command_str)
+            command_str = launch_cmd.format(input_file=function_data_loc,
+                                            output_file=function_result_loc)
+            # print(command_str)
             t = Task(command_str)
-            t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache = True)
-            t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache = False)
-            t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache = False)
+            t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
+            t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
+            t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             wq_id = q.submit(t)
             wq_to_parsl[wq_id] = parsl_id
-            #print(str(wq_id)+" submitted")
+            # print(str(wq_id)+" submitted")
 
-        if continue_running == False:
-           #print("exiting while loop")
-           break
+        if continue_running is False:
+            # print("exiting while loop")
+            break
 
         # Wait for Tasks
         task_found = True
         while task_found:
             t = q.wait(5)
-            if t == None:
+            if t is None:
                 task_found = False
             else:
-                #print(t.id)
+                # print(t.id)
                 wq_tid = t.id
                 status = t.return_status
                 if status != 0:
@@ -85,7 +85,7 @@ def WorkQueueThread(tasks={},
                     del wq_to_parsl[wq_tid]
                     continue
                 parsl_tid = wq_to_parsl[wq_tid]
-                result_loc = os.path.join(data_dir, "task_"+str(parsl_tid)+"_function_result")
+                result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
                 f = open(result_loc, "rb")
                 result = pickle.load(f)
                 f.close()
@@ -93,15 +93,16 @@ def WorkQueueThread(tasks={},
                 tasks_lock.acquire()
                 future = tasks[parsl_tid]
                 tasks_lock.release()
-               
-                future.set_result(result) 
+
+                future.set_result(result)
                 del wq_to_parsl[wq_tid]
 
     for wq_task in wq_to_parsl:
         q.cancel_by_taskid(wq_task)
 
-    #print("returning")
+    # print("returning")
     return
+
 
 class WorkQueueExecutor(ParslExecutor):
     """Define the strict interface for all Executor classes.
@@ -118,10 +119,10 @@ class WorkQueueExecutor(ParslExecutor):
     """
 
     def __init__(self,
-              label="wq",
-              working_dir=None,
-              managed = True,
-              port=WORK_QUEUE_DEFAULT_PORT):
+                 label="wq",
+                 working_dir=None,
+                 managed=True,
+                 port=WORK_QUEUE_DEFAULT_PORT):
         self.label = label
         self.managed = managed
         self.task_queue = deque()
@@ -129,7 +130,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.port = port
         self.task_counter = 0
         self.scaling_enabled = False
-        #print("init for wq Executed")
+        # print("init for wq Executed")
 
         self.launch_cmd = ("python3 workqueue_worker.py {input_file} {output_file}")
 
@@ -139,7 +140,7 @@ class WorkQueueExecutor(ParslExecutor):
 
         self.function_data_dir = os.path.join(self.run_dir, "function_data")
 
-        os.mkdir(self.function_data_dir) 
+        os.mkdir(self.function_data_dir)
 
         thread_kwargs = {"port": self.port,
                          "tasks": self.tasks,
@@ -147,13 +148,13 @@ class WorkQueueExecutor(ParslExecutor):
                          "queue_lock": self.queue_lock,
                          "tasks_lock": self.tasks_lock,
                          "launch_cmd": self.launch_cmd,
-                         "data_dir": self.function_data_dir} 
-        self.master_thread = threading.Thread(target = WorkQueueThread,
-                                    name = "master_thread", 
-                                    kwargs = thread_kwargs)
+                         "data_dir": self.function_data_dir}
+        self.master_thread = threading.Thread(target=WorkQueueThread,
+                                              name="master_thread",
+                                              kwargs=thread_kwargs)
         self.master_thread.daemon = True
         self.master_thread.start()
- 
+
     def submit(self, func, *args, **kwargs):
         """Submit.
 
@@ -171,12 +172,12 @@ class WorkQueueExecutor(ParslExecutor):
 
         # Pickle the result into object to pass into message buffer
         # TODO Try/Except Block
-        function_data_file = os.path.join(self.function_data_dir, "task_"+str(task_id) + "_function_data")
-        function_result_file = os.path.join(self.function_data_dir, "task_"+str(task_id) + "_function_result")
+        function_data_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_data")
+        function_result_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_result")
         f = open(function_data_file, "wb")
         fn_buf = pack_apply_message(func, args, kwargs,
-                           buffer_threshold=1024 * 1024,
-                           item_threshold=1024)
+                                    buffer_threshold=1024 * 1024,
+                                    item_threshold=1024)
         pickle.dump(fn_buf, f)
         f.close
 
@@ -215,7 +216,7 @@ class WorkQueueExecutor(ParslExecutor):
 
         This includes all attached resources such as workers and controllers.
         """
-        #print("shutdown")
+        # print("shutdown")
         msg = {"task_id": -1,
                "data_loc": None,
                "result_loc": None}

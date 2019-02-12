@@ -1,8 +1,12 @@
 import sys
 import pickle
 from ipyparallel.serialize import unpack_apply_message
+import logging
 
 if __name__ == "__main__":
+    name = "parsl"
+    logger = logging.getLogger(name)
+
     input_function_file = sys.argv[1]
     output_result_file = sys.argv[2]
 
@@ -12,10 +16,10 @@ if __name__ == "__main__":
 
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
-    f, args, kwargs = unpack_apply_message(function_tuple, user_ns, copy=False)   
+    f, args, kwargs = unpack_apply_message(function_tuple, user_ns, copy=False)
 
     prefix = "parsl_"
-    fname = prefix + "f" 
+    fname = prefix + "f"
     argname = prefix + "args"
     kwargname = prefix + "kwargs"
     resultname = prefix + "result"
