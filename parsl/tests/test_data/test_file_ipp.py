@@ -82,3 +82,4 @@ if __name__ == '__main__':
 
     test_files()
     test_increment()
+    test_regression_200()
