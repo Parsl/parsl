@@ -30,6 +30,40 @@ class File(str):
     *** BENC ^ I'd like there to be no DataManager association...
 
 
+    TODO:
+    This was a str subclass, but I don't see that it needs to be - I should
+    understand what, if anything, was coming from that inheritence? Other than
+    matching `isinstance str` tests which I think were then immediatly countermanded
+    by `isinstance File`
+
+    It does seem to break some tests changing the superclass, though...
+
+    Where it is needed is when we pass a File into open(), open wants a string
+    filename (or something like it) which we aren't providing. So open() fails as
+    having been passed an invalid filename.
+
+    That's slightly frustrating because this will change the str() representation
+    as we move between platforms, so it won't necessarily commute with other string
+    operations.
+
+    Maybe have a thing about the ergonomics of what datafuture returns and what
+    a File has as methods.
+
+    Do I want to require str() on all future results, to fix this? it seems awkward
+    even if it is more type correct.
+
+
+    This class specifically supports PEP-0519 which provides an __fspath__
+    method to support this kind of file-system-path-like object without
+    needing a str subclass. But that is only supported with Python 3.6
+    or later.
+
+    That's maybe an argument for tolerating string now - keeping semantics
+    such that it should behave as a `str` subclass as if it was not a str
+    subclass but has a suitable __fspath__ ? ... and document that properly
+    as a desired long term goal if <3.6 support is dropped.
+
+
     """
 
     def __init__(self, url, dman=None):
@@ -83,6 +117,7 @@ class File(str):
         """
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
             # The path returned here has to match exactly with where the
+            # TODO: ^ .... ?
             if hasattr(self, 'local_path'):
                 return self.local_path
             else:

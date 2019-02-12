@@ -43,7 +43,9 @@ def test_regression_200():
              outputs=[File("test_output.txt")])
     fu.result()
 
-    with open(fu.outputs[0].result(), 'r') as f:
+    fi = fu.outputs[0].result()
+    print("type of fi: {}".format(type(fi)))
+    with open(str(fi), 'r') as f:
         data = f.readlines()
         assert "Hello World" in data, "Missed data"
 
