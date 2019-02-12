@@ -13,8 +13,14 @@ from parsl.utils import RepresentationMixin
 
 
 class MessageType(Enum):
-    TASK_REG = 0
-    TASK_INFO = 1
+
+    # Reports any task related info such as launch, completion etc.
+    TASK_INFO = 0
+
+    # Reports of resource utilization on a per-task basis
+    RESOURCE_INFO = 1
+
+    # Top level workflow information
     WORKFLOW_INFO = 2
 
 
@@ -83,6 +89,21 @@ class UDPRadio(object):
         self.sock.settimeout(self.sock_timeout)
 
     def send(self, message_type, task_id, message):
+        """ Sends a message to the UDP receiver
+
+        Parameter
+        ---------
+
+        message_type: monitoring.MessageType (enum)
+            In this case message type is RESOURCE_INFO most often
+        task_id: int
+            Task identifier of the task for which resource monitoring is being reported
+        message: object
+            Arbitrary pickle-able object that is to be sent
+
+        Returns:
+            # bytes sent
+        """
         x = 0
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
@@ -114,12 +135,11 @@ class MonitoringHub(RepresentationMixin):
                  client_port_range=(55000, 56000),
 
                  workflow_name=None,
-                 workflow_version=None,
-
                  logging_endpoint=None,
                  logdir=None,
                  logging_level=logging.INFO,
-                 resource_poll_period=15):  # in seconds
+                 resource_monitoring_enabled=True,
+                 resource_monitoring_interval=30):  # in seconds
         """
         Update docs here.
         """
@@ -135,8 +155,9 @@ class MonitoringHub(RepresentationMixin):
         self.logging_level = logging_level
 
         self.workflow_name = workflow_name
-        self.workflow_version = workflow_version
-        self.resource_poll_period = resource_poll_period
+
+        self.resource_monitoring_enabled = resource_monitoring_enabled
+        self.resource_monitoring_interval = resource_monitoring_interval
 
         self._dfk_channel = None
 

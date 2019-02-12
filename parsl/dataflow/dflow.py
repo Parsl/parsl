@@ -278,7 +278,7 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['status'] = States.failed
                 if self.monitoring:
                     task_log_info = self._create_task_log_info(task_id, 'eager')
-                    self.monitoring.send(MessageType.TASK_REG, task_log_info)
+                    self.monitoring.send(MessageType.TASK_INFO, task_log_info)
                 return
 
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
@@ -301,7 +301,7 @@ class DataFlowKernel(object):
 
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_id, 'lazy')
-            self.monitoring.send(MessageType.TASK_REG, task_log_info)
+            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
         # it might be that in the course of the update, we've gone back to being
         # pending - in which case, we should consider ourself for relaunch
@@ -403,7 +403,7 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['status'] = States.dep_fail
                 if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
-                    self.monitoring.send(MessageType.TASK_REG, task_log_info)
+                    self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
                 try:
                     fu = Future()
@@ -460,12 +460,12 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
-        if self.monitoring is not None:
+        if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             # executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
             executable = self.monitoring.monitor_wrapper(executable, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
-                                                         self.monitoring.resource_poll_period)
+                                                         self.monitoring.resource_monitoring_interval)
             print("Wrapper initialized")
 
         with self.submitter_lock:
@@ -473,7 +473,7 @@ class DataFlowKernel(object):
         self.tasks[task_id]['status'] = States.running
         if self.monitoring is not None:
             task_log_info = self._create_task_log_info(task_id, 'lazy')
-            self.monitoring.send(MessageType.TASK_REG, task_log_info)
+            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
