@@ -3,7 +3,6 @@ from parsl.app.app import App
 from parsl.tests.configs.local_ipp import config
 
 
-
 @App("bash")
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'

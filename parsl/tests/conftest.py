@@ -133,7 +133,7 @@ def load_dfk(config):
             module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
 
             if DataFlowKernelLoader._dfk is not None:
-              raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
+                raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
 
             parsl.clear()
             dfk = parsl.load(module.config)
@@ -141,7 +141,7 @@ def load_dfk(config):
             yield
 
             if(parsl.dfk() != dfk):
-                raise ValueError("DFK was changed during test run which means the test might not have used to pytest-specified DFK: parsl.dfk={}  local dfk={}".format(parsl.dfk(), dfk))
+                raise ValueError("DFK changed unexpectedly during test")
             dfk.cleanup()
             parsl.clear()
         except KeyError:

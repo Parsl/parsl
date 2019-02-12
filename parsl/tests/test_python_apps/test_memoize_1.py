@@ -8,7 +8,6 @@ from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
 
-
 @App('python', cache=True)
 def random_uuid(x, cache=True):
     import uuid

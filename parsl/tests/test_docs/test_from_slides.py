@@ -1,8 +1,4 @@
-import parsl
-
 from parsl.app.app import App
-from parsl.tests.configs.local_threads import config
-
 
 
 @App('bash')

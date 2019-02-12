@@ -8,7 +8,6 @@ from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
-
 @App('bash')
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
