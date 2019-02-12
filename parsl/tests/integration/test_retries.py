@@ -1,8 +1,6 @@
 import argparse
 import os
 
-import pytest
-
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
@@ -10,6 +8,7 @@ from parsl.tests.configs.local_threads import config
 config.retries = 2
 parsl.clear()
 parsl.load(config)
+
 
 @App('python')
 def sleep_then_fail(inputs=[], sleep_dur=0.1):
