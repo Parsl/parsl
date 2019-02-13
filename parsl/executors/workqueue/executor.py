@@ -19,13 +19,31 @@ def WorkQueueThread(tasks={},
                     tasks_lock=threading.Lock(),
                     port=50000,
                     launch_cmd=None,
-                    data_dir="."):
+                    data_dir=".",
+                    log_dir=None,
+                    full=False):
 
     # print("spin up the thread")
 
     wq_to_parsl = {}
+    if not log_dir is None:
+        wq_debug_log = os.path.join(log_dir, "debug")      
+        cctools_debug_flags_set("all")
+        cctools_debug_config_file(wq_debug_log)
 
     q = WorkQueue(port)
+
+    # Only write Logs when the log_dir is specified, which is most likely always will be
+    if not log_dir is None:
+        wq_master_log = os.path.join(log_dir, "master_log")
+        wq_trans_log = os.path.join(log_dir, "transaction_log")
+        if not full:
+            wq_resource_log = os.path.join(log_dir, "resource_logs")
+            q.enable_monitoring_full(dirname=wq_resource_log)
+ 
+ 
+        q.specify_log(wq_master_log)
+        q.specify_transactions_log(wq_trans_log)
 
     continue_running = True
     while(continue_running):
@@ -80,6 +98,7 @@ def WorkQueueThread(tasks={},
                 # print(t.id)
                 wq_tid = t.id
                 status = t.return_status
+                # TODO output sdtout and stderr to files as well as submit command
                 if status != 0:
                     # Should probably do something smarter for this later
                     del wq_to_parsl[wq_tid]
@@ -139,8 +158,11 @@ class WorkQueueExecutor(ParslExecutor):
         self.tasks_lock = threading.Lock()
 
         self.function_data_dir = os.path.join(self.run_dir, "function_data")
+        self.wq_log_dir = os.path.join(self.run_dir, self.label)
+
 
         os.mkdir(self.function_data_dir)
+        os.mkdir(self.wq_log_dir)
 
         thread_kwargs = {"port": self.port,
                          "tasks": self.tasks,
@@ -148,7 +170,8 @@ class WorkQueueExecutor(ParslExecutor):
                          "queue_lock": self.queue_lock,
                          "tasks_lock": self.tasks_lock,
                          "launch_cmd": self.launch_cmd,
-                         "data_dir": self.function_data_dir}
+                         "data_dir": self.function_data_dir,
+                         "log_dir": self.wq_log_dir}
         self.master_thread = threading.Thread(target=WorkQueueThread,
                                               name="master_thread",
                                               kwargs=thread_kwargs)
