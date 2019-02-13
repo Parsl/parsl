@@ -4,8 +4,8 @@ import os
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
-config.retries = 2
 
+config.retries = 2
 parsl.clear()
 parsl.load(config)
 

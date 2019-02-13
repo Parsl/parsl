@@ -69,7 +69,7 @@ class Controller(RepresentationMixin):
         if self.mode == "manual":
             return
 
-        if self.ipython_dir is not '~/.ipython':
+        if self.ipython_dir != '~/.ipython':
             self.ipython_dir = os.path.abspath(os.path.expanduser(self.ipython_dir))
 
         if self.log:
@@ -82,9 +82,9 @@ class Controller(RepresentationMixin):
         try:
             opts = [
                 'ipcontroller',
-                '' if self.ipython_dir is '~/.ipython' else '--ipython-dir={}'.format(self.ipython_dir),
+                '' if self.ipython_dir == '~/.ipython' else '--ipython-dir={}'.format(self.ipython_dir),
                 self.interfaces if self.interfaces is not None else '--ip=*',
-                '' if self.profile is 'default' else '--profile={0}'.format(self.profile),
+                '' if self.profile == 'default' else '--profile={0}'.format(self.profile),
                 '--reuse' if self.reuse else '',
                 '--location={}'.format(self.public_ip) if self.public_ip else '',
                 '--port={}'.format(self.port) if self.port is not None else ''

@@ -401,7 +401,7 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
 
     global logger
     logger = logging.getLogger(name)

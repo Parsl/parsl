@@ -32,7 +32,7 @@ class LocalChannel(Channel, RepresentationMixin):
         self._envs.update(envs)
         self.script_dir = script_dir
 
-    def execute_wait(self, cmd, walltime, envs={}):
+    def execute_wait(self, cmd, walltime=None, envs={}):
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
