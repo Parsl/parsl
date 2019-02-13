@@ -49,10 +49,10 @@ class Database(object):
     def execute(self, query):
         self.con.execute(query)
 
-    def update(self, table=None, columns=[], where_condition=['run_id'], msg=None):
+    def update(self, table=None, columns=[], whereclause=['run_id'], msg=None):
         table = self.meta.tables[table]
         query = table.update()
-        for w in where_condition:
+        for w in whereclause:
             query = query.where(table.c[w] == msg[w])
         query = query.values(**{k: msg[k] for k in columns})
         self.execute(query)
@@ -176,18 +176,18 @@ class DatabaseManager(object):
                         self.logger.debug("Updating workflow end info to WORKFLOW table")
                         self._update(table=WORKFLOW,
                                      columns=['tasks_failed_count', 'tasks_completed_count', 'time_completed'],
-                                     where_condition=['run_id'],
+                                     whereclause=['run_id'],
                                      msg=msg)
                 elif msg_type.value == MessageType.TASK_INFO.value:
                     self.logger.debug("Updating and inserting TASK_INFO to all tables")
                     self._update(table=WORKFLOW,
                                  columns=['tasks_failed_count', 'tasks_completed_count'],
-                                 where_condition=['run_id'],
+                                 whereclause=['run_id'],
                                  msg=msg)
                     if msg['task_time_returned'] is not None:
                         self._update(table=TASK,
                                      columns=['task_time_returned'],
-                                     where_condition=['run_id', 'task_id'],
+                                     whereclause=['run_id', 'task_id'],
                                      msg=msg)
                     else:
                         self._insert(TASK, msg)
@@ -216,8 +216,8 @@ class DatabaseManager(object):
                 elif queue_tag == 'resource':
                     self.pending_resource_queue.put(x)
 
-    def _update(self, table, columns, where_condition, msg):
-        self.db.update(table=table, columns=columns, where_condition=where_condition, msg=msg)
+    def _update(self, table, columns, whereclause, msg):
+        self.db.update(table=table, columns=columns, whereclause=whereclause, msg=msg)
 
     def _insert(self, table, msg):
         self.db.insert(table=table, msg=msg)

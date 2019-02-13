@@ -370,7 +370,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
             d["task_id"] = task_id
-            d['timestamp'] = time.time()
+            d['timestamp'] = str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())))
             children = pm.children(recursive=True)
             d["psutil_cpu_count"] = psutil.cpu_count()
             d['psutil_process_memory_virtual'] = pm.memory_info().vms
