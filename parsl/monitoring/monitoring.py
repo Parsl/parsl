@@ -4,24 +4,13 @@ import pickle
 import logging
 import time
 import zmq
-from enum import Enum
 
 import queue
 from multiprocessing import Process, Queue
 
 from parsl.utils import RepresentationMixin
-
-
-class MessageType(Enum):
-
-    # Reports any task related info such as launch, completion etc.
-    TASK_INFO = 0
-
-    # Reports of resource utilization on a per-task basis
-    RESOURCE_INFO = 1
-
-    # Top level workflow information
-    WORKFLOW_INFO = 2
+from parsl.monitoring.db_manager import dbm_starter
+from parsl.monitoring.db_manager import MessageType
 
 
 def start_file_logger(filename, name='monitoring', level=logging.DEBUG, format_string=None):
@@ -135,7 +124,8 @@ class MonitoringHub(RepresentationMixin):
                  client_port_range=(55000, 56000),
 
                  workflow_name=None,
-                 logging_endpoint=None,
+                 workflow_version=None,
+                 logging_endpoint='sqlite:///monitoring.db',
                  logdir=None,
                  logging_level=logging.INFO,
                  resource_monitoring_enabled=True,
@@ -155,6 +145,7 @@ class MonitoringHub(RepresentationMixin):
         self.logging_level = logging_level
 
         self.workflow_name = workflow_name
+        self.workflow_version = workflow_version
 
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
@@ -185,10 +176,12 @@ class MonitoringHub(RepresentationMixin):
                                                               min_port=self.client_port_range[0],
                                                               max_port=self.client_port_range[1])
 
-        print("Requesting logging level :{}".format(self.logging_level))
         comm_q = Queue(maxsize=10)
+        priority_msgs = Queue()
+        resource_msgs = Queue()
+
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q,),
+                                  args=(comm_q, priority_msgs, resource_msgs, ),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
@@ -199,6 +192,16 @@ class MonitoringHub(RepresentationMixin):
                                   },
         )
         self.queue_proc.start()
+
+        self.dbm_proc = Process(target=dbm_starter,
+                                args=(priority_msgs, resource_msgs,),
+                                kwargs={"logdir": self.logdir,
+                                        "logging_level": self.logging_level,
+                                        "db_url": self.logging_endpoint,
+                                  },
+        )
+        self.dbm_proc.start()
+
         try:
             udp_dish_port = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -218,6 +221,7 @@ class MonitoringHub(RepresentationMixin):
         if self._dfk_channel:
             self._dfk_channel.close()
             self.queue_proc.terminate()
+            self.dbm_proc.terminate()
 
     def close(self):
         return self.__del__()
@@ -273,7 +277,7 @@ class Hub(object):
         workflow_name : str, optional
             Name to record as the workflow base name, defaults to the name of the parsl script file if left as None.
 
-        version : str, optional
+        workflow_version : str, optional
             Optional workflow identification to distinguish between workflows with the same name, not used internally only for display to user.
 
         resource_loop_sleep_duration : float, optional
@@ -289,7 +293,6 @@ class Hub(object):
                                         level=logging_level)
         self.logger.debug("Hub starting")
 
-        print("Logger : {}".format(self.logger))
         if not hub_port:
             self.logger.critical("At this point the hub port must be set")
 
@@ -320,16 +323,13 @@ class Hub(object):
         self.dfk_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
         self.dfk_channel.connect("tcp://{}:{}".format(client_address, client_port))
 
-        self.priority_msgs = Queue()
-        self.resource_msgs = Queue()
-
-    def start(self):
+    def start(self, priority_msgs, resource_msgs):
 
         while True:
             try:
-                data, addr = self.sock.recvfrom(1024)
+                data, addr = self.sock.recvfrom(2048)
                 msg = pickle.loads(data)
-                self.resource_msgs.put((data, addr))
+                resource_msgs.put((msg, addr))
                 self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
             except socket.timeout:
                 pass
@@ -337,15 +337,15 @@ class Hub(object):
             try:
                 msg = self.dfk_channel.recv_pyobj()
                 self.logger.debug("Got ZMQ Message: {}".format(msg))
-                self.priority_msgs.put((msg, 0))
+                priority_msgs.put((msg, 0))
             except zmq.Again:
                 pass
 
 
-def hub_starter(comm_q, *args, **kwargs):
+def hub_starter(comm_q, priority_msgs, resource_msgs, *args, **kwargs):
     hub = Hub(*args, **kwargs)
     comm_q.put(hub.hub_port)
-    hub.start()
+    hub.start(priority_msgs, resource_msgs)
 
 
 def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
@@ -370,6 +370,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
             d["task_id"] = task_id
+            d['timestamp'] = time.time()
             children = pm.children(recursive=True)
             d["psutil_cpu_count"] = psutil.cpu_count()
             d['psutil_process_memory_virtual'] = pm.memory_info().vms

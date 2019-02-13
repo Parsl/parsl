@@ -5,6 +5,7 @@ import os
 import pathlib
 import pickle
 import random
+import inspect
 import threading
 import sys
 # import multiprocessing
@@ -132,6 +133,22 @@ class DataFlowKernel(object):
             self.web_app = None
         """
 
+        self.workflow_name = None
+        if self.monitoring is not None and self.monitoring.workflow_name is not None:
+            self.workflow_name = self.monitoring.workflow_name
+        else:
+            for frame in inspect.stack():
+                fname = os.path.basename(str(frame.filename))
+                parsl_file_names = ['dflow.py']
+                # Find first file name not considered a parsl file
+                if fname not in parsl_file_names:
+                    self.workflow_name = fname
+                    break
+
+        self.workflow_version = str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.time_began)))
+        if self.monitoring is not None and self.monitoring.workflow_version is not None:
+            self.workflow_version = self.monitoring.workflow_version
+
         workflow_info = {
                 'python_version': "{}.{}.{}".format(sys.version_info.major,
                                                     sys.version_info.minor,
@@ -140,8 +157,8 @@ class DataFlowKernel(object):
                 "time_began": str(self.time_began),
                 'time_completed': str(None),
                 'run_id': self.run_id,
-                # 'workflow_name': self.workflow_name,
-                # 'workflow_version': self.workflow_version,
+                'workflow_name': self.workflow_name,
+                'workflow_version': self.workflow_version,
                 'rundir': self.run_dir,
                 'tasks_completed_count': self.tasks_completed_count,
                 'tasks_failed_count': self.tasks_failed_count,
@@ -203,10 +220,11 @@ class DataFlowKernel(object):
         """
 
         info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'checkpoint', 'fail_count',
-                           'fail_history', 'status', 'id', 'time_submitted', 'time_returned']
+                           'fail_history', 'status', 'id', 'time_submitted', 'time_returned', 'executor']
 
         task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
+        task_log_info['timestamp'] = time.time()
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
         task_log_info['tasks_completed_count'] = self.tasks_completed_count
@@ -466,7 +484,6 @@ class DataFlowKernel(object):
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
                                                          self.monitoring.resource_monitoring_interval)
-            print("Wrapper initialized")
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, *args, **kwargs)
