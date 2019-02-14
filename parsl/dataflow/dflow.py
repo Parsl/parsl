@@ -339,8 +339,13 @@ class DataFlowKernel(object):
                 self.checkpoint(tasks=[task_id])
 
         # Submit _*_stage_out tasks for output data futures that correspond with remote files
-        if (self.tasks[task_id]['app_fu'] and
-            self.tasks[task_id]['app_fu'].done() and
+
+        if (self.tasks[task_id]['app_fu'] and  # should be statically true...
+            self.tasks[task_id]['app_fu'].done() and  # should be true by call pattern for this callback
+                                                      # so these two ^ should become consistency assertions
+                                                      # /contract pre-conditions
+                                                      # that could go at the top of the call even...
+
             self.tasks[task_id]['app_fu'].exception() is None and
             self.tasks[task_id]['executor'] != 'data_manager' and
             # TODO: do the below tests for stage_in names need to be
@@ -351,6 +356,8 @@ class DataFlowKernel(object):
             self.tasks[task_id]['func_name'] != '_http_stage_in'):
             for dfu in self.tasks[task_id]['app_fu'].outputs:
                 f = dfu.file_obj
+                if not isinstance(f, File):
+                    raise ValueError("Output file is not a File object")
                 if isinstance(f, File) and f.is_remote():
                     self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
                 # TODO: what are the non-file cases for stuff being in
