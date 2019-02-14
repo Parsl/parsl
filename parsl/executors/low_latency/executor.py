@@ -124,8 +124,9 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                                   kwargs={"client_ports": (self.outgoing_q.port,
                                                            self.incoming_q.port),
                                           "worker_port": self.worker_port,
-                                          "worker_port_range": self.worker_port_range
-                                          # TODO: logdir and logging level
+                                          "worker_port_range": self.worker_port_range,
+                                          "logdir": "{}/{}".format(self.run_dir, self.label),
+                                          "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                           })
         self.queue_proc.start()
 

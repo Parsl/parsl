@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import logging
 import zmq
 # import time
@@ -12,11 +13,20 @@ class Interchange(object):
                  client_address="127.0.0.1",
                  client_ports=(50055, 50056),
                  worker_port=None,
-                 worker_port_range=(54000, 55000)
+                 worker_port_range=(54000, 55000),
+                 logdir=".",
+                 logging_level=logging.INFO
                  ):
+        self.logdir = logdir
+        try:
+            os.makedirs(self.logdir)
+        except FileExistsError:
+            pass
+
         global logger
-        start_file_logger("interchange.log")
-        logger.info("Init Interchange")
+        start_file_logger("{}/interchange.log".format(self.logdir),
+                          level=logging_level)
+        logger.debug("Initializing Interchange process")
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.ROUTER)
