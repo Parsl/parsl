@@ -8,8 +8,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_ipp import config
 
-parsl.clear()
-parsl.load(config)
 parsl.set_stream_logger()
 
 
@@ -108,6 +106,8 @@ def demonstrate_custom_exception():
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",
