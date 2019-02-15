@@ -25,7 +25,7 @@ setup(
     ],
     extras_require = {
         'visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
-        'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
+        'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy', 'sqlalchemy_utils'],
         'aws' : ['boto3'],
         'kubernetes' : ['kubernetes'],
         # Jetstream is deprecated since the interface has not been maintained.
@@ -34,7 +34,7 @@ setup(
         'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
         'google_cloud' : ['google-auth', 'google-api-python-client'],
         'gssapi' : ['python-gssapi'],
-        'all' : ['CMRESHandler', 'psutil', 'sqlalchemy',
+        'all' : ['CMRESHandler', 'psutil', 'sqlalchemy', 'sqlalchemy_utils',
                  'dash', 'dash-html-components', 'dash-core-components', 'pandas',
                  'boto3',
                  'kubernetes',

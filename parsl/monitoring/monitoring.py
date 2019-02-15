@@ -177,11 +177,11 @@ class MonitoringHub(RepresentationMixin):
                                                               max_port=self.client_port_range[1])
 
         comm_q = Queue(maxsize=10)
-        priority_msgs = Queue()
-        resource_msgs = Queue()
+        self.priority_msgs = Queue()
+        self.resource_msgs = Queue()
 
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, priority_msgs, resource_msgs, ),
+                                  args=(comm_q, self.priority_msgs, self.resource_msgs,),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
@@ -194,7 +194,7 @@ class MonitoringHub(RepresentationMixin):
         self.queue_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
-                                args=(priority_msgs, resource_msgs,),
+                                args=(self.priority_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": self.logging_level,
                                         "db_url": self.logging_endpoint,
@@ -216,12 +216,13 @@ class MonitoringHub(RepresentationMixin):
         return self._dfk_channel.send_pyobj((mtype, message))
 
     def __del__(self):
+        time.sleep(1)
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
         if self._dfk_channel:
             self._dfk_channel.close()
             self.queue_proc.terminate()
-            self.dbm_proc.terminate()
+            self.priority_msgs.put(("STOP", 0))
 
     def close(self):
         return self.__del__()

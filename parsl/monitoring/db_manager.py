@@ -2,11 +2,19 @@ import logging
 import threading
 import queue
 import os
+import time
 from enum import Enum
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Table, Column, Text
+    from sqlalchemy import Column, Text, PrimaryKeyConstraint
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.ext.declarative import declarative_base
+except ImportError:
+    pass
+
+try:
+    from sqlalchemy_utils import get_mapper
 except ImportError:
     pass
 
@@ -28,102 +36,115 @@ class MessageType(Enum):
     WORKFLOW_INFO = 2
 
 
+Base = declarative_base()
+
+
 class Database(object):
+
     def __init__(self,
                  url='sqlite:///monitoring.db',
                  username=None,
                  password=None,
             ):
-        self.eng = sa.create_engine(url)
-        self.meta = sa.MetaData()
 
-        self.create_workflow_table(self.meta)
-        self.create_task_table(self.meta)
-        self.create_status_table(self.meta)
-        self.create_resource_table(self.meta)
+        self.eng = sa.create_engine(url)
+        self.meta = Base.metadata
+
         self.meta.create_all(self.eng)
         self.meta.reflect(bind=self.eng)
 
-        self.con = self.eng.connect()
+        Session = sessionmaker(bind=self.eng)
+        self.session = Session()
 
-    def execute(self, query):
-        self.con.execute(query)
-
-    def update(self, table=None, columns=[], whereclause=['run_id'], msg=None):
+    def update(self, table=None, columns=None, messages=None):
         table = self.meta.tables[table]
-        query = table.update()
-        for w in whereclause:
-            query = query.where(table.c[w] == msg[w])
-        query = query.values(**{k: msg[k] for k in columns})
-        self.execute(query)
+        mappings = self._generate_mappings(table, columns=columns,
+                                           messages=messages)
+        mapper = get_mapper(table)
+        self.session.bulk_update_mappings(mapper, mappings)
+        self.session.commit()
 
-    def insert(self, table=None, msg=None):
+    def insert(self, table=None, messages=None):
         table = self.meta.tables[table]
-        query = table.insert().values(**{k: v for k, v in msg.items() if k in table.c})
-        self.execute(query)
+        mappings = self._generate_mappings(table, messages=messages)
+        mapper = get_mapper(table)
+        self.session.bulk_insert_mappings(mapper, mappings)
+        self.session.commit()
 
-    def create_workflow_table(self, meta):
-        return Table(
-                WORKFLOW, meta,
-                Column('run_id', Text, nullable=False, primary_key=True),
-                Column('workflow_name', Text, nullable=True),
-                Column('workflow_version', Text, nullable=True),
-                Column('time_began', Text, nullable=False),
-                Column('time_completed', Text),
-                Column('host', Text, nullable=False),
-                Column('user', Text, nullable=False),
-                Column('rundir', Text, nullable=False),
-                Column('tasks_failed_count', Text, nullable=False),
-                Column('tasks_completed_count', Text, nullable=False),
-        )
+    def _generate_mappings(self, table, columns=None, messages=[]):
+        mappings = []
+        for msg in messages:
+            m = {}
+            if columns is None:
+                columns = table.c.keys()
+            for column in columns:
+                m[column] = msg[column]
+            mappings.append(m)
+        return mappings
+
+    class Workflow(Base):
+        __tablename__ = WORKFLOW
+        run_id = Column(Text, nullable=False, primary_key=True)
+        workflow_name = Column(Text, nullable=True)
+        workflow_version = Column(Text, nullable=True)
+        time_began = Column(Text, nullable=False)
+        time_completed = Column(Text)
+        host = Column(Text, nullable=False)
+        user = Column(Text, nullable=False)
+        rundir = Column(Text, nullable=False)
+        tasks_failed_count = Column(Text, nullable=False)
+        tasks_completed_count = Column(Text, nullable=False)
 
     # TODO: expand to full set of info
-    def create_status_table(self, meta):
-        return Table(
-              STATUS, meta,
-              Column('task_id', Text, sa.ForeignKey('task.task_id'), nullable=False),
-              Column('task_status_name', Text, nullable=False),
-              Column('timestamp', Text, nullable=False),
-              Column('run_id', Text, sa.ForeignKey('workflow.run_id'), nullable=False),
-        )
+    class Status(Base):
+        __tablename__ = STATUS
+        task_id = Column(Text, sa.ForeignKey('task.task_id'), nullable=False)
+        task_status_name = Column(Text, nullable=False)
+        timestamp = Column(Text, nullable=False)
+        run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
+        __table_args__ = (
+                          PrimaryKeyConstraint('task_id', 'run_id', 'task_status_name', 'timestamp'),
+                        )
 
-    def create_task_table(self, meta):
-        return Table(
-              TASK, meta,
-              Column('task_id', Text, nullable=False),
-              Column('run_id', Text, sa.ForeignKey('workflow.run_id'), nullable=False),
-              Column('task_executor', Text, nullable=False),
-              Column('task_func_name', Text, nullable=False),
-              Column('task_time_submitted', Text, nullable=False),
-              Column('task_time_returned', Text, nullable=True),
-              Column('task_memoize', Text, nullable=False),
-              Column('task_inputs', Text, nullable=True),
-              Column('task_outputs', Text, nullable=True),
-              Column('task_stdin', Text, nullable=True),
-              Column('task_stdout', Text, nullable=True),
-        )
+    class Task(Base):
+        __tablename__ = TASK
+        task_id = Column('task_id', Text, nullable=False)
+        run_id = Column('run_id', Text, nullable=False)
+        task_executor = Column('task_executor', Text, nullable=False)
+        task_func_name = Column('task_func_name', Text, nullable=False)
+        task_time_submitted = Column('task_time_submitted', Text, nullable=False)
+        task_time_returned = Column('task_time_returned', Text, nullable=True)
+        task_memoize = Column('task_memoize', Text, nullable=False)
+        task_inputs = Column('task_inputs', Text, nullable=True)
+        task_outputs = Column('task_outputs', Text, nullable=True)
+        task_stdin = Column('task_stdin', Text, nullable=True)
+        task_stdout = Column('task_stdout', Text, nullable=True)
+        __table_args__ = (
+                          PrimaryKeyConstraint('task_id', 'run_id'),
+                        )
 
-    def create_resource_table(self, meta):
-        return Table(
-              RESOURCE, meta,
-              Column('task_id', Text, sa.ForeignKey('task.task_id'), nullable=False),
-              Column('timestamp', Text, nullable=False),
-              Column('run_id', Text, sa.ForeignKey('workflow.run_id'), nullable=False),
-              Column('psutil_process_pid', Text, nullable=True),
-              Column('psutil_process_cpu_percent', Text, nullable=True),
-              Column('psutil_process_memory_percent', Text, nullable=True),
-              Column('psutil_process_children_count', Text, nullable=True),
-              Column('psutil_process_time_user', Text, nullable=True),
-              Column('psutil_process_time_system', Text, nullable=True),
-              Column('psutil_process_memory_virtual', Text, nullable=True),
-              Column('psutil_process_memory_resident', Text, nullable=True),
-              Column('psutil_process_disk_read', Text, nullable=True),
-              Column('psutil_process_disk_write', Text, nullable=True),
-              Column('psutil_process_status', Text, nullable=True),
-        )
+    class Resource(Base):
+        __tablename__ = RESOURCE
+        task_id = Column('task_id', Text, sa.ForeignKey('task.task_id'), nullable=False)
+        timestamp = Column('timestamp', Text, nullable=False)
+        run_id = Column('run_id', Text, sa.ForeignKey('workflow.run_id'), nullable=False)
+        psutil_process_pid = Column('psutil_process_pid', Text, nullable=True)
+        psutil_process_cpu_percent = Column('psutil_process_cpu_percent', Text, nullable=True)
+        psutil_process_memory_percent = Column('psutil_process_memory_percent', Text, nullable=True)
+        psutil_process_children_count = Column('psutil_process_children_count', Text, nullable=True)
+        psutil_process_time_user = Column('psutil_process_time_user', Text, nullable=True)
+        psutil_process_time_system = Column('psutil_process_time_system', Text, nullable=True)
+        psutil_process_memory_virtual = Column('psutil_process_memory_virtual', Text, nullable=True)
+        psutil_process_memory_resident = Column('psutil_process_memory_resident', Text, nullable=True)
+        psutil_process_disk_read = Column('psutil_process_disk_read', Text, nullable=True)
+        psutil_process_disk_write = Column('psutil_process_disk_write', Text, nullable=True)
+        psutil_process_status = Column('psutil_process_status', Text, nullable=True)
+        __table_args__ = (
+                          PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
+                        )
 
     def __del__(self):
-        self.con.close()
+        self.session.close()
 
 
 class DatabaseManager(object):
@@ -131,6 +152,8 @@ class DatabaseManager(object):
                  db_url='sqlite:///monitoring.db',
                  logdir='.',
                  logging_level=logging.INFO,
+                 batching_interval=1,
+                 batching_threshold=500,
                ):
 
         self.logdir = logdir
@@ -143,88 +166,133 @@ class DatabaseManager(object):
         self.logger.debug("Initializing Database Manager process")
 
         self.db = Database(db_url)
+        self.batching_interval = batching_interval
+        self.batching_threshold = batching_threshold
 
         self.pending_priority_queue = queue.Queue()
         self.pending_resource_queue = queue.Queue()
 
     def start(self, priority_queue, resource_queue):
+
+        self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                            args=(priority_queue, 'priority',)
+                                                            args=(priority_queue, 'priority', self._kill_event,)
                                               )
         self._priority_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                            args=(resource_queue, 'resource',)
+                                                            args=(resource_queue, 'resource', self._kill_event,)
                                               )
         self._resource_queue_pull_thread.start()
 
-        while True:
-            try:
-                x, addr = self.pending_priority_queue.get(block=False)
-                self.logger.debug("Database manager receives a priority message {}".format(x))
-            except queue.Empty:
-                pass
-            else:
-                msg_type, msg = x[0], x[1]
-                self.logger.debug("The message type is {}".format(msg_type))
-                if msg_type.value == MessageType.WORKFLOW_INFO.value:
-                    if "python_version" in msg:   # workflow start
-                        self.logger.debug("Inserting workflow start info to WORKFLOW table")
-                        self._insert(table=WORKFLOW, msg=msg)
+        while (not self._kill_event.is_set() or
+               self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
+               priority_queue.qsize() != 0 or resource_queue.qsize() != 0):
 
-                    else:                         # workflow end
+            """
+            WORKFLOW_INFO and TASK_INFO messages
+
+            """
+            self.logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}""".format(
+                              self._kill_event.is_set(),
+                              self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
+                              priority_queue.qsize() != 0, resource_queue.qsize() != 0))
+
+            messages = self._get_messages_in_batch(self.pending_priority_queue,
+                                                   interval=self.batching_interval,
+                                                   threshold=self.batching_threshold)
+
+            if messages:
+                self.logger.debug("Got a batch of messages from priority queue {}".format(messages))
+            update_messages, insert_messages, all_messages = [], [], []
+            for msg_type, msg in messages:
+                if msg_type.value == MessageType.WORKFLOW_INFO.value:
+                    if "python_version" in msg:   # workflow start message
+                        self.logger.debug("Inserting workflow start info to WORKFLOW table")
+                        self._insert(table=WORKFLOW, messages=[msg])
+                    else:                         # workflow end message
                         self.logger.debug("Updating workflow end info to WORKFLOW table")
                         self._update(table=WORKFLOW,
-                                     columns=['tasks_failed_count', 'tasks_completed_count', 'time_completed'],
-                                     whereclause=['run_id'],
-                                     msg=msg)
-                elif msg_type.value == MessageType.TASK_INFO.value:
-                    self.logger.debug("Updating and inserting TASK_INFO to all tables")
-                    self._update(table=WORKFLOW,
-                                 columns=['tasks_failed_count', 'tasks_completed_count'],
-                                 whereclause=['run_id'],
-                                 msg=msg)
+                                     columns=['run_id', 'tasks_failed_count', 'tasks_completed_count', 'time_completed'],
+                                     messages=[msg])
+                else:                             # TASK_INFO message
+                    all_messages.append(msg)
                     if msg['task_time_returned'] is not None:
-                        self._update(table=TASK,
-                                     columns=['task_time_returned'],
-                                     whereclause=['run_id', 'task_id'],
-                                     msg=msg)
+                        update_messages.append(msg)
                     else:
-                        self._insert(TASK, msg)
-                    self._insert(STATUS, msg)
-            try:
-                x, _ = self.pending_resource_queue.get(block=False)
-                self.logger.debug("Database manager receives a resource message {}".format(x))
-            except queue.Empty:
-                pass
-            else:
-                msg = x[-1]
-                self._insert(RESOURCE, msg)
-                # self._insert(STATUS, msg)
+                        insert_messages.append(msg)
 
-    def _migrate_logs_to_internal(self, logs_queue, queue_tag):
+            self.logger.debug("Updating and inserting TASK_INFO to all tables")
+            self._update(table=WORKFLOW,
+                         columns=['run_id', 'tasks_failed_count', 'tasks_completed_count'],
+                         messages=update_messages)
+
+            if insert_messages:
+                self._insert(table=TASK, messages=insert_messages)
+            if update_messages:
+                self._update(table=TASK,
+                             columns=['task_time_returned', 'run_id', 'task_id'],
+                             messages=update_messages)
+            self._insert(table=STATUS, messages=all_messages)
+
+            """
+            RESOURCE_INFO messages
+
+            """
+            messages = self._get_messages_in_batch(self.pending_resource_queue,
+                                                   interval=self.batching_interval,
+                                                   threshold=self.batching_threshold)
+
+            if messages:
+                self.logger.debug("Got a batch of messages from resource queue {}".format(messages))
+            self._insert(table=RESOURCE, messages=messages)
+            # self._insert(STATUS, msg)
+
+    def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
         self.logger.info("[{}_queue_PULL_THREAD] Starting".format(queue_tag))
 
-        while True:
+        while not kill_event.is_set() or logs_queue.qsize() != 0:
+            self.logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
+                              .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
             try:
-                x = logs_queue.get(block=False)
+                x, addr = logs_queue.get(block=False)
             except queue.Empty:
                 continue
             else:
                 if queue_tag == 'priority':
-                    self.pending_priority_queue.put(x)
+                    if x == 'STOP':
+                        self.close()
+                    else:
+                        self.pending_priority_queue.put(x)
                 elif queue_tag == 'resource':
-                    self.pending_resource_queue.put(x)
+                    self.pending_resource_queue.put(x[-1])
 
-    def _update(self, table, columns, whereclause, msg):
-        self.db.update(table=table, columns=columns, whereclause=whereclause, msg=msg)
+    def _update(self, table, columns, messages):
+        self.db.update(table=table, columns=columns, messages=messages)
 
-    def _insert(self, table, msg):
-        self.db.insert(table=table, msg=msg)
+    def _insert(self, table, messages):
+        self.db.insert(table=table, messages=messages)
 
-    def __del__(self):
+    def _get_messages_in_batch(self, msg_queue, interval=1, threshold=500):
+        messages = []
+        start = time.time()
+        while True:
+            if time.time() - start >= interval or len(messages) >= threshold:
+                break
+            try:
+                x = msg_queue.get(block=False)
+                self.logger.debug("Database manager receives a message {}".format(x))
+            except queue.Empty:
+                break
+            else:
+                messages.append(x)
+        return messages
+
+    def close(self):
         if self.logger:
-            self.logger.info("Terminating Database Manager")
+            self.logger.info("Finish all the logging and terminate Database Manager.")
+        self.batching_interval, self.batching_threshold = float('inf'), float('inf')
+        self._kill_event.set()
 
 
 def start_file_logger(filename, name='database_manager', level=logging.DEBUG, format_string=None):
