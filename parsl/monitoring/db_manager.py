@@ -5,18 +5,24 @@ import os
 import time
 from enum import Enum
 
+from parsl.providers.error import OptionalModuleMissing
+
 try:
     import sqlalchemy as sa
     from sqlalchemy import Column, Text, PrimaryKeyConstraint
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
 except ImportError:
-    pass
+    _sqlalchemy_enabled = False
+else:
+    _sqlalchemy_enabled = True
 
 try:
     from sqlalchemy_utils import get_mapper
 except ImportError:
-    pass
+    _sqlalchemy_utils_enabled = False
+else:
+    _sqlalchemy_utils_enabled = True
 
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
@@ -36,10 +42,14 @@ class MessageType(Enum):
     WORKFLOW_INFO = 2
 
 
-Base = declarative_base()
-
-
 class Database(object):
+    if not _sqlalchemy_enabled:
+        raise OptionalModuleMissing(['sqlalchemy'],
+                                    "Default database logging requires the sqlalchemy library.")
+    if not _sqlalchemy_utils_enabled:
+        raise OptionalModuleMissing(['sqlalchemy_utils'],
+                                    "Default database logging requires the sqlalchemy_utils library.")
+    Base = declarative_base()
 
     def __init__(self,
                  url='sqlite:///monitoring.db',
@@ -48,7 +58,7 @@ class Database(object):
             ):
 
         self.eng = sa.create_engine(url)
-        self.meta = Base.metadata
+        self.meta = self.Base.metadata
 
         self.meta.create_all(self.eng)
         self.meta.reflect(bind=self.eng)
@@ -153,7 +163,7 @@ class DatabaseManager(object):
                  logdir='.',
                  logging_level=logging.INFO,
                  batching_interval=1,
-                 batching_threshold=500,
+                 batching_threshold=99999,
                ):
 
         self.logdir = logdir
@@ -203,7 +213,7 @@ class DatabaseManager(object):
                                                    threshold=self.batching_threshold)
 
             if messages:
-                self.logger.debug("Got a batch of messages from priority queue {}".format(messages))
+                self.logger.debug("Got {} messages from priority queue".format(len(messages)))
             update_messages, insert_messages, all_messages = [], [], []
             for msg_type, msg in messages:
                 if msg_type.value == MessageType.WORKFLOW_INFO.value:
@@ -244,7 +254,7 @@ class DatabaseManager(object):
                                                    threshold=self.batching_threshold)
 
             if messages:
-                self.logger.debug("Got a batch of messages from resource queue {}".format(messages))
+                self.logger.debug("Got {} messages from resource queue".format(len(messages)))
             self._insert(table=RESOURCE, messages=messages)
             # self._insert(STATUS, msg)
 
@@ -273,7 +283,7 @@ class DatabaseManager(object):
     def _insert(self, table, messages):
         self.db.insert(table=table, messages=messages)
 
-    def _get_messages_in_batch(self, msg_queue, interval=1, threshold=500):
+    def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
         messages = []
         start = time.time()
         while True:
@@ -281,7 +291,7 @@ class DatabaseManager(object):
                 break
             try:
                 x = msg_queue.get(block=False)
-                self.logger.debug("Database manager receives a message {}".format(x))
+                # self.logger.debug("Database manager receives a message {}".format(x))
             except queue.Empty:
                 break
             else:
@@ -290,7 +300,7 @@ class DatabaseManager(object):
 
     def close(self):
         if self.logger:
-            self.logger.info("Finish all the logging and terminate Database Manager.")
+            self.logger.info("Finishing all the logging and terminating Database Manager.")
         self.batching_interval, self.batching_threshold = float('inf'), float('inf')
         self._kill_event.set()
 
