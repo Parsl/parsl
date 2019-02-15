@@ -298,7 +298,7 @@ class AprunLauncher(Launcher):
         ----------
 
         options: str
-             This string will be passed to the aprun launcher. Default: None
+             This string will be passed to the aprun launcher. Default: ''
         """
         self.overrides = overrides
 
