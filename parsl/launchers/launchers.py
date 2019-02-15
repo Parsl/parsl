@@ -225,17 +225,6 @@ class SrunMPILauncher(Launcher):
     at the same time. Workers should be launched with independent Srun calls so as to setup the
     environment for MPI application launch.
     """
-
-    def __init__(self, options=None):
-        """
-        Parameters
-        ----------
-
-        options: str
-             This string will be passed to the srun launcher. Default: None
-        """
-        self.options = options if options else ''
-
     def __init__(self, overrides=''):
         """
         Parameters
