@@ -230,7 +230,7 @@ class SrunMPILauncher(Launcher):
         Parameters
         ----------
 
-        options: str
+        overrides: str
              This string will be passed to the launcher. Default: ''
         """
         self.overrides = overrides
@@ -297,7 +297,7 @@ class AprunLauncher(Launcher):
         Parameters
         ----------
 
-        options: str
+        overrides: str
              This string will be passed to the aprun launcher. Default: ''
         """
         self.overrides = overrides
