@@ -216,12 +216,13 @@ class MonitoringHub(RepresentationMixin):
         return self._dfk_channel.send_pyobj((mtype, message))
 
     def __del__(self):
-        time.sleep(1)
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
         if self._dfk_channel:
             self._dfk_channel.close()
-            self.queue_proc.terminate()
+            # self.queue_proc.terminate()
+            while self.queue_proc.is_alive():
+                time.sleep(1)
             self.priority_msgs.put(("STOP", 0))
 
     def close(self):
@@ -259,7 +260,9 @@ class Hub(object):
 
                  monitoring_hub_address="127.0.0.1",
                  logdir=".",
-                 logging_level=logging.DEBUG):
+                 logging_level=logging.DEBUG,
+                 idle_timeout=10    # in seconds
+                ):
         """ Initializes a monitoring configuration class.
 
         Parameters
@@ -281,8 +284,8 @@ class Hub(object):
         workflow_version : str, optional
             Optional workflow identification to distinguish between workflows with the same name, not used internally only for display to user.
 
-        resource_loop_sleep_duration : float, optional
-            The amount of time in seconds to sleep in between resource monitoring logs per task.
+        idle_timeout : float, optional
+            The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
         """
         try:
@@ -301,6 +304,7 @@ class Hub(object):
         self.hub_address = hub_address
         self.database = database
         self.visualization_server = visualization_server
+        self.idle_timeout = idle_timeout
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -339,7 +343,20 @@ class Hub(object):
                 msg = self.dfk_channel.recv_pyobj()
                 self.logger.debug("Got ZMQ Message: {}".format(msg))
                 priority_msgs.put((msg, 0))
+                if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
+                    break
             except zmq.Again:
+                pass
+
+        last_msg_received_time = time.time()
+        while time.time() - last_msg_received_time < self.idle_timeout:
+            try:
+                data, addr = self.sock.recvfrom(2048)
+                msg = pickle.loads(data)
+                resource_msgs.put((msg, addr))
+                last_msg_received_time = time.time()
+                self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+            except socket.timeout:
                 pass
 
 
