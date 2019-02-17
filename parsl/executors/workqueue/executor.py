@@ -1,4 +1,5 @@
 import threading
+import logging
 from collections import deque
 from concurrent.futures import Future
 
@@ -12,6 +13,7 @@ from parsl.executors.base import ParslExecutor
 
 from work_queue import *
 
+logger = logging.getLogger(__name__)
 
 def WorkQueueThread(tasks={},
                     task_queue=deque,
@@ -21,9 +23,12 @@ def WorkQueueThread(tasks={},
                     launch_cmd=None,
                     data_dir=".",
                     log_dir=None,
-                    full=False):
+                    full=False,
+                    password=None,
+                    password_file=None,
+                    project_name=None):
 
-    # print("spin up the thread")
+    logger.debug("Starting WorkQueue Master Thread")
 
     wq_to_parsl = {}
     if not log_dir is None:
@@ -31,7 +36,20 @@ def WorkQueueThread(tasks={},
         cctools_debug_flags_set("all")
         cctools_debug_config_file(wq_debug_log)
 
-    q = WorkQueue(port)
+    logger.debug("Creating Workqueue Object")
+    try:
+        q = WorkQueue(port)
+    except Exception as e:
+        logger.error("Unable to create Workqueue object: {}",format(e))
+        raise e
+
+    if project_name:
+        q.specify_name(project_name)
+
+    if password:
+        q.specify_password(password)
+    elif password_file:
+        q.specify_password_file(password_file)
 
     # Only write Logs when the log_dir is specified, which is most likely always will be
     if not log_dir is None:
@@ -75,17 +93,28 @@ def WorkQueueThread(tasks={},
             script_name = full_script_name.split("/")[-1]
             command_str = launch_cmd.format(input_file=function_data_loc,
                                             output_file=function_result_loc)
-            # print(command_str)
-            t = Task(command_str)
+            logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
+            try:
+                t = Task(command_str)
+            except Exception as e:
+                logger.error("Unable to create task: {}".format(e))
+                raise e
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
-            wq_id = q.submit(t)
+
+            logger.debug("Submitting task {} to workqueue".format(parsl_id))
+            try:
+                wq_id = q.submit(t)
+            except Exception as e:
+                logger.error("Unable to create task: {}".format(e))
+                raise e
+ 
+            logger.debug("Task {} submitted workqueue with id {}".format(parsl_id, wq_id))
             wq_to_parsl[wq_id] = parsl_id
-            # print(str(wq_id)+" submitted")
 
         if continue_running is False:
-            # print("exiting while loop")
+            logger.debug("Exiting WorkQueue Master Thread event loop")
             break
 
         # Wait for Tasks
@@ -97,14 +126,17 @@ def WorkQueueThread(tasks={},
             else:
                 # print(t.id)
                 wq_tid = t.id
+                parsl_tid = wq_to_parsl[wq_tid]
+                logger.debug("Completed workqueue task {}, parsl task {}".format(wq_id, parsl_tid))
                 status = t.return_status
                 # TODO output sdtout and stderr to files as well as submit command
                 if status != 0:
+                    logger.debug("Workqueue task {} failed with status {}".format(wq_id, status))
                     # Should probably do something smarter for this later
                     del wq_to_parsl[wq_tid]
                     continue
-                parsl_tid = wq_to_parsl[wq_tid]
                 result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
+                logger.debug("Looking for result in {}".format(result_loc))
                 f = open(result_loc, "rb")
                 result = pickle.load(f)
                 f.close()
@@ -113,13 +145,16 @@ def WorkQueueThread(tasks={},
                 future = tasks[parsl_tid]
                 tasks_lock.release()
 
+                logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
                 future.set_result(result)
                 del wq_to_parsl[wq_tid]
 
     for wq_task in wq_to_parsl:
+        logger.debug("Cancelling Workqueue Task {}".format(wq_task))
+        
         q.cancel_by_taskid(wq_task)
 
-    # print("returning")
+    logger.debug("Exiting WorkQueue Master Thread")
     return
 
 
@@ -141,7 +176,11 @@ class WorkQueueExecutor(ParslExecutor):
                  label="wq",
                  working_dir=None,
                  managed=True,
+                 project_name=None,
+                 project_password=None,
+                 project_password_file=None,
                  port=WORK_QUEUE_DEFAULT_PORT):
+
         self.label = label
         self.managed = managed
         self.task_queue = deque()
@@ -149,7 +188,16 @@ class WorkQueueExecutor(ParslExecutor):
         self.port = port
         self.task_counter = 0
         self.scaling_enabled = False
-        # print("init for wq Executed")
+        self.project_name = project_name
+        self.project_password = project_password
+        self.project_password_file = project_password_file
+        if not self.project_password is None and not self.project_password_file is None:
+            logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
+            self.project_password_file = None
+        if not self.project_password_file is None:
+            if not os.path.exists(self.project_password_file):
+                logger.debug("Password File does not exist, no file used")
+                self.project_password_file = None
 
         self.launch_cmd = ("python3 workqueue_worker.py {input_file} {output_file}")
 
@@ -164,6 +212,8 @@ class WorkQueueExecutor(ParslExecutor):
         os.mkdir(self.function_data_dir)
         os.mkdir(self.wq_log_dir)
 
+        logger.debug("Starting WorkQueueExectutor")
+
         thread_kwargs = {"port": self.port,
                          "tasks": self.tasks,
                          "task_queue": self.task_queue,
@@ -171,7 +221,10 @@ class WorkQueueExecutor(ParslExecutor):
                          "tasks_lock": self.tasks_lock,
                          "launch_cmd": self.launch_cmd,
                          "data_dir": self.function_data_dir,
-                         "log_dir": self.wq_log_dir}
+                         "log_dir": self.wq_log_dir,
+                         "password_file": self.project_password_file,
+                         "password": self.project_password,
+                         "project_name": self.project_name}
         self.master_thread = threading.Thread(target=WorkQueueThread,
                                               name="master_thread",
                                               kwargs=thread_kwargs)
@@ -197,6 +250,10 @@ class WorkQueueExecutor(ParslExecutor):
         # TODO Try/Except Block
         function_data_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_data")
         function_result_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_result")
+
+        logger.debug("Creating Tasks with executable at: {}".format(function_data_file))
+        logger.debug("Creating Tasks with result to be found at: {}".format(function_result_file))
+
         f = open(function_data_file, "wb")
         fn_buf = pack_apply_message(func, args, kwargs,
                                     buffer_threshold=1024 * 1024,
@@ -204,6 +261,7 @@ class WorkQueueExecutor(ParslExecutor):
         pickle.dump(fn_buf, f)
         f.close
 
+        logger.debug("Placing task {} on message queue".format(task_id))
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
                "result_loc": function_result_file}
@@ -240,6 +298,7 @@ class WorkQueueExecutor(ParslExecutor):
         This includes all attached resources such as workers and controllers.
         """
         # print("shutdown")
+        logger.debug("Placing sentinel task on message queue")
         msg = {"task_id": -1,
                "data_loc": None,
                "result_loc": None}
