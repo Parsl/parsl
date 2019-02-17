@@ -257,6 +257,12 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     def label(self):
         return self._label
 
+    def execute_wait(self, cmd, timeout=None):
+        t = self.cmd_timeout
+        if timeout is not None:
+            t = timeout
+        return self.channel.execute_wait(cmd, t)
+
 
 if __name__ == "__main__":
 
