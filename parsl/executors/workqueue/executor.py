@@ -15,6 +15,7 @@ from work_queue import *
 
 logger = logging.getLogger(__name__)
 
+
 def WorkQueueThread(tasks={},
                     task_queue=deque,
                     queue_lock=threading.Lock(),
@@ -31,8 +32,8 @@ def WorkQueueThread(tasks={},
     logger.debug("Starting WorkQueue Master Thread")
 
     wq_to_parsl = {}
-    if not log_dir is None:
-        wq_debug_log = os.path.join(log_dir, "debug")      
+    if log_dir is not None:
+        wq_debug_log = os.path.join(log_dir, "debug")
         cctools_debug_flags_set("all")
         cctools_debug_config_file(wq_debug_log)
 
@@ -40,7 +41,7 @@ def WorkQueueThread(tasks={},
     try:
         q = WorkQueue(port)
     except Exception as e:
-        logger.error("Unable to create Workqueue object: {}",format(e))
+        logger.error("Unable to create Workqueue object: {}", format(e))
         raise e
 
     if project_name:
@@ -52,14 +53,13 @@ def WorkQueueThread(tasks={},
         q.specify_password_file(password_file)
 
     # Only write Logs when the log_dir is specified, which is most likely always will be
-    if not log_dir is None:
+    if log_dir is not None:
         wq_master_log = os.path.join(log_dir, "master_log")
         wq_trans_log = os.path.join(log_dir, "transaction_log")
         if not full:
             wq_resource_log = os.path.join(log_dir, "resource_logs")
             q.enable_monitoring_full(dirname=wq_resource_log)
- 
- 
+
         q.specify_log(wq_master_log)
         q.specify_transactions_log(wq_trans_log)
 
@@ -109,7 +109,7 @@ def WorkQueueThread(tasks={},
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
                 raise e
- 
+
             logger.debug("Task {} submitted workqueue with id {}".format(parsl_id, wq_id))
             wq_to_parsl[wq_id] = parsl_id
 
@@ -151,7 +151,6 @@ def WorkQueueThread(tasks={},
 
     for wq_task in wq_to_parsl:
         logger.debug("Cancelling Workqueue Task {}".format(wq_task))
-        
         q.cancel_by_taskid(wq_task)
 
     logger.debug("Exiting WorkQueue Master Thread")
@@ -191,11 +190,12 @@ class WorkQueueExecutor(ParslExecutor):
         self.project_name = project_name
         self.project_password = project_password
         self.project_password_file = project_password_file
-        if not self.project_password is None and not self.project_password_file is None:
+
+        if self.project_password is not None and self.project_password_file is not None:
             logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
             self.project_password_file = None
-        if not self.project_password_file is None:
-            if not os.path.exists(self.project_password_file):
+        if self.project_password_file is not None:
+            if os.path.exists(self.project_password_file) is False:
                 logger.debug("Password File does not exist, no file used")
                 self.project_password_file = None
 
@@ -207,7 +207,6 @@ class WorkQueueExecutor(ParslExecutor):
 
         self.function_data_dir = os.path.join(self.run_dir, "function_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
-
 
         os.mkdir(self.function_data_dir)
         os.mkdir(self.wq_log_dir)
