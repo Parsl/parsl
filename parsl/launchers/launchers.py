@@ -177,8 +177,15 @@ class SrunLauncher(Launcher):
     to launch multiple cmd invocations in parallel on a single job allocation.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, overrides=''):
+        """
+        Parameters
+        ----------
+
+        overrides: str
+             This string will be passed to the srun launcher. Default: ''
+        """
+        self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None) -> str:
         """
@@ -204,10 +211,10 @@ chmod a+x cmd_$SLURM_JOB_NAME.sh
 
 TASKBLOCKS={1}
 
-srun --ntasks $TASKBLOCKS -l bash cmd_$SLURM_JOB_NAME.sh
+srun --ntasks $TASKBLOCKS -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
 
 echo "Done"
-'''.format(command, task_blocks)
+'''.format(command, task_blocks, overrides=self.overrides)
         return x
 
 
@@ -218,6 +225,16 @@ class SrunMPILauncher(Launcher):
     at the same time. Workers should be launched with independent Srun calls so as to setup the
     environment for MPI application launch.
     """
+    def __init__(self, overrides=''):
+        """
+        Parameters
+        ----------
+
+        overrides: str
+             This string will be passed to the launcher. Default: ''
+        """
+        self.overrides = overrides
+
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None) -> str:
         """
         Args:
@@ -249,7 +266,7 @@ then
     CORES_PER_BLOCK=$(($NODES * $CORES / $TASKBLOCKS))
     for blk in $(seq 1 1 $TASKBLOCKS):
     do
-        srun --ntasks $CORES_PER_BLOCK -l bash cmd_$SLURM_JOB_NAME.sh &
+        srun --ntasks $CORES_PER_BLOCK -l {overrides} bash cmd_$SLURM_JOB_NAME.sh &
     done
     wait
 else
@@ -258,7 +275,7 @@ else
     NODES_PER_BLOCK=$(( $NODES / $TASKBLOCKS ))
     for blk in $(seq 1 1 $TASKBLOCKS):
     do
-        srun --exclusive --nodes $NODES_PER_BLOCK -l bash cmd_$SLURM_JOB_NAME.sh &
+        srun --exclusive --nodes $NODES_PER_BLOCK -l {overrides} bash cmd_$SLURM_JOB_NAME.sh &
     done
     wait
 
@@ -266,7 +283,7 @@ fi
 
 
 echo "Done"
-'''.format(command, task_blocks)
+'''.format(command, task_blocks, overrides=self.overrides)
         return x
 
 
@@ -276,6 +293,13 @@ class AprunLauncher(Launcher):
 
     """
     def __init__(self, overrides=''):
+        """
+        Parameters
+        ----------
+
+        overrides: str
+             This string will be passed to the aprun launcher. Default: ''
+        """
         self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None) -> str:
