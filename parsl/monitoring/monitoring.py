@@ -261,7 +261,7 @@ class Hub(object):
                  monitoring_hub_address="127.0.0.1",
                  logdir=".",
                  logging_level=logging.DEBUG,
-                 idle_timeout=10    # in seconds
+                 atexit_timeout=5    # in seconds
                 ):
         """ Initializes a monitoring configuration class.
 
@@ -284,7 +284,7 @@ class Hub(object):
         workflow_version : str, optional
             Optional workflow identification to distinguish between workflows with the same name, not used internally only for display to user.
 
-        idle_timeout : float, optional
+        atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
         """
@@ -304,7 +304,7 @@ class Hub(object):
         self.hub_address = hub_address
         self.database = database
         self.visualization_server = visualization_server
-        self.idle_timeout = idle_timeout
+        self.atexit_timeout = atexit_timeout
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -349,7 +349,7 @@ class Hub(object):
                 pass
 
         last_msg_received_time = time.time()
-        while time.time() - last_msg_received_time < self.idle_timeout:
+        while time.time() - last_msg_received_time < self.atexit_timeout:
             try:
                 data, addr = self.sock.recvfrom(2048)
                 msg = pickle.loads(data)
