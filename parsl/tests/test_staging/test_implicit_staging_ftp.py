@@ -5,9 +5,6 @@ from parsl.app.app import App
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
-
 
 @App('python')
 def sort_strings(inputs=[], outputs=[]):
@@ -36,6 +33,8 @@ def test_implicit_staging_ftp():
 
 
 if __name__ == "__main__":
+    parsl.clear()
+    parsl.load(config)
 
     import argparse
 
