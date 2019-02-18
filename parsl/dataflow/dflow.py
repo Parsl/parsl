@@ -34,6 +34,7 @@ from parsl.monitoring.monitoring import MessageType
 # from parsl.monitoring import app_monitor
 # from parsl.monitoring import logging_server
 # from parsl.monitoring.web_app import index
+from parsl.monitoring.viz_app import viz_app
 
 
 logger = logging.getLogger(__name__)
@@ -77,8 +78,7 @@ class DataFlowKernel(object):
                     'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
-        parsl.set_file_logger("{}/parsl.log".format(self.run_dir),
-                              level=logging.DEBUG)
+        parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         logger.info("Parsl version: {}".format(get_version()))
 
@@ -87,7 +87,7 @@ class DataFlowKernel(object):
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
 
-        # ES logging
+        # Monitoring
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
 
@@ -122,9 +122,14 @@ class DataFlowKernel(object):
         """
         if self.dashboard is not None:
             logger.info("Dashboard is found at " + self.dashboard)
+
+        self.logging_server = None
+        self.web_app = None
+
         # start tornado logging server
-        if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database':
-            self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'monitoring_config': self.monitoring_config})
+        if self.monitoring is not None:
+            self.logging_server = multiprocessing.Process(target=logging_server.run,
+                                                          kwargs={'monitoring_config': self.monitoring})
             self.logging_server.start()
             self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config})
             self.web_app.start()
@@ -478,6 +483,7 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
+
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             # executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
             executable = self.monitoring.monitor_wrapper(executable, task_id,

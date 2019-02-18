@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+<h2>Workflow: {{ workflow_name }} ({{ workflow_id }}) </h2>
+
+<p>
+    Owner: {{ owner }}
+
+    Rundir: {{ rundir }}
+
+    <a href="task/0">View task details</a>
+</p>
+
+{{ task_gantt|safe }}
+
+{{ task_per_app|safe }}
+
+{{ total_tasks|safe }}
+
+{{ user_time_distribution_avg_plot|safe }}
+{{ user_time_distribution_max_plot|safe }}
+
+{{ system_time_distribution_avg_plot|safe }}
+{{ system_time_distribution_max_plot|safe }}
+
+{{ memory_usage_distribution_avg_plot|safe }}
+{{ memory_usage_distribution_max_plot|safe }}
+
+{{ resident_memory_usage_distribution_avg_plot|safe }}
+{{ resident_memory_usage_distribution_max_plot|safe }}
+
+{{ virtual_memory_usage_distribution_avg_plot|safe }}
+{{ virtual_memory_usage_distribution_max_plot|safe }}
+
+
+
+{% endblock %}
