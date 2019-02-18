@@ -91,8 +91,10 @@ def WorkQueueThread(tasks={},
             full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
 
             script_name = full_script_name.split("/")[-1]
-            command_str = launch_cmd.format(input_file=function_data_loc,
-                                            output_file=function_result_loc)
+            sandbox_func_data = "$WORK_QUEUE_SANDBOX/" + function_data_loc_remote
+            sandbox_func_result = "$WORK_QUEUE_SANDBOX/" + function_result_loc_remote
+            command_str = launch_cmd.format(input_file=sandbox_func_data,
+                                            output_file=sandbox_func_result)
             logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
             try:
                 t = Task(command_str)
@@ -245,13 +247,15 @@ class WorkQueueExecutor(ParslExecutor):
         self.tasks[task_id] = fu
         self.tasks_lock.release()
 
+        logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
+
         # Pickle the result into object to pass into message buffer
         # TODO Try/Except Block
         function_data_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_data")
         function_result_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_result")
 
-        logger.debug("Creating Tasks with executable at: {}".format(function_data_file))
-        logger.debug("Creating Tasks with result to be found at: {}".format(function_result_file))
+        logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
+        logger.debug("Creating Tasks {} with result to be found at: {}".format(task_id, function_result_file))
 
         f = open(function_data_file, "wb")
         fn_buf = pack_apply_message(func, args, kwargs,
