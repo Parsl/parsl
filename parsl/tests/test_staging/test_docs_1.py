@@ -1,11 +1,5 @@
 import pytest
-
-import parsl
 from parsl import App, File
-from parsl.configs.local_threads import config
-
-parsl.clear()
-parsl.load(config)
 
 
 @App('python')
