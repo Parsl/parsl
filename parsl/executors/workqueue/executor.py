@@ -95,6 +95,8 @@ def WorkQueueThread(tasks={},
             sandbox_func_result = "$WORK_QUEUE_SANDBOX/" + function_result_loc_remote
             command_str = launch_cmd.format(input_file=sandbox_func_data,
                                             output_file=sandbox_func_result)
+            command_str = launch_cmd.format(input_file=function_data_loc_remote,
+                                            output_file=function_result_loc_remote)
             logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
             try:
                 t = Task(command_str)
@@ -134,6 +136,7 @@ def WorkQueueThread(tasks={},
                 # TODO output sdtout and stderr to files as well as submit command
                 if status != 0:
                     logger.debug("Workqueue task {} failed with status {}".format(wq_id, status))
+                    print(t.output)
                     # Should probably do something smarter for this later
                     del wq_to_parsl[wq_tid]
                     continue
