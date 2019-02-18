@@ -8,7 +8,7 @@ from parsl.monitoring.viz_app.views import get_db, close_db
 
 def total_tasks_plot(run_id, columns=20):
     sql_conn = get_db()
-    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
+    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id=(?)',
                                   sql_conn, params=(run_id, ))
     df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?)',
                                 sql_conn, params=(run_id, ))
@@ -85,7 +85,7 @@ def total_tasks_plot(run_id, columns=20):
 
 def total_tasks_multiple_plot(run_id, apps, columns=20):
     sql_conn = get_db()
-    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM task_status WHERE run_id=(?)',
+    df_status = pd.read_sql_query('SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id=(?)',
                                   sql_conn, params=(run_id, ))
 
     if type(apps) is dict:

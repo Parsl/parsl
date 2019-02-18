@@ -13,7 +13,7 @@ def index():
     db = get_db()
 
     df = pd.read_sql_query("SELECT run_id, workflow_name, workflow_version, time_began, time_completed, "
-                           "tasks_completed_count, tasks_failed_count, user, host, rundir FROM workflows", db)\
+                           "tasks_completed_count, tasks_failed_count, user, host, rundir FROM workflow", db)\
         .sort_values(by=['time_began'], ascending=[False]).drop_duplicates(subset=['workflow_name', 'workflow_version'], keep='last')
 
     return render_template('workflows_summary.html', df=df)
@@ -23,7 +23,7 @@ def index():
 def workflow(workflow_id):
     db = get_db()
 
-    workflow_query = db.execute("SELECT workflow_name, user, rundir from workflows WHERE run_id='%s'" % workflow_id)
+    workflow_query = db.execute("SELECT workflow_name, user, rundir from workflow WHERE run_id='%s'" % workflow_id)
     workflow_details = workflow_query.fetchone()
 
 # TODO add logic here to check if there is a workflow with this ID and if there are any tasks to render..
@@ -59,7 +59,7 @@ def workflow(workflow_id):
 def task(workflow_id, task_id):
     db = get_db()
 
-    workflow_query = db.execute("SELECT workflow_name, user, rundir from workflows WHERE run_id='%s'" % workflow_id)
+    workflow_query = db.execute("SELECT workflow_name, user, rundir from workflow WHERE run_id='%s'" % workflow_id)
     workflow_details = workflow_query.fetchone()
 
     tasks = db.execute("SELECT task_id from task WHERE run_id='%s'" % workflow_id)

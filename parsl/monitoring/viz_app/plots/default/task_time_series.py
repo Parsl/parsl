@@ -6,7 +6,7 @@ from parsl.monitoring.viz_app.views import get_db, close_db
 
 def time_series_user_time_per_task_plot(run_id, task_id):
     sql_conn = get_db()
-    df_resources = pd.read_sql_query('SELECT psutil_process_time_user, timestamp FROM task_resources WHERE run_id=(?) AND task_id=(?)',
+    df_resources = pd.read_sql_query('SELECT psutil_process_time_user, timestamp FROM resource WHERE run_id=(?) AND task_id=(?)',
                                      sql_conn, params=(run_id, task_id))
 
     close_db()
@@ -24,7 +24,7 @@ def time_series_user_time_per_task_plot(run_id, task_id):
 
 def time_series_system_time_per_task_plot(run_id, task_id):
     sql_conn = get_db()
-    df_resources = pd.read_sql_query('SELECT psutil_process_time_system, timestamp FROM task_resources WHERE run_id=(?) AND task_id=(?)',
+    df_resources = pd.read_sql_query('SELECT psutil_process_time_system, timestamp FROM resource WHERE run_id=(?) AND task_id=(?)',
                                      sql_conn, params=(run_id, task_id))
 
     close_db()
@@ -42,7 +42,7 @@ def time_series_system_time_per_task_plot(run_id, task_id):
 
 def time_series_resident_memory_usage_per_task_plot(run_id, task_id):
     sql_conn = get_db()
-    df_resources = pd.read_sql_query('SELECT psutil_process_memory_resident, timestamp FROM task_resources WHERE run_id=(?) AND task_id=(?)',
+    df_resources = pd.read_sql_query('SELECT psutil_process_memory_resident, timestamp FROM resource WHERE run_id=(?) AND task_id=(?)',
                                      sql_conn, params=(run_id, task_id))
 
     close_db()
@@ -59,7 +59,7 @@ def time_series_resident_memory_usage_per_task_plot(run_id, task_id):
 
 def time_series_virtual_memory_usage_per_task_plot(run_id, task_id):
     sql_conn = get_db()
-    df_resources = pd.read_sql_query('SELECT psutil_process_memory_virtual, timestamp FROM task_resources WHERE run_id=(?) AND task_id=(?)',
+    df_resources = pd.read_sql_query('SELECT psutil_process_memory_virtual, timestamp FROM resource WHERE run_id=(?) AND task_id=(?)',
                                      sql_conn, params=(run_id, task_id))
 
     close_db()

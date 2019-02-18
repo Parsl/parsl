@@ -7,7 +7,7 @@ from parsl.monitoring.viz_app.views import get_db, close_db
 
 def user_time_distribution_plot(run_id, option, columns=20):
     sql_conn = get_db()
-    df_resources = pd.read_sql_query('SELECT psutil_process_time_user, timestamp, task_id FROM task_resources WHERE run_id=(?)',
+    df_resources = pd.read_sql_query('SELECT psutil_process_time_user, timestamp, task_id FROM resource WHERE run_id=(?)',
                                      sql_conn, params=(run_id, ))
     df_task = pd.read_sql_query('SELECT task_id, task_func_name FROM task WHERE run_id=(?)',
                                 sql_conn, params=(run_id, ))
