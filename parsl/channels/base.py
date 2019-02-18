@@ -25,12 +25,12 @@ class Channel(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def execute_wait(self, cmd, walltime, envs={}, *args, **kwargs):
+    def execute_wait(self, cmd, walltime=None, envs={}, *args, **kwargs):
         ''' Executes the cmd, with a defined walltime.
 
         Args:
             - cmd (string): Command string to execute over the channel
-            - walltime (int) : Timeout in seconds
+            - walltime (int) : Timeout in seconds, optional
 
         KWargs:
             - envs (Dict[str, str]) : Environment variables to push to the remote side
