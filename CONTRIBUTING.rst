@@ -61,6 +61,22 @@ To run tests with a timeout limit of one minute, run::
 Several parsl-specific decorators are available for specifying certain configurations to test with; see ``pytest --markers parsl/tests/`` for more details.
 
 
+Coverage testing
+================
+
+There is also some coverage testing available. The CI by default records
+coverage for most of the tests that it runs and outputs a brief report
+at the end of each CI run. This is purely informational and a Lack of
+coverage won't produce a CI failure.
+
+It is possible to produce a more detailed coverage report on your
+development machine: make sure you have no `.coverage` file, run the
+test commands as shown in `.travis.yml`, and then run
+`coverage report` to produce the summary as seen in CI, or run
+`coverage html` to produce annotated source code in the `htmlcov/`
+subdirectory. This will show, line by line, if each line of parsl
+source code was executed during the coverage test.
+
 Development Process
 -------------------
 
