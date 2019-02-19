@@ -598,6 +598,26 @@ class Strategy(object):
                 pass
 
 
+    def _htex_strategy_totaltime(self, tasks, *args, kind=None, **kwargs):
+        """Course Project Strategy
+        Kill block which has minimum total time.
+
+        Peek at the DFK and the executors specified.
+
+        We assume here that tasks are not held in a runnable
+        state, and that all tasks from an app would be sent to
+        a single specific executor, i.e tasks cannot be specified
+        to go to one of more executors.
+
+        Args:
+            - tasks (task_ids): Not used here.
+
+        KWargs:
+            - kind (Not used)
+        """
+        pass
+
+
 if __name__ == '__main__':
 
     pass
