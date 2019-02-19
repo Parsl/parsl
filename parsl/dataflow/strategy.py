@@ -121,7 +121,9 @@ class Strategy(object):
                            'htex_simple': self._htex_strategy,
                            'htex_aggressive': self._htex_strategy_aggressive,
                            'htex_totaltime': self._htex_strategy_totaltime}
-
+        
+        # Dummy comment
+        
         self.strategize = self.strategies[self.config.strategy]
         self.logger_flag = False
         self.prior_loghandlers = set(logging.getLogger().handlers)
