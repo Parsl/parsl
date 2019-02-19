@@ -1,2 +1,2 @@
 include LICENSE
-include parsl/monitoring/web_app/assets/*.css
+include parsl/monitoring/viz_app/templates/*
