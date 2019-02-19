@@ -119,7 +119,8 @@ class Strategy(object):
         self.strategies = {None: self._strategy_noop,
                            'simple': self._strategy_simple,
                            'htex_simple': self._htex_strategy,
-                           'htex_aggressive': self._htex_strategy_aggressive}
+                           'htex_aggressive': self._htex_strategy_aggressive,
+                           'htex_totaltime': self._htex_strategy_totaltime}
 
         self.strategize = self.strategies[self.config.strategy]
         self.logger_flag = False
