@@ -177,6 +177,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                "--hb_period={heartbeat_period} "
                                "--hb_threshold={heartbeat_threshold} ")
 
+        self.ix_launch_cmd = ("htex-interchange {debug} -c={client_address} "
+                              "--client_ports={client_ports} "
+                              "--worker_port_range={worker_port_range} "
+                              "--logdir={logdir} "
+                              "{suppress_failure} "
+                              "--hb_threshold={heartbeat_threshold} "
+                              "&")
+
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
 
@@ -220,7 +228,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._executor_exception = None
         self._queue_management_thread = None
         self._start_queue_management_thread()
-        self._start_local_queue_process()
+        # self._start_local_queue_process()
+        self._start_remote_interchange_process()
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
@@ -370,6 +379,42 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.worker_task_url = "tcp://{}:{}".format(self.address, worker_task_port)
         self.worker_result_url = "tcp://{}:{}".format(self.address, worker_result_port)
 
+    def _start_remote_interchange_process(self):
+        """ Starts the interchange process locally
+
+        Starts the interchange process remotely via the provider.channel and uses the command channel
+        to request worker urls that the interchange has selected.
+        """
+        logger.debug("Attempting Interchange deployment via channel: {}".format(self.provider.channel))
+
+        debug_opts = "--debug" if self.worker_debug else ""
+        suppress_failure = "--suppress_failure" if self.suppress_failure else ""
+        logger.debug("Before : \n{}\n".format(self.ix_launch_cmd))
+        launch_command = self.ix_launch_cmd.format(debug=debug_opts,
+                                                   client_address=self.address,
+                                                   client_ports="{},{},{}".format(self.outgoing_q.port,
+                                                                                  self.incoming_q.port,
+                                                                                  self.command_client.port),
+                                                   worker_port_range="{},{}".format(self.worker_port_range[0],
+                                                                                    self.worker_port_range[1]),
+                                                   logdir="{}/{}".format(self.run_dir, self.label),
+                                                   suppress_failure=suppress_failure,
+                                                   heartbeat_threshold=self.heartbeat_threshold)
+
+        if self.provider.worker_init:
+            launch_command = self.provider.worker_init + '\n' + launch_command
+
+        logger.debug("Launch command : \n{}\n".format(launch_command))
+
+        retcode, stdout, stderr = self.provider.execute_wait(launch_command)
+        if retcode == 0:
+            logger.debug("Starting Interchange remotely worked")
+
+        logger.debug("Requesting worker urls ")
+        self.worker_task_url, self.worker_result_url = self.get_worker_urls()
+        logger.debug("Got worker urls {}, {}".format(self.worker_task_url, self.worker_result_url))
+        return
+
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
 
@@ -400,6 +445,16 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
         logger.debug("Sent hold request to worker: {}".format(worker_id))
+        return c
+
+    def get_worker_urls(self):
+        """Ensure Interchange is reachable over the command channel and get worker urls
+
+        Returns:
+            worker_task_url, worker_result_url
+        """
+        c = self.command_client.run("GET_WORKER_URLS;")
+        logger.debug("Got worker urls: {}")
         return c
 
     @property
