@@ -9,6 +9,7 @@
     <thead>
       <tr>
         <th>Name</th>
+        <th>Version</th>
         <th>Owner</th>
         <th>Status</th>
         <th>Runtime</th>
@@ -20,7 +21,8 @@
       {% for key,value in df.iterrows() %}
           <tr>
         <td><a href="workflow/{{ value['run_id'] }}/">{{ value['workflow_name'] }}</a></td>
-        <td>Kyle</td>
+        <td>{{ value['workflow_version'] }}</td>
+        <td>{{ value['user'] }}</td>
         <td>Running</td>
         <td>1:30</td>
         <td>
