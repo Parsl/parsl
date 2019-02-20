@@ -87,8 +87,10 @@ class File(str):
                 return self.local_path
             else:
                 return self.filename
-
-        return self.path
+        elif self.scheme in ['file']:
+            return self.path
+        else:
+            raise Exception('Cannot return filepath for unknown scheme {}'.format(self.scheme))
 
     def stage_in(self, executor):
         """Transport file from the input source to the executor.
