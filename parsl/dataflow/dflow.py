@@ -492,17 +492,32 @@ class DataFlowKernel(object):
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            if isinstance(f, File) and f.is_remote():
-                inputs[idx] = f.stage_in(executor)
+            if isinstance(f, File):
+                if f.is_registered():
+                    f.shared = True
+                else:
+                    f.registered = True
+                if f.is_remote():
+                    inputs[idx] = f.stage_in(executor)
 
         for kwarg, potential_f in kwargs.items():
-            if isinstance(potential_f, File) and potential_f.is_remote():
-                kwargs[kwarg] = potential_f.stage_in(executor)
+            if isinstance(potential_f, File):
+                if f.is_registered():
+                    potential_f.shared = True
+                else:
+                    potential_f.registered = True
+                if potential_f.is_remote():
+                    kwargs[kwarg] = potential_f.stage_in(executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
-            if isinstance(f, File) and f.is_remote():
-                newargs[idx] = f.stage_in(executor)
+            if isinstance(f, File):
+                if f.is_registered():
+                    f.shared = True
+                else:
+                    f.registered = True
+                if f.is_remote():
+                    newargs[idx] = f.stage_in(executor)
 
         return tuple(newargs), kwargs
 

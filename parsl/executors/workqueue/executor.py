@@ -257,6 +257,27 @@ class WorkQueueExecutor(ParslExecutor):
         self.task_counter += 1
         task_id = self.task_counter
 
+        input_files = []
+        output_files = []
+
+        func_inputs = kwargs.get("inputs", [])
+        for inp in func_inputs:
+            if isinstance(inp, File):
+                input_files.append((inp.filepath, inp.shared))
+
+        for kwarg, potential_f in kwargs.items():
+            if isinstance(potential_f, File):
+                input_files.append((potential_f.filepath, potential_f.shared))
+        
+        for inp in args:
+            if isinstance(inp, File):
+                input_files.append((inp.filepath, inp.shared))
+
+        func_inputs = kwargs.get("inputs")
+        for output in func_outputs:
+            if isinstance(output, File):
+                output_files.append(output.filepath)
+
         fu = Future()
         self.tasks_lock.acquire()
         self.tasks[task_id] = fu
