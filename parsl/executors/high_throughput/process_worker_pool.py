@@ -154,7 +154,7 @@ class Manager(object):
 
         # Send a registration message
         msg = self.create_reg_message()
-        logger.debug("Sending registration message: {}".format(msg))
+        logger.info("Sending registration message: {}".format(msg))
         self.task_incoming.send(msg)
         last_beat = time.time()
         last_interchange_contact = time.time()
