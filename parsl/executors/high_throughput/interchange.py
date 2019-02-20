@@ -3,6 +3,7 @@ import argparse
 import zmq
 # import uuid
 import os
+import daemon
 import sys
 import platform
 import random
@@ -111,7 +112,6 @@ class Interchange(object):
              When set to True, the interchange will attempt to suppress failures. Default: False
 
         """
-        print("Here")
         self.logdir = logdir
         try:
             os.makedirs(self.logdir)
@@ -181,6 +181,7 @@ class Interchange(object):
                                  'os': platform.system(),
                                  'hname': platform.node(),
                                  'dir': os.getcwd()}
+        logger.info("Current platform info: {}".format(self.current_platform))
 
     def get_tasks(self, count):
         """ Obtains a batch of tasks from the internal pending_task_queue
@@ -243,8 +244,7 @@ class Interchange(object):
         while not kill_event.is_set():
             try:
                 command_req = self.command_channel.recv_pyobj()
-                logger.debug("[COMMAND] Received command request: {}".format(command_req))
-                print("DEBUG: got command {}".format(command_req))
+                logger.info("[COMMAND] Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
                     outstanding = self.pending_task_queue.qsize()
                     for manager in self._ready_manager_queue:
@@ -551,5 +551,6 @@ def cli_run():
     if args.worker_port_range:
         optionals['client_ports'] = [int(i) for i in args.client_ports.split(',')]
 
-    ic = Interchange(**optionals)
-    ic.start()
+    with daemon.DaemonContext():
+        ic = Interchange(**optionals)
+        ic.start()
