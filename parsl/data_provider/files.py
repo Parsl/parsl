@@ -104,12 +104,6 @@ class File(str):
         """Transport file from executor to final output destination."""
         return self.dman.stage_out(self, executor)
 
-    def set_data_future(self, df, executor=None):
-        self.data_future[executor] = df
-
-    def get_data_future(self, executor):
-        return self.data_future.get(executor)
-
     def __getstate__(self):
         """Override the default pickling method.
 
