@@ -518,7 +518,7 @@ def starter(comm_q, *args, **kwargs):
 def cli_run():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--client_address",
+    parser.add_argument("-c", "--client_address", required=True,
                         help="Client address")
     parser.add_argument("--client_ports",
                         help="client ports as a triple of outgoing,incoming,command")
@@ -541,6 +541,7 @@ def cli_run():
     optionals = {}
     optionals['suppress_failure'] = args.suppress_failure
     optionals['logdir'] = args.logdir
+    optionals['client_address'] = args.client_address
 
     if args.debug:
         optionals['logging_level'] = logging.DEBUG

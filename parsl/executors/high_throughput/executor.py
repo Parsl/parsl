@@ -6,6 +6,7 @@ import logging
 import threading
 import queue
 import pickle
+import os
 from multiprocessing import Process, Queue
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
@@ -408,7 +409,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                                                                   self.command_client.port),
                                                    worker_port_range="{},{}".format(self.worker_port_range[0],
                                                                                     self.worker_port_range[1]),
-                                                   logdir="{}/{}".format(self.run_dir, self.label),
+                                                   logdir="{}/runinfo/{}/{}".format(self.provider.channel.script_dir,
+                                                                                    os.path.basename(self.run_dir),
+                                                                                    self.label),
                                                    suppress_failure=suppress_failure,
                                                    heartbeat_threshold=self.heartbeat_threshold)
 
