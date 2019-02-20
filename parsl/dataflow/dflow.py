@@ -379,10 +379,17 @@ class DataFlowKernel(object):
         """
         if self._count_deps(self.tasks[task_id]['depends']) == 0:
 
+            logger.info("BENC3.0: launch if ready, kwargs {}".format(self.tasks[task_id]['kwargs']))
             # We can now launch *task*
+
+            # ... sanitize_and_wrap is where inputs changes from being a DataFuture to
+            #     being a File again. At this point we know the executor (because it is
+            #     specified in self.tasks[task_id]['executor'] so we could potentially
+            #     customise a new file object to send, inside sanitize_and_wrap.
             new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
                                                                   self.tasks[task_id]['args'],
                                                                   self.tasks[task_id]['kwargs'])
+            logger.info("BENC3.05: launch if ready, kwargs {}".format(kwargs))
             self.tasks[task_id]['args'] = new_args
             self.tasks[task_id]['kwargs'] = kwargs
             if not exceptions:
@@ -391,6 +398,8 @@ class DataFlowKernel(object):
                 # Acquire a lock, retest the state, launch
                 with self.tasks[task_id]['task_launch_lock']:
                     if self.tasks[task_id]['status'] == States.pending:
+                        # by this point, the kwargs inputs are files, not data futures...
+                        logger.info("BENC3.1: launch if ready, kwargs {}".format(kwargs))
                         exec_fu = self.launch_task(
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
@@ -502,7 +511,9 @@ class DataFlowKernel(object):
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             if isinstance(f, File) and f.is_remote():
+                logger.info("BENC: stage in file type: {}".format(type(f)))
                 inputs[idx] = self.data_manager.stage_in(f, executor)
+                logger.info("BENC: returned inputs[idx]: {}".format(type(inputs[idx])))
 
         for kwarg, f in kwargs.items():
             if isinstance(f, File) and f.is_remote():
@@ -567,6 +578,13 @@ class DataFlowKernel(object):
         Return:
              partial Function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
 
+        BENC: somewhere in here, the kwargs change from being data futures to being
+              file objects (possibly the original file objects?) and it is here that
+              i might look at replacing these with executor-customised file objects
+              that know details of the remote execution environment.
+
+              I think because a datafuture.result() is the relevant file object? so
+              replacing each future with its result performs this substitution?
         """
         dep_failures = []
 
@@ -652,6 +670,11 @@ class DataFlowKernel(object):
 
         # Transform remote input files to data futures
         args, kwargs = self._add_input_deps(executor, args, kwargs)
+        benc_inputs = kwargs.get('inputs', [])
+        logger.debug("BENC2: inputs[] length {}".format(len(benc_inputs)))
+        logger.debug("BENC2: returned inputs: {}".format(benc_inputs))
+        logger.debug("BENC2: kwargs: {}".format(kwargs))
+        # logger.debug("BENC2: returned inputs[0] type: {}".format(type(benc_inputs[0])))
 
         task_def = {'depends': None,
                     'executor': executor,

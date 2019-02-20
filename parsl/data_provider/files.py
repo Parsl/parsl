@@ -27,6 +27,8 @@ class File(str):
     a previously loaded Parsl config.
 
     A File which is not associated with a DataManager is ill-defined.
+    *** BENC ^ I'd like there to be no DataManager association...
+
 
     """
 

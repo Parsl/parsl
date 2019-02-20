@@ -47,6 +47,9 @@ class DataFuture(Future):
         if e:
             super().set_exception(e)
         else:
+            # here instead of using the original file object, want to make a
+            # new file object that is customised? or perhaps when we create
+            # the data future in the first place
             super().set_result(self.file_obj)
 
     def __init__(self, fut, file_obj, parent=None, tid=None):
