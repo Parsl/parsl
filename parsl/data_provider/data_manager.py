@@ -107,29 +107,30 @@ class DataManager(ParslExecutor):
         if self.globus is None:
             self.globus = get_globus()
 
-    def _get_globus_endpoint(self, executor_label=None):
-        for executor in self.dfk.executors.values():
-            if executor_label is None or executor.label == executor_label:
-                for scheme in executor.storage_access:
-                    if isinstance(scheme, GlobusScheme):
-                        if executor.working_dir:
-                            working_dir = os.path.normpath(executor.working_dir)
-                        else:
-                            raise ValueError("executor working_dir must be specified for GlobusScheme")
-                        if scheme.endpoint_path and scheme.local_path:
-                            endpoint_path = os.path.normpath(scheme.endpoint_path)
-                            local_path = os.path.normpath(scheme.local_path)
-                            common_path = os.path.commonpath((local_path, working_dir))
-                            if local_path != common_path:
-                                raise Exception('"local_path" must be equal or an absolute subpath of "working_dir"')
-                            relative_path = os.path.relpath(working_dir, common_path)
-                            endpoint_path = os.path.join(endpoint_path, relative_path)
-                        else:
-                            endpoint_path = working_dir
-                        return {'endpoint_uuid': scheme.endpoint_uuid,
-                                'endpoint_path': endpoint_path,
-                                'working_dir': working_dir}
-        raise Exception('No executor with a Globus endpoint and working_dir defined')
+    def _get_globus_endpoint(self, executor_label):
+        if executor_label is None:
+            raise ValueError("executor_label is mandatory")
+        executor = self.dfk.executors[executor_label]
+        for scheme in executor.storage_access:
+            if isinstance(scheme, GlobusScheme):
+                if executor.working_dir:
+                    working_dir = os.path.normpath(executor.working_dir)
+                else:
+                    raise ValueError("executor working_dir must be specified for GlobusScheme")
+                if scheme.endpoint_path and scheme.local_path:
+                    endpoint_path = os.path.normpath(scheme.endpoint_path)
+                    local_path = os.path.normpath(scheme.local_path)
+                    common_path = os.path.commonpath((local_path, working_dir))
+                    if local_path != common_path:
+                        raise Exception('"local_path" must be equal or an absolute subpath of "working_dir"')
+                    relative_path = os.path.relpath(working_dir, common_path)
+                    endpoint_path = os.path.join(endpoint_path, relative_path)
+                else:
+                    endpoint_path = working_dir
+                return {'endpoint_uuid': scheme.endpoint_uuid,
+                        'endpoint_path': endpoint_path,
+                        'working_dir': working_dir}
+        raise Exception('No suitable Globus endpoint defined for executor {}'.format(executor_label))
 
     def stage_in(self, file, executor):
         """Transport the file from the input source to the executor.
