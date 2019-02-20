@@ -6,3 +6,4 @@ tblib
 ipykernel
 requests
 paramiko
+python-daemon
