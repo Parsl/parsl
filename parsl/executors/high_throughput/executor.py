@@ -93,6 +93,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     worker_port_range : (int, int)
         Worker ports will be chosen between the two integers provided.
 
+    interchange_address : str | function
+        Address (str) at which the interchange will be reachable from compute nodes or an address
+        function from parsl.addresses that be executed on the interchange to determine a suitable
+        address. Only valid when remote_interchange=True.
+        Eg. remote_interchange_address=parsl.addresses.address_by_hostname,
+            remote_interchange_address="10.10.10.2"
+        Default : "localhost"
+
     interchange_port_range : (int, int)
         Port range used by Parsl to communicate with the Interchange.
 
@@ -131,6 +139,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  address="127.0.0.1",
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
+                 interchange_address="localhost",
                  interchange_port_range=(55000, 56000),
                  storage_access=None,
                  working_dir=None,
@@ -167,6 +176,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.heartbeat_period = heartbeat_period
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
+        self.interchange_address = interchange_address
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
@@ -182,8 +192,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                               "--worker_port_range={worker_port_range} "
                               "--logdir={logdir} "
                               "{suppress_failure} "
-                              "--hb_threshold={heartbeat_threshold} "
-                              "&")
+                              "--hb_threshold={heartbeat_threshold} ")
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
@@ -228,8 +237,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._executor_exception = None
         self._queue_management_thread = None
         self._start_queue_management_thread()
-        # self._start_local_queue_process()
-        self._start_remote_interchange_process()
+        if self.interchange_address == "localhost":
+            self._start_local_queue_process()
+        else:
+            self._start_remote_interchange_process()
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
@@ -447,6 +458,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         logger.debug("Sent hold request to worker: {}".format(worker_id))
         return c
 
+    def _shutdown_interchange(self):
+        """Trigger shutdown sequence on the Interchange
+
+        """
+        c = self.command_client.run("SHUTDOWN")
+        logger.debug("Sent shutdown command to interchange")
+        return c
+
     def get_worker_urls(self):
         """Ensure Interchange is reachable over the command channel and get worker urls
 
@@ -454,7 +473,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             worker_task_url, worker_result_url
         """
         c = self.command_client.run("GET_WORKER_URLS;")
-        logger.debug("Got worker urls: {}")
+        logger.debug("Got worker urls: {}".format(c))
         return c
 
     @property
@@ -574,6 +593,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         logger.warning("Attempting HighThroughputExecutor shutdown")
         # self.outgoing_q.close()
         # self.incoming_q.close()
-        self.queue_proc.terminate()
+        self._shutdown_interchange()
+        if self.interchange_address == "localhost":
+            self.queue_proc.terminate()
         logger.warning("Finished HighThroughputExecutor shutdown attempt")
         return True
