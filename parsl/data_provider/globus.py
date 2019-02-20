@@ -2,17 +2,9 @@ import logging
 import json
 import globus_sdk
 import os
-
+import parsl
 
 logger = logging.getLogger(__name__)
-# Add StreamHandler to print error Globus events to stderr
-handler = logging.StreamHandler()
-handler.setLevel(logging.WARN)
-format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 
 """
 'Parsl Application' OAuth2 client registered with Globus Auth
@@ -166,6 +158,7 @@ class Globus(object):
 
 
 def cli_run():
+    parsl.set_stream_logger()
     print("Parsl Globus command-line authoriser")
     print("If authorisation to Globus is necessary, the library will prompt you now.")
     print("Otherwise it will do nothing")
