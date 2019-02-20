@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+<h2>{{ task_details['task_func_name'] }} ({{ task_details['task_id'] }})</h2>
+<hr>
+<ul>
+    <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}">{{ workflow_details['workflow_name'] }}<a/></li>
+    <li><b>Started:</b>  {{ workflow_details['time_began'] }}</li>
+    <li><b>Completed:</b>  {{ workflow_details['time_completed'] }}</li>
+    <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
+    <li><b>task_func_name:</b>   <a href="/workflow/{{ workflow_details['run_id'] }}/app/{{ task_details['task_func_name'] }}">{{ task_details['task_func_name'] }}</a></li>
+    <li><b>task_time_submitted:</b>  {{ task_details['task_time_submitted'] }}</li>
+    <li><b>task_time_returned:</b>  {{ task_details['task_time_returned'] }}</li>
+    <li><b>task_inputs:</b>  {{ task_details['task_inputs'] }}</li>
+    <li><b>task_outputs:</b>  {{ task_details['task_outputs'] }}</li>
+    <li><b>task_stdin:</b>  {{ task_details['task_stdin'] }}</li>
+    <li><b>task_stdout:</b>  {{ task_details['task_stdout'] }}</li>
+</ul>
+
+
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 300px;">
+{{ time_series_cpu|safe }}
+    </div>
+    <div class="col-6" style="height: 300px;">
+{{ time_series_memory|safe }}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
