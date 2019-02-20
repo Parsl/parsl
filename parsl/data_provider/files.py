@@ -46,6 +46,8 @@ class File(str):
         self.scheme = parsed_url.scheme if parsed_url.scheme else 'file'
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
+        self.registered = False
+        self.shared = False
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {}

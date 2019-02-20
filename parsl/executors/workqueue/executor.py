@@ -27,7 +27,8 @@ def WorkQueueThread(tasks={},
                     full=False,
                     password=None,
                     password_file=None,
-                    project_name=None):
+                    project_name=None,
+                    env=None):
 
     logger.debug("Starting WorkQueue Master Thread")
 
@@ -103,6 +104,10 @@ def WorkQueueThread(tasks={},
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
                 raise e
+            if env is not None:
+                for var in env:
+                    t.specify_environment_variable(var, env[var])
+
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
@@ -183,7 +188,9 @@ class WorkQueueExecutor(ParslExecutor):
                  project_name=None,
                  project_password=None,
                  project_password_file=None,
-                 port=WORK_QUEUE_DEFAULT_PORT):
+                 port=WORK_QUEUE_DEFAULT_PORT,
+                 env=None,
+                 init_command=""):
 
         self.label = label
         self.managed = managed
@@ -195,6 +202,8 @@ class WorkQueueExecutor(ParslExecutor):
         self.project_name = project_name
         self.project_password = project_password
         self.project_password_file = project_password_file
+        self.env = env
+        self.init_command = init_command
 
         if self.project_password is not None and self.project_password_file is not None:
             logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
@@ -205,6 +214,8 @@ class WorkQueueExecutor(ParslExecutor):
                 self.project_password_file = None
 
         self.launch_cmd = ("python3 workqueue_worker.py {input_file} {output_file}")
+        if self.init_command != "":
+            self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
     def start(self):
         self.queue_lock = threading.Lock()
@@ -228,7 +239,8 @@ class WorkQueueExecutor(ParslExecutor):
                          "log_dir": self.wq_log_dir,
                          "password_file": self.project_password_file,
                          "password": self.project_password,
-                         "project_name": self.project_name}
+                         "project_name": self.project_name,
+                         "env": self.env}
         self.master_thread = threading.Thread(target=WorkQueueThread,
                                               name="master_thread",
                                               kwargs=thread_kwargs)

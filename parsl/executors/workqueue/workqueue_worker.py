@@ -1,7 +1,8 @@
 import sys
+import os
 import pickle
-from ipyparallel.serialize import unpack_apply_message
 import logging
+from ipyparallel.serialize import unpack_apply_message
 
 if __name__ == "__main__":
     name = "parsl"
