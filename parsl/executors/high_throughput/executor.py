@@ -228,9 +228,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def start(self):
         """Create the Interchange process and connect to it.
         """
-        self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
-        self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
-        self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
+        self.outgoing_q = zmq_pipes.TasksOutgoing("0.0.0.0", self.interchange_port_range)
+        self.incoming_q = zmq_pipes.ResultsIncoming("0.0.0.0", self.interchange_port_range)
+        self.command_client = zmq_pipes.CommandClient("0.0.0.0", self.interchange_port_range)
 
         self.is_alive = True
 
@@ -475,7 +475,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Returns:
             worker_task_url, worker_result_url
         """
-        c = self.command_client.run("GET_WORKER_URLS;")
+        c = self.command_client.run("GET_WORKER_URLS;{}".format(self.interchange_address))
         logger.debug("Got worker urls: {}".format(c))
         return c
 
