@@ -128,7 +128,9 @@ class Strategy(object):
 
         self.blocks = {}
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
-
+        
+        self.task_tracker = {}
+        
     def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
         """Do nothing.
 
@@ -617,6 +619,8 @@ class Strategy(object):
             - kind (Not used)
         """
         
+        print("Run course project strategy")
+        
         for label, executor in self.dfk.executors.items():
             if not executor.scaling_enabled:
                 continue
@@ -668,7 +672,7 @@ class Strategy(object):
             else:
                 logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
                     label, active_tasks, running, submitting, pending))
-
+            
             # Case 1
             # No tasks.
             if active_tasks == 0:
@@ -678,7 +682,7 @@ class Strategy(object):
                     # Ignore
                     # logger.debug("Strategy: Case.1a")
                     pass
-
+            
                 # Case 1b
                 # More blocks than min_blocks. Scale down
                 else:
@@ -734,7 +738,7 @@ class Strategy(object):
             # More slots than tasks
             elif active_slots > 0 and active_slots > active_tasks:
                 if isinstance(executor, HighThroughputExecutor):
-
+                
                     blocks = {}
                     for manager in connected_workers:
                         blk_id = manager['block_id']
@@ -746,7 +750,7 @@ class Strategy(object):
                             blocks[blk_id]['managers'].append(manager)
                             blocks[blk_id]['tasks'] += manager['tasks']
                             blocks[blk_id]['worker_count'] += manager['worker_count']
-
+                    """
                     for block in blocks:
                         tasks_in_flight = sum([manager['tasks'] for manager in blocks[block]])
                         is_active = all([manager['active'] for manager in blocks[block]])
@@ -755,7 +759,42 @@ class Strategy(object):
                         if tasks_in_flight == 0 and is_active:
                             executor.scale_in(1, block_ids=[block])
                             logger.debug("[STRATEGY] CASE:4a Block:{} is empty".format(block))
-
+                    """
+                    
+                    min_totaltime = None
+                    selected_block = None
+                    # Go through all allocated blocks
+                    for block in blocks:
+                        # For each block, check if we tracked it or not
+                        if block not in self.task_tracker:
+                            # If not, then add a new slot for it to the task_tracker
+                            self.task_tracker[block] = {}
+                        # Update the tracker for this block
+                        new_task_tracker = {}
+                        for task in block['tasks']:
+                            # Go through outstanding task in the block, check if we have tracked
+                            # the runtime the task
+                            if task not in self.task_tracker[block]:
+                                # If not then the task have just get started, track it with runtime = 0
+                                tracker[task] = 0
+                            else:
+                                # Otherwise, add 1 to the runtime meaning that the task have run for 1 time unit
+                                tracker[task] += self.task_tracker[block][task] + 1
+                        # Update the task tracker
+                        self.task_tracker[block] = new_task_tracker
+                        # Compute the total runtime of tasks in the blocks
+                        totaltime = sum([task for task in new_task_tracker])
+                        # Check if it is the lowest
+                        if (min_totaltime == None or totaltime > min_totaltime):
+                            # Update
+                            min_totaltime = totaltime
+                            selected_block = block
+                    
+                    # Scale in!
+                    if (selected_block != None):
+                        executor.scale_in(1, block_ids=[selected_block])
+                        logger.debug("[COURSE PROJECT STRATEGY] CASE:4a Block:{} has lowest totaltime".format(selected_block))
+                    
                     logger.debug("[STRATEGY] CASE:4 Block slots:{}".format(blocks.keys()))
 
             # Case 3
