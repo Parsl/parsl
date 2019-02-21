@@ -275,8 +275,10 @@ class Interchange(object):
                     reply = True
 
                 elif command_req.startswith("GET_WORKER_URLS"):
+                    logger.info("[CMD] Here ")
                     cmd, method = command_req.split(';')
                     logger.info("[CMD] Requested worker urls via {}".format(method))
+                    self.interchange_address = method
                     reply = ("tcp://{}:{}".format(self.interchange_address, self.worker_task_port),
                              "tcp://{}:{}".format(self.interchange_address, self.worker_result_port))
                 else:
