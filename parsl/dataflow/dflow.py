@@ -543,7 +543,7 @@ class DataFlowKernel(object):
              kwargs (Dict) : Kwargs to app function
 
         Return:
-             partial Function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
+             partial function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
 
         """
         dep_failures = []
