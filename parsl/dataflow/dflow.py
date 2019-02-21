@@ -155,8 +155,8 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
-        self.executors = {e.label: e for e in config.executors + [data_manager]}
+        self.data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
+        self.executors = {e.label: e for e in config.executors + [self.data_manager]}
         for executor in self.executors.values():
             executor.run_dir = self.run_dir
             if hasattr(executor, 'provider'):
@@ -352,7 +352,7 @@ class DataFlowKernel(object):
             for dfu in self.tasks[task_id]['app_fu'].outputs:
                 f = dfu.file_obj
                 if isinstance(f, File) and f.is_remote():
-                    f.stage_out(self.tasks[task_id]['executor'])
+                    self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
                 # TODO: what are the non-file cases for stuff being in
                 # outputs here?
                 # `isinstance File and not f.is_remote` - that's a reasonable one
@@ -502,16 +502,16 @@ class DataFlowKernel(object):
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             if isinstance(f, File) and f.is_remote():
-                inputs[idx] = f.stage_in(executor)
+                inputs[idx] = self.data_manager.stage_in(f, executor)
 
         for kwarg, f in kwargs.items():
             if isinstance(f, File) and f.is_remote():
-                kwargs[kwarg] = f.stage_in(executor)
+                kwargs[kwarg] = self.data_manager.stage_in(f, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
             if isinstance(f, File) and f.is_remote():
-                newargs[idx] = f.stage_in(executor)
+                newargs[idx] = self.data_manager.stage_in(f, executor)
 
         return tuple(newargs), kwargs
 
