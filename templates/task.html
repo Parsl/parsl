@@ -5,6 +5,9 @@
 <br />
 <h2>{{ task_details['task_func_name'] }} ({{ task_details['task_id'] }})</h2>
 <hr>
+<div class="container">
+  <div class="row">
+    <div class="col">
 <ul>
     <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}">{{ workflow_details['workflow_name'] }}<a/></li>
     <li><b>Started:</b>  {{ workflow_details['time_began'] }}</li>
@@ -12,6 +15,7 @@
     <li><b>Completion time:</b>  {{ workflow_details['completion_time'] }} s</li>
     <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
     <li><b>task_func_name:</b>   <a href="/workflow/{{ workflow_details['run_id'] }}/app/{{ task_details['task_func_name'] }}">{{ task_details['task_func_name'] }}</a></li>
+    <li><b>task_id:</b>  {{ task_details['task_id'] }}</li>
     <li><b>task_time_submitted:</b>  {{ task_details['task_time_submitted'] }}</li>
     <li><b>task_time_returned:</b>  {{ task_details['task_time_returned'] }}</li>
     <li><b>task_inputs:</b>  {{ task_details['task_inputs'] }}</li>
@@ -19,7 +23,29 @@
     <li><b>task_stdin:</b>  {{ task_details['task_stdin'] }}</li>
     <li><b>task_stdout:</b>  {{ task_details['task_stdout'] }}</li>
 </ul>
+    </div>
+    <div class="col">
+        <h5>Task State</h5>
 
+        <table class="table table-hover" style="width: 400px">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>State</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in task_status %}
+                  <tr>
+                <td>{{ t.timestamp }}</td>
+                <td>{{ t.task_status_name }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+    </div>
+  </div>
+</div>
 
 <div class="container">
   <div class="row">

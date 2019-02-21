@@ -62,10 +62,14 @@ def task(workflow_id, task_id):
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
     task_details = Task.query.filter_by(run_id=workflow_id, task_id=task_id).first()
+    task_status = Status.query.filter_by(run_id=workflow_id, task_id=task_id).order_by(Status.timestamp)
 
     df_resources = pd.read_sql_query("SELECT * FROM resource WHERE run_id='%s' AND task_id='%s'" % (workflow_id, task_id), db.engine)
 
-    return render_template('task.html', workflow_details=workflow_details, task_details=task_details,
+    return render_template('task.html', 
+                           workflow_details=workflow_details, 
+                           task_details=task_details,
+                           task_status=task_status,
                            time_series_cpu=time_series_cpu_per_task_plot(df_resources, 'psutil_process_time_user', 'CPU Usage'),
                            time_series_memory=time_series_memory_per_task_plot(df_resources, 'psutil_process_memory_resident', 'Memory Usage'),)
 

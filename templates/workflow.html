@@ -23,7 +23,7 @@
         </ul>
     </div>
     <div class="col">
-        <h5>Task Summary</h5>
+        <h5>App Summary</h5>
 
         <table class="table table-hover" style="width: 400px">
             <thead>
@@ -42,6 +42,7 @@
             </tbody>
           </table>
     </div>
+  </div>
 </div>
 
 <a href="resource_usage">View workflow resource usage</a>
@@ -52,7 +53,7 @@
     <div class="col-6">
 {{ task_gantt|safe }}
     </div>
-    <div class="col-6">
+    <div class="col-6" style="height: 600px ">
 {{ task_per_app|safe }}
     </div>
   </div>
