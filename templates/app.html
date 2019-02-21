@@ -11,6 +11,7 @@
     <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}">{{ workflow_details['workflow_name'] }}<a/></li>
     <li><b>Started:</b>  {{ workflow_details['time_began'] }}</li>
     <li><b>Completed:</b>  {{ workflow_details['time_completed'] }}</li>
+    <li><b>Completion:</b>  {{ workflow_details['completion_time'] }} s</li>
     <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
     <li><b>host:</b>  {{ workflow_details['host'] }}</li>
     <li><b>rundir:</b>  {{ workflow_details['rundir'] }}</li>
@@ -33,7 +34,7 @@
       {% for t in task_summary %}
       <tr>
         <td><a href="/workflow/{{ workflow_details['run_id'] }}/task/{{ t['task_id'] }}">{{ t.task_func_name }}</a></td>
-        <td><{{ t.task_executor }}</td>
+        <td>{{ t['task_executor'] }}</td>
 
         <td>{{ t['task_time_submitted'] }}</td>
         <td> {{ t['task_time_returned'] }}</td>

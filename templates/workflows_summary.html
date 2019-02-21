@@ -9,9 +9,10 @@
     <thead>
       <tr>
         <th>Name</th>
+        <th>Version</th>
         <th>Owner</th>
         <th>Status</th>
-        <th>Runtime</th>
+        <th>Runtime (s)</th>
         <th>Tasks</th>
         <th>Actions</th>
       </tr>
@@ -20,10 +21,10 @@
       {% for w in workflows %}
           <tr>
         <td><a href="workflow/{{ w['run_id'] }}/">{{ w.workflow_name }}</a></td>
-        <td><{{ w.user }}</td>
-
-        <td>{{ w['status'] }}</td>
-        <td>TODO: {{ w['time_completed'] }}</td>
+        <td>{{ w.workflow_version }}</td>
+        <td>{{ w.user }}</td>
+        <td>{{ w.status }}</td>
+        <td>{{ w.completion_time }}</td>
         <td>
              <span class="task task-complete">{{ w['tasks_completed_count'] }}</span>
              <span class="task task-failed">{{ w['tasks_failed_count'] }}</span>

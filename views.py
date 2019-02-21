@@ -9,7 +9,10 @@ from plots.default.workflow_resource_plots import resource_distribution_plot
 @app.route('/')
 def index():
     workflows = Workflow.query.all()
-    print (workflows)
+    for workflow in workflows:
+        workflow.status = 'Running'
+        if workflow.time_completed is not None:
+            workflow.status = 'Completed'
     return render_template('workflows_summary.html', workflows=workflows)
 
 @app.route('/workflow/<workflow_id>/')
@@ -36,7 +39,6 @@ def parsl_apps(workflow_id):
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
     task_summary = Task.query.filter_by(run_id=workflow_id)
-
     return render_template('app.html', app_name="All Apps", workflow_details=workflow_details, task_summary=task_summary)
 
 

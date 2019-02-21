@@ -9,6 +9,7 @@
     <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}">{{ workflow_details['workflow_name'] }}<a/></li>
     <li><b>Started:</b>  {{ workflow_details['time_began'] }}</li>
     <li><b>Completed:</b>  {{ workflow_details['time_completed'] }}</li>
+    <li><b>Completion time:</b>  {{ workflow_details['completion_time'] }} s</li>
     <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
     <li><b>task_func_name:</b>   <a href="/workflow/{{ workflow_details['run_id'] }}/app/{{ task_details['task_func_name'] }}">{{ task_details['task_func_name'] }}</a></li>
     <li><b>task_time_submitted:</b>  {{ task_details['task_time_submitted'] }}</li>

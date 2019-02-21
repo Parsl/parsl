@@ -10,8 +10,8 @@ def task_gantt_plot(df_task):
 
     df_task = df_task.sort_values(by=['task_time_submitted'], ascending=False)
 
-    df_task['task_time_submitted'] = pd.to_datetime(df_task['task_time_submitted'], unit='s')
-    df_task['task_time_returned'] = pd.to_datetime(df_task['task_time_returned'], unit='s')
+    #df_task['task_time_submitted'] = pd.to_datetime(df_task['task_time_submitted'], unit='s')
+    #df_task['task_time_returned'] = pd.to_datetime(df_task['task_time_returned'], unit='s')
 
     df_task = df_task.rename(index=str, columns={"task_id": "Task",
                                                  "task_time_submitted": "Start",
