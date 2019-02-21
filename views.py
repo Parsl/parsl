@@ -26,7 +26,9 @@ def workflow(workflow_id):
     df_status = pd.read_sql_query("SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='%s'" % workflow_id, db.engine)
     task_summary = db.engine.execute("SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;"  % workflow_id)
 
-    return render_template('workflow.html', workflow_details=workflow_details, task_summary=task_summary,
+    return render_template('workflow.html',
+                           workflow_details=workflow_details,
+                           task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task),
                            task_per_app=task_per_app_plot(df_task, df_status))
 
@@ -39,7 +41,10 @@ def parsl_apps(workflow_id):
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
     task_summary = Task.query.filter_by(run_id=workflow_id)
-    return render_template('app.html', app_name="All Apps", workflow_details=workflow_details, task_summary=task_summary)
+    return render_template('app.html',
+                           app_name="All Apps",
+                           workflow_details=workflow_details,
+                           task_summary=task_summary)
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
@@ -51,7 +56,10 @@ def parsl_app(workflow_id, app_name):
 
     task_summary = Task.query.filter_by(run_id=workflow_id, task_func_name=app_name)
 
-    return render_template('app.html', app_name=app_name, workflow_details=workflow_details, task_summary=task_summary)
+    return render_template('app.html',
+                           app_name=app_name,
+                           workflow_details=workflow_details,
+                           task_summary=task_summary)
 
 
 @app.route('/workflow/<workflow_id>/task/<task_id>')
@@ -86,6 +94,6 @@ def workflow_resources(workflow_id):
     return render_template('resource_usage.html', workflow_details=workflow_details,
                             user_time_distribution_avg_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution',  option='avg'),
                             user_time_distribution_max_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='max'),
-                            memory_usage_distribution_avg_plot=resource_distribution_plot(df_resources,  df_task, type='psutil_process_memory_percent', label='Memory Distribution',  option='avg'),
-                            memory_usage_distribution_max_plot=resource_distribution_plot(df_resources,  df_task, type='psutil_process_memory_percent', label='Memory Distribution', option='max'),)
+                            memory_usage_distribution_avg_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_memory_percent', label='Memory Distribution',  option='avg'),
+                            memory_usage_distribution_max_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_memory_percent', label='Memory Distribution', option='max'),)
 
