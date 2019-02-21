@@ -71,7 +71,7 @@ class DataManager(ParslExecutor):
         self.executors = {e.label: e for e in executors}
         self.max_threads = max_threads
         # self.files = []
-        self.globus = None
+        self.globus = None  # only initialise this if we actually use globus
         self.managed = True
 
     def start(self):
@@ -102,24 +102,9 @@ class DataManager(ParslExecutor):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    # this seems to be special-cased to globus
-    # because... something special happens for globus?
-    # what is that?
-    # keeping files in a list will inhibit GC
-    # local path will be set for globus files but
-    # not for any other file - why?
-
-    def add_file(self, file):
-        if file.scheme == 'globus':
-            if not self.globus:
-                self.globus = get_globus()
-            # keep a list of all remote files for optimization purposes (TODO)
-            # self.files.append(file)
-            self._set_local_path(file)
-
-    def _set_local_path(self, file):
-        globus_ep = self._get_globus_endpoint()
-        file.local_path = os.path.join(globus_ep['working_dir'], file.filename)
+    def initialize_globus(self):
+        if self.globus is None:
+            self.globus = get_globus()
 
     def _get_globus_endpoint(self, executor_label=None):
         for executor in self.executors.values():
@@ -192,6 +177,9 @@ class DataManager(ParslExecutor):
                 globus_ep['working_dir'], file.filename)
         dst_path = os.path.join(
                 globus_ep['endpoint_path'], file.filename)
+
+        self.initialize_globus()
+
         self.globus.transfer_file(
                 file.netloc, globus_ep['endpoint_uuid'],
                 file.path, dst_path)
@@ -227,6 +215,9 @@ class DataManager(ParslExecutor):
     def _globus_stage_out(self, globus_ep, inputs=[]):
         file = inputs[0]
         src_path = os.path.join(globus_ep['endpoint_path'], file.filename)
+
+        self.initialize_globus()
+
         self.globus.transfer_file(
             globus_ep['endpoint_uuid'], file.netloc,
             src_path, file.path
