@@ -5,11 +5,12 @@ import os
 import time
 from enum import Enum
 
+from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, PrimaryKeyConstraint
+    from sqlalchemy import Column, Text, Float, Integer, DateTime, PrimaryKeyConstraint
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
 except ImportError:
@@ -97,20 +98,21 @@ class Database(object):
         run_id = Column(Text, nullable=False, primary_key=True)
         workflow_name = Column(Text, nullable=True)
         workflow_version = Column(Text, nullable=True)
-        time_began = Column(Text, nullable=False)
-        time_completed = Column(Text)
+        time_began = Column(DateTime, nullable=False)
+        time_completed = Column(DateTime)
+        completion_time = Column(Float)
         host = Column(Text, nullable=False)
         user = Column(Text, nullable=False)
         rundir = Column(Text, nullable=False)
-        tasks_failed_count = Column(Text, nullable=False)
-        tasks_completed_count = Column(Text, nullable=False)
+        tasks_failed_count = Column(Integer, nullable=False)
+        tasks_completed_count = Column(Integer, nullable=False)
 
     # TODO: expand to full set of info
     class Status(Base):
         __tablename__ = STATUS
-        task_id = Column(Text, sa.ForeignKey('task.task_id'), nullable=False)
+        task_id = Column(Integer, sa.ForeignKey('task.task_id'), nullable=False)
         task_status_name = Column(Text, nullable=False)
-        timestamp = Column(Text, nullable=False)
+        timestamp = Column(DateTime, nullable=False)
         run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
         __table_args__ = (
                           PrimaryKeyConstraint('task_id', 'run_id', 'task_status_name', 'timestamp'),
@@ -118,12 +120,13 @@ class Database(object):
 
     class Task(Base):
         __tablename__ = TASK
-        task_id = Column('task_id', Text, nullable=False)
+        task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
         task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
-        task_time_submitted = Column('task_time_submitted', Text, nullable=False)
-        task_time_returned = Column('task_time_returned', Text, nullable=True)
+        task_time_submitted = Column('task_time_submitted', DateTime, nullable=False)
+        task_time_returned = Column('task_time_returned', DateTime, nullable=True)
+        task_elapsed_time = Column('task_elapsed_time', Float, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
@@ -135,19 +138,19 @@ class Database(object):
 
     class Resource(Base):
         __tablename__ = RESOURCE
-        task_id = Column('task_id', Text, sa.ForeignKey('task.task_id'), nullable=False)
-        timestamp = Column('timestamp', Text, nullable=False)
+        task_id = Column('task_id', Integer, sa.ForeignKey('task.task_id'), nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
         run_id = Column('run_id', Text, sa.ForeignKey('workflow.run_id'), nullable=False)
-        psutil_process_pid = Column('psutil_process_pid', Text, nullable=True)
-        psutil_process_cpu_percent = Column('psutil_process_cpu_percent', Text, nullable=True)
-        psutil_process_memory_percent = Column('psutil_process_memory_percent', Text, nullable=True)
-        psutil_process_children_count = Column('psutil_process_children_count', Text, nullable=True)
-        psutil_process_time_user = Column('psutil_process_time_user', Text, nullable=True)
-        psutil_process_time_system = Column('psutil_process_time_system', Text, nullable=True)
-        psutil_process_memory_virtual = Column('psutil_process_memory_virtual', Text, nullable=True)
-        psutil_process_memory_resident = Column('psutil_process_memory_resident', Text, nullable=True)
-        psutil_process_disk_read = Column('psutil_process_disk_read', Text, nullable=True)
-        psutil_process_disk_write = Column('psutil_process_disk_write', Text, nullable=True)
+        psutil_process_pid = Column('psutil_process_pid', Integer, nullable=True)
+        psutil_process_cpu_percent = Column('psutil_process_cpu_percent', Float, nullable=True)
+        psutil_process_memory_percent = Column('psutil_process_memory_percent', Float, nullable=True)
+        psutil_process_children_count = Column('psutil_process_children_count', Float, nullable=True)
+        psutil_process_time_user = Column('psutil_process_time_user', Float, nullable=True)
+        psutil_process_time_system = Column('psutil_process_time_system', Float, nullable=True)
+        psutil_process_memory_virtual = Column('psutil_process_memory_virtual', Float, nullable=True)
+        psutil_process_memory_resident = Column('psutil_process_memory_resident', Float, nullable=True)
+        psutil_process_disk_read = Column('psutil_process_disk_read', Float, nullable=True)
+        psutil_process_disk_write = Column('psutil_process_disk_write', Float, nullable=True)
         psutil_process_status = Column('psutil_process_status', Text, nullable=True)
         __table_args__ = (
                           PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
@@ -214,36 +217,38 @@ class DatabaseManager(object):
 
             if messages:
                 self.logger.debug("Got {} messages from priority queue".format(len(messages)))
-            update_messages, insert_messages, all_messages = [], [], []
-            for msg_type, msg in messages:
-                if msg_type.value == MessageType.WORKFLOW_INFO.value:
-                    if "python_version" in msg:   # workflow start message
-                        self.logger.debug("Inserting workflow start info to WORKFLOW table")
-                        self._insert(table=WORKFLOW, messages=[msg])
-                    else:                         # workflow end message
-                        self.logger.debug("Updating workflow end info to WORKFLOW table")
-                        self._update(table=WORKFLOW,
-                                     columns=['run_id', 'tasks_failed_count', 'tasks_completed_count', 'time_completed'],
-                                     messages=[msg])
-                else:                             # TASK_INFO message
-                    all_messages.append(msg)
-                    if msg['task_time_returned'] is not None:
-                        update_messages.append(msg)
-                    else:
-                        insert_messages.append(msg)
+                update_messages, insert_messages, all_messages = [], [], []
+                for msg_type, msg in messages:
+                    if msg_type.value == MessageType.WORKFLOW_INFO.value:
+                        if "python_version" in msg:   # workflow start message
+                            self.logger.debug("Inserting workflow start info to WORKFLOW table")
+                            self._insert(table=WORKFLOW, messages=[msg])
+                        else:                         # workflow end message
+                            self.logger.debug("Updating workflow end info to WORKFLOW table")
+                            self._update(table=WORKFLOW,
+                                         columns=['run_id', 'tasks_failed_count',
+                                                  'tasks_completed_count', 'time_completed',
+                                                  'completion_time'],
+                                         messages=[msg])
+                    else:                             # TASK_INFO message
+                        all_messages.append(msg)
+                        if msg['task_time_returned'] is not None:
+                            update_messages.append(msg)
+                        else:
+                            insert_messages.append(msg)
 
-            self.logger.debug("Updating and inserting TASK_INFO to all tables")
-            self._update(table=WORKFLOW,
-                         columns=['run_id', 'tasks_failed_count', 'tasks_completed_count'],
-                         messages=update_messages)
-
-            if insert_messages:
-                self._insert(table=TASK, messages=insert_messages)
-            if update_messages:
-                self._update(table=TASK,
-                             columns=['task_time_returned', 'run_id', 'task_id'],
+                self.logger.debug("Updating and inserting TASK_INFO to all tables")
+                self._update(table=WORKFLOW,
+                             columns=['run_id', 'tasks_failed_count', 'tasks_completed_count'],
                              messages=update_messages)
-            self._insert(table=STATUS, messages=all_messages)
+
+                if insert_messages:
+                    self._insert(table=TASK, messages=insert_messages)
+                if update_messages:
+                    self._update(table=TASK,
+                                 columns=['task_time_returned', 'task_elapsed_time', 'run_id', 'task_id'],
+                                 messages=update_messages)
+                self._insert(table=STATUS, messages=all_messages)
 
             """
             RESOURCE_INFO messages
@@ -255,8 +260,14 @@ class DatabaseManager(object):
 
             if messages:
                 self.logger.debug("Got {} messages from resource queue".format(len(messages)))
-            self._insert(table=RESOURCE, messages=messages)
-            # self._insert(STATUS, msg)
+                self._insert(table=RESOURCE, messages=messages)
+                first_messages = []
+                for msg in messages:
+                    if msg['first_msg']:
+                        msg['task_status_name'] = States.running.name
+                        first_messages.append(msg)
+                if first_messages:
+                    self._insert(STATUS, messages=first_messages)
 
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
         self.logger.info("[{}_queue_PULL_THREAD] Starting".format(queue_tag))
