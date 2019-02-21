@@ -204,6 +204,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
+        if self.interchange_address == "localhost":
+            logdir = "{}/{}".format(self.run_dir, self.label)
+        else:
+            logdir = os.path.join(*(self.provider.channel.script_dir,
+                                    "runinfo",
+                                    os.path.basename(self.run_dir),
+                                    self.label))
+
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        task_url=self.worker_task_url,
                                        result_url=self.worker_result_url,
@@ -212,7 +220,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
-                                       logdir="{}/{}".format(self.run_dir, self.label))
+                                       logdir=logdir)
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
