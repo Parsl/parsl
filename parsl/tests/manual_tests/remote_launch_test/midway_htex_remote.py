@@ -9,15 +9,17 @@ config = Config(
         HighThroughputExecutor(
             label='midway_htex_remote',
             max_workers=4,
-            address="128.135.123.206",
-            interchange_address="swift.rcc.uchicago.edu",
-            worker_debug=True,
+            # address="128.135.123.206",    # Address on UC wired n/w
+            address="34.204.113.50",        # Address of AWS host
+            interchange_address="swift.rcc.uchicago.edu",  # Address at which workers can reach the ix
+            interchange_port_range=(51000,52000),          # Specify accessible ports  
+            # worker_debug=True,            # Be careful with this one, dumps a 1GB/few minutes
             provider=SlurmProvider(
-                'westmere',
+                'sandyb',
                 channel=SSHChannel(
                     hostname='swift.rcc.uchicago.edu',
                     username='yadunand',
-                    script_dir='/scratch/midway2/yadunand/'
+                    script_dir='/scratch/midway2/yadunand/' # Required. Logging dirs will be under this.
                 ),
                 init_blocks=1,
                 min_blocks=1,
