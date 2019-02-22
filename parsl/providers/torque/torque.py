@@ -76,7 +76,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  max_blocks=100,
                  parallelism=1,
                  launcher=AprunLauncher(),
-                 walltime="00:20:00"):
+                 walltime="00:20:00",
+                 cmd_timeout=120):
         label = 'torque'
         super().__init__(label,
                          channel,
@@ -86,7 +87,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
+                         launcher,
+                         cmd_timeout=cmd_timeout)
 
         self.account = account
         self.queue = queue
@@ -111,7 +113,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = self.channel.execute_wait("qstat {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = super().execute_wait("qstat {0}".format(job_id_list))
         for line in stdout.split('\n'):
             parts = line.split()
             if not parts or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
@@ -201,7 +203,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             submit_options = '{0} -A {1}'.format(submit_options, self.account)
 
         launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
-        retcode, stdout, stderr = self.channel.execute_wait(launch_cmd, 10)
+        retcode, stdout, stderr = super().execute_wait(launch_cmd)
 
         job_id = None
         if retcode == 0:
@@ -228,7 +230,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.channel.execute_wait("qdel {0}".format(job_id_list), 3)
+        retcode, stdout, stderr = super().execute_wait("qdel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:

@@ -59,6 +59,7 @@ Here's a list of the components and their extras option:
 
 * Amazon Web Services (Cloud) : `aws`
 * Google Cloud : `google_cloud`
+* Kubernetes : `kubernetes`
 * Extreme Scale Executor (Supercomputing) : `extreme_scale`
 * Database logging of monitoring data : `db_logging`
 * Jetstream (NSF Cloud) : `jetstream`

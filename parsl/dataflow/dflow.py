@@ -629,6 +629,10 @@ class DataFlowKernel(object):
                (AppFuture) [DataFutures,]
 
         """
+
+        if self.cleanup_called:
+            raise ValueError("Cannot submit to a DFK that has been cleaned up")
+
         task_id = self.task_count
         self.task_count += 1
         if isinstance(executors, str) and executors.lower() == 'all':
