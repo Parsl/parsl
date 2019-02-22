@@ -4,7 +4,7 @@ from models import *
 from viz_app import app, db
 from plots.default.workflow_plots import task_gantt_plot, task_per_app_plot
 from plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
-from plots.default.workflow_resource_plots import resource_distribution_plot
+from plots.default.workflow_resource_plots import resource_distribution_plot, resource_time_series
 
 @app.route('/')
 def index():
@@ -22,7 +22,11 @@ def workflow(workflow_id):
     if workflow_details == None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
-    df_task = pd.read_sql_query("SELECT task_id, task_func_name, task_time_submitted, task_time_returned from task WHERE run_id='%s'" % workflow_id, db.engine)
+    df_task = pd.read_sql_query("""SELECT task.task_id, task.task_func_name, task.task_time_submitted,
+                                status.timestamp, task.task_time_returned from task, status
+                                WHERE task.run_id='%s' and status.run_id=task.run_id and
+                                status.task_status_name='running' and status.task_id=task.task_id"""
+                                % (workflow_id), db.engine)
     df_status = pd.read_sql_query("SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='%s'" % workflow_id, db.engine)
     task_summary = db.engine.execute("SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;"  % workflow_id)
 
@@ -92,10 +96,23 @@ def workflow_resources(workflow_id):
 
     df_resources = pd.read_sql_query("SELECT * FROM resource WHERE run_id='%s'" % (workflow_id), db.engine)
     df_task = pd.read_sql_query("SELECT * FROM task  WHERE run_id='%s'" % (workflow_id), db.engine)
+    
+    df_task_resources = pd.read_sql_query('''
+                                          SELECT task_id, timestamp,
+                                          psutil_process_cpu_percent, psutil_process_time_user,
+                                          psutil_process_memory_percent, psutil_process_memory_resident
+                                          from resource
+                                          where run_id = '%s'
+                                          ''' % (workflow_id), db.engine)
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
                             user_time_distribution_avg_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution',  option='avg'),
                             user_time_distribution_max_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='max'),
                             memory_usage_distribution_avg_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_memory_percent', label='Memory Distribution',  option='avg'),
-                            memory_usage_distribution_max_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_memory_percent', label='Memory Distribution', option='max'),)
+                            memory_usage_distribution_max_plot=resource_distribution_plot(df_resources, df_task, type='psutil_process_memory_percent', label='Memory Distribution', option='max'),
+                            user_time_time_series=resource_time_series(df_task_resources, type='psutil_process_time_user', label='CPU user time'),
+                            cpu_percent_time_series=resource_time_series(df_task_resources, type='psutil_process_cpu_percent', label='CPU utilization'),
+                            memory_percent_time_series=resource_time_series(df_task_resources, type='psutil_process_memory_percent', label='Memory utilization'),
+                            memory_resident_time_series=resource_time_series(df_task_resources, type='psutil_process_memory_resident', label='Memory usage'),
+)
 
