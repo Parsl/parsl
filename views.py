@@ -78,8 +78,10 @@ def task(workflow_id, task_id):
                            workflow_details=workflow_details, 
                            task_details=task_details,
                            task_status=task_status,
-                           time_series_cpu=time_series_cpu_per_task_plot(df_resources, 'psutil_process_time_user', 'CPU Usage'),
-                           time_series_memory=time_series_memory_per_task_plot(df_resources, 'psutil_process_memory_resident', 'Memory Usage'),)
+                           time_series_cpu_time=time_series_cpu_per_task_plot(df_resources, 'psutil_process_time_user', 'CPU user time'),
+                           time_series_cpu_percent=time_series_cpu_per_task_plot(df_resources, 'psutil_process_cpu_percent', 'CPU utilization'),
+                           time_series_memory_resident=time_series_memory_per_task_plot(df_resources, 'psutil_process_memory_resident', 'Memory Usage'),
+                           time_series_memory_percent=time_series_memory_per_task_plot(df_resources, 'psutil_process_memory_percent', 'Memory utilization'))
 
 
 @app.route('/workflow/<workflow_id>/resource_usage')
