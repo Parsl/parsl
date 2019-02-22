@@ -45,7 +45,27 @@
   </div>
 </div>
 
+<h5>CPU usage</h5>
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 300px;">
+{{ cpu_percent_time_series|safe }}
+    </div>
+    <div class="col-6" style="height: 300px;">
+{{ user_time_time_series|safe }}
+    </div>
+  </div>
+</div>
 
-
-
+<h5>Memory usage</h5>
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 300px;">
+{{ memory_percent_time_series|safe }}
+    </div>
+    <div class="col-6" style="height: 300px;">
+{{ memory_resident_time_series|safe }}
+    </div>
+  </div>
+</div>
 {% endblock %}

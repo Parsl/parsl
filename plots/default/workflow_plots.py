@@ -20,10 +20,10 @@ def task_gantt_plot(df_task):
     # parsl_tasks = df_task.to_dict('records')
     parsl_tasks = []
     for i, task in df_task.iterrows():
-        dic1 = dict(Task=task['task_id'], Start=task['task_time_submitted'], Finish=task['task_time_returned'], Resource="Launched")
+        dic1 = dict(Task=task['task_id'], Start=task['task_time_submitted'], Finish=task['task_time_returned'], Resource="Queuing")
         dic2 = dict(Task=task['task_id'], Start=task['timestamp'], Finish=task['task_time_returned'], Resource="Running")
         parsl_tasks.extend([dic1, dic2])
-    colors = {'Launched': 'rgb(220, 0, 0)', 'Running': 'rgb(0, 255, 100)'}
+    colors = {'Queuing': 'rgb(220, 0, 0)', 'Running': 'rgb(0, 255, 100)'}
     fig = ff.create_gantt(parsl_tasks,
                           title="",
                           colors=colors,
@@ -31,7 +31,8 @@ def task_gantt_plot(df_task):
                           show_colorbar=True,
                           index_col='Resource',
                           )
-
+    fig['layout']['yaxis']['title'] = 'Task ID'
+    fig['layout']['xaxis']['title'] = 'Time'
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
 

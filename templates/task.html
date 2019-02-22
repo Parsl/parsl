@@ -53,11 +53,12 @@
 {{ time_series_cpu_percent|safe }}
     </div>
     <div class="col-6" style="height: 350px;">
-{{ time_series_cpu_time|safe }}
+{{ time_series_memory_resident|safe }}
     </div>
   </div>
 </div>
 
+<!--
 <div class="container">
   <div class="row">
     <div class="col-6" style="height: 300px;">
@@ -68,5 +69,5 @@
     </div>
   </div>
 </div>
-
+-->
 {% endblock %}

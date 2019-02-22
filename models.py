@@ -53,6 +53,7 @@ class Resource(db.Model):
     task_id = db.Column('task_id', db.Integer, db.ForeignKey('task.task_id'), nullable=False)
     timestamp = db.Column('timestamp', db.DateTime, nullable=False)
     run_id = db.Column('run_id', db.Text, db.ForeignKey('workflow.run_id'), nullable=False)
+    resource_monitoring_interval = db.Column('resource_monitoring_interval', db.Float, nullable=True)
     psutil_process_pid = db.Column('psutil_process_pid', db.Integer, nullable=True)
     psutil_process_cpu_percent = db.Column('psutil_process_cpu_percent', db.Float, nullable=True)
     psutil_process_memory_percent = db.Column('psutil_process_memory_percent', db.Float, nullable=True)
