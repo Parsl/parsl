@@ -398,6 +398,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
             d["task_id"] = task_id
+            d['sleep_dur'] = sleep_dur
             d['first_msg'] = first_msg
             d['timestamp'] = datetime.datetime.now()
             children = pm.children(recursive=True)

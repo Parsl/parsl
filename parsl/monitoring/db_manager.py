@@ -141,6 +141,7 @@ class Database(object):
         task_id = Column('task_id', Integer, sa.ForeignKey('task.task_id'), nullable=False)
         timestamp = Column('timestamp', DateTime, nullable=False)
         run_id = Column('run_id', Text, sa.ForeignKey('workflow.run_id'), nullable=False)
+        resource_monitoring_interval = Column('resource_monitoring_interval', Float, nullable=True)
         psutil_process_pid = Column('psutil_process_pid', Integer, nullable=True)
         psutil_process_cpu_percent = Column('psutil_process_cpu_percent', Float, nullable=True)
         psutil_process_memory_percent = Column('psutil_process_memory_percent', Float, nullable=True)
