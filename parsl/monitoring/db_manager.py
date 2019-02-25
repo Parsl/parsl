@@ -89,7 +89,7 @@ class Database(object):
             if columns is None:
                 columns = table.c.keys()
             for column in columns:
-                m[column] = msg[column]
+                m[column] = msg.get(column, None)
             mappings.append(m)
         return mappings
 
@@ -126,6 +126,7 @@ class Database(object):
         task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
         task_time_submitted = Column('task_time_submitted', DateTime, nullable=False)
+        task_time_running = Column('task_time_running', DateTime, nullable=True)
         task_time_returned = Column('task_time_returned', DateTime, nullable=True)
         task_elapsed_time = Column('task_elapsed_time', Float, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
@@ -267,9 +268,13 @@ class DatabaseManager(object):
                 for msg in messages:
                     if msg['first_msg']:
                         msg['task_status_name'] = States.running.name
+                        msg['task_time_running'] = msg['timestamp']
                         first_messages.append(msg)
                 if first_messages:
-                    self._insert(STATUS, messages=first_messages)
+                    self._insert(table=STATUS, messages=first_messages)
+                    self._update(table=TASK,
+                                 columns=['task_time_running', 'run_id', 'task_id'],
+                                 messages=first_messages)
 
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
         self.logger.info("[{}_queue_PULL_THREAD] Starting".format(queue_tag))
