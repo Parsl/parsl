@@ -122,6 +122,7 @@ class Database(object):
         __tablename__ = TASK
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
+        task_depends = Column('task_depends', Text, nullable=True)
         task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
         task_time_submitted = Column('task_time_submitted', DateTime, nullable=False)
