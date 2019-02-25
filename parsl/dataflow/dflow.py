@@ -155,8 +155,8 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
-        self.executors = {e.label: e for e in config.executors + [data_manager]}
+        self.data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
+        self.executors = {e.label: e for e in config.executors + [self.data_manager]}
         for executor in self.executors.values():
             executor.run_dir = self.run_dir
             if hasattr(executor, 'provider'):
@@ -339,17 +339,33 @@ class DataFlowKernel(object):
                 self.checkpoint(tasks=[task_id])
 
         # Submit _*_stage_out tasks for output data futures that correspond with remote files
-        if (self.tasks[task_id]['app_fu'] and
-            self.tasks[task_id]['app_fu'].done() and
+
+        if (self.tasks[task_id]['app_fu'] and  # should be statically true...
+            self.tasks[task_id]['app_fu'].done() and  # should be true by call pattern for this callback
+                                                      # so these two ^ should become consistency assertions
+                                                      # /contract pre-conditions
+                                                      # that could go at the top of the call even...
+
             self.tasks[task_id]['app_fu'].exception() is None and
             self.tasks[task_id]['executor'] != 'data_manager' and
-            self.tasks[task_id]['func_name'] != '_file_stage_in' and
+            # TODO: do the below tests for stage_in names need to be
+            # checked here or is being 'data_manager' executor sufficient?
+            # what about _*_stage_out jobs? What about globus staging jobs
+            # as this list does not include those?
             self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
             self.tasks[task_id]['func_name'] != '_http_stage_in'):
             for dfu in self.tasks[task_id]['app_fu'].outputs:
                 f = dfu.file_obj
+                if not isinstance(f, File):
+                    raise ValueError("Output file is not a File object")
                 if isinstance(f, File) and f.is_remote():
-                    f.stage_out(self.tasks[task_id]['executor'])
+                    self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
+                # TODO: what are the non-file cases for stuff being in
+                # outputs here?
+                # `isinstance File and not f.is_remote` - that's a reasonable one
+                # what about when f is not a file? is that ever meaningful?
+                # i think probably not? and so should either not check, or error
+                # out. typechecking in mypy should be used to enforce that harder.
 
         return
 
@@ -370,10 +386,17 @@ class DataFlowKernel(object):
         """
         if self._count_deps(self.tasks[task_id]['depends']) == 0:
 
+            logger.info("BENC3.0: launch if ready, kwargs {}".format(self.tasks[task_id]['kwargs']))
             # We can now launch *task*
+
+            # ... sanitize_and_wrap is where inputs changes from being a DataFuture to
+            #     being a File again. At this point we know the executor (because it is
+            #     specified in self.tasks[task_id]['executor'] so we could potentially
+            #     customise a new file object to send, inside sanitize_and_wrap.
             new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
                                                                   self.tasks[task_id]['args'],
                                                                   self.tasks[task_id]['kwargs'])
+            logger.info("BENC3.05: launch if ready, kwargs {}".format(kwargs))
             self.tasks[task_id]['args'] = new_args
             self.tasks[task_id]['kwargs'] = kwargs
             if not exceptions:
@@ -382,6 +405,8 @@ class DataFlowKernel(object):
                 # Acquire a lock, retest the state, launch
                 with self.tasks[task_id]['task_launch_lock']:
                     if self.tasks[task_id]['status'] == States.pending:
+                        # by this point, the kwargs inputs are files, not data futures...
+                        logger.info("BENC3.1: launch if ready, kwargs {}".format(kwargs))
                         exec_fu = self.launch_task(
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
@@ -493,16 +518,18 @@ class DataFlowKernel(object):
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             if isinstance(f, File) and f.is_remote():
-                inputs[idx] = f.stage_in(executor)
+                logger.info("BENC: stage in file type: {}".format(type(f)))
+                inputs[idx] = self.data_manager.stage_in(f, executor)
+                logger.info("BENC: returned inputs[idx]: {}".format(type(inputs[idx])))
 
-        for kwarg, potential_f in kwargs.items():
-            if isinstance(potential_f, File) and potential_f.is_remote():
-                kwargs[kwarg] = potential_f.stage_in(executor)
+        for kwarg, f in kwargs.items():
+            if isinstance(f, File) and f.is_remote():
+                kwargs[kwarg] = self.data_manager.stage_in(f, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
             if isinstance(f, File) and f.is_remote():
-                newargs[idx] = f.stage_in(executor)
+                newargs[idx] = self.data_manager.stage_in(f, executor)
 
         return tuple(newargs), kwargs
 
@@ -558,6 +585,13 @@ class DataFlowKernel(object):
         Return:
              partial Function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
 
+        BENC: somewhere in here, the kwargs change from being data futures to being
+              file objects (possibly the original file objects?) and it is here that
+              i might look at replacing these with executor-customised file objects
+              that know details of the remote execution environment.
+
+              I think because a datafuture.result() is the relevant file object? so
+              replacing each future with its result performs this substitution?
         """
         dep_failures = []
 
@@ -643,6 +677,11 @@ class DataFlowKernel(object):
 
         # Transform remote input files to data futures
         args, kwargs = self._add_input_deps(executor, args, kwargs)
+        benc_inputs = kwargs.get('inputs', [])
+        logger.debug("BENC2: inputs[] length {}".format(len(benc_inputs)))
+        logger.debug("BENC2: returned inputs: {}".format(benc_inputs))
+        logger.debug("BENC2: kwargs: {}".format(kwargs))
+        # logger.debug("BENC2: returned inputs[0] type: {}".format(type(benc_inputs[0])))
 
         task_def = {'depends': None,
                     'executor': executor,

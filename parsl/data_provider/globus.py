@@ -2,17 +2,9 @@ import logging
 import json
 import globus_sdk
 import os
-
+import parsl
 
 logger = logging.getLogger(__name__)
-# Add StreamHandler to print error Globus events to stderr
-handler = logging.StreamHandler()
-handler.setLevel(logging.WARN)
-format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 
 """
 'Parsl Application' OAuth2 client registered with Globus Auth
@@ -157,6 +149,14 @@ class Globus(object):
         if task['status'] == 'SUCCEEDED':
             logger.debug('Globus transfer {}, from {}{} to {}{} succeeded'.format(
                 task['task_id'], src_ep, src_path, dst_ep, dst_path))
+# The formatting of the partial-URIs in this above log message is wrong:
+# it outputs (see the 2nd endpoint/path) a piece of path without a /
+# separating the endpoint ID from the path - because the path is relative in the user_opts test config:
+#
+# globus.py                  161 DEBUG    Globus transfer 13ca4428-2582-11e9-9835-0262a1f2f698,
+# from 03d7d06a-cb6b-11e8-8c6a-0a1d4c5c824a/unsorted.txt
+# to 70839ed0-2488-11e9-934f-0e3d676669f4parsl/src/parsl/unsorted.txt succeeded
+
         else:
             logger.debug('Globus Transfer task: {}'.format(task))
             events = tc.task_event_list(task['task_id'], num_results=1, filter='is_error:1')
@@ -166,6 +166,7 @@ class Globus(object):
 
 
 def cli_run():
+    parsl.set_stream_logger()
     print("Parsl Globus command-line authoriser")
     print("If authorisation to Globus is necessary, the library will prompt you now.")
     print("Otherwise it will do nothing")

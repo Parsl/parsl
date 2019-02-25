@@ -85,8 +85,8 @@ user_opts = {
     #     'scheduler_options': "",
     #     "worker_init": """export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH; source activate parsl_env_3.5"""
     # },
-    # 'globus': {
-    #     'endpoint': 'fixme',
-    #     'path': 'fixme'
-    # }
+    'globus': {
+        'endpoint': '70839ed0-2488-11e9-934f-0e3d676669f4',
+        'path': '/home/benc/parsl/src/parsl'
+    }
 }

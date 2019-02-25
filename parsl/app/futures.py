@@ -8,28 +8,11 @@ import os
 import logging
 from concurrent.futures import Future
 
-from parsl.dataflow.futures import AppFuture
+from parsl.dataflow.futures import AppFuture, _STATE_TO_DESCRIPTION_MAP, FINISHED
 from parsl.app.errors import *
 from parsl.data_provider.files import File
 
 logger = logging.getLogger(__name__)
-
-# Possible future states (for internal use by the futures package).
-PENDING = 'PENDING'
-RUNNING = 'RUNNING'
-# The future was cancelled by the user...
-CANCELLED = 'CANCELLED'
-# ...and _Waiter.add_cancelled() was called by a worker.
-CANCELLED_AND_NOTIFIED = 'CANCELLED_AND_NOTIFIED'
-FINISHED = 'FINISHED'
-
-_STATE_TO_DESCRIPTION_MAP = {
-    PENDING: "pending",
-    RUNNING: "running",
-    CANCELLED: "cancelled",
-    CANCELLED_AND_NOTIFIED: "cancelled",
-    FINISHED: "finished"
-}
 
 
 class DataFuture(Future):
@@ -38,6 +21,13 @@ class DataFuture(Future):
     We are simply wrapping a AppFuture, and adding the specific case where, if
     the future is resolved i.e file exists, then the DataFuture is assumed to be
     resolved.
+
+    The super.result of the future is set to parent_fu.result. TODO: WHY?
+    The results of calling self.result() will give different behaviour though
+      - fileobj. But add_done_callback will pass the parent result.
+    TODO: a consistency unit test:   self.result() should return the same as
+        a callback added with add_done_callback(). I believe (prior to this
+        commit) that this is violated because of the above.
     """
 
     def parent_callback(self, parent_fu):
@@ -51,18 +41,21 @@ class DataFuture(Future):
 
         Updates the super() with the result() or exception()
         """
-        if parent_fu.done() is True:
-            e = parent_fu._exception
-            if e:
-                super().set_exception(e)
-            else:
-                super().set_result(parent_fu.result())
-        return
+
+        # if parent_fu.done() is True: # TODO: would it ever not be in here?
+        e = parent_fu._exception
+        if e:
+            super().set_exception(e)
+        else:
+            # here instead of using the original file object, want to make a
+            # new file object that is customised? or perhaps when we create
+            # the data future in the first place
+            super().set_result(self.file_obj)
 
     def __init__(self, fut, file_obj, parent=None, tid=None):
         """Construct the DataFuture object.
 
-        If the file_obj is a string convert to a File.
+        If the file_obj is a string (but not a File) convert to a File.
 
         Args:
             - fut (AppFuture) : AppFuture that this DataFuture will track
@@ -74,16 +67,18 @@ class DataFuture(Future):
         """
         super().__init__()
         self._tid = tid
+
+        # this is a weird test that comes from file being a 'str' subclass
+        # which it almost definitely shouldn't be
         if isinstance(file_obj, str) and not isinstance(file_obj, File):
             self.file_obj = File(file_obj)
         else:
             self.file_obj = file_obj
         self.parent = parent
-        self._exception = None
 
         if fut is None:
-            logger.debug("Setting result to filepath since no future was passed")
-            self.set_result = self.file_obj
+            logger.debug("Setting result to filepath immediately since no parent future was passed")
+            self.set_result(self.file_obj)
 
         else:
             if isinstance(fut, Future):
@@ -141,20 +136,10 @@ class DataFuture(Future):
         return self.file_obj
 
     def cancel(self):
-        """Cancel the task that this DataFuture is tracking.
-
-            Note: This may not work
-        """
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise ValueError("cancel() not supported for data futures")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        raise ValueError("cancelled() not supported for data futures")
 
     def running(self):
         if self.parent:
@@ -162,23 +147,14 @@ class DataFuture(Future):
         else:
             return False
 
-    def done(self):
-        if self.parent:
-            return self.parent.done()
-        else:
-            return True
+    # def done(self):
+    # this should be handled by super.done
 
-    def exception(self, timeout=None):
-        if self.parent:
-            return self.parent.exception(timeout=timeout)
-        else:
-            return True
+    # def exception(self, timeout=None):
+    # this should be handled by super.exception
 
-    def add_done_callback(self, fn):
-        if self.parent:
-            return self.parent.add_done_callback(fn)
-        else:
-            raise ValueError("Callback will be discarded because no parent future")
+    # def add_done_callback(self, fn):
+    # this is removed because it should be handled by super.add_done_callback with no special casing here
 
     def __repr__(self):
 

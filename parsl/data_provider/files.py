@@ -27,10 +27,46 @@ class File(str):
     a previously loaded Parsl config.
 
     A File which is not associated with a DataManager is ill-defined.
+    *** BENC ^ I'd like there to be no DataManager association...
+
+
+    TODO:
+    This was a str subclass, but I don't see that it needs to be - I should
+    understand what, if anything, was coming from that inheritence? Other than
+    matching `isinstance str` tests which I think were then immediatly countermanded
+    by `isinstance File`
+
+    It does seem to break some tests changing the superclass, though...
+
+    Where it is needed is when we pass a File into open(), open wants a string
+    filename (or something like it) which we aren't providing. So open() fails as
+    having been passed an invalid filename.
+
+    That's slightly frustrating because this will change the str() representation
+    as we move between platforms, so it won't necessarily commute with other string
+    operations.
+
+    Maybe have a thing about the ergonomics of what datafuture returns and what
+    a File has as methods.
+
+    Do I want to require str() on all future results, to fix this? it seems awkward
+    even if it is more type correct.
+
+
+    This class specifically supports PEP-0519 which provides an __fspath__
+    method to support this kind of file-system-path-like object without
+    needing a str subclass. But that is only supported with Python 3.6
+    or later.
+
+    That's maybe an argument for tolerating string now - keeping semantics
+    such that it should behave as a `str` subclass as if it was not a str
+    subclass but has a suitable __fspath__ ? ... and document that properly
+    as a desired long term goal if <3.6 support is dropped.
+
 
     """
 
-    def __init__(self, url, dman=None, cache=False, caching_dir="."):
+    def __init__(self, url, dman=None):
         """Construct a File object from a url string.
 
         Args:
@@ -49,11 +85,6 @@ class File(str):
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {}
-        if self.scheme == 'globus':
-            self.dman.add_file(self)
-
-        self.cache = cache
-        self.caching_dir = caching_dir
 
     def __str__(self):
         return self.filepath
@@ -86,32 +117,15 @@ class File(str):
         """
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
             # The path returned here has to match exactly with where the
+            # TODO: ^ .... ?
             if hasattr(self, 'local_path'):
                 return self.local_path
             else:
                 return self.filename
-
-        return self.path
-
-    def stage_in(self, executor):
-        """Transport file from the input source to the executor.
-
-        Args:
-            - executor (str) - executor the file is staged in to.
-
-        """
-
-        return self.dman.stage_in(self, executor)
-
-    def stage_out(self, executor=None):
-        """Transport file from executor to final output destination."""
-        return self.dman.stage_out(self, executor)
-
-    def set_data_future(self, df, executor=None):
-        self.data_future[executor] = df
-
-    def get_data_future(self, executor):
-        return self.data_future.get(executor)
+        elif self.scheme in ['file']:
+            return self.path
+        else:
+            raise Exception('Cannot return filepath for unknown scheme {}'.format(self.scheme))
 
     def __getstate__(self):
         """Override the default pickling method.
