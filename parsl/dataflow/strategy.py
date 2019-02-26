@@ -202,6 +202,9 @@ class Strategy(object):
             active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
+            print("[MONITOR] Active tasks:", active_tasks)
+            print("[MONITOR] Active slots:", active_slots)
+
             if (isinstance(executor, IPyParallelExecutor) or
                 isinstance(executor, HighThroughputExecutor) or
                 isinstance(executor, ExtremeScaleExecutor)):
