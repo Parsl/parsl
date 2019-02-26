@@ -1,4 +1,6 @@
 pydot
 networkx
-flask
+Flask
 flask_sqlalchemy
+pandas
+plotly
