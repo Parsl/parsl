@@ -102,6 +102,8 @@ def func(n=1000000, stime=0.00):
   cpus += [psutil.cpu_percent()]
   ctime = time.time() - stime
   times += [ctime]
+  import random
+  time.sleep(random.randint(1, 5))
   return mems, cpus, times
 
 
@@ -118,7 +120,7 @@ cpu_list.append(_get_cpu())
 mem_list.append(_get_mem())
 times_list.append(time.time()-stime)
 time.sleep(.100)
-for i in range(20):
+for i in range(100):
   rand_nums.append(func(_n, stime))
   #mem, cpu, times = func(_n, stime).result()
 
