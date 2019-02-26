@@ -104,6 +104,11 @@ def func(n=1000000, stime=0.00):
     num = 1
     end_time  = time.time() - init_time
   logging.info("Elapse Time: %f" % end_time)
+  # log end-time info
+  mems += [psutil.virtual_memory().percent]
+  cpus += [psutil.cpu_percent()]
+  ctime = time.time() - stime
+  times += [ctime]
   return mems, cpus, times
 
 
@@ -113,21 +118,28 @@ stime = time.time()
 mem_list = []
 cpu_list = []
 times_list = []
-#for i in range(1):
-i = 2
-#time.sleep(10*(i+1))
+
+rand_nums = []
 cpu_list.append(_get_cpu())
 mem_list.append(_get_mem())
 times_list.append(time.time()-stime)
-#n= _n*(i+1)
-n= _n*(i+1)
-alist = []
-alist +=[ func(n, stime).result()]   # result() should be appended otherwise get error
-print(alist)
-mem, cpu, times = alist
-  
-# Upadate 
-mem_list.extend(mem)
-cpu_list.extend(cpu)
-times_list.extend(times)
-   
+time.sleep(.100)
+for i in range(20):
+  rand_nums.append(func(_n, stime))
+  #mem, cpu, times = func(_n, stime).result()
+
+_outputs = [i.result() for i in rand_nums]
+print("   Output Shape Check (#iteration, #variable, #log)" , np.asarray(_outputs).shape)
+
+# update
+outputs = np.asarray(_outputs)
+mem = outputs[:,0,:]
+cpu = outputs[:,1,:]
+times = outputs[:,2,:]
+
+# log list
+mem_list.extend(mem.flatten())
+cpu_list.extend(cpu.flatten())
+times_list.extend(times.flatten())
+
+logging.info("    #### NORMAL END  ####")

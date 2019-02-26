@@ -1,8 +1,14 @@
 # TODO 
 * Debug: Feb. 25/ Takuya. Local application suspends long-time without time.sleep <br />
-  ==> should fid ASAP
+  ==> should fid ASAP <br />
+  This occurs somtimes in this time, but now ??
 
+* Debug: Feb. 26/ Takuya. FIXME:/parsl/dataflow/strategy.py, def _htex_strategy_totaltime  <br />
+   Error line; `tasks_per_node = connected_workers[0]['worker_count']` <br />
+   Error Msg;  TypeError: tuple indices must be integers or slices, not str <br />
+   Return object from `connected_workers` ==>  `[('df15cd1e9f13', 0, True)]` 
 
+* Debug: Feb. 26/ Takuya. Slurm/Local job does not finish automatically. Why??!  <br />
 
 # List of Programs
 
