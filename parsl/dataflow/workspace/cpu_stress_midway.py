@@ -7,6 +7,7 @@ __author__ = 'tkurihana@uchicago.edu'
 import os
 import sys
 import time
+import numpy as np
 import matplotlib.pyplot as plt
 from mod_libmonitors import _get_cpu, _get_mem
 
@@ -57,8 +58,8 @@ config = Config(
         )
     ],
     #strategy='htex_aggressive',
-    #strategy='htex_totaltime',
-    strategy='simple',
+    strategy='htex_totaltime',
+    #strategy='simple',
 )
 # Load config 
 parsl.load(config)
@@ -110,34 +111,49 @@ stime = time.time()
 mem_list = []
 cpu_list = []
 times_list = []
-for i in range(10):
-  time.sleep(2*(i+1))
-  cpu_list.append(_get_cpu())
-  mem_list.append(_get_mem())
-  times_list.append(time.time()-stime)
-  #n= _n*(i+1)
-  n= _n*(i+1)
-  alist = []
-  #alist +=[ func(n, stime).result()]   # result() should be appended otherwise get error
-  #print(alist)
-  #mem, cpu, times = alist[0], alist[1], alist[2]
-  mem, cpu, times = func(n, stime).result()
 
-  # Upadate 
-  mem_list.extend(mem)
-  cpu_list.extend(cpu)
-  times_list.extend(times)
+
+rand_nums = []
+cpu_list.append(_get_cpu())
+mem_list.append(_get_mem())
+times_list.append(time.time()-stime)
+time.sleep(.100)
+for i in range(20):
+  rand_nums.append(func(_n, stime))
+  #mem, cpu, times = func(_n, stime).result()
+
+_outputs = [i.result() for i in rand_nums]
+print(np.asarray(_outputs).shape)
+
+# update
+outputs = np.asarray(_outputs)
+mem = outputs[:,0,:]
+cpu = outputs[:,1,:]
+times = outputs[:,2,:]
+
+
+# log list
+mem_list.extend(mem.flatten())
+cpu_list.extend(cpu.flatten())
+times_list.extend(times.flatten())
 
 # Plot
 fig = plt.figure()
 ax = plt.subplot(121)
 #plt.scatter(times_list, cpu_list, label='cpu', color='red', alpha=0.3 )
-plt.plot(times_list, cpu_list, label='cpu', color='red', alpha=0.3 )
+#plt.plot(times_list, cpu_list, label='cpu', color='red', alpha=0.3 )
+plt.hist(cpu_list, label='cpu', color='red', alpha=0.3  )
 plt.legend()
 ax = plt.subplot(122)
 #plt.scatter(times_list, mem_list, label='mem', color='blue', alpha=0.3 )
-plt.plot(times_list, mem_list, label='mem', color='blue', alpha=0.3 )
+#plt.plot(times_list, mem_list, label='mem', color='blue', alpha=0.3 )
+plt.hist(mem_list, label='mem', color='blue', alpha=0.3 )
 plt.legend()
 fig.tight_layout()
 plt.show()
-   
+  
+# before debug 
+  #n= _n*(i+1)
+  #alist = []
+  #alist +=[ func(n, stime).result()]   # result() should be appended otherwise get error
+  #print(alist)
