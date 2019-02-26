@@ -110,7 +110,7 @@ stime = time.time()
 mem_list = []
 cpu_list = []
 times_list = []
-for i in range(10):
+for i in range(20):
   time.sleep(2*(i+1))
   cpu_list.append(_get_cpu())
   mem_list.append(_get_mem())
