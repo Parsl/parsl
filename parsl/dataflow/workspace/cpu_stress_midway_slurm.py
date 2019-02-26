@@ -12,7 +12,6 @@ from mod_libmonitors import _get_cpu, _get_mem
 # parsl module 
 import parsl
 from parsl.app.app import python_app, bash_app
-from parsl.configs import config
 from parsl.launchers import SingleNodeLauncher
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
@@ -48,8 +47,9 @@ config = Config(
             provider=SlurmProvider(
                 'westmere',
                 channel=SSHChannel(
-                  hostname='tkurihana@uchicago.edu',  # specify your hostaname on midway
-                  username='tkurihana'  # username on midway
+                  hostname='midway2.rcc.uchicago.edu',  # specify your hostaname on midway
+                  username='tkurihana',  # username on midway
+                  script_dir='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace',
                 ),
                 init_blocks=1,
                 max_blocks=10,
