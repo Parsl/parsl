@@ -46,7 +46,7 @@ script:
 
     # these tests run with specific configs loaded within the tests themselves.
     # This mode is enabled with: --config local
-    - (for test in parsl/tests/sites/test*; do pytest $test -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
+    - (for test in parsl/tests/test*/test* parsl/tests/sites/test*; do pytest $test -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
