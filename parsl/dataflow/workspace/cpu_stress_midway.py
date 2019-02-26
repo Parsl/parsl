@@ -97,6 +97,10 @@ def func(n=1000000, stime=0.00):
     num = 1
     end_time  = time.time() - init_time
   logging.info("Elapse Time: %f" % end_time)
+  mems += [psutil.virtual_memory().percent]
+  cpus += [psutil.cpu_percent()]
+  ctime = time.time() - stime
+  times += [ctime]
   return mems, cpus, times
 
 
@@ -119,10 +123,10 @@ for i in range(10):
   #mem, cpu, times = alist[0], alist[1], alist[2]
   mem, cpu, times = func(n, stime).result()
 
-# Upadate 
-mem_list.extend(mem)
-cpu_list.extend(cpu)
-times_list.extend(times)
+  # Upadate 
+  mem_list.extend(mem)
+  cpu_list.extend(cpu)
+  times_list.extend(times)
 
 # Plot
 fig = plt.figure()
