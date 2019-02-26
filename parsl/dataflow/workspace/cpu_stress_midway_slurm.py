@@ -1,6 +1,6 @@
 # _*_  coding : utf-8   _*_
 #
-#   Multi-Core Test Script for strategy(ies) benchmark
+#   Multi-Core Test Script for strategy(ies) benchmark on slurm
 #
 __author__ = 'tkurihana@uchicago.edu'
 
@@ -12,13 +12,14 @@ from mod_libmonitors import _get_cpu, _get_mem
 # parsl module 
 import parsl
 from parsl.app.app import python_app, bash_app
-from parsl.configs.local_threads import config
-from parsl.providers import LocalProvider
-from parsl.channels import LocalChannel
-# from parsl.launchers import SimpleLauncher
+from parsl.configs import config
 from parsl.launchers import SingleNodeLauncher
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.channels import SSHChannel
+from parsl.providers import SlurmProvider
+from parsl.launchers import SrunLauncher
+
 
 # Log 
 import logging
@@ -42,17 +43,24 @@ def _logger(*args):
 config = Config(
     executors=[
         HighThroughputExecutor(
-            label="local_threads",
-            #label="htex_local",
-            # worker_debug=True,
+            label="midway_ipp_multinode",
             cores_per_worker=1,
-            provider=LocalProvider(
-                channel=LocalChannel(),
+            provider=SlurmProvider(
+                'westmere',
+                channel=SSHChannel(
+                  hostname='tkurihana@uchicago.edu',  # specify your hostaname on midway
+                  username='tkurihana'  # username on midway
+                ),
                 init_blocks=1,
-                max_blocks=1,
+                max_blocks=10,
+                nodes_per_block=10,
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
-                launcher=SingleNodeLauncher(),
+                launcher=SrunLauncher(),
+                parallelism=1.0,
+                walltime='00:20:00',
+                worker_init='module load Anaconda3/5.0.0.1; source activate py3501'
             ),
+             controller=Controller(public_ip='PUBLIC_IP'),    # Please replace PUBLIC_IP with your public ip
         )
     ],
     #strategy='htex_aggressive',
