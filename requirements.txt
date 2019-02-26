@@ -1,0 +1,4 @@
+pydot
+networkx
+flask
+flask_sqlalchemy
