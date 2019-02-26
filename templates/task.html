@@ -16,6 +16,15 @@
     <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
     <li><b>task_func_name:</b>   <a href="/workflow/{{ workflow_details['run_id'] }}/app/{{ task_details['task_func_name'] }}">{{ task_details['task_func_name'] }}</a></li>
     <li><b>task_id:</b>  {{ task_details['task_id'] }}</li>
+    <li><b>task_depends:</b>
+        {% if task_details['task_depends'] %}
+            {% for id in task_details['task_depends'].split(",") %}
+                <a href="/workflow/{{ workflow_details['run_id'] }}/task/{{ id }}">{{ id }}</a>
+            {% endfor %}
+        {% else %}
+            None
+        {% endif %}
+    </li>
     <li><b>task_time_submitted:</b>  {{ task_details['task_time_submitted'] }}</li>
     <li><b>task_time_returned:</b>  {{ task_details['task_time_returned'] }}</li>
     <li><b>task_inputs:</b>  {{ task_details['task_inputs'] }}</li>

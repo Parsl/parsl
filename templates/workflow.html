@@ -45,15 +45,16 @@
   </div>
 </div>
 
-<a href="resource_usage">View workflow resource usage</a>
+<a href="dag">View workflow DAG</a>
+<br><a href="resource_usage">View workflow resource usage</a>
 
 
 <div class="container">
   <!-- <div class="row"> -->
-    <div class="col-6">
+    <div class="col-10">
 {{ task_gantt | safe }}
     </div>
-    <div class="col-6" style="height: 600px ">
+    <div class="col-10" style="height: 600px ">
 {{ task_per_app |safe }}
     </div>
   </div>

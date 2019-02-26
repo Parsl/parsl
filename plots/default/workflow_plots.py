@@ -4,7 +4,9 @@ import plotly.graph_objs as go
 import plotly.figure_factory as ff
 from plotly.offline import plot
 from utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
-
+import networkx as nx
+import datetime
+import time
 
 def task_gantt_plot(df_task):
 
@@ -20,8 +22,13 @@ def task_gantt_plot(df_task):
     # parsl_tasks = df_task.to_dict('records')
     parsl_tasks = []
     for i, task in df_task.iterrows():
-        dic1 = dict(Task=task['task_id'], Start=task['task_time_submitted'], Finish=task['task_time_returned'], Resource="Queuing")
-        dic2 = dict(Task=task['task_id'], Start=task['timestamp'], Finish=task['task_time_returned'], Resource="Running")
+        time_running, time_returned =  task['task_time_running'],  task['task_time_returned']
+        if task['task_time_returned'] is None:
+            time_returned = datetime.datetime.now()
+        if task['task_time_running'] is None:
+            time_running = datetime.datetime.now()
+        dic1 = dict(Task=task['task_id'], Start=task['task_time_submitted'], Finish=time_running, Resource="Queuing")
+        dic2 = dict(Task=task['task_id'], Start=time_running, Finish=time_returned, Resource="Running")
         parsl_tasks.extend([dic1, dic2])
     colors = {'Queuing': 'rgb(220, 0, 0)', 'Running': 'rgb(0, 255, 100)'}
     fig = ff.create_gantt(parsl_tasks,
@@ -145,4 +152,90 @@ def total_tasks_plot(df_task, df_status, columns=20):
                                      barmode='stack',
                                      title="Total tasks"))
 
+    return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
+
+def workflow_dag_plot(workflow_completed, df_tasks):
+    G = nx.DiGraph(directed=True)
+    nodes = df_tasks['task_id'].unique()
+    dic = df_tasks.set_index('task_id').to_dict()
+    G.add_nodes_from(nodes)
+
+    # Add edges or links between the nodes:
+    edges = []
+    for k, v in dic['task_depends'].items():
+        if v:
+            adj = v.split(",")
+            for e in adj:
+                edges.append((int(e), k))
+    G.add_edges_from(edges)
+
+    node_positions = nx.nx_pydot.pydot_layout(G, prog='dot')
+    node_traces = []
+    if workflow_completed:
+        colors_list = { app: i for i, app in enumerate(df_tasks['task_func_name'].unique()) }
+    else:
+        colors_list = { 'Queuing': 0, "Running": 1, 'Completed': 2 }
+
+    for k, _ in colors_list.items():
+        node_trace = go.Scatter(
+            x=[],
+            y=[],
+            text=[],
+            mode='markers',
+            textposition='top center',
+            textfont=dict(
+                family='arial',
+                size=18,
+                color='rgb(0,0,0)'
+            ),
+            hoverinfo='text',
+            name=k,          # legend app_name here
+            marker=dict(
+                    showscale=False,
+                    # color='rgb(200,0,0)',
+                    size=8,
+                    line=dict(width=1, color='rgb(0,0,0)')))
+        node_traces.append(node_trace)
+
+    for node in node_positions:
+        x, y = node_positions[node]
+        if workflow_completed:
+            name = dic['task_func_name'][node]
+        else:
+            if dic['task_time_returned'][node] is not None:
+                name = 'Completed'
+            elif dic['task_time_running'][node] is not None:
+                name = "Running"
+            elif dic['task_time_submitted'][node] is not None:
+                name = "Queuing"
+        index = colors_list[name]
+        node_traces[index]['x'] += tuple([x])
+        node_traces[index]['y'] += tuple([y])
+        node_traces[index]['text'] += tuple(["{}:{}".format(dic['task_func_name'][node], node)])
+
+    # The edges will be drawn as lines:
+    edge_trace = go.Scatter(
+        x=[],
+        y=[],
+        line=dict(width=1, color='rgb(150,150,150)'),
+        hoverinfo='none',
+        showlegend=False,
+        mode='lines')
+
+    for edge in G.edges:
+        x0, y0 = node_positions[edge[0]]
+        x1, y1 = node_positions[edge[1]]
+        edge_trace['x'] += tuple([x0, x1, None])
+        edge_trace['y'] += tuple([y0, y1, None])
+
+    # Create figure:
+    fig = go.Figure(data = [edge_trace] + node_traces,
+                 layout = go.Layout(
+                    title = 'Workflow DAG',
+                    titlefont = dict(size=16),
+                    showlegend = True,
+                    hovermode = 'closest',
+                    margin = dict(b=20,l=5,r=5,t=40),
+                    xaxis = dict(showgrid=False, zeroline=False, showticklabels=False),
+                    yaxis = dict(showgrid=False, zeroline=False, showticklabels=False)))
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
