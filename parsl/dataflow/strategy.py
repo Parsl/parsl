@@ -647,6 +647,9 @@ class Strategy(object):
                 # This is probably wrong calculation, we need this to come from the executor
                 # since we can't know slots ahead of time.
                 if executor.connected_workers:
+                    # insert print for debug 02/22 T.Kurihana
+                    #TODO: here there maybe debug. TypeError: tuple indices must be integers or slices, not str
+                    print(connected_workers)
                     tasks_per_node = connected_workers[0]['worker_count']
                 elif executor.max_workers != float('inf'):
                     tasks_per_node = executor.max_workers
