@@ -8,6 +8,7 @@ import networkx as nx
 import datetime
 import time
 
+
 def task_gantt_plot(df_task):
 
     df_task = df_task.sort_values(by=['task_time_submitted'], ascending=False)
@@ -22,13 +23,15 @@ def task_gantt_plot(df_task):
     # parsl_tasks = df_task.to_dict('records')
     parsl_tasks = []
     for i, task in df_task.iterrows():
-        time_running, time_returned =  task['task_time_running'],  task['task_time_returned']
+        time_running, time_returned = task['task_time_running'],  task['task_time_returned']
         if task['task_time_returned'] is None:
             time_returned = datetime.datetime.now()
         if task['task_time_running'] is None:
             time_running = datetime.datetime.now()
-        dic1 = dict(Task=task['task_id'], Start=task['task_time_submitted'], Finish=time_running, Resource="Queuing")
-        dic2 = dict(Task=task['task_id'], Start=time_running, Finish=time_returned, Resource="Running")
+        dic1 = dict(Task=task['task_id'], Start=task['task_time_submitted'],
+                    Finish=time_running, Resource="Queuing")
+        dic2 = dict(Task=task['task_id'], Start=time_running,
+                    Finish=time_returned, Resource="Running")
         parsl_tasks.extend([dic1, dic2])
     colors = {'Queuing': 'rgb(220, 0, 0)', 'Running': 'rgb(0, 255, 100)'}
     fig = ff.create_gantt(parsl_tasks,
@@ -68,12 +71,14 @@ def task_per_app_plot(df_task, df_status):
 
     fig = go.Figure(
         data=[go.Scatter(x=df_status[df_status['task_id'].isin(tasks)]['timestamp'],
-                         y=y_axis_setup(df_status[df_status['task_id'].isin(tasks)]['task_status_name'] == 'running'),
+                         y=y_axis_setup(df_status[df_status['task_id'].isin(
+                             tasks)]['task_status_name'] == 'running'),
                          name=app)
               for app, tasks in apps_dict.items()] +
-             [go.Scatter(x=df_status['timestamp'],
-                         y=y_axis_setup(df_status['task_status_name'] == 'running'),
-                         name='all')],
+        [go.Scatter(x=df_status['timestamp'],
+                    y=y_axis_setup(
+            df_status['task_status_name'] == 'running'),
+            name='all')],
         layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                     autorange=True,
                                     title='Time'),
@@ -123,9 +128,9 @@ def total_tasks_plot(df_task, df_status, columns=20):
     fig = go.Figure(data=[go.Bar(x=x_axis[:-1],
                                  y=y_axis_done,
                                  name='done'),
-                           go.Bar(x=x_axis[:-1],
-                                  y=y_axis_failed,
-                                  name='failed')],
+                          go.Bar(x=x_axis[:-1],
+                                 y=y_axis_failed,
+                                 name='failed')],
                     layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
                                                 autorange=True,
                                                 title='Time'),
@@ -136,7 +141,8 @@ def total_tasks_plot(df_task, df_status, columns=20):
                                              x=0,
                                              y=1.07,
                                              showarrow=False,
-                                             text='Total Done: ' + str(sum(y_axis_done)),
+                                             text='Total Done: ' +
+                                             str(sum(y_axis_done)),
                                              xref='paper',
                                              yref='paper'
                                          ),
@@ -144,15 +150,17 @@ def total_tasks_plot(df_task, df_status, columns=20):
                                              x=0,
                                              y=1.05,
                                              showarrow=False,
-                                             text='Total Failed: ' + str(sum(y_axis_failed)),
+                                             text='Total Failed: ' +
+                                             str(sum(y_axis_failed)),
                                              xref='paper',
                                              yref='paper'
                                          ),
-                                     ],
-                                     barmode='stack',
-                                     title="Total tasks"))
+                    ],
+        barmode='stack',
+        title="Total tasks"))
 
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
+
 
 def workflow_dag_plot(workflow_completed, df_tasks):
     G = nx.DiGraph(directed=True)
@@ -172,9 +180,10 @@ def workflow_dag_plot(workflow_completed, df_tasks):
     node_positions = nx.nx_pydot.pydot_layout(G, prog='dot')
     node_traces = []
     if workflow_completed:
-        colors_list = { app: i for i, app in enumerate(df_tasks['task_func_name'].unique()) }
+        colors_list = {app: i for i, app in enumerate(
+            df_tasks['task_func_name'].unique())}
     else:
-        colors_list = { 'Queuing': 0, "Running": 1, 'Completed': 2 }
+        colors_list = {'Queuing': 0, "Running": 1, 'Completed': 2}
 
     for k, _ in colors_list.items():
         node_trace = go.Scatter(
@@ -191,10 +200,10 @@ def workflow_dag_plot(workflow_completed, df_tasks):
             hoverinfo='text',
             name=k,          # legend app_name here
             marker=dict(
-                    showscale=False,
-                    # color='rgb(200,0,0)',
-                    size=8,
-                    line=dict(width=1, color='rgb(0,0,0)')))
+                showscale=False,
+                # color='rgb(200,0,0)',
+                size=8,
+                line=dict(width=1, color='rgb(0,0,0)')))
         node_traces.append(node_trace)
 
     for node in node_positions:
@@ -211,7 +220,8 @@ def workflow_dag_plot(workflow_completed, df_tasks):
         index = colors_list[name]
         node_traces[index]['x'] += tuple([x])
         node_traces[index]['y'] += tuple([y])
-        node_traces[index]['text'] += tuple(["{}:{}".format(dic['task_func_name'][node], node)])
+        node_traces[index]['text'] += tuple(
+            ["{}:{}".format(dic['task_func_name'][node], node)])
 
     # The edges will be drawn as lines:
     edge_trace = go.Scatter(
@@ -229,13 +239,14 @@ def workflow_dag_plot(workflow_completed, df_tasks):
         edge_trace['y'] += tuple([y0, y1, None])
 
     # Create figure:
-    fig = go.Figure(data = [edge_trace] + node_traces,
-                 layout = go.Layout(
-                    title = 'Workflow DAG',
-                    titlefont = dict(size=16),
-                    showlegend = True,
-                    hovermode = 'closest',
-                    margin = dict(b=20,l=5,r=5,t=40),
-                    xaxis = dict(showgrid=False, zeroline=False, showticklabels=False),
-                    yaxis = dict(showgrid=False, zeroline=False, showticklabels=False)))
+    fig = go.Figure(data=[edge_trace] + node_traces,
+                    layout=go.Layout(
+                    title='Workflow DAG',
+                    titlefont=dict(size=16),
+                    showlegend=True,
+                    hovermode='closest',
+                    margin=dict(b=20, l=5, r=5, t=40),
+                    xaxis=dict(showgrid=False, zeroline=False,
+                               showticklabels=False),
+                    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
