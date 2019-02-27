@@ -773,6 +773,8 @@ class Strategy(object):
                     min_totaltime = None
                     selected_block = None
                     # Go through all allocated blocks
+                    print("blocks", blocks)
+                    print(type(blocks))
                     for block in blocks:
                         # For each block, check if we tracked it or not
                         if block not in self.task_tracker:
@@ -780,7 +782,10 @@ class Strategy(object):
                             self.task_tracker[block] = {}
                         # Update the tracker for this block
                         new_task_tracker = {}
-                        for task in block['tasks']:
+                        print("### Block ", block)
+                        # Here T. Kurihana modify
+                        for task in blocks[block]['tasks'] :
+                        #for task in block['tasks']:
                             # Go through outstanding task in the block, check if we have tracked
                             # the runtime the task
                             if task not in self.task_tracker[block]:
