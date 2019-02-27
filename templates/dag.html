@@ -18,7 +18,12 @@
     <li><b>tasks_completed_count:</b>  {{ workflow_details['tasks_completed_count'] }}</li>
 </ul>
 
-<a href="/workflow/{{ workflow_details['run_id'] }} ">View workflow task summary</a>
+{% if not group_by_apps %}
+    <a href="dag_group_by_apps">View workflow DAG -- colors grouped by apps</a>
+{% else %}
+    <a href="dag_group_by_states">View workflow DAG -- colors grouped by task states</a>
+{% endif%}
+<br><a href="/workflow/{{ workflow_details['run_id'] }} ">View workflow task summary</a>
 
 <div class="container">
     <div class="col-12" style='height: 600px'>
