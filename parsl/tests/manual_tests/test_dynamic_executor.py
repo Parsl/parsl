@@ -1,7 +1,4 @@
 import parsl
-from parsl import *
-# from parsl.monitoring.db_logger import MonitoringConfig
-from parsl.monitoring.monitoring import MonitoringHub
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.threads import ThreadPoolExecutor
@@ -10,19 +7,19 @@ from parsl.app.app import python_app
 from parsl.launchers import SrunLauncher
 from parsl.providers.slurm.slurm import SlurmProvider
 from parsl.addresses import address_by_hostname
-import logging
 
-#parsl.set_stream_logger()
+# parsl.set_stream_logger()
 
 config = Config(
-    executors=[HighThroughputExecutor(
-        label='htex_local',
-        cores_per_worker=1,
-        max_workers=5,
-        provider=LocalProvider(
+    executors=[
+        HighThroughputExecutor(
+            label='htex_local',
+            cores_per_worker=1,
+            max_workers=5,
+            provider=LocalProvider(
                 init_blocks=1,
                 max_blocks=1,
-            ),      
+            ),
         )
     ],
     strategy=None,
@@ -30,10 +27,12 @@ config = Config(
 
 dfk = parsl.load(config)
 
+
 @python_app(executors=['htex_local'])
 def sleeper(dur=1):
     import time
     time.sleep(dur)
+
 
 @python_app(executors=['threads'])
 def cpu_stress(dur=2):
@@ -46,12 +45,14 @@ def cpu_stress(dur=2):
             break
     return s
 
+
 @python_app(executors=['midway_htex'])
 def add(n):
     s = 0
     for i in range(n):
-       s += i
+        s += i
     return s
+
 
 if __name__ == "__main__":
 
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     results = [i.result() for i in tasks]
     print("Done with initial test. The results are ", results)
 
-    thread_executors=[ThreadPoolExecutor(
+    thread_executors = [ThreadPoolExecutor(
         label='threads',
         max_threads=4)
     ]
@@ -68,10 +69,10 @@ if __name__ == "__main__":
     results = [i.result() for i in tasks]
     print("Successfully added thread executor and ran with it. The results are ", results)
 
-    htex_executors=[
+    htex_executors = [
         HighThroughputExecutor(
             label="midway_htex",
-            #worker_debug=True,
+            # worker_debug=True,
             cores_per_worker=1,
             address=address_by_hostname(),
             provider=SlurmProvider(
@@ -84,11 +85,11 @@ if __name__ == "__main__":
                 min_blocks=1,
                 nodes_per_block=2,
                 walltime='00:10:00',
-           ),
+            ),
         )
     ]
     dfk.add_executors(executors=htex_executors)
     tasks = [add(i) for i in range(60)]
     results = [i.result() for i in tasks]
-    print("Successfully added midway_htex executor and done with it. The results are ", results)
+    print("Successfully added midway_htex executor and ran with it. The results are ", results)
     print("Done testing")
