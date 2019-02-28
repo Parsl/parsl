@@ -257,6 +257,7 @@ class Interchange(object):
                                 'block_id': self._ready_manager_queue[manager]['block_id'],
                                 'worker_count': self._ready_manager_queue[manager]['worker_count'],
                                 'tasks': len(self._ready_manager_queue[manager]['tasks']),
+                                'task_list': self._ready_manager_queue[manager]['tasks'],
                                 'active': self._ready_manager_queue[manager]['active']}
                         reply.append(resp)
 
