@@ -670,6 +670,7 @@ class Strategy(object):
 
             print("[MONITOR] Active tasks:", active_tasks)
             print("[MONITOR] Active slots:", active_slots)
+            task_status = executor.tasks;
             
             if (isinstance(executor, HighThroughputExecutor) or
                 isinstance(executor, ExtremeScaleExecutor)):
@@ -773,38 +774,34 @@ class Strategy(object):
                     min_totaltime = None
                     selected_block = None
                     # Go through all allocated blocks
-                    print("blocks", blocks)
-                    print(type(blocks))
-                    for block in blocks:
+                    for block_id, block in blocks:
                         # For each block, check if we tracked it or not
-                        if block not in self.task_tracker:
+                        if block_id not in self.task_tracker:
                             # If not, then add a new slot for it to the task_tracker
                             self.task_tracker[block] = {}
                         # Update the tracker for this block
-                        new_task_tracker = {}
-                        print("### Block ", block)
+                        tracker = {}
                         # Here T. Kurihana modify
-                        tracker = []
-                        for task in [blocks[block]['tasks']] :
+                        for task_id in block['task_list']] :
                         #for task in block['tasks']:
                             # Go through outstanding task in the block, check if we have tracked
                             # the runtime the task
-                            print(self.task_tracker)
-                            if task not in self.task_tracker[block]:
+                            print(task_status[task_id].state)
+                            if task.state == running and not in self.task_tracker[block]:
                                 # If not then the task have just get started, track it with runtime = 0
-                                tracker[task] = 0
+                                tracker[task_id] = 0
                             else:
                                 # Otherwise, add 1 to the runtime meaning that the task have run for 1 time unit
-                                tracker[task] += self.task_tracker[block][task] + 1
+                                tracker[task_id] += self.task_tracker[block_id][task_id] + 1
                         # Update the task tracker
-                        self.task_tracker[block] = new_task_tracker
+                        self.task_tracker[block_id] = tracker
                         # Compute the total runtime of tasks in the blocks
-                        totaltime = sum([task for task in new_task_tracker])
+                        totaltime = sum([task for task in tracker])
                         # Check if it is the lowest
                         if (min_totaltime == None or totaltime > min_totaltime):
                             # Update
                             min_totaltime = totaltime
-                            selected_block = block
+                            selected_block = block_id
                     
                     # Scale in!
                     if (selected_block != None):
