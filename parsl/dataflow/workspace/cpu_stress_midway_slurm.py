@@ -15,6 +15,7 @@ from parsl.app.app import python_app, bash_app
 from parsl.launchers import SingleNodeLauncher
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.addresses import address_by_hostname
 from parsl.channels import SSHChannel
 from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
@@ -42,25 +43,21 @@ def _logger(*args):
 config = Config(
     executors=[
         HighThroughputExecutor(
-            label="midway_ipp_multinode",
+            label="midway_htex",
             cores_per_worker=1,
+            address=adress_by_hostname(),
             provider=SlurmProvider(
-                'westmere',
-                channel=SSHChannel(
-                  hostname='midway2.rcc.uchicago.edu',  # specify your hostaname on midway
-                  username='tkurihana',  # username on midway
-                  script_dir='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace',
-                ),
+                'broadwl',    # machine name on midway
                 init_blocks=1,
+                launcher=SrunLauncher(),
+                scheduler_options='#SBATCH --exclusive',
                 max_blocks=10,
                 nodes_per_block=10,
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
-                launcher=SrunLauncher(),
                 parallelism=1.0,
                 walltime='00:20:00',
                 worker_init='module load Anaconda3/5.0.0.1; source activate py3501'
             ),
-             controller=Controller(public_ip='PUBLIC_IP'),    # Please replace PUBLIC_IP with your public ip
         )
     ],
     #strategy='htex_aggressive',

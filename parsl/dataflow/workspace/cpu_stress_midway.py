@@ -120,9 +120,8 @@ cpu_list.append(_get_cpu())
 mem_list.append(_get_mem())
 times_list.append(time.time()-stime)
 time.sleep(.100)
-for i in range(100):
+for i in range(4):
   rand_nums.append(func(_n, stime))
-  #mem, cpu, times = func(_n, stime).result()
 
 _outputs = [i.result() for i in rand_nums]
 print(np.asarray(_outputs).shape)
@@ -153,9 +152,3 @@ plt.hist(mem_list, label='mem', color='blue', alpha=0.3 )
 plt.legend()
 fig.tight_layout()
 plt.show()
-  
-# before debug 
-  #n= _n*(i+1)
-  #alist = []
-  #alist +=[ func(n, stime).result()]   # result() should be appended otherwise get error
-  #print(alist)

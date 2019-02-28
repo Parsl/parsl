@@ -784,10 +784,12 @@ class Strategy(object):
                         new_task_tracker = {}
                         print("### Block ", block)
                         # Here T. Kurihana modify
-                        for task in blocks[block]['tasks'] :
+                        tracker = []
+                        for task in [blocks[block]['tasks']] :
                         #for task in block['tasks']:
                             # Go through outstanding task in the block, check if we have tracked
                             # the runtime the task
+                            print(self.task_tracker)
                             if task not in self.task_tracker[block]:
                                 # If not then the task have just get started, track it with runtime = 0
                                 tracker[task] = 0
