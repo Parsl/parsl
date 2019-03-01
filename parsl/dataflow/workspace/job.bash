@@ -5,8 +5,12 @@
 #SBATCH -p broadwl
 #SBATCH --time=0:10:00
 
+# Here you should modify for your own conda-env
 module load Anaconda3/5.0.0.1
-source activate py3501
+source activate parsl-dev
 
-python cpu_stress.py
+# modify config below program as following points
+# - worker_init:  e.g.worker_init='module load Anaconda3/5.0.0.1; source activate py3501'
+# - 
+python cpu_stress_midway_slurm.py
 

@@ -1,0 +1,444 @@
+2019-02-28 22:34:50 parsl.dataflow.dflow:82 [DEBUG]  Starting DataFlowKernel with config
+Config(
+    app_cache=True, 
+    checkpoint_files=None, 
+    checkpoint_mode=None, 
+    checkpoint_period=None, 
+    data_management_max_threads=10, 
+    executors=[HighThroughputExecutor(
+        address='midway2-0010.rcc.local', 
+        cores_per_worker=1, 
+        heartbeat_period=30, 
+        heartbeat_threshold=120, 
+        interchange_port_range=(55000, 56000), 
+        label='midway_htex', 
+        launch_cmd='process_worker_pool.py {debug} {max_workers} -c {cores_per_worker} --task_url={task_url} --result_url={result_url} --logdir={logdir} --hb_period={heartbeat_period} --hb_threshold={heartbeat_threshold} ', 
+        managed=True, 
+        max_workers=inf, 
+        provider=SlurmProvider(
+            'broadwl',
+            channel=LocalChannel(
+                envs={}, 
+                script_dir=None, 
+                userhome='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace'
+            ), 
+            cmd_timeout=10, 
+            exclusive=True, 
+            init_blocks=1, 
+            launcher=SrunLauncher(), 
+            max_blocks=10, 
+            min_blocks=0, 
+            move_files=True, 
+            nodes_per_block=10, 
+            parallelism=1.0, 
+            scheduler_options='#SBATCH --exclusive\n#SBATCH --mem-per-cpu=16000 ', 
+            walltime='00:10:00', 
+            worker_init='module load Anaconda3/5.0.0.1; source activate py3501'
+        ), 
+        storage_access=[], 
+        suppress_failure=False, 
+        worker_debug=False, 
+        worker_port_range=(54000, 55000), 
+        worker_ports=None, 
+        working_dir=None
+    )], 
+    lazy_errors=True, 
+    monitoring_config=None, 
+    retries=0, 
+    run_dir='runinfo', 
+    strategy='simple', 
+    usage_tracking=True
+)
+2019-02-28 22:34:50 parsl.dataflow.dflow:83 [INFO]  Parsl version: 0.7.1
+2019-02-28 22:34:50 parsl.dataflow.usage_tracking.usage:126 [DEBUG]  Tracking status: True
+2019-02-28 22:34:50 parsl.dataflow.usage_tracking.usage:127 [DEBUG]  Testing mode   : False
+2019-02-28 22:34:52 parsl.dataflow.dflow:123 [INFO]  Run id is: bbdd1f82-55d4-4443-87e9-6ca3fc9b6e0a
+2019-02-28 22:34:52 parsl.dataflow.memoization:52 [INFO]  App caching initialized
+2019-02-28 22:34:52 parsl.executors.high_throughput.executor:380 [DEBUG]  Starting queue management thread
+2019-02-28 22:34:52 parsl.executors.high_throughput.executor:266 [DEBUG]  [MTHREAD] queue management worker starting
+2019-02-28 22:34:52 parsl.executors.high_throughput.executor:384 [DEBUG]  Started queue management thread
+2019-02-28 22:34:52 parsl.executors.high_throughput.executor:225 [DEBUG]  Created management thread: <Thread(Thread-1, started daemon 140584442906368)>
+2019-02-28 22:34:52 parsl.executors.high_throughput.executor:199 [DEBUG]  Launch command: process_worker_pool.py   -c 1 --task_url=tcp://midway2-0010.rcc.local:54672 --result_url=tcp://midway2-0010.rcc.local:54129 --logdir=/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace/runinfo/012/midway_htex --hb_period=30 --hb_threshold=120 
+2019-02-28 22:34:52 parsl.executors.high_throughput.executor:202 [DEBUG]  Starting HighThroughputExecutor with provider:
+SlurmProvider(
+    'broadwl',
+    channel=LocalChannel(
+        envs={}, 
+        script_dir='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace/runinfo/012/submit_scripts', 
+        userhome='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace'
+    ), 
+    cmd_timeout=10, 
+    exclusive=True, 
+    init_blocks=1, 
+    launcher=SrunLauncher(), 
+    max_blocks=10, 
+    min_blocks=0, 
+    move_files=True, 
+    nodes_per_block=10, 
+    parallelism=1.0, 
+    scheduler_options='#SBATCH --exclusive\n#SBATCH --mem-per-cpu=16000 ', 
+    walltime='00:10:00', 
+    worker_init='module load Anaconda3/5.0.0.1; source activate py3501'
+)
+2019-02-28 22:34:52 parsl.providers.slurm.slurm:167 [DEBUG]  Requesting one block with 10 nodes
+2019-02-28 22:34:52 parsl.providers.slurm.slurm:184 [DEBUG]  Writing submit script
+2019-02-28 22:34:52 parsl.providers.slurm.slurm:188 [DEBUG]  moving files
+2019-02-28 22:34:52 parsl.executors.high_throughput.executor:471 [DEBUG]  Launched block 0:58208457
+2019-02-28 22:34:52 parsl.dataflow.strategy:130 [DEBUG]  Scaling strategy: simple
+2019-02-28 22:34:52 parsl.dataflow.dflow:679 [INFO]  Task 0 submitted for App func, waiting on tasks []
+2019-02-28 22:34:52 parsl.dataflow.dflow:689 [DEBUG]  Task 0 set to pending state with AppFuture: <AppFuture at 0x7fdc5d240a20 state=pending>
+2019-02-28 22:34:52 parsl.executors.high_throughput.executor:440 [DEBUG]  Pushing function <function func at 0x7fdc5d244378> to queue with args (10000000, 1551414892.4870064)
+2019-02-28 22:34:53 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 0
+2019-02-28 22:34:53 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:34:53 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 0 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:34:53 parsl.dataflow.strategy:234 [DEBUG]  Executor midway_htex has 0 active tasks; starting kill timer (if idle time exceeds 120s, resources will be removed)
+2019-02-28 22:34:58 parsl.dataflow.dflow:471 [INFO]  Task 0 launched on executor midway_htex
+2019-02-28 22:34:58 parsl.dataflow.dflow:679 [INFO]  Task 1 submitted for App func, waiting on tasks []
+2019-02-28 22:34:58 parsl.dataflow.dflow:689 [DEBUG]  Task 1 set to pending state with AppFuture: <AppFuture at 0x7fdc627a0048 state=pending>
+2019-02-28 22:34:58 parsl.executors.high_throughput.executor:440 [DEBUG]  Pushing function <function func at 0x7fdc5d244378> to queue with args (10000000, 1551414892.4870064)
+2019-02-28 22:34:58 parsl.dataflow.dflow:471 [INFO]  Task 1 launched on executor midway_htex
+2019-02-28 22:34:58 parsl.dataflow.dflow:679 [INFO]  Task 2 submitted for App func, waiting on tasks []
+2019-02-28 22:34:58 parsl.dataflow.dflow:689 [DEBUG]  Task 2 set to pending state with AppFuture: <AppFuture at 0x7fdc5d240d68 state=pending>
+2019-02-28 22:34:58 parsl.executors.high_throughput.executor:440 [DEBUG]  Pushing function <function func at 0x7fdc5d244378> to queue with args (10000000, 1551414892.4870064)
+2019-02-28 22:34:58 parsl.dataflow.dflow:471 [INFO]  Task 2 launched on executor midway_htex
+2019-02-28 22:34:58 parsl.dataflow.dflow:679 [INFO]  Task 3 submitted for App func, waiting on tasks []
+2019-02-28 22:34:58 parsl.dataflow.dflow:689 [DEBUG]  Task 3 set to pending state with AppFuture: <AppFuture at 0x7fdc47570160 state=pending>
+2019-02-28 22:34:58 parsl.executors.high_throughput.executor:440 [DEBUG]  Pushing function <function func at 0x7fdc5d244378> to queue with args (10000000, 1551414892.4870064)
+2019-02-28 22:34:58 parsl.dataflow.dflow:471 [INFO]  Task 3 launched on executor midway_htex
+2019-02-28 22:34:58 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:34:58 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:34:58 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:03 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:08 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:13 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:18 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:23 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:35:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:35:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:35:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:04 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:04 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:09 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:09 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:14 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:14 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:19 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:19 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:24 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:24 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:27 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:29 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:29 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:36:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:36:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:36:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:23 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:23 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:27 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:28 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:28 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:37:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:37:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:37:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:23 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:23 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:27 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:28 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:28 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:38:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:38:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:38:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:23 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:23 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:27 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:28 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:28 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:39:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:39:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:39:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:23 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:23 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:27 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:28 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:28 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:40:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:40:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:40:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:23 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:23 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:27 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:28 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:28 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:41:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:41:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:41:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:23 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:23 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:27 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:28 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:28 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:42:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:42:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:42:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:23 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:23 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:27 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:28 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:28 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:32 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:32 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:32 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:37 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:37 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:37 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:42 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:42 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:42 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:47 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:47 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:47 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:52 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:52 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:52 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:43:57 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:43:57 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:43:57 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:44:02 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:44:03 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:44:03 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:44:07 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:44:08 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:44:08 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:44:12 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:44:13 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:44:13 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:44:17 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
+2019-02-28 22:44:18 parsl.executors.high_throughput.executor:414 [DEBUG]  Got managers: []
+2019-02-28 22:44:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-02-28 22:44:22 parsl.executors.high_throughput.executor:408 [DEBUG]  Got outstanding count: 4
