@@ -10,6 +10,10 @@
 
 * Debug: Feb. 26/ Takuya. Slurm/Local job does not finish automatically. Why??!  <br />
 
+* Debug: Feb. 28/ Hai. Strategy Debug 90% Done.  <br />
+
+* TODO: Feb. 28/ Theo & Tak. Think metrics and Dev. application for benchmark .  <br />
+
 # List of Programs
 
 1. test_cio_parsl.py  <br />
@@ -31,3 +35,11 @@
 6. cpu_stress_midway_slurm.py  <br />
   Test script for midway on slurm 
 
+7. app_dag_zhuozhao.py <br />
+  Dataflow python application from Zhuzhao
+ 
+8. app_dev_dag_zhuozhao.py <br />
+  Developed Dataflow python application based on app_dag_zhuozhao.py
+
+9. app_slurm_dag_zhuozhao.py
+  Dataflow script on slurm job
