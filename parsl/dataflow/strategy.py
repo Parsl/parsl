@@ -111,7 +111,8 @@ class Strategy(object):
         self.dfk = dfk
         self.config = dfk.config
         self.executors = {}
-        self.max_idletime = 60 * 2  # 2 minutes
+        #self.max_idletime = 60 * 2  # 2 minutes
+        self.max_idletime = 15
 
         for e in self.dfk.config.executors:
             self.executors[e.label] = {'idle_since': None, 'config': e.label}
@@ -649,7 +650,6 @@ class Strategy(object):
                 if executor.connected_workers:
                     # insert print for debug 02/22 T.Kurihana
                     #TODO: here there maybe debug. TypeError: tuple indices must be integers or slices, not str
-                    print(connected_workers)
                     tasks_per_node = connected_workers[0]['worker_count']
                 elif executor.max_workers != float('inf'):
                     tasks_per_node = executor.max_workers
@@ -672,6 +672,47 @@ class Strategy(object):
             print("[MONITOR] Active slots:", active_slots)
             task_status = executor.tasks;
             
+            totaltime = {}
+            if isinstance(executor, HighThroughputExecutor):
+                blocks = {}
+                for manager in connected_workers:
+                    blk_id = manager['block_id']
+                    if blk_id not in blocks:
+                        blocks[blk_id] = {'managers': manager,
+                                            'tasks': manager['tasks'],
+                                            'worker_count': manager['worker_count']}
+                    else:
+                        blocks[blk_id]['managers'].append(manager)
+                        blocks[blk_id]['tasks'] += manager['tasks']
+                        blocks[blk_id]['worker_count'] += manager['worker_count']
+                    
+                    
+                # Go through all allocated blocks
+                for block_id, block in blocks.items():
+                    if (block['managers']['active'] == False):
+                        continue
+                    # For each block, check if we tracked it or not
+                    if block_id not in self.task_tracker:
+                        # If not, then add a new slot for it to the task_tracker
+                        self.task_tracker[block_id] = {}
+                    # Update the tracker for this block
+                    tracker = {}
+                    print("Block: ", block_id, block)
+                    for task_id in block['managers']['task_list'] :
+                        # Go through outstanding task in the block, check if we have tracked
+                        # the runtime the task
+                        if (task_id not in self.task_tracker[block_id]):
+                            # If not then the task have just get started, track it with runtime = 0
+                            tracker[task_id] = 0
+                        else:
+                            # Otherwise, add 1 to the runtime meaning that the task have run for 1 time unit
+                            tracker[task_id] = self.task_tracker[block_id][task_id] + 1
+                    # Update the task tracker
+                    self.task_tracker[block_id] = tracker
+                    # Compute the total runtime of tasks in the blocks
+                    totaltime[block_id] = sum([task for task_id, task in tracker.items()])
+                    print('Block', block_id, "total runtime", totaltime[block_id])
+                
             if (isinstance(executor, HighThroughputExecutor) or
                 isinstance(executor, ExtremeScaleExecutor)):
                 logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected engines'.format(
@@ -746,69 +787,32 @@ class Strategy(object):
 
             # Case 4
             # More slots than tasks
-            elif active_slots > 0 and active_slots > active_tasks:
-                if isinstance(executor, HighThroughputExecutor):
+            #elif active_slots > 0 and active_slots > active_tasks:
+            elif active_slots > 0 and active_slots - tasks_per_node * nodes_per_block >= active_tasks:
                 
-                    blocks = {}
-                    for manager in connected_workers:
-                        blk_id = manager['block_id']
-                        if blk_id not in blocks:
-                            blocks[blk_id] = {'managers': manager,
-                                              'tasks': manager['tasks'],
-                                              'worker_count': manager['worker_count']}
-                        else:
-                            blocks[blk_id]['managers'].append(manager)
-                            blocks[blk_id]['tasks'] += manager['tasks']
-                            blocks[blk_id]['worker_count'] += manager['worker_count']
-                    """
-                    for block in blocks:
-                        tasks_in_flight = sum([manager['tasks'] for manager in blocks[block]])
-                        is_active = all([manager['active'] for manager in blocks[block]])
-                        logger.debug("[STRATEGY] YADU block:{} has {} tasks".format(block,
-                                                                                    tasks_in_flight))
-                        if tasks_in_flight == 0 and is_active:
-                            executor.scale_in(1, block_ids=[block])
-                            logger.debug("[STRATEGY] CASE:4a Block:{} is empty".format(block))
-                    """
+                # We want to make sure that max_idletime is reached
+                # before killing off resources
+                if  'under_utilization' not in self.executors[executor.label]:
+                    logger.debug("Executor {} is underutilization; starting kill timer (if idle time exceeds {}s, resources will be removed)".format(
+                        label, self.max_idletime)
+                    )
+                    self.executors[executor.label]['under_utilization'] = time.time()
+                
+                idle_since = self.executors[executor.label]['under_utilization']
                     
-                    min_totaltime = None
-                    selected_block = None
-                    # Go through all allocated blocks
-                    for block_id, block in blocks:
-                        # For each block, check if we tracked it or not
-                        if block_id not in self.task_tracker:
-                            # If not, then add a new slot for it to the task_tracker
-                            self.task_tracker[block] = {}
-                        # Update the tracker for this block
-                        tracker = {}
-                        # Here T. Kurihana modify
-                        for task_id in block['task_list']] :
-                        #for task in block['tasks']:
-                            # Go through outstanding task in the block, check if we have tracked
-                            # the runtime the task
-                            print(task_status[task_id].state)
-                            if task.state == running and not in self.task_tracker[block]:
-                                # If not then the task have just get started, track it with runtime = 0
-                                tracker[task_id] = 0
-                            else:
-                                # Otherwise, add 1 to the runtime meaning that the task have run for 1 time unit
-                                tracker[task_id] += self.task_tracker[block_id][task_id] + 1
-                        # Update the task tracker
-                        self.task_tracker[block_id] = tracker
-                        # Compute the total runtime of tasks in the blocks
-                        totaltime = sum([task for task in tracker])
-                        # Check if it is the lowest
-                        if (min_totaltime == None or totaltime > min_totaltime):
-                            # Update
-                            min_totaltime = totaltime
-                            selected_block = block_id
+                # We have resources idle for the max duration,
+                # we have to scale_in now.
+                selected_block = min(totaltime.items(), key=lambda x: x[1])[0]
+                if (active_blocks > 1 and (time.time() - idle_since) > self.max_idletime):
+                    logger.debug("[COURSE PROJECT STRATEGY] CASE:4a Block:{} has lowest totaltime".format(selected_block))
+                    logger.debug("Idle time has reached {}s for executor {}; removing resources".format(
+                        self.max_idletime, label)
+                    )
+                    print("Kill block ", selected_block)
+                    executor.scale_in(1, block_ids=[selected_block])
+                    del self.executors[executor.label]['under_utilization']
                     
-                    # Scale in!
-                    if (selected_block != None):
-                        executor.scale_in(1, block_ids=[selected_block])
-                        logger.debug("[COURSE PROJECT STRATEGY] CASE:4a Block:{} has lowest totaltime".format(selected_block))
-                    
-                    logger.debug("[STRATEGY] CASE:4 Block slots:{}".format(blocks.keys()))
+                logger.debug("[STRATEGY] CASE:4 Block slots:{}".format(blocks.keys()))
 
             # Case 3
             # tasks ~ slots

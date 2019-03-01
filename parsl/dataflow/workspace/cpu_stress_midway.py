@@ -51,7 +51,7 @@ config = Config(
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=1,
-                max_blocks=1,
+                max_blocks=4,
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
                 launcher=SingleNodeLauncher(),
             ),
@@ -103,7 +103,7 @@ def func(n=1000000, stime=0.00):
   ctime = time.time() - stime
   times += [ctime]
   import random
-  time.sleep(random.randint(1, 5))
+  time.sleep(random.randint(30, 60))
   return mems, cpus, times
 
 
@@ -120,7 +120,7 @@ cpu_list.append(_get_cpu())
 mem_list.append(_get_mem())
 times_list.append(time.time()-stime)
 time.sleep(.100)
-for i in range(4):
+for i in range(100):
   rand_nums.append(func(_n, stime))
 
 _outputs = [i.result() for i in rand_nums]
