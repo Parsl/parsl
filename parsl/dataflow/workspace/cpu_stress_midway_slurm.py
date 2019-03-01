@@ -7,6 +7,7 @@ __author__ = 'tkurihana@uchicago.edu'
 import os
 import sys
 import time
+import numpy as np
 from mod_libmonitors import _get_cpu, _get_mem
 
 # parsl module 
@@ -48,15 +49,16 @@ config = Config(
             address=address_by_hostname(),
             provider=SlurmProvider(
                 'broadwl',    # machine name on midway
-                init_blocks=1,
                 launcher=SrunLauncher(),
-                scheduler_options='#SBATCH --exclusive',
+                scheduler_options='#SBATCH --mem-per-cpu=16000 ',
+                #scheduler_options='#SBATCH --exclusive',
+                worker_init='module load Anaconda3/5.0.0.1; source activate parsl-dev',
+                init_blocks=1,
                 max_blocks=10,
                 nodes_per_block=10,
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
                 parallelism=1.0,
                 walltime='00:10:00',
-                worker_init='module load Anaconda3/5.0.0.1; source activate py3501'
             ),
         )
     ],

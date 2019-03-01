@@ -7,7 +7,7 @@
 
 # Here you should modify for your own conda-env
 module load Anaconda3/5.0.0.1
-source activate py3501
+source activate parsl-dev
 
 # modify config below program as following points
 # - worker_init:  e.g.worker_init='module load Anaconda3/5.0.0.1; source activate py3501'
