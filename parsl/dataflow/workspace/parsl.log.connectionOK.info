@@ -1,0 +1,125 @@
+2019-03-01 14:23:05 parsl.dataflow.dflow:82 [DEBUG]  Starting DataFlowKernel with config
+Config(
+    app_cache=True, 
+    checkpoint_files=None, 
+    checkpoint_mode=None, 
+    checkpoint_period=None, 
+    data_management_max_threads=10, 
+    executors=[HighThroughputExecutor(
+        address='midway2-0378.rcc.local', 
+        cores_per_worker=1, 
+        heartbeat_period=30, 
+        heartbeat_threshold=120, 
+        interchange_port_range=(55000, 56000), 
+        label='midway_htex', 
+        launch_cmd='process_worker_pool.py {debug} {max_workers} -p {prefetch_capacity} -c {cores_per_worker} --task_url={task_url} --result_url={result_url} --logdir={logdir} --block_id={{block_id}} --hb_period={heartbeat_period} --hb_threshold={heartbeat_threshold} ', 
+        managed=True, 
+        max_workers=inf, 
+        prefetch_capacity=100, 
+        provider=SlurmProvider(
+            'broadwl',
+            channel=LocalChannel(
+                envs={}, 
+                script_dir=None, 
+                userhome='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace'
+            ), 
+            cmd_timeout=10, 
+            exclusive=True, 
+            init_blocks=1, 
+            launcher=SrunLauncher(), 
+            max_blocks=10, 
+            min_blocks=0, 
+            move_files=True, 
+            nodes_per_block=10, 
+            parallelism=1.0, 
+            scheduler_options='#SBATCH --exclusive\n#SBATCH --mem-per-cpu=16000 ', 
+            walltime='00:10:00', 
+            worker_init='module load Anaconda3/5.0.0.1; source activate parsl-dev'
+        ), 
+        storage_access=[], 
+        suppress_failure=False, 
+        worker_debug=False, 
+        worker_port_range=(54000, 55000), 
+        worker_ports=None, 
+        working_dir=None
+    )], 
+    lazy_errors=True, 
+    monitoring_config=None, 
+    retries=0, 
+    run_dir='runinfo', 
+    strategy='simple', 
+    usage_tracking=True
+)
+2019-03-01 14:23:05 parsl.dataflow.dflow:83 [INFO]  Parsl version: 1.7.3
+2019-03-01 14:23:05 parsl.dataflow.usage_tracking.usage:126 [DEBUG]  Tracking status: True
+2019-03-01 14:23:05 parsl.dataflow.usage_tracking.usage:127 [DEBUG]  Testing mode   : False
+2019-03-01 14:23:05 parsl.dataflow.dflow:123 [INFO]  Run id is: 43d6b3d3-332d-44bf-82dd-bb8783b51354
+2019-03-01 14:23:05 parsl.dataflow.memoization:52 [INFO]  App caching initialized
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:392 [DEBUG]  Starting queue management thread
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:278 [DEBUG]  [MTHREAD] queue management worker starting
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:396 [DEBUG]  Started queue management thread
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:237 [DEBUG]  Created management thread: <Thread(Thread-1, started daemon 140528132126464)>
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:199 [DEBUG]  YADU : /scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace/runinfo/013/midway_htex
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:211 [DEBUG]  Launch command: process_worker_pool.py   -p 100 -c 1 --task_url=tcp://midway2-0378.rcc.local:54923 --result_url=tcp://midway2-0378.rcc.local:54998 --logdir=/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace/runinfo/013/midway_htex --block_id={block_id} --hb_period=30 --hb_threshold=120 
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:214 [DEBUG]  Starting HighThroughputExecutor with provider:
+SlurmProvider(
+    'broadwl',
+    channel=LocalChannel(
+        envs={}, 
+        script_dir='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace/runinfo/013/submit_scripts', 
+        userhome='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace'
+    ), 
+    cmd_timeout=10, 
+    exclusive=True, 
+    init_blocks=1, 
+    launcher=SrunLauncher(), 
+    max_blocks=10, 
+    min_blocks=0, 
+    move_files=True, 
+    nodes_per_block=10, 
+    parallelism=1.0, 
+    scheduler_options='#SBATCH --exclusive\n#SBATCH --mem-per-cpu=16000 ', 
+    walltime='00:10:00', 
+    worker_init='module load Anaconda3/5.0.0.1; source activate parsl-dev'
+)
+2019-03-01 14:23:06 parsl.providers.slurm.slurm:167 [DEBUG]  Requesting one block with 10 nodes
+2019-03-01 14:23:06 parsl.providers.slurm.slurm:184 [DEBUG]  Writing submit script
+2019-03-01 14:23:06 parsl.providers.slurm.slurm:188 [DEBUG]  moving files
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:500 [DEBUG]  Launched block 0->58224032
+2019-03-01 14:23:06 parsl.dataflow.strategy:130 [DEBUG]  Scaling strategy: simple
+2019-03-01 14:23:06 parsl.dataflow.dflow:679 [INFO]  Task 0 submitted for App func, waiting on tasks []
+2019-03-01 14:23:06 parsl.dataflow.dflow:689 [DEBUG]  Task 0 set to pending state with AppFuture: <AppFuture at 0x7fcf40e238d0 state=pending>
+2019-03-01 14:23:06 parsl.executors.high_throughput.executor:468 [DEBUG]  Pushing function <function func at 0x7fcf40e26730> to queue with args (10000000, 1551471786.414487)
+2019-03-01 14:23:07 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 0 active tasks, 0/0/1 running/submitted/pending blocks, and 0 connected engines
+2019-03-01 14:23:07 parsl.dataflow.strategy:234 [DEBUG]  Executor midway_htex has 0 active tasks; starting kill timer (if idle time exceeds 120s, resources will be removed)
+2019-03-01 14:23:10 parsl.dataflow.dflow:471 [INFO]  Task 0 launched on executor midway_htex
+2019-03-01 14:23:10 parsl.dataflow.dflow:679 [INFO]  Task 1 submitted for App func, waiting on tasks []
+2019-03-01 14:23:10 parsl.dataflow.dflow:689 [DEBUG]  Task 1 set to pending state with AppFuture: <AppFuture at 0x7fcf40606898 state=pending>
+2019-03-01 14:23:10 parsl.executors.high_throughput.executor:468 [DEBUG]  Pushing function <function func at 0x7fcf40e26730> to queue with args (10000000, 1551471786.414487)
+2019-03-01 14:23:10 parsl.dataflow.dflow:471 [INFO]  Task 1 launched on executor midway_htex
+2019-03-01 14:23:10 parsl.dataflow.dflow:679 [INFO]  Task 2 submitted for App func, waiting on tasks []
+2019-03-01 14:23:10 parsl.dataflow.dflow:689 [DEBUG]  Task 2 set to pending state with AppFuture: <AppFuture at 0x7fcf40e23cf8 state=pending>
+2019-03-01 14:23:10 parsl.executors.high_throughput.executor:468 [DEBUG]  Pushing function <function func at 0x7fcf40e26730> to queue with args (10000000, 1551471786.414487)
+2019-03-01 14:23:10 parsl.dataflow.dflow:471 [INFO]  Task 2 launched on executor midway_htex
+2019-03-01 14:23:10 parsl.dataflow.dflow:679 [INFO]  Task 3 submitted for App func, waiting on tasks []
+2019-03-01 14:23:10 parsl.dataflow.dflow:689 [DEBUG]  Task 3 set to pending state with AppFuture: <AppFuture at 0x7fcf4003f748 state=pending>
+2019-03-01 14:23:10 parsl.executors.high_throughput.executor:468 [DEBUG]  Pushing function <function func at 0x7fcf40e26730> to queue with args (10000000, 1551471786.414487)
+2019-03-01 14:23:10 parsl.dataflow.dflow:471 [INFO]  Task 3 launched on executor midway_htex
+2019-03-01 14:23:12 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 1/0/0 running/submitted/pending blocks, and 0 connected engines
+2019-03-01 14:23:18 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 1/0/0 running/submitted/pending blocks, and 10 connected engines
+2019-03-01 14:23:23 parsl.dataflow.strategy:212 [DEBUG]  Executor midway_htex has 4 active tasks, 1/0/0 running/submitted/pending blocks, and 10 connected engines
+2019-03-01 14:23:24 parsl.dataflow.dflow:298 [INFO]  Task 2 completed
+2019-03-01 14:23:24 parsl.dataflow.dflow:298 [INFO]  Task 0 completed
+2019-03-01 14:23:24 parsl.dataflow.dflow:298 [INFO]  Task 3 completed
+2019-03-01 14:23:24 parsl.dataflow.dflow:298 [INFO]  Task 1 completed
+2019-03-01 14:23:24 parsl.dataflow.dflow:794 [INFO]  DFK cleanup initiated
+2019-03-01 14:23:24 parsl.dataflow.dflow:725 [INFO]  Summary of tasks in DFK:
+2019-03-01 14:23:24 parsl.dataflow.dflow:756 [INFO]  Tasks in state States.done: 0, 1, 2, 3
+2019-03-01 14:23:24 parsl.dataflow.dflow:763 [INFO]  End of summary
+2019-03-01 14:23:24 parsl.dataflow.dflow:818 [INFO]  Terminating flow_control and strategy threads
+2019-03-01 14:23:24 parsl.executors.high_throughput.executor:531 [DEBUG]  YADU: SCALE_IN, self.blocks: {'0': '58224032'}
+2019-03-01 14:23:24 parsl.executors.high_throughput.executor:540 [DEBUG]  YADU: SCALE_IN, trying to scale_in: ['58224032']
+2019-03-01 14:23:25 parsl.executors.high_throughput.executor:569 [WARNING]  Attempting HighThroughputExecutor shutdown
+2019-03-01 14:23:25 parsl.executors.high_throughput.executor:573 [WARNING]  Finished HighThroughputExecutor shutdown attempt
+2019-03-01 14:23:25 parsl.data_provider.data_manager:98 [DEBUG]  Done with executor shutdown
+2019-03-01 14:23:25 parsl.dataflow.dflow:841 [INFO]  DFK cleanup complete

@@ -24,12 +24,21 @@ from parsl.app.app import python_app
 
 # Argument settings
 p = argparse.ArgumentParser()
+# Executor option
 p.add_argument(
     "--executor",
     help="executor option for configuration setting ",
     type=str,
     default='HighThroughput_Slurm'
 )
+# outputfilename
+p.add_argument(
+    "--oname",
+    help="output npy-filename option ",
+    type=str,
+    default='change'
+)
+args = p.parse_args()
 args = p.parse_args()
 print('Argparse:  --executor='+args.executor, flush=True)
 
@@ -77,8 +86,8 @@ elif args.executor == 'HighThroughput_Slurm':
                 ###scheduler_options='#SBATCH --exclusive',
                 worker_init='module load Anaconda3/5.0.0.1; source activate parsl-dev',
                 init_blocks=1,
-                max_blocks=10,
-                nodes_per_block=10,
+                max_blocks=1,
+                nodes_per_block=1,
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
                 parallelism=1.0,
                 walltime='00:10:00',
@@ -200,5 +209,5 @@ if __name__ == "__main__":
     print(cpus)
 
     cdir='/home/tkurihana/scratch-midway2/parsl/parsl/dataflow/workspace'
-    np.save(cdir+'/'+"output_mems_slurm", np.asarray(mems))
-    np.save(cdir+'/'+"output_cpus_slurm", np.asarray(cpus))
+    np.save(cdir+'/'+"output_mems_slurm-"+args.oname, np.asarray(mems))
+    np.save(cdir+'/'+"output_cpus_slurm-"+args.oname, np.asarray(cpus))
