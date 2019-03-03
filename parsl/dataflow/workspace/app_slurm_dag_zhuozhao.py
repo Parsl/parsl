@@ -4,6 +4,7 @@
 #  based on app_dag_zhuzhao.py
 #   Author: Takuya Kurihana 
 #
+import os
 import argparse
 import numpy as np
 import psutil
@@ -31,6 +32,20 @@ p.add_argument(
     type=str,
     default='HighThroughput_Slurm'
 )
+# Strategy option
+p.add_argument(
+    "--strategy",
+    help="strategy option for configuration setting ",
+    type=str,
+    default='simple'
+)
+# outputfile directory
+p.add_argument(
+    "--ofiledir",
+    help="output npy-filename directory ",
+    type=str,
+    default='not-specify'
+)
 # outputfilename
 p.add_argument(
     "--oname",
@@ -38,7 +53,6 @@ p.add_argument(
     type=str,
     default='change'
 )
-args = p.parse_args()
 args = p.parse_args()
 print('Argparse:  --executor='+args.executor, flush=True)
 
@@ -63,14 +77,15 @@ elif args.executor == 'HighThroughput_Local':
               channel=LocalChannel(),
               init_blocks=1,
               max_blocks=1,
-              # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
+              # tasks_perss_node=1,  # For HighThroughputExecutor, this option sho<
               launcher=SingleNodeLauncher(),
             ),
         )
     ],
     #strategy='htex_aggressive',
     #strategy='htex_totaltime',
-    strategy='simple',
+    #strategy='simple',
+    strategy=args.strategy,
   )
 elif args.executor == 'HighThroughput_Slurm':
   config = Config(
@@ -90,13 +105,14 @@ elif args.executor == 'HighThroughput_Slurm':
                 nodes_per_block=1,
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
                 parallelism=1.0,
-                walltime='00:10:00',
+                walltime='00:40:00',
             ),
         )
     ],
     #strategy='htex_aggressive',
     #strategy='htex_totaltime',
-    strategy='simple',
+    #strategy='simple',
+    strategy=args.strategy,
   )
 
 # TODO: 
@@ -172,7 +188,6 @@ def add_inc(inputs=[]):
     cpus += [psutil.cpu_percent()]
     return  [mems, cpus]
 
-
 if __name__ == "__main__":
 
     total = 10 
@@ -194,20 +209,15 @@ if __name__ == "__main__":
     print([f.result() for f in futures_4])
     print("Done")
 
-    # plotting
-    for iout in [_outputs1, _outputs2, _outputs3, _outputs4]:
-        _iout = np.asarray(iout)
-        print(_iout.shape)
-        print(_iout)
-        _mem  = _iout[:,0].flatten() 
-        _cpu  = _iout[:,1].flatten()
-        mems.extend(_mem)
-        cpus.extend(_cpu)
+    # save output into file
+    cdir = args.ofiledir
+    try:
+      if  cdir is not 'not-specify': 
+        print("  ### Outputdir : %s " % cdir , flush=True )
+    except:
+      cdir = os.getcwd()
     
-    print(mems)
-    print()
-    print(cpus)
-
-    cdir='/home/tkurihana/scratch-midway2/parsl/parsl/dataflow/workspace'
-    np.save(cdir+'/'+"output_mems_slurm-"+args.oname, np.asarray(mems))
-    np.save(cdir+'/'+"output_cpus_slurm-"+args.oname, np.asarray(cpus))
+    for idx ,  iout in enumerate([_outputs1, _outputs2, _outputs3, _outputs4]) :
+        _iout = np.asarray(iout)
+        _idx = idx + 1
+        np.save(cdir+'/'+"outputs_"+str(_idx)+"_slurm-"+args.oname, _iout)
