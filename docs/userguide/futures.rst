@@ -93,11 +93,16 @@ The following code snippet shows how DataFutures are used:
       print(hello.outputs)
 
       # Print the contents of the output DataFuture when complete
-      with open(hello.outputs[0].result(), 'r') as f:
+      with open(hello.outputs[0].result().filepath, 'r') as f:
            print(f.read())
 
-
-
+.. note::
+      # TODO BENC:
+      the added .filepath here is only needed on python 3.5. With python
+      >= 3.6 the resulting file can maybe be passed to open directly.
+      Maybe this should be a .. note:: ?
+      I actually need to check if fspath protocol is used even when File
+      is still a str, as it is at the point that this patch is written.
 
 
 
