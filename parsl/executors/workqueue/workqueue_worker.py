@@ -1,5 +1,4 @@
 import sys
-import os
 import pickle
 import logging
 from ipyparallel.serialize import unpack_apply_message
@@ -14,11 +13,10 @@ if __name__ == "__main__":
     if len(sys.argv) > 3:
         if sys.argv[3] == "--shared-fs":
             shared_fs = True
- 
+
     input_function = open(input_function_file, "rb")
     function_tuple = pickle.load(input_function)
     input_function.close()
-
 
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
@@ -27,7 +25,7 @@ if __name__ == "__main__":
     if shared_fs is False:
         from parsl.data_provider.files import File
 
-        func_inputs = kwargs.get("inputs", []) 
+        func_inputs = kwargs.get("inputs", [])
         for inp in func_inputs:
             if isinstance(inp, File):
                 inp.set_in_task()
@@ -35,7 +33,7 @@ if __name__ == "__main__":
         for kwarg, potential_f in kwargs.items():
             if isinstance(potential_f, File):
                 potential_f.set_in_task()
-    
+
         for inp in args:
             if isinstance(inp, File):
                 inp.set_in_task()

@@ -89,7 +89,6 @@ def WorkQueueThread(tasks={},
             function_result_loc_remote = function_result_loc.split("/")[-1]
             function_data_loc_remote = function_data_loc.split("/")[-1]
 
-
             input_files = item["input_files"]
             output_files = item["output_files"]
 
@@ -97,8 +96,6 @@ def WorkQueueThread(tasks={},
             full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
 
             script_name = full_script_name.split("/")[-1]
-            sandbox_func_data = "$WORK_QUEUE_SANDBOX/" + function_data_loc_remote
-            sandbox_func_result = "$WORK_QUEUE_SANDBOX/" + function_result_loc_remote
             command_str = launch_cmd.format(input_file=function_data_loc_remote,
                                             output_file=function_result_loc_remote)
 
@@ -118,7 +115,7 @@ def WorkQueueThread(tasks={},
 
             for item in input_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_INPUT, cache=item[2])
-            
+
             for item in output_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
 
@@ -228,7 +225,7 @@ class WorkQueueExecutor(ParslExecutor):
                 self.project_password_file = None
 
         self.launch_cmd = ("python3 workqueue_worker.py {input_file} {output_file}")
-        if self.shared_fs = True:
+        if self.shared_fs is True:
             self.launch_cmd += " --shared-fs"
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
@@ -318,7 +315,7 @@ class WorkQueueExecutor(ParslExecutor):
                 new_name = output.filepath
                 if not output.task_path:
                     if self.shared_fs is False:
-                        new_name = self.create_new_name(os.path.basename(ouput.filepath))
+                        new_name = self.create_new_name(os.path.basename(output.filepath))
                         output.task_path = new_name
                 output_files.append((output.filepath, new_name, output.shared, "in"))
 
@@ -338,7 +335,7 @@ class WorkQueueExecutor(ParslExecutor):
         logger.debug("Creating Tasks {} with result to be found at: {}".format(task_id, function_result_file))
 
         f = open(function_data_file, "wb")
-        fnn_buf = pack_apply_message(func, args, kwargs,
+        fn_buf = pack_apply_message(func, args, kwargs,
                                     buffer_threshold=1024 * 1024,
                                     item_threshold=1024)
         pickle.dump(fn_buf, f)
