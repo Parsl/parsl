@@ -217,6 +217,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.init_command = init_command
         self.shared_fs = shared_fs
         self.working_dir = working_dir
+        self.used_names = set()
 
         if self.project_password is not None and self.project_password_file is not None:
             logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
@@ -262,6 +263,14 @@ class WorkQueueExecutor(ParslExecutor):
         self.master_thread.daemon = True
         self.master_thread.start()
 
+    def create_new_name(self, file_name):
+        new_name = file_name
+        index = 0
+        while new_name in self.used_names:
+            new_name = file_name + "-" + str(index)
+            index += 1
+        return new_name
+
     def submit(self, func, *args, **kwargs):
         """Submit.
 
@@ -281,7 +290,7 @@ class WorkQueueExecutor(ParslExecutor):
                 new_name = inp.filepath
                 if not inp.task_path:
                     if self.shared_fs is False:
-                        new_name = os.path.basename(inp.filepath)
+                        new_name = self.create_new_name(os.path.basename(inp.filepath))
                         inp.task_path = new_name
                 input_files.append((inp.filepath, new_name, inp.shared, "in"))
 
@@ -290,7 +299,7 @@ class WorkQueueExecutor(ParslExecutor):
                 new_name = inp.filepath
                 if not inp.task_path:
                     if self.shared_fs is False:
-                        new_name = os.path.basename(inp.filepath)
+                        new_name = self.create_new_name(os.path.basename(inp.filepath))
                         inp.task_path = new_name
                 input_files.append((inp.filepath, new_name, inp.shared, "in"))
 
@@ -299,7 +308,7 @@ class WorkQueueExecutor(ParslExecutor):
                 new_name = inp.filepath
                 if not inp.task_path:
                     if self.shared_fs is False:
-                        new_name = os.path.basename(inp.filepath)
+                        new_name = self.create_new_name(os.path.basename(inp.filepath))
                         inp.task_path = new_name
                 input_files.append((inp.filepath, new_name, inp.shared, "in"))
 
@@ -309,7 +318,7 @@ class WorkQueueExecutor(ParslExecutor):
                 new_name = output.filepath
                 if not output.task_path:
                     if self.shared_fs is False:
-                        new_name = os.path.basename(output.filepath)
+                        new_name = self.create_new_name(os.path.basename(ouput.filepath))
                         output.task_path = new_name
                 output_files.append((output.filepath, new_name, output.shared, "in"))
 
@@ -329,7 +338,7 @@ class WorkQueueExecutor(ParslExecutor):
         logger.debug("Creating Tasks {} with result to be found at: {}".format(task_id, function_result_file))
 
         f = open(function_data_file, "wb")
-        fn_buf = pack_apply_message(func, args, kwargs,
+        fnn_buf = pack_apply_message(func, args, kwargs,
                                     buffer_threshold=1024 * 1024,
                                     item_threshold=1024)
         pickle.dump(fn_buf, f)
