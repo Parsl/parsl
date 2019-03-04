@@ -80,11 +80,12 @@ elif args.executor == 'HighThroughput_Slurm':
             cores_per_worker=1,
             address=address_by_hostname(),
             provider=SlurmProvider(
-                'broadwl',    # machine name on midway
+                #'broadwl',    # machine name on midway
+                'build',    # machine name on midway
                 launcher=SrunLauncher(),
                 scheduler_options='#SBATCH --mem-per-cpu=16000 ',
                 ###scheduler_options='#SBATCH --exclusive',
-                worker_init='module load Anaconda3/5.0.0.1; source activate parsl-dev',
+                worker_init='module load Anaconda3/5.0.0.1; source activate parsl',
                 init_blocks=1,
                 max_blocks=1,
                 nodes_per_block=1,
@@ -207,7 +208,9 @@ if __name__ == "__main__":
     print(mems)
     print()
     print(cpus)
-
-    cdir='/home/tkurihana/scratch-midway2/parsl/parsl/dataflow/workspace'
+    
+    home='/home/tkurihana/scratch-midway2/'
+    home='/home/ndhai/home/sources/'
+    cdir = home + 'parsl/parsl/dataflow/workspace/runinfo/slurm/'
     np.save(cdir+'/'+"output_mems_slurm-"+args.oname, np.asarray(mems))
     np.save(cdir+'/'+"output_cpus_slurm-"+args.oname, np.asarray(cpus))
