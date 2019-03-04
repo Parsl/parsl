@@ -10,6 +10,7 @@ from ipyparallel.serialize import pack_apply_message
 
 from parsl.executors.errors import *
 from parsl.executors.base import ParslExecutor
+from parsl.data_provider.files import File
 
 from work_queue import *
 
@@ -88,16 +89,19 @@ def WorkQueueThread(tasks={},
             function_result_loc_remote = function_result_loc.split("/")[-1]
             function_data_loc_remote = function_data_loc.split("/")[-1]
 
+
+            input_files = item["input_files"]
+            output_files = item["output_files"]
+
             # TODO Make this general
             full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
 
             script_name = full_script_name.split("/")[-1]
             sandbox_func_data = "$WORK_QUEUE_SANDBOX/" + function_data_loc_remote
             sandbox_func_result = "$WORK_QUEUE_SANDBOX/" + function_result_loc_remote
-            command_str = launch_cmd.format(input_file=sandbox_func_data,
-                                            output_file=sandbox_func_result)
             command_str = launch_cmd.format(input_file=function_data_loc_remote,
                                             output_file=function_result_loc_remote)
+
             logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
             try:
                 t = Task(command_str)
@@ -111,6 +115,12 @@ def WorkQueueThread(tasks={},
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
+
+            for item in input_files:
+                t.specify_file(item[0], item[1], WORK_QUEUE_INPUT, cache=item[2])
+            
+            for item in output_files:
+                t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
 
             logger.debug("Submitting task {} to workqueue".format(parsl_id))
             try:
@@ -183,13 +193,14 @@ class WorkQueueExecutor(ParslExecutor):
 
     def __init__(self,
                  label="wq",
-                 working_dir=None,
+                 working_dir=".",
                  managed=True,
                  project_name=None,
                  project_password=None,
                  project_password_file=None,
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
+                 shared_fs=False,
                  init_command=""):
 
         self.label = label
@@ -204,6 +215,8 @@ class WorkQueueExecutor(ParslExecutor):
         self.project_password_file = project_password_file
         self.env = env
         self.init_command = init_command
+        self.shared_fs = shared_fs
+        self.working_dir = working_dir
 
         if self.project_password is not None and self.project_password_file is not None:
             logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
@@ -214,6 +227,8 @@ class WorkQueueExecutor(ParslExecutor):
                 self.project_password_file = None
 
         self.launch_cmd = ("python3 workqueue_worker.py {input_file} {output_file}")
+        if self.shared_fs = True:
+            self.launch_cmd += " --shared-fs"
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -263,20 +278,40 @@ class WorkQueueExecutor(ParslExecutor):
         func_inputs = kwargs.get("inputs", [])
         for inp in func_inputs:
             if isinstance(inp, File):
-                input_files.append((inp.filepath, inp.shared))
+                new_name = inp.filepath
+                if not inp.task_path:
+                    if self.shared_fs is False:
+                        new_name = os.path.basename(inp.filepath)
+                        inp.task_path = new_name
+                input_files.append((inp.filepath, new_name, inp.shared, "in"))
 
-        for kwarg, potential_f in kwargs.items():
-            if isinstance(potential_f, File):
-                input_files.append((potential_f.filepath, potential_f.shared))
-        
+        for kwarg, inp in kwargs.items():
+            if isinstance(inp, File):
+                new_name = inp.filepath
+                if not inp.task_path:
+                    if self.shared_fs is False:
+                        new_name = os.path.basename(inp.filepath)
+                        inp.task_path = new_name
+                input_files.append((inp.filepath, new_name, inp.shared, "in"))
+
         for inp in args:
             if isinstance(inp, File):
-                input_files.append((inp.filepath, inp.shared))
+                new_name = inp.filepath
+                if not inp.task_path:
+                    if self.shared_fs is False:
+                        new_name = os.path.basename(inp.filepath)
+                        inp.task_path = new_name
+                input_files.append((inp.filepath, new_name, inp.shared, "in"))
 
-        func_inputs = kwargs.get("inputs")
+        func_outputs = kwargs.get("outputs", [])
         for output in func_outputs:
             if isinstance(output, File):
-                output_files.append(output.filepath)
+                new_name = output.filepath
+                if not output.task_path:
+                    if self.shared_fs is False:
+                        new_name = os.path.basename(output.filepath)
+                        output.task_path = new_name
+                output_files.append((output.filepath, new_name, output.shared, "in"))
 
         fu = Future()
         self.tasks_lock.acquire()
@@ -303,7 +338,9 @@ class WorkQueueExecutor(ParslExecutor):
         logger.debug("Placing task {} on message queue".format(task_id))
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
-               "result_loc": function_result_file}
+               "result_loc": function_result_file,
+               "input_files": input_files,
+               "output_files": output_files}
 
         self.queue_lock.acquire()
         self.task_queue.appendleft(msg)
