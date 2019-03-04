@@ -83,7 +83,7 @@ class MissingOutputs(ParslError):
     """
 
     def __init__(self, reason, outputs):
-        super().__init__(reason)
+        super().__init__(reason, outputs)
         self.reason = reason
         self.outputs = outputs
 
@@ -104,7 +104,7 @@ class BadStdStreamFile(ParslError):
     """
 
     def __init__(self, outputs, exception):
-        super().__init__()
+        super().__init__(outputs, exception)
         self._outputs = outputs
         self._exception = exception
 
