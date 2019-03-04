@@ -11,7 +11,6 @@ from parsl.executors import ThreadPoolExecutor
 import logging
 from parsl.app.app import python_app
 
-
 # Here we can add htex_strategy for option
 threads_config = Config(
     executors=[ThreadPoolExecutor(
@@ -34,7 +33,7 @@ def cpu_stress(dur=30):
     import time
     s = 0
     start = time.time()
-    for i in range(10**8):
+    while True:
         s += i
         if time.time() - start >= dur:
             break
