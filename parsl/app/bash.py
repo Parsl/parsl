@@ -53,21 +53,30 @@ def remote_side_bash_executor(func, *args, **kwargs) -> int:
     logging.debug("Executable: %s", executable)
 
     # Updating stdout, stderr if values passed at call time.
-    stdout = kwargs.get('stdout')
-    stderr = kwargs.get('stderr')
+
+    def open_std_fd(fdname):
+        # fdname is 'stdout' or 'stderr'
+        stdfspec = kwargs.get(fdname)  # spec is str name or tuple (name, mode)
+        if stdfspec is None:
+            return None
+        elif isinstance(stdfspec, str):
+            fname = stdfspec
+            mode = 'a+'
+        elif isinstance(stdfspec, tuple):
+            if len(stdfspec) != 2:
+                raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
+            fname, mode = stdfspec
+        else:
+            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+        try:
+            fd = open(fname, mode)
+        except Exception as e:
+            raise pe.BadStdStreamFile(fname, e)
+        return fd
+
+    std_out = open_std_fd('stdout')
+    std_err = open_std_fd('stderr')
     timeout = kwargs.get('walltime')
-    logging.debug("Stdout: %s", stdout)
-    logging.debug("Stderr: %s", stderr)
-
-    try:
-        std_out = open(stdout, 'a+') if stdout else None
-    except Exception as e:
-        raise pe.BadStdStreamFile(stdout, e)
-
-    try:
-        std_err = open(stderr, 'a+') if stderr else None
-    except Exception as e:
-        raise pe.BadStdStreamFile(stderr, e)
 
     returncode = None
     try:

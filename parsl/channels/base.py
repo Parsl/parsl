@@ -35,10 +35,12 @@ class Channel(metaclass=ABCMeta):
             - walltime (int) : Timeout in seconds - TODO: or string? check this
 
         KWargs:
-            - envs (dict) : Environment variables to push to the remote side
+            - envs (Dict[str, str]) : Environment variables to push to the remote side
 
         Returns:
-            - (exit_code, stdout, stderr) (int, string, string)
+            - (exit_code, stdout, stderr) (int, optional string, optional string)
+              If the exit code is a failure code, the stdout and stderr return values
+              may be None.
         '''
         pass
 

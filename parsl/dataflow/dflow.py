@@ -357,7 +357,6 @@ class DataFlowKernel(object):
             self.tasks[task_id]['app_fu'].done() and
             self.tasks[task_id]['app_fu'].exception() is None and
             self.tasks[task_id]['executor'] != 'data_manager' and
-            self.tasks[task_id]['func_name'] != '_file_stage_in' and
             self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
             self.tasks[task_id]['func_name'] != '_http_stage_in'):
             for dfu in self.tasks[task_id]['app_fu'].outputs:
@@ -509,9 +508,9 @@ class DataFlowKernel(object):
             if isinstance(f, File) and f.is_remote():
                 inputs[idx] = f.stage_in(executor)
 
-        for kwarg, potential_f in kwargs.items():
-            if isinstance(potential_f, File) and potential_f.is_remote():
-                kwargs[kwarg] = potential_f.stage_in(executor)
+        for kwarg, f in kwargs.items():
+            if isinstance(f, File) and f.is_remote():
+                kwargs[kwarg] = f.stage_in(executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
