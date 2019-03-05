@@ -9,7 +9,7 @@ Parsl apps are defined by annotating Python functions with an app decorator. Cur
 Python Apps
 -----------
 
-The following code snippet shows a Python function ``double(int)``, used to double the input value. This function is defined as a Parsl app using the ``@python_app`` decorator.
+The following code snippet shows a Python function ``double(x: int)``, used to double the input value. This function is defined as a Parsl app using the ``@python_app`` decorator.
 
 Python apps are *pure* Python functions. As these functions are executed asynchronously, and potentially remotely, it is important to note that they must explicitly import any required modules and act only on defined input arguments (i.e., they cannot include variables used elsewhere in the script).
 
