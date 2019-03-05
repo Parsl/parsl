@@ -121,7 +121,9 @@ class Strategy(object):
                            'simple': self._strategy_simple,
                            'htex_simple': self._htex_strategy,
                            'htex_aggressive': self._htex_strategy_aggressive,
-                           'htex_totaltime': self._htex_strategy_totaltime}
+                           'htex_totaltime': self._htex_strategy_totaltime,
+                           'htex_gradient': self._htex_strategy_gradient}
+                    
         
         self.strategize = self.strategies[self.config.strategy]
         self.logger_flag = False
@@ -131,6 +133,9 @@ class Strategy(object):
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
         
         self.task_tracker = {}
+        
+        self.grad = []
+        
         
     def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
         """Do nothing.
@@ -819,6 +824,224 @@ class Strategy(object):
             else:
                 # logger.debug("Strategy: Case 3")
                 pass
+
+
+    def _htex_strategy_gradient(self, tasks, *args, kind=None, **kwargs):
+        """Course Project Strategy
+        Kill block which has minimum total time.
+
+        Peek at the DFK and the executors specified.
+
+        We assume here that tasks are not held in a runnable
+        state, and that all tasks from an app would be sent to
+        a single specific executor, i.e tasks cannot be specified
+        to go to one of more executors.
+
+        Args:
+            - tasks (task_ids): Not used here.
+
+        KWargs:
+            - kind (Not used)
+        """
+        
+        print("Run gradient strategy")
+        
+        for label, executor in self.dfk.executors.items():
+            if not executor.scaling_enabled:
+                continue
+
+            # Tasks that are either pending completion
+            active_tasks = executor.outstanding
+            # logger.debug("[STRATEGY] Outstanding tasks: {}".format(active_tasks))
+            status = executor.status()
+            # logger.debug("[STRATEGY] Status: {}".format(status))
+            connected_workers = executor.connected_workers
+            # logger.debug("[STRATEGY] Connected workers: {}".format(connected_workers))
+            self.unset_logging()
+
+            # FIXME we need to handle case where provider does not define these
+            # FIXME probably more of this logic should be moved to the provider
+            min_blocks = executor.provider.min_blocks
+            max_blocks = executor.provider.max_blocks
+            if isinstance(executor, IPyParallelExecutor):
+                tasks_per_node = executor.workers_per_node
+            elif isinstance(executor, HighThroughputExecutor):
+                # This is probably wrong calculation, we need this to come from the executor
+                # since we can't know slots ahead of time.
+                if executor.connected_workers:
+                    # insert print for debug 02/22 T.Kurihana
+                    #TODO: here there maybe debug. TypeError: tuple indices must be integers or slices, not str
+                    tasks_per_node = connected_workers[0]['worker_count']
+                elif executor.max_workers != float('inf'):
+                    tasks_per_node = executor.max_workers
+                else:
+                    # This is an assumption we have to make until some manager reports back
+                    tasks_per_node = 1
+            elif isinstance(executor, ExtremeScaleExecutor):
+                tasks_per_node = executor.ranks_per_node
+
+            nodes_per_block = executor.provider.nodes_per_block
+            parallelism = executor.provider.parallelism
+
+            running = sum([1 for x in status if x == 'RUNNING'])
+            submitting = sum([1 for x in status if x == 'SUBMITTING'])
+            pending = sum([1 for x in status if x == 'PENDING'])
+            active_blocks = running + submitting + pending
+            active_slots = active_blocks * tasks_per_node * nodes_per_block
+
+            if (len(self.grad) >= 3):
+                self.grad.pop(0)
+            self.grad.append(active_tasks)
+            # Check if the load is stable
+            stable_load = True
+            grad = []
+            stable_threshold = max(self.grad) * 0.1
+            for i in range(len(self.grad)-1):
+                g = self.grad[i+1] - self.grad[i]
+                if (g < 0):
+                    g = -g
+                if (g > stable_threshold):
+                    stable_load = False
+                    break 
+                
+            
+            print("[MONITOR] Active tasks:", active_tasks)
+            print("[MONITOR] Active slots:", active_slots)
+            task_status = executor.tasks;
+            
+            totaltime = {}
+            if isinstance(executor, HighThroughputExecutor):
+                blocks = {}
+                for manager in connected_workers:
+                    blk_id = manager['block_id']
+                    if blk_id not in blocks:
+                        blocks[blk_id] = {'managers': manager,
+                                            'tasks': manager['tasks'],
+                                            'worker_count': manager['worker_count']}
+                    else:
+                        blocks[blk_id]['managers'].append(manager)
+                        blocks[blk_id]['tasks'] += manager['tasks']
+                        blocks[blk_id]['worker_count'] += manager['worker_count']
+                    
+                    
+                # Go through all allocated blocks
+                for block_id, block in blocks.items():
+                    if (block['managers']['active'] == False):
+                        continue
+                    # For each block, check if we tracked it or not
+                    if block_id not in self.task_tracker:
+                        # If not, then add a new slot for it to the task_tracker
+                        self.task_tracker[block_id] = {}
+                    # Update the tracker for this block
+                    tracker = {}
+                    print("Block: ", block_id, block)
+                    for task_id in block['managers']['task_list'] :
+                        # Go through outstanding task in the block, check if we have tracked
+                        # the runtime the task
+                        if (task_id not in self.task_tracker[block_id]):
+                            # If not then the task have just get started, track it with runtime = 0
+                            tracker[task_id] = 0
+                        else:
+                            # Otherwise, add 1 to the runtime meaning that the task have run for 1 time unit
+                            tracker[task_id] = self.task_tracker[block_id][task_id] + 1
+                    # Update the task tracker
+                    self.task_tracker[block_id] = tracker
+                    # Compute the total runtime of tasks in the blocks
+                    totaltime[block_id] = sum([task for task_id, task in tracker.items()])
+                    print('Block', block_id, "total runtime", totaltime[block_id])
+                
+            if (isinstance(executor, HighThroughputExecutor) or
+                isinstance(executor, ExtremeScaleExecutor)):
+                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected engines'.format(
+                    label, active_tasks, running, submitting, pending, sum([x['worker_count'] for x in connected_workers])))
+            elif isinstance(executor, IPyParallelExecutor):
+                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected engines'.format(
+                    label, active_tasks, running, submitting, pending, len(connected_workers)))
+            else:
+                logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
+                    label, active_tasks, running, submitting, pending))
+            
+            # Case 1
+            # No tasks.
+            if active_tasks == 0:
+                # Case 1a
+                # Fewer blocks that min_blocks
+                if active_blocks <= min_blocks:
+                    # Ignore
+                    # logger.debug("Strategy: Case.1a")
+                    pass
+            
+                # Case 1b
+                # More blocks than min_blocks. Scale down
+                else:
+                    # We want to make sure that max_idletime is reached
+                    # before killing off resources
+                    if not self.executors[executor.label]['idle_since']:
+                        logger.debug(("[STRATEGY] Executor {} has 0 active tasks;"
+                                      " starting kill timer (if idle time exceeds {}s,"
+                                      " resources will be removed)").format(label,
+                                                                            self.max_idletime))
+                        self.executors[executor.label]['idle_since'] = time.time()
+
+                    idle_since = self.executors[executor.label]['idle_since']
+                    if (time.time() - idle_since) > self.max_idletime:
+                        # We have resources idle for the max duration,
+                        # we have to scale_in now.
+                        logger.debug("[STRATEGY] Idle time has reached {}s for executor {}; removing resources".format(
+                            self.max_idletime, label)
+                        )
+                        executor.scale_in(active_blocks - min_blocks)
+
+                    else:
+                        pass
+                        # logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
+
+            # Case 2
+            # More tasks than the available slots.
+            elif (float(active_slots) / active_tasks) < parallelism:
+                # Case 2a
+                # We have the max blocks possible
+                if active_blocks >= max_blocks:
+                    # Ignore since we already have the max nodes
+                    # logger.debug("Strategy: Case.2a")
+                    pass
+
+                # Case 2b
+                else:
+                    # logger.debug("Strategy: Case.2b")
+                    excess = math.ceil((active_tasks * parallelism) - active_slots)
+                    excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
+                    # Ensure that we don't request more that max_blocks
+                    excess_blocks = min(excess_blocks, max_blocks - active_blocks)
+                    logger.debug("[STRATEGY] Requesting {} more blocks".format(excess_blocks))
+                    executor.scale_out(excess_blocks)
+
+            elif active_slots == 0 and active_tasks > 0:
+                # Case 4
+                # Check if slots are being lost quickly ?
+                logger.debug("Requesting single slot")
+                executor.scale_out(1)
+
+            # Case 4
+            # More slots than tasks
+            #elif active_slots > 0 and active_slots > active_tasks:
+            elif active_slots > 0 and active_slots - tasks_per_node * nodes_per_block >= active_tasks and stable_load:
+                
+                # We have resources idle for the max duration,
+                # we have to scale_in now.
+                selected_block = min(totaltime.items(), key=lambda x: x[1])[0]
+                logger.debug("[COURSE PROJECT STRATEGY] CASE:4a Block:{} has lowest totaltime".format(selected_block))
+                logger.debug("Load is stable and under-utilization; removing resources".format(label))
+                print("Kill block ", selected_block)
+                executor.scale_in(1, block_ids=[selected_block])
+                logger.debug("[STRATEGY] CASE:4 Block slots:{}".format(blocks.keys()))
+
+            # Case 3
+            # tasks ~ slots
+            else:
+                # logger.debug("Strategy: Case 3")
+                pass
+
 
 
         
