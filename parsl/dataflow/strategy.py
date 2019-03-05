@@ -210,6 +210,8 @@ class Strategy(object):
 
             print("[MONITOR] Active tasks:", active_tasks)
             print("[MONITOR] Active slots:", active_slots)
+            logger.debug("[MONITOR] active tasks: " + str(active_tasks))
+            logger.debug("[MONITOR] active slots: " + str(active_slots))
 
             if (isinstance(executor, IPyParallelExecutor) or
                 isinstance(executor, HighThroughputExecutor) or
@@ -675,6 +677,9 @@ class Strategy(object):
 
             print("[MONITOR] Active tasks:", active_tasks)
             print("[MONITOR] Active slots:", active_slots)
+            logger.debug("[MONITOR] active tasks: " + str(active_tasks))
+            logger.debug("[MONITOR] active slots: " + str(active_slots))
+            
             task_status = executor.tasks;
             
             totaltime = {}
@@ -907,6 +912,9 @@ class Strategy(object):
             
             print("[MONITOR] Active tasks:", active_tasks)
             print("[MONITOR] Active slots:", active_slots)
+            logger.debug("[MONITOR] active tasks: " + str(active_tasks))
+            logger.debug("[MONITOR] active slots: " + str(active_slots))
+            
             task_status = executor.tasks;
             
             totaltime = {}
@@ -1029,7 +1037,8 @@ class Strategy(object):
                 
                 # We have resources idle for the max duration,
                 # we have to scale_in now.
-                selected_block = min(totaltime.items(), key=lambda x: x[1])[0]
+                #selected_block = min(totaltime.items(), key=lambda x: x[1])[0]
+                selected_block = max(totaltime.items(), key=lambda x: x[1])[0]
                 logger.debug("[COURSE PROJECT STRATEGY] CASE:4a Block:{} has lowest totaltime".format(selected_block))
                 logger.debug("Load is stable and under-utilization; removing resources".format(label))
                 print("Kill block ", selected_block)
