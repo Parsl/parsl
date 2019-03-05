@@ -211,13 +211,13 @@ if __name__ == "__main__":
     init_time = time.time()   # initial time for runnnig 
     futures_1 = [inc(inputs, init_time) for i in range(total)]
     _outputs1 = [ i.result() for i in futures_1]
-    futures_2 = [add_inc(inputs=futures_1[0:half], init_time), add_inc(inputs=futures_1[half:total], init_time)]  
+    futures_2 = [add_inc(inputs=futures_1[0:half], init_time=init_time), add_inc(inputs=futures_1[half:total],init_time=init_time)]  
     _outputs2 = [ i.result() for i in futures_2]
-    futures_3 = [inc(futures_2[0], init_time) for _ in range(half)] + [inc(futures_2[1], init_time) for _ in range(half)]
+    futures_3 = [inc(futures_2[0], init_time=init_time) for _ in range(half)] + [inc(futures_2[1], init_time=init_time) for _ in range(half)]
     _outputs3 = [ i.result() for i in futures_3]
-    futures_4 = [add_inc(inputs=futures_3[0:one_third], init_time), 
-                 add_inc(inputs=futures_3[one_third:two_third], init_time), 
-                 add_inc(inputs=futures_3[two_third:total], init_time)
+    futures_4 = [add_inc(inputs=futures_3[0:one_third], init_time=init_time), 
+                 add_inc(inputs=futures_3[one_third:two_third], init_time=init_time), 
+                 add_inc(inputs=futures_3[two_third:total], init_time=init_time)
                 ]
     _outputs4 = [ i.result() for i in futures_4]
     
@@ -235,4 +235,4 @@ if __name__ == "__main__":
     for idx ,  iout in enumerate([_outputs1, _outputs2, _outputs3, _outputs4]) :
         _iout = np.asarray(iout)
         _idx = idx + 1
-        np.save(cdir+'/'+"outputs_"+str(_idx)+"_slurm-"+args.oname, _iout)
+        np.save(cdir+'/'+"outputs_app-"+str(_idx)+"_slurm-"+args.oname, _iout)
