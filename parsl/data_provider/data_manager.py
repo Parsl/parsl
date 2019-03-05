@@ -122,7 +122,7 @@ class DataManager(ParslExecutor):
                         if executor.working_dir:
                             working_dir = os.path.normpath(executor.working_dir)
                         else:
-                            working_dir = os.getcwd()
+                            raise ValueError("executor working_dir must be specified for GlobusScheme")
                         if scheme.endpoint_path and scheme.local_path:
                             endpoint_path = os.path.normpath(scheme.endpoint_path)
                             local_path = os.path.normpath(scheme.local_path)
