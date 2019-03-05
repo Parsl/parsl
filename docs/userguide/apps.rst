@@ -21,7 +21,7 @@ Python apps are *pure* Python functions. As these functions are executed asynchr
 
        double(x)
 
-Python apps may also act upon files. In order to make Parsl aware of these files they must be defined using the inputs or outputs keyword arguments. The following code snippet illustrates how the contents of one file can be copied to another.
+Python apps may also act upon files. In order to make Parsl aware of these files they must be defined using the ``inputs`` or ``outputs`` keyword arguments. The following code snippet illustrates how the contents of one file can be copied to another.
 
 .. code-block:: python
 
