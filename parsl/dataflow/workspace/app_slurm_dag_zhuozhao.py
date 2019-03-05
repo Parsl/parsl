@@ -105,7 +105,7 @@ elif args.executor == 'HighThroughput_Slurm':
                 nodes_per_block=1,
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
                 parallelism=1.0,
-                walltime='00:40:00',
+                walltime='12:00:00',
             ),
         )
     ],
@@ -148,7 +148,8 @@ def inc(inputs=[]):
     import psutil
     import numpy as np
     start = time.time()
-    sleep_duration = 60.0
+    sleep_duration = 600.0
+    #sleep_duration = 60.0
     _inputs = np.asarray(inputs)
     mems = [] #_inputs[0].tolist()
     cpus = [] #_inputs[1].tolist()
@@ -171,7 +172,8 @@ def add_inc(inputs=[]):
     import psutil
     import numpy as np
     start = time.time()
-    sleep_duration = 60.0
+    sleep_duration = 300.0
+    #sleep_duration = 60.0
     res = 0
     _inputs = np.asarray(inputs)
     mems = [] # _inputs[0].tolist()
@@ -190,7 +192,8 @@ def add_inc(inputs=[]):
 
 if __name__ == "__main__":
 
-    total = 10 
+    #total = 10 
+    total = 100
     half = int(total / 2)
     one_third = int(total / 3)
     two_third = int(total / 3 * 2)
