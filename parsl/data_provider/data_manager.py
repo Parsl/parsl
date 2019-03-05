@@ -152,11 +152,7 @@ class DataManager(ParslExecutor):
                                 the first executor with the "globus" key in a config.
         """
 
-        if file.scheme == 'file':
-            stage_in_app = self._file_stage_in_app()
-            app_fut = stage_in_app(outputs=[file])
-            return app_fut._outputs[0]
-        elif file.scheme == 'ftp':
+        if file.scheme == 'ftp':
             working_dir = self.executors[executor].working_dir
             stage_in_app = self._ftp_stage_in_app(executor=executor)
             app_fut = stage_in_app(working_dir, outputs=[file])
@@ -173,12 +169,6 @@ class DataManager(ParslExecutor):
             return app_fut._outputs[0]
         else:
             raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
-
-    def _file_stage_in_app(self):
-        return python_app(executors=['data_manager'])(self._file_stage_in)
-
-    def _file_stage_in(self, outputs=[]):
-        pass
 
     def _ftp_stage_in_app(self, executor):
         return python_app(executors=[executor])(_ftp_stage_in)
@@ -213,10 +203,7 @@ class DataManager(ParslExecutor):
                                 the first executor with the "globus" key in a config.
         """
 
-        if file.scheme == 'file':
-            stage_out_app = self._file_stage_out_app()
-            return stage_out_app()
-        elif file.scheme == 'http' or file.scheme == 'https':
+        if file.scheme == 'http' or file.scheme == 'https':
             raise Exception('HTTP/HTTPS file staging out is not supported')
         elif file.scheme == 'ftp':
             raise Exception('FTP file staging out is not supported')
@@ -226,12 +213,6 @@ class DataManager(ParslExecutor):
             return stage_out_app(globus_ep, inputs=[file])
         else:
             raise Exception('Staging out with unknown file scheme {} is not supported'.format(file.scheme))
-
-    def _file_stage_out_app(self):
-        return python_app(executors=['data_manager'])(self._file_stage_out)
-
-    def _file_stage_out(self):
-        pass
 
     def _globus_stage_out_app(self):
         return python_app(executors=['data_manager'])(self._globus_stage_out)
