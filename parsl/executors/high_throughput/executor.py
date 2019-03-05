@@ -118,6 +118,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         cores to be assigned to each worker. Oversubscription is possible
         by setting cores_per_worker < 1.0. Default=1
 
+    mem_per_worker : float
+        GB of memory required per worker. If this option is specified, the node manager
+        will check the available memory at startup and limit the number of workers such that
+        the there's sufficient memory for each worker. Default: None
+
     max_workers : int
         Caps the number of workers launched by the manager. Default: infinity
 
@@ -146,6 +151,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  working_dir=None,
                  worker_debug=False,
                  cores_per_worker=1.0,
+                 mem_per_worker=None,
                  max_workers=float('inf'),
                  heartbeat_threshold=120,
                  heartbeat_period=30,
@@ -166,6 +172,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.blocks = []
         self.tasks = {}
         self.cores_per_worker = cores_per_worker
+        self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
 
         self._task_counter = 0
@@ -182,6 +189,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-c {cores_per_worker} "
+                               "-m {mem_per_worker} "
                                "--task_url={task_url} "
                                "--result_url={result_url} "
                                "--logdir={logdir} "
@@ -216,6 +224,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        task_url=self.worker_task_url,
                                        result_url=self.worker_result_url,
                                        cores_per_worker=self.cores_per_worker,
+                                       mem_per_worker=self.mem_per_worker,
                                        max_workers=max_workers,
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,

@@ -15,6 +15,7 @@ import uuid
 import zmq
 import math
 import json
+import psutil
 
 from parsl.version import VERSION as PARSL_VERSION
 import multiprocessing
@@ -51,6 +52,7 @@ class Manager(object):
                  result_q_url="tcp://127.0.0.1:50098",
                  max_queue_size=10,
                  cores_per_worker=1,
+                 mem_per_worker=0,
                  max_workers=float('inf'),
                  uid=None,
                  heartbeat_threshold=120,
@@ -67,6 +69,11 @@ class Manager(object):
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0. Default=1
+
+        mem_per_worker : float
+             GB of memory assigned to each worker. This is used at the start of the node_manager to find
+             available memory on the node and launch only so many workers such that there's sufficient memory
+             available to them. Default=0, implying no memory assignment.
 
         max_workers : int
              caps the maximum number of workers that can be launched.
@@ -102,8 +109,11 @@ class Manager(object):
         self.uid = uid
 
         cores_on_node = multiprocessing.cpu_count()
+        available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
+
         self.max_workers = max_workers
         self.worker_count = min(max_workers,
+                                math.floor(available_mem_on_node / mem_per_worker),
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
@@ -449,6 +459,8 @@ if __name__ == "__main__":
                         help="Unique identifier string for Manager")
     parser.add_argument("-c", "--cores_per_worker", default="1.0",
                         help="Number of cores assigned to each worker process. Default=1.0")
+    parser.add_argument("-m", "--mem_per_worker", default=0,
+                        help="GB of memory assigned to each worker process. Default=0, no assignment")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("--max_workers", default=float('inf'),
@@ -476,15 +488,17 @@ if __name__ == "__main__":
         logger.info("Debug logging: {}".format(args.debug))
         logger.info("Log dir: {}".format(args.logdir))
         logger.info("Manager ID: {}".format(args.uid))
-        logger.info("cores_per_worker: {}".format(args.cores_per_worker))
         logger.info("task_url: {}".format(args.task_url))
         logger.info("result_url: {}".format(args.result_url))
         logger.info("max_workers: {}".format(args.max_workers))
+        logger.info("cores_per_worker: {}".format(args.cores_per_worker))
+        logger.info("mem_per_worker: {}".format(args.mem_per_worker))
 
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
                           cores_per_worker=float(args.cores_per_worker),
+                          mem_per_worker=float(args.mem_per_worker),
                           max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period))
