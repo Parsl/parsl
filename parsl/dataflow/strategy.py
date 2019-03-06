@@ -204,6 +204,10 @@ class Strategy(object):
                 logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
                     label, active_tasks, running, submitting, pending))
 
+            # reset kill timer if executor has active tasks
+            if active_tasks > 0 and self.executors[executor.label]['idle_since']:
+                self.executors[executor.label]['idle_since'] = None
+
             # Case 1
             # No tasks.
             if active_tasks == 0:
