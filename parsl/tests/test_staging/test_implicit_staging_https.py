@@ -84,6 +84,7 @@ def test_implicit_staging_https_args():
     f = sort_strings_arg(unsorted_file, outputs=[sorted_file])
     f.result()
 
+
 @App('python', executors=['other'])
 def sort_strings_additional_executor(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
@@ -108,7 +109,7 @@ def test_implicit_staging_https_additional_executor():
     # Create a local file for output data
     sorted_file = File('sorted.txt')
 
-    other_executor = parsl.ThreadPoolExecutor(label='other') 
+    other_executor = parsl.ThreadPoolExecutor(label='other')
 
     parsl.dfk().add_executors([other_executor])
 
