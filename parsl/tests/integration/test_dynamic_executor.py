@@ -5,33 +5,15 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.providers import LocalProvider
 from parsl.app.app import python_app
 
-# parsl.set_stream_logger()
+dfk = parsl.load()
 
-config = Config(
-    executors=[
-        HighThroughputExecutor(
-            label='htex_local',
-            cores_per_worker=1,
-            max_workers=5,
-            provider=LocalProvider(
-                init_blocks=1,
-                max_blocks=1,
-            ),
-        )
-    ],
-    strategy=None,
-)
-
-dfk = parsl.load(config)
-
-
-@python_app(executors=['htex_local'])
+@python_app(executors=['threads'])
 def sleeper(dur=1):
     import time
     time.sleep(dur)
 
 
-@python_app(executors=['threads'])
+@python_app(executors=['threads2'])
 def cpu_stress(dur=2):
     import time
     s = 0
@@ -48,11 +30,13 @@ def test_dynamic_executor():
     results = [i.result() for i in tasks]
     print("Done with initial test. The results are", results)
 
+    # Here we add a new executor to an active DFK
     thread_executors = [ThreadPoolExecutor(
-        label='threads',
+        label='threads2',
         max_threads=4)
     ]
     dfk.add_executors(executors=thread_executors)
+
     tasks = [cpu_stress() for i in range(10)]
     results = [i.result() for i in tasks]
     print("Successfully added thread executor and ran with it. The results are", results)
