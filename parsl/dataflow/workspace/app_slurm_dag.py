@@ -5,6 +5,7 @@
 #   Author: Takuya Kurihana 
 #
 import os
+import time
 import argparse
 import numpy as np
 import psutil
@@ -162,13 +163,13 @@ def inc(inputs=[], init_time=0):
         if (end - start) % 2 == 0:
             mems += [psutil.virtual_memory().percent]
             cpus += [psutil.cpu_percent()]
-            time += [time.time() - init_time ]
+            times += [time.time() - init_time ]
         if end - start >= sleep_duration:
             break
     mems += [psutil.virtual_memory().percent]
     cpus += [psutil.cpu_percent()]
-    time += [time.time() - init_time ]
-    return [mems, cpus, time]
+    times += [time.time() - init_time ]
+    return [mems, cpus, times]
 
 @python_app
 def add_inc(inputs=[], init_time=0):
@@ -182,7 +183,7 @@ def add_inc(inputs=[], init_time=0):
     _inputs = np.asarray(inputs)
     mems = [] # _inputs[0].tolist()
     cpus = [] # _inputs[1].tolist()
-    time = []
+    times = []
     while True:
         res += 1
         end = time.time()
@@ -190,13 +191,13 @@ def add_inc(inputs=[], init_time=0):
         if (end - start) % 2 == 0:
             mems += [psutil.virtual_memory().percent]
             cpus += [psutil.cpu_percent()]
-            time += [time.time() - init_time ]
+            times += [time.time() - init_time ]
         if end - start >= sleep_duration:
             break
     mems += [psutil.virtual_memory().percent]
     cpus += [psutil.cpu_percent()]
-    time += [time.time() - init_time ]
-    return  [mems, cpus, time]
+    times += [time.time() - init_time ]
+    return  [mems, cpus, times]
 
 if __name__ == "__main__":
 
