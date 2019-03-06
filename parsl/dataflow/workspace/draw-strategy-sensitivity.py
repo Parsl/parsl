@@ -1,6 +1,29 @@
+import os
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
+# get dir for save file
+cwd=os.getcwd()
+
+# get parsed arguments
+p = argparse.ArgumentParser()
+p.add_argument(
+  '--outdir',
+  help='output file directory',
+  type=str,
+  default='.'
+)
+p.add_argument(
+  '--outfilename',
+  help='output file name',
+  type=str,
+  default='output-'+datetime.now().strftime("%m%d%H%M%S")
+)
+args = p.parse_args()
+
+# files
 task_path = 'task.data'
 slot_path = 'slot.data'
 
@@ -39,7 +62,9 @@ ax2.set_ylabel('# Slots', color='r')
 ax2.tick_params('y', colors='r')
 
 fig.tight_layout()
-plt.show()
+#plt.show()
+plt.savefig(args.outdir+'/'+args.outfilename)
+print("##  NORMAL END ##", flush=True)
 
 
 
