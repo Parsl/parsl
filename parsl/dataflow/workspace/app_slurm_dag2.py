@@ -233,4 +233,4 @@ if __name__ == "__main__":
     for idx ,  iout in enumerate([_outputs1, _outputs2, _outputs3]) :
         _iout = np.asarray(iout)
         _idx = idx + 1
-        np.save(cdir+'/'+"outputs_app-"+str(_idx)+"_slurm-"+args.oname, _iout)
+        np.save(cdir+'/'+"outputs_app2-"+str(_idx)+"_slurm-"+args.oname, _iout)
