@@ -59,6 +59,10 @@ def pytest_configure(config):
         'markers',
         'forked: mark test to only run in a subprocess'
     )
+    config.addinivalue_line(
+        'markers',
+        'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
+    )
 
 
 def pytest_generate_tests(metafunc):
