@@ -6,19 +6,17 @@ from parsl.providers import LocalProvider
 from parsl.app.app import python_app
 
 import pytest
-from parsl.dataflow.dflow import DataFlowKernel
-from parsl.tests.conftest import load_dfk
 
 parsl.clear()
 dfk = parsl.load()
 
 @python_app(executors=['threads'])
-def sleeper(dur=1):
+def sleeper(dur=0.1):
     import time
     time.sleep(dur)
 
 @python_app(executors=['threads2'])
-def cpu_stress(dur=2):
+def cpu_stress(dur=0.1):
     import time
     s = 0
     start = time.time()
@@ -29,7 +27,7 @@ def cpu_stress(dur=2):
     return s
 
 @python_app(executors=['htex_local'])
-def add(dur=1):
+def add(dur=0.1):
     import time
     s = 0
     start = time.time()
