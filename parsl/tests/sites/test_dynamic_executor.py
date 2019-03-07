@@ -1,5 +1,4 @@
 import parsl
-from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.providers import LocalProvider
@@ -10,13 +9,15 @@ import pytest
 parsl.clear()
 dfk = parsl.load()
 
+
 @python_app(executors=['threads'])
-def sleeper(dur=0.1):
+def sleeper(dur=0):
     import time
     time.sleep(dur)
 
+
 @python_app(executors=['threads2'])
-def cpu_stress(dur=0.1):
+def cpu_stress(dur=0.01):
     import time
     s = 0
     start = time.time()
@@ -26,8 +27,9 @@ def cpu_stress(dur=0.1):
             break
     return s
 
+
 @python_app(executors=['htex_local'])
-def add(dur=0.1):
+def add(dur=0.01):
     import time
     s = 0
     start = time.time()
@@ -36,10 +38,11 @@ def add(dur=0.1):
         if time.time() - start >= dur:
             break
     return s
+
 
 @pytest.mark.local
 def test_dynamic_executor():
-    tasks = [sleeper() for i in range(10)]
+    tasks = [sleeper() for i in range(5)]
     results = [i.result() for i in tasks]
     print("Done with initial test. The results are", results)
 
@@ -49,12 +52,12 @@ def test_dynamic_executor():
         max_threads=4)
     ]
     dfk.add_executors(executors=thread_executors)
-    tasks = [cpu_stress() for i in range(10)]
+    tasks = [cpu_stress() for i in range(8)]
     results = [i.result() for i in tasks]
-    print("Successfully added thread executor and ran with it. The results are", results)    
-        
+    print("Successfully added thread executor and ran with it. The results are", results)
+
     # We add a htex executor to an active DFK
-    executors=[
+    executors = [
         HighThroughputExecutor(
             label='htex_local',
             cores_per_worker=1,
@@ -65,7 +68,7 @@ def test_dynamic_executor():
             ),
         )
     ]
-    dfk.add_executors(executors=executors)   
+    dfk.add_executors(executors=executors)
     tasks = [add() for i in range(10)]
     results = [i.result() for i in tasks]
     print("Successfully added htex executor and ran with it. The results are", results)
