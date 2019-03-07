@@ -74,7 +74,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def shutdown(self, block: bool) -> bool:
+    def shutdown(self) -> bool:
         """Shutdown the executor.
 
         This includes all attached resources such as workers and controllers.
