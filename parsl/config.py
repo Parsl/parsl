@@ -43,7 +43,8 @@ class Config(RepresentationMixin):
         Strategy to use for scaling resources according to workflow needs. Can be 'simple' or `None`. If `None`, dynamic
         scaling will be disabled. Default is 'simple'.
     usage_tracking : bool, optional
-        Enable usage tracking. Default is True.
+        Set this field to True to Opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
+        information used for reporting to our funding agencies. Default is False.
     """
     def __init__(self,
                  executors=None,
@@ -57,7 +58,7 @@ class Config(RepresentationMixin):
                  run_dir='runinfo',
                  strategy='simple',
                  monitoring_config=None,
-                 usage_tracking=True):
+                 usage_tracking=False):
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
