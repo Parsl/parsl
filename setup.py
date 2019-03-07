@@ -22,6 +22,7 @@ setup(
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
+               'parsl/executors/workqueue/workqueue_worker.py',
     ],
     extras_require = {
         'visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
