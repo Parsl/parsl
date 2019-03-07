@@ -124,8 +124,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         counterpart (interchange, manager). Default:30s
 
     poll_period : int
-        Number of milliseconds for the interchange main loop pool period. (TODO: should this be seconds to be consistent with heartbeat parameters?)
-        Default: 1ms
+        Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
+        trades performance for cpu efficiency. Default: 10ms
     """
 
     def __init__(self,
@@ -143,7 +143,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  max_workers=float('inf'),
                  heartbeat_threshold=120,
                  heartbeat_period=30,
-                 poll_period=1,
+                 poll_period=10,
                  suppress_failure=False,
                  managed=True):
 
@@ -177,6 +177,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-c {cores_per_worker} "
+                               "--poll {poll_period} "
                                "--task_url={task_url} "
                                "--result_url={result_url} "
                                "--logdir={logdir} "
@@ -200,6 +201,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
+                                       poll_period=self.poll_period,
                                        logdir="{}/{}".format(self.run_dir, self.label))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))

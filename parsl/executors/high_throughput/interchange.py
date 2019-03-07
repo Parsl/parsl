@@ -185,6 +185,8 @@ class Interchange(object):
                                  'hname': platform.node(),
                                  'dir': os.getcwd()}
 
+        logger.info("Platform info: {}".format(self.current_platform))
+
     def get_tasks(self, count):
         """ Obtains a batch of tasks from the internal pending_task_queue
 
@@ -286,7 +288,7 @@ class Interchange(object):
                 logger.debug("[COMMAND] is alive")
                 continue
 
-    def start(self, poll_period=1):
+    def start(self, poll_period=None):
         """ Start the NeedNameQeueu
 
         Parameters:
@@ -295,6 +297,9 @@ class Interchange(object):
         TODO: Move task receiving to a thread
         """
         logger.info("Incoming ports bound")
+
+        if poll_period is None:
+            poll_period = self.poll_period
 
         start = time.time()
         count = 0

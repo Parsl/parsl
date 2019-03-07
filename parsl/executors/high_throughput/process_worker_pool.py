@@ -55,7 +55,8 @@ class Manager(object):
                  max_workers=float('inf'),
                  uid=None,
                  heartbeat_threshold=120,
-                 heartbeat_period=30):
+                 heartbeat_period=30,
+                 poll_period=1):
         """
         Parameters
         ----------
@@ -83,7 +84,10 @@ class Manager(object):
         heartbeat_period : int
              Number of seconds after which a heartbeat message is sent to the interchange
 
+        poll_period : int
+             Timeout period used by the manager in milliseconds. Default: 1ms
         """
+
         logger.info("Manager started")
 
         self.context = zmq.Context()
@@ -118,6 +122,7 @@ class Manager(object):
 
         self.heartbeat_period = heartbeat_period
         self.heartbeat_threshold = heartbeat_threshold
+        self.poll_period = poll_period
 
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
@@ -161,7 +166,7 @@ class Manager(object):
         last_interchange_contact = time.time()
         task_recv_counter = 0
 
-        poll_timer = 0
+        poll_timer = self.poll_period
 
         while not kill_event.is_set():
             # time.sleep(LOOP_SLOWDOWN)
@@ -211,7 +216,7 @@ class Manager(object):
                 # Limit poll duration to heartbeat_period
                 # heartbeat_period is in s vs poll_timer in ms
                 if not poll_timer:
-                    poll_timer = 1
+                    poll_timer = self.poll_period
                 poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
 
                 # Only check if no messages were received.
@@ -221,7 +226,7 @@ class Manager(object):
                     logger.critical("[TASK_PULL_THREAD] Exiting")
                     break
 
-    def push_results(self, kill_event):
+    def push_results(self, kill_event, max_queued_results=10):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
         Parameters:
@@ -232,22 +237,29 @@ class Manager(object):
 
         logger.debug("[RESULT_PUSH_THREAD] Starting thread")
 
+        push_poll_period = (50 + self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
+        logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
+
+        last_beat = time.time()
+        items = []
+
         while not kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
-            items = []
+
             try:
-                while not self.pending_result_queue.empty():
-                    r = self.pending_result_queue.get(block=True)
-                    items.append(r)
-
-                if items:
-                    self.result_outgoing.send_multipart(items)
-
+                r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
+                items.append(r)
             except queue.Empty:
                 pass
-
             except Exception as e:
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
+
+            # If we have reached poll_period duration or timer has expired, we send results
+            if len(items) >= max_queued_results or time.time() > last_beat + push_poll_period:
+                last_beat = time.time()
+                if items:
+                    self.result_outgoing.send_multipart(items)
+                    items = []
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
@@ -283,8 +295,7 @@ class Manager(object):
 
         # TODO : Add mechanism in this loop to stop the worker pool
         # This might need a multiprocessing event to signal back.
-        while not self._kill_event.is_set():
-            time.sleep(0.1)
+        self._kill_event.wait()
         logger.critical("[MAIN] Received kill event, terminating worker processes")
 
         self._task_puller_thread.join()
@@ -458,6 +469,8 @@ if __name__ == "__main__":
                         help="Heartbeat period in seconds. Uses manager default unless set")
     parser.add_argument("--hb_threshold", default=120,
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
+    parser.add_argument("--poll", default=1,
+                        help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
 
@@ -481,6 +494,7 @@ if __name__ == "__main__":
         logger.info("task_url: {}".format(args.task_url))
         logger.info("result_url: {}".format(args.result_url))
         logger.info("max_workers: {}".format(args.max_workers))
+        logger.info("poll_period: {}".format(args.poll))
 
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
@@ -488,7 +502,8 @@ if __name__ == "__main__":
                           cores_per_worker=float(args.cores_per_worker),
                           max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
                           heartbeat_threshold=int(args.hb_threshold),
-                          heartbeat_period=int(args.hb_period))
+                          heartbeat_period=int(args.hb_period),
+                          poll_period=int(args.poll))
         manager.start()
 
     except Exception as e:
