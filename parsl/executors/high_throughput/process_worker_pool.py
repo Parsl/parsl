@@ -26,8 +26,6 @@ from ipyparallel.serialize import serialize_object
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
-LOOP_SLOWDOWN = 0.00  # in seconds
-
 HEARTBEAT_CODE = (2 ** 32) - 1
 
 
@@ -56,7 +54,7 @@ class Manager(object):
                  uid=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30,
-                 poll_period=1):
+                 poll_period=10):
         """
         Parameters
         ----------
@@ -85,7 +83,7 @@ class Manager(object):
              Number of seconds after which a heartbeat message is sent to the interchange
 
         poll_period : int
-             Timeout period used by the manager in milliseconds. Default: 1ms
+             Timeout period used by the manager in milliseconds. Default: 10ms
         """
 
         logger.info("Manager started")
@@ -169,7 +167,6 @@ class Manager(object):
         poll_timer = self.poll_period
 
         while not kill_event.is_set():
-            # time.sleep(LOOP_SLOWDOWN)
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
@@ -237,14 +234,13 @@ class Manager(object):
 
         logger.debug("[RESULT_PUSH_THREAD] Starting thread")
 
-        push_poll_period = (50 + self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
+        push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
         logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
         items = []
 
         while not kill_event.is_set():
-            time.sleep(LOOP_SLOWDOWN)
 
             try:
                 r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
@@ -469,7 +465,7 @@ if __name__ == "__main__":
                         help="Heartbeat period in seconds. Uses manager default unless set")
     parser.add_argument("--hb_threshold", default=120,
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
-    parser.add_argument("--poll", default=1,
+    parser.add_argument("--poll", default=10,
                         help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
