@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 BUFFER_THRESHOLD = 1024 * 1024
 ITEM_THRESHOLD = 1024
 
+from typing import Any, Dict, List, Union
 
 class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
@@ -140,7 +141,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  suppress_failure=False,
-                 managed=True):
+                 managed=True) -> None:
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -153,8 +154,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
         self.managed = managed
-        self.blocks = []
-        self.tasks = {}
+        self.blocks = [] # type: List[Any]
+        self.tasks = {} # type: Dict[str,Future]
         self.cores_per_worker = cores_per_worker
         self.max_workers = max_workers
 
@@ -230,7 +231,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             self._scaling_enabled = False
             logger.debug("Starting HighThroughputExecutor with no provider")
 
-    def _queue_management_worker(self):
+    def _queue_management_worker(self) -> None:
         """Listen to the queue for task status messages and handle them.
 
         Depending on the message, tasks will be updated with results, exceptions,
@@ -461,13 +462,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def scale_out(self, blocks=1):
+    def scale_out(self, blocks=1) -> Any:
         """Scales out the number of blocks by "blocks"
 
         Raises:
              NotImplementedError
         """
-        r = []
+        r = [] # type: Union[List[Any], None]
         for i in range(blocks):
             if self.provider:
                 block = self.provider.submit(self.launch_cmd, 1, 1)
