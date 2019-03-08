@@ -9,6 +9,7 @@ from parsl.data_provider.globus import get_globus
 from parsl.app.app import python_app
 
 from typing import List
+from parsl.dataflow.dflow import DataFlowKernel
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class DataManager(ParslExecutor):
 
         return dfk.executors['data_manager']
 
-    def __init__(self, dfk, max_threads=10) -> None:
+    def __init__(self, dfk: DataFlowKernel, max_threads=10) -> None:
         """Initialize the DataManager.
 
         Args:
@@ -141,7 +142,7 @@ class DataManager(ParslExecutor):
         globus_ep = self._get_globus_endpoint()
         file.local_path = os.path.join(globus_ep['working_dir'], file.filename)
 
-    def _get_globus_endpoint(self, executor_label=None):
+    def _get_globus_endpoint(self, executor_label: Optional[str] =None):
         for executor in self.dfk.executors.values():
             if executor_label is None or executor.label == executor_label:
                 for scheme in executor.storage_access:
