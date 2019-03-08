@@ -156,22 +156,8 @@ class DataFlowKernel(object):
         self.checkpoint_mode = config.checkpoint_mode
 
         data_manager = DataManager(self, max_threads=config.data_management_max_threads)
-        self.executors = {e.label: e for e in config.executors + [data_manager]}
-        for executor in self.executors.values():
-            executor.run_dir = self.run_dir
-            if hasattr(executor, 'provider'):
-                if hasattr(executor.provider, 'script_dir'):
-                    executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                    if executor.provider.channel.script_dir is None:
-                        executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                        if not executor.provider.channel.isdir(self.run_dir):
-                            parent, child = pathlib.Path(self.run_dir).parts[-2:]
-                            remote_run_dir = os.path.join(parent, child)
-                            executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
-                            executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
-                    executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
-                    os.makedirs(executor.provider.script_dir, exist_ok=True)
-            executor.start()
+        self.executors = {}
+        self.add_executors(config.executors + [data_manager])
 
         if self.checkpoint_mode == "periodic":
             try:
@@ -182,6 +168,8 @@ class DataFlowKernel(object):
                 logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
+        # if we use the functionality of dynamicall adding executors
+        # all executors should be managed.
         if any([x.managed for x in config.executors]):
             self.flowcontrol = FlowControl(self)
         else:
@@ -764,6 +752,26 @@ class DataFlowKernel(object):
                 total_summarised, total_in_tasks))
 
         logger.info("End of summary")
+
+    def add_executors(self, executors):
+        for executor in executors:
+            executor.run_dir = self.run_dir
+            if hasattr(executor, 'provider'):
+                if hasattr(executor.provider, 'script_dir'):
+                    executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                    if executor.provider.channel.script_dir is None:
+                        executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                        if not executor.provider.channel.isdir(self.run_dir):
+                            parent, child = pathlib.Path(self.run_dir).parts[-2:]
+                            remote_run_dir = os.path.join(parent, child)
+                            executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
+                            executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
+                    executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
+                    os.makedirs(executor.provider.script_dir, exist_ok=True)
+            self.executors[executor.label] = executor
+            executor.start()
+        if hasattr(self, 'flowcontrol') and isinstance(self.flowcontrol, FlowControl):
+            self.flowcontrol.strategy.add_executors(executors)
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
