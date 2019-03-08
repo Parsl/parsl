@@ -223,7 +223,7 @@ class Manager(object):
                     logger.critical("[TASK_PULL_THREAD] Exiting")
                     break
 
-    def push_results(self, kill_event, max_queued_results=10):
+    def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
         Parameters:
@@ -251,7 +251,7 @@ class Manager(object):
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
 
             # If we have reached poll_period duration or timer has expired, we send results
-            if len(items) >= max_queued_results or time.time() > last_beat + push_poll_period:
+            if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
                 last_beat = time.time()
                 if items:
                     self.result_outgoing.send_multipart(items)
