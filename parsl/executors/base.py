@@ -2,6 +2,9 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 from typing import Any
 
+# for type checking:
+from parsl.providers.provider_base import ExecutionProvider
+
 class ParslExecutor(metaclass=ABCMeta):
     """Define the strict interface for all Executor classes.
 
@@ -15,6 +18,12 @@ class ParslExecutor(metaclass=ABCMeta):
               with respect to other executors.
 
     """
+
+    label: str
+    provider: ExecutionProvider
+    managed: bool 
+    status: Any # what is this? used by strategy
+    outstanding: Any # what is this? used by strategy
 
     @abstractmethod
     def start(self) -> None:

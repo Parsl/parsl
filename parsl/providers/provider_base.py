@@ -1,5 +1,8 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
+# for typechecking:
+from typing import Any, Dict, Optional
+from parsl.channels.base import Channel
 
 class ExecutionProvider(metaclass=ABCMeta):
     """ Define the strict interface for all Execution Provider
@@ -21,6 +24,15 @@ class ExecutionProvider(metaclass=ABCMeta):
                                 |
                                 +-------------------
      """
+
+    channel: Channel
+    min_blocks: int
+    max_blocks: int
+    nodes_per_block: int
+    script_dir: Optional[str]
+    parallelism: float #TODO not sure about this one?
+    resources: Dict[Any, Any] # I think the contents of this are provider-specific?    
+
 
     @abstractmethod
     def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):

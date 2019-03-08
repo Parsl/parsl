@@ -58,6 +58,11 @@ class Channel(metaclass=ABCMeta):
         '''
         pass
 
+    # DFK expects to be able to modify this, so it needs to be in the abstract class
+    @script_dir.setter
+    def script_dir(self, value):
+        pass
+
     @abstractmethod
     def execute_no_wait(self, cmd, walltime, envs={}) -> Any:
         ''' Optional. This is infrequently used.
