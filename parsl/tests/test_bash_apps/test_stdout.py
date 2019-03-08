@@ -8,9 +8,6 @@ import parsl.app.errors as perror
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-dfk = parsl.load(config)
-
 
 @App('bash')
 def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
@@ -19,41 +16,103 @@ def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
 
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
+speclist = (
+    '/bad/dir/t.out',
+    ['t3.out', 'w'],
+    ('t4.out', None),
+    (42, 'w'),
+    ('t6.out', 'w', 42),
+    ('t7.out',),
+    ('t8.out', 'badmode')
+)
 
-# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
-def test_bad_stdout():
-    """Testing bad stdout file
+testids = [
+    'nonexistent_dir',
+    'list_not_tuple',
+    'null_mode',
+    'not_a_string',
+    '3tuple',
+    '1tuple',
+    'bad_mode'
+]
+
+
+@pytest.mark.parametrize('spec', speclist, ids=testids)
+def test_bad_stdout_specs(spec):
+    """Testing bad stdout spec cases
     """
-    stdout = "/x/test_bad_stdout.stdout"
-    stderr = "test_bad_stdout.stderr"
-    fu = echo_to_streams("Hello world", stderr=stderr, stdout=stdout)
+
+    fn = echo_to_streams("Hello world", stdout=spec, stderr='t.err')
 
     try:
-        fu.result()
+        fn.result()
     except Exception as e:
         assert isinstance(
             e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got :{0}".format(type(e))
+    else:
+        assert False, "Did not raise expected exception BadStdStreamFile"
 
     return
 
 
 # @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
-def test_bad_stderr():
-    """Testing bad stderr file
-    """
-    stdout = "test_bad_stdout.stdout"
-    stderr = "/x/test_bad_stdout.stderr"
-    fu = echo_to_streams("Hello world", stderr=stderr, stdout=stdout)
+# @pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
+def test_bad_stderr_file():
+
+    """ Testing bad stderr file """
+
+    out = "t2.out"
+    err = "/bad/dir/t2.err"
+
+    fn = echo_to_streams("Hello world", stdout=out, stderr=err)
 
     try:
-        fu.result()
+        fn.result()
     except Exception as e:
         assert isinstance(
             e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got :{0}".format(type(e))
+    else:
+        assert False, "Did not raise expected exception BadStdStreamFile"
 
     return
+
+
+def test_stdout_truncate():
+
+    """ Testing truncation of prior content of stdout """
+
+    out = ('t1.out', 'w')
+    err = 't1.err'
+    os.system('rm -f ' + out[0] + ' ' + err)
+
+    echo_to_streams('hi', stdout=out, stderr=err).result()
+    len1 = len(open(out[0]).readlines())
+
+    echo_to_streams('hi', stdout=out, stderr=err).result()
+    len2 = len(open(out[0]).readlines())
+
+    assert len1 == len2 == 1, "Line count of output files should both be 1, but: len1={} len2={}".format(len1, len2)
+
+    os.system('rm -f ' + out[0] + ' ' + err)
+
+
+def test_stdout_append():
+
+    """ Testing appending to prior content of stdout (default open() mode) """
+
+    out = 't1.out'
+    err = 't1.err'
+    os.system('rm -f ' + out + ' ' + err)
+
+    echo_to_streams('hi', stdout=out, stderr=err).result()
+    len1 = len(open(out).readlines())
+
+    echo_to_streams('hi', stdout=out, stderr=err).result()
+    len2 = len(open(out).readlines())
+
+    assert len1 == 1 and len2 == 2, "Line count of output files should be 1 and 2, but:  len1={} len2={}".format(len1, len2)
+
+    os.system('rm -f ' + out + ' ' + err)
 
 
 if __name__ == '__main__':
@@ -68,5 +127,11 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    y = test_bad_stdout()
-    y = test_bad_stderr()
+    parsl.load(config)
+
+    # test_bad_stdout_specs is omitted because it is called in a
+    # more complicated parameterised fashion by pytest.
+
+    y = test_bad_stderr_file()
+    y = test_stdout_truncate()
+    y = test_stdout_append()

@@ -8,28 +8,11 @@ import os
 import logging
 from concurrent.futures import Future
 
-from parsl.dataflow.futures import AppFuture
+from parsl.dataflow.futures import AppFuture, _STATE_TO_DESCRIPTION_MAP, FINISHED
 from parsl.app.errors import *
 from parsl.data_provider.files import File
 
 logger = logging.getLogger(__name__)
-
-# Possible future states (for internal use by the futures package).
-PENDING = 'PENDING'
-RUNNING = 'RUNNING'
-# The future was cancelled by the user...
-CANCELLED = 'CANCELLED'
-# ...and _Waiter.add_cancelled() was called by a worker.
-CANCELLED_AND_NOTIFIED = 'CANCELLED_AND_NOTIFIED'
-FINISHED = 'FINISHED'
-
-_STATE_TO_DESCRIPTION_MAP = {
-    PENDING: "pending",
-    RUNNING: "running",
-    CANCELLED: "cancelled",
-    CANCELLED_AND_NOTIFIED: "cancelled",
-    FINISHED: "finished"
-}
 
 
 class DataFuture(Future):
