@@ -24,7 +24,7 @@ for reliable installation when many Python environments are avaialble.
 
      $ python3 -m pip install parsl
 
-     (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
+To update a previously installed parsl to a newer version, use: ``python3 -m pip install -U parsl``
 
 2. Install Jupyter for Tutorial notebooks::
 
@@ -46,7 +46,7 @@ Installation using Conda
 
      $ python3 -m pip install parsl
 
-     (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
+To update a previously installed parsl to a newer version, use: ``python3 -m pip install -U parsl``
 
 Installation of Optional Packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

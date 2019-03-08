@@ -48,7 +48,8 @@ class Config(RepresentationMixin):
     # TODO: db_logger_config is not documented here. The type is keyword based here, by the looks of it, which might
     # be better structured as a type-checked config object? For now, I've told mypy it is Optional[Any] which is weak.
     usage_tracking : bool, optional
-        Enable usage tracking. Default is True.
+        Set this field to True to Opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
+        information used for reporting to our funding agencies. Default is False.
     """
     def __init__(self,
                  executors: Optional[List[ParslExecutor]] =None,
@@ -62,7 +63,7 @@ class Config(RepresentationMixin):
                  run_dir: Optional[str] ='runinfo',
                  strategy: Optional[str] ='simple',
                  monitoring_config: Optional[Any] =None,
-                 usage_tracking: Optional[bool] =True) -> None:
+                 usage_tracking: Optional[bool] =False) -> None:
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors

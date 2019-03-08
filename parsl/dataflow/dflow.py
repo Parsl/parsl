@@ -159,12 +159,8 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        data_manager = DataManager(max_threads=config.data_management_max_threads, executors=config.executors)
+        data_manager = DataManager(self, max_threads=config.data_management_max_threads)
         self.executors = {e.label: e for e in config.executors + [data_manager]} # type: Dict[str, ParslExecutor]
-        # ^ setting the correct type on executors reveals a whole load of
-        #   type unsafe usage through the codebase, mostly involving the
-        #   .provider attribute. So until I'm ready to address that, this
-        #   type checking is disabled.
         for executor in self.executors.values():
             executor.run_dir = self.run_dir
             if hasattr(executor, 'provider'):
