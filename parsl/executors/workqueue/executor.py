@@ -94,6 +94,7 @@ def WorkQueueThread(tasks={},
 
             # TODO Make this general
             # full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
+            full_script_name = "workqueue_worker.py"
 
             remapping_string = ""
 
