@@ -107,7 +107,7 @@ def WorkQueueThread(tasks={},
             if len(input_files) + len(output_files) > 0:
                 remapping_string = "-r " + remapping_string
                 remapping_string = remapping_string[:-1]
-            print(remapping_string)
+
             script_name = full_script_name.split("/")[-1]
             command_str = launch_cmd.format(input_file=function_data_loc_remote,
                                             output_file=function_result_loc_remote,
