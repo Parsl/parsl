@@ -321,8 +321,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                         elif 'exception' in msg:
                             try:
                                 s, _ = deserialize_object(msg['exception'])
-                                exception = ValueError("Remote exception description: {}".format(s))
-                                task_fut.set_exception(exception)
+                                # s should be a RemoteExceptionWrapper... so we can reraise it
+                                try:
+                                    s.reraise()
+                                except Exception as e:
+                                    task_fut.set_exception(e)
                             except Exception as e:
                                 # TODO could be a proper wrapped exception?
                                 task_fut.set_exception(
