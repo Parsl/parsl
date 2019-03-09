@@ -95,9 +95,22 @@ def WorkQueueThread(tasks={},
             # TODO Make this general
             full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
 
+            remapping_string = ""
+
+            for item in input_files:
+                remapping_string += item[0]+":"+item[1]+","
+
+            for item in output_files:
+                remapping_string += item[0]+":"+item[1]+","
+
+            if len(input_files) + len(output_files) > 0:
+                remapping_string = "-r " + remapping_string
+                remapping_string = remapping_string[:-1]
+            print(remapping_string)
             script_name = full_script_name.split("/")[-1]
             command_str = launch_cmd.format(input_file=function_data_loc_remote,
-                                            output_file=function_result_loc_remote)
+                                            output_file=function_result_loc_remote,
+                                            remapping_string=remapping_string)
 
             logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
             try:
@@ -214,7 +227,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.init_command = init_command
         self.shared_fs = shared_fs
         self.working_dir = working_dir
-        self.used_names = set()
+        self.used_names = {}
 
         if self.project_password is not None and self.project_password_file is not None:
             logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
@@ -224,7 +237,7 @@ class WorkQueueExecutor(ParslExecutor):
                 logger.debug("Password File does not exist, no file used")
                 self.project_password_file = None
 
-        self.launch_cmd = ("python3 workqueue_worker.py {input_file} {output_file}")
+        self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
         if self.shared_fs is True:
             self.launch_cmd += " --shared-fs"
         if self.init_command != "":
@@ -285,19 +298,23 @@ class WorkQueueExecutor(ParslExecutor):
         for inp in func_inputs:
             if isinstance(inp, File):
                 new_name = inp.filepath
-                if not inp.task_path:
+                if not inp.filepath in self.used_names:
                     if self.shared_fs is False:
                         new_name = self.create_new_name(os.path.basename(inp.filepath))
-                        inp.task_path = new_name
+                        self.used_names[inp.filepath] = new_name
+                else:
+                    new_name = self.used_names[inp.filepath]
                 input_files.append((inp.filepath, new_name, inp.shared, "in"))
 
         for kwarg, inp in kwargs.items():
             if isinstance(inp, File):
                 new_name = inp.filepath
-                if not inp.task_path:
+                if not inp.filepath in self.used_names:
                     if self.shared_fs is False:
                         new_name = self.create_new_name(os.path.basename(inp.filepath))
-                        inp.task_path = new_name
+                        self.used_names[inp.filepath] = new_name
+                else:
+                    new_name = self.used_names[inp.filepath]
                 input_files.append((inp.filepath, new_name, inp.shared, "in"))
 
         for inp in args:
@@ -306,17 +323,21 @@ class WorkQueueExecutor(ParslExecutor):
                 if not inp.task_path:
                     if self.shared_fs is False:
                         new_name = self.create_new_name(os.path.basename(inp.filepath))
-                        inp.task_path = new_name
+                        self.used_names[inp.filepath] = new_name
+                else:
+                    new_name = self.used_names[inp.filepath]
                 input_files.append((inp.filepath, new_name, inp.shared, "in"))
 
         func_outputs = kwargs.get("outputs", [])
         for output in func_outputs:
             if isinstance(output, File):
                 new_name = output.filepath
-                if not output.task_path:
+                if not output.filepath in self.used_names:
                     if self.shared_fs is False:
                         new_name = self.create_new_name(os.path.basename(output.filepath))
-                        output.task_path = new_name
+                        self.used_names[output.filepath] = new_name
+                else:
+                    new_name = self.used_names[output.filepath]
                 output_files.append((output.filepath, new_name, output.shared, "in"))
 
         fu = Future()

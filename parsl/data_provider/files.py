@@ -30,7 +30,7 @@ class File(str):
 
     """
 
-    def __init__(self, url, dman=None, cache=False, caching_dir="."):
+    def __init__(self, url, dman=None):
         """Construct a File object from a url string.
 
         Args:
@@ -51,13 +51,8 @@ class File(str):
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {}
-        self.task_path = None
-        self.in_task = False
         if self.scheme == 'globus':
             self.dman.add_file(self)
-
-        self.cache = cache
-        self.caching_dir = caching_dir
 
     def __str__(self):
         return self.filepath
@@ -88,16 +83,15 @@ class File(str):
         Returns:
              - filepath (string)
         """
-        if self.in_task is True:
-            return self.task_path
-        elif self.scheme in ['ftp', 'http', 'https', 'globus']:
-            # The path returned here has to match exactly with where the
-            if hasattr(self, 'local_path'):
-                return self.local_path
-            else:
-                return self.filename
+        if hasattr(self, 'local_path'):
+            return self.local_path
 
-        return self.path
+        if self.scheme in ['ftp', 'http', 'https', 'globus']:
+            return self.filename
+        elif self.scheme in ['file']:
+            return self.path
+        else:
+            raise Exception('Cannot return filepath for unknown scheme {}'.format(self.scheme))
 
     def stage_in(self, executor):
         """Transport file from the input source to the executor.
@@ -121,9 +115,6 @@ class File(str):
 
     def is_registered(self):
         return self.registered
-
-    def set_in_task(self):
-        self.in_task = True
 
     def __getstate__(self):
         """Override the default pickling method.

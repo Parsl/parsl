@@ -124,6 +124,10 @@ class Strategy(object):
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
+    def add_executors(self, executors):
+        for executor in executors:
+            self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
+
     def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
         """Do nothing.
 
@@ -203,6 +207,10 @@ class Strategy(object):
             else:
                 logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
                     label, active_tasks, running, submitting, pending))
+
+            # reset kill timer if executor has active tasks
+            if active_tasks > 0 and self.executors[executor.label]['idle_since']:
+                self.executors[executor.label]['idle_since'] = None
 
             # Case 1
             # No tasks.

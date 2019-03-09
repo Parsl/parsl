@@ -17,6 +17,7 @@ import math
 import json
 
 from parsl.version import VERSION as PARSL_VERSION
+from parsl.app.errors import RemoteExceptionWrapper
 import multiprocessing
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -376,8 +377,8 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         try:
             result = execute_task(req['buffer'])
             serialized_result = serialize_object(result)
-        except Exception as e:
-            result_package = {'task_id': tid, 'exception': serialize_object("Exception which we cannot send the full exception object back for: {}".format(e))}
+        except Exception:
+            result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))

@@ -8,11 +8,27 @@ if __name__ == "__main__":
     logger = logging.getLogger(name)
 
     shared_fs = False
-    input_function_file = sys.argv[1]
-    output_result_file = sys.argv[2]
-    if len(sys.argv) > 3:
-        if sys.argv[3] == "--shared-fs":
+    input_function_file = None
+    output_result_file = None
+    remapping_string = None
+
+    index = 1
+    while index < len(sys.argv):
+        if sys.argv[index] == "-i":
+            input_function_file = sys.argv[index + 1]
+            index += 1
+        elif sys.argv[index] == "-o":
+            output_result_file = sys.argv[index + 1]
+            index += 1
+        elif sys.argv[index] == "-r":
+            remapping_string = sys.argv[index + 1]
+            index += 1
+        elif sys.argv[index] == "--shared-fs":
             shared_fs = True
+        else:
+            print("command line argument not supported")
+            exit(-2)
+        index += 1
 
     input_function = open(input_function_file, "rb")
     function_tuple = pickle.load(input_function)
@@ -22,26 +38,36 @@ if __name__ == "__main__":
     user_ns.update({'__builtins__': __builtins__})
     f, args, kwargs = unpack_apply_message(function_tuple, user_ns, copy=False)
 
+    mapping = {}
+
     if shared_fs is False:
         from parsl.data_provider.files import File
+
+        for i in remapping_string.split(","):
+            split_mapping = i.split(":")
+            mapping[split_mapping[0]] = split_mapping[1]
 
         func_inputs = kwargs.get("inputs", [])
         for inp in func_inputs:
             if isinstance(inp, File):
-                inp.set_in_task()
+                if inp.filepath in mapping:
+                    inp.local_path = mapping[inp.filepath]
 
         for kwarg, potential_f in kwargs.items():
             if isinstance(potential_f, File):
-                potential_f.set_in_task()
+                if potential_f.filepath in mapping:
+                    potential_f.local_path = mapping[potential_f.filepath]
 
         for inp in args:
             if isinstance(inp, File):
-                inp.set_in_task()
+                if inp.filepath in mapping:
+                    inp.local_path = mapping[inp.filepath]
 
         func_outputs = kwargs.get("outputs", [])
         for output in func_outputs:
             if isinstance(output, File):
-                output.set_in_task()
+                if output.filepath in mapping:
+                    output.local_path = mapping[output.filepath]
 
     prefix = "parsl_"
     fname = prefix + "f"
