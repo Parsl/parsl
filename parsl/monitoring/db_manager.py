@@ -256,7 +256,7 @@ class DatabaseManager(object):
 
                             # check if there is an left_message for this task
                             if msg['task_id'] in left_messages:
-                                first_messages.append( left_messages.pop(msg['task_id']) )
+                                first_messages.append(left_messages.pop(msg['task_id']))
 
                 self.logger.debug("Updating and inserting TASK_INFO to all tables")
                 self._update(table=WORKFLOW,
@@ -290,7 +290,7 @@ class DatabaseManager(object):
                         if msg['task_id'] in inserted_tasks:
                             first_messages.append(msg)
                         else:
-                            left_messages[ msg['task_id'] ] = msg
+                            left_messages[msg['task_id']] = msg
                 if first_messages:
                     self._insert(table=STATUS, messages=first_messages)
                     self._update(table=TASK,
