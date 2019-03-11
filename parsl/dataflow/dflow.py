@@ -30,7 +30,7 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
-from parsl.monitoring.monitoring import MessageType
+from parsl.monitoring.db_manager import MessageType
 
 
 logger = logging.getLogger(__name__)
