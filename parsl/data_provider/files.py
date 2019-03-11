@@ -30,7 +30,7 @@ class File(str):
 
     """
 
-    def __init__(self, url, dman=None, cache=False, caching_dir="."):
+    def __init__(self, url, dman=None):
         """Construct a File object from a url string.
 
         Args:
@@ -51,9 +51,6 @@ class File(str):
         self.data_future = {}
         if self.scheme == 'globus':
             self.dman.add_file(self)
-
-        self.cache = cache
-        self.caching_dir = caching_dir
 
     def __str__(self):
         return self.filepath
@@ -90,8 +87,10 @@ class File(str):
                 return self.local_path
             else:
                 return self.filename
-
-        return self.path
+        elif self.scheme in ['file']:
+            return self.path
+        else:
+            raise Exception('Cannot return filepath for unknown scheme {}'.format(self.scheme))
 
     def stage_in(self, executor):
         """Transport file from the input source to the executor.
@@ -106,12 +105,6 @@ class File(str):
     def stage_out(self, executor=None):
         """Transport file from executor to final output destination."""
         return self.dman.stage_out(self, executor)
-
-    def set_data_future(self, df, executor=None):
-        self.data_future[executor] = df
-
-    def get_data_future(self, executor):
-        return self.data_future.get(executor)
 
     def __getstate__(self):
         """Override the default pickling method.
