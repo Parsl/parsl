@@ -77,7 +77,7 @@ class Interchange(object):
                  heartbeat_threshold=60,
                  logdir=".",
                  logging_level=logging.INFO,
-                 poll_period=1,
+                 poll_period=10,
                  suppress_failure=False,
              ):
         """
@@ -109,7 +109,7 @@ class Interchange(object):
              Logging level as defined in the logging module. Default: logging.INFO (20)
 
         poll_period : int
-             The main thread polling period, in milliseconds
+             The main thread polling period, in milliseconds. Default: 10ms
 
         suppress_failure : Bool
              When set to True, the interchange will attempt to suppress failures. Default: False
@@ -325,7 +325,7 @@ class Interchange(object):
         interesting_managers = set()
 
         while not self._kill_event.is_set():
-            self.socks = dict(poller.poll(timeout=self.poll_period))
+            self.socks = dict(poller.poll(timeout=poll_period))
 
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
