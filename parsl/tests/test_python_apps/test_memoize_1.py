@@ -7,9 +7,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
-
 
 @App('python', cache=True)
 def random_uuid(x, cache=True):
@@ -56,6 +53,8 @@ def test_bash_memoization(n=2):
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",

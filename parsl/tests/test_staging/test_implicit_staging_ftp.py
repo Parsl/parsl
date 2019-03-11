@@ -19,8 +19,7 @@ def sort_strings(inputs=[], outputs=[]):
                 s.write(e)
 
 
-# @pytest.mark.local
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
+@pytest.mark.cleannet
 def test_implicit_staging_ftp():
     """Test implicit staging for an ftp file
 
