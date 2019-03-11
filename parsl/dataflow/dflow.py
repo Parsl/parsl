@@ -31,10 +31,6 @@ from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
 from parsl.monitoring.monitoring import MessageType
-# from parsl.monitoring import app_monitor
-# from parsl.monitoring import logging_server
-# from parsl.monitoring.web_app import index
-from parsl.monitoring.viz_app import viz_app
 
 
 logger = logging.getLogger(__name__)
