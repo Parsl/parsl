@@ -71,20 +71,17 @@ Here are a series of question to help formulate a suitable configuration:
 |                     | * `HighThroughputExecutor` |                        |
 +---------------------+----------------------------+------------------------+
 
-2. How many and how long are the tasks? How many nodes do you have to execute them ?
+2. How many nodes do you have to execute the tasks? How long are the tasks?
 
-+---------------------+---------------------+--------------------+----------------------------+
-| Node scale          | Task Duration       |  Task Count        | Suitable Executor          |
-+=====================+=====================+====================+============================+
-| Nodes=1             | <1s - minutes       |  0-100K            | * `ThreadPoolExecutor`     |
-|                     |                     |                    | * `HighThroughputExecutor` |
-+---------------------+---------------------+--------------------+----------------------------+
-| Nodes<=1000         | <1s - minutes       |  0-1M              | * `ThreadPoolExecutor`     |
-|                     |                     |                    | * `IPyParallelExecutor`    |
-|                     |                     |                    | * `HighThroughputExecutor` |
-+---------------------+---------------------+--------------------+----------------------------+
-| Nodes>1000          |  >minutes           |  0-1M              | * `ExtremeScaleExecutor`   |
-+---------------------+---------------------+--------------------+----------------------------+
++--------------------------+---------------------+-----------------------------------------+
+| Executor                 |  Number of Nodes    | Task Duration for Good Performance      |
++==========================+=====================+=========================================+
+| `ThreadPoolExecutor`     |  1                  | Any                                     |
++--------------------------+---------------------+-----------------------------------------+
+| `HighThroughputExecutor` |  <= 2,000           | Task duration (s) / # of nodes >= 0.01  |
++--------------------------+---------------------+-----------------------------------------+
+| `ExtremeScaleExecutor`   |  > 1,000            | > minutes                               |
++--------------------------+---------------------+-----------------------------------------+
 
 3. If you are running on a cluster or supercomputer, will you request multiple nodes per block ?
    Note that in this case a block is equivalent to a batch job.
