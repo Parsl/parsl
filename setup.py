@@ -24,7 +24,7 @@ setup(
                'parsl/executors/low_latency/lowlatency_worker.py',
     ],
     extras_require = {
-        'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy', 'sqlalchemy_utils'],
+        'db_logging' : ['psutil', 'sqlalchemy', 'sqlalchemy_utils'],
         'aws' : ['boto3'],
         'kubernetes' : ['kubernetes'],
         # Jetstream is deprecated since the interface has not been maintained.
