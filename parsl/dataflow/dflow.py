@@ -92,47 +92,13 @@ class DataFlowKernel(object):
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.monitoring.start()
-        self.monitoring_config = None
-        """
-        if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database'\
-                and self.monitoring_config.eng_link is None:
-            # uses the rundir as the default location.
-            logger.info('Local monitoring database can be found inside the run_dir at: {}'.format(self.run_dir))
-            self.monitoring_config.eng_link = "sqlite:///{}".format(os.path.join(os.path.abspath(self.run_dir), 'monitoring.db'))
-
-        if self.monitoring_config is None:
-            self.monitor = None
-        else:
-            #self.monitor_hub = parsl.monitoring.
-            self.monitor = parsl.monitoring.monitoring.UDPRadio("udp://{}:{}".format(self.monitoring_config))
-        """
 
         self.time_began = datetime.datetime.now()
         self.time_completed = None
         self.run_id = str(uuid4())
-        self.dashboard = self.monitoring_config.dashboard_link if self.monitoring_config is not None else None
 
         # TODO: make configurable
         logger.info("Run id is: " + self.run_id)
-
-        """
-        if self.dashboard is not None:
-            logger.info("Dashboard is found at " + self.dashboard)
-
-        self.logging_server = None
-        self.web_app = None
-
-        # start tornado logging server
-        if self.monitoring is not None:
-            self.logging_server = multiprocessing.Process(target=logging_server.run,
-                                                          kwargs={'monitoring_config': self.monitoring})
-            self.logging_server.start()
-            self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config})
-            self.web_app.start()
-        else:
-            self.logging_server = None
-            self.web_app = None
-        """
 
         self.workflow_name = None
         if self.monitoring is not None and self.monitoring.workflow_name is not None:
@@ -475,7 +441,6 @@ class DataFlowKernel(object):
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
-            # executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
             executable = self.monitoring.monitor_wrapper(executable, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
