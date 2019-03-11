@@ -24,7 +24,6 @@ setup(
                'parsl/executors/low_latency/lowlatency_worker.py',
     ],
     extras_require = {
-        'visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
         'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy', 'sqlalchemy_utils'],
         'aws' : ['boto3'],
         'kubernetes' : ['kubernetes'],
