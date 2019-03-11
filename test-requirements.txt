@@ -4,6 +4,7 @@ pytest>=3.6.0,<4.1.0
 pytest-cov
 pytest-xdist
 pytest-ordering
+pandas
 coverage
 coverage
 mock>=1.0.0
