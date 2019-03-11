@@ -56,7 +56,7 @@ class Database(object):
                  url='sqlite:///monitoring.db',
                  username=None,
                  password=None,
-            ):
+                 ):
 
         self.eng = sa.create_engine(url)
         self.meta = self.Base.metadata
@@ -110,13 +110,15 @@ class Database(object):
     # TODO: expand to full set of info
     class Status(Base):
         __tablename__ = STATUS
-        task_id = Column(Integer, sa.ForeignKey('task.task_id'), nullable=False)
+        task_id = Column(Integer, sa.ForeignKey(
+            'task.task_id'), nullable=False)
         task_status_name = Column(Text, nullable=False)
         timestamp = Column(DateTime, nullable=False)
         run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
         __table_args__ = (
-                          PrimaryKeyConstraint('task_id', 'run_id', 'task_status_name', 'timestamp'),
-                        )
+            PrimaryKeyConstraint('task_id', 'run_id',
+                                 'task_status_name', 'timestamp'),
+        )
 
     class Task(Base):
         __tablename__ = TASK
@@ -125,9 +127,12 @@ class Database(object):
         task_depends = Column('task_depends', Text, nullable=True)
         task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
-        task_time_submitted = Column('task_time_submitted', DateTime, nullable=False)
-        task_time_running = Column('task_time_running', DateTime, nullable=True)
-        task_time_returned = Column('task_time_returned', DateTime, nullable=True)
+        task_time_submitted = Column(
+            'task_time_submitted', DateTime, nullable=False)
+        task_time_running = Column(
+            'task_time_running', DateTime, nullable=True)
+        task_time_returned = Column(
+            'task_time_returned', DateTime, nullable=True)
         task_elapsed_time = Column('task_elapsed_time', Float, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
         task_inputs = Column('task_inputs', Text, nullable=True)
@@ -135,29 +140,43 @@ class Database(object):
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         __table_args__ = (
-                          PrimaryKeyConstraint('task_id', 'run_id'),
-                        )
+            PrimaryKeyConstraint('task_id', 'run_id'),
+        )
 
     class Resource(Base):
         __tablename__ = RESOURCE
-        task_id = Column('task_id', Integer, sa.ForeignKey('task.task_id'), nullable=False)
+        task_id = Column('task_id', Integer, sa.ForeignKey(
+            'task.task_id'), nullable=False)
         timestamp = Column('timestamp', DateTime, nullable=False)
-        run_id = Column('run_id', Text, sa.ForeignKey('workflow.run_id'), nullable=False)
-        resource_monitoring_interval = Column('resource_monitoring_interval', Float, nullable=True)
-        psutil_process_pid = Column('psutil_process_pid', Integer, nullable=True)
-        psutil_process_cpu_percent = Column('psutil_process_cpu_percent', Float, nullable=True)
-        psutil_process_memory_percent = Column('psutil_process_memory_percent', Float, nullable=True)
-        psutil_process_children_count = Column('psutil_process_children_count', Float, nullable=True)
-        psutil_process_time_user = Column('psutil_process_time_user', Float, nullable=True)
-        psutil_process_time_system = Column('psutil_process_time_system', Float, nullable=True)
-        psutil_process_memory_virtual = Column('psutil_process_memory_virtual', Float, nullable=True)
-        psutil_process_memory_resident = Column('psutil_process_memory_resident', Float, nullable=True)
-        psutil_process_disk_read = Column('psutil_process_disk_read', Float, nullable=True)
-        psutil_process_disk_write = Column('psutil_process_disk_write', Float, nullable=True)
-        psutil_process_status = Column('psutil_process_status', Text, nullable=True)
+        run_id = Column('run_id', Text, sa.ForeignKey(
+            'workflow.run_id'), nullable=False)
+        resource_monitoring_interval = Column(
+            'resource_monitoring_interval', Float, nullable=True)
+        psutil_process_pid = Column(
+            'psutil_process_pid', Integer, nullable=True)
+        psutil_process_cpu_percent = Column(
+            'psutil_process_cpu_percent', Float, nullable=True)
+        psutil_process_memory_percent = Column(
+            'psutil_process_memory_percent', Float, nullable=True)
+        psutil_process_children_count = Column(
+            'psutil_process_children_count', Float, nullable=True)
+        psutil_process_time_user = Column(
+            'psutil_process_time_user', Float, nullable=True)
+        psutil_process_time_system = Column(
+            'psutil_process_time_system', Float, nullable=True)
+        psutil_process_memory_virtual = Column(
+            'psutil_process_memory_virtual', Float, nullable=True)
+        psutil_process_memory_resident = Column(
+            'psutil_process_memory_resident', Float, nullable=True)
+        psutil_process_disk_read = Column(
+            'psutil_process_disk_read', Float, nullable=True)
+        psutil_process_disk_write = Column(
+            'psutil_process_disk_write', Float, nullable=True)
+        psutil_process_status = Column(
+            'psutil_process_status', Text, nullable=True)
         __table_args__ = (
-                          PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
-                        )
+            PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
+        )
 
     def __del__(self):
         self.session.close()
@@ -170,7 +189,7 @@ class DatabaseManager(object):
                  logging_level=logging.INFO,
                  batching_interval=1,
                  batching_threshold=99999,
-               ):
+                 ):
 
         self.logdir = logdir
         try:
@@ -178,7 +197,8 @@ class DatabaseManager(object):
         except FileExistsError:
             pass
 
-        self.logger = start_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level)
+        self.logger = start_file_logger(
+            "{}/database_manager.log".format(self.logdir), level=logging_level)
         self.logger.debug("Initializing Database Manager process")
 
         self.db = Database(db_url)
@@ -192,13 +212,15 @@ class DatabaseManager(object):
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                            args=(priority_queue, 'priority', self._kill_event,)
-                                              )
+                                                            args=(
+                                                                priority_queue, 'priority', self._kill_event,)
+                                                            )
         self._priority_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                            args=(resource_queue, 'resource', self._kill_event,)
-                                              )
+                                                            args=(
+                                                                resource_queue, 'resource', self._kill_event,)
+                                                            )
         self._resource_queue_pull_thread.start()
 
         """
@@ -232,15 +254,18 @@ class DatabaseManager(object):
                                                    interval=self.batching_interval,
                                                    threshold=self.batching_threshold)
             if messages:
-                self.logger.debug("Got {} messages from priority queue".format(len(messages)))
+                self.logger.debug(
+                    "Got {} messages from priority queue".format(len(messages)))
                 update_messages, insert_messages, all_messages = [], [], []
                 for msg_type, msg in messages:
                     if msg_type.value == MessageType.WORKFLOW_INFO.value:
                         if "python_version" in msg:   # workflow start message
-                            self.logger.debug("Inserting workflow start info to WORKFLOW table")
+                            self.logger.debug(
+                                "Inserting workflow start info to WORKFLOW table")
                             self._insert(table=WORKFLOW, messages=[msg])
                         else:                         # workflow end message
-                            self.logger.debug("Updating workflow end info to WORKFLOW table")
+                            self.logger.debug(
+                                "Updating workflow end info to WORKFLOW table")
                             self._update(table=WORKFLOW,
                                          columns=['run_id', 'tasks_failed_count',
                                                   'tasks_completed_count', 'time_completed',
@@ -256,19 +281,24 @@ class DatabaseManager(object):
 
                             # check if there is an left_message for this task
                             if msg['task_id'] in left_messages:
-                                first_messages.append( left_messages.pop(msg['task_id']) )
+                                first_messages.append(
+                                    left_messages.pop(msg['task_id']))
 
-                self.logger.debug("Updating and inserting TASK_INFO to all tables")
+                self.logger.debug(
+                    "Updating and inserting TASK_INFO to all tables")
                 self._update(table=WORKFLOW,
-                             columns=['run_id', 'tasks_failed_count', 'tasks_completed_count'],
+                             columns=['run_id', 'tasks_failed_count',
+                                      'tasks_completed_count'],
                              messages=update_messages)
 
                 if insert_messages:
                     self._insert(table=TASK, messages=insert_messages)
-                    self.logger.debug("There are {} inserted task records".format(len(inserted_tasks)))
+                    self.logger.debug(
+                        "There are {} inserted task records".format(len(inserted_tasks)))
                 if update_messages:
                     self._update(table=TASK,
-                                 columns=['task_time_returned', 'task_elapsed_time', 'run_id', 'task_id'],
+                                 columns=['task_time_returned',
+                                          'task_elapsed_time', 'run_id', 'task_id'],
                                  messages=update_messages)
                 self._insert(table=STATUS, messages=all_messages)
 
@@ -281,7 +311,8 @@ class DatabaseManager(object):
                                                    threshold=self.batching_threshold)
 
             if messages or first_messages:
-                self.logger.debug("Got {} messages from resource queue".format(len(messages)))
+                self.logger.debug(
+                    "Got {} messages from resource queue".format(len(messages)))
                 self._insert(table=RESOURCE, messages=messages)
                 for msg in messages:
                     if msg['first_msg']:
@@ -290,11 +321,12 @@ class DatabaseManager(object):
                         if msg['task_id'] in inserted_tasks:
                             first_messages.append(msg)
                         else:
-                            left_messages[ msg['task_id'] ] = msg
+                            left_messages[msg['task_id']] = msg
                 if first_messages:
                     self._insert(table=STATUS, messages=first_messages)
                     self._update(table=TASK,
-                                 columns=['task_time_running', 'run_id', 'task_id'],
+                                 columns=['task_time_running',
+                                          'run_id', 'task_id'],
                                  messages=first_messages)
 
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
@@ -339,8 +371,10 @@ class DatabaseManager(object):
 
     def close(self):
         if self.logger:
-            self.logger.info("Finishing all the logging and terminating Database Manager.")
-        self.batching_interval, self.batching_threshold = float('inf'), float('inf')
+            self.logger.info(
+                "Finishing all the logging and terminating Database Manager.")
+        self.batching_interval, self.batching_threshold = float(
+            'inf'), float('inf')
         self._kill_event.set()
 
 
