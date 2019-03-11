@@ -56,8 +56,11 @@ class DataManager(ParslExecutor):
 
         return dfk.executors['data_manager']
 
-    def __init__(self, max_threads=10, executors=None):
+    def __init__(self, dfk, max_threads=10):
         """Initialize the DataManager.
+
+        Args:
+           - dfk (DataFlowKernel): The DataFlowKernel that this DataManager is managing data for.
 
         Kwargs:
            - max_threads (int): Number of threads. Default is 10.
@@ -66,9 +69,7 @@ class DataManager(ParslExecutor):
         self._scaling_enabled = False
 
         self.label = 'data_manager'
-        if executors is None:
-            executors = []
-        self.executors = {e.label: e for e in executors}
+        self.dfk = dfk
         self.max_threads = max_threads
         self.files = []
         self.globus = None
@@ -115,7 +116,7 @@ class DataManager(ParslExecutor):
         file.local_path = os.path.join(globus_ep['working_dir'], file.filename)
 
     def _get_globus_endpoint(self, executor_label=None):
-        for executor in self.executors.values():
+        for executor in self.dfk.executors.values():
             if executor_label is None or executor.label == executor_label:
                 for scheme in executor.storage_access:
                     if isinstance(scheme, GlobusScheme):
@@ -153,12 +154,12 @@ class DataManager(ParslExecutor):
         """
 
         if file.scheme == 'ftp':
-            working_dir = self.executors[executor].working_dir
+            working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = self._ftp_stage_in_app(executor=executor)
             app_fut = stage_in_app(working_dir, outputs=[file])
             return app_fut._outputs[0]
         elif file.scheme == 'http' or file.scheme == 'https':
-            working_dir = self.executors[executor].working_dir
+            working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = self._http_stage_in_app(executor=executor)
             app_fut = stage_in_app(working_dir, outputs=[file])
             return app_fut._outputs[0]
