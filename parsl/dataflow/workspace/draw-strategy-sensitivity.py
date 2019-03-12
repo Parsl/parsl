@@ -47,6 +47,7 @@ with open(slot_path) as f:
 
 print(tasks)
 print(slots)
+limit = max(max(tasks), max(slots)) + 10
 time = range(len(slots))
 # Draw graph
 fig, ax1 = plt.subplots()
@@ -55,11 +56,13 @@ ax1.set_xlabel('time')
 # Make the y-axis label, ticks and tick labels match the line color.
 ax1.set_ylabel('# Tasks', color='b')
 ax1.tick_params('y', colors='b')
+ax1.set_ylim(0, limit)
 
 ax2 = ax1.twinx()
 ax2.plot(time, slots, 'r--')
 ax2.set_ylabel('# Slots', color='r')
 ax2.tick_params('y', colors='r')
+ax2.set_ylim(0, limit)
 
 fig.tight_layout()
 #plt.show()
