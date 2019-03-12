@@ -1,0 +1,1 @@
+process_worker_pool.py   -p 100 -c 1 --task_url=tcp://midway2-0274.rcc.local:54004 --result_url=tcp://midway2-0274.rcc.local:54634 --logdir=/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace/theo/app1/runinfo/000/midway_htex --block_id=0 --hb_period=1 --hb_threshold=2 
