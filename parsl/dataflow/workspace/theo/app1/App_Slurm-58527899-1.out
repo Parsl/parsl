@@ -1,0 +1,52 @@
+Argparse:  --executor=HighThroughput_Slurm
+Config(
+    app_cache=True, 
+    checkpoint_files=None, 
+    checkpoint_mode=None, 
+    checkpoint_period=None, 
+    data_management_max_threads=10, 
+    executors=[HighThroughputExecutor(
+        address='midway2-0274.rcc.local', 
+        cores_per_worker=1, 
+        heartbeat_period=1, 
+        heartbeat_threshold=2, 
+        interchange_port_range=(55000, 56000), 
+        label='midway_htex', 
+        launch_cmd='process_worker_pool.py {debug} {max_workers} -p {prefetch_capacity} -c {cores_per_worker} --task_url={task_url} --result_url={result_url} --logdir={logdir} --block_id={{block_id}} --hb_period={heartbeat_period} --hb_threshold={heartbeat_threshold} ', 
+        managed=True, 
+        max_workers=inf, 
+        prefetch_capacity=100, 
+        provider=SlurmProvider(
+            'broadwl',
+            channel=LocalChannel(
+                envs={}, 
+                script_dir=None, 
+                userhome='/scratch/midway2/tkurihana/parsl/parsl/dataflow/workspace/theo/app1'
+            ), 
+            cmd_timeout=10, 
+            exclusive=True, 
+            init_blocks=1, 
+            launcher=SrunLauncher(), 
+            max_blocks=5, 
+            min_blocks=0, 
+            move_files=True, 
+            nodes_per_block=1, 
+            parallelism=1.0, 
+            scheduler_options='#SBATCH --exclusive\n#SBATCH --mem-per-cpu=16000 ', 
+            walltime='12:00:00', 
+            worker_init='module load Anaconda3/5.0.0.1; source activate parsl-dev'
+        ), 
+        storage_access=[], 
+        suppress_failure=False, 
+        worker_debug=False, 
+        worker_port_range=(54000, 55000), 
+        worker_ports=None, 
+        working_dir=None
+    )], 
+    lazy_errors=True, 
+    monitoring_config=None, 
+    retries=100, 
+    run_dir='runinfo', 
+    strategy='simple', 
+    usage_tracking=True
+)
