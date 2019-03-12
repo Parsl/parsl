@@ -76,15 +76,23 @@ Here are a series of question to help formulate a suitable configuration:
 +---------------------+---------------------+--------------------+----------------------------+
 | Node scale          | Task Duration       |  Task Count        | Suitable Executor          |
 +=====================+=====================+====================+============================+
-| Nodes=1             | <1s - minutes       |  0-100K            | * `ThreadPoolExecutor`     |
-|                     |                     |                    | * `HighThroughputExecutor` |
+| Nodes=1(local)      | <1s - minutes       |  0-100K            | * `ThreadPoolExecutor`     |
 +---------------------+---------------------+--------------------+----------------------------+
-| Nodes<=1000         | <1s - minutes       |  0-1M              | * `ThreadPoolExecutor`     |
-|                     |                     |                    | * `IPyParallelExecutor`    |
-|                     |                     |                    | * `HighThroughputExecutor` |
+| Nodes<=10           | <1s (interactive)   |  ~1M               | * `LowLatencyExecutor`     |
 +---------------------+---------------------+--------------------+----------------------------+
-| Nodes>1000          |  >minutes           |  0-1M              | * `ExtremeScaleExecutor`   |
+| Nodes<=200          | <1s - days          |  0-1M              | * `IPyParallelExecutor`    |
 +---------------------+---------------------+--------------------+----------------------------+
+| Nodes<=1000         | 0.1s - days         |  > 1M              | * `HighThroughputExecutor` |
++---------------------+---------------------+--------------------+----------------------------+
+| Nodes>1000          | > 1 minutes         |  > 1M              | * `ExtremeScaleExecutor`   |
++---------------------+---------------------+--------------------+----------------------------+
+
+.. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
+             as the recommended replacement.
+
+.. note:: `HighThroughputExecutor` is ideal for batch computations on ≤1000 nodes. (For good performance,
+          you want task-duration / # nodes ≥ 0.01: e.g., on 10
+          nodes, tasks ≥ 0.1 s.
 
 3. If you are running on a cluster or supercomputer, will you request multiple nodes per block ?
    Note that in this case a block is equivalent to a batch job.
