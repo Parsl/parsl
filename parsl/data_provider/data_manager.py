@@ -117,7 +117,7 @@ class DataManager(ParslExecutor):
 
     def _get_globus_endpoint(self, executor_label=None):
         for executor in self.dfk.executors.values():
-            if executor_label is None or executor.label == executor_label:
+            if (executor_label is None or executor.label == executor_label) and hasattr(executor, "storage_access"):
                 for scheme in executor.storage_access:
                     if isinstance(scheme, GlobusScheme):
                         if executor.working_dir:
