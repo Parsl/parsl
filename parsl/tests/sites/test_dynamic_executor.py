@@ -6,9 +6,6 @@ from parsl.app.app import python_app
 
 import pytest
 
-parsl.clear()
-dfk = parsl.load()
-
 
 @python_app(executors=['threads'])
 def sleeper(dur=0):
@@ -42,6 +39,8 @@ def add(dur=0.01):
 
 @pytest.mark.local
 def test_dynamic_executor():
+    parsl.clear()
+    dfk = parsl.load()
     tasks = [sleeper() for i in range(5)]
     results = [i.result() for i in tasks]
     print("Done with initial test. The results are", results)
