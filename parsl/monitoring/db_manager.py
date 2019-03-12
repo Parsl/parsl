@@ -99,8 +99,8 @@ class Database(object):
         workflow_name = Column(Text, nullable=True)
         workflow_version = Column(Text, nullable=True)
         time_began = Column(DateTime, nullable=False)
-        time_completed = Column(DateTime)
-        completion_time = Column(Float)
+        time_completed = Column(DateTime, nullable=True)
+        workflow_duration = Column(Float, nullable=True)
         host = Column(Text, nullable=False)
         user = Column(Text, nullable=False)
         rundir = Column(Text, nullable=False)
@@ -269,7 +269,7 @@ class DatabaseManager(object):
                             self._update(table=WORKFLOW,
                                          columns=['run_id', 'tasks_failed_count',
                                                   'tasks_completed_count', 'time_completed',
-                                                  'completion_time'],
+                                                  'workflow_duration'],
                                          messages=[msg])
                     else:                             # TASK_INFO message
                         all_messages.append(msg)
