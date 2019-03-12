@@ -1,7 +1,3 @@
-from parsl.monitoring.monitoring_base import Database
-from parsl.monitoring.monitoring_base import Monitoring
-from parsl.monitoring.monitoring_base import VisualizationServer
+from parsl.monitoring.monitoring import MonitoringHub
 
-__all__ = ['Monitoring',
-           'Database',
-           'VisualizationServer']
+__all__ = ['MonitoringHub']
