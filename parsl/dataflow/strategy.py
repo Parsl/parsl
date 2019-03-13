@@ -345,6 +345,12 @@ class Strategy(object):
             active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
+            print("[MONITOR] Active tasks:", active_tasks)
+            print("[MONITOR] Active slots:", active_slots)
+            logger.debug("[MONITOR] active tasks: " + str(active_tasks))
+            logger.debug("[MONITOR] active slots: " + str(active_slots))
+            
+
             if (isinstance(executor, HighThroughputExecutor) or
                 isinstance(executor, ExtremeScaleExecutor)):
                 logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected engines'.format(
