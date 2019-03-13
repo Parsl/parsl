@@ -5,6 +5,7 @@ from concurrent.futures import Future
 
 import os
 import pickle
+import shutil
 
 from ipyparallel.serialize import pack_apply_message
 
@@ -94,7 +95,12 @@ def WorkQueueThread(tasks={},
 
             # TODO Make this general
             # full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
-            full_script_name = "workqueue_worker.py"
+            script_name = "workqueue_worker.py"
+            full_script_name = shutil.which(script_name)
+            if full_script_name is None:
+                logger.error("Unable to find script {} on path, skipping task {}".format(script_name, parsl_id))
+                # logger.error("Unable to find script {} on path, skipping task {}, setting future result as an exception".format(script_name, parsl_id))
+                continue
 
             remapping_string = ""
 
@@ -108,7 +114,6 @@ def WorkQueueThread(tasks={},
                 remapping_string = "-r " + remapping_string
                 remapping_string = remapping_string[:-1]
 
-            script_name = full_script_name.split("/")[-1]
             command_str = launch_cmd.format(input_file=function_data_loc_remote,
                                             output_file=function_result_loc_remote,
                                             remapping_string=remapping_string)

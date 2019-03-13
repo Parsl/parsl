@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     mapping = {}
 
-    if shared_fs is False:
+    if shared_fs is False and remapping_string is not None:
         from parsl.data_provider.files import File
 
         for i in remapping_string.split(","):
