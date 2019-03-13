@@ -105,10 +105,10 @@ def WorkQueueThread(tasks={},
             remapping_string = ""
 
             for item in input_files:
-                remapping_string += item[0]+":"+item[1]+","
+                remapping_string += item[0] + ":" + item[1]+","
 
             for item in output_files:
-                remapping_string += item[0]+":"+item[1]+","
+                remapping_string += item[0] + ":" + item[1]+","
 
             if len(input_files) + len(output_files) > 0:
                 remapping_string = "-r " + remapping_string
@@ -304,7 +304,7 @@ class WorkQueueExecutor(ParslExecutor):
         for inp in func_inputs:
             if isinstance(inp, File):
                 new_name = inp.filepath
-                if not inp.filepath in self.used_names:
+                if inp.filepath not in self.used_names:
                     if self.shared_fs is False:
                         new_name = self.create_new_name(os.path.basename(inp.filepath))
                         self.used_names[inp.filepath] = new_name
@@ -315,7 +315,7 @@ class WorkQueueExecutor(ParslExecutor):
         for kwarg, inp in kwargs.items():
             if isinstance(inp, File):
                 new_name = inp.filepath
-                if not inp.filepath in self.used_names:
+                if inp.filepath not in self.used_names:
                     if self.shared_fs is False:
                         new_name = self.create_new_name(os.path.basename(inp.filepath))
                         self.used_names[inp.filepath] = new_name
@@ -338,7 +338,7 @@ class WorkQueueExecutor(ParslExecutor):
         for output in func_outputs:
             if isinstance(output, File):
                 new_name = output.filepath
-                if not output.filepath in self.used_names:
+                if output.filepath not in self.used_names:
                     if self.shared_fs is False:
                         new_name = self.create_new_name(os.path.basename(output.filepath))
                         self.used_names[output.filepath] = new_name
