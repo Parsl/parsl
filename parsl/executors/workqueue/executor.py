@@ -105,10 +105,10 @@ def WorkQueueThread(tasks={},
             remapping_string = ""
 
             for item in input_files:
-                remapping_string += item[0] + ":" + item[1]+","
+                remapping_string += item[0] + ":" + item[1] + ","
 
             for item in output_files:
-                remapping_string += item[0] + ":" + item[1]+","
+                remapping_string += item[0] + ":" + item[1] + ","
 
             if len(input_files) + len(output_files) > 0:
                 remapping_string = "-r " + remapping_string

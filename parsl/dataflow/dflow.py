@@ -495,7 +495,7 @@ class DataFlowKernel(object):
                     potential_f.registered = True
                 if potential_f.is_remote():
                     kwargs[kwarg] = potential_f.stage_in(executor)
- 
+
         newargs = list(args)
         for idx, f in enumerate(newargs):
             if isinstance(f, File):
