@@ -152,6 +152,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_interval = resource_monitoring_interval
 
         self._dfk_channel = None
+        self.logger = None
 
     def start(self):
 
