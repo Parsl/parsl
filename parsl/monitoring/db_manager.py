@@ -3,7 +3,6 @@ import threading
 import queue
 import os
 import time
-from enum import Enum
 
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
@@ -30,26 +29,20 @@ TASK = 'task'            # Task table includes task metadata
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 
-
-class MessageType(Enum):
-
-    # Reports any task related info such as launch, completion etc.
-    TASK_INFO = 0
-
-    # Reports of resource utilization on a per-task basis
-    RESOURCE_INFO = 1
-
-    # Top level workflow information
-    WORKFLOW_INFO = 2
+from parsl.monitoring.message_type import MessageType
 
 
 class Database(object):
+
     if not _sqlalchemy_enabled:
         raise OptionalModuleMissing(['sqlalchemy'],
-                                    "Default database logging requires the sqlalchemy library.")
+                                    ("Default database logging requires the sqlalchemy library."
+                                     " Enable monitoring support with: pip install parsl[monitoring]"))
     if not _sqlalchemy_utils_enabled:
         raise OptionalModuleMissing(['sqlalchemy_utils'],
-                                    "Default database logging requires the sqlalchemy_utils library.")
+                                    ("Default database logging requires the sqlalchemy_utils library."
+                                     " Enable monitoring support with: pip install parsl[monitoring]"))
+
     Base = declarative_base()
 
     def __init__(self,

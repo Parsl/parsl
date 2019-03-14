@@ -8,10 +8,16 @@ import zmq
 
 import queue
 from multiprocessing import Process, Queue
-
 from parsl.utils import RepresentationMixin
-from parsl.monitoring.db_manager import dbm_starter
-from parsl.monitoring.db_manager import MessageType
+
+from parsl.monitoring.message_type import MessageType
+
+try:
+    from parsl.monitoring.db_manager import dbm_starter
+except Exception as e:
+    _db_manager_excepts = e
+else:
+    _db_manager_excepts = None
 
 
 def start_file_logger(filename, name='monitoring', level=logging.DEBUG, format_string=None):
@@ -134,6 +140,12 @@ class MonitoringHub(RepresentationMixin):
         """
         Update docs here.
         """
+        self.logger = None
+        self._dfk_channel = None
+
+        if _db_manager_excepts:
+            raise(_db_manager_excepts)
+
         self.client_address = client_address
         self.client_port_range = client_port_range
 
@@ -150,9 +162,6 @@ class MonitoringHub(RepresentationMixin):
 
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
-
-        self._dfk_channel = None
-        self.logger = None
 
     def start(self):
 
