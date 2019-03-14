@@ -33,7 +33,7 @@ setup(
         'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
         'google_cloud' : ['google-auth', 'google-api-python-client'],
         'gssapi' : ['python-gssapi'],
-        'all' : ['CMRESHandler', 'psutil', 'sqlalchemy', 'sqlalchemy_utils',
+        'all' : ['psutil', 'sqlalchemy', 'sqlalchemy_utils',
                  'dash', 'dash-html-components', 'dash-core-components', 'pandas',
                  'boto3',
                  'kubernetes',
