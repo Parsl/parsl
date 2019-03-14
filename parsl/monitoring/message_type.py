@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class MessageType(Enum):
 
     # Reports any task related info such as launch, completion etc.

@@ -19,6 +19,7 @@ except Exception as e:
 else:
     _db_manager_excepts = None
 
+
 def start_file_logger(filename, name='monitoring', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
 
@@ -161,7 +162,6 @@ class MonitoringHub(RepresentationMixin):
 
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
-
 
     def start(self):
 

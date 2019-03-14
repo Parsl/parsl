@@ -135,7 +135,6 @@ class DataFlowKernel(object):
         }
 
         if self.monitoring:
-            
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  workflow_info)
 
