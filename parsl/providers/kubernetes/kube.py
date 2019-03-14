@@ -65,6 +65,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  max_blocks=10,
                  parallelism=1,
                  worker_init="",
+                 deployment_name=None,
                  user_id=None,
                  group_id=None,
                  run_as_non_root=False,
@@ -85,6 +86,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.parallelism = parallelism
         self.worker_init = worker_init
         self.secret = secret
+        self.deployment_name=deployment_name
         self.user_id = user_id
         self.group_id = group_id
         self.run_as_non_root = run_as_non_root
@@ -95,7 +97,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl"):
         """ Submit a job
         Args:
              - cmd_string  :(String) - Name of the container to initiate
@@ -109,10 +111,14 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
              - job_id: (string) Identifier for the job
         """
         if not self.resources:
-            job_name = "{0}-{1}".format(job_name, time.time()).split(".")[0]
+            cur_timestamp = str(time.time() * 1000).split(".")[0]
+            job_name = "{0}-{1}".format(job_name, cur_timestamp)
 
-            self.deployment_name = '{}-{}-deployment'.format(job_name,
-                                                             str(time.time()).split('.')[0])
+            if not self.deployment_name:
+                self.deployment_name = '{}-deployment'.format(job_name)
+            else:
+                self.deployment_name = '{}-{}-deployment'.format(self.deployment_name,
+                                                                 cur_timestamp)
 
             formatted_cmd = template_string.format(command=cmd_string,
                                                    worker_init=self.worker_init)
@@ -206,7 +212,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
         launch_args = ["-c", "{0}; /app/deploy.sh;".format(cmd_string)]
-        print(launch_args)
 
         volume_mounts = []
         # Create mount paths for the volumes
