@@ -15,7 +15,9 @@ def web_app(db, port):
 
     from parsl.monitoring.web_app.app import app, init_db
 
-    # TODO Find out if db is created after script finalizes or during its execution. If the latter, this is a race condition that needs a fix
+    # TODO Find out if db is created after script finalizes or during its execution.
+    #  If the latter, this is a race condition that needs a fix
+
     if not init_db(db):
         print("Visualization tool failed to initialize. " + db + " hasn't been created yet", file=sys.stderr)
         return
@@ -59,7 +61,7 @@ def cli_run():
 
 
 def run(monitoring_config):
-    db = monitoring_config.eng_link.split('/').pop()
-    port = monitoring_config.web_app_port + 1
+    db = monitoring_config.store.connection_string.split('/').pop()
+    port = monitoring_config.visualization_server.port
 
     web_app(db, port)
