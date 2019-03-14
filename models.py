@@ -13,7 +13,7 @@ class Workflow(db.Model):
     workflow_version = db.Column(db.Text, nullable=True)
     time_began = db.Column(db.DateTime, nullable=False)  # Why not date?
     time_completed = db.Column(db.DateTime)
-    completion_time = db.Column(db.Float)
+    workflow_duration = db.Column(db.Float)
     host = db.Column(db.Text, nullable=False)
     user = db.Column(db.Text, nullable=False)
     rundir = db.Column(db.Text, nullable=False)
