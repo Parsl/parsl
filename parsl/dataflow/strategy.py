@@ -5,10 +5,12 @@ import math
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.dataflow.dflow import DataFlowKernel
+    from parsl.executors.base import ParslExecutor
 
 from typing import Dict
 from typing import Any
 from typing import Callable
+from typing import List
 from typing import Optional
 
 # this is used for testing a class to decide how to
@@ -142,7 +144,7 @@ class Strategy(object):
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
-    def add_executors(self, executors):
+    def add_executors(self, executors: List[ParslExecutor]) -> None:
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
 

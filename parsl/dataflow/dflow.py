@@ -763,7 +763,7 @@ class DataFlowKernel(object):
 
         logger.info("End of summary")
 
-    def add_executors(self, executors):
+    def add_executors(self, executors: List[ParslExecutor]) -> None:
         for executor in executors:
             executor.run_dir = self.run_dir
             if hasattr(executor, 'provider'):
