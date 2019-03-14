@@ -1,7 +1,7 @@
 Quickstart
 ==========
 
-To try Parsl now (without installing any code) experiment with our `hosted tutorial notebooks <http://try.parsl-project.org>`_.
+To try Parsl now (without installing any code) experiment with our `hosted tutorial notebooks <https://mybinder.org/v2/gh/Parsl/parsl-tutorial/master>`_.
 
 
 Installation
@@ -13,6 +13,10 @@ Parsl is available on PyPI, but first make sure you have Python3.5+
 
 Parsl has been tested on Linux and MacOS.
 
+.. note:: As of Parsl v0.7.2 we are switching to an opt-in model for anonymous usage tracking. To help support the
+   Parsl project we request that users opt-in where possible by setting ``PARSL_TRACKING=true`` in their environment
+   or by setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). To read more about
+   what information is collected and how it is used see :ref:`label-usage-tracking`.
 
 Installation using Pip
 ^^^^^^^^^^^^^^^^^^^^^^
