@@ -123,6 +123,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     heartbeat_period : int
         Number of seconds after which a heartbeat message indicating liveness is sent to the
         counterpart (interchange, manager). Default:30s
+
+    poll_period : int
+        Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
+        trades performance for cpu efficiency. Default: 10ms
     """
 
     def __init__(self,
@@ -140,6 +144,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  max_workers=float('inf'),
                  heartbeat_threshold=120,
                  heartbeat_period=30,
+                 poll_period=10,
                  suppress_failure=False,
                  managed=True) -> None:
 
@@ -166,12 +171,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
+        self.poll_period = poll_period
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-c {cores_per_worker} "
+                               "--poll {poll_period} "
                                "--task_url={task_url} "
                                "--result_url={result_url} "
                                "--logdir={logdir} "
@@ -195,6 +202,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
+                                       poll_period=self.poll_period,
                                        logdir="{}/{}".format(self.run_dir, self.label))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
@@ -361,6 +369,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                           "logdir": "{}/{}".format(self.run_dir, self.label),
                                           "suppress_failure": self.suppress_failure,
                                           "heartbeat_threshold": self.heartbeat_threshold,
+                                          "poll_period": self.poll_period,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
         )

@@ -142,6 +142,10 @@ class Strategy(object):
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
+    def add_executors(self, executors):
+        for executor in executors:
+            self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
+
     def _strategy_noop(self, tasks, kind: str =None) -> None:
         """Do nothing.
 
