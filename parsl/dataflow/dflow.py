@@ -30,7 +30,6 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
-from parsl.monitoring.db_manager import MessageType
 
 
 logger = logging.getLogger(__name__)
@@ -89,6 +88,7 @@ class DataFlowKernel(object):
 
         self.monitoring = config.monitoring
         if self.monitoring:
+            from parsl.monitoring.db_manager import MessageType
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.monitoring.start()
@@ -135,6 +135,7 @@ class DataFlowKernel(object):
         }
 
         if self.monitoring:
+            
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  workflow_info)
 
