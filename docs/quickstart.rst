@@ -13,6 +13,10 @@ Parsl is available on PyPI, but first make sure you have Python3.5+
 
 Parsl has been tested on Linux and MacOS.
 
+.. note:: As of Parsl v0.7.2 we are switching to an opt-in model for anonymous usage tracking. We request that our
+   users volunteer to send us this information by setting ``PARSL_TRACKING=true`` in your environment or by
+   setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). To read more about
+   what information is collected and how it is used see :ref:`label-usage-tracking`.
 
 Installation using Pip
 ^^^^^^^^^^^^^^^^^^^^^^
