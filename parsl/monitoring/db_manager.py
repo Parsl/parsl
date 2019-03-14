@@ -44,12 +44,16 @@ class MessageType(Enum):
 
 
 class Database(object):
+
     if not _sqlalchemy_enabled:
         raise OptionalModuleMissing(['sqlalchemy'],
-                                    "Default database logging requires the sqlalchemy library.")
+                                    ("Default database logging requires the sqlalchemy library."
+                                     " Enable monitoring support with: pip install parsl[monitoring]"))
     if not _sqlalchemy_utils_enabled:
         raise OptionalModuleMissing(['sqlalchemy_utils'],
-                                    "Default database logging requires the sqlalchemy_utils library.")
+                                    ("Default database logging requires the sqlalchemy_utils library."
+                                     " Enable monitoring support with: pip install parsl[monitoring]"))
+
     Base = declarative_base()
 
     def __init__(self,
