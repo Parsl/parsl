@@ -10,6 +10,14 @@ import queue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 
+from parsl.monitoring.message_type import MessageType
+
+try:
+    from parsl.monitoring.db_manager import dbm_starter
+except Exception as e:
+    _db_manager_excepts = e
+else:
+    _db_manager_excepts = None
 
 def start_file_logger(filename, name='monitoring', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
@@ -133,8 +141,9 @@ class MonitoringHub(RepresentationMixin):
         """
         self.logger = None
         self._dfk_channel = None
-        from parsl.monitoring.db_manager import dbm_starter
-        from parsl.monitoring.db_manager import MessageType
+
+        if _db_manager_excepts:
+            raise(_db_manager_excepts)
 
         self.client_address = client_address
         self.client_port_range = client_port_range
