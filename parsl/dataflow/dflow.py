@@ -98,7 +98,7 @@ class DataFlowKernel(object):
             self.monitoring.start()
 
         self.time_began = datetime.datetime.now()
-        self.time_completed = None
+        self.time_completed = None # type: Optional[datetime.datetime]
         self.run_id = str(uuid4())
 
         # TODO: make configurable

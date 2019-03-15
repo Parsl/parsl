@@ -11,6 +11,9 @@ from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 
 from parsl.monitoring.message_type import MessageType
+from typing import Optional
+
+_db_manager_excepts: Optional[Exception]
 
 try:
     from parsl.monitoring.db_manager import dbm_starter

@@ -4,6 +4,8 @@ import queue
 import os
 import time
 
+from typing import Any
+
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
 
@@ -43,7 +45,10 @@ class Database(object):
                                     ("Default database logging requires the sqlalchemy_utils library."
                                      " Enable monitoring support with: pip install parsl[monitoring]"))
 
-    Base = declarative_base()
+    # alas, this Any annotation means that we cannot do much type-checking
+    # on the behaviour of classes subclassing Base: because Base is
+    # declared to accept Anything.
+    Base = declarative_base() # type: Any
 
     def __init__(self,
                  url='sqlite:///monitoring.db',
