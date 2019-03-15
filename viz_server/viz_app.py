@@ -9,8 +9,14 @@ We need to make this a function that takes the monitoring db path
 and does whatever logging it needs to do
 """
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///monitoring.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+def initialize_db_app(db_path="sqlite:///monitoring.db", track_mods=False):
 
-db = SQLAlchemy(app)
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_path
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = track_mods
+
+    global db = SQLAlchemy(app)
+
+    return app, db
+
+
