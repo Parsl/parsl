@@ -33,7 +33,7 @@ class Config(RepresentationMixin):
     data_management_max_threads : int, optional
         Maximum number of threads to allocate for the data manager to use for managing input and output transfers.
         Default is 10.
-    monitoring_config : MonitoringConfig, optional
+    monitoring : MonitoringHub, optional
         The config to use for database monitoring. Default is None which does not log to a database.
     lazy_errors : bool, optional
         If True, errors from task failures will not be raised until `future.result()` is called. Otherwise, they will
@@ -62,7 +62,7 @@ class Config(RepresentationMixin):
                  retries: Optional[int] =0,
                  run_dir: Optional[str] ='runinfo',
                  strategy: Optional[str] ='simple',
-                 monitoring_config: Optional[Any] =None,
+                 monitoring: Optional[Any] =None,
                  usage_tracking: Optional[bool] =False) -> None:
         if executors is None:
             executors = [ThreadPoolExecutor()]
@@ -88,7 +88,7 @@ class Config(RepresentationMixin):
         self.run_dir = run_dir
         self.strategy = strategy
         self.usage_tracking = usage_tracking
-        self.monitoring_config = monitoring_config
+        self.monitoring = monitoring
 
     @property
     def executors(self):
