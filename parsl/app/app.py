@@ -3,6 +3,7 @@
 The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
 import logging
+from abc import ABCMeta, abstractmethod
 from inspect import getsource
 from hashlib import md5
 from inspect import signature
@@ -12,7 +13,7 @@ from parsl.app.errors import InvalidAppTypeError
 logger = logging.getLogger(__name__)
 
 
-class AppBase(object):
+class AppBase(metaclass=ABCMeta):
     """This is the base class that defines the two external facing functions that an App must define.
 
     The  __init__ () which is called when the interpreter sees the definition of the decorated
@@ -69,9 +70,9 @@ class AppBase(object):
         self.outputs = params['outputs'].default if 'outputs' in params else []
         self.inputs = params['inputs'].default if 'inputs' in params else []
 
+    @abstractmethod
     def __call__(self, *args, **kwargs):
-        """The __call__ function must be implemented in the subclasses."""
-        raise NotImplementedError
+        pass
 
 
 def app_wrapper(func):
