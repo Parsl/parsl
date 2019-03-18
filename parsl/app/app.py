@@ -75,17 +75,6 @@ class AppBase(metaclass=ABCMeta):
         pass
 
 
-def app_wrapper(func):
-
-    def wrapper(*args, **kwargs):
-        logger.debug("App wrapper begins")
-        x = func(*args, **kwargs)
-        logger.debug("App wrapper ends")
-        return x
-
-    return wrapper
-
-
 def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
     """The App decorator function.
 
