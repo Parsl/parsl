@@ -87,7 +87,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         '''
 
-        logging.debug("Checking status of: {0}".format(job_ids))
+        logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
 
             if self.resources[job_id]['proc']:

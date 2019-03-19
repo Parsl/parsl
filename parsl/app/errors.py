@@ -112,8 +112,8 @@ class BadStdStreamFile(ParslError):
         self._exception = exception
 
     def __repr__(self):
-        return "FilePath:[{}] Exception:{}".format(self._outputs,
-                                                   self._exception)
+        return "FilePath: [{}] Exception: {}".format(self._outputs,
+                                                     self._exception)
 
     def __str__(self):
         return self.__repr__()
