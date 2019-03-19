@@ -1,6 +1,21 @@
 Changelog
 =========
 
+Parsl 0.7.2
+-----------
+
+Released on Mar 14th, 2019
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* `Monitoring`: Support for reporting monitoring data to a local sqlite database is now available.
+* Parsl is switching to an opt-in model for anonymous usage tracking. Read more here: :ref:`label-usage-tracking`.
+* `bash_app` now supports specification of write modes for `stdout` and `stderr`.
+* Persistent volume support added to `Kubernetes` provider.
+* Scaling recommendations from study on Bluewaters is now available in the userguide.
+
+
 Parsl 0.7.1
 -----------
 
