@@ -116,14 +116,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
 
             if not self.deployment_name:
                 self.deployment_name = '{}-deployment'.format(job_name)
-            else:
-                self.deployment_name = '{}-{}-deployment'.format(self.deployment_name,
-                                                                 cur_timestamp)
 
             formatted_cmd = template_string.format(command=cmd_string,
                                                    worker_init=self.worker_init)
 
-            print("Creating replicas :", self.init_blocks)
             self.deployment_obj = self._create_deployment_object(job_name,
                                                                  self.image,
                                                                  self.deployment_name,
