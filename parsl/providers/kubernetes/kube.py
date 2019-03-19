@@ -86,7 +86,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.parallelism = parallelism
         self.worker_init = worker_init
         self.secret = secret
-        self.deployment_name=deployment_name
+        self.deployment_name = deployment_name
         self.user_id = user_id
         self.group_id = group_id
         self.run_as_non_root = run_as_non_root
