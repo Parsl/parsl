@@ -577,9 +577,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
              NotImplementedError
         """
 
-        logger.warning("Attempting HighThroughputExecutor shutdown")
+        logger.info("Attempting HighThroughputExecutor shutdown")
         # self.outgoing_q.close()
         # self.incoming_q.close()
         self.queue_proc.terminate()
-        logger.warning("Finished HighThroughputExecutor shutdown attempt")
+        logger.info("Finished HighThroughputExecutor shutdown attempt")
         return True
