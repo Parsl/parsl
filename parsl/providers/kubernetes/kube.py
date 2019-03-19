@@ -115,23 +115,26 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             job_name = "{0}-{1}".format(job_name, cur_timestamp)
 
             if not self.deployment_name:
-                self.deployment_name = '{}-deployment'.format(job_name)
+                deployment_name = '{}-deployment'.format(job_name)
+            else:
+                deployment_name = '{}-{}-deployment'.format(self.deployment_name,
+                                                            cur_timestamp)
 
             formatted_cmd = template_string.format(command=cmd_string,
                                                    worker_init=self.worker_init)
 
             self.deployment_obj = self._create_deployment_object(job_name,
                                                                  self.image,
-                                                                 self.deployment_name,
+                                                                 deployment_name,
                                                                  cmd_string=formatted_cmd,
                                                                  replicas=self.init_blocks,
                                                                  volumes=self.persistent_volumes)
-            logger.debug("Deployment name :{}".format(self.deployment_name))
+            logger.debug("Deployment name :{}".format(deployment_name))
             self._create_deployment(self.deployment_obj)
-            self.resources[self.deployment_name] = {'status': 'RUNNING',
-                                                    'pods': self.init_blocks}
+            self.resources[deployment_name] = {'status': 'RUNNING',
+                                               'pods': self.init_blocks}
 
-        return self.deployment_name
+        return deployment_name
 
     def status(self, job_ids):
         """ Get the status of a list of jobs identified by the job identifiers
