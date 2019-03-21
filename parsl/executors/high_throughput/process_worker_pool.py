@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 import platform
-# import random
 import threading
 import pickle
 import time
@@ -317,7 +316,7 @@ class Manager(object):
                 try:
                     os.mkdir("NAMESPACE/{}".format(worker_id))
                     shutil.copyfile(worker_py_path, "NAMESPACE/{}/funcx_worker.py".format(worker_id))
-                except Exception as e:
+                except Exception:
                     pass  # Assuming the directory already exists.
 
             if self.mode == "no_container":
