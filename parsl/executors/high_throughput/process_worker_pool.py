@@ -4,7 +4,6 @@ import argparse
 import logging
 import os
 import sys
-import sys
 import platform
 # import random
 import threading
@@ -16,13 +15,11 @@ import zmq
 import math
 import json
 import subprocess
-
-from parsl.version import VERSION as PARSL_VERSION
-from parsl.app.errors import RemoteExceptionWrapper
 import multiprocessing
 
-from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
-from ipyparallel.serialize import serialize_object
+from parsl.executors.high_throughput.funcx_worker import funcx_worker
+from parsl.version import VERSION as PARSL_VERSION
+
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
@@ -57,6 +54,7 @@ class Manager(object):
                  heartbeat_period=30,
                  logdir=None,
                  debug=False,
+                 mode="singularity_reuse",
                  poll_period=10):
         """
         Parameters
@@ -84,6 +82,11 @@ class Manager(object):
 
         heartbeat_period : int
              Number of seconds after which a heartbeat message is sent to the interchange
+        mode : str
+             Pick between 3 supported modes for the worker:
+              1. no_container : Worker launched without containers
+              2. singularity_reuse : Worker launched inside a singularity container that will be reused
+              3. singularity_single_use : Each worker and task runs inside a new container instance.
 
         poll_period : int
              Timeout period used by the manager in milliseconds. Default: 10ms
@@ -109,6 +112,7 @@ class Manager(object):
 
         self.uid = uid
 
+        self.mode = mode
         cores_on_node = multiprocessing.cpu_count()
         self.max_workers = max_workers
         self.worker_count = min(max_workers,
@@ -281,28 +285,6 @@ class Manager(object):
                     items = []
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
-        """
-        socks = dict(poller.poll(timeout=self.poll_period))
-
-        if self.funcx_result_queue in socks and socks[self.funcx_result_queue] == zmq.POLLIN:
-            # r = self.funcx_result_queue.recv_multipart()
-            r = self.funcx_result_queue.recv_pyobj()
-            logger.debug("[RESULT_PUSH_THREAD] FUNCX from worker {}".format(r))
-            self.funcx_result_queue.send(b'ACK')
-            items.append(r)
-            logger.debug("[RESULT_PUSH_THREAD] Received task {}".format(r))
-        else:
-            logger.debug("[RESULT_PUSH_THREAD] No tasks to send")
-
-        # If we have reached poll_period duration or timer has expired, we send results
-        if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
-            last_beat = time.time()
-            if items:
-                self.result_outgoing.send_multipart(items)
-                items = []
-
-        logger.critical("[RESULT_PUSH_THREAD] Exiting")
-        """
 
     def start(self):
         """ Start the worker processes.
@@ -318,27 +300,33 @@ class Manager(object):
         # copy that file over the directory '.' and then have the container run with pwd visible
         # as an initial cut, while we resolve possible issues.
 
-        for worker_id in range(1): #self.worker_count):
-            #p = multiprocessing.Process(target=funcx_worker, args=(worker_id,
-            #                                                       self.uid,
-            #                                                       "tcp://localhost:{}".format(self.internal_worker_port),
-            #                                                       "tcp://localhost:50002",
-            #), kwargs={'debug': self.debug,
-            #           'logdir': self.logdir})
+        for worker_id in range(self.worker_count):
+            if self.mode == "no_container":
+                p = multiprocessing.Process(target=funcx_worker,
+                                            args=(worker_id,
+                                                  self.uid,
+                                                  "tcp://localhost:{}".format(self.internal_worker_port),
+                                                  ),
+                                            kwargs={'debug': self.debug,
+                                                    'logdir': self.logdir})
 
+                p.start()
+                self.procs[worker_id] = p
+            elif self.mode == "singularity_reuse":
+                sys_cmd = ("funcx_worker.py --worker_id {} "
+                           "--pool_id {} --task_url {} "
+                           "--logdir {} ")
+                sys_cmd = sys_cmd.format(worker_id,
+                                         self.uid,
+                                         "tcp://localhost:{}".format(self.internal_worker_port),
+                                         "tcp://localhost:50002", self.logdir)
 
-            #p.start()
-            #self.procs[worker_id] = p
+                logger.debug("Singularity reuse launch cmd: {}".format(sys_cmd))
+                proc = subprocess.Popen(sys_cmd, shell=True)
+                self.procs[worker_id] = proc
 
-            sys_cmd = "python3.7 /home/ubuntu/sing-run/funcx_worker.py --worker_id {} --pool_id {} --task_url {} --result_url {} --logdir {}".format(worker_id, self.uid, "tcp://localhost:{}".format(self.internal_worker_port), "tcp://localhost:50002", self.logdir)
-
-            logger.info("WORKER LAUNCH CMD: " + sys_cmd)
-            f = open("worker_error.txt", "w")
-            g = open("worder_output.txt", "w")
-            proc = subprocess.Popen(sys_cmd, stderr = f, stdout=g, shell=True)
-            # proc = subprocess.call("touch testing.txt", shell=True)
-            self.procs[worker_id] = proc
-
+            elif self.mode == "singularity_single_use":
+                raise Exception("Not supported")
 
         logger.debug("Manager synced with workers")
 
@@ -372,137 +360,6 @@ class Manager(object):
         logger.info("process_worker_pool ran for {} seconds".format(delta))
         return
 
-
-def execute_task(bufs):
-    """Deserialize the buffer and execute the task.
-
-    Returns the result or throws exception.
-    """
-    user_ns = locals()
-    user_ns.update({'__builtins__': __builtins__})
-
-    f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
-
-    # We might need to look into callability of the function from itself
-    # since we change it's name in the new namespace
-    prefix = "parsl_"
-    fname = prefix + "f"
-    argname = prefix + "args"
-    kwargname = prefix + "kwargs"
-    resultname = prefix + "result"
-
-    user_ns.update({fname: f,
-                    argname: args,
-                    kwargname: kwargs,
-                    resultname: resultname})
-
-    code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                           argname, kwargname)
-    try:
-        # logger.debug("[RUNNER] Executing: {0}".format(code))
-        exec(code, user_ns, user_ns)
-
-    except Exception as e:
-        logger.warning("Caught exception; will raise it: {}".format(e), exc_info=True)
-        raise e
-
-    else:
-        # logger.debug("[RUNNER] Result: {0}".format(user_ns.get(resultname)))
-        return user_ns.get(resultname)
-
-
-def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
-    """
-
-    Put request token into queue
-    Get task from task_queue
-    Pop request from queue
-    Put result into result_queue
-    """
-    start_file_logger('{}/{}/worker_{}.log'.format(args.logdir, pool_id, worker_id),
-                      worker_id,
-                      name="worker_log",
-                      level=logging.DEBUG if args.debug else logging.INFO)
-
-    # Sync worker with master
-    logger.info('Worker {} started'.format(worker_id))
-    if args.debug:
-        logger.debug("Debug logging enabled")
-
-    while True:
-        worker_queue.put(worker_id)
-
-        # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
-        req = task_queue.get()
-        tid = req['task_id']
-        logger.info("Received task {}".format(tid))
-
-        try:
-            worker_queue.get()
-        except queue.Empty:
-            logger.warning("Worker ID: {} failed to remove itself from ready_worker_queue".format(worker_id))
-            pass
-
-        try:
-            result = execute_task(req['buffer'])
-            serialized_result = serialize_object(result)
-        except Exception:
-            result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
-        else:
-            result_package = {'task_id': tid, 'result': serialized_result}
-
-        logger.info("Completed task {}".format(tid))
-        pkl_package = pickle.dumps(result_package)
-        result_queue.put(pkl_package)
-
-
-"""
-def funcx_worker(worker_id, pool_id, task_url, result_url, logdir, debug=False):
-
-
-    Funcx worker will use the REP sockets to:
-         task = recv ()
-         result = execute(task)
-         send(result)
-
-    start_file_logger('{}/{}/funcx_worker_{}.log'.format(logdir, pool_id, worker_id),
-                      worker_id,
-                      name="worker_log",
-                      level=logging.DEBUG if debug else logging.INFO)
-
-    # Sync worker with master
-    logger.info('Worker {} started'.format(worker_id))
-    if debug:
-        logger.debug("Debug logging enabled")
-
-    context = zmq.Context()
-
-    funcx_worker_socket = context.socket(zmq.REP)
-    funcx_worker_socket.connect(task_url)
-    logger.debug("Connecting to {}".format(task_url))
-
-    while True:
-        b_task_id, *buf = funcx_worker_socket.recv_multipart()
-        # msg = task_socket.recv_pyobj()
-        logger.debug("Got buffer : {}".format(buf))
-        task_id = int.from_bytes(b_task_id, "little")
-
-        logger.info("Received task {}".format(task_id))
-
-        try:
-            result = execute_task(buf)
-            serialized_result = serialize_object(result)
-        except Exception:
-            result_package = {'task_id': task_id, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
-            logger.debug("Got exception something")
-        else:
-            result_package = {'task_id': task_id, 'result': serialized_result}
-
-        logger.info("Completed task {}".format(task_id))
-        pkl_package = pickle.dumps(result_package)
-
-        funcx_worker_socket.send_multipart([pkl_package])
-"""
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
@@ -575,6 +432,9 @@ if __name__ == "__main__":
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
     parser.add_argument("--poll", default=10,
                         help="Poll period used in milliseconds")
+    parser.add_argument("--mode", default="singularity_reuse",
+                        help=("Select the mode of operation from "
+                              "(no_container, singularity_reuse, singularity_single_use"))
     parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
 
@@ -609,6 +469,7 @@ if __name__ == "__main__":
                           heartbeat_period=int(args.hb_period),
                           logdir=args.logdir,
                           debug=args.debug,
+                          mode=args.mode,
                           poll_period=int(args.poll))
         manager.start()
 
