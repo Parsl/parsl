@@ -46,11 +46,10 @@ class File(str):
         self.scheme = parsed_url.scheme if parsed_url.scheme else 'file'
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
-        self.registered = False
-        self.shared = False
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {}
+        self.is_a_parsl_file = True
         if self.scheme == 'globus':
             self.dman.add_file(self)
 
@@ -112,9 +111,6 @@ class File(str):
 
     def get_data_future(self, executor):
         return self.data_future.get(executor)
-
-    def is_registered(self):
-        return self.registered
 
     def __getstate__(self):
         """Override the default pickling method.

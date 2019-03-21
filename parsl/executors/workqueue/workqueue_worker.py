@@ -3,6 +3,13 @@ import pickle
 import logging
 from ipyparallel.serialize import unpack_apply_message
 
+
+def check_file(parsl_file_obj, mapping):
+    if hasattr(parsl_file_obj, "is_a_parsl_file"):
+        if parsl_file_obj.filepath in mapping:
+            parsl_file_obj.local_path = mapping[parsl_file_obj.filepath]
+
+
 if __name__ == "__main__":
     name = "parsl"
     logger = logging.getLogger(name)
@@ -41,7 +48,6 @@ if __name__ == "__main__":
     mapping = {}
 
     if shared_fs is False and remapping_string is not None:
-        from parsl.data_provider.files import File
 
         for i in remapping_string.split(","):
             split_mapping = i.split(":")
@@ -49,25 +55,17 @@ if __name__ == "__main__":
 
         func_inputs = kwargs.get("inputs", [])
         for inp in func_inputs:
-            if isinstance(inp, File):
-                if inp.filepath in mapping:
-                    inp.local_path = mapping[inp.filepath]
+            check_file(inp, mapping)
 
         for kwarg, potential_f in kwargs.items():
-            if isinstance(potential_f, File):
-                if potential_f.filepath in mapping:
-                    potential_f.local_path = mapping[potential_f.filepath]
+            check_file(potential_f, mapping)
 
         for inp in args:
-            if isinstance(inp, File):
-                if inp.filepath in mapping:
-                    inp.local_path = mapping[inp.filepath]
+            check_file(inp, mapping)
 
         func_outputs = kwargs.get("outputs", [])
         for output in func_outputs:
-            if isinstance(output, File):
-                if output.filepath in mapping:
-                    output.local_path = mapping[output.filepath]
+            check_file(output, mapping)
 
     prefix = "parsl_"
     fname = prefix + "f"

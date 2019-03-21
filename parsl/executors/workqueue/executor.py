@@ -5,13 +5,15 @@ from concurrent.futures import Future
 
 import os
 import pickle
-import shutil
+# import shutil
+# import importlib
 
 from ipyparallel.serialize import pack_apply_message
 
 from parsl.executors.errors import *
 from parsl.executors.base import ParslExecutor
-from parsl.data_provider.files import File
+# from parsl.data_provider.files import File
+from parsl.executors.workqueue import workqueue_worker
 
 from work_queue import *
 
@@ -22,6 +24,7 @@ def WorkQueueThread(tasks={},
                     task_queue=deque,
                     queue_lock=threading.Lock(),
                     tasks_lock=threading.Lock(),
+                    see_worker_output=False,
                     port=50000,
                     launch_cmd=None,
                     data_dir=".",
@@ -95,8 +98,11 @@ def WorkQueueThread(tasks={},
 
             # TODO Make this general
             # full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
-            script_name = "workqueue_worker.py"
-            full_script_name = shutil.which(script_name)
+            full_script_name = workqueue_worker.__file__
+            script_name = full_script_name.split("/")[-1]
+
+            # script_name = "workqueue_worker.py"
+            # full_script_name = shutil.which(script_name)
             if full_script_name is None:
                 logger.error("Unable to find script {} on path, skipping task {}".format(script_name, parsl_id))
                 # logger.error("Unable to find script {} on path, skipping task {}, setting future result as an exception".format(script_name, parsl_id))
@@ -129,6 +135,7 @@ def WorkQueueThread(tasks={},
                     t.specify_environment_variable(var, env[var])
 
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
+            # t.specify_file(full_file_obj_name, file_obj_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
 
@@ -171,6 +178,9 @@ def WorkQueueThread(tasks={},
                     # Should probably do something smarter for this later
                     del wq_to_parsl[wq_tid]
                     continue
+
+                if see_worker_output:
+                    print(t.output)
                 result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
                 logger.debug("Looking for result in {}".format(result_loc))
                 f = open(result_loc, "rb")
@@ -234,6 +244,8 @@ class WorkQueueExecutor(ParslExecutor):
         self.shared_fs = shared_fs
         self.working_dir = working_dir
         self.used_names = {}
+        self.shared_files = set()
+        self.registered_files = set()
 
         if self.project_password is not None and self.project_password_file is not None:
             logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
@@ -279,6 +291,23 @@ class WorkQueueExecutor(ParslExecutor):
         self.master_thread.daemon = True
         self.master_thread.start()
 
+    def create_name_tuple(self, parsl_file_obj, in_or_out):
+        new_name = parsl_file_obj.filepath
+        if parsl_file_obj.filepath not in self.used_names:
+            if self.shared_fs is False:
+                new_name = self.create_new_name(os.path.basename(parsl_file_obj.filepath))
+                self.used_names[parsl_file_obj.filepath] = new_name
+        else:
+            new_name = self.used_names[parsl_file_obj.filepath]
+        file_is_shared = False
+        if parsl_file_obj in self.registered_files:
+            file_is_shared = True
+            if parsl_file_obj not in self.shared_files:
+                self.shared_files.add(parsl_file_obj)
+        else:
+            self.registered_files.add(parsl_file_obj)
+        return (parsl_file_obj.filepath, new_name, file_is_shared, in_or_out)
+
     def create_new_name(self, file_name):
         new_name = file_name
         index = 0
@@ -302,49 +331,21 @@ class WorkQueueExecutor(ParslExecutor):
 
         func_inputs = kwargs.get("inputs", [])
         for inp in func_inputs:
-            if isinstance(inp, File):
-                new_name = inp.filepath
-                if inp.filepath not in self.used_names:
-                    if self.shared_fs is False:
-                        new_name = self.create_new_name(os.path.basename(inp.filepath))
-                        self.used_names[inp.filepath] = new_name
-                else:
-                    new_name = self.used_names[inp.filepath]
-                input_files.append((inp.filepath, new_name, inp.shared, "in"))
+            if hasattr(inp, "is_a_parsl_file"):
+                input_files.append(self.create_name_tuple(inp, "in"))
 
         for kwarg, inp in kwargs.items():
-            if isinstance(inp, File):
-                new_name = inp.filepath
-                if inp.filepath not in self.used_names:
-                    if self.shared_fs is False:
-                        new_name = self.create_new_name(os.path.basename(inp.filepath))
-                        self.used_names[inp.filepath] = new_name
-                else:
-                    new_name = self.used_names[inp.filepath]
-                input_files.append((inp.filepath, new_name, inp.shared, "in"))
+            if hasattr(inp, "is_a_parsl_file"):
+                input_files.append(self.create_name_tuple(inp, "in"))
 
         for inp in args:
-            if isinstance(inp, File):
-                new_name = inp.filepath
-                if not inp.task_path:
-                    if self.shared_fs is False:
-                        new_name = self.create_new_name(os.path.basename(inp.filepath))
-                        self.used_names[inp.filepath] = new_name
-                else:
-                    new_name = self.used_names[inp.filepath]
-                input_files.append((inp.filepath, new_name, inp.shared, "in"))
+            if hasattr(inp, "is_a_parsl_file"):
+                input_files.append(self.create_name_tuple(inp, "in"))
 
         func_outputs = kwargs.get("outputs", [])
         for output in func_outputs:
-            if isinstance(output, File):
-                new_name = output.filepath
-                if output.filepath not in self.used_names:
-                    if self.shared_fs is False:
-                        new_name = self.create_new_name(os.path.basename(output.filepath))
-                        self.used_names[output.filepath] = new_name
-                else:
-                    new_name = self.used_names[output.filepath]
-                output_files.append((output.filepath, new_name, output.shared, "in"))
+            if hasattr(output, "is_a_parsl_file"):
+                input_files.append(self.create_name_tuple(output, "out"))
 
         fu = Future()
         self.tasks_lock.acquire()
