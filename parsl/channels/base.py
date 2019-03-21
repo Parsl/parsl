@@ -58,7 +58,7 @@ class Channel(metaclass=ABCMeta):
 
     @abstractmethod
     def execute_no_wait(self, cmd, walltime, envs={}, *args, **kwargs):
-        ''' Optional. This is infrequently used.
+        ''' Execute asynchronousely without waiting for exitcode
 
         Args:
             - cmd (string): Command string to execute over the channel
@@ -68,7 +68,7 @@ class Channel(metaclass=ABCMeta):
             - envs (dict) : Environment variables to push to the remote side
 
         Returns:
-            - (exit_code(None), stdout, stderr) (int, io_thing, io_thing)
+            - the type of return value is channel specific
         '''
         pass
 

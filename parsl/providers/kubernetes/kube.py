@@ -65,6 +65,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  max_blocks=10,
                  parallelism=1,
                  worker_init="",
+                 deployment_name=None,
                  user_id=None,
                  group_id=None,
                  run_as_non_root=False,
@@ -85,6 +86,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.parallelism = parallelism
         self.worker_init = worker_init
         self.secret = secret
+        self.deployment_name = deployment_name
         self.user_id = user_id
         self.group_id = group_id
         self.run_as_non_root = run_as_non_root
@@ -95,7 +97,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl"):
         """ Submit a job
         Args:
              - cmd_string  :(String) - Name of the container to initiate
@@ -109,27 +111,30 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
              - job_id: (string) Identifier for the job
         """
         if not self.resources:
-            job_name = "{0}-{1}".format(job_name, time.time()).split(".")[0]
+            cur_timestamp = str(time.time() * 1000).split(".")[0]
+            job_name = "{0}-{1}".format(job_name, cur_timestamp)
 
-            self.deployment_name = '{}-{}-deployment'.format(job_name,
-                                                             str(time.time()).split('.')[0])
+            if not self.deployment_name:
+                deployment_name = '{}-deployment'.format(job_name)
+            else:
+                deployment_name = '{}-{}-deployment'.format(self.deployment_name,
+                                                            cur_timestamp)
 
             formatted_cmd = template_string.format(command=cmd_string,
                                                    worker_init=self.worker_init)
 
-            print("Creating replicas :", self.init_blocks)
             self.deployment_obj = self._create_deployment_object(job_name,
                                                                  self.image,
-                                                                 self.deployment_name,
+                                                                 deployment_name,
                                                                  cmd_string=formatted_cmd,
                                                                  replicas=self.init_blocks,
                                                                  volumes=self.persistent_volumes)
-            logger.debug("Deployment name :{}".format(self.deployment_name))
+            logger.debug("Deployment name :{}".format(deployment_name))
             self._create_deployment(self.deployment_obj)
-            self.resources[self.deployment_name] = {'status': 'RUNNING',
-                                                    'pods': self.init_blocks}
+            self.resources[deployment_name] = {'status': 'RUNNING',
+                                               'pods': self.init_blocks}
 
-        return self.deployment_name
+        return deployment_name
 
     def status(self, job_ids):
         """ Get the status of a list of jobs identified by the job identifiers
@@ -206,7 +211,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
         launch_args = ["-c", "{0}; /app/deploy.sh;".format(cmd_string)]
-        print(launch_args)
 
         volume_mounts = []
         # Create mount paths for the volumes
