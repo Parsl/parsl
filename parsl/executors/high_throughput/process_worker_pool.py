@@ -14,6 +14,7 @@ import uuid
 import zmq
 import math
 import json
+import shutil
 import subprocess
 import multiprocessing
 
@@ -300,7 +301,26 @@ class Manager(object):
         # copy that file over the directory '.' and then have the container run with pwd visible
         # as an initial cut, while we resolve possible issues.
 
+        orig_location = os.getcwd()
+
+        if self.mode.startswith("singularity"):
+            worker_py_path = shutil.which("funcx_worker.py")
+
+            try:
+                os.mkdir("NAMESPACE")
+            except Exception as e:
+                logger.error("Error creating NAMESPACE: {}".format(e))
+                pass  # Assuming the directory already exists.
+
         for worker_id in range(self.worker_count):
+
+            if self.mode.startswith("singularity"):
+                try:
+                    os.mkdir("NAMESPACE/{}".format(worker_id))
+                    shutil.copyfile.(worker_py_path, "NAMESPACE/{}/funcx_worker.py".format(worker_id))
+                except Exception as e:
+                    pass  # Assuming the directory already exists.
+
             if self.mode == "no_container":
                 p = multiprocessing.Process(target=funcx_worker,
                                             args=(worker_id,
@@ -313,7 +333,9 @@ class Manager(object):
                 p.start()
                 self.procs[worker_id] = p
             elif self.mode == "singularity_reuse":
-                sys_cmd = ("funcx_worker.py --worker_id {} "
+
+                os.chdir("NAMESPACE/{}".format(worker_id))
+                sys_cmd = ("singularity run /home/ubuntu/sing-run/sing-run.simg funcx_worker.py --worker_id {} "
                            "--pool_id {} --task_url {} "
                            "--logdir {} ")
                 sys_cmd = sys_cmd.format(worker_id,
@@ -336,6 +358,9 @@ class Manager(object):
                                                       args=(self._kill_event,))
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
+
+        if self.mode.startswith("singularity"):
+            os.chdir(orig_location)
 
         logger.info("Loop start")
 
