@@ -300,7 +300,6 @@ class Manager(object):
         # @Tyler, we should do a `which funcx_worker.py` [note: not entry point, this must be a script]
         # copy that file over the directory '.' and then have the container run with pwd visible
         # as an initial cut, while we resolve possible issues.
-
         orig_location = os.getcwd()
 
         if self.mode.startswith("singularity"):
@@ -317,7 +316,7 @@ class Manager(object):
             if self.mode.startswith("singularity"):
                 try:
                     os.mkdir("NAMESPACE/{}".format(worker_id))
-                    shutil.copyfile.(worker_py_path, "NAMESPACE/{}/funcx_worker.py".format(worker_id))
+                    shutil.copyfile(worker_py_path, "NAMESPACE/{}/funcx_worker.py".format(worker_id))
                 except Exception as e:
                     pass  # Assuming the directory already exists.
 
