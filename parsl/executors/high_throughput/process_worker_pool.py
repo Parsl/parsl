@@ -15,6 +15,7 @@ import uuid
 import zmq
 import math
 import json
+import subprocess
 
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
@@ -317,15 +318,27 @@ class Manager(object):
         # copy that file over the directory '.' and then have the container run with pwd visible
         # as an initial cut, while we resolve possible issues.
 
-        for worker_id in range(self.worker_count):
-            p = multiprocessing.Process(target=funcx_worker, args=(worker_id,
-                                                                   self.uid,
-                                                                   "tcp://localhost:{}".format(self.internal_worker_port),
-                                                                   "tcp://localhost:50002",
-            ), kwargs={'debug': self.debug,
-                       'logdir': self.logdir})
-            p.start()
-            self.procs[worker_id] = p
+        for worker_id in range(1): #self.worker_count):
+            #p = multiprocessing.Process(target=funcx_worker, args=(worker_id,
+            #                                                       self.uid,
+            #                                                       "tcp://localhost:{}".format(self.internal_worker_port),
+            #                                                       "tcp://localhost:50002",
+            #), kwargs={'debug': self.debug,
+            #           'logdir': self.logdir})
+
+
+            #p.start()
+            #self.procs[worker_id] = p
+
+            sys_cmd = "python3.7 /home/ubuntu/sing-run/funcx_worker.py --worker_id {} --pool_id {} --task_url {} --result_url {} --logdir {}".format(worker_id, self.uid, "tcp://localhost:{}".format(self.internal_worker_port), "tcp://localhost:50002", self.logdir)
+
+            logger.info("WORKER LAUNCH CMD: " + sys_cmd)
+            f = open("worker_error.txt", "w")
+            g = open("worder_output.txt", "w")
+            proc = subprocess.Popen(sys_cmd, stderr = f, stdout=g, shell=True)
+            # proc = subprocess.call("touch testing.txt", shell=True)
+            self.procs[worker_id] = proc
+
 
         logger.debug("Manager synced with workers")
 
@@ -443,14 +456,15 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         result_queue.put(pkl_package)
 
 
+"""
 def funcx_worker(worker_id, pool_id, task_url, result_url, logdir, debug=False):
-    """
+
 
     Funcx worker will use the REP sockets to:
          task = recv ()
          result = execute(task)
          send(result)
-    """
+
     start_file_logger('{}/{}/funcx_worker_{}.log'.format(logdir, pool_id, worker_id),
                       worker_id,
                       name="worker_log",
@@ -488,7 +502,7 @@ def funcx_worker(worker_id, pool_id, task_url, result_url, logdir, debug=False):
         pkl_package = pickle.dumps(result_package)
 
         funcx_worker_socket.send_multipart([pkl_package])
-
+"""
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
