@@ -134,10 +134,10 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--worker_id")
-    parser.add_argument("--pool_id")
-    parser.add_argument("--task_url")
-    parser.add_argument("--logdir")
+    parser.add_argument("--worker_id", help="ID of worker from process_worker_pool")
+    parser.add_argument("--pool_id", help="ID of our process_worker_pool")
+    parser.add_argument("--task_url", help="URL from which we receive tasks and send replies")
+    parser.add_argument("--logdir", help="Directory path where worker log files written")
 
     args = parser.parse_args()
     worker = funcx_worker(args.worker_id, args.pool_id, args.task_url, args.logdir)
