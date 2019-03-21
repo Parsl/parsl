@@ -9,7 +9,7 @@ from parsl.executors import HighThroughputExecutor
 config = Config(
     executors=[
         HighThroughputExecutor(
-            poll_period=1,
+            # poll_period=10,
             label="htex_local",
             # worker_debug=True,
             cores_per_worker=1,
