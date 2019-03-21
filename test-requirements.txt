@@ -12,4 +12,4 @@ sphinx_rtd_theme
 sqlalchemy
 sqlalchemy_utils
 mypy
-# sqlalchemy-stubs 
+sqlalchemy-stubs
