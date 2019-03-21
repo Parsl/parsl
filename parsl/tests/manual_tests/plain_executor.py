@@ -83,27 +83,53 @@ def measure_latency(size, executor):
 
     delta_all = time.time() - start_all
 
-    print("Time to complete {} tasks: {:8.3f} s".format(args.count, delta_all))
+    print("Time to complete {} tasks: {:8.3f} s".format(size, delta_all))
     print("Latency avg:{:8.3f}ms  min:{:8.3f}ms  max:{:8.3f}ms".format(
         1000 * sum(tasks) / len(tasks),
         1000 * min(tasks),
         1000 * max(tasks)))
 
 
+def measure_throughput(size, executor):
+    print("Priming ....")
+    start = time.time()
+
+    primers = [executor.submit(double, i) for i in range(0, 2)]
+    print("Got results : ", [p.result() for p in primers])
+    delta = time.time() - start
+    print("Priming done in {:10.4f} s".format(delta))
+
+    print("Launching tasks: {}".format(size))
+
+    start_all = time.time()
+    tasks = []
+
+    for i in range(size):
+        fu = executor.submit(double, i)
+        tasks.append(fu)
+
+    [t.result() for t in tasks]
+    delta_all = time.time() - start_all
+
+    print("Time to complete {} tasks: {:8.3f} s".format(size, delta_all))
+    print("Throughput: {:8.3f} Tasks/s".format(size / delta_all))
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-c", "--count", default="1000",
+    parser.add_argument("-c", "--count", default="100",
                         help="Count of apps to launch")
 
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
 
     args = parser.parse_args()
-    parsl.set_stream_logger()
-    from htex_local import config
+    if args.debug:
+        parsl.set_stream_logger()
 
+    from htex_local import config
     # from llex_local import config
     dfk = parsl.load(config)
     executor = dfk.executors["htex_local"]
@@ -111,3 +137,4 @@ if __name__ == '__main__':
     # config.executors[0].worker_debug = True
     # call_double(int(args.count), executor)
     measure_latency(int(args.count), executor)
+    measure_throughput(int(args.count) * 100, executor)

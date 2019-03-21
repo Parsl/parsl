@@ -54,6 +54,8 @@ class Manager(object):
                  uid=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30,
+                 logdir=None,
+                 debug=False,
                  poll_period=10):
         """
         Parameters
@@ -96,6 +98,8 @@ class Manager(object):
         self.task_incoming.setsockopt(zmq.LINGER, 0)
         self.task_incoming.connect(task_q_url)
 
+        self.logdir = logdir
+        self.debug = debug
         self.result_outgoing = self.context.socket(zmq.DEALER)
         self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.setsockopt(zmq.LINGER, 0)
@@ -110,12 +114,14 @@ class Manager(object):
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
-        self.pending_task_queue = multiprocessing.Queue()
+        self.internal_worker_port = 50055
+        self.funcx_task_socket = self.context.socket(zmq.DEALER)
+        self.funcx_task_socket.set_hwm(0)
+        self.funcx_task_socket.bind("tcp://*:{}".format(self.internal_worker_port))
+
         self.pending_result_queue = multiprocessing.Queue()
-        self.ready_worker_queue = multiprocessing.Queue()
 
         self.max_queue_size = max_queue_size + self.worker_count
-
         self.tasks_per_round = 1
 
         self.heartbeat_period = heartbeat_period
@@ -155,6 +161,7 @@ class Manager(object):
         logger.info("[TASK PULL THREAD] starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
+        poller.register(self.funcx_task_socket, zmq.POLLIN)
 
         # Send a registration message
         msg = self.create_reg_message()
@@ -163,12 +170,14 @@ class Manager(object):
         last_beat = time.time()
         last_interchange_contact = time.time()
         task_recv_counter = 0
+        task_done_counter = 0
 
         poll_timer = self.poll_period
 
         while not kill_event.is_set():
-            ready_worker_count = self.ready_worker_queue.qsize()
-            pending_task_count = self.pending_task_queue.qsize()
+            # Disabling the check on ready_worker_queue disables batching
+            pending_task_count = task_recv_counter - task_done_counter
+            ready_worker_count = self.worker_count - pending_task_count
 
             logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
                                                                                         pending_task_count))
@@ -182,8 +191,20 @@ class Manager(object):
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
+            # Receive results from the workers, if any
             socks = dict(poller.poll(timeout=poll_timer))
+            # logger.debug("[FUNCX] *****************************")
+            if self.funcx_task_socket in socks and socks[self.funcx_task_socket] == zmq.POLLIN:
+                # logger.debug("[FUNCX] There's an incoming result")
+                try:
+                    _, result_obj = self.funcx_task_socket.recv_multipart()
+                except Exception as e:
+                    logger.warning("[TASK_PULL_THREAD] FUNCX : caught {}".format(e))
+                # logger.debug("[TASK_PULL_THREAD] FUNCX : result obj {}".format(result_obj))
+                self.pending_result_queue.put(result_obj)
+                task_done_counter += 1
 
+            # Receive task batches from Interchange and forward to workers
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
                 poll_timer = 0
                 _, pkl_msg = self.task_incoming.recv_multipart()
@@ -204,9 +225,11 @@ class Manager(object):
                                                                                  task_recv_counter))
 
                     for task in tasks:
-                        self.pending_task_queue.put(task)
-                        # logger.debug("[TASK_PULL_THREAD] Ready tasks: {}".format(
-                        #    [i['task_id'] for i in self.pending_task_queue]))
+                        # In the FuncX model we forward tasks received directly via a DEALER socket.
+                        logger.debug("TASK_PULL_THREAD] FUNCX Forwarding task {}".format(task))
+                        b_task_id = (task['task_id']).to_bytes(4, "little")
+                        self.funcx_task_socket.send_multipart([b'', b_task_id] + task['buffer'])
+                        logger.debug("TASK_PULL_THREAD] FUNCX Forwarded task")
 
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
@@ -223,7 +246,7 @@ class Manager(object):
                     logger.critical("[TASK_PULL_THREAD] Exiting")
                     break
 
-    def push_results(self, kill_event):
+    def push_results(self, kill_event, max_result_batch_size=1):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
         Parameters:
@@ -241,7 +264,6 @@ class Manager(object):
         items = []
 
         while not kill_event.is_set():
-
             try:
                 r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
                 items.append(r)
@@ -258,6 +280,28 @@ class Manager(object):
                     items = []
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
+        """
+        socks = dict(poller.poll(timeout=self.poll_period))
+
+        if self.funcx_result_queue in socks and socks[self.funcx_result_queue] == zmq.POLLIN:
+            # r = self.funcx_result_queue.recv_multipart()
+            r = self.funcx_result_queue.recv_pyobj()
+            logger.debug("[RESULT_PUSH_THREAD] FUNCX from worker {}".format(r))
+            self.funcx_result_queue.send(b'ACK')
+            items.append(r)
+            logger.debug("[RESULT_PUSH_THREAD] Received task {}".format(r))
+        else:
+            logger.debug("[RESULT_PUSH_THREAD] No tasks to send")
+
+        # If we have reached poll_period duration or timer has expired, we send results
+        if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
+            last_beat = time.time()
+            if items:
+                self.result_outgoing.send_multipart(items)
+                items = []
+
+        logger.critical("[RESULT_PUSH_THREAD] Exiting")
+        """
 
     def start(self):
         """ Start the worker processes.
@@ -268,13 +312,18 @@ class Manager(object):
         self._kill_event = threading.Event()
 
         self.procs = {}
+
+        # @Tyler, we should do a `which funcx_worker.py` [note: not entry point, this must be a script]
+        # copy that file over the directory '.' and then have the container run with pwd visible
+        # as an initial cut, while we resolve possible issues.
+
         for worker_id in range(self.worker_count):
-            p = multiprocessing.Process(target=worker, args=(worker_id,
-                                                             self.uid,
-                                                             self.pending_task_queue,
-                                                             self.pending_result_queue,
-                                                             self.ready_worker_queue,
-                                                         ))
+            p = multiprocessing.Process(target=funcx_worker, args=(worker_id,
+                                                                   self.uid,
+                                                                   "tcp://localhost:{}".format(self.internal_worker_port),
+                                                                   "tcp://localhost:50002",
+            ), kwargs={'debug': self.debug,
+                       'logdir': self.logdir})
             p.start()
             self.procs[worker_id] = p
 
@@ -388,12 +437,57 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
             result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'task_id': tid, 'result': serialized_result}
-            # logger.debug("Result: {}".format(result))
 
         logger.info("Completed task {}".format(tid))
         pkl_package = pickle.dumps(result_package)
-
         result_queue.put(pkl_package)
+
+
+def funcx_worker(worker_id, pool_id, task_url, result_url, logdir, debug=False):
+    """
+
+    Funcx worker will use the REP sockets to:
+         task = recv ()
+         result = execute(task)
+         send(result)
+    """
+    start_file_logger('{}/{}/funcx_worker_{}.log'.format(logdir, pool_id, worker_id),
+                      worker_id,
+                      name="worker_log",
+                      level=logging.DEBUG if debug else logging.INFO)
+
+    # Sync worker with master
+    logger.info('Worker {} started'.format(worker_id))
+    if debug:
+        logger.debug("Debug logging enabled")
+
+    context = zmq.Context()
+
+    funcx_worker_socket = context.socket(zmq.REP)
+    funcx_worker_socket.connect(task_url)
+    logger.debug("Connecting to {}".format(task_url))
+
+    while True:
+        b_task_id, *buf = funcx_worker_socket.recv_multipart()
+        # msg = task_socket.recv_pyobj()
+        logger.debug("Got buffer : {}".format(buf))
+        task_id = int.from_bytes(b_task_id, "little")
+
+        logger.info("Received task {}".format(task_id))
+
+        try:
+            result = execute_task(buf)
+            serialized_result = serialize_object(result)
+        except Exception:
+            result_package = {'task_id': task_id, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+            logger.debug("Got exception something")
+        else:
+            result_package = {'task_id': task_id, 'result': serialized_result}
+
+        logger.info("Completed task {}".format(task_id))
+        pkl_package = pickle.dumps(result_package)
+
+        funcx_worker_socket.send_multipart([pkl_package])
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -499,6 +593,8 @@ if __name__ == "__main__":
                           max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),
+                          logdir=args.logdir,
+                          debug=args.debug,
                           poll_period=int(args.poll))
         manager.start()
 
