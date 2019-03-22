@@ -307,15 +307,6 @@ class Manager(object):
         # as an initial cut, while we resolve possible issues.
         orig_location = os.getcwd()
 
-        if self.mode.startswith("singularity"):
-            worker_py_path = shutil.which("funcx_worker.py")
-
-            try:
-                os.mkdir("NAMESPACE")
-            except Exception as e:
-                logger.error("Error creating NAMESPACE: {}".format(e))
-                pass  # Assuming the directory already exists.
-
         for worker_id in range(self.worker_count):
 
             if self.mode.startswith("singularity"):
@@ -340,7 +331,9 @@ class Manager(object):
             elif self.mode == "singularity_reuse":
 
                 os.chdir("NAMESPACE/{}".format(worker_id))
-                sys_cmd = ("singularity run {singularity_img} funcx_worker.py --worker_id {worker_id} "
+                # @Tyler, FuncX worker path needs to be updated to not use the run command in the container.
+                # We just want to invoke with "funcx_worker.py" which is found in the $PATH
+                sys_cmd = ("singularity run {singularity_img} /usr/local/bin/funcx_worker.py --worker_id {worker_id} "
                            "--pool_id {pool_id} --task_url {task_url} "
                            "--logdir {logdir} ")
                 sys_cmd = sys_cmd.format(singularity_img=self.container_image,
@@ -354,6 +347,14 @@ class Manager(object):
                 self.procs[worker_id] = proc
 
                 if self.mode.startswith("singularity"):
+
+                    # Update the command to say something like :
+                    # while :
+                    # do 
+                    #     singularity run {singularity_img} funcx_worker.py --no_reuse .....
+                    # done
+                    
+                    # FuncX worker to accept new --no_reuse flag that breaks the loop after 1 task.
                     os.chdir(orig_location)
 
             elif self.mode == "singularity_single_use":
