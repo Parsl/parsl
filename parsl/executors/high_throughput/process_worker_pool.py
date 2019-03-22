@@ -352,6 +352,9 @@ class Manager(object):
                 proc = subprocess.Popen(sys_cmd, shell=True)
                 self.procs[worker_id] = proc
 
+                if self.mode.startswith("singularity"):
+                    os.chdir(orig_location)
+
             elif self.mode == "singularity_single_use":
                 raise Exception("Not supported")
 
@@ -363,9 +366,6 @@ class Manager(object):
                                                       args=(self._kill_event,))
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
-
-        if self.mode.startswith("singularity"):
-            os.chdir(orig_location)
 
         logger.info("Loop start")
 
