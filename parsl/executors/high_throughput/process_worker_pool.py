@@ -336,6 +336,7 @@ class Manager(object):
 
                 p.start()
                 self.procs[worker_id] = p
+
             elif self.mode == "singularity_reuse":
 
                 os.chdir("NAMESPACE/{}".format(worker_id))
