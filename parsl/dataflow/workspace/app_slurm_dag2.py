@@ -95,6 +95,8 @@ elif args.executor == 'HighThroughput_Slurm':
             label="midway_htex",
             cores_per_worker=1,
             address=address_by_hostname(),
+            heartbeat_period=1,  # default 30s
+            heartbeat_threshold=2,  #default 120s
             provider=SlurmProvider(
                 'broadwl',    # machine name on midway
                 launcher=SrunLauncher(),
@@ -102,7 +104,8 @@ elif args.executor == 'HighThroughput_Slurm':
                 ###scheduler_options='#SBATCH --exclusive',
                 worker_init='module load Anaconda3/5.0.0.1; source activate parsl-dev',
                 init_blocks=1,
-                max_blocks=1,
+                max_blocks=5,
+                #max_blocks=1,
                 nodes_per_block=1,
                 # tasks_per_node=1,  # For HighThroughputExecutor, this option sho<
                 parallelism=1.0,
@@ -114,6 +117,7 @@ elif args.executor == 'HighThroughput_Slurm':
     #strategy='htex_totaltime',
     #strategy='simple',
     strategy=args.strategy,
+    retries=100,
   )
 
 # TODO: 
@@ -149,8 +153,8 @@ def inc(inputs=[], init_time=0):
     import psutil
     import numpy as np
     start = time.time()
-    #sleep_duration = 600.0
-    sleep_duration = 10
+    #sleep_duration = 10
+    sleep_duration = 60
     _inputs = np.asarray(inputs)
     mems = [] #_inputs[0].tolist()
     cpus = [] #_inputs[1].tolist()
@@ -178,7 +182,8 @@ def add_inc(inputs=[], init_time=0):
     import numpy as np
     start = time.time()
     #sleep_duration = 300.0
-    sleep_duration = np.random.gumbel(20, 0.05)
+    #sleep_duration = np.random.gumbel(20, 0.05)
+    sleep_duration = np.random.gumbel(60, 0.05)
     res = 0
     _inputs = np.asarray(inputs)
     mems = [] # _inputs[0].tolist()
@@ -202,7 +207,8 @@ def add_inc(inputs=[], init_time=0):
 if __name__ == "__main__":
 
     #total = 10 
-    total = 40
+    #total = 40
+    total = 100
     #half = int(total / 2)
     #one_third = int(total / 3)
     #two_third = int(total / 3 * 2)
