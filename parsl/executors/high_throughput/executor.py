@@ -126,6 +126,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     poll_period : int
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
         trades performance for cpu efficiency. Default: 10ms
+
+    container_image : str
+        Path or identfier to the container image to be used by the workers
+
+    worker_mode : str
+        Select the mode of operation from no_container, singularity_reuse, singularity_single_use
+        Default: singularity_reuse
     """
 
     def __init__(self,
@@ -144,6 +151,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  poll_period=10,
+                 container_image=None,
+                 worker_mode="singularity_reuse",
                  suppress_failure=False,
                  managed=True):
 
@@ -174,6 +183,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
 
+        # FuncX specific options
+        self.container_image = container_image
+        self.worker_mode = worker_mode
+
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-c {cores_per_worker} "
@@ -182,7 +195,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                "--result_url={result_url} "
                                "--logdir={logdir} "
                                "--hb_period={heartbeat_period} "
-                               "--hb_threshold={heartbeat_threshold} ")
+                               "--hb_threshold={heartbeat_threshold} "
+                               "--mode={worker_mode} "
+                               "--container_image={container_image} ")
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
@@ -202,7 +217,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
-                                       logdir="{}/{}".format(self.run_dir, self.label))
+                                       logdir="{}/{}".format(self.run_dir, self.label),
+                                       worker_mode=self.worker_mode,
+                                       container_image=self.container_image)
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 

@@ -12,6 +12,7 @@ config = Config(
             # poll_period=10,
             label="htex_local",
             # worker_debug=True,
+            worker_mode="no_container",
             cores_per_worker=1,
             provider=LocalProvider(
                 channel=LocalChannel(),

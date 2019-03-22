@@ -55,6 +55,7 @@ class Manager(object):
                  logdir=None,
                  debug=False,
                  mode="singularity_reuse",
+                 container_image=None,
                  poll_period=10):
         """
         Parameters
@@ -82,11 +83,15 @@ class Manager(object):
 
         heartbeat_period : int
              Number of seconds after which a heartbeat message is sent to the interchange
+
         mode : str
              Pick between 3 supported modes for the worker:
               1. no_container : Worker launched without containers
               2. singularity_reuse : Worker launched inside a singularity container that will be reused
               3. singularity_single_use : Each worker and task runs inside a new container instance.
+
+        container_image : str
+             Path or identifier for the container to be used. Default: None
 
         poll_period : int
              Timeout period used by the manager in milliseconds. Default: 10ms
@@ -113,6 +118,7 @@ class Manager(object):
         self.uid = uid
 
         self.mode = mode
+        self.container_image = container_image
         cores_on_node = multiprocessing.cpu_count()
         self.max_workers = max_workers
         self.worker_count = min(max_workers,
@@ -333,13 +339,14 @@ class Manager(object):
             elif self.mode == "singularity_reuse":
 
                 os.chdir("NAMESPACE/{}".format(worker_id))
-                sys_cmd = ("singularity run /home/ubuntu/sing-run/sing-run.simg funcx_worker.py --worker_id {} "
-                           "--pool_id {} --task_url {} "
-                           "--logdir {} ")
-                sys_cmd = sys_cmd.format(worker_id,
-                                         self.uid,
-                                         "tcp://localhost:{}".format(self.internal_worker_port),
-                                         "tcp://localhost:50002", self.logdir)
+                sys_cmd = ("singularity run {singularity_img} funcx_worker.py --worker_id {worker_id} "
+                           "--pool_id {pool_id} --task_url {task_url} "
+                           "--logdir {logdir} ")
+                sys_cmd = sys_cmd.format(singularity_img=self.container_image,
+                                         worker_id=worker_id,
+                                         pool_id=self.uid,
+                                         task_url="tcp://localhost:{}".format(self.internal_worker_port),
+                                         logdir=self.logdir)
 
                 logger.debug("Singularity reuse launch cmd: {}".format(sys_cmd))
                 proc = subprocess.Popen(sys_cmd, shell=True)
@@ -455,6 +462,8 @@ if __name__ == "__main__":
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
     parser.add_argument("--poll", default=10,
                         help="Poll period used in milliseconds")
+    parser.add_argument("--container_image", default=None,
+                        help="Container image identifier/path")
     parser.add_argument("--mode", default="singularity_reuse",
                         help=("Select the mode of operation from "
                               "(no_container, singularity_reuse, singularity_single_use"))
@@ -482,6 +491,8 @@ if __name__ == "__main__":
         logger.info("result_url: {}".format(args.result_url))
         logger.info("max_workers: {}".format(args.max_workers))
         logger.info("poll_period: {}".format(args.poll))
+        logger.info("mode: {}".format(args.mode))
+        logger.info("container_image: {}".format(args.container_image))
 
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
@@ -493,6 +504,7 @@ if __name__ == "__main__":
                           logdir=args.logdir,
                           debug=args.debug,
                           mode=args.mode,
+                          container_image=args.container_image,
                           poll_period=int(args.poll))
         manager.start()
 
