@@ -7,7 +7,7 @@
 #SBATCH --time=12:00:00
 ###SBATCH --array 4
 ##SBATCH --array=1-3
-#SBATCH --array=3
+#SBATCH --array=4
 
 # Here you should modify for your own conda-env
 module load Anaconda3/5.0.0.1
@@ -29,7 +29,7 @@ if [ ${SLURM_ARRAY_TASK_ID} -eq 3 ]; then
   strategy=htex_gradient
 fi
 if [ ${SLURM_ARRAY_TASK_ID} -eq 4 ]; then
-  strategy=htex_aggressive
+  strategy=htex_simple
 fi
 oname=${SLURM_JOB_ID}-${strategy}
 
