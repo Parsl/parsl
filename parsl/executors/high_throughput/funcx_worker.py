@@ -11,7 +11,7 @@ from ipyparallel.serialize import serialize_object, unpack_apply_message
 from parsl.app.errors import RemoteExceptionWrapper
 
 
-def funcx_worker(worker_id, pool_id, task_url, logdir, no_reuse, debug=False):
+def funcx_worker(worker_id, pool_id, task_url, no_reuse, logdir, debug=False):
     """
     Funcx worker will use the REP sockets to:
          task = recv ()
@@ -38,6 +38,8 @@ def funcx_worker(worker_id, pool_id, task_url, logdir, no_reuse, debug=False):
     logger.info('Worker {} started'.format(worker_id))
     if debug:
         logger.debug("Debug logging enabled")
+
+    print(no_reuse)
 
     context = zmq.Context()
 
@@ -153,7 +155,8 @@ if __name__ == "__main__":
     parser.add_argument("--pool_id", help="ID of our process_worker_pool", required=True)
     parser.add_argument("--task_url", help="URL from which we receive tasks and send replies", required=True)
     parser.add_argument("--logdir", help="Directory path where worker log files written", required=True)
-    parser.add_argument("--no_reuse", help="If exists, run in no_reuse mode on containers", action="store_true")
+    parser.add_argument("--no_reuse", help="If exists, run in no_reuse mode on containers", action="store_true", required=False)
 
     args = parser.parse_args()
+    print(args.no_reuse)
     worker = funcx_worker(args.worker_id, args.pool_id, args.task_url, args.no_reuse, args.logdir)
