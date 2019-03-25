@@ -65,3 +65,7 @@ Contributing
 ============
 
 We welcome contributions from the community. Please see our `contributing guide <CONTRIBUTING.rst>`_.
+
+Another notification
+====================
+This git-repo was made for course project 2019 Winter Semester "Advanced OS" to develop autoscaling strategy in Parsl 
