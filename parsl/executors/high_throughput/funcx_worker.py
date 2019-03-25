@@ -40,6 +40,8 @@ def funcx_worker(worker_id, pool_id, task_url, logdir, debug=False, no_reuse=Fal
     funcx_worker_socket.connect(task_url)
     logger.info("Connecting to {}".format(task_url))
 
+
+    logger.info("Entering container runs with no_reuse set: {}".format(no_reuse))
     while True:
         # This task receiver socket is blocking.
         b_task_id, *buf = funcx_worker_socket.recv_multipart()
@@ -65,7 +67,8 @@ def funcx_worker(worker_id, pool_id, task_url, logdir, debug=False, no_reuse=Fal
         funcx_worker_socket.send_multipart([pkl_package])
 
         if no_reuse:
-            break
+            logger.info("Exiting worker. Container will not be reused")
+            logger.info("Exited with code: {}".format(exit()))
 
 
 def execute_task(bufs):
