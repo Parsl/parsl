@@ -11,7 +11,7 @@ from ipyparallel.serialize import serialize_object, unpack_apply_message
 from parsl.app.errors import RemoteExceptionWrapper
 
 
-def funcx_worker(worker_id, pool_id, task_url, logdir, debug=False, no_reuse=False):
+def funcx_worker(worker_id, pool_id, task_url, logdir, no_reuse, debug=False):
     """
     Funcx worker will use the REP sockets to:
          task = recv ()
@@ -145,7 +145,7 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
 
 
 if __name__ == "__main__":
-    no_reuse = False
+    # no_reuse = False
     # open('my_file.txt', 'a').close()
     # exit()
     parser = argparse.ArgumentParser()
@@ -156,4 +156,4 @@ if __name__ == "__main__":
     parser.add_argument("--no_reuse", help="If exists, run in no_reuse mode on containers", action="store_true")
 
     args = parser.parse_args()
-    worker = funcx_worker(args.worker_id, args.pool_id, args.task_url, args.logdir, args.no_reuse)
+    worker = funcx_worker(args.worker_id, args.pool_id, args.task_url, args.no_reuse, args.logdir)
