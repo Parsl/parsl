@@ -204,7 +204,6 @@ class Manager(object):
 
             # Receive results from the workers, if any
             socks = dict(poller.poll(timeout=poll_timer))
-            # logger.debug("[FUNCX] *****************************")
             if self.funcx_task_socket in socks and socks[self.funcx_task_socket] == zmq.POLLIN:
                 # logger.debug("[FUNCX] There's an incoming result")
                 try:
@@ -307,6 +306,9 @@ class Manager(object):
         # as an initial cut, while we resolve possible issues.
         orig_location = os.getcwd()
 
+        if not os.path.isdir("NAMESPACE"):
+            os.mkdir("NAMESPACE")
+
         for worker_id in range(self.worker_count):
 
             if self.mode.startswith("singularity"):
@@ -346,19 +348,35 @@ class Manager(object):
                 proc = subprocess.Popen(sys_cmd, shell=True)
                 self.procs[worker_id] = proc
 
-                if self.mode.startswith("singularity"):
-
-                    # Update the command to say something like :
-                    # while :
-                    # do 
-                    #     singularity run {singularity_img} funcx_worker.py --no_reuse .....
-                    # done
+                # Update the command to say something like :
+                # while :
+                # do 
+                #     singularity run {singularity_img} funcx_worker.py --no_reuse .....
+                # done
                     
-                    # FuncX worker to accept new --no_reuse flag that breaks the loop after 1 task.
-                    os.chdir(orig_location)
+                # FuncX worker to accept new --no_reuse flag that breaks the loop after 1 task.
+                os.chdir(orig_location)
 
             elif self.mode == "singularity_single_use":
-                raise Exception("Not supported")
+                # raise Exception("Not supported")
+                os.chdir("NAMESPACE/{}".format(worker_id))
+
+                if self.mode.startswith("singularity"):
+                    sys_cmd = ("singularity run {singularity_img} /usr/local/bin/funcx_worker.py --no_reuse --worker_id {worker_id} "
+                               "--pool_id {pool_id} --task_url {task_url} "
+                               "--logdir {logdir} ")
+                    sys_cmd = sys_cmd.format(singularity_img=self.container_image,
+                                             worker_id=worker_id,
+                                             pool_id=self.uid,
+                                             task_url="tcp://localhost:{}".format(self.internal_worker_port),
+                                             logdir=self.logdir)
+
+                    logger.debug("Singularity NO-reuse launch cmd: {}".format(sys_cmd))
+                    proc = subprocess.Popen(sys_cmd, shell=True)
+                    self.procs[worker_id] = proc
+                    os.chdir(orig_location)
+
+ 
 
         logger.debug("Manager synced with workers")
 

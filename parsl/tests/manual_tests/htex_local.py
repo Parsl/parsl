@@ -11,8 +11,8 @@ config = Config(
         HighThroughputExecutor(
             # poll_period=10,
             label="htex_local",
-            # worker_debug=True,
-            worker_mode="singularity_reuse",
+            worker_debug=True,
+            worker_mode="singularity_single_use",
             # worker_mode="no_container",
             # We always want the container to be in the home dir.
             container_image=os.path.expanduser("~/sing-run.simg"),
@@ -28,6 +28,6 @@ config = Config(
             ),
         )
     ],
-    run_dir="/home/yadunand/funcx/parsl/tests/manual_tests/runinfo/",
+    run_dir="/home/tskluzac/parsl/parsl/tests/manual_tests/runinfo/",
     strategy=None,
 )
