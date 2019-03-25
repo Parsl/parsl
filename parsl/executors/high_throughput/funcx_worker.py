@@ -50,7 +50,10 @@ def funcx_worker(worker_id, pool_id, task_url, no_reuse, logdir, debug=False):
     while True:
         logger.info("No_Reuse?: {}".format(no_reuse))
         # This task receiver socket is blocking.
-        b_task_id, *buf = funcx_worker_socket.recv_multipart()
+        try:
+            b_task_id, *buf = funcx_worker_socket.recv_multipart()
+        except Exception as e:
+            logger.debug(e)
         # msg = task_socket.recv_pyobj()
         logger.debug("Got buffer : {}".format(buf))
 
