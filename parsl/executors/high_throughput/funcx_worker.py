@@ -39,8 +39,6 @@ def funcx_worker(worker_id, pool_id, task_url, no_reuse, logdir, debug=False):
     if debug:
         logger.debug("Debug logging enabled")
 
-    print(no_reuse)
-
     context = zmq.Context()
 
     funcx_worker_socket = context.socket(zmq.REP)
@@ -158,5 +156,4 @@ if __name__ == "__main__":
     parser.add_argument("--no_reuse", help="If exists, run in no_reuse mode on containers", action="store_true", required=False)
 
     args = parser.parse_args()
-    print(args.no_reuse)
     worker = funcx_worker(args.worker_id, args.pool_id, args.task_url, args.no_reuse, args.logdir)

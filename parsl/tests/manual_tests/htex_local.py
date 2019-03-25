@@ -1,4 +1,4 @@
-from parsl.providers import LocalProvider
+\from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
 # from parsl.launchers import SimpleLauncher
 from parsl.launchers import SingleNodeLauncher
@@ -11,9 +11,9 @@ config = Config(
         HighThroughputExecutor(
             # poll_period=10,
             label="htex_local",
-            worker_debug=True,
-            # worker_mode="singularity_single_use",
-            worker_mode="no_container",
+            # worker_debug=True,
+            worker_mode="singularity_single_use",
+            # worker_mode="no_container",
             # We always want the container to be in the home dir.
             container_image=os.path.expanduser("~/sing-run.simg"),
             cores_per_worker=1,

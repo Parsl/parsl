@@ -338,6 +338,8 @@ class Manager(object):
                 sys_cmd = ("singularity run {singularity_img} /usr/local/bin/funcx_worker.py --worker_id {worker_id} "
                            "--pool_id {pool_id} --task_url {task_url} "
                            "--logdir {logdir} ")
+
+
                 sys_cmd = sys_cmd.format(singularity_img=self.container_image,
                                          worker_id=worker_id,
                                          pool_id=self.uid,
@@ -350,10 +352,10 @@ class Manager(object):
 
                 # Update the command to say something like :
                 # while :
-                # do 
+                # do
                 #     singularity run {singularity_img} funcx_worker.py --no_reuse .....
                 # done
-                    
+
                 # FuncX worker to accept new --no_reuse flag that breaks the loop after 1 task.
                 os.chdir(orig_location)
 
@@ -362,9 +364,11 @@ class Manager(object):
                 os.chdir("NAMESPACE/{}".format(worker_id))
 
                 if self.mode.startswith("singularity"):
+                    #while True:
+                    logger.info("New subprocess loop!")
                     sys_cmd = ("singularity run {singularity_img} /usr/local/bin/funcx_worker.py --no_reuse --worker_id {worker_id} "
-                               "--pool_id {pool_id} --task_url {task_url} "
-                               "--logdir {logdir} ")
+                                   "--pool_id {pool_id} --task_url {task_url} "
+                                   "--logdir {logdir} ")
                     sys_cmd = sys_cmd.format(singularity_img=self.container_image,
                                              worker_id=worker_id,
                                              pool_id=self.uid,
@@ -372,11 +376,15 @@ class Manager(object):
                                              logdir=self.logdir)
 
                     logger.debug("Singularity NO-reuse launch cmd: {}".format(sys_cmd))
-                    proc = subprocess.Popen(sys_cmd, shell=True)
+
+                    bash_cmd = """ while :
+                                   do
+                                      {}
+                                   done """.format(sys_cmd)
+                    proc = subprocess.Popen(bash_cmd, shell=True)
                     self.procs[worker_id] = proc
                     os.chdir(orig_location)
 
- 
 
         logger.debug("Manager synced with workers")
 
