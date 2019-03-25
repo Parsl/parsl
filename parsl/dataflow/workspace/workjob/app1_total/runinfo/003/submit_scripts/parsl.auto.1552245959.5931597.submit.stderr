@@ -1,0 +1,3 @@
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 65: /home/tkurihana/.conda/envs/parsl-dev/bin/conda: No such file or directory
+0: cmd_parsl.auto.1552245959.5931597.sh: line 1: process_worker_pool.py: command not found
+srun: error: midway2-0367: task 0: Exited with exit code 127

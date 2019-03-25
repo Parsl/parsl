@@ -3,6 +3,7 @@
 #SBATCH --output=%x-%A.out
 #SBATCH --error=%x-%A.err
 #SBATCH -p broadwl
+#SBATCH --nodes=5
 #SBATCH --time=0:60:00
 
 

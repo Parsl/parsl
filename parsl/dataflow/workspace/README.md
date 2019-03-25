@@ -1,3 +1,6 @@
+# FOR CORRECT SCALEING UP/DOWN
+  `max_blocks` should be more than 1 otherwise user cannot get merties from new strategies
+
 # TODO 
 * Debug: Feb. 25/ Takuya. Local application suspends long-time without time.sleep <br />
   ==> should fid ASAP <br />
@@ -43,3 +46,6 @@
 
 9. app_slurm_dag_zhuozhao.py
   Dataflow script on slurm job
+
+10. job_slurm_app_parallel.bash
+  Dataflow script(app_slurm_dag.py ) on slurm job

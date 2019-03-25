@@ -1,0 +1,7 @@
+/home/tkurihana/.conda/envs/parsl-dev/bin/deactivate: line 84: /home/tkurihana/.conda/envs/parsl-dev/bin/conda: No such file or directory
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 94: sed: command not found
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 98: grep: command not found
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 99: grep: command not found
+/tmp/slurmd/job58476016/slurm_script: line 24: cat: command not found
+/tmp/slurmd/job58476016/slurm_script: line 27: chmod: command not found
+/tmp/slurmd/job58476016/slurm_script: line 31: srun: command not found

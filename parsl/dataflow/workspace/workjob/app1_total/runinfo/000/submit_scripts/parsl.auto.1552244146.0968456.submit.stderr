@@ -1,0 +1,5 @@
+/home/tkurihana/.conda/envs/parsl-dev/bin/deactivate: line 84: /home/tkurihana/.conda/envs/parsl-dev/bin/conda: No such file or directory
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 65: /home/tkurihana/.conda/envs/parsl-dev/bin/conda: No such file or directory
+/tmp/slurmd/job58470967/slurm_script: line 24: cat: No such file or directory
+/tmp/slurmd/job58470967/slurm_script: line 27: chmod: No such file or directory
+/tmp/slurmd/job58470967/slurm_script: line 31: srun: No such file or directory

@@ -1,0 +1,4 @@
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 62: /home/tkurihana/.conda/envs/parsl-dev/bin/deactivate: No such file or directory
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 65: /home/tkurihana/.conda/envs/parsl-dev/bin/conda: No such file or directory
+0: slurmstepd-midway2-0340: error: *** STEP 58475749.0 ON midway2-0340 CANCELLED AT 2019-03-10T16:46:25 ***
+slurmstepd-midway2-0340: error: *** JOB 58475749 ON midway2-0340 CANCELLED AT 2019-03-10T16:46:25 ***

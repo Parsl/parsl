@@ -57,8 +57,8 @@ elif args.executor == 'HighThroughput':
         )
     ],
     #strategy='htex_aggressive',
-    #strategy='htex_totaltime',
-    strategy='simple',
+    strategy='htex_totaltime',
+    #strategy='simple',
   )
 # TODO: 
 #try:

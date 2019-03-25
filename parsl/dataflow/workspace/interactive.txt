@@ -1,0 +1,1 @@
+sinteractive  --job-name=App_Slurm  --output=%x-%A-%a.out --error=%x-%A-%a.err -p broadwl --nodes=5

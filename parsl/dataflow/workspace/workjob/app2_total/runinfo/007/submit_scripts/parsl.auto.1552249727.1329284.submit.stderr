@@ -1,0 +1,4 @@
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 62: /home/tkurihana/.conda/envs/parsl-dev/bin/deactivate: No such file or directory
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+0: slurmstepd-midway2-0333: error: *** STEP 58473142.0 ON midway2-0333 CANCELLED AT 2019-03-10T15:32:58 ***
+slurmstepd-midway2-0333: error: *** JOB 58473142 ON midway2-0333 CANCELLED AT 2019-03-10T15:32:58 ***

@@ -1,0 +1,5 @@
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 97: /home/tkurihana/.conda/envs/parsl-dev/bin/conda: No such file or directory
+/home/tkurihana/.conda/envs/parsl-dev/bin/activate: line 97: [: =: unary operator expected
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+0: slurmstepd-midway2-0382: error: *** STEP 58472908.0 ON midway2-0382 CANCELLED AT 2019-03-10T15:21:56 ***
+slurmstepd-midway2-0382: error: *** JOB 58472908 ON midway2-0382 CANCELLED AT 2019-03-10T15:21:56 ***

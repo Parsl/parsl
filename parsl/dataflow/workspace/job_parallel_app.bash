@@ -5,8 +5,8 @@
 #SBATCH -p broadwl
 #SBATCH --nodes=5
 #SBATCH --time=12:00:00
-#SBATCH --array 4
-#####SBATCH --array 1-3
+###SBATCH --array 4
+#SBATCH --array=3
 
 # Here you should modify for your own conda-env
 module load Anaconda3/5.0.0.1

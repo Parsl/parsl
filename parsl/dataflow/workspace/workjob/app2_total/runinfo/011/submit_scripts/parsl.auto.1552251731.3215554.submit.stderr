@@ -1,0 +1,3 @@
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+0: slurmstepd-midway2-0142: error: *** STEP 58473775.0 ON midway2-0142 CANCELLED AT 2019-03-10T16:03:31 ***
+slurmstepd-midway2-0142: error: *** JOB 58473775 ON midway2-0142 CANCELLED AT 2019-03-10T16:03:31 ***
