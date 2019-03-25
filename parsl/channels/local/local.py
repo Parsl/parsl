@@ -144,6 +144,9 @@ class LocalChannel(Channel, RepresentationMixin):
             except OSError as e:
                 raise FileCopyException(e, self.hostname)
 
+        else:
+            os.chmod(local_dest, 0o777)
+
         return local_dest
 
     def close(self):
