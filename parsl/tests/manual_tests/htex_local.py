@@ -12,12 +12,13 @@ config = Config(
             # poll_period=10,
             label="htex_local",
             worker_debug=True,
-            worker_mode="singularity_single_use",
-            # worker_mode="no_container",
+            # worker_mode="singularity_single_use",
+            worker_mode="no_container",
             # We always want the container to be in the home dir.
             container_image=os.path.expanduser("~/sing-run.simg"),
             cores_per_worker=1,
-            max_workers=8,
+            #max_workers=8,
+            max_workers=1,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=1,
@@ -28,6 +29,6 @@ config = Config(
             ),
         )
     ],
-    run_dir="/home/tskluzac/parsl/parsl/tests/manual_tests/runinfo/",
+    run_dir="/home/ubuntu/parsl/parsl/tests/manual_tests/runinfo/",
     strategy=None,
 )

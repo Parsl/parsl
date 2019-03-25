@@ -19,6 +19,11 @@ def funcx_worker(worker_id, pool_id, task_url, logdir, debug=False, no_reuse=Fal
          send(result)
     """
 
+    #print("Exiting worker. Container will not be reused")
+    #print("Exited with code: {}".format(exit()))
+
+
+
     try:
         os.makedirs("{}/{}".format(logdir, pool_id))
     except Exception:
@@ -43,6 +48,7 @@ def funcx_worker(worker_id, pool_id, task_url, logdir, debug=False, no_reuse=Fal
 
     logger.info("Entering container runs with no_reuse set: {}".format(no_reuse))
     while True:
+        logger.info("No_Reuse?: {}".format(no_reuse))
         # This task receiver socket is blocking.
         b_task_id, *buf = funcx_worker_socket.recv_multipart()
         # msg = task_socket.recv_pyobj()
