@@ -75,6 +75,8 @@ def funcx_worker(worker_id, pool_id, task_url, no_reuse, logdir, debug=False):
 
         if no_reuse:
             logger.info("Exiting worker. Container will not be reused, breaking...")
+            funcx_worker_socket.close()
+            context.term()
             return None
 
 
