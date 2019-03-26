@@ -58,10 +58,8 @@ class Interchange(object):
     def start(self):
         """ TODO: docstring """
         logger.info("Starting interchange")
-        # last = time.time()
 
         while True:
-            # active_flag = False
             socks = dict(self.poller.poll(1))
 
             if socks.get(self.task_incoming) == zmq.POLLIN:
@@ -69,22 +67,13 @@ class Interchange(object):
                 logger.debug("Got new task from client")
                 self.worker_messages.send_multipart(message)
                 logger.debug("Sent task to worker")
-                # active_flag = True
-                # last = time.time()
 
             if socks.get(self.worker_messages) == zmq.POLLIN:
                 message = self.worker_messages.recv_multipart()
                 logger.debug("Got new result from worker")
-                # self.result_outgoing.send_multipart(message)
                 self.result_outgoing.send_multipart(message[1:])
 
                 logger.debug("Sent result to client")
-                # active_flag = True
-                # last = time.time()
-
-            # if not active_flag and last + 1 < time.time():
-            #    logger.debug("Nothing in the past 1s round")
-            #    last = time.time()
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
@@ -125,7 +114,6 @@ def starter(comm_q, *args, **kwargs):
 
     The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
     """
-    # logger = multiprocessing.get_logger()
     ic = Interchange(*args, **kwargs)
     comm_q.put(ic.worker_port)
     ic.start()
