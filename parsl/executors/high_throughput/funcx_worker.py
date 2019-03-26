@@ -44,11 +44,9 @@ def funcx_worker(worker_id, pool_id, task_url, no_reuse, logdir, debug=False):
     funcx_worker_socket = context.socket(zmq.REP)
     funcx_worker_socket.connect(task_url)
     logger.info("Connecting to {}".format(task_url))
+    logger.info("Container will exit after single task: {}".format(no_reuse))
 
-
-    logger.info("Entering container runs with no_reuse set: {}".format(no_reuse))
     while True:
-        logger.info("No_Reuse?: {}".format(no_reuse))
         # This task receiver socket is blocking.
         try:
             b_task_id, *buf = funcx_worker_socket.recv_multipart()
@@ -76,8 +74,8 @@ def funcx_worker(worker_id, pool_id, task_url, no_reuse, logdir, debug=False):
         funcx_worker_socket.send_multipart([pkl_package])
 
         if no_reuse:
-            logger.info("Exiting worker. Container will not be reused")
-            logger.info("Exited with code: {}".format(exit()))
+            logger.info("Exiting worker. Container will not be reused, breaking...")
+            return None
 
 
 def execute_task(bufs):
@@ -160,3 +158,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     worker = funcx_worker(args.worker_id, args.pool_id, args.task_url, args.no_reuse, args.logdir)
+    

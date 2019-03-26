@@ -210,7 +210,8 @@ class Manager(object):
                     _, result_obj = self.funcx_task_socket.recv_multipart()
                 except Exception as e:
                     logger.warning("[TASK_PULL_THREAD] FUNCX : caught {}".format(e))
-                # logger.debug("[TASK_PULL_THREAD] FUNCX : result obj {}".format(result_obj))
+                else:
+                    logger.debug("[TASK_PULL_THREAD] Got result: {}".format(result_obj))
                 self.pending_result_queue.put(result_obj)
                 task_done_counter += 1
 
@@ -236,10 +237,10 @@ class Manager(object):
 
                     for task in tasks:
                         # In the FuncX model we forward tasks received directly via a DEALER socket.
-                        logger.debug("TASK_PULL_THREAD] FUNCX Forwarding task {}".format(task))
                         b_task_id = (task['task_id']).to_bytes(4, "little")
+                        #logger.debug("[TASK_PULL_THREAD] FuncX attempting send")
                         self.funcx_task_socket.send_multipart([b'', b_task_id] + task['buffer'])
-                        logger.debug("TASK_PULL_THREAD] FUNCX Forwarded task")
+                        logger.debug("[TASK_PULL_THREAD] FUNCX Forwarded task: {}".format(task['task_id']))
 
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
@@ -324,7 +325,9 @@ class Manager(object):
                                                   self.uid,
                                                   "tcp://localhost:{}".format(self.internal_worker_port),
                                                   ),
-                                            kwargs={'debug': self.debug,
+                                            # DEBUG YADU. MUST SET BACK TO False,
+                                            kwargs={'no_reuse': True,
+                                                    'debug': self.debug,
                                                     'logdir': self.logdir})
 
                 p.start()
