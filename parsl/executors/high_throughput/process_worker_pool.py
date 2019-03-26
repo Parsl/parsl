@@ -239,8 +239,9 @@ class Manager(object):
                         # In the FuncX model we forward tasks received directly via a DEALER socket.
                         b_task_id = (task['task_id']).to_bytes(4, "little")
                         #logger.debug("[TASK_PULL_THREAD] FuncX attempting send")
-                        self.funcx_task_socket.send_multipart([b'', b_task_id] + task['buffer'])
+                        i = self.funcx_task_socket.send_multipart([b'', b_task_id] + task['buffer'])
                         logger.debug("[TASK_PULL_THREAD] FUNCX Forwarded task: {}".format(task['task_id']))
+                        logger.debug("[TASK_PULL_THREAD] forward returned:{}".format(i))
 
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
@@ -378,12 +379,11 @@ class Manager(object):
                                              task_url="tcp://localhost:{}".format(self.internal_worker_port),
                                              logdir=self.logdir)
 
-                    logger.debug("Singularity NO-reuse launch cmd: {}".format(sys_cmd))
-
                     bash_cmd = """ while :
                                    do
                                       {}
                                    done """.format(sys_cmd)
+                    logger.debug("Singularity NO-reuse launch cmd: {}".format(bash_cmd))
                     proc = subprocess.Popen(bash_cmd, shell=True)
                     self.procs[worker_id] = proc
                     os.chdir(orig_location)
