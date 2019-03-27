@@ -73,7 +73,7 @@ class DataFuture(Future):
             else:
                 raise NotFutureError("DataFuture can be created only with a FunctionFuture on None")
 
-        logger.debug("Creating DataFuture with parent: %s", parent)
+        logger.debug("Creating DataFuture with parent: %s", self.parent)
         logger.debug("Filepath: %s", self.filepath)
 
     @property
