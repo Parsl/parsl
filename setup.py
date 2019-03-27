@@ -25,8 +25,7 @@ setup(
                'parsl/executors/workqueue/workqueue_worker.py',
     ],
     extras_require = {
-        'visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
-        'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
+        'monitoring' : ['psutil', 'sqlalchemy', 'sqlalchemy_utils'],
         'aws' : ['boto3'],
         'kubernetes' : ['kubernetes'],
         # Jetstream is deprecated since the interface has not been maintained.
@@ -35,7 +34,7 @@ setup(
         'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
         'google_cloud' : ['google-auth', 'google-api-python-client'],
         'gssapi' : ['python-gssapi'],
-        'all' : ['CMRESHandler', 'psutil', 'sqlalchemy',
+        'all' : ['psutil', 'sqlalchemy', 'sqlalchemy_utils',
                  'dash', 'dash-html-components', 'dash-core-components', 'pandas',
                  'boto3',
                  'kubernetes',
@@ -58,7 +57,7 @@ setup(
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':
-      ['parsl-visualize=parsl.monitoring.web_app.index:cli_run',
+      [
        'parsl-globus-auth=parsl.data_provider.globus:cli_run'
       ]}
 )

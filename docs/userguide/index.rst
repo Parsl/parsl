@@ -15,5 +15,6 @@ User guide
    checkpoints
    configuring
    modularizing
+   monitoring
    containers
    usage_tracking
