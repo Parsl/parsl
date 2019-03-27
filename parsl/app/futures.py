@@ -39,7 +39,7 @@ class DataFuture(Future):
             if e:
                 super().set_exception(e)
             else:
-                super().set_result(parent_fu.result())
+                super().set_result(self.file_obj)
         return
 
     def __init__(self, fut, file_obj, parent=None, tid=None):
