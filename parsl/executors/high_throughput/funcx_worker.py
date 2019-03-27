@@ -11,7 +11,7 @@ from ipyparallel.serialize import serialize_object, unpack_apply_message
 from parsl.app.errors import RemoteExceptionWrapper
 
 
-def funcx_worker(worker_id, pool_id, task_url, no_reuse, logdir, debug=False):
+def funcx_worker(worker_id, pool_id, task_url, reg_url, no_reuse, logdir, debug=False):
     """
     Funcx worker will use the REP sockets to:
          task = recv ()
@@ -40,6 +40,19 @@ def funcx_worker(worker_id, pool_id, task_url, no_reuse, logdir, debug=False):
         logger.debug("Debug logging enabled")
 
     context = zmq.Context()
+
+    registration_socket = context.socket(zmq.REQ)
+    registration_socket.RCVTIMEO=1000
+    registration_socket.connect(reg_url)
+    logger.info("Connecting to {} for registration".format(reg_url))
+    registration_socket.send_pyobj(worker_id)
+    try:
+        msg = registration_socket.recv_pyobj()
+    except zmq.Again:
+        logger.critical("Registered with manager failed")
+    else:
+        logger.info("Registered with manager successful")
+
 
     funcx_worker_socket = context.socket(zmq.REP)
     funcx_worker_socket.connect(task_url)
@@ -155,9 +168,10 @@ if __name__ == "__main__":
     parser.add_argument("--worker_id", help="ID of worker from process_worker_pool", required=True)
     parser.add_argument("--pool_id", help="ID of our process_worker_pool", required=True)
     parser.add_argument("--task_url", help="URL from which we receive tasks and send replies", required=True)
+    parser.add_argument("--reg_url", help="URL for registering the worker", required=True)
     parser.add_argument("--logdir", help="Directory path where worker log files written", required=True)
     parser.add_argument("--no_reuse", help="If exists, run in no_reuse mode on containers", action="store_true", required=False)
 
     args = parser.parse_args()
-    worker = funcx_worker(args.worker_id, args.pool_id, args.task_url, args.no_reuse, args.logdir)
+    worker = funcx_worker(args.worker_id, args.pool_id, args.task_url, args.reg_url, args.no_reuse, args.logdir)
     

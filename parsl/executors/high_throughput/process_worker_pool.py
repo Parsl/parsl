@@ -311,6 +311,10 @@ class Manager(object):
         if not os.path.isdir("NAMESPACE"):
             os.mkdir("NAMESPACE")
 
+        context = zmq.Context()
+        registration_socket = context.socket(zmq.REP)
+        self.reg_port = registration_socket.bind_to_random_port("tcp://*", min_port=50001, max_port=55000)
+
         for worker_id in range(self.worker_count):
 
             if self.mode.startswith("singularity"):
@@ -325,9 +329,10 @@ class Manager(object):
                                             args=(worker_id,
                                                   self.uid,
                                                   "tcp://localhost:{}".format(self.internal_worker_port),
+                                                  "tcp://localhost:{}".format(self.reg_port),
                                                   ),
                                             # DEBUG YADU. MUST SET BACK TO False,
-                                            kwargs={'no_reuse': True,
+                                            kwargs={'no_reuse': False,
                                                     'debug': self.debug,
                                                     'logdir': self.logdir})
 
@@ -348,6 +353,7 @@ class Manager(object):
                                          worker_id=worker_id,
                                          pool_id=self.uid,
                                          task_url="tcp://localhost:{}".format(self.internal_worker_port),
+                                         reg_url="tcp://localhost:{}".format(self.reg_port),
                                          logdir=self.logdir)
 
                 logger.debug("Singularity reuse launch cmd: {}".format(sys_cmd))
@@ -371,12 +377,13 @@ class Manager(object):
                     #while True:
                     logger.info("New subprocess loop!")
                     sys_cmd = ("singularity run {singularity_img} /usr/local/bin/funcx_worker.py --no_reuse --worker_id {worker_id} "
-                                   "--pool_id {pool_id} --task_url {task_url} "
+                                   "--pool_id {pool_id} --task_url {task_url} --reg_url {reg_url} "
                                    "--logdir {logdir} ")
                     sys_cmd = sys_cmd.format(singularity_img=self.container_image,
                                              worker_id=worker_id,
                                              pool_id=self.uid,
                                              task_url="tcp://localhost:{}".format(self.internal_worker_port),
+                                             reg_url="tcp://localhost:{}".format(self.reg_port),
                                              logdir=self.logdir)
 
                     bash_cmd = """ while :
@@ -388,6 +395,11 @@ class Manager(object):
                     self.procs[worker_id] = proc
                     os.chdir(orig_location)
 
+
+        for worker_id in range(self.worker_count):
+            msg = registration_socket.recv_pyobj()
+            logger.info("Received registration message from worker: {}".format(msg))
+            registration_socket.send_pyobj("ACK")
 
         logger.debug("Manager synced with workers")
 
