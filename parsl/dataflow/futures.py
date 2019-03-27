@@ -160,16 +160,10 @@ class AppFuture(Future):
             logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
     def cancel(self):
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise NotImplementedError("Cancel not implemented")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        return False
 
     def running(self):
         if self.parent:
