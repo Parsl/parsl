@@ -124,20 +124,10 @@ class DataFuture(Future):
         return self.file_obj
 
     def cancel(self):
-        """Cancel the task that this DataFuture is tracking.
-
-            Note: This may not work
-        """
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise NotImplementedError("Cancel not implemented")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        return False
 
     def running(self):
         if self.parent:
