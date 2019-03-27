@@ -313,12 +313,12 @@ class Manager(object):
 
         for worker_id in range(self.worker_count):
 
-            if self.mode.startswith("singularity"):
-                try:
-                    os.mkdir("NAMESPACE/{}".format(worker_id))
-                    shutil.copyfile(worker_py_path, "NAMESPACE/{}/funcx_worker.py".format(worker_id))
-                except Exception:
-                    pass  # Assuming the directory already exists.
+            # if self.mode.startswith("singularity"):
+            #     try:
+            #         os.mkdir("NAMESPACE/{}".format(worker_id))
+            #         shutil.copyfile(worker_py_path, "NAMESPACE/{}/funcx_worker.py".format(worker_id))
+            #     except Exception:
+            #         pass  # Assuming the directory already exists.
 
             if self.mode == "no_container":
                 p = multiprocessing.Process(target=funcx_worker,
@@ -409,8 +409,22 @@ class Manager(object):
         self._result_pusher_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
-            logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
-                                                              self.procs[proc_id].is_alive()))
+
+            if type(self.procs[proc_id]) == "subprocess.Popen":
+
+                poll = p.poll()
+
+                if poll == None:
+                    is_alive = False
+                else:
+                    is_alive = True
+         
+                logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
+                                                                  is_alive))
+            else: 
+                logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
+                                                                  self.procs[proc_id].is_alive()))                
+            
             self.procs[proc_id].join()
             logger.debug("Worker:{} joined successfully".format(self.procs[proc_id]))
 
