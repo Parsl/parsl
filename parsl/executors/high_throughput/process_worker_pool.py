@@ -345,7 +345,7 @@ class Manager(object):
                 # @Tyler, FuncX worker path needs to be updated to not use the run command in the container.
                 # We just want to invoke with "funcx_worker.py" which is found in the $PATH
                 sys_cmd = ("singularity run {singularity_img} /usr/local/bin/funcx_worker.py --worker_id {worker_id} "
-                           "--pool_id {pool_id} --task_url {task_url} "
+                           "--pool_id {pool_id} --task_url {task_url} --reg_url {reg_url} "
                            "--logdir {logdir} ")
 
 
