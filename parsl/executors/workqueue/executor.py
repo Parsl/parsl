@@ -5,14 +5,14 @@ from concurrent.futures import Future
 
 import os
 import pickle
-# import shutil
-# import importlib
 
-from ipyparallel.serialize import pack_apply_message
+from ipyparallel.serialize import pack_apply_message, deserialize_object
 
 from parsl.executors.errors import *
+from parsl.app.errors import AppFailure
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.base import ParslExecutor
-# from parsl.data_provider.files import File
+from parsl.data_provider.files import File
 from parsl.executors.workqueue import workqueue_worker
 
 from work_queue import *
@@ -96,17 +96,8 @@ def WorkQueueThread(tasks={},
             input_files = item["input_files"]
             output_files = item["output_files"]
 
-            # TODO Make this general
-            # full_script_name = "/afs/crc.nd.edu/user/a/alitteke/parsl/parsl/executors/workqueue/workqueue_worker.py"
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
-
-            # script_name = "workqueue_worker.py"
-            # full_script_name = shutil.which(script_name)
-            if full_script_name is None:
-                logger.error("Unable to find script {} on path, skipping task {}".format(script_name, parsl_id))
-                # logger.error("Unable to find script {} on path, skipping task {}, setting future result as an exception".format(script_name, parsl_id))
-                continue
 
             remapping_string = ""
 
@@ -129,13 +120,12 @@ def WorkQueueThread(tasks={},
                 t = Task(command_str)
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
-                raise e
+                continue
             if env is not None:
                 for var in env:
                     t.specify_environment_variable(var, env[var])
 
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
-            # t.specify_file(full_file_obj_name, file_obj_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
 
@@ -150,7 +140,11 @@ def WorkQueueThread(tasks={},
                 wq_id = q.submit(t)
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
-                raise e
+                tasks_lock.acquire()
+                future = tasks[parsl_tid]
+                tasks_lock.release()
+                future.set_exception(AppFailure("Workqueue Task Start Failure", 1))
+                continue
 
             logger.debug("Task {} submitted workqueue with id {}".format(parsl_id, wq_id))
             wq_to_parsl[wq_id] = parsl_id
@@ -166,16 +160,33 @@ def WorkQueueThread(tasks={},
             if t is None:
                 task_found = False
             else:
-                # print(t.id)
                 wq_tid = t.id
                 parsl_tid = wq_to_parsl[wq_tid]
                 logger.debug("Completed workqueue task {}, parsl task {}".format(wq_id, parsl_tid))
                 status = t.return_status
-                # TODO output sdtout and stderr to files as well as submit command
+
                 if status != 0:
                     logger.debug("Workqueue task {} failed with status {}".format(wq_id, status))
-                    print(t.output)
-                    # Should probably do something smarter for this later
+                    tasks_lock.acquire()
+                    future = tasks[parsl_tid]
+                    tasks_lock.release()
+
+                    logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
+
+                    reason = "Wrapper Script Failure: "
+                    if status == 1:
+                        reasion += "command line parsing"
+                    if status == 2:
+                        reasion += "problem loading function data"
+                    if status == 3:
+                        reasion += "problem remapping file names"
+                    if status == 4:
+                        reasion += "problem writing out funciton result"
+
+                    logger.debug("Workqueue runner script failed for task {}because {}. Trace:\n{}".format(parsl_tid, reason, t.output))
+
+                    future.set_exception(AppFailure(reason, status))
+
                     del wq_to_parsl[wq_tid]
                     continue
 
@@ -191,8 +202,12 @@ def WorkQueueThread(tasks={},
                 future = tasks[parsl_tid]
                 tasks_lock.release()
 
+                future_update, _ = deserialize_object(result["result"])
                 logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
-                future.set_result(result)
+                if result["failure"] is False:
+                    future.set_result(future_update)
+                else:
+                    future.set_exception(RemoteExceptionWrapper(*future_update))
                 del wq_to_parsl[wq_tid]
 
     for wq_task in wq_to_parsl:
@@ -227,7 +242,8 @@ class WorkQueueExecutor(ParslExecutor):
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
-                 init_command=""):
+                 init_command="",
+                 see_worker_output=False):
 
         self.label = label
         self.managed = managed
@@ -246,6 +262,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.used_names = {}
         self.shared_files = set()
         self.registered_files = set()
+        self.worker_output = see_worker_output
 
         if self.project_password is not None and self.project_password_file is not None:
             logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
@@ -284,7 +301,8 @@ class WorkQueueExecutor(ParslExecutor):
                          "password_file": self.project_password_file,
                          "password": self.project_password,
                          "project_name": self.project_name,
-                         "env": self.env}
+                         "env": self.env,
+                         "see_worker_output": self.worker_ouput}
         self.master_thread = threading.Thread(target=WorkQueueThread,
                                               name="master_thread",
                                               kwargs=thread_kwargs)
@@ -331,20 +349,20 @@ class WorkQueueExecutor(ParslExecutor):
 
         func_inputs = kwargs.get("inputs", [])
         for inp in func_inputs:
-            if hasattr(inp, "is_a_parsl_file"):
+            if isinstance(inp, File):
                 input_files.append(self.create_name_tuple(inp, "in"))
 
         for kwarg, inp in kwargs.items():
-            if hasattr(inp, "is_a_parsl_file"):
+            if isinstance(inp, File):
                 input_files.append(self.create_name_tuple(inp, "in"))
 
         for inp in args:
-            if hasattr(inp, "is_a_parsl_file"):
+            if isinstance(inp, File):
                 input_files.append(self.create_name_tuple(inp, "in"))
 
         func_outputs = kwargs.get("outputs", [])
         for output in func_outputs:
-            if hasattr(output, "is_a_parsl_file"):
+            if isinstance(output, File):
                 input_files.append(self.create_name_tuple(output, "out"))
 
         fu = Future()
@@ -367,7 +385,7 @@ class WorkQueueExecutor(ParslExecutor):
                                     buffer_threshold=1024 * 1024,
                                     item_threshold=1024)
         pickle.dump(fn_buf, f)
-        f.close
+        f.close()
 
         logger.debug("Placing task {} on message queue".format(task_id))
         msg = {"task_id": task_id,
