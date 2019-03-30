@@ -6,6 +6,7 @@ import logging
 import threading
 import queue
 import pickle
+import os
 from multiprocessing import Process, Queue
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
@@ -93,6 +94,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     worker_port_range : (int, int)
         Worker ports will be chosen between the two integers provided.
 
+    interchange_address : str | function
+        Address (str) at which the interchange will be reachable from compute nodes or an address
+        function from parsl.addresses that be executed on the interchange to determine a suitable
+        address. Only valid when remote_interchange=True.
+        Eg. remote_interchange_address=parsl.addresses.address_by_hostname,
+            remote_interchange_address="10.10.10.2"
+        Default : "localhost"
+
     interchange_port_range : (int, int)
         Port range used by Parsl to communicate with the Interchange.
 
@@ -142,6 +151,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  address="127.0.0.1",
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
+                 interchange_address="localhost",
                  interchange_port_range=(55000, 56000),
                  storage_access=None,
                  working_dir=None,
@@ -182,6 +192,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.poll_period = poll_period
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
+        self.interchange_address = interchange_address
 
         # FuncX specific options
         self.container_image = container_image
@@ -199,6 +210,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                "--mode={worker_mode} "
                                "--container_image={container_image} ")
 
+        self.ix_launch_cmd = ("htex-interchange {debug} -c={client_address} "
+                              "--client_ports={client_ports} "
+                              "--worker_port_range={worker_port_range} "
+                              "--logdir={logdir} "
+                              "{suppress_failure} "
+                              "--hb_threshold={heartbeat_threshold} ")
+
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
 
@@ -207,6 +225,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
+
+        if self.interchange_address == "localhost":
+            logdir = "{}/{}".format(self.run_dir, self.label)
+        else:
+            logdir = os.path.join(*(self.provider.channel.script_dir,
+                                    "runinfo",
+                                    os.path.basename(self.run_dir),
+                                    self.label))
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        task_url=self.worker_task_url,
@@ -217,9 +243,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
-                                       logdir="{}/{}".format(self.run_dir, self.label),
                                        worker_mode=self.worker_mode,
                                        container_image=self.container_image)
+                                       logdir=logdir)
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -235,9 +261,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def start(self):
         """Create the Interchange process and connect to it.
         """
-        self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
-        self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
-        self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
+        self.outgoing_q = zmq_pipes.TasksOutgoing("0.0.0.0", self.interchange_port_range)
+        self.incoming_q = zmq_pipes.ResultsIncoming("0.0.0.0", self.interchange_port_range)
+        self.command_client = zmq_pipes.CommandClient("0.0.0.0", self.interchange_port_range)
 
         self.is_alive = True
 
@@ -245,7 +271,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._executor_exception = None
         self._queue_management_thread = None
         self._start_queue_management_thread()
-        self._start_local_queue_process()
+        if self.interchange_address == "localhost":
+            self._start_local_queue_process()
+        else:
+            self._start_remote_interchange_process()
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
@@ -399,6 +428,44 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.worker_task_url = "tcp://{}:{}".format(self.address, worker_task_port)
         self.worker_result_url = "tcp://{}:{}".format(self.address, worker_result_port)
 
+    def _start_remote_interchange_process(self):
+        """ Starts the interchange process locally
+
+        Starts the interchange process remotely via the provider.channel and uses the command channel
+        to request worker urls that the interchange has selected.
+        """
+        logger.debug("Attempting Interchange deployment via channel: {}".format(self.provider.channel))
+
+        debug_opts = "--debug" if self.worker_debug else ""
+        suppress_failure = "--suppress_failure" if self.suppress_failure else ""
+        logger.debug("Before : \n{}\n".format(self.ix_launch_cmd))
+        launch_command = self.ix_launch_cmd.format(debug=debug_opts,
+                                                   client_address=self.address,
+                                                   client_ports="{},{},{}".format(self.outgoing_q.port,
+                                                                                  self.incoming_q.port,
+                                                                                  self.command_client.port),
+                                                   worker_port_range="{},{}".format(self.worker_port_range[0],
+                                                                                    self.worker_port_range[1]),
+                                                   logdir="{}/runinfo/{}/{}".format(self.provider.channel.script_dir,
+                                                                                    os.path.basename(self.run_dir),
+                                                                                    self.label),
+                                                   suppress_failure=suppress_failure,
+                                                   heartbeat_threshold=self.heartbeat_threshold)
+
+        if self.provider.worker_init:
+            launch_command = self.provider.worker_init + '\n' + launch_command
+
+        logger.debug("Launch command : \n{}\n".format(launch_command))
+
+        retcode, stdout, stderr = self.provider.execute_wait(launch_command)
+        if retcode == 0:
+            logger.debug("Starting Interchange remotely worked")
+
+        logger.debug("Requesting worker urls ")
+        self.worker_task_url, self.worker_result_url = self.get_worker_urls()
+        logger.debug("Got worker urls {}, {}".format(self.worker_task_url, self.worker_result_url))
+        return
+
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
 
@@ -429,6 +496,24 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
         logger.debug("Sent hold request to worker: {}".format(worker_id))
+        return c
+
+    def _shutdown_interchange(self):
+        """Trigger shutdown sequence on the Interchange
+
+        """
+        c = self.command_client.run("SHUTDOWN")
+        logger.debug("Sent shutdown command to interchange")
+        return c
+
+    def get_worker_urls(self):
+        """Ensure Interchange is reachable over the command channel and get worker urls
+
+        Returns:
+            worker_task_url, worker_result_url
+        """
+        c = self.command_client.run("GET_WORKER_URLS;{}".format(self.interchange_address))
+        logger.debug("Got worker urls: {}".format(c))
         return c
 
     @property
@@ -548,6 +633,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         logger.info("Attempting HighThroughputExecutor shutdown")
         # self.outgoing_q.close()
         # self.incoming_q.close()
-        self.queue_proc.terminate()
-        logger.info("Finished HighThroughputExecutor shutdown attempt")
+        self._shutdown_interchange()
+        if self.interchange_address == "localhost":
+            self.queue_proc.terminate()
+        logger.warning("Finished HighThroughputExecutor shutdown attempt")
         return True

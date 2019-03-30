@@ -3,6 +3,7 @@ import argparse
 import zmq
 # import uuid
 import os
+import daemon
 import sys
 import platform
 import random
@@ -121,6 +122,7 @@ class Interchange(object):
         except FileExistsError:
             pass
 
+        print("Starting logger at {}/interchange.log".format(self.logdir))
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
         logger.debug("Initializing Interchange process")
 
@@ -184,6 +186,7 @@ class Interchange(object):
                                  'os': platform.system(),
                                  'hname': platform.node(),
                                  'dir': os.getcwd()}
+        logger.info("Current platform info: {}".format(self.current_platform))
 
         logger.info("Platform info: {}".format(self.current_platform))
 
@@ -248,7 +251,7 @@ class Interchange(object):
         while not kill_event.is_set():
             try:
                 command_req = self.command_channel.recv_pyobj()
-                logger.debug("[COMMAND] Received command request: {}".format(command_req))
+                logger.info("[COMMAND] Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
                     outstanding = self.pending_task_queue.qsize()
                     for manager in self._ready_manager_queue:
@@ -278,6 +281,13 @@ class Interchange(object):
                     kill_event.set()
                     reply = True
 
+                elif command_req.startswith("GET_WORKER_URLS"):
+                    logger.info("[CMD] Here ")
+                    cmd, method = command_req.split(';')
+                    logger.info("[CMD] Requested worker urls via {}".format(method))
+                    self.interchange_address = method
+                    reply = ("tcp://{}:{}".format(self.interchange_address, self.worker_task_port),
+                             "tcp://{}:{}".format(self.interchange_address, self.worker_result_port))
                 else:
                     reply = None
 
@@ -305,13 +315,13 @@ class Interchange(object):
         count = 0
 
         self._kill_event = threading.Event()
-        self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
-                                                    args=(self._kill_event,))
-        self._task_puller_thread.start()
-
         self._command_thread = threading.Thread(target=self._command_server,
                                                 args=(self._kill_event,))
         self._command_thread.start()
+
+        self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
+                                                    args=(self._kill_event,))
+        self._task_puller_thread.start()
 
         poller = zmq.Poller()
         # poller.register(self.task_incoming, zmq.POLLIN)
@@ -510,11 +520,18 @@ def starter(comm_q, *args, **kwargs):
     ic.start()
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
+def cli_run():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--client_address",
+    parser.add_argument("-c", "--client_address", required=True,
                         help="Client address")
+    parser.add_argument("--client_ports",
+                        help="client ports as a triple of outgoing,incoming,command")
+    parser.add_argument("--worker_ports",
+                        help="worker port tuple")
+    parser.add_argument("--worker_port_range",
+                        help="Worker port range as a tuple")
     parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
                         help="Parsl worker log directory")
     parser.add_argument("-t", "--task_url",
@@ -527,30 +544,28 @@ if __name__ == '__main__':
                         help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
     parser.add_argument("--suppress_failure", action='store_true',
                         help="Enables suppression of failures")
+    parser.add_argument("--hb_threshold",
+                        help="Heartbeat threshold in seconds")
     parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
+                        help="Enables debug logging")
 
+    print("Starting HTEX Intechange")
     args = parser.parse_args()
-
-    # Setup logging
-    global logger
-    format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger("interchange")
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel('DEBUG' if args.debug is True else 'INFO')
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    logger.debug("Starting Interchange")
 
     optionals = {}
     optionals['suppress_failure'] = args.suppress_failure
+    optionals['logdir'] = args.logdir
+    optionals['client_address'] = args.client_address
 
+    if args.debug:
+        optionals['logging_level'] = logging.DEBUG
     if args.worker_ports:
         optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
+    if args.worker_port_range:
+        optionals['worker_port_range'] = [int(i) for i in args.worker_port_range.split(',')]
+    if args.worker_port_range:
+        optionals['client_ports'] = [int(i) for i in args.client_ports.split(',')]
 
-    ic = Interchange(**optionals)
-    ic.start()
+    with daemon.DaemonContext():
+        ic = Interchange(**optionals)
+        ic.start()
