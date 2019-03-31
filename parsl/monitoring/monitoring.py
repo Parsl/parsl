@@ -12,10 +12,12 @@ from parsl.utils import RepresentationMixin
 
 from parsl.monitoring.message_type import MessageType
 
+from typing import Optional
+
 try:
     from parsl.monitoring.db_manager import dbm_starter
 except Exception as e:
-    _db_manager_excepts = e
+    _db_manager_excepts = e  # type: Optional[Exception]
 else:
     _db_manager_excepts = None
 
