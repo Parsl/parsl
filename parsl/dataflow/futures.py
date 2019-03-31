@@ -60,12 +60,10 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, parent, tid=None, stdout=None, stderr=None):
+    def __init__(self, tid=None, stdout=None, stderr=None):
         """Initialize the AppFuture.
 
         Args:
-             - parent (Future) : The parent future if one exists
-               A default value of None should be passed in if app is not launched
 
         KWargs:
              - tid (Int) : Task id should be any unique identifier. Now Int.
@@ -81,9 +79,6 @@ class AppFuture(Future):
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
-
-        if parent is not None:
-            self.update_parent(parent)
 
     def parent_callback(self, executor_fu):
         """Callback from a parent future to update the AppFuture.

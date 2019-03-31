@@ -39,7 +39,7 @@ class DataFuture(Future):
             if e:
                 super().set_exception(e)
             else:
-                super().set_result(parent_fu.result())
+                super().set_result(self.file_obj)
         return
 
     def __init__(self, fut, file_obj, parent=None, tid=None):
@@ -124,20 +124,10 @@ class DataFuture(Future):
         return self.file_obj
 
     def cancel(self):
-        """Cancel the task that this DataFuture is tracking.
-
-            Note: This may not work
-        """
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise NotImplementedError("Cancel not implemented")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        return False
 
     def running(self):
         if self.parent:
@@ -220,7 +210,7 @@ if __name__ == "__main__":
         for item in nums:
             testfile.write("{0}\n".format(item))
 
-    foo = Future()
+    foo = Future()  # type: Future[str]
     df = DataFuture(foo, './shuffled.txt')
     dx = DataFuture(foo, '~/shuffled.txt')
 
