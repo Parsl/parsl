@@ -42,7 +42,7 @@ class DataFuture(Future):
                 super().set_result(self.file_obj)
         return
 
-    def __init__(self, fut, file_obj, parent=None, tid=None):
+    def __init__(self, fut, file_obj, tid=None):
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.
@@ -52,7 +52,6 @@ class DataFuture(Future):
             - file_obj (string/File obj) : Something representing file(s)
 
         Kwargs:
-            - parent ()
             - tid (task_id) : Task id that this DataFuture tracks
         """
         super().__init__()
@@ -61,7 +60,7 @@ class DataFuture(Future):
             self.file_obj = File(file_obj)
         else:
             self.file_obj = file_obj
-        self.parent = parent
+        self.parent = fut
         self._exception = None
 
         if fut is None:
@@ -70,12 +69,11 @@ class DataFuture(Future):
 
         else:
             if isinstance(fut, Future):
-                self.parent = fut
                 self.parent.add_done_callback(self.parent_callback)
             else:
                 raise NotFutureError("DataFuture can be created only with a FunctionFuture on None")
 
-        logger.debug("Creating DataFuture with parent: %s", parent)
+        logger.debug("Creating DataFuture with parent: %s", self.parent)
         logger.debug("Filepath: %s", self.filepath)
 
     @property
