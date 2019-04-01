@@ -65,7 +65,7 @@ class DataFuture(Future):
 
         if fut is None:
             logger.debug("Setting result to filepath since no future was passed")
-            self.set_result = self.file_obj
+            self.set_result(self.file_obj)
 
         else:
             if isinstance(fut, Future):
