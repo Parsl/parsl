@@ -2,7 +2,14 @@
 
 import logging
 import zmq
-# import time
+import time
+
+import queue
+import multiprocessing as mp
+
+
+ADD_EVENT = True
+REMOVE_EVENT = False
 
 
 class Interchange(object):
@@ -53,6 +60,13 @@ class Interchange(object):
         self.poller = zmq.Poller()
         self.poller.register(self.task_incoming, zmq.POLLIN)
         self.poller.register(self.worker_messages, zmq.POLLIN)
+
+        # Start process for monitoring tasks
+        self.monitor_task_updates = mp.Queue()
+        self.monitor_proc = mp.Process(target=self._task_monitor,
+                                       args=(self.monitor_task_updates,))
+        self.monitor_proc.start()
+
         logger.debug("Init complete")
 
     def start(self):
@@ -67,13 +81,50 @@ class Interchange(object):
                 logger.debug("Got new task from client")
                 self.worker_messages.send_multipart(message)
                 logger.debug("Sent task to worker")
+                task_id = int.from_bytes(message[2], "little")
+                # TODO: correct this to actual expected deadlines
+                update = (ADD_EVENT, task_id, time.time())
+                self.monitor_task_updates.put(update)
 
             if socks.get(self.worker_messages) == zmq.POLLIN:
                 message = self.worker_messages.recv_multipart()
                 logger.debug("Got new result from worker")
                 self.result_outgoing.send_multipart(message[1:])
-
+                logger.info(message[1:])
                 logger.debug("Sent result to client")
+                task_id = int.from_bytes(message[2], "little")
+                update = (REMOVE_EVENT, task_id)
+                self.monitor_task_updates.put(update)
+
+    def _task_monitor(self, monitor_task_updates):
+        pending_tasks = {}
+
+        while True:
+            timeout = None
+            if len(pending_tasks) != 0:
+                # TODO: do this faster using a heap / sorted list
+                timeout = min(pending_tasks.values()) - time.time()
+
+            try:
+                # Wait until a task update is received or first timeout expires
+                update = monitor_task_updates.get(True, timeout)
+            except queue.Empty:  # Timeout expired
+                pass
+            else:  # New update event
+                action = update[0]
+                task_id = update[1]
+                if action == ADD_EVENT:
+                    pending_tasks[task_id] = update[2]
+                elif action == REMOVE_EVENT:
+                    del pending_tasks[task_id]
+            finally:
+                now = time.time()
+                for task_id, deadline in pending_tasks.items():
+                    if now > deadline:
+                        logger.warn(
+                            "RESULT FOR TASK {} NOT RECEIVED IN TIME"
+                            .format(task_id))
+                        # TODO: send back error or warning for this task
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
