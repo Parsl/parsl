@@ -138,6 +138,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
+<<<<<<< HEAD
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
@@ -155,7 +156,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
                  suppress_failure: bool = False,
-                 managed: bool = True):
+                 managed: bool = True,
+                 worker_logdir_root: Optional[str] = None):
+        
         logger.debug("Initializing HighThroughputExecutor")
 
         self.label = label
@@ -183,6 +186,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.poll_period = poll_period
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
+        self.worker_logdir_root = worker_logdir_root
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
@@ -203,6 +207,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
+
+        worker_logdir = "{}/{}".format(self.run_dir, self.label)
+        if self.worker_logdir_root is not None:
+            worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,

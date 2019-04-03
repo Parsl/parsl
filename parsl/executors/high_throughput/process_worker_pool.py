@@ -178,7 +178,7 @@ class Manager(object):
         while not kill_event.is_set():
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
-
+            
             logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
                                                                                         pending_task_count))
 

@@ -15,6 +15,10 @@ REDIRECT_URI = 'https://auth.globus.org/v2/web/auth-code'
 SCOPES = ('openid '
           'urn:globus:auth:scope:transfer.api.globus.org:all')
 
+token_path = os.path.join(os.path.expanduser('./'), '.parsl')
+if not os.path.isdir(token_path):
+    os.mkdir(token_path)
+TOKEN_FILE = os.path.join(token_path, '.globus.json')
 
 get_input = getattr(__builtins__, 'raw_input', input)
 
