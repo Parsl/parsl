@@ -103,17 +103,20 @@ def task(workflow_id, task_id):
                            )
 
 
-@app.route('/workflow/<workflow_id>/dag')
-def workflow_dag_details(workflow_id):
+@app.route('/workflow/<workflow_id>/dag_<path:path>')
+@app.route('/workflow/<workflow_id>/dag_<path:path>')
+def workflow_dag_details(workflow_id, path='group_by_apps'):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
     df_tasks = pd.read_sql_query("""SELECT task_id, task_func_name, task_depends,
                                  task_time_submitted, task_time_returned, task_time_running
                                  FROM task WHERE run_id='%s' """
                                  % (workflow_id), db.engine)
-    workflow_completed = workflow_details.time_completed is not None
+
+    group_by_apps = (path == "group_by_apps")
     return render_template('dag.html',
                            workflow_details=workflow_details,
-                           workflow_dag_plot=workflow_dag_plot(workflow_completed, df_tasks))
+                           group_by_apps=group_by_apps,
+                           workflow_dag_plot=workflow_dag_plot(df_tasks, group_by_apps=group_by_apps))
 
 
 @app.route('/workflow/<workflow_id>/resource_usage')
@@ -137,11 +140,11 @@ def workflow_resources(workflow_id):
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
                            user_time_distribution_avg_plot=resource_distribution_plot(
-                               df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution',  option='avg'),
+                               df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='avg'),
                            user_time_distribution_max_plot=resource_distribution_plot(
                                df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='max'),
                            memory_usage_distribution_avg_plot=resource_distribution_plot(
-                               df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution',  option='avg'),
+                               df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='avg'),
                            memory_usage_distribution_max_plot=resource_distribution_plot(
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='max'),
                            user_time_time_series=resource_time_series(
