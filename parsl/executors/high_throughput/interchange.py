@@ -416,7 +416,7 @@ class Interchange(object):
                             self._ready_manager_queue[manager]['tasks'].extend(tids)
                             logger.debug("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
                             if self._ready_manager_queue[manager]['free_capacity'] > 0:
-                                logger.debug("[MAIN] Manager {} still has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
+                                logger.debug("[MAIN] Manager {} has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
                                 # ... so keep it in the interesting_managers list
                             else:
                                 logger.debug("[MAIN] Manager {} is now saturated".format(manager))
