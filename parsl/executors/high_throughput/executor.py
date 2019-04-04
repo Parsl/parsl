@@ -131,7 +131,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Path or identfier to the container image to be used by the workers
 
     worker_mode : str
-        Select the mode of operation from no_container, singularity_reuse, singularity_single_use
+        Select the mode of operation from no_container, singularity_reuse, singularity_single_use, shifter_reuse
         Default: singularity_reuse
     """
 

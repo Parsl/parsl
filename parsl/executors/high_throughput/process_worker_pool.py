@@ -85,10 +85,11 @@ class Manager(object):
              Number of seconds after which a heartbeat message is sent to the interchange
 
         mode : str
-             Pick between 3 supported modes for the worker:
+             Pick between 4 supported modes for the worker:
               1. no_container : Worker launched without containers
               2. singularity_reuse : Worker launched inside a singularity container that will be reused
               3. singularity_single_use : Each worker and task runs inside a new container instance.
+              4. shifter_reuse : Each worker and tasks runs in a reused shifter container
 
         container_image : str
              Path or identifier for the container to be used. Default: None
@@ -317,7 +318,7 @@ class Manager(object):
 
         for worker_id in range(self.worker_count):
 
-            if self.mode.startswith("singularity"):
+            if self.mode.startswith("singularity") or self.mode.startswith("shifter"):
                 try:
                     os.mkdir("NAMESPACE/{}".format(worker_id))
                     # shutil.copyfile(worker_py_path, "NAMESPACE/{}/funcx_worker.py".format(worker_id))
@@ -338,6 +339,36 @@ class Manager(object):
 
                 p.start()
                 self.procs[worker_id] = p
+
+            elif self.mode == "shifter_reuse":
+
+                os.chdir("NAMESPACE/{}".format(worker_id))
+                # @Tyler, FuncX worker path needs to be updated to not use the run command in the container.
+                # We just want to invoke with "funcx_worker.py" which is found in the $PATH
+                sys_cmd = ("shifter --image={singularity_img} -- python3 /usr/local/bin/funcx_worker.py --worker_id {worker_id} "
+                           "--pool_id {pool_id} --task_url {task_url} --reg_url {reg_url} "
+                           "--logdir {logdir} ")
+
+
+                sys_cmd = sys_cmd.format(singularity_img=self.container_image,
+                                         worker_id=worker_id,
+                                         pool_id=self.uid,
+                                         task_url="tcp://localhost:{}".format(self.internal_worker_port),
+                                         reg_url="tcp://localhost:{}".format(self.reg_port),
+                                         logdir=self.logdir)
+
+                logger.debug("Shifter reuse launch cmd: {}".format(sys_cmd))
+                proc = subprocess.Popen(sys_cmd, shell=True)
+                self.procs[worker_id] = proc
+
+                # Update the command to say something like :
+                # while :
+                # do
+                #     singularity run {singularity_img} funcx_worker.py --no_reuse .....
+                # done
+
+                # FuncX worker to accept new --no_reuse flag that breaks the loop after 1 task.
+                os.chdir(orig_location)
 
             elif self.mode == "singularity_reuse":
 
