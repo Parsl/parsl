@@ -4,3 +4,4 @@ Flask
 flask_sqlalchemy
 pandas
 plotly
+python-daemon

@@ -26,8 +26,8 @@ def resource_distribution_plot(df_resources, df_task, type='psutil_process_time_
         for app, tasks in apps_dict.items():
             tmp = []
             if option == 'avg':
-                task = df_resources[df_resources['task_id']
-                                    == app][type].astype('float').mean()
+                task = df_resources[df_resources['task_id'] ==
+                                    app][type].astype('float').mean()
             elif option == 'max':
                 task = max(
                     df_resources[df_resources['task_id'] == app][type].astype('float'))
@@ -64,7 +64,7 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
     end = tasks['epoch_time'].max()
     tasks['relative_time'] = tasks['epoch_time'] - start
     bins = pd.cut(tasks['relative_time'], range(
-        0, end-start+1, step), include_lowest=True)
+        0, end - start + 1, step), include_lowest=True)
 
     df = tasks.groupby(bins, as_index=False)[type].mean()
     df['time'] = step * df.index

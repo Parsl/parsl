@@ -1,0 +1,2 @@
+include viz_server/templates/*
+include viz_server/static/*
