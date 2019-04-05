@@ -7,6 +7,7 @@ from viz_server.plots.default.workflow_plots import task_gantt_plot, task_per_ap
 from viz_server.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
 from viz_server.plots.default.workflow_resource_plots import resource_distribution_plot, resource_time_series
 
+dummy=True
 
 @app.route('/')
 def index():
