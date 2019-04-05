@@ -6,6 +6,7 @@ import time
 
 import queue
 import multiprocessing as mp
+from ipyparallel.serialize import pack_apply_message
 
 
 ADD_EVENT = True
@@ -73,6 +74,9 @@ class Interchange(object):
         """ TODO: docstring """
         logger.info("Starting interchange")
 
+        # Measure average round-trip time to workers
+        self.measure_worker_rtt()
+
         while True:
             socks = dict(self.poller.poll(1))
 
@@ -82,15 +86,15 @@ class Interchange(object):
                 self.worker_messages.send_multipart(message)
                 logger.debug("Sent task to worker")
                 task_id = int.from_bytes(message[2], "little")
-                # TODO: correct this to actual expected deadlines
-                update = (ADD_EVENT, task_id, time.time())
+                # TODO: correct this to actual expected deadlines instead of hardcoded 1ms execution time (for testing)
+                deadline = time.time() + self.worker_rtt + 1000 
+                update = (ADD_EVENT, task_id, deadline)
                 self.monitor_task_updates.put(update)
 
             if socks.get(self.worker_messages) == zmq.POLLIN:
                 message = self.worker_messages.recv_multipart()
                 logger.debug("Got new result from worker")
                 self.result_outgoing.send_multipart(message[1:])
-                logger.info(message[1:])
                 logger.debug("Sent result to client")
                 task_id = int.from_bytes(message[2], "little")
                 update = (REMOVE_EVENT, task_id)
@@ -121,10 +125,29 @@ class Interchange(object):
                 now = time.time()
                 for task_id, deadline in pending_tasks.items():
                     if now > deadline:
-                        logger.warn(
-                            "RESULT FOR TASK {} NOT RECEIVED IN TIME"
-                            .format(task_id))
+                        logger.warn("Result for task {} not received on time"
+                                    .format(task_id))
                         # TODO: send back error or warning for this task
+
+    def measure_worker_rtt(self, num_measurements=10, warmup=10):
+        fn_buf = pack_apply_message(lambda x: x, (0,), {},
+                                    buffer_threshold=1024 * 1024,
+                                    item_threshold=1024)
+        task_id_bytes = (0).to_bytes(4, "little")
+        message = [b"\x00", b"", task_id_bytes] + fn_buf
+        times = []
+
+        for i in range(warmup + num_measurements):
+            send_time = time.time()
+            self.worker_messages.send_multipart(message)
+            _ = self.worker_messages.recv_multipart()
+            if i >= warmup:
+                times.append(time.time() - send_time)
+
+        assert(len(times) == num_measurements)
+        self.worker_rtt = sum(times) / num_measurements
+        logger.info("Interchange-worker RTT is {} ms"
+                    .format(self.worker_rtt * 1000))
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
