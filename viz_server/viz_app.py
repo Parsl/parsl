@@ -1,20 +1,19 @@
 from flask import Flask
 from viz_server.models import db
 import argparse
-import os
 
 def cli_run():
+    """ Instantiates the Monitoring viz server
+    """
     parser = argparse.ArgumentParser(description='Parsl visualization tool')
-    parser.add_argument('db_path', type=str,
-                        help='Database path')
-    parser.add_argument('--port', type=int, default=50550)
-    parser.add_argument('--debug', type=str, default='False')
-
+    parser.add_argument('db_path', type=str, required=True,
+                        help='Database path in the format sqlite:///<absolute_path_to_db>')
+    parser.add_argument('--port', type=int, default=8080,
+                        help='Port at which the monitoring Viz Server is hosted. Default: 8080')
+    parser.add_argument("-d", "--debug", action='store_true',
+                        help="Enable debug logging")
     args = parser.parse_args()
-    debug = False
-    if args.debug == 'True':
-        debug = True
-    print("current working dir: {}".format(os.getcwd()))
+
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = args.db_path
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -23,7 +22,8 @@ def cli_run():
     with app.app_context():
         db.create_all()
         from viz_server import views
-        app.run(host='0.0.0.0', port=args.port, debug=debug)
+        views.dummy = False
+        app.run(host='0.0.0.0', port=args.port, debug=args.debug)
 
 
 if __name__ == "__main__":
