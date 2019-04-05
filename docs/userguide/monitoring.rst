@@ -50,6 +50,8 @@ Install the visualization server::
    $ pip install git+https://github.com/Parsl/viz_server.git
 
 Once `viz_server` is installed, you can run the utility `parsl-visualize` in the directory with the
-monitoring.db sqlite file to launch a web page with the workflow visualization.
+`monitoring.db` sqlite file to launch a web page for the workflow visualization::
+
+   $ parsl-visualize sqlite:///<absolute-full-path-to-db>
 
 .. warning:: Please note that visualization support is in `alpha` state
