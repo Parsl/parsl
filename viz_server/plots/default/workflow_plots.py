@@ -1,13 +1,12 @@
-import pandas as pd
 import numpy as np
 import plotly.graph_objs as go
 import plotly.figure_factory as ff
 from plotly.offline import plot
 import networkx as nx
 import datetime
-import time
 
 from viz_server.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
+
 
 def task_gantt_plot(df_task):
 
@@ -23,7 +22,7 @@ def task_gantt_plot(df_task):
     # parsl_tasks = df_task.to_dict('records')
     parsl_tasks = []
     for i, task in df_task.iterrows():
-        time_running, time_returned = task['task_time_running'],  task['task_time_returned']
+        time_running, time_returned = task['task_time_running'], task['task_time_returned']
         if task['task_time_returned'] is None:
             time_returned = datetime.datetime.now()
         if task['task_time_running'] is None:

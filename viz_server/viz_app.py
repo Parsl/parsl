@@ -2,11 +2,12 @@ from flask import Flask
 from viz_server.models import db
 import argparse
 
+
 def cli_run():
     """ Instantiates the Monitoring viz server
     """
     parser = argparse.ArgumentParser(description='Parsl visualization tool')
-    parser.add_argument('db_path', type=str, required=True,
+    parser.add_argument('db_path', type=str,
                         help='Database path in the format sqlite:///<absolute_path_to_db>')
     parser.add_argument('--port', type=int, default=8080,
                         help='Port at which the monitoring Viz Server is hosted. Default: 8080')

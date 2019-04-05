@@ -1,6 +1,5 @@
 import plotly.graph_objs as go
 from plotly.offline import plot
-import pandas as pd
 
 
 def time_series_cpu_per_task_plot(df_resources, resource_type, label):

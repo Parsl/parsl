@@ -1,13 +1,14 @@
 from flask import render_template
 from flask import current_app as app
 import pandas as pd
-from viz_server.models import Workflow, Task, Status, Resource, db
+from viz_server.models import *
 
 from viz_server.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from viz_server.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
 from viz_server.plots.default.workflow_resource_plots import resource_distribution_plot, resource_time_series
 
-dummy=True
+dummy = True
+
 
 @app.route('/')
 def index():
@@ -23,7 +24,7 @@ def index():
 def workflow(workflow_id):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
 
-    if workflow_details == None:
+    if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
 #     df_task = pd.read_sql_query("""SELECT task.task_id, task.task_func_name, task.task_time_submitted,
@@ -51,7 +52,7 @@ def workflow(workflow_id):
 def parsl_apps(workflow_id):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
 
-    if workflow_details == None:
+    if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
     task_summary = Task.query.filter_by(run_id=workflow_id)
@@ -65,7 +66,7 @@ def parsl_apps(workflow_id):
 def parsl_app(workflow_id, app_name):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
 
-    if workflow_details == None:
+    if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
     task_summary = Task.query.filter_by(
@@ -80,7 +81,7 @@ def parsl_app(workflow_id, app_name):
 def task(workflow_id, task_id):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
 
-    if workflow_details == None:
+    if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
     task_details = Task.query.filter_by(
@@ -123,7 +124,7 @@ def workflow_dag_details(workflow_id, path='group_by_apps'):
 @app.route('/workflow/<workflow_id>/resource_usage')
 def workflow_resources(workflow_id):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
-    if workflow_details == None:
+    if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
     df_resources = pd.read_sql_query(
