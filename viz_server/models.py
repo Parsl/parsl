@@ -1,9 +1,12 @@
-from viz_server.viz_app import db
+from flask_sqlalchemy import SQLAlchemy
+
 
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
+
+db = SQLAlchemy()
 
 
 class Workflow(db.Model):
@@ -20,9 +23,8 @@ class Workflow(db.Model):
     tasks_failed_count = db.Column(db.Integer, nullable=False)
     tasks_completed_count = db.Column(db.Integer, nullable=False)
 
+
 # TODO: expand to full set of info
-
-
 class Status(db.Model):
     __tablename__ = STATUS
     task_id = db.Column(db.Integer, db.ForeignKey(

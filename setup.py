@@ -32,6 +32,6 @@ setup(
     ],
     keywords=['Visualization', 'Workflows', 'Scientific computing'],
     entry_points={'console_scripts':
-      ['parsl-visualize=viz_server.viz:cli_run',
+      ['parsl-visualize=viz_server.viz_app:cli_run',
       ]}
 )

@@ -29,11 +29,11 @@ def task_gantt_plot(df_task):
         if task['task_time_running'] is None:
             time_running = datetime.datetime.now()
         dic1 = dict(Task=task['task_id'], Start=task['task_time_submitted'],
-                    Finish=time_running, Resource="Queuing")
+                    Finish=time_running, Resource="Pending")
         dic2 = dict(Task=task['task_id'], Start=time_running,
                     Finish=time_returned, Resource="Running")
         parsl_tasks.extend([dic1, dic2])
-    colors = {'Queuing': 'rgb(220, 0, 0)', 'Running': 'rgb(0, 255, 100)'}
+    colors = {'Pending': 'rgb(168, 168, 168)', 'Running': 'rgb(0, 0, 255)'}
     fig = ff.create_gantt(parsl_tasks,
                           title="",
                           colors=colors,
@@ -162,7 +162,7 @@ def total_tasks_plot(df_task, df_status, columns=20):
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
 
-def workflow_dag_plot(workflow_completed, df_tasks):
+def workflow_dag_plot(df_tasks, group_by_apps=True):
     G = nx.DiGraph(directed=True)
     nodes = df_tasks['task_id'].unique()
     dic = df_tasks.set_index('task_id').to_dict()
@@ -179,13 +179,14 @@ def workflow_dag_plot(workflow_completed, df_tasks):
 
     node_positions = nx.nx_pydot.pydot_layout(G, prog='dot')
     node_traces = []
-    if workflow_completed:
-        colors_list = {app: i for i, app in enumerate(
+
+    if group_by_apps:
+        groups_list = {app: i for i, app in enumerate(
             df_tasks['task_func_name'].unique())}
     else:
-        colors_list = {'Queuing': 0, "Running": 1, 'Completed': 2}
+        groups_list = {'Pending': (0, 'gray'), "Running": (1, 'blue'), 'Completed': (2, 'green')}
 
-    for k, _ in colors_list.items():
+    for k, _ in groups_list.items():
         node_trace = go.Scatter(
             x=[],
             y=[],
@@ -202,22 +203,24 @@ def workflow_dag_plot(workflow_completed, df_tasks):
             marker=dict(
                 showscale=False,
                 # color='rgb(200,0,0)',
-                size=8,
+                size=11,
                 line=dict(width=1, color='rgb(0,0,0)')))
         node_traces.append(node_trace)
 
     for node in node_positions:
         x, y = node_positions[node]
-        if workflow_completed:
+        if group_by_apps:
             name = dic['task_func_name'][node]
+            index = groups_list[name]
         else:
             if dic['task_time_returned'][node] is not None:
                 name = 'Completed'
             elif dic['task_time_running'][node] is not None:
                 name = "Running"
             elif dic['task_time_submitted'][node] is not None:
-                name = "Queuing"
-        index = colors_list[name]
+                name = "Pending"
+            index, color = groups_list[name]
+            node_traces[index]['marker']['color'] = color
         node_traces[index]['x'] += tuple([x])
         node_traces[index]['y'] += tuple([y])
         node_traces[index]['text'] += tuple(
@@ -227,9 +230,10 @@ def workflow_dag_plot(workflow_completed, df_tasks):
     edge_trace = go.Scatter(
         x=[],
         y=[],
-        line=dict(width=1, color='rgb(150,150,150)'),
+        line=dict(width=1, color='rgb(160,160,160)'),
         hoverinfo='none',
-        showlegend=False,
+        # showlegend=False,
+        name='Dependency',
         mode='lines')
 
     for edge in G.edges:
