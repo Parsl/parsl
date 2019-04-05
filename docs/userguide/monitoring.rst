@@ -23,11 +23,20 @@ Here's an example configuration that logs monitoring information to a local sqli
 
 .. code-block:: python
 
+    import parsl
+    from parsl.monitoring.monitoring import MonitoringHub
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.addresses import address_by_hostname
+
+    import logging
+
     config = Config(
         executors=[
             HighThroughputExecutor(
                 label="local_htex",
                 cores_per_worker=1,
+                max_workers=4,
                 address=address_by_hostname(),
             )
         ],
