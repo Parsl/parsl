@@ -60,12 +60,10 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, parent, tid=None, stdout=None, stderr=None):
+    def __init__(self, tid=None, stdout=None, stderr=None):
         """Initialize the AppFuture.
 
         Args:
-             - parent (Future) : The parent future if one exists
-               A default value of None should be passed in if app is not launched
 
         KWargs:
              - tid (Int) : Task id should be any unique identifier. Now Int.
@@ -76,16 +74,11 @@ class AppFuture(Future):
         """
         self._tid = tid
         super().__init__()
-        self.prev_parent = None
         self.parent = None
         self._update_lock = threading.Lock()
-        self._parent_update_event = threading.Event()
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
-
-        if parent is not None:
-            self.update_parent(parent)
 
     def parent_callback(self, executor_fu):
         """Callback from a parent future to update the AppFuture.
@@ -107,7 +100,6 @@ class AppFuture(Future):
 
         Updates the super() with the result() or exception()
         """
-        # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
         with self._update_lock:
 
             if not executor_fu.done():
@@ -155,7 +147,6 @@ class AppFuture(Future):
         This handles the case where the user has called result on the AppFuture
         before the parent exists.
         """
-        # with self._parent_update_lock:
         self.parent = fut
 
         try:
@@ -163,19 +154,11 @@ class AppFuture(Future):
         except Exception as e:
             logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
-        self._parent_update_event.set()
-
     def cancel(self):
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise NotImplementedError("Cancel not implemented")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        return False
 
     def running(self):
         if self.parent:
