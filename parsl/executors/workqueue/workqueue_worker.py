@@ -4,9 +4,11 @@ import logging
 from ipyparallel.serialize import unpack_apply_message, serialize_object
 
 
-def check_file(parsl_file_obj, mapping):
+def check_file(parsl_file_obj, mapping, file_type_string):
     type_desc = type(parsl_file_obj)
-    if type_desc == "<class 'parsl.data_provider.files.File'>":
+    if file_type_string is None:
+        file_type_string = "<class 'parsl.data_provider.files.File'>"
+    if type_desc == file_type_string:
         if parsl_file_obj.filepath in mapping:
             parsl_file_obj.local_path = mapping[parsl_file_obj.filepath]
 
@@ -19,6 +21,7 @@ if __name__ == "__main__":
     input_function_file = None
     output_result_file = None
     remapping_string = None
+    file_type_string = None
 
     try:
         index = 1
@@ -32,11 +35,14 @@ if __name__ == "__main__":
             elif sys.argv[index] == "-r":
                 remapping_string = sys.argv[index + 1]
                 index += 1
+            elif sys.argv[index] == "-t":
+                file_type_string = sys.argv[index + 1]
+                index += 1
             elif sys.argv[index] == "--shared-fs":
                 shared_fs = True
             else:
                 print("command line argument not supported")
-                exit(-2)
+                exit(2)
             index += 1
     except Exception:
         exit(1)
@@ -63,17 +69,17 @@ if __name__ == "__main__":
 
             func_inputs = kwargs.get("inputs", [])
             for inp in func_inputs:
-                check_file(inp, mapping)
+                check_file(inp, mapping, file_type_string)
 
             for kwarg, potential_f in kwargs.items():
-                check_file(potential_f, mapping)
+                check_file(potential_f, mapping, file_type_string)
 
             for inp in args:
-                check_file(inp, mapping)
+                check_file(inp, mapping, file_type_string)
 
             func_outputs = kwargs.get("outputs", [])
             for output in func_outputs:
-                check_file(output, mapping)
+                check_file(output, mapping, file_type_string)
     except Exception:
         exit(3)
 

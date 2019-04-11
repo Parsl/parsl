@@ -1,10 +1,11 @@
 import threading
+import multiprocessing
 import logging
-from collections import deque
 from concurrent.futures import Future
 
 import os
 import pickle
+import queue
 
 from ipyparallel.serialize import pack_apply_message, deserialize_object
 
@@ -20,26 +21,29 @@ from work_queue import *
 logger = logging.getLogger(__name__)
 
 
-def WorkQueueThread(tasks={},
-                    task_queue=deque,
-                    queue_lock=threading.Lock(),
-                    tasks_lock=threading.Lock(),
-                    see_worker_output=False,
-                    port=50000,
-                    launch_cmd=None,
-                    data_dir=".",
-                    log_dir=None,
-                    full=False,
-                    password=None,
-                    password_file=None,
-                    project_name=None,
-                    env=None):
+def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
+                          queue_lock=threading.Lock(),
+                          launch_cmd=None,
+                          env=None,
+                          collector_queue=multiprocessing.Queue(),
+                          see_worker_output=False,
+                          data_dir=".",
+                          full=False,
+                          cancel_value=multiprocessing.Value('i', 1),
+                          port=50000,
+                          wq_log_dir=None,
+                          project_password=None,
+                          project_password_file=None,
+                          project_name=None):
 
-    logger.debug("Starting WorkQueue Master Thread")
+    logger.debug("Starting WorkQueue Submit/Wait Process")
 
-    wq_to_parsl = {}
-    if log_dir is not None:
-        wq_debug_log = os.path.join(log_dir, "debug")
+    wq_tasks = set()
+
+    continue_running = True
+
+    if wq_log_dir is not None:
+        wq_debug_log = os.path.join(wq_log_dir, "debug")
         cctools_debug_flags_set("all")
         cctools_debug_config_file(wq_debug_log)
 
@@ -53,41 +57,38 @@ def WorkQueueThread(tasks={},
     if project_name:
         q.specify_name(project_name)
 
-    if password:
-        q.specify_password(password)
-    elif password_file:
-        q.specify_password_file(password_file)
+    if project_password:
+        q.specify_password(project_password)
+    elif project_password_file:
+        q.specify_password_file(project_password_file)
 
     # Only write Logs when the log_dir is specified, which is most likely always will be
-    if log_dir is not None:
-        wq_master_log = os.path.join(log_dir, "master_log")
-        wq_trans_log = os.path.join(log_dir, "transaction_log")
-        if not full:
-            wq_resource_log = os.path.join(log_dir, "resource_logs")
+    if wq_log_dir is not None:
+        wq_master_log = os.path.join(wq_log_dir, "master_log")
+        wq_trans_log = os.path.join(wq_log_dir, "transaction_log")
+        if full:
+            wq_resource_log = os.path.join(wq_log_dir, "resource_logs")
             q.enable_monitoring_full(dirname=wq_resource_log)
 
         q.specify_log(wq_master_log)
         q.specify_transactions_log(wq_trans_log)
 
-    continue_running = True
     while(continue_running):
         # Monitor the Task Queue
 
-        place_holder_queue = []
-
-        queue_lock.acquire()
-        queue_len = len(task_queue)
-        while queue_len > 0:
-            place_holder_queue.append(task_queue.pop())
-            queue_len -= 1
-        queue_lock.release()
-
         # Submit Tasks
-        for item in place_holder_queue:
-            parsl_id = item["task_id"]
-            if parsl_id < 0:
+        while task_queue.qsize() > 0:
+            if cancel_value.value == 0:
                 continue_running = False
                 break
+
+            try:
+                # item = task_queue.get_nowait()
+                item = task_queue.get(timeout=1)
+            except queue.Empty:
+                continue
+            parsl_id = item["task_id"]
+
             function_data_loc = item["data_loc"]
             function_result_loc = item["result_loc"]
             function_result_loc_remote = function_result_loc.split("/")[-1]
@@ -123,11 +124,12 @@ def WorkQueueThread(tasks={},
                 continue
             if env is not None:
                 for var in env:
-                    t.specify_environment_variable(var, env[var])
+                    t.specify_environment_variable(var, self.env[var])
 
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
+            t.specify_tag(str(parsl_id))
 
             for item in input_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_INPUT, cache=item[2])
@@ -138,83 +140,130 @@ def WorkQueueThread(tasks={},
             logger.debug("Submitting task {} to workqueue".format(parsl_id))
             try:
                 wq_id = q.submit(t)
+                wq_tasks.add(wq_id)
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
-                tasks_lock.acquire()
-                future = tasks[parsl_tid]
-                tasks_lock.release()
-                future.set_exception(AppFailure("Workqueue Task Start Failure", 1))
+
+                msg = {"tid": parsl_tid,
+                       "result_recieved": False,
+                       "reason": "Workqueue Task Start Failure",
+                       "status": 1}
+
+                collector_queue.put_nowait(msg)
                 continue
 
             logger.debug("Task {} submitted workqueue with id {}".format(parsl_id, wq_id))
-            wq_to_parsl[wq_id] = parsl_id
+
+        if cancel_value.value == 0:
+            continue_running = False
+
+        # Wait for Tasks
+        task_found = True
+        # If the queue is not empty wait on the workqueue queue for a task
+        if not q.empty() and continue_running:
+            while task_found is True:
+                if cancel_value.value == 0:
+                    continue_running = False
+                    task_found = False
+                    continue
+                t = q.wait(1)
+                if t is None:
+                    task_found = False
+                    continue
+                else:
+                    parsl_tid = t.tag
+                    logger.debug("Completed workqueue task {}, parsl task {}".format(t.id, parsl_tid))
+                    status = t.return_status
+
+                    if status != 0:
+                        logger.debug("Workqueue task {} failed with status {}".format(t.id, status))
+
+                        reason = "Wrapper Script Failure: "
+                        if status == 1:
+                            reason += "command line parsing"
+                        if status == 2:
+                            reason += "problem loading function data"
+                        if status == 3:
+                            reason += "problem remapping file names"
+                        if status == 4:
+                            reason += "problem writing out funciton result"
+
+                        logger.debug("Workqueue runner script failed for task {}because {}. Trace:\n{}".format(parsl_tid, reason, t.output))
+
+                        msg = {"tid": parsl_tid,
+                               "result_recieved": False,
+                               "reason": reason,
+                               "status": status}
+
+                        collector_queue.put_nowait(msg)
+
+                        continue
+
+                    if see_worker_output:
+                        print(t.output)
+
+                    result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
+                    logger.debug("Looking for result in {}".format(result_loc))
+                    f = open(result_loc, "rb")
+                    result = pickle.load(f)
+                    f.close()
+                    msg = {"tid": parsl_tid,
+                           "result_recieved": True,
+                           "result": result}
+
+                    collector_queue.put_nowait(msg)
+                    wq_tasks.remove(t.id)
 
         if continue_running is False:
             logger.debug("Exiting WorkQueue Master Thread event loop")
             break
 
-        # Wait for Tasks
-        task_found = True
-        while task_found:
-            t = q.wait(5)
-            if t is None:
-                task_found = False
-            else:
-                wq_tid = t.id
-                parsl_tid = wq_to_parsl[wq_tid]
-                logger.debug("Completed workqueue task {}, parsl task {}".format(wq_id, parsl_tid))
-                status = t.return_status
-
-                if status != 0:
-                    logger.debug("Workqueue task {} failed with status {}".format(wq_id, status))
-                    tasks_lock.acquire()
-                    future = tasks[parsl_tid]
-                    tasks_lock.release()
-
-                    logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
-
-                    reason = "Wrapper Script Failure: "
-                    if status == 1:
-                        reasion += "command line parsing"
-                    if status == 2:
-                        reasion += "problem loading function data"
-                    if status == 3:
-                        reasion += "problem remapping file names"
-                    if status == 4:
-                        reasion += "problem writing out funciton result"
-
-                    logger.debug("Workqueue runner script failed for task {}because {}. Trace:\n{}".format(parsl_tid, reason, t.output))
-
-                    future.set_exception(AppFailure(reason, status))
-
-                    del wq_to_parsl[wq_tid]
-                    continue
-
-                if see_worker_output:
-                    print(t.output)
-                result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
-                logger.debug("Looking for result in {}".format(result_loc))
-                f = open(result_loc, "rb")
-                result = pickle.load(f)
-                f.close()
-
-                tasks_lock.acquire()
-                future = tasks[parsl_tid]
-                tasks_lock.release()
-
-                future_update, _ = deserialize_object(result["result"])
-                logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
-                if result["failure"] is False:
-                    future.set_result(future_update)
-                else:
-                    future.set_exception(RemoteExceptionWrapper(*future_update))
-                del wq_to_parsl[wq_tid]
-
-    for wq_task in wq_to_parsl:
+    for wq_task in wq_tasks:
         logger.debug("Cancelling Workqueue Task {}".format(wq_task))
         q.cancel_by_taskid(wq_task)
 
-    logger.debug("Exiting WorkQueue Master Thread")
+    logger.debug("Exiting WorkQueue Wait Thread")
+    return
+
+
+def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
+                             tasks={},
+                             tasks_lock=threading.Lock(),
+                             cancel_value=multiprocessing.Value('i', 1)):
+
+    logger.debug("Starting Collector Thread")
+
+    continue_running = True
+    while continue_running:
+        if cancel_value.value == 0:
+            continue_running = False
+
+        try:
+            item = collector_queue.get(timeout=1)
+        except queue.Empty:
+            continue
+
+        parsl_tid = item["tid"]
+        recieved = item["result_recieved"]
+
+        tasks_lock.acquire()
+        future = tasks[parsl_tid]
+        tasks_lock.release()
+
+        if recieved is False:
+            reason = item["reason"]
+            status = item["status"]
+            future.set_exception(AppFailure(reason, status))
+        else:
+            result = item["result"]
+            future_update, _ = deserialize_object(result["result"])
+            logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
+            if result["failure"] is False:
+                future.set_result(future_update)
+            else:
+                future.set_exception(RemoteExceptionWrapper(*future_update))
+
+    logger.debug("Starting Collector Thread")
     return
 
 
@@ -247,10 +296,11 @@ class WorkQueueExecutor(ParslExecutor):
 
         self.label = label
         self.managed = managed
-        self.task_queue = deque()
+        self.task_queue = multiprocessing.Queue()
+        self.collector_queue = multiprocessing.Queue()
         self.tasks = {}
         self.port = port
-        self.task_counter = 0
+        self.task_counter = -1
         self.scaling_enabled = False
         self.project_name = project_name
         self.project_password = project_password
@@ -263,6 +313,8 @@ class WorkQueueExecutor(ParslExecutor):
         self.shared_files = set()
         self.registered_files = set()
         self.worker_output = see_worker_output
+        self.full = True
+        self.cancel_value = multiprocessing.Value('i', 1)
 
         if self.project_password is not None and self.project_password_file is not None:
             logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
@@ -290,24 +342,35 @@ class WorkQueueExecutor(ParslExecutor):
 
         logger.debug("Starting WorkQueueExectutor")
 
-        thread_kwargs = {"port": self.port,
-                         "tasks": self.tasks,
-                         "task_queue": self.task_queue,
-                         "queue_lock": self.queue_lock,
-                         "tasks_lock": self.tasks_lock,
-                         "launch_cmd": self.launch_cmd,
-                         "data_dir": self.function_data_dir,
-                         "log_dir": self.wq_log_dir,
-                         "password_file": self.project_password_file,
-                         "password": self.project_password,
-                         "project_name": self.project_name,
-                         "env": self.env,
-                         "see_worker_output": self.worker_ouput}
-        self.master_thread = threading.Thread(target=WorkQueueThread,
-                                              name="master_thread",
-                                              kwargs=thread_kwargs)
-        self.master_thread.daemon = True
-        self.master_thread.start()
+        submit_process_kwargs = {"task_queue": self.task_queue,
+                                 "queue_lock": self.queue_lock,
+                                 "launch_cmd": self.launch_cmd,
+                                 "data_dir": self.function_data_dir,
+                                 "collector_queue": self.collector_queue,
+                                 "see_worker_output": self.worker_output,
+                                 "full": self.full,
+                                 "cancel_value": self.cancel_value,
+                                 "port": self.port,
+                                 "wq_log_dir": self.wq_log_dir,
+                                 "project_password": self.project_password,
+                                 "project_password_file": self.project_password_file,
+                                 "project_name": self.project_name}
+
+        self.submit_process = multiprocessing.Process(target=WorkQueueSubmitThread,
+                                                      name="submit_thread",
+                                                      kwargs=submit_process_kwargs)
+
+        collector_thread_kwargs = {"collector_queue": self.collector_queue,
+                                   "tasks": self.tasks,
+                                   "tasks_lock": self.tasks_lock,
+                                   "cancel_value": self.cancel_value}
+        self.collector_thread = threading.Thread(target=WorkQueueCollectorThread,
+                                                 name="wait_thread",
+                                                 kwargs=collector_thread_kwargs)
+        self.collector_thread.daemon = True
+
+        self.submit_process.start()
+        self.collector_thread.start()
 
     def create_name_tuple(self, parsl_file_obj, in_or_out):
         new_name = parsl_file_obj.filepath
@@ -367,7 +430,7 @@ class WorkQueueExecutor(ParslExecutor):
 
         fu = Future()
         self.tasks_lock.acquire()
-        self.tasks[task_id] = fu
+        self.tasks[str(task_id)] = fu
         self.tasks_lock.release()
 
         logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
@@ -378,7 +441,7 @@ class WorkQueueExecutor(ParslExecutor):
         function_result_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_result")
 
         logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
-        logger.debug("Creating Tasks {} with result to be found at: {}".format(task_id, function_result_file))
+        logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
 
         f = open(function_data_file, "wb")
         fn_buf = pack_apply_message(func, args, kwargs,
@@ -394,9 +457,7 @@ class WorkQueueExecutor(ParslExecutor):
                "input_files": input_files,
                "output_files": output_files}
 
-        self.queue_lock.acquire()
-        self.task_queue.appendleft(msg)
-        self.queue_lock.release()
+        self.task_queue.put_nowait(msg)
 
         return fu
 
@@ -425,17 +486,15 @@ class WorkQueueExecutor(ParslExecutor):
 
         This includes all attached resources such as workers and controllers.
         """
-        # print("shutdown")
-        logger.debug("Placing sentinel task on message queue")
-        msg = {"task_id": -1,
-               "data_loc": None,
-               "result_loc": None}
+        logger.debug("Setting value to cancel")
+        self.cancel_value.value = 0
 
-        self.queue_lock.acquire()
-        self.task_queue.append(msg)
-        self.queue_lock.release()
+        #self.queue_lock.acquire()
+        #self.task_queue.append(msg)
+        #self.queue_lock.release()
 
-        self.master_thread.join()
+        self.submit_process.join()
+        self.collector_thread.join()
 
         return True
 
