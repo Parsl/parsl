@@ -456,7 +456,7 @@ class Interchange(object):
                     try:
                         raise ManagerLost(manager)
                     except Exception as e:
-                        result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(e))}
+                        result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
