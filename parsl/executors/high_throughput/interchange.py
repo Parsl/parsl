@@ -16,6 +16,8 @@ import json
 from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
+from parsl.app.errors import RemoteExceptionWrapper
+
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
@@ -363,7 +365,7 @@ class Interchange(object):
                                 logger.debug("Setting kill event")
                                 self._kill_event.set()
                                 e = ManagerLost(manager)
-                                result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                                result_package = {'task_id': -1, 'exception': serialize_object(RemoteExceptionWrapper(e))}
                                 pkl_package = pickle.dumps(result_package)
                                 self.results_outgoing.send(pkl_package)
                                 logger.warning("[MAIN] Sent failure reports, unregistering manager")
@@ -375,7 +377,7 @@ class Interchange(object):
                         if self.suppress_failure is False:
                             self._kill_event.set()
                             e = BadRegistration(manager, critical=True)
-                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                            result_package = {'task_id': -1, 'exception': serialize_object(RemoteExceptionWrapper(e))}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)
                         else:
@@ -451,7 +453,7 @@ class Interchange(object):
                 logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
                 e = ManagerLost(manager)
                 for tid in self._ready_manager_queue[manager]['tasks']:
-                    result_package = {'task_id': tid, 'exception': serialize_object(e)}
+                    result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(e))}
                     pkl_package = pickle.dumps(result_package)
                     self.results_outgoing.send(pkl_package)
                     logger.warning("[MAIN] Sent failure reports, unregistering manager")
