@@ -61,6 +61,10 @@ Install the visualization server::
 Once `viz_server` is installed, you can run the utility `parsl-visualize` in the directory with the
 `monitoring.db` sqlite file to launch a web page for the workflow visualization::
 
-   $ parsl-visualize sqlite:///<absolute-full-path-to-db>
+   $ parsl-visualize sqlite:///<absolute-path-to-db>
+
+For example, if the `monitoring.db` is at `/tmp/monitoring.db`, run the `parsl-visualize` as follows::
+
+   $ parsl-visualize sqlite:////tmp/monitoring.db
 
 .. warning:: Please note that visualization support is in `alpha` state
