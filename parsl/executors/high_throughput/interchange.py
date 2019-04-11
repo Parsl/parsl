@@ -446,9 +446,8 @@ class Interchange(object):
                 logger.debug("[MAIN] leaving results_incoming section")
 
             logger.debug("[MAIN] entering bad_managers section")
-            # bad_managers = [manager for manager in self._ready_manager_queue if
-            #                time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
-            bad_managers = [manager for manager in self._ready_manager_queue]
+            bad_managers = [manager for manager in self._ready_manager_queue if
+                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
             for manager in bad_managers:
                 logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last'], time.time()))
                 logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
