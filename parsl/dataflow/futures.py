@@ -171,27 +171,7 @@ class AppFuture(Future):
         return self._outputs
 
     def __repr__(self):
-        if self.parent:
-            with self.parent._condition:
-                if self.parent._state == FINISHED:
-                    if self.parent._exception:
-                        return '<%s at %#x state=%s raised %s>' % (
-                            self.__class__.__name__,
-                            id(self),
-                            _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.parent._exception.__class__.__name__)
-                    else:
-                        return '<%s at %#x state=%s returned %s>' % (
-                            self.__class__.__name__,
-                            id(self),
-                            _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.parent._result.__class__.__name__)
-                return '<%s at %#x state=%s>' % (
-                    self.__class__.__name__,
-                    id(self),
-                    _STATE_TO_DESCRIPTION_MAP[self.parent._state])
-        else:
-            return '<%s at %#x state=%s>' % (
-                self.__class__.__name__,
-                id(self),
-                _STATE_TO_DESCRIPTION_MAP[self._state])
+        return '<%s at %#x parent=%s>' % (
+            self.__class__.__name__,
+            id(self),
+            self.parent.__repr__())
