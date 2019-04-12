@@ -202,7 +202,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
-        logger.debug("YADU : {}/{}".format(self.run_dir, self.label))
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
                                        task_url=self.worker_task_url,
@@ -539,7 +538,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        logger.debug("YADU: SCALE_IN, self.blocks: {}".format(self.blocks))
         for block_id in block_ids:
             self._hold_block(block_id)
 
@@ -548,7 +546,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         else:
             to_kill = [self.blocks.pop(bid) for bid in list(self.blocks.keys())[:blocks]]
 
-        logger.debug("YADU: SCALE_IN, trying to scale_in: {}".format(to_kill))
         if self.provider:
             r = self.provider.cancel(to_kill)
 
