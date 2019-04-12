@@ -51,17 +51,17 @@ class Config(RepresentationMixin):
     @enforce.runtime_validation
     def __init__(self,
                  executors=None,
-                 app_cache=True,
+                 app_cache: bool = True,
                  checkpoint_files=None,
                  checkpoint_mode=None,
                  checkpoint_period=None,
-                 data_management_max_threads=10,
-                 lazy_errors=True,
-                 retries=0,
-                 run_dir='runinfo',
-                 strategy: str='simple',
+                 data_management_max_threads: int = 10,
+                 lazy_errors: bool = True,
+                 retries: int = 0,
+                 run_dir: str = 'runinfo',
+                 strategy: str = 'simple',
                  monitoring=None,
-                 usage_tracking=False):
+                 usage_tracking: bool = False):
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
