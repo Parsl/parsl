@@ -171,7 +171,7 @@ class AppFuture(Future):
         return self._outputs
 
     def __repr__(self):
-        return '<%s at %#x parent=%s>' % (
+        return '<%s super=%s parent=%s>' % (
             self.__class__.__name__,
-            id(self),
+            super().__repr__(),
             self.parent.__repr__())
