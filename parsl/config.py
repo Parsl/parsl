@@ -1,3 +1,4 @@
+import enforce
 import logging
 
 from parsl.utils import RepresentationMixin
@@ -46,6 +47,8 @@ class Config(RepresentationMixin):
         Set this field to True to Opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
     """
+
+    @enforce.runtime_validation
     def __init__(self,
                  executors=None,
                  app_cache=True,
@@ -56,7 +59,7 @@ class Config(RepresentationMixin):
                  lazy_errors=True,
                  retries=0,
                  run_dir='runinfo',
-                 strategy='simple',
+                 strategy: str='simple',
                  monitoring=None,
                  usage_tracking=False):
         if executors is None:
