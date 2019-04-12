@@ -1,11 +1,16 @@
 import enforce
 import logging
 
+from typing import List, Optional
+
 from parsl.utils import RepresentationMixin
+from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
 
 logger = logging.getLogger(__name__)
+
+enforce.config({'mode': 'covariant'})
 
 
 class Config(RepresentationMixin):
@@ -50,7 +55,7 @@ class Config(RepresentationMixin):
 
     @enforce.runtime_validation
     def __init__(self,
-                 executors=None,
+                 executors: Optional[List[ParslExecutor]] = None,
                  app_cache: bool = True,
                  checkpoint_files=None,
                  checkpoint_mode=None,
@@ -59,7 +64,7 @@ class Config(RepresentationMixin):
                  lazy_errors: bool = True,
                  retries: int = 0,
                  run_dir: str = 'runinfo',
-                 strategy: str = 'simple',
+                 strategy: Optional[str] = 'simple',
                  monitoring=None,
                  usage_tracking: bool = False):
         if executors is None:
