@@ -146,7 +146,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  worker_debug=False,
                  cores_per_worker=1.0,
                  max_workers=float('inf'),
-                 prefetch_capacity=100,
+                 prefetch_capacity=0,
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  poll_period=10,
