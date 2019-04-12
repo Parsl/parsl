@@ -15,6 +15,8 @@ from typing import Optional
 
 _db_manager_excepts: Optional[Exception]
 
+from typing import Optional
+
 try:
     from parsl.monitoring.db_manager import dbm_starter
 except Exception as e:

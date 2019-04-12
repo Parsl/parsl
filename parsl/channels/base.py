@@ -75,7 +75,7 @@ class Channel(metaclass=ABCMeta):
             - envs (dict) : Environment variables to push to the remote side
 
         Returns:
-            - channel specific information
+            - the type of return value is channel specific
         '''
         pass
 

@@ -553,7 +553,7 @@ class DataFlowKernel(object):
              kwargs (Dict) : Kwargs to app function
 
         Return:
-             partial Function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
+             partial function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
 
         """
         dep_failures = []
@@ -680,7 +680,7 @@ class DataFlowKernel(object):
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(None, tid=task_id,
+        app_fu = AppFuture(tid=task_id,
                            stdout=task_stdout,
                            stderr=task_stderr)
 

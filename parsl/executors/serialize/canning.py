@@ -290,12 +290,12 @@ class CannedBytes(CannedObject):
         return self.wrap(data)
 
 class CannedBuffer(CannedBytes):
-    wrap = buffer # type: ignore
+    wrap = buffer  # type: ignore
     # unsure what the type error is/means here but mute it for now
 
 
 class CannedMemoryView(CannedBytes):
-    wrap = memoryview # type: ignore
+    wrap = memoryview  # type: ignore
     # unsure what the type error is/means here but mute it for now
 
 #-------------------------------------------------------------------------------

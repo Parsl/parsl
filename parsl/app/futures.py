@@ -40,10 +40,10 @@ class DataFuture(Future):
             if e:
                 super().set_exception(e)
             else:
-                super().set_result(parent_fu.result())
+                super().set_result(self.file_obj)
         return
 
-    def __init__(self, fut, file_obj, parent=None, tid=None):
+    def __init__(self, fut, file_obj, tid=None):
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.
@@ -53,7 +53,6 @@ class DataFuture(Future):
             - file_obj (string/File obj) : Something representing file(s)
 
         Kwargs:
-            - parent ()
             - tid (task_id) : Task id that this DataFuture tracks
         """
         super().__init__()
@@ -62,21 +61,20 @@ class DataFuture(Future):
             self.file_obj = File(file_obj)
         else:
             self.file_obj = file_obj
-        self.parent = parent
+        self.parent = fut
         self._exception = None
 
         if fut is None:
             logger.debug("Setting result to filepath since no future was passed")
-            self.set_result = self.file_obj
+            self.set_result(self.file_obj)
 
         else:
             if isinstance(fut, Future):
-                self.parent = fut
                 self.parent.add_done_callback(self.parent_callback)
             else:
                 raise NotFutureError("DataFuture can be created only with a FunctionFuture on None")
 
-        logger.debug("Creating DataFuture with parent: %s", parent)
+        logger.debug("Creating DataFuture with parent: %s", self.parent)
         logger.debug("Filepath: %s", self.filepath)
 
     @property
@@ -125,20 +123,10 @@ class DataFuture(Future):
         return self.file_obj
 
     def cancel(self):
-        """Cancel the task that this DataFuture is tracking.
-
-            Note: This may not work
-        """
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise NotImplementedError("Cancel not implemented")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        return False
 
     def running(self):
         if self.parent:
@@ -221,7 +209,7 @@ if __name__ == "__main__":
         for item in nums:
             testfile.write("{0}\n".format(item))
 
-    foo = Future() # type: Future[str]
+    foo = Future()  # type: Future[str]
     df = DataFuture(foo, './shuffled.txt')
     dx = DataFuture(foo, '~/shuffled.txt')
 

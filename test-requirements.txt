@@ -2,7 +2,7 @@ flake8
 ipyparallel
 pytest>=3.6.0,<4.1.0
 pytest-cov
-pytest-xdist
+pytest-xdist==1.26.1
 pytest-ordering
 pandas
 coverage
@@ -11,4 +11,5 @@ nbsphinx
 sphinx_rtd_theme
 sqlalchemy
 sqlalchemy_utils
-
+mypy
+sqlalchemy-stubs

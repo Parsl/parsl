@@ -88,11 +88,11 @@ class File(str):
         Returns:
              - filepath
         """
+        if hasattr(self, 'local_path') and self.local_path is not None:
+            return self.local_path
+
         if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            if self.local_path is not None:
-                return self.local_path
-            else:
-                return self.filename
+            return self.filename
         elif self.scheme in ['file']:
             return self.path
         else:

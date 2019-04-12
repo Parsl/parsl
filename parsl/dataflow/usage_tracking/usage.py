@@ -241,13 +241,3 @@ class UsageTracker (object):
         """We terminate (SIGTERM) the processes added to the self.procs list """
         for proc in self.procs:
             proc.terminate()
-
-
-if __name__ == '__main__':
-
-    from parsl import set_stream_logger
-    from parsl import ThreadPoolExecutor
-    from parsl import DataFlowKernel
-
-    set_stream_logger()
-    workers = ThreadPoolExecutor(max_threads=4)

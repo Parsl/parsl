@@ -91,4 +91,4 @@ user_opts = {
     #     'endpoint': 'fixme',
     #     'path': 'fixme'
     # }
-} # type: Dict[Any, Any]
+}  # type: Dict[str, Any]
