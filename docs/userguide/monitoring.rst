@@ -23,11 +23,20 @@ Here's an example configuration that logs monitoring information to a local sqli
 
 .. code-block:: python
 
+    import parsl
+    from parsl.monitoring.monitoring import MonitoringHub
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.addresses import address_by_hostname
+
+    import logging
+
     config = Config(
         executors=[
             HighThroughputExecutor(
                 label="local_htex",
                 cores_per_worker=1,
+                max_workers=4,
                 address=address_by_hostname(),
             )
         ],
@@ -50,6 +59,12 @@ Install the visualization server::
    $ pip install git+https://github.com/Parsl/viz_server.git
 
 Once `viz_server` is installed, you can run the utility `parsl-visualize` in the directory with the
-monitoring.db sqlite file to launch a web page with the workflow visualization.
+`monitoring.db` sqlite file to launch a web page for the workflow visualization::
+
+   $ parsl-visualize sqlite:///<absolute-path-to-db>
+
+For example, if the `monitoring.db` is at `/tmp/monitoring.db`, run the `parsl-visualize` as follows::
+
+   $ parsl-visualize sqlite:////tmp/monitoring.db
 
 .. warning:: Please note that visualization support is in `alpha` state
