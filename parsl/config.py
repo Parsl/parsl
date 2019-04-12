@@ -7,6 +7,7 @@ from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
+from parsl.monitoring import MonitoringHub
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ class Config(RepresentationMixin):
                  retries: int = 0,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
-                 monitoring=None,
+                 monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False):
         if executors is None:
             executors = [ThreadPoolExecutor()]
