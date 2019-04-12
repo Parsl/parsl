@@ -48,7 +48,7 @@ class Config(RepresentationMixin):
         Strategy to use for scaling resources according to workflow needs. Can be 'simple' or `None`. If `None`, dynamic
         scaling will be disabled. Default is 'simple'.
     usage_tracking : bool, optional
-        Set this field to True to Opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
+        Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
     """
 
