@@ -48,7 +48,6 @@ class Manager(object):
     def __init__(self,
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
-                 max_queue_size=10,
                  cores_per_worker=1,
                  max_workers=float('inf'),
                  prefetch_capacity=100,
@@ -126,7 +125,7 @@ class Manager(object):
         self.pending_result_queue = multiprocessing.Queue()
         self.ready_worker_queue = multiprocessing.Queue()
 
-        self.max_queue_size = max_queue_size + self.worker_count
+        self.max_queue_size = self.prefetch_capacity + self.worker_count
 
         self.tasks_per_round = 1
 
