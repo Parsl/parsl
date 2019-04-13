@@ -1,3 +1,4 @@
+enforce
 pyzmq>=17.1.2
 ipyparallel
 globus-sdk
