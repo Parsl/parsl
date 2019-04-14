@@ -137,7 +137,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
                  address: str = "127.0.0.1",
-                 worker_ports: Union[Tuple[int, int], None] = None,
+                 worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
                  storage_access: Optional[List[Any]] = None,
