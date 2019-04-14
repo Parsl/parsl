@@ -1,5 +1,5 @@
-enforce
 pyzmq>=17.1.2
+typeguard
 ipyparallel
 globus-sdk
 dill
