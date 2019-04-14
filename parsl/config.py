@@ -1,5 +1,5 @@
-import enforce
 import logging
+import typeguard
 
 from typing import List, Optional
 
@@ -10,8 +10,6 @@ from parsl.dataflow.error import ConfigurationError
 from parsl.monitoring import MonitoringHub
 
 logger = logging.getLogger(__name__)
-
-enforce.config({'mode': 'covariant'})
 
 
 class Config(RepresentationMixin):
@@ -54,7 +52,7 @@ class Config(RepresentationMixin):
         information used for reporting to our funding agencies. Default is False.
     """
 
-    @enforce.runtime_validation
+    @typeguard.typechecked
     def __init__(self,
                  executors: Optional[List[ParslExecutor]] = None,
                  app_cache: bool = True,
