@@ -310,7 +310,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             raise BadMessage("Message received does not contain 'task_id' field")
 
                         if tid == -1 and 'exception' in msg:
-                            logger.warning("Executor shutting down due to version mismatch in interchange")
+                            logger.warning("Executor shutting down due to exception from interchange")
                             self._executor_exception, _ = deserialize_object(msg['exception'])
                             logger.exception("Exception: {}".format(self._executor_exception))
                             # Set bad state to prevent new tasks from being submitted

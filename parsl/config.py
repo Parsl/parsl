@@ -1,8 +1,13 @@
 import logging
+import typeguard
+
+from typing import List, Optional
 
 from parsl.utils import RepresentationMixin
+from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
+from parsl.monitoring import MonitoringHub
 
 from typing import Optional, Any, List # for mypy
 from parsl.executors.base import ParslExecutor # for mypy
@@ -51,6 +56,8 @@ class Config(RepresentationMixin):
         Set this field to True to Opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
     """
+
+    @typeguard.typechecked
     def __init__(self,
                  executors: Optional[List[ParslExecutor]] =None,
                  app_cache: Optional[bool] =True,
