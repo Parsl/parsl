@@ -13,6 +13,8 @@ def cli_run():
                         help='Port at which the monitoring Viz Server is hosted. Default: 8080')
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Enable debug logging")
+    parser.add_argument("-e", "--external", action='store_true',
+                        help="Enable hosting on Internet")
     args = parser.parse_args()
 
     app = Flask(__name__)
@@ -24,7 +26,10 @@ def cli_run():
         db.create_all()
         from viz_server import views
         views.dummy = False
-        app.run(host='0.0.0.0', port=args.port, debug=args.debug)
+        host = '127.0.0.1'
+        if args.external:
+            host = '0.0.0.0'
+        app.run(host=host, port=args.port, debug=args.debug)
 
 
 if __name__ == "__main__":
