@@ -93,11 +93,12 @@ The following code snippet shows how DataFutures are used:
       print(hello.outputs)
 
       # Print the contents of the output DataFuture when complete
-      with open(hello.outputs[0].result(), 'r') as f:
+      with open(hello.outputs[0].result().filepath, 'r') as f:
            print(f.read())
 
-
-
+.. note::
+      Adding `.filepath` is only needed on python 3.5. With python
+      >= 3.6 the resulting file can maybe be passed to open directly.
 
 
 

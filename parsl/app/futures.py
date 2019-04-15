@@ -56,10 +56,12 @@ class DataFuture(Future):
         """
         super().__init__()
         self._tid = tid
-        if isinstance(file_obj, str) and not isinstance(file_obj, File):
+        if isinstance(file_obj, str):
             self.file_obj = File(file_obj)
-        else:
+        elif isinstance(file_obj, File):
             self.file_obj = file_obj
+        else:
+            raise ValueError("DataFuture must be initialized with a str or File")
         self.parent = fut
         self._exception = None
 

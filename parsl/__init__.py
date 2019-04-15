@@ -24,6 +24,9 @@ However the following helper functions are provided for logging:
 
 """
 import logging
+import typeguard
+
+from typing import Optional
 
 from parsl.version import VERSION
 from parsl.app.app import App
@@ -50,7 +53,8 @@ dfk = DataFlowKernelLoader.dfk
 wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
+@typeguard.typechecked
+def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
@@ -80,7 +84,8 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     futures_logger.addHandler(handler)
 
 
-def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
+@typeguard.typechecked
+def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
