@@ -56,8 +56,6 @@ class File(object):
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {}  # type: Dict[str, DataFuture]
-        if self.scheme == 'globus':
-            self.dman.add_file(self)
 
     def __str__(self):
         return self.filepath
