@@ -12,6 +12,7 @@ from ipyparallel.serialize import pack_apply_message, deserialize_object
 from parsl.executors.errors import *
 from parsl.app.errors import AppFailure
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.errors import ExecutorError
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
 from parsl.executors.workqueue import workqueue_worker
@@ -37,6 +38,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           project_name=None):
 
     logger.debug("Starting WorkQueue Submit/Wait Process")
+
+    orig_ppid = os.getppid()
 
     wq_tasks = set()
 
@@ -75,6 +78,10 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
     while(continue_running):
         # Monitor the Task Queue
+        ppid = os.getppid()
+        if ppid != orig_ppid:
+            continue_running = False
+            continue
 
         # Submit Tasks
         while task_queue.qsize() > 0:
@@ -222,14 +229,16 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         logger.debug("Cancelling Workqueue Task {}".format(wq_task))
         q.cancel_by_taskid(wq_task)
 
-    logger.debug("Exiting WorkQueue Wait Thread")
-    return
+    logger.debug("Exiting WorkQueue Monitoring Process")
+    exit(1)
 
 
 def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
                              tasks={},
                              tasks_lock=threading.Lock(),
-                             cancel_value=multiprocessing.Value('i', 1)):
+                             cancel_value=multiprocessing.Value('i', 1),
+                             submit_process=None,
+                             executor=None):
 
     logger.debug("Starting Collector Thread")
 
@@ -237,6 +246,9 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
     while continue_running:
         if cancel_value.value == 0:
             continue_running = False
+
+        if not submit_process.is_alive():
+            raise ExecutorError(executor, "Workqueue Submit Process is not alive")
 
         try:
             item = collector_queue.get(timeout=1)
@@ -263,7 +275,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
             else:
                 future.set_exception(RemoteExceptionWrapper(*future_update))
 
-    logger.debug("Starting Collector Thread")
+    logger.debug("Exiting Collector Thread")
     return
 
 
@@ -363,7 +375,9 @@ class WorkQueueExecutor(ParslExecutor):
         collector_thread_kwargs = {"collector_queue": self.collector_queue,
                                    "tasks": self.tasks,
                                    "tasks_lock": self.tasks_lock,
-                                   "cancel_value": self.cancel_value}
+                                   "cancel_value": self.cancel_value,
+                                   "submit_process": self.submit_process,
+                                   "executor": self}
         self.collector_thread = threading.Thread(target=WorkQueueCollectorThread,
                                                  name="wait_thread",
                                                  kwargs=collector_thread_kwargs)
@@ -428,6 +442,9 @@ class WorkQueueExecutor(ParslExecutor):
             if isinstance(output, File):
                 input_files.append(self.create_name_tuple(output, "out"))
 
+        if not self.submit_process.is_alive():
+            raise ExecutorError(self, "Workqueue Submit Process is not alive")
+
         fu = Future()
         self.tasks_lock.acquire()
         self.tasks[str(task_id)] = fu
@@ -488,10 +505,6 @@ class WorkQueueExecutor(ParslExecutor):
         """
         logger.debug("Setting value to cancel")
         self.cancel_value.value = 0
-
-        #self.queue_lock.acquire()
-        #self.task_queue.append(msg)
-        #self.queue_lock.release()
 
         self.submit_process.join()
         self.collector_thread.join()
