@@ -116,9 +116,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Caps the number of workers launched by the manager. Default: infinity
 
     prefetch_capacity : int
-        Number of tasks that could be prefetched over available worker capacity. Default:100.
+        Number of tasks that could be prefetched over available worker capacity.
         When there are a few tasks (<100) or when tasks are long running, this option should
-        be set to 0 for better load balancing.
+        be set to 0 for better load balancing. Default is 0.
 
     suppress_failure : Bool
         If set, the interchange will suppress failures rather than terminate early. Default: False
