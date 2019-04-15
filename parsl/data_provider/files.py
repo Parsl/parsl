@@ -7,9 +7,15 @@ being called from.
 """
 
 import os
+import typeguard
 import logging
+from typing import Dict, Optional
 from urllib.parse import urlparse
 from parsl.data_provider.data_manager import DataManager
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from parsl.app.futures import DataFuture
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +36,8 @@ class File(object):
 
     """
 
-    def __init__(self, url, dman=None):
+    @typeguard.typechecked
+    def __init__(self, url: str, dman: Optional[DataManager] = None):
         """Construct a File object from a url string.
 
         Args:
@@ -48,7 +55,7 @@ class File(object):
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
         self.dman = dman if dman else DataManager.get_data_manager()
-        self.data_future = {}
+        self.data_future = {}  # type: Dict[str, DataFuture]
         if self.scheme == 'globus':
             self.dman.add_file(self)
 
