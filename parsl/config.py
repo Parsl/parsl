@@ -1,5 +1,4 @@
 import logging
-import typeguard
 
 from typing import List, Optional
 
@@ -57,7 +56,6 @@ class Config(RepresentationMixin):
         information used for reporting to our funding agencies. Default is False.
     """
 
-    @typeguard.typechecked
     def __init__(self,
                  executors: Optional[List[ParslExecutor]] =None,
                  app_cache: Optional[bool] =True,
