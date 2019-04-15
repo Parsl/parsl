@@ -50,7 +50,7 @@ class Manager(object):
                  result_q_url="tcp://127.0.0.1:50098",
                  cores_per_worker=1,
                  max_workers=float('inf'),
-                 prefetch_capacity=100,
+                 prefetch_capacity=0,
                  uid=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30,
@@ -73,9 +73,9 @@ class Manager(object):
              default: infinity
 
         prefetch_capacity : int
-             Number of tasks that could be prefetched over available worker capacity. Default:100.
+             Number of tasks that could be prefetched over available worker capacity.
              When there are a few tasks (<100) or when tasks are long running, this option should
-             be set to 0 for better load balancing.
+             be set to 0 for better load balancing. Default is 0.
 
         heartbeat_threshold : int
              Seconds since the last message from the interchange after which the
@@ -135,6 +135,7 @@ class Manager(object):
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
+               'block_id': self.block_id,
                'worker_count': self.worker_count,
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,
@@ -470,8 +471,8 @@ if __name__ == "__main__":
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("--max_workers", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
-    parser.add_argument("-p", "--prefetch_capacity", default=100,
-                        help="Number of tasks that can be prefetched to the manager. default:100")
+    parser.add_argument("-p", "--prefetch_capacity", default=0,
+                        help="Number of tasks that can be prefetched to the manager. Default is 0.")
     parser.add_argument("--hb_period", default=30,
                         help="Heartbeat period in seconds. Uses manager default unless set")
     parser.add_argument("--hb_threshold", default=120,
