@@ -26,19 +26,20 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='beagle_multinode_mpi',
+            workers_per_node=1,
             provider=TorqueProvider(
-                'debug',
+                queue='debug',
                 channel=SSHChannel(
                     hostname='login4.beagle.ci.uchicago.edu',
                     username=user_opts['beagle']['username'],
                     script_dir="/lustre/beagle2/{}/parsl_scripts".format(user_opts['beagle']['username'])
                 ),
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                launcher=AprunLauncher,
-                overrides=user_opts['beagle']['overrides'],
+                launcher=AprunLauncher(),
+                scheduler_options=user_opts['beagle']['scheduler_options'],
+                worker_init=user_opts['beagle']['worker_init'],
             )
         )
 

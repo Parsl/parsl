@@ -4,15 +4,12 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-dfk = parsl.load(config)
-
 
 def test_python_memoization(n=2):
     """Testing python memoization when func bodies differ
     This is the canonical use case.
     """
-    @App('python', dfk)
+    @App('python')
     def random_uuid(x, cache=True):
         import uuid
         return str(uuid.uuid4())
@@ -20,7 +17,7 @@ def test_python_memoization(n=2):
     x = random_uuid(0)
     print(x.result())
 
-    @App('python', dfk)
+    @App('python')
     def random_uuid(x, cache=True):
         import uuid
         print("hi")
@@ -31,6 +28,9 @@ def test_python_memoization(n=2):
 
 
 if __name__ == '__main__':
+
+    parsl.clear()
+    dfk = parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",

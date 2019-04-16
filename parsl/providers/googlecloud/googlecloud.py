@@ -1,6 +1,7 @@
 import atexit
 import logging
 import os
+from parsl.launchers import SingleNodeLauncher
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,6 @@ class GoogleCloudProvider():
         OS project code for Google compute engine.
     os_family : str
         OS family to request.
-    label : str
-        A label for this executor. Default is 'google_cloud'.
     google_version : str
         Google compute engine version to use. Possibilies include 'v1' (default) or 'beta'.
     instance_type: str
@@ -83,19 +82,19 @@ class GoogleCloudProvider():
                  region,
                  os_project,
                  os_family,
-                 label='google_cloud',
                  google_version='v1',
                  instance_type='n1-standard-1',
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
+                 launcher=SingleNodeLauncher(),
                  parallelism=1):
         self.project_id = project_id
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_file
         self.zone = self.get_zone(region)
         self.os_project = os_project
         self.os_family = os_family
-        self.label = label
+        self.label = 'google_cloud'
         self.client = googleapiclient.discovery.build('compute', google_version)
         self.instance_type = instance_type
         self.init_blocks = init_blocks
@@ -103,19 +102,21 @@ class GoogleCloudProvider():
         self.max_blocks = max_blocks
         self.parallelism = parallelism
         self.num_instances = 0
+        self.launcher = launcher
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
         self.provisioned_blocks = 0
         atexit.register(self.bye)
 
-    def submit(self, command="", blocksize=1, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot.
 
         Args :
              - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
+             - tasks_per_node (int) : command invocations to be launched per node
 
         KWargs:
              - job_name (str) : Human friendly name to be assigned to the job request
@@ -126,7 +127,11 @@ class GoogleCloudProvider():
         Raises:
              - ExecutionProviderException or its subclasses
         '''
-        instance, name = self.create_instance(command=command)
+        wrapped_cmd = self.launcher(command,
+                                    tasks_per_node,
+                                    1)
+
+        instance, name = self.create_instance(command=wrapped_cmd)
         self.provisioned_blocks += 1
         self.resources[name] = {"job_id": name, "status": translate_table[instance['status']]}
         return name

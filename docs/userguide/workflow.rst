@@ -104,7 +104,7 @@ Parallel dataflows can be developed by passing data between apps. In the followi
       @python_app
       def total(inputs=[]):
           total = 0
-          with open(inputs[0], 'r') as f:
+          with open(inputs[0].filepath, 'r') as f:
               for l in f:
                   total += int(l)
           return total

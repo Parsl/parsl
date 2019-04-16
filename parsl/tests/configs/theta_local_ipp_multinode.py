@@ -17,15 +17,16 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='theta_local_ipp_multinode',
+            workers_per_node=1,
             provider=CobaltProvider(
                 queue="debug-flat-quad",
                 launcher=AprunLauncher(),
                 walltime="00:30:00",
                 nodes_per_block=2,
-                tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
-                overrides=user_opts['theta']['overrides'],
+                scheduler_options=user_opts['theta']['scheduler_options'],
+                worker_init=user_opts['theta']['worker_init'],
                 account=user_opts['theta']['account'],
                 cmd_timeout=60
             ),

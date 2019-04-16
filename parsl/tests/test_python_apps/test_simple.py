@@ -4,9 +4,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_ipp import config
 
-parsl.clear()
-parsl.load(config)
-
 
 @App('python')
 def increment(x):
@@ -40,6 +37,8 @@ def test_slow_increment(depth=5):
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="5",

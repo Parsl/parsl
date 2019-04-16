@@ -62,6 +62,7 @@ class TasksOutgoing(object):
         """
         self.context = zmq.Context()
         self.zmq_socket = self.context.socket(zmq.DEALER)
+        self.zmq_socket.set_hwm(0)
         self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
@@ -86,7 +87,7 @@ class TasksOutgoing(object):
                 return
             else:
                 timeout_ms += 1
-                logger.debug("Not sending due full zmq pipe, timeout: {} ms".format(timeout_ms))
+                logger.debug("Not sending due to full zmq pipe, timeout: {} ms".format(timeout_ms))
 
     def close(self):
         self.zmq_socket.close()
@@ -110,6 +111,7 @@ class ResultsIncoming(object):
         """
         self.context = zmq.Context()
         self.results_receiver = self.context.socket(zmq.DEALER)
+        self.results_receiver.set_hwm(0)
         self.port = self.results_receiver.bind_to_random_port("tcp://{}".format(ip_address),
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])

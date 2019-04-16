@@ -3,6 +3,7 @@
 The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
 import logging
+from abc import ABCMeta, abstractmethod
 from inspect import getsource
 from hashlib import md5
 from inspect import signature
@@ -12,7 +13,7 @@ from parsl.app.errors import InvalidAppTypeError
 logger = logging.getLogger(__name__)
 
 
-class AppBase(object):
+class AppBase(metaclass=ABCMeta):
     """This is the base class that defines the two external facing functions that an App must define.
 
     The  __init__ () which is called when the interpreter sees the definition of the decorated
@@ -69,20 +70,9 @@ class AppBase(object):
         self.outputs = params['outputs'].default if 'outputs' in params else []
         self.inputs = params['inputs'].default if 'inputs' in params else []
 
+    @abstractmethod
     def __call__(self, *args, **kwargs):
-        """The __call__ function must be implemented in the subclasses."""
-        raise NotImplementedError
-
-
-def app_wrapper(func):
-
-    def wrapper(*args, **kwargs):
-        logger.debug("App wrapper begins")
-        x = func(*args, **kwargs)
-        logger.debug("App wrapper ends")
-        return x
-
-    return wrapper
+        pass
 
 
 def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
@@ -108,21 +98,21 @@ def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all
     from parsl.app.python import PythonApp
     from parsl.app.bash import BashApp
 
-    logger.warning("The 'App' decorator will be depreciated in Parsl 0.8. Please use 'python_app' or 'bash_app' instead.")
+    logger.warning("The 'App' decorator will be deprecated in Parsl 0.8. Please use 'python_app' or 'bash_app' instead.")
 
-    if apptype is 'python':
+    if apptype == 'python':
         app_class = PythonApp
-    elif apptype is 'bash':
+    elif apptype == 'bash':
         app_class = BashApp
     else:
         raise InvalidAppTypeError("Invalid apptype requested {}; must be 'python' or 'bash'".format(apptype))
 
     def wrapper(f):
-            return app_class(f,
-                             data_flow_kernel=data_flow_kernel,
-                             walltime=walltime,
-                             cache=cache,
-                             executors=executors)
+        return app_class(f,
+                         data_flow_kernel=data_flow_kernel,
+                         walltime=walltime,
+                         cache=cache,
+                         executors=executors)
     return wrapper
 
 

@@ -24,14 +24,15 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='cc_in2p3_local_single_node',
+            workers_per_node=1,
             provider=GridEngineProvider(
                 channel=LocalChannel(),
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
                 walltime="00:20:00",
-                overrides=user_opts['cc_in2p3']['overrides'],
+                scheduler_options=user_opts['cc_in2p3']['scheduler_options'],
+                worker_init=user_opts['cc_in2p3']['worker_init'],
             ),
             engine_debug_level='DEBUG',
         )

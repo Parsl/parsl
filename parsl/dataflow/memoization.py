@@ -135,7 +135,7 @@ class Memoizer(object):
              - task (dict) : A task dict from dfk.tasks
              - r (Result future): Result future
 
-        A warning is issued when a hash collision occures during the update.
+        A warning is issued when a hash collision occurs during the update.
         This is not likely.
         """
         if not self.memoize or not task['memoize']:

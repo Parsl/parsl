@@ -39,6 +39,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Label for this executor instance.
     controller : :class:`~parsl.executors.ipp_controller.Controller`
         Which Controller instance to use. Default is `Controller()`.
+    workers_per_node : int
+        Number of workers to be launched per node. Default=1
     container_image : str
         Launch tasks in a container using this docker image. If set to None, no container is used.
         Default is None.
@@ -72,6 +74,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                  engine_dir=None,
                  storage_access=None,
                  engine_debug_level=None,
+                 workers_per_node=1,
                  managed=True):
         self.provider = provider
         self.label = label
@@ -80,6 +83,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.engine_debug_level = engine_debug_level
         self.container_image = container_image
         self.engine_dir = engine_dir
+        self.workers_per_node = workers_per_node
         self.storage_access = storage_access if storage_access is not None else []
         if len(self.storage_access) > 1:
             raise ConfigurationError('Multiple storage access schemes are not yet supported')
@@ -110,7 +114,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.executor = Client(url_file=self.controller.client_file)
         if self.container_image:
             command_composer = self.compose_containerized_launch_cmd
-            logger.info("Launching IPP with Docker:{0}".format(self.container_image))
+            logger.info("Launching IPP with Docker image: {0}".format(self.container_image))
 
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []
@@ -119,14 +123,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
         if hasattr(self.provider, 'init_blocks'):
             try:
-                for i in range(self.provider.init_blocks):
-                    engine = self.provider.submit(self.launch_cmd, 1)
-                    logger.debug("Launched block: {0}:{1}".format(i, engine))
-                    if not engine:
-                        raise(ScalingFailed(self.provider.label,
-                                            "Attempt to provision nodes via provider has failed"))
-                    self.engines.extend([engine])
-
+                self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
                 logger.error("Scaling out failed: %s" % e)
                 raise e
@@ -229,15 +226,25 @@ sleep infinity
         """
         return self.lb_view.apply_async(*args, **kwargs)
 
-    def scale_out(self, *args, **kwargs):
+    def scale_out(self, blocks=1):
         """Scales out the number of active workers by 1.
 
         This method is notImplemented for threads and will raise the error if called.
 
+        Parameters:
+            blocks : int
+               Number of blocks to be provisioned.
         """
-        if self.provider:
-            r = self.provider.submit(self.launch_cmd, *args, **kwargs)
-            self.engines.extend([r])
+        r = []
+        for i in range(blocks):
+            if self.provider:
+                block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
+                logger.debug("Launched block {}:{}".format(i, block))
+                if not block:
+                    raise(ScalingFailed(self.provider.label,
+                                        "Attempts to provision nodes via provider has failed"))
+                self.engines.extend([block])
+                r.extend([block])
         else:
             logger.error("No execution provider available")
             r = None

@@ -9,7 +9,7 @@ Parsl apps are defined by annotating Python functions with an app decorator. Cur
 Python Apps
 -----------
 
-The following code snippet shows a Python function ``double(int)``, used to double the input value. This function is defined as a Parsl app using the ``@python_app`` decorator.
+The following code snippet shows a Python function ``double(x: int)``, used to double the input value. This function is defined as a Parsl app using the ``@python_app`` decorator.
 
 Python apps are *pure* Python functions. As these functions are executed asynchronously, and potentially remotely, it is important to note that they must explicitly import any required modules and act only on defined input arguments (i.e., they cannot include variables used elsewhere in the script).
 
@@ -21,7 +21,7 @@ Python apps are *pure* Python functions. As these functions are executed asynchr
 
        double(x)
 
-Python apps may also act upon files. In order to make Parsl aware of these files they must be defined using the inputs or outputs keyword arguments. The following code snippet illustrates how the contents of one file can be copied to another.
+Python apps may also act upon files. In order to make Parsl aware of these files they must be defined using the ``inputs`` or ``outputs`` keyword arguments. The following code snippet illustrates how the contents of one file can be copied to another.
 
 .. code-block:: python
 
@@ -48,7 +48,7 @@ Special Keyword Arguments
 
 Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_app`` decorator) can use the following special reserved keyword arguments.
 
-1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures`. Parsl will establish a dependency on these inputs and wait for the results of these futures to be resolved before execution. This is useful if one wishes to pass in an arbitrary number of futures at call
+1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures`. Parsl will establish a dependency on these inputs and wait for the results of these futures to be resolved before execution.    This is useful if one wishes to pass in an arbitrary number of futures at call
    time; note that if :ref:`label-futures` are passed as positional arguments, they will also be resolved before execution.
 2. outputs: (list) This keyword argument defines a list of output :ref:`label-futures` that
    will be produced by this app. Parsl will track these files and ensure they are correctly created.

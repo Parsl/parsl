@@ -16,14 +16,16 @@ Reference guide
     parsl.data_provider.data_manager.DataManager
     parsl.data_provider.files.File
     parsl.executors.base.ParslExecutor
-    parsl.executors.threads.ThreadPoolExecutor
-    parsl.executors.ipp.IPyParallelExecutor
+    parsl.executors.ThreadPoolExecutor
+    parsl.executors.IPyParallelExecutor
     parsl.executors.ipp_controller.Controller
+    parsl.executors.HighThroughputExecutor
+    parsl.executors.ExtremeScaleExecutor
     parsl.executors.swift_t.TurbineExecutor
-    parsl.channels.local.local.LocalChannel
-    parsl.channels.ssh.ssh.SSHChannel
+    parsl.channels.LocalChannel
+    parsl.channels.SSHChannel
+    parsl.channels.SSHInteractiveLoginChannel
     parsl.providers.AWSProvider
-    parsl.providers.AzureProvider
     parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
     parsl.providers.GoogleCloudProvider
@@ -33,6 +35,14 @@ Reference guide
     parsl.providers.GridEngineProvider
     parsl.providers.SlurmProvider
     parsl.providers.TorqueProvider
+    parsl.providers.KubernetesProvider
+    parsl.launchers.SimpleLauncher
+    parsl.launchers.SingleNodeLauncher
+    parsl.launchers.SrunLauncher
+    parsl.launchers.AprunLauncher
+    parsl.launchers.SrunMPILauncher
+    parsl.launchers.GnuParallelLauncher
+    parsl.launchers.MpiExecLauncher
     parsl.monitoring.db_logger.MonitoringConfig
 
 .. autosummary::

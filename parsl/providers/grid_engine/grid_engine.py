@@ -40,12 +40,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    label : str
-        Label for this provider.
     nodes_per_block : int
         Nodes to provision per block.
-    tasks_per_node : int
-        Tasks to run per node.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
@@ -56,8 +52,10 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     walltime : str
         Walltime requested per block in HH:MM:SS.
-    overrides : str
-        String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+    scheduler_options : str
+        String to prepend to the #$$ blocks in the submit script to the scheduler.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
@@ -65,51 +63,52 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
     def __init__(self,
                  channel=LocalChannel(),
-                 label='grid_engine',
                  nodes_per_block=1,
-                 tasks_per_node=1,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
                  parallelism=1,
                  walltime="00:10:00",
-                 overrides='',
+                 scheduler_options='',
+                 worker_init='',
                  launcher=SingleNodeLauncher()):
+        label = 'grid_engine'
         super().__init__(label,
                          channel,
                          nodes_per_block,
-                         tasks_per_node,
                          init_blocks,
                          min_blocks,
                          max_blocks,
                          parallelism,
                          walltime,
                          launcher)
-        self.overrides = overrides
+        self.scheduler_options = scheduler_options
+        self.worker_init = worker_init
 
         if launcher in ['srun', 'srun_mpi']:
             logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
                            "Recommended options include 'single_node' or 'aprun'.".format(launcher))
 
-    def get_configs(self, command):
+    def get_configs(self, command, tasks_per_node):
         """Compose a dictionary with information for writing the submit script."""
 
         logger.debug("Requesting one block with {} nodes per block and {} tasks per node".format(
-            self.nodes_per_block, self.tasks_per_node))
+            self.nodes_per_block, tasks_per_node))
 
         job_config = {}
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["walltime"] = wtime_to_minutes(self.walltime)
-        job_config["overrides"] = self.overrides
+        job_config["scheduler_options"] = self.scheduler_options
+        job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
 
         job_config["user_script"] = self.launcher(command,
-                                                  self.tasks_per_node,
+                                                  tasks_per_node,
                                                   self.nodes_per_block)
         return job_config
 
-    def submit(self, command="", blocksize=1, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
@@ -117,6 +116,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         Args :
              - command (str) : The bash command string to be executed.
              - blocksize (int) : Blocksize to be requested
+             - tasks_per_node (int) : command invocations to be launched per node
 
         KWargs:
              - job_name (str) : Human friendly name to be assigned to the job request
@@ -140,7 +140,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        job_config = self.get_configs(command, blocksize)
+        job_config = self.get_configs(command, tasks_per_node)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)

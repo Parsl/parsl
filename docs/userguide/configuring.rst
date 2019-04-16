@@ -1,4 +1,4 @@
-.. _configuration_section:
+.. _configuration-section:
 
 Configuration
 =============
@@ -17,12 +17,138 @@ Parsl workflows are developed completely independently from their execution envi
       )
       parsl.load(config)
 
-.. contents:: Example Site Configurations
+.. contents:: Configuration How-To and Examples:
 
 .. note::
-   Please note that all configuration examples below import a `user_opts` file where all user specific
-   options are defined. To use the configuration, these options **must** be defined either by creating
-   a user_opts file, or explicitly edit the configuration with user specific information.
+   Please note that all configuration examples below require customization for your account, 
+   allocation, Python environment, etc. 
+
+How-to Configure
+----------------
+
+The configuration provided to Parsl dictates the shape and limits of various resources to be provisioned
+for the workflow. Therefore it is important to carefully evaluate certain aspects of the workflow and
+the planned compute resources to determine an ideal configuration match.
+
+Here are a series of question to help formulate a suitable configuration:
+
+
+1. Where would you like the tasks that comprise the workflow to execute?
+
++---------------------+----------------------------+------------------------+
+| Target              | Executor                   | Provider               |
++=====================+============================+========================+
+| Laptop/Workstation  | * `ThreadPoolExecutor`     | `LocalProvider`        |
+|                     | * `IPyParallelExecutor`    |                        |
+|                     | * `HighThroughputExecutor` |                        |
+|                     | * `ExtremeScaleExecutor`   |                        |
++---------------------+----------------------------+------------------------+
+| Amazon Web Services | * `IPyParallelExecutor`    | `AWSProvider`          |
+|                     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+| Google Cloud        | * `IPyParallelExecutor`    | `GoogleCloudProvider`  |
+|                     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+| Slurm based cluster | * `IPyParallelExecutor`    | `SlurmProvider`        |
+| or supercomputer    | * `HighThroughputExecutor` |                        |
+|                     | * `ExtremeScaleExecutor`   |                        |
++---------------------+----------------------------+------------------------+
+| Torque/PBS based    | * `IPyParallelExecutor`    | `TorqueProvider`       |
+| cluster or          | * `HighThroughputExecutor` |                        |
+| supercomputer       | * `ExtremeScaleExecutor`   |                        |
++---------------------+----------------------------+------------------------+
+| Cobalt based cluster| * `IPyParallelExecutor`    | `CobaltProvider`       |
+| or supercomputer    | * `HighThroughputExecutor` |                        |
+|                     | * `ExtremeScaleExecutor`   |                        |
++---------------------+----------------------------+------------------------+
+| GridEngine based    | * `IPyParallelExecutor`    | `GridEngineProvider`   |
+| cluster or grid     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+| Condor based        | * `IPyParallelExecutor`    | `CondorProvider`       |
+| cluster or grid     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+| Kubernetes cluster  | * `IPyParallelExecutor`    | `KubernetesProvider`   |
+|                     | * `HighThroughputExecutor` |                        |
++---------------------+----------------------------+------------------------+
+
+2. How many nodes do you have to execute them ? What task durations give good performance on different executors?
+
+
++--------------------------+----------------------+------------------------------------+
+| Executor                 | Number of Nodes [*]_ | Task duration for good performance |
++==========================+======================+====================================+
+| `ThreadPoolExecutor`     | 1 (Only local)       |  Any                               |
++--------------------------+----------------------+------------------------------------+
+| `LowLatencyExecutor`     | <=10                 |  10ms+                             |
++--------------------------+----------------------+------------------------------------+
+| `IPyParallelExecutor`    | <=128                |  50ms+                             |
++--------------------------+----------------------+------------------------------------+
+| `HighThroughputExecutor` | <=2000               |  Task duration(s)/#nodes >= 0.01   |
+|                          |                      | longer tasks needed at higher scale|
++--------------------------+----------------------+------------------------------------+
+| `ExtremeScaleExecutor`   | >1000, <=8000 [*]_   |  >minutes                          |
++--------------------------+----------------------+------------------------------------+
+
+
+.. [*] We assume that each node has 32 workers. If there are fewer workers launched
+       per node, a higher number of nodes could be supported.
+
+.. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale that
+       we've tested the `ExtremeScaleExecutor` at.
+
+.. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
+             as the recommended replacement.
+
+
+3. If you are running on a cluster or supercomputer, will you request multiple nodes per block ?
+   Note that in this case a block is equivalent to a batch job.
+
++----------------------------------------------------------------------------+
+| ``nodes_per_block = 1``                                                    |
++---------------------+--------------------------+---------------------------+
+| Provider            | Executor choice          | Suitable Launchers        |
++=====================+==========================+===========================+
+| Systems that don't  | Any                      | * `SingleNodeLauncher`    |
+| use Aprun           |                          | * `SimpleLauncher`        |
++---------------------+--------------------------+---------------------------+
+| Aprun based systems | Any                      | * `AprunLauncher`         |
+|                     |                          |                           |
++---------------------+--------------------------+---------------------------+
+
++-------------------------------------------------------------------------------------+
+| ``nodes_per_block > 1``                                                             |
++---------------------+--------------------------+------------------------------------+
+| Provider            | Executor choice          | Suitable Launchers                 |
++=====================+==========================+====================================+
+| `TorqueProvider`    | Any                      | * `AprunLauncher`                  |
+|                     |                          | * `MpiExecLauncher`                |
++---------------------+--------------------------+------------------------------------+
+| `CobaltProvider`    | Any                      | * `AprunLauncher`                  |
++---------------------+--------------------------+------------------------------------+
+| `SlurmProvider`     | Any                      | * `SrunLauncher`  if native slurm  |
+|                     |                          | * `AprunLauncher`, otherwise       |
++---------------------+--------------------------+------------------------------------+
+
+.. note:: If you are on a Cray system, you most likely need the `AprunLauncher` to launch workers unless you
+          are on a **native Slurm** system like :ref:`configuring_nersc_cori`
+
+
+4. Where will you run the main parsl process vs the tasks?
+
++---------------------+--------------------------+------------------------------------+
+| Workflow location   | Execution target         | Suitable channel                   |
++=====================+==========================+====================================+
+| Laptop/Workstation  | Laptop/Workstation       | `LocalChannel`                     |
++---------------------+--------------------------+------------------------------------+
+| Laptop/Workstation  | Cloud Resources          | None                               |
++---------------------+--------------------------+------------------------------------+
+| Laptop/Workstation  | Clusters with no 2FA     | `SSHChannel`                       |
++---------------------+--------------------------+------------------------------------+
+| Laptop/Workstation  | Clusters with 2FA        | `SSHInteractiveLoginChannel`       |
++---------------------+--------------------------+------------------------------------+
+| Login node          | Cluster/Supercomputer    | `LocalChannel`                     |
++---------------------+--------------------------+------------------------------------+
+
 
 Comet (SDSC)
 ------------
@@ -31,8 +157,10 @@ Comet (SDSC)
 
 The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/tests/configs/comet_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/comet_ipp_multinode.py
 
+
+.. _configuring_nersc_cori:
 
 Cori (NERSC)
 ------------
@@ -41,7 +169,17 @@ Cori (NERSC)
 
 The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
-.. literalinclude:: ../../parsl/tests/configs/cori_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/cori_ipp_multinode.py
+
+
+Stampede2 (TACC)
+------------
+
+.. image:: https://www.tacc.utexas.edu/documents/1084364/1413880/stampede2-0717.jpg/
+
+The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
+
+.. literalinclude:: ../../parsl/configs/stampede2_htex_multinode.py
 
 
 Theta (ALCF)
@@ -50,14 +188,14 @@ Theta (ALCF)
 .. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
 
 The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's **Theta** supercomputer.
-This example uses the `IPythonParallel` executor and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
+This example uses the `IPyParallelExecutor` and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
 assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/tests/configs/theta_local_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/theta_local_ipp_multinode.py
 
 
 Cooley (ALCF)
-------------
+-------------
 
 .. image:: https://today.anl.gov/wp-content/uploads/sites/44/2015/06/Cray-Cooley.jpg
 
@@ -65,7 +203,7 @@ The following snippet shows an example configuration for executing remotely on A
 The example uses an `SSHInteractiveLoginChannel` to connect remotely to Cooley using ALCF's 2FA token.
 The configuration uses the `CobaltProvider` to interface with Cooley's scheduler.
 
-.. literalinclude:: ../../parsl/tests/configs/cooley_ssh_il_single_node.py
+.. literalinclude:: ../../parsl/configs/cooley_ssh_il_single_node.py
 
 Swan (Cray)
 -----------
@@ -76,7 +214,7 @@ The following snippet shows an example configuration for executing remotely on S
 The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
 to launch workers on the machine
 
-.. literalinclude:: ../../parsl/tests/configs/swan_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/swan_ipp_multinode.py
 
 
 CC-IN2P3
@@ -88,7 +226,7 @@ The snippet below shows an example configuration for executing from a login node
 The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
 This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
 
-.. literalinclude:: ../../parsl/tests/configs/cc_in2p3_local_single_node.py
+.. literalinclude:: ../../parsl/configs/cc_in2p3_local_single_node.py
 
 Midway (RCC, UChicago)
 ----------------------
@@ -97,10 +235,10 @@ Midway (RCC, UChicago)
 
 This Midway cluster is a campus cluster hosted by the Research Computing Center at the University of Chicago.
 The snippet below shows an example configuration for executing remotely on Midway.
-The configuration uses the `SSHProvider` to connect remotely to Midway, uses the `SlurmProvider` to interface
-with the scheduler, and uses the `SrunProvider` to launch workers.
+The configuration uses the `SSHChannel` to connect remotely to Midway, uses the `SlurmProvider` to interface
+with the scheduler, and uses the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/tests/configs/midway_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/midway_ipp_multinode.py
 
 
 Open Science Grid
@@ -110,10 +248,10 @@ Open Science Grid
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
 The snippet below shows an example configuration for executing remotely on OSG.
-The configuration uses the `SSHProvider` to connect remotely to OSG, uses the `CondorProvider` to interface
+The configuration uses the `SSHChannel` to connect remotely to OSG, uses the `CondorProvider` to interface
 with the scheduler.
 
-.. literalinclude:: ../../parsl/tests/configs/osg_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/osg_ipp_multinode.py
 
 Amazon Web Services
 -------------------
@@ -121,15 +259,36 @@ Amazon Web Services
 .. image:: ./aws_image.png
 
 .. note::
-   Please note that `boto3` library is a requirement to use AWS with Parsl.
-   This can be installed via `python3 -m pip install libsubmit+aws`
+   Please note that **boto3** library is a requirement to use AWS with Parsl.
+   This can be installed via ``python3 -m pip install parsl[aws]``
 
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
 re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
 
-.. literalinclude:: ../../parsl/tests/configs/ec2_single_node.py
+.. literalinclude:: ../../parsl/configs/ec2_single_node.py
+
+
+Ad-Hoc Clusters
+---------------
+
+Any collection of compute nodes without a scheduler setup for task scheduling can be considered an
+ad-hoc cluster. Often these machines have a shared-filesystem such as NFS or Lustre.
+In order to use these resources with Parsl, they need to set-up for password-less SSH access.
+
+In order to use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
+for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname.
+Here's an example configuration using the 2 login nodes from the Midway cluster as a proxy for
+an ad-hoc cluster.
+
+.. literalinclude:: ../../parsl/configs/ad_hoc.py
+
+.. note::
+   Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
+
+
+
 
 
 Further help

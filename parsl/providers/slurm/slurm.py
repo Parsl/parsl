@@ -36,8 +36,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     ----------
     partition : str
         Slurm partition to request blocks from.
-    label : str
-        Label for this provider.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
@@ -45,8 +43,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
-    tasks_per_node : int
-        Tasks to run per node.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
@@ -57,33 +53,39 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     walltime : str
         Walltime requested per block in HH:MM:SS.
-    overrides : str
+    scheduler_options : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
+    exclusive : bool (Default = True)
+        Requests nodes which are not shared with other running jobs.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
+     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
     def __init__(self,
                  partition,
-                 label='slurm',
                  channel=LocalChannel(),
                  nodes_per_block=1,
-                 tasks_per_node=1,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
                  parallelism=1,
                  walltime="00:10:00",
-                 overrides='',
+                 scheduler_options='',
+                 worker_init='',
                  cmd_timeout=10,
+                 exclusive=True,
+                 move_files=True,
                  launcher=SingleNodeLauncher()):
+        label = 'slurm'
         super().__init__(label,
                          channel,
                          nodes_per_block,
-                         tasks_per_node,
                          init_blocks,
                          min_blocks,
                          max_blocks,
@@ -91,8 +93,15 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                          walltime,
                          cmd_timeout=cmd_timeout,
                          launcher=launcher)
+
         self.partition = partition
-        self.overrides = overrides
+        self.exclusive = exclusive
+        self.move_files = move_files
+        if exclusive:
+            self.scheduler_options = "#SBATCH --exclusive\n" + scheduler_options
+        else:
+            self.scheduler_options = scheduler_options
+        self.worker_init = worker_init
 
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
@@ -127,7 +136,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    def submit(self, command, blocksize, job_name="parsl.auto"):
+    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
         """Submit the command as a slurm job of blocksize parallel elements.
 
         Parameters
@@ -136,9 +145,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             Command to be made on the remote side.
         blocksize : int
             Not implemented.
+        tasks_per_node : int
+            Command invocations to be launched per node
         job_name : str
             Name for the job (must be unique).
-
         Returns
         -------
         None or str
@@ -159,21 +169,27 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config = {}
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["nodes"] = self.nodes_per_block
-        job_config["tasks_per_node"] = self.tasks_per_node
+        job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
-        job_config["overrides"] = self.overrides
+        job_config["scheduler_options"] = self.scheduler_options
+        job_config["worker_init"] = self.worker_init
         job_config["partition"] = self.partition
         job_config["user_script"] = command
 
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
-                                                  self.tasks_per_node,
+                                                  tasks_per_node,
                                                   self.nodes_per_block)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
+        if self.move_files:
+            logger.debug("moving files")
+            channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
+        else:
+            logger.debug("not moving files")
+            channel_script_path = script_path
 
         retcode, stdout, stderr = super().execute_wait("sbatch {0}".format(channel_script_path))
 

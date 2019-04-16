@@ -6,7 +6,7 @@ import concurrent.futures as cf
 from parsl.data_provider.scheme import GlobusScheme
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.globus import get_globus
-from parsl.app.app import App
+from parsl.app.app import python_app
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +56,11 @@ class DataManager(ParslExecutor):
 
         return dfk.executors['data_manager']
 
-    def __init__(self, max_threads=10, executors=None):
+    def __init__(self, dfk, max_threads=10):
         """Initialize the DataManager.
+
+        Args:
+           - dfk (DataFlowKernel): The DataFlowKernel that this DataManager is managing data for.
 
         Kwargs:
            - max_threads (int): Number of threads. Default is 10.
@@ -66,11 +69,8 @@ class DataManager(ParslExecutor):
         self._scaling_enabled = False
 
         self.label = 'data_manager'
-        if executors is None:
-            executors = []
-        self.executors = {e.label: e for e in executors}
+        self.dfk = dfk
         self.max_threads = max_threads
-        self.files = []
         self.globus = None
         self.managed = True
 
@@ -102,27 +102,19 @@ class DataManager(ParslExecutor):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def add_file(self, file):
-        if file.scheme == 'globus':
-            if not self.globus:
-                self.globus = get_globus()
-            # keep a list of all remote files for optimization purposes (TODO)
-            self.files.append(file)
-            self._set_local_path(file)
-
-    def _set_local_path(self, file):
-        globus_ep = self._get_globus_endpoint()
-        file.local_path = os.path.join(globus_ep['working_dir'], file.filename)
+    def initialize_globus(self):
+        if self.globus is None:
+            self.globus = get_globus()
 
     def _get_globus_endpoint(self, executor_label=None):
-        for executor in self.executors.values():
-            if executor_label is None or executor.label == executor_label:
+        for executor in self.dfk.executors.values():
+            if (executor_label is None or executor.label == executor_label) and hasattr(executor, "storage_access"):
                 for scheme in executor.storage_access:
                     if isinstance(scheme, GlobusScheme):
                         if executor.working_dir:
                             working_dir = os.path.normpath(executor.working_dir)
                         else:
-                            working_dir = os.getcwd()
+                            raise ValueError("executor working_dir must be specified for GlobusScheme")
                         if scheme.endpoint_path and scheme.local_path:
                             endpoint_path = os.path.normpath(scheme.endpoint_path)
                             local_path = os.path.normpath(scheme.local_path)
@@ -152,17 +144,13 @@ class DataManager(ParslExecutor):
                                 the first executor with the "globus" key in a config.
         """
 
-        if file.scheme == 'file':
-            stage_in_app = self._file_stage_in_app()
-            app_fut = stage_in_app(outputs=[file])
-            return app_fut._outputs[0]
-        elif file.scheme == 'ftp':
-            working_dir = self.executors[executor].working_dir
+        if file.scheme == 'ftp':
+            working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = self._ftp_stage_in_app(executor=executor)
             app_fut = stage_in_app(working_dir, outputs=[file])
             return app_fut._outputs[0]
         elif file.scheme == 'http' or file.scheme == 'https':
-            working_dir = self.executors[executor].working_dir
+            working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = self._http_stage_in_app(executor=executor)
             app_fut = stage_in_app(working_dir, outputs=[file])
             return app_fut._outputs[0]
@@ -174,20 +162,14 @@ class DataManager(ParslExecutor):
         else:
             raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
 
-    def _file_stage_in_app(self):
-        return App("python", executors=['data_manager'])(self._file_stage_in)
-
-    def _file_stage_in(self, outputs=[]):
-        pass
-
     def _ftp_stage_in_app(self, executor):
-        return App("python", executors=[executor])(_ftp_stage_in)
+        return python_app(executors=[executor])(_ftp_stage_in)
 
     def _http_stage_in_app(self, executor):
-        return App("python", executors=[executor])(_http_stage_in)
+        return python_app(executors=[executor])(_http_stage_in)
 
     def _globus_stage_in_app(self):
-        return App("python", executors=['data_manager'])(self._globus_stage_in)
+        return python_app(executors=['data_manager'])(self._globus_stage_in)
 
     def _globus_stage_in(self, globus_ep, outputs=[]):
         file = outputs[0]
@@ -195,6 +177,9 @@ class DataManager(ParslExecutor):
                 globus_ep['working_dir'], file.filename)
         dst_path = os.path.join(
                 globus_ep['endpoint_path'], file.filename)
+
+        self.initialize_globus()
+
         self.globus.transfer_file(
                 file.netloc, globus_ep['endpoint_uuid'],
                 file.path, dst_path)
@@ -213,10 +198,7 @@ class DataManager(ParslExecutor):
                                 the first executor with the "globus" key in a config.
         """
 
-        if file.scheme == 'file':
-            stage_out_app = self._file_stage_out_app()
-            return stage_out_app()
-        elif file.scheme == 'http' or file.scheme == 'https':
+        if file.scheme == 'http' or file.scheme == 'https':
             raise Exception('HTTP/HTTPS file staging out is not supported')
         elif file.scheme == 'ftp':
             raise Exception('FTP file staging out is not supported')
@@ -227,18 +209,15 @@ class DataManager(ParslExecutor):
         else:
             raise Exception('Staging out with unknown file scheme {} is not supported'.format(file.scheme))
 
-    def _file_stage_out_app(self):
-        return App("python", executors=['data_manager'])(self._file_stage_out)
-
-    def _file_stage_out(self):
-        pass
-
     def _globus_stage_out_app(self):
-        return App("python", executors=['data_manager'])(self._globus_stage_out)
+        return python_app(executors=['data_manager'])(self._globus_stage_out)
 
     def _globus_stage_out(self, globus_ep, inputs=[]):
         file = inputs[0]
         src_path = os.path.join(globus_ep['endpoint_path'], file.filename)
+
+        self.initialize_globus()
+
         self.globus.transfer_file(
             globus_ep['endpoint_uuid'], file.netloc,
             src_path, file.path

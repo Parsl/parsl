@@ -49,7 +49,6 @@ class ClusterProvider(ExecutionProvider):
                  label,
                  channel,
                  nodes_per_block,
-                 tasks_per_node,
                  init_blocks,
                  min_blocks,
                  max_blocks,
@@ -59,11 +58,9 @@ class ClusterProvider(ExecutionProvider):
                  cmd_timeout=10):
 
         self._scaling_enabled = True
-        self.label = label
+        self._label = label
         self.channel = channel
-        self.tasks_per_block = nodes_per_block * tasks_per_node
         self.nodes_per_block = nodes_per_block
-        self.tasks_per_node = tasks_per_node
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
@@ -127,14 +124,15 @@ class ClusterProvider(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, blocksize, job_name="parsl.auto"):
+    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
-             - cmd_string (str) : The bash command string to be executed.
+             - cmd_string (str) : The bash command string to be executed
              - blocksize (int) : Blocksize to be requested
+             - tasks_per_node (int) : command invocations to be launched per node
 
         KWargs:
              - job_name (str) : Human friendly name to be assigned to the job request
@@ -201,3 +199,7 @@ class ClusterProvider(ExecutionProvider):
         { minsize, maxsize, current_requested }
         """
         return self.provisioned_blocks
+
+    @property
+    def label(self):
+        return self._label

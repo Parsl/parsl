@@ -25,18 +25,20 @@ class Channel(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def execute_wait(self, cmd, walltime, envs={}, *args, **kwargs):
+    def execute_wait(self, cmd, walltime=None, envs={}, *args, **kwargs):
         ''' Executes the cmd, with a defined walltime.
 
         Args:
             - cmd (string): Command string to execute over the channel
-            - walltime (int) : Timeout in seconds
+            - walltime (int) : Timeout in seconds, optional
 
         KWargs:
-            - envs (dict) : Environment variables to push to the remote side
+            - envs (Dict[str, str]) : Environment variables to push to the remote side
 
         Returns:
-            - (exit_code, stdout, stderr) (int, string, string)
+            - (exit_code, stdout, stderr) (int, optional string, optional string)
+              If the exit code is a failure code, the stdout and stderr return values
+              may be None.
         '''
         pass
 
@@ -56,7 +58,7 @@ class Channel(metaclass=ABCMeta):
 
     @abstractmethod
     def execute_no_wait(self, cmd, walltime, envs={}, *args, **kwargs):
-        ''' Optional. THis is infrequently used.
+        ''' Execute asynchronousely without waiting for exitcode
 
         Args:
             - cmd (string): Command string to execute over the channel
@@ -66,7 +68,7 @@ class Channel(metaclass=ABCMeta):
             - envs (dict) : Environment variables to push to the remote side
 
         Returns:
-            - (exit_code(None), stdout, stderr) (int, io_thing, io_thing)
+            - the type of return value is channel specific
         '''
         pass
 

@@ -10,7 +10,7 @@ from concurrent.futures import Future
 import logging
 import threading
 
-from parsl.app.errors import RemoteException
+from parsl.app.errors import RemoteExceptionWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -54,18 +54,16 @@ class AppFuture(Future):
     retries left, or if it has no retry field. .result(), .exception() and done callbacks
     should give a result as expected when a Future has a result set
 
-    The parent future may return a RemoteException as a result (rather than raising it
-    as an exception) and AppFuture will treat this an an exception for the above
+    The parent future may return a RemoteExceptionWrapper as a result
+    and AppFuture will treat this an an exception for the above
     retry and result handling behaviour.
 
     """
 
-    def __init__(self, parent, tid=None, stdout=None, stderr=None):
+    def __init__(self, tid=None, stdout=None, stderr=None):
         """Initialize the AppFuture.
 
         Args:
-             - parent (Future) : The parent future if one exists
-               A default value of None should be passed in if app is not launched
 
         KWargs:
              - tid (Int) : Task id should be any unique identifier. Now Int.
@@ -76,16 +74,11 @@ class AppFuture(Future):
         """
         self._tid = tid
         super().__init__()
-        self.prev_parent = None
         self.parent = None
         self._update_lock = threading.Lock()
-        self._parent_update_event = threading.Event()
         self._outputs = []
         self._stdout = stdout
         self._stderr = stderr
-
-        if parent is not None:
-            self.update_parent(parent)
 
     def parent_callback(self, executor_fu):
         """Callback from a parent future to update the AppFuture.
@@ -107,7 +100,6 @@ class AppFuture(Future):
 
         Updates the super() with the result() or exception()
         """
-        # print("[RETRY:TODO] parent_Callback for {0}".format(executor_fu))
         with self._update_lock:
 
             if not executor_fu.done():
@@ -115,7 +107,7 @@ class AppFuture(Future):
 
             # this is for consistency checking
             if executor_fu != self.parent:
-                if executor_fu.exception() is None and not isinstance(executor_fu.result(), RemoteException):
+                if executor_fu.exception() is None and not isinstance(executor_fu.result(), RemoteExceptionWrapper):
                     # ... then we completed with a value, not an exception or wrapped exception,
                     # but we've got an updated executor future.
                     # This is bad - for example, we've started a retry even though we have a result
@@ -124,7 +116,7 @@ class AppFuture(Future):
 
             try:
                 res = executor_fu.result()
-                if isinstance(res, RemoteException):
+                if isinstance(res, RemoteExceptionWrapper):
                     res.reraise()
                 super().set_result(executor_fu.result())
 
@@ -155,22 +147,18 @@ class AppFuture(Future):
         This handles the case where the user has called result on the AppFuture
         before the parent exists.
         """
-        # with self._parent_update_lock:
         self.parent = fut
-        fut.add_done_callback(self.parent_callback)
-        self._parent_update_event.set()
+
+        try:
+            fut.add_done_callback(self.parent_callback)
+        except Exception as e:
+            logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
     def cancel(self):
-        if self.parent:
-            return self.parent.cancel
-        else:
-            return False
+        raise NotImplementedError("Cancel not implemented")
 
     def cancelled(self):
-        if self.parent:
-            return self.parent.cancelled()
-        else:
-            return False
+        return False
 
     def running(self):
         if self.parent:
@@ -183,27 +171,7 @@ class AppFuture(Future):
         return self._outputs
 
     def __repr__(self):
-        if self.parent:
-            with self.parent._condition:
-                if self.parent._state == FINISHED:
-                    if self.parent._exception:
-                        return '<%s at %#x state=%s raised %s>' % (
-                            self.__class__.__name__,
-                            id(self),
-                            _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.parent._exception.__class__.__name__)
-                    else:
-                        return '<%s at %#x state=%s returned %s>' % (
-                            self.__class__.__name__,
-                            id(self),
-                            _STATE_TO_DESCRIPTION_MAP[self.parent._state],
-                            self.parent._result.__class__.__name__)
-                return '<%s at %#x state=%s>' % (
-                    self.__class__.__name__,
-                    id(self),
-                    _STATE_TO_DESCRIPTION_MAP[self.parent._state])
-        else:
-            return '<%s at %#x state=%s>' % (
-                self.__class__.__name__,
-                id(self),
-                _STATE_TO_DESCRIPTION_MAP[self._state])
+        return '<%s super=%s parent=%s>' % (
+            self.__class__.__name__,
+            super().__repr__(),
+            self.parent.__repr__())

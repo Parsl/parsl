@@ -1,6 +1,7 @@
 import logging
 
 from inspect import signature, Parameter
+from parsl.app.errors import wrap_error
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -50,21 +51,30 @@ def remote_side_bash_executor(func, *args, **kwargs):
     logging.debug("Executable: %s", executable)
 
     # Updating stdout, stderr if values passed at call time.
-    stdout = kwargs.get('stdout')
-    stderr = kwargs.get('stderr')
+
+    def open_std_fd(fdname):
+        # fdname is 'stdout' or 'stderr'
+        stdfspec = kwargs.get(fdname)  # spec is str name or tuple (name, mode)
+        if stdfspec is None:
+            return None
+        elif isinstance(stdfspec, str):
+            fname = stdfspec
+            mode = 'a+'
+        elif isinstance(stdfspec, tuple):
+            if len(stdfspec) != 2:
+                raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
+            fname, mode = stdfspec
+        else:
+            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+        try:
+            fd = open(fname, mode)
+        except Exception as e:
+            raise pe.BadStdStreamFile(fname, e)
+        return fd
+
+    std_out = open_std_fd('stdout')
+    std_err = open_std_fd('stderr')
     timeout = kwargs.get('walltime')
-    logging.debug("Stdout: %s", stdout)
-    logging.debug("Stderr: %s", stderr)
-
-    try:
-        std_out = open(stdout, 'a+') if stdout else None
-    except Exception as e:
-        raise pe.BadStdStreamFile(stdout, e)
-
-    try:
-        std_err = open(stderr, 'a+') if stderr else None
-    except Exception as e:
-        raise pe.BadStdStreamFile(stderr, e)
 
     returncode = None
     try:
@@ -136,15 +146,17 @@ class BashApp(AppBase):
         self.kwargs.update(kwargs)
 
         if self.data_flow_kernel is None:
-            self.data_flow_kernel = DataFlowKernelLoader.dfk()
+            dfk = DataFlowKernelLoader.dfk()
+        else:
+            dfk = self.data_flow_kernel
 
-        app_fut = self.data_flow_kernel.submit(remote_side_bash_executor, self.func, *args,
-                                               executors=self.executors,
-                                               fn_hash=self.func_hash,
-                                               cache=self.cache,
-                                               **self.kwargs)
+        app_fut = dfk.submit(wrap_error(remote_side_bash_executor), self.func, *args,
+                             executors=self.executors,
+                             fn_hash=self.func_hash,
+                             cache=self.cache,
+                             **self.kwargs)
 
-        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
+        out_futs = [DataFuture(app_fut, o, tid=app_fut.tid)
                     for o in kwargs.get('outputs', [])]
         app_fut._outputs = out_futs
 

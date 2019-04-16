@@ -5,9 +5,6 @@ from parsl.app.app import App
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
-
 
 @App('bash')
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
@@ -46,7 +43,9 @@ def test_regression_200():
              outputs=[File("test_output.txt")])
     fu.result()
 
-    with open(fu.outputs[0].result(), 'r') as f:
+    fi = fu.outputs[0].result()
+    print("type of fi: {}".format(type(fi)))
+    with open(str(fi), 'r') as f:
         data = f.readlines()
         assert "Hello World" in data, "Missed data"
 
@@ -80,6 +79,8 @@ def test_increment(depth=5):
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    parsl.load(config)
 
     test_files()
     test_increment()

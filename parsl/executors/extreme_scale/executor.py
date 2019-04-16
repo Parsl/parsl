@@ -78,9 +78,16 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     launch_cmd : str
         Command line string to launch the mpi_worker_pool from the provider.
+        The command line string will be formatted with appropriate values for the following values (debug, task_url, result_url,
+        ranks_per_node, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For eg:
+        launch_cmd="mpiexec -np {ranks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url}"
 
-    public_ip : string
-        Set the public ip of the machine on which Parsl is executing.
+    address : string
+        An address to connect to the main Parsl process which is reachable from the network in which
+        workers will be running. This can be either a hostname as returned by `hostname` or an
+        IP address. Most login nodes on clusters have several network interfaces available, only
+        some of which can be reached from the compute nodes.  Some trial and error might be
+        necessary to indentify what addresses are reachable from compute nodes.
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -100,31 +107,48 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     managed : Bool
         If this executor is managed by the DFK or externally handled.
+
+    ranks_per_node : int
+        Specify the ranks to be launched per node.
+
+    heartbeat_threshold : int
+        Seconds since the last message from the counterpart in the communication pair:
+        (interchange, manager) after which the counterpart is assumed to be un-available. Default:120s
+
+    heartbeat_period : int
+        Number of seconds after which a heartbeat message indicating liveness is sent to the
+        counterpart (interchange, manager). Default:30s
+
     """
 
     def __init__(self,
                  label='ExtremeScaleExecutor',
                  provider=LocalProvider(),
                  launch_cmd=None,
-                 public_ip="127.0.0.1",
+                 address="127.0.0.1",
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
                  interchange_port_range=(55000, 56000),
                  storage_access=None,
                  working_dir=None,
                  worker_debug=False,
+                 ranks_per_node=1,
+                 heartbeat_threshold=120,
+                 heartbeat_period=30,
                  managed=True):
 
         super().__init__(label=label,
                          provider=provider,
                          launch_cmd=launch_cmd,
-                         public_ip=public_ip,
+                         address=address,
                          worker_ports=worker_ports,
                          worker_port_range=worker_port_range,
                          interchange_port_range=interchange_port_range,
                          storage_access=storage_access,
                          working_dir=working_dir,
                          worker_debug=worker_debug,
+                         heartbeat_threshold=heartbeat_threshold,
+                         heartbeat_period=heartbeat_period,
                          managed=managed)
 
         if not _mpi_enabled:
@@ -133,7 +157,42 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
             # This is only to stop flake8 from complaining
             logger.debug("MPI version :{}".format(mpi4py.__version__))
 
+        self.ranks_per_node = ranks_per_node
+
         logger.debug("Initializing ExtremeScaleExecutor")
 
         if not launch_cmd:
-            self.launch_cmd = """mpiexec -np {tasks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url}"""
+            self.launch_cmd = ("mpiexec -np {ranks_per_node} mpi_worker_pool.py "
+                               "{debug} "
+                               "--task_url={task_url} "
+                               "--result_url={result_url} "
+                               "--logdir={logdir} "
+                               "--hb_period={heartbeat_period} "
+                               "--hb_threshold={heartbeat_threshold} ")
+        self.worker_debug = worker_debug
+
+    def initialize_scaling(self):
+
+        debug_opts = "--debug" if self.worker_debug else ""
+        l_cmd = self.launch_cmd.format(debug=debug_opts,
+                                       task_url=self.worker_task_url,
+                                       result_url=self.worker_result_url,
+                                       cores_per_worker=self.cores_per_worker,
+                                       # This is here only to support the exex mpiexec call
+                                       ranks_per_node=self.ranks_per_node,
+                                       nodes_per_block=self.provider.nodes_per_block,
+                                       heartbeat_period=self.heartbeat_period,
+                                       heartbeat_threshold=self.heartbeat_threshold,
+                                       logdir="{}/{}".format(self.run_dir, self.label))
+        self.launch_cmd = l_cmd
+        logger.debug("Launch command: {}".format(self.launch_cmd))
+
+        self._scaling_enabled = self.provider.scaling_enabled
+        logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        if hasattr(self.provider, 'init_blocks'):
+            try:
+                self.scale_out(blocks=self.provider.init_blocks)
+
+            except Exception as e:
+                logger.error("Scaling out failed: {}".format(e))
+                raise e

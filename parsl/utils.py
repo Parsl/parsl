@@ -142,7 +142,10 @@ def wtime_to_minutes(time_string):
 
     '''
     hours, mins, seconds = time_string.split(':')
-    return int(hours) * 60 + int(mins) + 1
+    total_mins = int(hours) * 60 + int(mins)
+    if total_mins < 1:
+        logger.warning("Time string '{}' parsed to {} minutes, less than 1".format(time_string, total_mins))
+    return total_mins
 
 
 class RepresentationMixin(object):
@@ -176,7 +179,7 @@ class RepresentationMixin(object):
         if len(argspec.args) > 1:
             defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
         else:
-            defaults = []
+            defaults = {}
 
         for arg in argspec.args[1:]:
             if not hasattr(self, arg):

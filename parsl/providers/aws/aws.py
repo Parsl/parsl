@@ -45,9 +45,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     ----------
     image_id : str
         Identification of the Amazon Machine Image (AMI).
-    label : str
-        Label for this provider.
-    overrides : str
+    worker_init : str
         String to append to the Userdata script executed in the cloudinit phase of
         instance initialization.
     walltime : str
@@ -56,8 +54,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         Path to json file that contains 'AWSAccessKeyId' and 'AWSSecretKey'.
     nodes_per_block : int
         This is always 1 for ec2. Nodes to provision per block.
-    tasks_per_node : int
-        Tasks to run per node.
     profile : str
         Profile to be used from the standard aws config file ~/.aws/config.
     nodes_per_block : int
@@ -97,15 +93,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def __init__(self,
                  image_id,
-                 label='ec2',
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
-                 tasks_per_node=1,
                  nodes_per_block=1,
                  parallelism=1,
 
-                 overrides='',
+                 worker_init='',
                  instance_type='t2.small',
                  region='us-east-2',
                  spot_max_bid=0,
@@ -123,16 +117,15 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
 
         self.image_id = image_id
-        self.label = label
+        self._label = 'ec2'
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
-        self.tasks_per_node = tasks_per_node
         self.nodes_per_block = nodes_per_block
         self.max_nodes = max_blocks * nodes_per_block
         self.parallelism = parallelism
 
-        self.overrides = overrides
+        self.worker_init = worker_init
         self.instance_type = instance_type
         self.region = region
         self.spot_max_bid = spot_max_bid
@@ -160,7 +153,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         state_file_exists = False
         try:
-            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(label)
+            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(self.label)
             self.read_state_file(self.state_file)
             state_file_exists = True
         except Exception:
@@ -191,7 +184,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         """Read the state file, if it exists.
 
         If this script has been run previously, resource IDs will have been written to a
-        state file On starting a run, a state file will be looked for before creating new
+        state file. On starting a run, a state file will be looked for before creating new
         infrastructure. Information on VPCs, security groups, and subnets are saved, as
         well as running instances and their states.
 
@@ -455,7 +448,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         command = Template(template_string).substitute(jobname=job_name,
                                                        user_script=command,
                                                        linger=str(self.linger).lower(),
-                                                       overrides=self.overrides)
+                                                       worker_init=self.worker_init)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
         ami_id = self.image_id
@@ -570,7 +563,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         return all_states
 
-    def submit(self, command='sleep 1', blocksize=1, job_name="parsl.auto"):
+    def submit(self, command='sleep 1', blocksize=1, tasks_per_node=1, job_name="parsl.auto"):
         """Submit the command onto a freshly instantiated AWS EC2 instance.
 
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -581,6 +574,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             Command to be invoked on the remote side.
         blocksize : int
             Number of blocks requested.
+        tasks_per_node : int (default=1)
+            Number of command invocations to be launched per node
         job_name : str
             Prefix for the job name.
 
@@ -592,7 +587,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         job_name = "parsl.auto.{0}".format(time.time())
         wrapped_cmd = self.launcher(command,
-                                    self.tasks_per_node,
+                                    tasks_per_node,
                                     self.nodes_per_block)
         [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
 
@@ -696,6 +691,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     @property
     def scaling_enabled(self):
         return True
+
+    @property
+    def label(self):
+        return self._label
 
     @property
     def current_capacity(self):

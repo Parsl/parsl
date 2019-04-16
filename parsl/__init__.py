@@ -24,6 +24,9 @@ However the following helper functions are provided for logging:
 
 """
 import logging
+import typeguard
+
+from typing import Optional
 
 from parsl.version import VERSION
 from parsl.app.app import App
@@ -47,9 +50,11 @@ __all__ = [
 clear = DataFlowKernelLoader.clear
 load = DataFlowKernelLoader.load
 dfk = DataFlowKernelLoader.dfk
+wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
+@typeguard.typechecked
+def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
@@ -79,7 +84,8 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     futures_logger.addHandler(handler)
 
 
-def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
+@typeguard.typechecked
+def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
@@ -92,7 +98,7 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)

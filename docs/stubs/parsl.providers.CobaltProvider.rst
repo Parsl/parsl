@@ -28,6 +28,7 @@ parsl.providers.CobaltProvider
    .. autosummary::
    
       ~CobaltProvider.current_capacity
+      ~CobaltProvider.label
       ~CobaltProvider.scaling_enabled
    
    
