@@ -291,11 +291,11 @@ class CannedBytes(CannedObject):
 
 
 class CannedBuffer(CannedBytes):
-    wrap = buffer
+    wrap = buffer  # type: ignore
 
 
 class CannedMemoryView(CannedBytes):
-    wrap = memoryview
+    wrap = memoryview  # type: ignore
 
 #-------------------------------------------------------------------------------
 # Functions

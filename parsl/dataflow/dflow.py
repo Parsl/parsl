@@ -5,11 +5,11 @@ import os
 import pathlib
 import pickle
 import random
-import threading
 import inspect
+import threading
 import sys
-import multiprocessing
-import time
+# import multiprocessing
+import datetime
 
 from getpass import getuser
 from uuid import uuid4
@@ -30,11 +30,8 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.utils import get_version
-from parsl.monitoring.db_logger import get_db_logger
-from parsl.monitoring import app_monitor
-from parsl.monitoring import logging_server
-from parsl.monitoring.web_app import index
 
+from parsl.monitoring.message_type import MessageType
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +74,7 @@ class DataFlowKernel(object):
                     'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
-        parsl.set_file_logger("{}/parsl.log".format(self.run_dir),
-                              level=logging.DEBUG)
+        parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         logger.info("Parsl version: {}".format(get_version()))
 
@@ -87,22 +83,26 @@ class DataFlowKernel(object):
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
 
-        # ES logging
+        # Monitoring
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
-        self.monitoring_config = config.monitoring_config
-        if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database'\
-                and self.monitoring_config.eng_link is None:
-            # uses the rundir as the default location.
-            logger.info('Local monitoring database can be found inside the run_dir at: {}'.format(self.run_dir))
-            self.monitoring_config.eng_link = "sqlite:///{}".format(os.path.join(os.path.abspath(self.run_dir), 'monitoring.db'))
-        if self.monitoring_config is None:
-            self.db_logger = get_db_logger()
-        else:
-            self.db_logger = get_db_logger(monitoring_config=self.monitoring_config)
+
+        self.monitoring = config.monitoring
+        if self.monitoring:
+            if self.monitoring.logdir is None:
+                self.monitoring.logdir = self.run_dir
+            self.monitoring.start()
+
+        self.time_began = datetime.datetime.now()
+        self.time_completed = None
+        self.run_id = str(uuid4())
+
+        # TODO: make configurable
+        logger.info("Run id is: " + self.run_id)
+
         self.workflow_name = None
-        if self.monitoring_config is not None and self.monitoring_config.workflow_name is not None:
-            self.workflow_name = self.monitoring_config.workflow_name
+        if self.monitoring is not None and self.monitoring.workflow_name is not None:
+            self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
@@ -112,31 +112,18 @@ class DataFlowKernel(object):
                     self.workflow_name = fname
                     break
 
-        self.workflow_version = None
-        if self.monitoring_config is not None and self.monitoring_config.version is not None:
-            self.workflow_version = self.monitoring_config.version
-        self.time_began = time.time()
-        self.time_completed = None
-        self.run_id = str(uuid4())
-        self.dashboard = self.monitoring_config.dashboard_link if self.monitoring_config is not None else None
-        # TODO: make configurable
-        logger.info("Run id is: " + self.run_id)
-        if self.dashboard is not None:
-            logger.info("Dashboard is found at " + self.dashboard)
-        # start tornado logging server
-        if self.monitoring_config is not None and self.monitoring_config.database_type == 'local_database':
-            self.logging_server = multiprocessing.Process(target=logging_server.run, kwargs={'monitoring_config': self.monitoring_config})
-            self.logging_server.start()
-            self.web_app = multiprocessing.Process(target=index.run, kwargs={'monitoring_config': self.monitoring_config})
-            self.web_app.start()
-        else:
-            self.logging_server = None
-            self.web_app = None
+        self.workflow_version = str(self.time_began)
+        if self.monitoring is not None and self.monitoring.workflow_version is not None:
+            self.workflow_version = self.monitoring.workflow_version
+
         workflow_info = {
-                'python_version': sys.version_info,
+                'python_version': "{}.{}.{}".format(sys.version_info.major,
+                                                    sys.version_info.minor,
+                                                    sys.version_info.micro),
                 'parsl_version': get_version(),
-                "time_began": str(self.time_began),
-                'time_completed': str(None),
+                "time_began": self.time_began,
+                'time_completed': None,
+                'workflow_duration': None,
                 'run_id': self.run_id,
                 'workflow_name': self.workflow_name,
                 'workflow_version': self.workflow_version,
@@ -146,8 +133,10 @@ class DataFlowKernel(object):
                 'user': getuser(),
                 'host': gethostname(),
         }
-        self.db_logger.info("DFK start", extra=workflow_info)
-        # ES logging end
+
+        if self.monitoring:
+            self.monitoring.send(MessageType.WORKFLOW_INFO,
+                                 workflow_info)
 
         checkpoints = self.load_checkpoints(config.checkpoint_files)
         self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
@@ -155,23 +144,9 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        self.data_manager = DataManager(self, max_threads=config.data_management_max_threads)
-        self.executors = {e.label: e for e in config.executors + [self.data_manager]}
-        for executor in self.executors.values():
-            executor.run_dir = self.run_dir
-            if hasattr(executor, 'provider'):
-                if hasattr(executor.provider, 'script_dir'):
-                    executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                    if executor.provider.channel.script_dir is None:
-                        executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                        if not executor.provider.channel.isdir(self.run_dir):
-                            parent, child = pathlib.Path(self.run_dir).parts[-2:]
-                            remote_run_dir = os.path.join(parent, child)
-                            executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
-                            executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
-                    executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
-                    os.makedirs(executor.provider.script_dir, exist_ok=True)
-            executor.start()
+        data_manager = DataManager(self, max_threads=config.data_management_max_threads)
+        self.executors = {}
+        self.add_executors(config.executors + [self.data_manager])
 
         if self.checkpoint_mode == "periodic":
             try:
@@ -182,6 +157,8 @@ class DataFlowKernel(object):
                 logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
+        # if we use the functionality of dynamicall adding executors
+        # all executors should be managed.
         if any([x.managed for x in config.executors]):
             self.flowcontrol = FlowControl(self)
         else:
@@ -197,16 +174,27 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-        task_log_info = {"task_" + k: v for k, v in self.tasks[task_id].items()}
+
+        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'checkpoint', 'fail_count',
+                           'fail_history', 'status', 'id', 'time_submitted', 'time_returned', 'executor']
+
+        task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
+        task_log_info['timestamp'] = datetime.datetime.now()
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
         task_log_info['tasks_completed_count'] = self.tasks_completed_count
-        task_log_info['time_began'] = str(self.time_began)
         task_log_info['task_inputs'] = str(self.tasks[task_id]['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(self.tasks[task_id]['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
         task_log_info['task_stdout'] = self.tasks[task_id]['kwargs'].get('stdout', None)
+        task_log_info['task_depends'] = None
+        if self.tasks[task_id]['depends'] is not None:
+            task_log_info['task_depends'] = ",".join([str(t._tid) for t in self.tasks[task_id]['depends']])
+        task_log_info['task_elapsed_time'] = None
+        if self.tasks[task_id]['time_returned'] is not None:
+            task_log_info['task_elapsed_time'] = (self.tasks[task_id]['time_returned'] -
+                                                  self.tasks[task_id]['time_submitted']).total_seconds()
         if fail_mode is not None:
             task_log_info['task_fail_mode'] = fail_mode
         return task_log_info
@@ -268,38 +256,32 @@ class DataFlowKernel(object):
             if not self._config.lazy_errors:
                 logger.debug("Eager fail, skipping retry logic")
                 self.tasks[task_id]['status'] = States.failed
-                if self.monitoring_config is not None:
+                if self.monitoring:
                     task_log_info = self._create_task_log_info(task_id, 'eager')
-                    self.db_logger.info("Task Fail", extra=task_log_info)
+                    self.monitoring.send(MessageType.TASK_INFO, task_log_info)
                 return
 
             if self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
-                if self.monitoring_config is not None:
-                    task_log_info = self._create_task_log_info(task_id, 'lazy')
-                    self.db_logger.info("Task Retry", extra=task_log_info)
 
             else:
                 logger.info("Task {} failed after {} retry attempts".format(task_id,
                                                                             self._config.retries))
                 self.tasks[task_id]['status'] = States.failed
                 self.tasks_failed_count += 1
-
-                self.tasks[task_id]['time_returned'] = time.time()
-                if self.monitoring_config is not None:
-                    task_log_info = self._create_task_log_info(task_id, 'lazy')
-                    self.db_logger.info("Task Retry Failed", extra=task_log_info)
+                self.tasks[task_id]['time_returned'] = datetime.datetime.now()
 
         else:
             self.tasks[task_id]['status'] = States.done
             self.tasks_completed_count += 1
 
             logger.info("Task {} completed".format(task_id))
-            self.tasks[task_id]['time_returned'] = time.time()
-            if self.monitoring_config is not None:
-                task_log_info = self._create_task_log_info(task_id)
-                self.db_logger.info("Task Done", extra=task_log_info)
+            self.tasks[task_id]['time_returned'] = datetime.datetime.now()
+
+        if self.monitoring:
+            task_log_info = self._create_task_log_info(task_id, 'lazy')
+            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
         # it might be that in the course of the update, we've gone back to being
         # pending - in which case, we should consider ourself for relaunch
@@ -398,9 +380,9 @@ class DataFlowKernel(object):
                     "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
                 self.tasks[task_id]['status'] = States.dep_fail
-                if self.monitoring_config is not None:
+                if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
-                    self.db_logger.info("Task Dep Fail", extra=task_log_info)
+                    self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
                 try:
                     fu = Future()
@@ -437,7 +419,7 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
-        self.tasks[task_id]['time_submitted'] = time.time()
+        self.tasks[task_id]['time_submitted'] = datetime.datetime.now()
 
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
@@ -457,14 +439,20 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
-        if self.monitoring_config is not None:
-            executable = app_monitor.monitor_wrapper(executable, task_id, self.monitoring_config, self.run_id)
+
+        if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+            executable = self.monitoring.monitor_wrapper(executable, task_id,
+                                                         self.monitoring.monitoring_hub_url,
+                                                         self.run_id,
+                                                         self.monitoring.resource_monitoring_interval)
+
         with self.submitter_lock:
             exec_fu = executor.submit(executable, *args, **kwargs)
-        self.tasks[task_id]['status'] = States.running
-        if self.monitoring_config is not None:
-            task_log_info = self._create_task_log_info(task_id)
-            self.db_logger.info("Task Launch", extra=task_log_info)
+        self.tasks[task_id]['status'] = States.launched
+        if self.monitoring is not None:
+            task_log_info = self._create_task_log_info(task_id, 'lazy')
+            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
@@ -555,7 +543,7 @@ class DataFlowKernel(object):
              kwargs (Dict) : Kwargs to app function
 
         Return:
-             partial Function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
+             partial function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
 
         """
         dep_failures = []
@@ -682,7 +670,7 @@ class DataFlowKernel(object):
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(None, tid=task_id,
+        app_fu = AppFuture(tid=task_id,
                            stdout=task_stdout,
                            stderr=task_stderr)
 
@@ -765,6 +753,26 @@ class DataFlowKernel(object):
 
         logger.info("End of summary")
 
+    def add_executors(self, executors):
+        for executor in executors:
+            executor.run_dir = self.run_dir
+            if hasattr(executor, 'provider'):
+                if hasattr(executor.provider, 'script_dir'):
+                    executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                    if executor.provider.channel.script_dir is None:
+                        executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                        if not executor.provider.channel.isdir(self.run_dir):
+                            parent, child = pathlib.Path(self.run_dir).parts[-2:]
+                            remote_run_dir = os.path.join(parent, child)
+                            executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
+                            executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
+                    executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
+                    os.makedirs(executor.provider.script_dir, exist_ok=True)
+            self.executors[executor.label] = executor
+            executor.start()
+        if hasattr(self, 'flowcontrol') and isinstance(self.flowcontrol, FlowControl):
+            self.flowcontrol.strategy.add_executors(executors)
+
     def atexit_cleanup(self):
         if not self.cleanup_called:
             self.cleanup()
@@ -828,11 +836,20 @@ class DataFlowKernel(object):
                     executor.scale_in(len(job_ids))
                 executor.shutdown()
 
-        self.time_completed = time.time()
-        self.db_logger.info("DFK end", extra={'tasks_failed_count': self.tasks_failed_count, 'tasks_completed_count': self.tasks_completed_count,
-                                              "time_began": str(self.time_began),
-                                              'time_completed': str(self.time_completed),
-                                              'run_id': self.run_id, 'rundir': self.run_dir})
+        self.time_completed = datetime.datetime.now()
+
+        if self.monitoring:
+            self.monitoring.send(MessageType.WORKFLOW_INFO,
+                                 {'tasks_failed_count': self.tasks_failed_count,
+                                  'tasks_completed_count': self.tasks_completed_count,
+                                  "time_began": self.time_began,
+                                  'time_completed': self.time_completed,
+                                  'workflow_duration': (self.time_completed - self.time_began).total_seconds(),
+                                  'run_id': self.run_id, 'rundir': self.run_dir})
+
+            self.monitoring.close()
+
+        """
         if self.logging_server is not None:
             self.logging_server.terminate()
             self.logging_server.join()
@@ -840,7 +857,7 @@ class DataFlowKernel(object):
         if self.web_app is not None:
             self.web_app.terminate()
             self.web_app.join()
-
+        """
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):

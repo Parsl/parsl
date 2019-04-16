@@ -71,7 +71,6 @@ class DataManager(ParslExecutor):
         self.label = 'data_manager'
         self.dfk = dfk
         self.max_threads = max_threads
-        self.files = []
         self.globus = None
         self.managed = True
 

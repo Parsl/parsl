@@ -71,20 +71,34 @@ Here are a series of question to help formulate a suitable configuration:
 |                     | * `HighThroughputExecutor` |                        |
 +---------------------+----------------------------+------------------------+
 
-2. How many and how long are the tasks? How many nodes do you have to execute them ?
+2. How many nodes do you have to execute them ? What task durations give good performance on different executors?
 
-+---------------------+---------------------+--------------------+----------------------------+
-| Node scale          | Task Duration       |  Task Count        | Suitable Executor          |
-+=====================+=====================+====================+============================+
-| Nodes=1             | <1s - minutes       |  0-100K            | * `ThreadPoolExecutor`     |
-|                     |                     |                    | * `HighThroughputExecutor` |
-+---------------------+---------------------+--------------------+----------------------------+
-| Nodes<=1000         | <1s - minutes       |  0-1M              | * `ThreadPoolExecutor`     |
-|                     |                     |                    | * `IPyParallelExecutor`    |
-|                     |                     |                    | * `HighThroughputExecutor` |
-+---------------------+---------------------+--------------------+----------------------------+
-| Nodes>1000          |  >minutes           |  0-1M              | * `ExtremeScaleExecutor`   |
-+---------------------+---------------------+--------------------+----------------------------+
+
++--------------------------+----------------------+------------------------------------+
+| Executor                 | Number of Nodes [*]_ | Task duration for good performance |
++==========================+======================+====================================+
+| `ThreadPoolExecutor`     | 1 (Only local)       |  Any                               |
++--------------------------+----------------------+------------------------------------+
+| `LowLatencyExecutor`     | <=10                 |  10ms+                             |
++--------------------------+----------------------+------------------------------------+
+| `IPyParallelExecutor`    | <=128                |  50ms+                             |
++--------------------------+----------------------+------------------------------------+
+| `HighThroughputExecutor` | <=2000               |  Task duration(s)/#nodes >= 0.01   |
+|                          |                      | longer tasks needed at higher scale|
++--------------------------+----------------------+------------------------------------+
+| `ExtremeScaleExecutor`   | >1000, <=8000 [*]_   |  >minutes                          |
++--------------------------+----------------------+------------------------------------+
+
+
+.. [*] We assume that each node has 32 workers. If there are fewer workers launched
+       per node, a higher number of nodes could be supported.
+
+.. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale that
+       we've tested the `ExtremeScaleExecutor` at.
+
+.. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
+             as the recommended replacement.
+
 
 3. If you are running on a cluster or supercomputer, will you request multiple nodes per block ?
    Note that in this case a block is equivalent to a batch job.
