@@ -371,7 +371,10 @@ class Interchange(object):
                                 logger.warning("[MAIN] Sent failure reports, unregistering manager")
                             else:
                                 logger.debug("[MAIN] Suppressing shutdown due to version incompatibility")
-
+                        else:
+                            logger.info("[MAIN] Manager {} has compatible Parsl version {}".format(manager, msg['parsl_v']))
+                            logger.info("[MAIN] Manager {} has compatible Python version {}".format(manager,
+                                                                                                    msg['python_v'].rsplit(".", 1)[0]))
                     else:
                         # Registration has failed.
                         if self.suppress_failure is False:
