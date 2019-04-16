@@ -2,11 +2,13 @@
 """
 
 from concurrent.futures import Future
+import typeguard
 import logging
 import threading
 import queue
 import pickle
 from multiprocessing import Process, Queue
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
@@ -16,6 +18,7 @@ from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import *
 from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
+from parsl.providers.provider_base import ExecutionProvider
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -112,6 +115,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     max_workers : int
         Caps the number of workers launched by the manager. Default: infinity
 
+    prefetch_capacity : int
+        Number of tasks that could be prefetched over available worker capacity.
+        When there are a few tasks (<100) or when tasks are long running, this option should
+        be set to 0 for better load balancing. Default is 0.
+
     suppress_failure : Bool
         If set, the interchange will suppress failures rather than terminate early. Default: False
 
@@ -128,25 +136,26 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         trades performance for cpu efficiency. Default: 10ms
     """
 
+    @typeguard.typechecked
     def __init__(self,
-                 label='HighThroughputExecutor',
-                 provider=LocalProvider(),
-                 launch_cmd=None,
-                 address="127.0.0.1",
-                 worker_ports=None,
-                 worker_port_range=(54000, 55000),
-                 interchange_port_range=(55000, 56000),
-                 storage_access=None,
-                 working_dir=None,
-                 worker_debug=False,
-                 cores_per_worker=1.0,
-                 max_workers=float('inf'),
-                 heartbeat_threshold=120,
-                 heartbeat_period=30,
-                 poll_period=10,
-                 suppress_failure=False,
-                 managed=True):
-
+                 label: str = 'HighThroughputExecutor',
+                 provider: ExecutionProvider = LocalProvider(),
+                 launch_cmd: Optional[str] = None,
+                 address: str = "127.0.0.1",
+                 worker_ports: Optional[Tuple[int, int]] = None,
+                 worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
+                 interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
+                 storage_access: Optional[List[Any]] = None,
+                 working_dir: Optional[str] = None,
+                 worker_debug: bool = False,
+                 cores_per_worker: float = 1.0,
+                 max_workers: Union[int, float] = float('inf'),
+                 prefetch_capacity: int = 0,
+                 heartbeat_threshold: int = 120,
+                 heartbeat_period: int = 30,
+                 poll_period: int = 10,
+                 suppress_failure: bool = False,
+                 managed: bool = True):
         logger.debug("Initializing HighThroughputExecutor")
 
         self.label = label
@@ -158,10 +167,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
         self.managed = managed
-        self.blocks = []
-        self.tasks = {}
+        self.blocks = []  # type: List[Any]
+        self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
         self.max_workers = max_workers
+        self.prefetch_capacity = prefetch_capacity
 
         self._task_counter = 0
         self.address = address
@@ -176,6 +186,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
+                               "-p {prefetch_capacity} "
                                "-c {cores_per_worker} "
                                "--poll {poll_period} "
                                "--task_url={task_url} "
@@ -194,6 +205,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
+                                       prefetch_capacity=self.prefetch_capacity,
                                        task_url=self.worker_task_url,
                                        result_url=self.worker_result_url,
                                        cores_per_worker=self.cores_per_worker,
@@ -309,7 +321,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             raise BadMessage("Message received does not contain 'task_id' field")
 
                         if tid == -1 and 'exception' in msg:
-                            logger.warning("Executor shutting down due to version mismatch in interchange")
+                            logger.warning("Executor shutting down due to exception from interchange")
                             self._executor_exception, _ = deserialize_object(msg['exception'])
                             logger.exception("Exception: {}".format(self._executor_exception))
                             # Set bad state to prevent new tasks from being submitted
@@ -501,6 +513,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
              NotImplementedError
         """
         to_kill = self.blocks[:blocks]
+
         if self.provider:
             r = self.provider.cancel(to_kill)
         return r
