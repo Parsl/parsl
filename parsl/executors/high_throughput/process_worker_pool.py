@@ -135,7 +135,6 @@ class Manager(object):
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
-               'block_id': self.block_id,
                'worker_count': self.worker_count,
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,
