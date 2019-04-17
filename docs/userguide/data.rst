@@ -91,7 +91,7 @@ Parsl scripts may combine staging of files in and out of apps. For example, the 
 
         @python_app
         def sort_strings(inputs=[], outputs=[]):
-            with open(inputs[0], 'r') as u:
+            with open(inputs[0].filepath, 'r') as u:
                 strs = u.readlines()
                 strs.sort()
                 with open(outputs[0].filepath, 'w') as s:

@@ -57,10 +57,12 @@ class DataFuture(Future):
         """
         super().__init__()
         self._tid = tid
-        if isinstance(file_obj, str) and not isinstance(file_obj, File):
+        if isinstance(file_obj, str):
             self.file_obj = File(file_obj)
-        else:
+        elif isinstance(file_obj, File):
             self.file_obj = file_obj
+        else:
+            raise ValueError("DataFuture must be initialized with a str or File")
         self.parent = fut
         self._exception = None
 
@@ -92,36 +94,6 @@ class DataFuture(Future):
         """Filepath of the File object this datafuture represents."""
         return self.filepath
 
-    def result(self, timeout=None):
-        """A blocking call that returns either the result or raises an exception.
-
-        Assumptions : A DataFuture always has a parent AppFuture. The AppFuture does callbacks when
-        setup.
-
-        Kwargs:
-            - timeout (int): Timeout in seconds
-
-        Returns:
-            - If App completed successfully returns the filepath.
-
-        Raises:
-            - Exception raised by app if failed.
-
-        """
-        if self.parent:
-            if self.parent.done():
-                # This explicit call to raise exceptions might be redundant.
-                # the result() call *should* raise an exception if there's one
-                e = self.parent._exception
-                if e:
-                    raise e
-                else:
-                    self.parent.result(timeout=timeout)
-            else:
-                self.parent.result(timeout=timeout)
-
-        return self.file_obj
-
     def cancel(self):
         raise NotImplementedError("Cancel not implemented")
 
@@ -133,24 +105,6 @@ class DataFuture(Future):
             return self.parent.running()
         else:
             return False
-
-    def done(self):
-        if self.parent:
-            return self.parent.done()
-        else:
-            return True
-
-    def exception(self, timeout=None):
-        if self.parent:
-            return self.parent.exception(timeout=timeout)
-        else:
-            return True
-
-    def add_done_callback(self, fn):
-        if self.parent:
-            return self.parent.add_done_callback(fn)
-        else:
-            raise ValueError("Callback will be discarded because no parent future")
 
     def __repr__(self):
 

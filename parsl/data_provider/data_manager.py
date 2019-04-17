@@ -98,7 +98,6 @@ class DataManager(ParslExecutor):
         self.label = 'data_manager'
         self.dfk = dfk
         self.max_threads = max_threads
-        self.files = [] # type: List[File]
         self.globus = None
         self.managed = True
 
@@ -130,17 +129,9 @@ class DataManager(ParslExecutor):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def add_file(self, file: "File") -> None:
-        if file.scheme == 'globus':
-            if not self.globus:
-                self.globus = get_globus()
-            # keep a list of all remote files for optimization purposes (TODO)
-            self.files.append(file)
-            self._set_local_path(file)
-
-    def _set_local_path(self, file):
-        globus_ep = self._get_globus_endpoint()
-        file.local_path = os.path.join(globus_ep['working_dir'], file.filename)
+    def initialize_globus(self):
+        if self.globus is None:
+            self.globus = get_globus()
 
     def _get_globus_endpoint(self, executor_label: Optional[str] =None):
         for executor in self.dfk.executors.values():
@@ -213,6 +204,9 @@ class DataManager(ParslExecutor):
                 globus_ep['working_dir'], file.filename)
         dst_path = os.path.join(
                 globus_ep['endpoint_path'], file.filename)
+
+        self.initialize_globus()
+
         self.globus.transfer_file(
                 file.netloc, globus_ep['endpoint_uuid'],
                 file.path, dst_path)
@@ -248,6 +242,9 @@ class DataManager(ParslExecutor):
     def _globus_stage_out(self, globus_ep, inputs=[]):
         file = inputs[0]
         src_path = os.path.join(globus_ep['endpoint_path'], file.filename)
+
+        self.initialize_globus()
+
         self.globus.transfer_file(
             globus_ep['endpoint_uuid'], file.netloc,
             src_path, file.path
