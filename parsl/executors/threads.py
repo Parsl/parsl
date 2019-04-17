@@ -28,7 +28,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         this is managed by the user.
     """
 
-    @typeguard.typechecked
+    # @typeguard.typechecked
     def __init__(self, label: str = 'threads', max_threads: int = 2,
                  thread_name_prefix: str = '', storage_access: List[Any] = None,
                  working_dir: Optional[str] = None, managed: bool = True):

@@ -137,7 +137,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         trades performance for cpu efficiency. Default: 10ms
     """
 
-    @typeguard.typechecked
+    # @typeguard.typechecked
     def __init__(self,
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),

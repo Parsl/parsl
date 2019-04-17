@@ -36,7 +36,7 @@ class File(object):
 
     """
 
-    @typeguard.typechecked
+    # @typeguard.typechecked
     def __init__(self, url: str, dman: Optional[DataManager] = None):
         """Construct a File object from a url string.
 
