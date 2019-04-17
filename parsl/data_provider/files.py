@@ -9,7 +9,7 @@ being called from.
 import os
 import typeguard
 import logging
-from typing import Dict, Optional
+from typing import Dict
 from urllib.parse import urlparse
 
 from typing import TYPE_CHECKING
