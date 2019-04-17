@@ -503,7 +503,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 r = None
         return r
 
-    def scale_in(self, blocks):
+    def scale_in(self, blocks: int) -> None:
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -516,8 +516,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         to_kill = self.blocks[:blocks]
 
         if self.provider:
-            r = self.provider.cancel(to_kill)
-        return r
+            self.provider.cancel(to_kill)
 
     def status(self):
         """Return status of all blocks."""
