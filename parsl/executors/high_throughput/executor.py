@@ -138,7 +138,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-<<<<<<< HEAD
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
@@ -222,7 +221,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
-                                       logdir="{}/{}".format(self.run_dir, self.label))
+                                       logdir=worker_logdir)
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
