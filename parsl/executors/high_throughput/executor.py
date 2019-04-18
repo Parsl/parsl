@@ -514,7 +514,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 r = None
         return r
 
-    def scale_in(self, blocks, block_ids=[]):
+    def scale_in(self, blocks=None, block_ids=[]):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -533,14 +533,18 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
-        for block_id in block_ids:
-            self._hold_block(block_id)
 
         if block_ids:
-            to_kill = [self.blocks.pop(bid) for bid in block_ids]
+            block_ids_to_kill = block_ids
         else:
-            to_kill = [self.blocks.pop(bid) for bid in list(self.blocks.keys())[:blocks]]
+            block_ids_to_kill = list(self.blocks.keys())[:blocks]
 
+        # Hold the block
+        for block_id in block_ids_to_kill:
+            self._hold_block(block_id)
+
+        # Now kill via provider
+        to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill]
         if self.provider:
             r = self.provider.cancel(to_kill)
 
