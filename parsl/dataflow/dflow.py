@@ -144,9 +144,9 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        data_manager = DataManager(self, max_threads=config.data_management_max_threads)
+        self.data_manager = DataManager(self, max_threads=config.data_management_max_threads)
         self.executors = {}
-        self.add_executors(config.executors + [data_manager])
+        self.add_executors(config.executors + [self.data_manager])
 
         if self.checkpoint_mode == "periodic":
             try:
@@ -330,7 +330,7 @@ class DataFlowKernel(object):
             for dfu in self.tasks[task_id]['app_fu'].outputs:
                 f = dfu.file_obj
                 if isinstance(f, File) and f.is_remote():
-                    f.stage_out(self.tasks[task_id]['executor'])
+                    self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
 
         return
 
@@ -480,16 +480,16 @@ class DataFlowKernel(object):
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             if isinstance(f, File) and f.is_remote():
-                inputs[idx] = f.stage_in(executor)
+                inputs[idx] = self.data_manager.stage_in(f, executor)
 
         for kwarg, f in kwargs.items():
             if isinstance(f, File) and f.is_remote():
-                kwargs[kwarg] = f.stage_in(executor)
+                kwargs[kwarg] = self.data_manager.stage_in(f, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
             if isinstance(f, File) and f.is_remote():
-                newargs[idx] = f.stage_in(executor)
+                newargs[idx] = self.data_manager.stage_in(f, executor)
 
         return tuple(newargs), kwargs
 

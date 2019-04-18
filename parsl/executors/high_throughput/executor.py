@@ -115,6 +115,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     max_workers : int
         Caps the number of workers launched by the manager. Default: infinity
 
+    prefetch_capacity : int
+        Number of tasks that could be prefetched over available worker capacity.
+        When there are a few tasks (<100) or when tasks are long running, this option should
+        be set to 0 for better load balancing. Default is 0.
+
     suppress_failure : Bool
         If set, the interchange will suppress failures rather than terminate early. Default: False
 
@@ -145,12 +150,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  max_workers: Union[int, float] = float('inf'),
+                 prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
                  suppress_failure: bool = False,
                  managed: bool = True):
-
         logger.debug("Initializing HighThroughputExecutor")
 
         self.label = label
@@ -166,6 +171,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
         self.max_workers = max_workers
+        self.prefetch_capacity = prefetch_capacity
 
         self._task_counter = 0
         self.address = address
@@ -180,6 +186,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
+                               "-p {prefetch_capacity} "
                                "-c {cores_per_worker} "
                                "--poll {poll_period} "
                                "--task_url={task_url} "
@@ -199,6 +206,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
+                                       prefetch_capacity=self.prefetch_capacity,
                                        task_url=self.worker_task_url,
                                        result_url=self.worker_result_url,
                                        cores_per_worker=self.cores_per_worker,
@@ -545,6 +553,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         # Now kill via provider
         to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill]
+
         if self.provider:
             r = self.provider.cancel(to_kill)
 
