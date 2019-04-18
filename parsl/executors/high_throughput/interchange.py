@@ -351,6 +351,7 @@ class Interchange(object):
                     # By default we set up to ignore bad nodes/registration messages.
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           'free_capacity': 0,
+                                                          'block_id': None,
                                                           'active': True,
                                                           'tasks': []}
                     if reg_flag is True:

@@ -134,6 +134,8 @@ class Manager(object):
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
+               'worker_count': self.worker_count,
+               'block_id': self.block_id,
                'os': platform.system(),
                'hname': platform.node(),
                'dir': os.getcwd(),
