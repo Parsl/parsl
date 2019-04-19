@@ -57,18 +57,18 @@ class Config(RepresentationMixin):
     """
 
     def __init__(self,
-                 executors: Optional[List[ParslExecutor]] =None,
-                 app_cache: Optional[bool] =True,
-                 checkpoint_files: Optional[List[str]] =None,
-                 checkpoint_mode: Optional[str] =None,
-                 checkpoint_period: Optional[str]=None,
-                 data_management_max_threads: Optional[int] =10,
-                 lazy_errors: Optional[bool] =True,
-                 retries: Optional[int] =0,
-                 run_dir: Optional[str] ='runinfo',
-                 strategy: Optional[str] ='simple',
-                 monitoring: Optional[MonitoringHub] =None,
-                 usage_tracking: bool =False) -> None:
+                 executors: Optional[List[ParslExecutor]] = None,
+                 app_cache: bool = True,
+                 checkpoint_files: Optional[List[str]] = None,
+                 checkpoint_mode: Optional[str] = None,
+                 checkpoint_period: Optional[str] = None,
+                 data_management_max_threads: int = 10,
+                 lazy_errors: bool = True,
+                 retries: int = 0,
+                 run_dir: str = 'runinfo',
+                 strategy: Optional[str] = 'simple',
+                 monitoring: Optional[MonitoringHub] = None,
+                 usage_tracking: bool = False) -> None:
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
