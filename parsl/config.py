@@ -68,7 +68,7 @@ class Config(RepresentationMixin):
                  run_dir: Optional[str] ='runinfo',
                  strategy: Optional[str] ='simple',
                  monitoring: Optional[MonitoringHub] =None,
-                 usage_tracking: Optional[bool] =False) -> None:
+                 usage_tracking: bool =False) -> None:
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
