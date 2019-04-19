@@ -103,8 +103,11 @@ class LocalChannel(Channel, RepresentationMixin):
         try:
             proc = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                # should this be using a pipe, or sending to existing
+                # stdout/err? What's the best behaviour in the abstract
+                # non-local case?
+                stdout=None,
+                stderr=None,
                 cwd=self.userhome,
                 env=current_env,
                 shell=True,
