@@ -43,8 +43,23 @@ __author__ = 'The Parsl Team'
 __version__ = VERSION
 
 __all__ = [
-    'App', 'DataFlowKernel', 'File', 'set_stream_logger', 'set_file_logger',
-    'ThreadPoolExecutor', 'HighThroughputExecutor', 'ExtremeScaleExecutor', 'IPyParallelExecutor',
+
+    # decorators
+    'App',
+
+    # core
+    'DataFlowKernel',
+    'File',
+
+    # logging
+    'set_stream_logger',
+    'set_file_logger',
+
+    # executors
+    'ThreadPoolExecutor',
+    'HighThroughputExecutor',
+    'ExtremeScaleExecutor',
+    'IPyParallelExecutor',
 ]
 
 clear = DataFlowKernelLoader.clear
