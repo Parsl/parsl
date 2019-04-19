@@ -3,6 +3,7 @@ import os
 import re
 import time
 
+from parsl.channels import LocalChannel
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
@@ -61,7 +62,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
     """
     def __init__(self,
-                 channel=None,
+                 channel=LocalChannel(),
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
