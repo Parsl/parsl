@@ -29,7 +29,7 @@ import typeguard
 from typing import Optional
 
 from parsl.version import VERSION
-from parsl.app.app import App
+from parsl.app.app import App, bash_app, python_app
 from parsl.executors import ThreadPoolExecutor
 from parsl.executors import IPyParallelExecutor
 from parsl.executors import HighThroughputExecutor
@@ -46,6 +46,8 @@ __all__ = [
 
     # decorators
     'App',
+    'bash_app',
+    'python_app',
 
     # core
     'DataFlowKernel',
