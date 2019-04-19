@@ -226,7 +226,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(cmd, 10)
+        retcode, stdout, stderr = super().execute_wait(cmd, 30)
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         job_id = []
@@ -263,7 +263,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 10)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 30)
         rets = None
         if retcode == 0:
             for jid in job_ids:
