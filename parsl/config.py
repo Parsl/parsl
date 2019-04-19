@@ -8,8 +8,8 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
 from parsl.monitoring import MonitoringHub
 
-from typing import Optional, List # for mypy
-from parsl.executors.base import ParslExecutor # for mypy
+from typing import Optional, List  # for mypy
+from parsl.executors.base import ParslExecutor  # for mypy
 
 logger = logging.getLogger(__name__)
 
