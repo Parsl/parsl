@@ -9,7 +9,6 @@ class Launcher(RepresentationMixin, metaclass=ABCMeta):
     @abstractmethod
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
         """ Wraps the command with the Launcher calls.
-        *MUST* be implemented by the concrete child classes
         """
         pass
 
