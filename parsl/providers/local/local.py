@@ -89,21 +89,29 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
+            logger.debug("Iterating over resource job_id: {0}".format(job_id))
 
             if self.resources[job_id]['proc']:
 
                 poll_code = self.resources[job_id]['proc'].poll()
                 if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
+                    logger.debug("Skippping change for job_id {} because it is in a terminal state {}".format(job_id, self.resources[job_id]['status']))
                     continue
 
                 if poll_code is None:
                     self.resources[job_id]['status'] = 'RUNNING'
-                elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
+                    logger.debug("Setting status for job_id {} to RUNNING because poll_code is None".format(job_id))
+                elif poll_code == 0:
+                    logger.debug("Setting status for job_id {} to COMPLETED".format(job_id))
                     self.resources[job_id]['status'] = 'COMPLETED'
-                elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
+                elif poll_code != 0:
+                    logger.debug("Setting status for job_id {} to FAILED".format(job_id))
                     self.resources[job_id]['status'] = 'FAILED'
+                else:
+                    logger.error("unhandled code path for job_id {} poll-code == {}  previous status = {} ".format(job_id, poll_code, self.resources[job_id]['status']))
 
             elif self.resources[job_id]['remote_pid']:
+                logger.debug("Performing remote pid check for job_id {}".format(job_id))
 
                 retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" ',
                                                                     self.cmd_timeout)
@@ -115,7 +123,9 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                         else:
                             self.resources[job_id]['status'] = 'FAILED'
 
-        return [self.resources[jid]['status'] for jid in job_ids]
+        statuses = [self.resources[jid]['status'] for jid in job_ids]
+        logger.debug("Status of: {0} is {1}".format(job_ids, statuses))
+        return statuses
 
     def _write_submit_script(self, script_string, script_filename):
         '''
