@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 # for type checking:
 from parsl.providers.provider_base import ExecutionProvider
 
+
 class ParslExecutor(metaclass=ABCMeta):
     """Define the strict interface for all Executor classes.
 
@@ -19,16 +20,15 @@ class ParslExecutor(metaclass=ABCMeta):
 
     """
 
-
     # mypy doesn't actually check that the below are defined by
-    # concrete subclasses - see  github.com/python/mypy/issues/4426 
+    # concrete subclasses - see  github.com/python/mypy/issues/4426
     # and maybe PEP-544 Protocols
 
     label: str
     provider: ExecutionProvider
-    managed: bool 
-    status: Any # what is this? used by strategy
-    outstanding: Any # what is this? used by strategy
+    managed: bool
+    status: Any  # what is this? used by strategy
+    outstanding: Any  # what is this? used by strategy
     working_dir: Optional[str]
     storage_access: List[Any]
 
