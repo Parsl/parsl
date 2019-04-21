@@ -67,7 +67,7 @@ For example, if the `monitoring.db` is at `/tmp/monitoring.db`, run the `parsl-v
 
    $ parsl-visualize sqlite:////tmp/monitoring.db
 
-This starts a visualization web server on `127.0.0.1:8080` by default. If you are running on a local machine with web browser, you can access viz_server via `127.0.0.1:8080`. Otherwise if you are running on the login node of a cluster, to access viz_server on local browser, you need `ssh tunneling` on your local machine to the cluster::
+This starts a visualization web server on `127.0.0.1:8080` by default. If you are running on a local machine with web browser, you can access viz_server via `127.0.0.1:8080`. Otherwise if you are running on the login node of a cluster, to access viz_server on local browser, you need an ssh tunnel from your local machine to the cluster::
 
    $ ssh -L 50000:127.0.0.1:8080 username@cluster_address
 
