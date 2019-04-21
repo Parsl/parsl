@@ -5,7 +5,7 @@ import uuid
 
 from ipyparallel import Client
 from parsl.providers import LocalProvider
-from parsl.providers.provider_base import ExecutionProvider # for mypy
+from parsl.providers.provider_base import ExecutionProvider  # for mypy
 from parsl.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
@@ -17,7 +17,6 @@ from parsl.utils import wait_for_file
 from typing import Any
 from typing import List
 from typing import Optional
-from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +53,9 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Directory where engine logs and configuration files will be stored.
     working_dir : str
         Directory where input data should be staged to.
-    storage_access : list of :class:`~parsl.data_provider.scheme.GlobusScheme` (or perhaps Any at the moment, because I don't know what the semantics actually are...)
+    storage_access : list of :class:`~parsl.data_provider.scheme.GlobusScheme`
+                     (or perhaps Any at the moment, because I don't know what
+                     the semantics actually are...)
         Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
@@ -72,16 +73,16 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     """
 
     def __init__(self,
-                 provider: ExecutionProvider =LocalProvider(),
-                 label: str ='ipp',
-                 working_dir: Optional[str] =None,
-                 controller: Controller =Controller(),
-                 container_image: Optional[str] =None,
-                 engine_dir: str =None,
-                 storage_access: List[Any] =None,
-                 engine_debug_level: str =None,
-                 workers_per_node: int=1,
-                 managed: bool=True) -> None:
+                 provider: ExecutionProvider = LocalProvider(),
+                 label: str = 'ipp',
+                 working_dir: Optional[str] = None,
+                 controller: Controller = Controller(),
+                 container_image: Optional[str] = None,
+                 engine_dir: str = None,
+                 storage_access: List[Any] = None,
+                 engine_debug_level: str = None,
+                 workers_per_node: int = 1,
+                 managed: bool = True) -> None:
         self.provider = provider
         self.label = label
         self.working_dir = working_dir
@@ -237,7 +238,7 @@ sleep infinity
         """
         return self.lb_view.apply_async(*args, **kwargs)
 
-    def scale_out(self, blocks: int=1) -> None:
+    def scale_out(self, blocks: int = 1) -> None:
         """Scales out the number of active workers by 1.
 
         Parameters:
@@ -247,11 +248,11 @@ sleep infinity
         Returns either None or a list. What's the difference between
         an empty list and a None?
 
-        This doesn't match the return type of ParslExecutor, which is 
+        This doesn't match the return type of ParslExecutor, which is
         None, and the return value doesn't seem used anywhere from this
         scale_out?
         """
-        r = [] # type: List[Any]
+        r = []  # type: List[Any]
         for i in range(blocks):
             if self.provider:
                 block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
@@ -292,7 +293,7 @@ sleep infinity
 
     # what the correct general signature for shutdown is, i don't know.
     # perhaps there are different ones? or perhaps they should all have targets and block?
-    def shutdown(self, block: bool =False) -> bool:
+    def shutdown(self, block: bool = False) -> bool:
         """Shutdown the executor, including all workers and controllers.
 
         The interface documentation for IPP is `here <http://ipyparallel.readthedocs.io/en/latest/api/ipyparallel.html#ipyparallel.Client.shutdown>`_
