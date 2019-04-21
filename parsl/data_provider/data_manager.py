@@ -9,7 +9,6 @@ from parsl.data_provider.globus import get_globus
 from parsl.app.app import python_app
 
 from typing import List
-from parsl.dataflow.dflow import DataFlowKernel
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +19,7 @@ if TYPE_CHECKING:
     from parsl.app.futures import DataFuture
     from parsl.data_provider.files import File # for mypy
     from parsl.data_provider.files import File
+    from parsl.dataflow.dflow import DataFlowKernel
 
 # BUG? both _http_stage_in and _ftp_stage_in take a list of files,
 # but only ever dosomething with the first elemtn of that list - 
@@ -83,7 +83,7 @@ class DataManager(ParslExecutor):
 
         return dfk.executors['data_manager']
 
-    def __init__(self, dfk: DataFlowKernel, max_threads=10) -> None:
+    def __init__(self, dfk: "DataFlowKernel", max_threads=10) -> None:
         """Initialize the DataManager.
 
         Args:

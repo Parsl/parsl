@@ -5,7 +5,8 @@ import math
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.dataflow.dflow import DataFlowKernel
-    from parsl.executors.base import ParslExecutor
+
+from parsl.executors.base import ParslExecutor
 
 from typing import Dict
 from typing import Any
