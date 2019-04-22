@@ -29,7 +29,7 @@ import typeguard
 from typing import Optional
 
 from parsl.version import VERSION
-from parsl.app.app import App
+from parsl.app.app import App, bash_app, python_app
 from parsl.executors import ThreadPoolExecutor
 from parsl.executors import IPyParallelExecutor
 from parsl.executors import HighThroughputExecutor
@@ -43,8 +43,25 @@ __author__ = 'The Parsl Team'
 __version__ = VERSION
 
 __all__ = [
-    'App', 'DataFlowKernel', 'File', 'set_stream_logger', 'set_file_logger',
-    'ThreadPoolExecutor', 'HighThroughputExecutor', 'ExtremeScaleExecutor', 'IPyParallelExecutor',
+
+    # decorators
+    'App',
+    'bash_app',
+    'python_app',
+
+    # core
+    'DataFlowKernel',
+    'File',
+
+    # logging
+    'set_stream_logger',
+    'set_file_logger',
+
+    # executors
+    'ThreadPoolExecutor',
+    'HighThroughputExecutor',
+    'ExtremeScaleExecutor',
+    'IPyParallelExecutor',
 ]
 
 clear = DataFlowKernelLoader.clear

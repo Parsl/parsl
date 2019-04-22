@@ -18,8 +18,7 @@ The following example demonstrates how a MapReduce job can be defined.
 
 .. code-block:: python
 
-    from parsl import load
-    from parsl.app.app import python_app
+    from parsl import load, python_app
     from parsl.configs.local_threads import config
     load(config)
 
