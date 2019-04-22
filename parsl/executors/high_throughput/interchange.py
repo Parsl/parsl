@@ -393,12 +393,12 @@ class Interchange(object):
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
-                    logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
+                        logger.debug("[MAIN] Manager {} sent heartbeat".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
+                        logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
                         interesting_managers.add(manager)
                 logger.debug("[MAIN] leaving task_outgoing section")
