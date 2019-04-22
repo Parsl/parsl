@@ -260,9 +260,11 @@ class Interchange(object):
                 elif command_req == "MANAGERS":
                     reply = []
                     for manager in self._ready_manager_queue:
-                        resp = (manager.decode('utf-8'),
-                                len(self._ready_manager_queue[manager]['tasks']),
-                                self._ready_manager_queue[manager]['active'])
+                        resp = {'manager': manager.decode('utf-8'),
+                                'block_id': self._ready_manager_queue[manager]['block_id'],
+                                'worker_count': self._ready_manager_queue[manager]['worker_count'],
+                                'tasks': len(self._ready_manager_queue[manager]['tasks']),
+                                'active': self._ready_manager_queue[manager]['active']}
                         reply.append(resp)
 
                 elif command_req.startswith("HOLD_WORKER"):
@@ -349,6 +351,7 @@ class Interchange(object):
                     # By default we set up to ignore bad nodes/registration messages.
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           'free_capacity': 0,
+                                                          'block_id': None,
                                                           'max_capacity': 0,
                                                           'active': True,
                                                           'tasks': []}
