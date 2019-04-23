@@ -233,6 +233,7 @@ class Strategy(object):
                 # meaningfully check in mypy. or have the executor able to
                 # print its own statistics status rather than any ad-hoc
                 # behaviour change here.
+                # mypy issue https://github.com/python/mypy/issues/1424
                 detyped_executor = cast(Any, executor)
 
                 logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected workers'.format(
