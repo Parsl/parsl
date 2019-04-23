@@ -157,7 +157,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  suppress_failure: bool = False,
                  managed: bool = True,
                  worker_logdir_root: Optional[str] = None):
-        
+
         logger.debug("Initializing HighThroughputExecutor")
 
         self.label = label
