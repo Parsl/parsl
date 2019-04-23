@@ -501,7 +501,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def scale_out(self, blocks=1) -> Any:
+    def scale_out(self, blocks=1) -> None:
         """Scales out the number of blocks by "blocks"
 
         Raises:
@@ -517,14 +517,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 if not internal_block:
                     raise(ScalingFailed(self.provider.label,
                                         "Attempts to provision nodes via provider has failed"))
-                r.extend([external_block_id])
                 self.blocks[external_block_id] = internal_block
             else:
                 logger.error("No execution provider available")
-                r = None
-        return r
 
-    def scale_in(self, blocks: Optional[int] = None, block_ids: Optional[str] = []) -> None:
+    def scale_in(self, blocks: Optional[int] = None, block_ids: List[str] = []) -> None:
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
