@@ -437,8 +437,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     @property
     def connected_workers(self):
+        workers = self.command_client.run("WORKERS")
+        return workers
+
+    @property
+    def connected_managers(self):
         workers = self.command_client.run("MANAGERS")
-        # logger.debug("Got managers: {}".format(workers))
         return workers
 
     def _hold_block(self, block_id):
@@ -450,7 +454,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
              Block identifier of the block to be put on hold
         """
 
-        managers = self.connected_workers
+        managers = self.connected_managers
 
         for manager in managers:
             if manager['block_id'] == block_id:
