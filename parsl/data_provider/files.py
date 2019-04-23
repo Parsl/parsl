@@ -96,29 +96,6 @@ class File(object):
         else:
             raise Exception('Cannot return filepath for unknown scheme {}'.format(self.scheme))
 
-<<<<<<< HEAD
-    def stage_in(self, executor):
-        """Transport file from the input source to the executor.
-
-        Args:
-            - executor (str) - executor the file is staged in to.
-
-        """
-
-        return self.dman.stage_in(self, executor)
-
-    def stage_out(self, executor=None):
-        """Transport file from executor to final output destination."""
-        return self.dman.stage_out(self, executor)
-
-    def set_data_future(self, df, executor=None):
-        self.data_future[executor] = df
-
-    def get_data_future(self, executor):
-        return self.data_future.get(executor)
-
-=======
->>>>>>> 6f3eb368888e9a4b0accd68317ef5a9287cb92f3
     def __getstate__(self):
         """Override the default pickling method.
 

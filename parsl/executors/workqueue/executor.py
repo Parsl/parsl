@@ -230,7 +230,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         q.cancel_by_taskid(wq_task)
 
     logger.debug("Exiting WorkQueue Monitoring Process")
-    exit(1)
+    return 0
 
 
 def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
@@ -246,8 +246,9 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
     while continue_running:
         if cancel_value.value == 0:
             continue_running = False
+            continue
 
-        if not submit_process.is_alive():
+        if not submit_process.is_alive() and cancel_value.value != 0:
             raise ExecutorError(executor, "Workqueue Submit Process is not alive")
 
         try:
