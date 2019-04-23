@@ -144,9 +144,9 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        data_manager = DataManager(self, max_threads=config.data_management_max_threads)
+        self.data_manager = DataManager(self, max_threads=config.data_management_max_threads)
         self.executors = {}
-        self.add_executors(config.executors + [data_manager])
+        self.add_executors(config.executors + [self.data_manager])
 
         if self.checkpoint_mode == "periodic":
             try:
@@ -330,7 +330,7 @@ class DataFlowKernel(object):
             for dfu in self.tasks[task_id]['app_fu'].outputs:
                 f = dfu.file_obj
                 if isinstance(f, File) and f.is_remote():
-                    f.stage_out(self.tasks[task_id]['executor'])
+                    self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
 
         return
 
@@ -367,6 +367,12 @@ class DataFlowKernel(object):
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
                 if exec_fu:
+
+                    try:
+                        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                    except Exception as e:
+                        logger.error("add_done_callback got an exception {} which will be ignored".format(e))
+
                     self.tasks[task_id]['exec_fu'] = exec_fu
                     try:
                         self.tasks[task_id]['app_fu'].update_parent(exec_fu)
@@ -424,14 +430,6 @@ class DataFlowKernel(object):
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
-            try:
-                self.handle_exec_update(task_id, memo_fu)
-            except Exception as e:
-                logger.error("handle_exec_update raised an exception {} which will be ignored".format(e))
-            try:
-                self.handle_app_update(task_id, memo_fu, memo_cbk=True)
-            except Exception as e:
-                logger.error("handle_app_update raised an exception {} which will be ignored".format(e))
             return memo_fu
 
         executor_label = self.tasks[task_id]["executor"]
@@ -456,10 +454,6 @@ class DataFlowKernel(object):
         exec_fu.retries_left = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
-        try:
-            exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-        except Exception as e:
-            logger.error("add_done_callback got an exception {} which will be ignored".format(e))
         return exec_fu
 
     def _add_input_deps(self, executor, args, kwargs):
@@ -480,16 +474,16 @@ class DataFlowKernel(object):
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             if isinstance(f, File) and f.is_remote():
-                inputs[idx] = f.stage_in(executor)
+                inputs[idx] = self.data_manager.stage_in(f, executor)
 
-        for kwarg, potential_f in kwargs.items():
-            if isinstance(potential_f, File) and potential_f.is_remote():
-                kwargs[kwarg] = potential_f.stage_in(executor)
+        for kwarg, f in kwargs.items():
+            if isinstance(f, File) and f.is_remote():
+                kwargs[kwarg] = self.data_manager.stage_in(f, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
             if isinstance(f, File) and f.is_remote():
-                newargs[idx] = f.stage_in(executor)
+                newargs[idx] = self.data_manager.stage_in(f, executor)
 
         return tuple(newargs), kwargs
 
@@ -670,7 +664,7 @@ class DataFlowKernel(object):
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(None, tid=task_id,
+        app_fu = AppFuture(tid=task_id,
                            stdout=task_stdout,
                            stderr=task_stderr)
 

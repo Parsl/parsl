@@ -5,6 +5,8 @@ The fields must be configured separately for each user. To disable any associate
 out the entry.
 """
 
+from typing import Any, Dict
+
 # PUBLIC_IP = "52.86.208.63" # "128.135.250.229"
 # MIDWAY_USERNAME = "yadunand"
 # OSG_USERNAME = "yadunand"
@@ -89,4 +91,4 @@ user_opts = {
     #     'endpoint': 'fixme',
     #     'path': 'fixme'
     # }
-}
+}  # type: Dict[str, Any]
