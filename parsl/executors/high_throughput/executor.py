@@ -160,7 +160,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         logger.debug("Initializing HighThroughputExecutor")
 
         self.label = label
-        self.launch_cmd = launch_cmd
         self.provider = provider
         self.worker_debug = worker_debug
         self.storage_access = storage_access if storage_access is not None else []
@@ -185,7 +184,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
 
-        if not launch_cmd:
+        if launch_cmd:
+            self.launch_cmd = launch_cmd
+        else:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-p {prefetch_capacity} "
                                "-c {cores_per_worker} "
