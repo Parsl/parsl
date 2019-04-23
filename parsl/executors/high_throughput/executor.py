@@ -435,8 +435,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     @property
     def connected_workers(self):
-        workers = self.command_client.run("MANAGERS")
-        # logger.debug("Got managers: {}".format(workers))
+        workers = self.command_client.run("WORKERS")
         return workers
 
     def _hold_block(self, block_id):

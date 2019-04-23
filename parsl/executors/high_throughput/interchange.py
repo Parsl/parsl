@@ -257,6 +257,11 @@ class Interchange(object):
                         outstanding += len(self._ready_manager_queue[manager]['tasks'])
                     reply = outstanding
 
+                elif command_req == "WORKERS":
+                    num_workers = 0
+                    for manager in self._ready_manager_queue:
+                        num_workers += self._ready_manager_queue[manager]['worker_count']
+                    reply = num_workers
                 elif command_req == "MANAGERS":
                     reply = []
                     for manager in self._ready_manager_queue:
