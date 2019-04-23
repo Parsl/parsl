@@ -260,9 +260,11 @@ class Interchange(object):
                 elif command_req == "MANAGERS":
                     reply = []
                     for manager in self._ready_manager_queue:
-                        resp = (manager.decode('utf-8'),
-                                len(self._ready_manager_queue[manager]['tasks']),
-                                self._ready_manager_queue[manager]['active'])
+                        resp = {'manager': manager.decode('utf-8'),
+                                'block_id': self._ready_manager_queue[manager]['block_id'],
+                                'worker_count': self._ready_manager_queue[manager]['worker_count'],
+                                'tasks': len(self._ready_manager_queue[manager]['tasks']),
+                                'active': self._ready_manager_queue[manager]['active']}
                         reply.append(resp)
 
                 elif command_req.startswith("HOLD_WORKER"):
@@ -349,6 +351,7 @@ class Interchange(object):
                     # By default we set up to ignore bad nodes/registration messages.
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           'free_capacity': 0,
+                                                          'block_id': None,
                                                           'max_capacity': 0,
                                                           'active': True,
                                                           'tasks': []}
@@ -390,12 +393,12 @@ class Interchange(object):
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
-                    logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
+                        logger.debug("[MAIN] Manager {} sent heartbeat".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
+                        logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
                         interesting_managers.add(manager)
                 logger.debug("[MAIN] leaving task_outgoing section")
