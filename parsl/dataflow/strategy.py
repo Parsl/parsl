@@ -13,6 +13,7 @@ from typing import Any
 from typing import Callable
 from typing import List
 from typing import Optional
+from typing import cast
 
 # this is used for testing a class to decide how to
 # print a status line. That might be better done inside
@@ -221,8 +222,21 @@ class Strategy(object):
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
             if hasattr(executor, 'connected_workers'):
+
+                # mypy is not able to infer that executor has a
+                # .connected_workers attribute from the above if statement,
+                # so to make it happy, detyped_executor is turned into an
+                # Any, which can have anything called on it. This makes this
+                # code block less type safe.
+                # A better approach would be for connected_workers to be
+                # in a protocol, perhaps? or something else we can
+                # meaningfully check in mypy. or have the executor able to
+                # print its own statistics status rather than any ad-hoc
+                # behaviour change here.
+                detyped_executor = cast(Any, executor)
+
                 logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, submitting, pending, executor.connected_workers))
+                    label, active_tasks, running, submitting, pending, detyped_executor.connected_workers))
             else:
                 logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
                     label, active_tasks, running, submitting, pending))
