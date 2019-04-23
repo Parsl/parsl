@@ -18,8 +18,8 @@ if __name__ == "__main__":
     logger = logging.getLogger(name)
 
     shared_fs = False
-    input_function_file = None
-    output_result_file = None
+    input_function_file = ""
+    output_result_file = ""
     remapping_string = None
     file_type_string = None
 

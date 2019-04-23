@@ -33,7 +33,7 @@ def test_open():
 
     pfile = File('test-open.txt')
 
-    with open(pfile, 'r') as opfile:
+    with open(str(pfile), 'r') as opfile:
         assert (opfile.readlines()[0] == 'Hello')
 
 
