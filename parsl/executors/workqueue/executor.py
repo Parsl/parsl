@@ -519,10 +519,9 @@ class WorkQueueExecutor(ParslExecutor):
         """
         return False
 
-    def run_dir(self):
+    def run_dir(self, value = None):
         """Path to the run directory.
         """
+        if value is not None:
+            self._run_dir = value
         return self._run_dir
-
-    def run_dir(self, value):
-        self._run_dir = value
