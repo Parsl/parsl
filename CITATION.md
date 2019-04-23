@@ -7,7 +7,9 @@ or
   author       = {Babuji, Yadu and
                   Woodard, Anna and
                   Li, Zhuozhao and
+                  Katz, Daniel S. and
                   Clifford, Ben and
+                  Kumar, Rohan and
                   Lacinski, Lukasz and
                   Chard, Ryan and 
                   Wozniak, Justin and
@@ -15,7 +17,7 @@ or
                   Wilde, Mike and
                   Chard, Kyle},
   title        = {Parsl: Pervasive Parallel Programming in Python},
-  booktitle    = {ACM International Symposium on High-Performance Parallel and Distributed Computing},
+  booktitle    = {28th ACM International Symposium on High-Performance Parallel and Distributed Computing (HPDC)},
   doi          = {10.1145/3307681.3325400},
   url          = {https://doi.org/10.1145/3307681.3325400}
 }
