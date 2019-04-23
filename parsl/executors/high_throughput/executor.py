@@ -134,6 +134,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     poll_period : int
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
         trades performance for cpu efficiency. Default: 10ms
+
+    worker_logdir_root : string
+        In case of a remote file system, specify the path to where logs will be kept.
     """
 
     @typeguard.typechecked
