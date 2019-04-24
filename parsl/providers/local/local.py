@@ -98,10 +98,12 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
                 if poll_code is None:
                     self.resources[job_id]['status'] = 'RUNNING'
-                elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
+                elif poll_code == 0:
                     self.resources[job_id]['status'] = 'COMPLETED'
-                elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
+                elif poll_code != 0:
                     self.resources[job_id]['status'] = 'FAILED'
+                else:
+                    logger.error("Internal consistency error: unexpected case in local provider state machine")
 
             elif self.resources[job_id]['remote_pid']:
 
