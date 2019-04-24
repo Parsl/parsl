@@ -14,6 +14,9 @@ before_install:
     - python$PY -m pip install Cython
     - python$PY -m pip install numpy
     - bash parsl/executors/extreme_scale/install-mpi.sh $MPI
+    - bash parsl/executors/workqueue/install-workqueue.sh
+    - export PATH=/tmp/cctools/bin:$PATH
+    - export PYTHONPATH=/tmp/cctools/lib/python3.6/site-packages:$PYTHONPATH
     - python$PY --version
     - python$PY -m cython --version
     - python$PY -c "import numpy;print(numpy.__version__)"
