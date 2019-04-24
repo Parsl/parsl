@@ -17,6 +17,8 @@ from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
 from parsl.executors.workqueue import workqueue_worker
 
+WORK_QUEUE_DEFAULT_PORT = 50000
+
 from work_queue import *
 
 logger = logging.getLogger(__name__)

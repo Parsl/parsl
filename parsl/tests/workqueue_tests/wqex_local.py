@@ -7,4 +7,3 @@ config = Config(
                                  # echo "Ran at $date" > /home/yadu/src/wq_parsl/parsl/tests/workqueue_tests/ran.log',
         )]
 )
-
