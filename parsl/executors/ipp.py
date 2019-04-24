@@ -209,7 +209,7 @@ sleep infinity
 
     @property
     def connected_workers(self):
-        return self.executor.ids
+        return len(self.executor.ids)
 
     @property
     def scaling_enabled(self):
