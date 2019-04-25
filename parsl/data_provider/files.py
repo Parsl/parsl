@@ -9,9 +9,8 @@ being called from.
 import os
 import typeguard
 import logging
-from typing import Dict, Optional
+from typing import Dict
 from urllib.parse import urlparse
-from parsl.data_provider.data_manager import DataManager
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -27,17 +26,10 @@ class File(object):
     This class captures various attributes of a file, and relies on client-side and
     worker-side systems to enable to appropriate transfer of files.
 
-    Note that an error will be raised if one tries to create a File without an
-    associated DataManager. That DataManager may be specified explicitly
-    as a parameter to the File constructor, or may be implicitly specified via
-    a previously loaded Parsl config.
-
-    A File which is not associated with a DataManager is ill-defined.
-
     """
 
     @typeguard.typechecked
-    def __init__(self, url: str, dman: Optional[DataManager] = None):
+    def __init__(self, url: str):
         """Construct a File object from a url string.
 
         Args:
@@ -46,7 +38,6 @@ class File(object):
               - 'file:///scratch/proj101/input.txt'
               - 'globus://go#ep1/~/data/input.txt'
               - 'globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/home/johndoe/data/input.txt'
-           - dman (DataManager) : data manager
         """
         self.url = url
         parsed_url = urlparse(self.url)
@@ -54,7 +45,6 @@ class File(object):
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
-        self.dman = dman if dman else DataManager.get_data_manager()
         self.data_future = {}  # type: Dict[str, DataFuture]
 
     def __str__(self):
@@ -112,8 +102,6 @@ class File(object):
             # This is assumed to be safe, since the data_future represents staging to a specific executor
             # and an executor will only have one filepath.
             state["data_future"][executor] = state["data_future"][executor].filepath
-
-        state["dman"] = None
 
         return state
 
