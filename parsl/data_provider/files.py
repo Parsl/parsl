@@ -9,13 +9,7 @@ being called from.
 import os
 import typeguard
 import logging
-from typing import Dict
 from urllib.parse import urlparse
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from parsl.app.futures import DataFuture
-
 
 logger = logging.getLogger(__name__)
 
