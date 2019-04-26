@@ -165,7 +165,6 @@ cat << MPIEXEC_EOF > cmd_$JOBNAME.sh
 MPIEXEC_EOF
 chmod u+x cmd_$JOBNAME.sh
 
-cat $HOSTFILE
 mpirun -np $WORKERCOUNT /bin/bash cmd_$JOBNAME.sh
 
 echo "All workers done"
