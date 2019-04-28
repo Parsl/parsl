@@ -5,6 +5,7 @@ import os
 import pathlib
 import pickle
 import random
+import typeguard
 import inspect
 import threading
 import sys
@@ -12,6 +13,7 @@ import sys
 import datetime
 
 from getpass import getuser
+from typing import Optional
 from uuid import uuid4
 from socket import gethostname
 from concurrent.futures import Future
@@ -1027,7 +1029,8 @@ class DataFlowKernelLoader(object):
         cls._dfk = None
 
     @classmethod
-    def load(cls, config=None):
+    @typeguard.typechecked
+    def load(cls, config: Optional[Config] = None):
         """Load a DataFlowKernel.
 
         Args:
