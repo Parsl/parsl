@@ -9,7 +9,6 @@ env:
     - OMPI_MCA_rmaps_base_oversubscribe=yes
     - MPI=mpich
     - secure: kJCqUDNFfiw/g4zjQ1Vp8qxO/+xT3JddW0B9u/t1j/KMgkYdilKr4NMoxwHGSajt4YmG8Gilcyoflf90UAws34Qjm8fK9ri5ZAvSgOG+YVeM/ZmPHseHImUNtL0xxKfBDlTVkx/hleONYxnP4JsiLp4XDVsahpKb3brb7W3MiR7VirrGp/amdKhel8ziTPinBnmnMcie6OExYQf+L0VSH45AeOltgsebxtpM/nuaGe0sRrK5w1SWDWWUgoauB1Q5bpmo4/fy11QfL9mMwI5ldRWmgU7DC6H6xA5N0pVjVkOGlXgplluqU5mKuxuljGC4EEYLANqqcrduBPCy4Jd1isigVl1xb3zfzRQUvnqmx2IXjN/xeOlYrkvXyJyazfoT7YrUQi9eCJ8wW/Ozv/jd/c/Nw4uiH7/I9nh1X+cgEj2lv870jK5Q1bmMpmGHmuNlIrZZ73bBGe1OxWPDer57nmyZTfrAqIge4/+ZLTl6EGeZ5wjxnl+gpJMPL2wfph/DMzFeXCgWI2fOmUOMHQ1Bc0ywOn28v9oYzUDWoFjZw+ecqNcR9f/xMUPclq3YmndarhkuRcYHIm4Q1rgSkKh4nF/AOyzQHYiFlwJcKSXMsNX3tZUbowU6wVn3piBVtTUMdtkUrF7zLOui51PA1LtUrFdXs+GFmBO9eI/vrXDqpaI=
-before_in
 
 before_install:
     - echo -e "machine github.com\n  login $CCLTOOLS_KEY" > ~/.netrc
