@@ -12,6 +12,7 @@ env:
 before_in
 
 before_install:
+    - echo -e "machine github.com\n  login $CCLTOOLS_KEY" > ~/.netrc
     - sudo apt-get update -q
     - python$PY -m pip install Cython
     - python$PY -m pip install numpy
