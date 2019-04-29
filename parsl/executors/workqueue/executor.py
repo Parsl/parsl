@@ -17,7 +17,7 @@ from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
 from parsl.executors.workqueue import workqueue_worker
 
-WORK_QUEUE_DEFAULT_PORT = 50000
+WORK_QUEUE_DEFAULT_PORT = -1
 
 from work_queue import *
 
@@ -33,7 +33,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           data_dir=".",
                           full=False,
                           cancel_value=multiprocessing.Value('i', 1),
-                          port=50000,
+                          port=WORK_QUEUE_DEFAULT_PORT,
                           wq_log_dir=None,
                           project_password=None,
                           project_password_file=None,
@@ -195,7 +195,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         if status == 3:
                             reason += "problem remapping file names"
                         if status == 4:
-                            reason += "problem writing out funciton result"
+                            reason += "problem writing out function result"
 
                         logger.debug("Workqueue runner script failed for task {}because {}. Trace:\n{}".format(parsl_tid, reason, t.output))
 

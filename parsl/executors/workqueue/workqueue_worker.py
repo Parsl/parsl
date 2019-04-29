@@ -42,9 +42,10 @@ if __name__ == "__main__":
                 shared_fs = True
             else:
                 print("command line argument not supported")
-                exit(2)
+                exit(1)
             index += 1
-    except Exception:
+    except Exception as e:
+        print(e)
         exit(1)
 
     try:
