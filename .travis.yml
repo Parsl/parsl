@@ -8,6 +8,8 @@ env:
     - HYDRA_LAUNCHER=fork
     - OMPI_MCA_rmaps_base_oversubscribe=yes
     - MPI=mpich
+    - secure: kJCqUDNFfiw/g4zjQ1Vp8qxO/+xT3JddW0B9u/t1j/KMgkYdilKr4NMoxwHGSajt4YmG8Gilcyoflf90UAws34Qjm8fK9ri5ZAvSgOG+YVeM/ZmPHseHImUNtL0xxKfBDlTVkx/hleONYxnP4JsiLp4XDVsahpKb3brb7W3MiR7VirrGp/amdKhel8ziTPinBnmnMcie6OExYQf+L0VSH45AeOltgsebxtpM/nuaGe0sRrK5w1SWDWWUgoauB1Q5bpmo4/fy11QfL9mMwI5ldRWmgU7DC6H6xA5N0pVjVkOGlXgplluqU5mKuxuljGC4EEYLANqqcrduBPCy4Jd1isigVl1xb3zfzRQUvnqmx2IXjN/xeOlYrkvXyJyazfoT7YrUQi9eCJ8wW/Ozv/jd/c/Nw4uiH7/I9nh1X+cgEj2lv870jK5Q1bmMpmGHmuNlIrZZ73bBGe1OxWPDer57nmyZTfrAqIge4/+ZLTl6EGeZ5wjxnl+gpJMPL2wfph/DMzFeXCgWI2fOmUOMHQ1Bc0ywOn28v9oYzUDWoFjZw+ecqNcR9f/xMUPclq3YmndarhkuRcYHIm4Q1rgSkKh4nF/AOyzQHYiFlwJcKSXMsNX3tZUbowU6wVn3piBVtTUMdtkUrF7zLOui51PA1LtUrFdXs+GFmBO9eI/vrXDqpaI=
+before_in
 
 before_install:
     - sudo apt-get update -q
@@ -16,7 +18,7 @@ before_install:
     - bash parsl/executors/extreme_scale/install-mpi.sh $MPI
     - bash parsl/executors/workqueue/install-workqueue.sh
     - export PATH=$PATH:/tmp/cctools/bin
-    - export PYTHONPATH=$PYTHONPATH:/tmp/cctools/lib/python3.5/site-packages
+    - export PYTHONPATH=$PYTHONPATH:$/tmp/cctools/lib/python3.5/site-packages
     - python$PY --version
     - python$PY -m cython --version
     - python$PY -c "import numpy;print(numpy.__version__)"
@@ -42,7 +44,7 @@ script:
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
     # parsl
-    - (for test in parsl/tests/configs/*.py parsl/tests/test*/test*; do MYPYPATH=$(pwd)/mypy-stubs mypy $test ; export MypyReturnCode=$? ; echo mypy return code is $MypyReturnCode ; if [[ "$MypyReturnCode" != 0 ]] ; then exit 1; fi; done ) ;
+    - (for test in parsl/tests/configs/*.py parsl/tests/test*/test*; do mypy $test ; export MypyReturnCode=$? ; echo mypy return code is $MypyReturnCode ; if [[ "$MypyReturnCode" != 0 ]] ; then exit 1; fi; done ) ;
 
       # do this before any testing, but not in-between tests
     - rm -f .coverage
