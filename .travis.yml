@@ -32,6 +32,7 @@ os:
 
 # command to run tests
 script:
+    - set -e # stop build after first failure, see https://github.com/travis-ci/travis-ci/issues/1066
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - flake8 parsl/
