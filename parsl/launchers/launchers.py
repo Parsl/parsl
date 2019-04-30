@@ -200,17 +200,9 @@ class MpiRunLauncher(Launcher):
 echo "Found cores : $CORES"
 WORKERCOUNT={3}
 
-# Deduplicate the nodefile
-HOSTFILE="$JOBNAME.nodes"
-if [ -z "$PBS_NODEFILE" ]; then
-    echo "localhost" > $HOSTFILE
-else
-    sort -u $PBS_NODEFILE > $HOSTFILE
-fi
-
-cat << MPIEXEC_EOF > cmd_$JOBNAME.sh
+cat << MPIRUN_EOF > cmd_$JOBNAME.sh
 {0}
-MPIEXEC_EOF
+MPIRUN_EOF
 chmod u+x cmd_$JOBNAME.sh
 
 mpirun -np $WORKERCOUNT {4} cmd_$JOBNAME.sh
