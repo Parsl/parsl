@@ -171,6 +171,7 @@ echo "All workers done"
 '''.format(command, tasks_per_node, nodes_per_block, task_blocks)
         return x
 
+
 class MpiRunLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the framework to
     launch multiple command invocations via mpirun.
