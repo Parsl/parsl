@@ -173,13 +173,13 @@ echo "All workers done"
 
 class MpiRunLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the framework to
-    launch multiple command invocations via mpiexec.
+    launch multiple command invocations via mpirun.
 
     This wrapper sets the bash env variable CORES to the number of cores on the
     machine.
 
     This launcher makes the following assumptions:
-    - mpiexec is installed and can be located in $PATH
+    - mpirun is installed and can be located in $PATH
     - The provider makes available the $PBS_NODEFILE environment variable
     """
     def __init__(self, bash_location='/bin/bash'):
