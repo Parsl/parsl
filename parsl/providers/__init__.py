@@ -8,6 +8,7 @@ from parsl.providers.condor.condor import CondorProvider
 from parsl.providers.grid_engine.grid_engine import GridEngineProvider
 from parsl.providers.slurm.slurm import SlurmProvider
 from parsl.providers.torque.torque import TorqueProvider
+from parsl.providers.pbspro.pbspro import PBSProProvider
 
 # Cloud Providers
 from parsl.providers.aws.aws import AWSProvider
@@ -23,6 +24,7 @@ __all__ = ['LocalProvider',
            'GridEngineProvider',
            'SlurmProvider',
            'TorqueProvider',
+           'PBSProProvider',
            'AWSProvider',
            'GoogleCloudProvider',
            'JetstreamProvider',
