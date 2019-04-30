@@ -3,7 +3,7 @@ Babuji, Y., Woodard, A., Li, Z., Katz, D. S., Clifford, B., Kumar, R., Lacinski,
 or
 
 ```{tex}
-@misc{babuji19parsl,
+@inproceedings{babuji19parsl,
   author       = {Babuji, Yadu and
                   Woodard, Anna and
                   Li, Zhuozhao and
