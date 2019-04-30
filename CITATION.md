@@ -19,6 +19,7 @@ or
   title        = {Parsl: Pervasive Parallel Programming in Python},
   booktitle    = {28th ACM International Symposium on High-Performance Parallel and Distributed Computing (HPDC)},
   doi          = {10.1145/3307681.3325400},
+  year         = {2019},
   url          = {https://doi.org/10.1145/3307681.3325400}
 }
 ```
