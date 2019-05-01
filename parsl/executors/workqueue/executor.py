@@ -18,6 +18,7 @@ from parsl.data_provider.files import File
 from parsl.executors.workqueue import workqueue_worker
 
 WORK_QUEUE_DEFAULT_PORT = -1
+WORK_QUEUE_RESULT_SUCCESS = 0
 
 from work_queue import *
 
@@ -183,8 +184,11 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     parsl_tid = t.tag
                     logger.debug("Completed workqueue task {}, parsl task {}".format(t.id, parsl_tid))
                     status = t.return_status
+                    task_result = t.result
+                    result_recieved = True
+                    msg = None
 
-                    if status != 0:
+                    if status != 0 or task_result != WORK_QUEUE_RESULT_SUCCESS:
                         logger.debug("Workqueue task {} failed with status {}".format(t.id, status))
 
                         reason = "Wrapper Script Failure: "
@@ -197,7 +201,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         if status == 4:
                             reason += "problem writing out function result"
 
-                        logger.debug("Workqueue runner script failed for task {}because {}. Trace:\n{}".format(parsl_tid, reason, t.output))
+                        reason += "\nTrace:\n"+t.output
+
+                        logger.debug("Workqueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
 
                         msg = {"tid": parsl_tid,
                                "result_recieved": False,
@@ -206,22 +212,23 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
                         collector_queue.put_nowait(msg)
 
-                        continue
+                    else:
 
-                    if see_worker_output:
-                        print(t.output)
+                        if see_worker_output:
+                            print(t.output)
 
-                    result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
-                    logger.debug("Looking for result in {}".format(result_loc))
-                    f = open(result_loc, "rb")
-                    result = pickle.load(f)
-                    f.close()
-                    msg = {"tid": parsl_tid,
-                           "result_recieved": True,
-                           "result": result}
+                        result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
+                        logger.debug("Looking for result in {}".format(result_loc))
+                        f = open(result_loc, "rb")
+                        result = pickle.load(f)
+                        f.close()
+
+                        msg = {"tid": parsl_tid,
+                               "result_recieved": True,
+                               "result": result}
+                        wq_tasks.remove(t.id)
 
                     collector_queue.put_nowait(msg)
-                    wq_tasks.remove(t.id)
 
         if continue_running is False:
             logger.debug("Exiting WorkQueue Master Thread event loop")

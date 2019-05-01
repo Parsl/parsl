@@ -15,7 +15,7 @@ def check_file(parsl_file_obj, mapping, file_type_string):
 
 if __name__ == "__main__":
     name = "parsl"
-    logger = logging.getLogger(name)
+    # logger = logging.getLogger(name)
 
     shared_fs = False
     input_function_file = ""
@@ -52,7 +52,8 @@ if __name__ == "__main__":
         input_function = open(input_function_file, "rb")
         function_tuple = pickle.load(input_function)
         input_function.close()
-    except Exception:
+    except Exception as e:
+        print(e)
         exit(2)
 
     user_ns = locals()
@@ -81,7 +82,8 @@ if __name__ == "__main__":
             func_outputs = kwargs.get("outputs", [])
             for output in func_outputs:
                 check_file(output, mapping, file_type_string)
-    except Exception:
+    except Exception as e:
+        print(e)
         exit(3)
 
     prefix = "parsl_"
@@ -101,7 +103,8 @@ if __name__ == "__main__":
     try:
         # logger.debug("[RUNNER] Executing: {0}".format(code))
         exec(code, user_ns, user_ns)
-    except Exception:
+    except Exception as e:
+        print(e)
         exec_info = sys.exc_info()
         result_package = {"failure": True, "result": serialize_object(exec_info)}
     else:
@@ -112,5 +115,6 @@ if __name__ == "__main__":
         pickle.dump(result_package, f)
         f.close()
         exit(0)
-    except Exception:
+    except Exception as e:
+        print(e)
         exit(4)
