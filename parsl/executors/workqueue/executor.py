@@ -189,21 +189,25 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     msg = None
 
                     if status != 0 or task_result != WORK_QUEUE_RESULT_SUCCESS:
-                        logger.debug("Workqueue task {} failed with status {}".format(t.id, status))
+                        if task_result == WORK_QUEUE_RESULT_SUCCESS:
+                            logger.debug("Workqueue task {} failed with status {}".format(t.id, status))
 
-                        reason = "Wrapper Script Failure: "
-                        if status == 1:
-                            reason += "command line parsing"
-                        if status == 2:
-                            reason += "problem loading function data"
-                        if status == 3:
-                            reason += "problem remapping file names"
-                        if status == 4:
-                            reason += "problem writing out function result"
+                            reason = "Wrapper Script Failure: "
+                            if status == 1:
+                                reason += "command line parsing"
+                            if status == 2:
+                                reason += "problem loading function data"
+                            if status == 3:
+                                reason += "problem remapping file names"
+                            if status == 4:
+                                reason += "problem writing out function result"
 
-                        reason += "\nTrace:\n"+t.output
+                            reason += "\nTrace:\n"+t.output
 
-                        logger.debug("Workqueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
+                            logger.debug("Workqueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
+
+                        else:
+                            reason = "Workqueue system failure\n"
 
                         msg = {"tid": parsl_tid,
                                "result_recieved": False,
