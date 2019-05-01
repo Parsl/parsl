@@ -44,6 +44,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to figure
         this out itself (= None). If True, then will always move. If False, will never move.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     """
 
     def __init__(self,
