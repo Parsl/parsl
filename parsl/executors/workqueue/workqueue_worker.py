@@ -1,6 +1,5 @@
 import sys
 import pickle
-import logging
 from ipyparallel.serialize import unpack_apply_message, serialize_object
 
 

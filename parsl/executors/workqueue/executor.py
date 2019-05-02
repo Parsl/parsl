@@ -106,6 +106,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             input_files = item["input_files"]
             output_files = item["output_files"]
+            std_file = item["std_files"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
@@ -145,6 +146,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 t.specify_file(item[0], item[1], WORK_QUEUE_INPUT, cache=item[2])
 
             for item in output_files:
+                t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
+
+            for item in std_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
 
             logger.debug("Submitting task {} to workqueue".format(parsl_id))
@@ -437,6 +441,7 @@ class WorkQueueExecutor(ParslExecutor):
 
         input_files = []
         output_files = []
+        std_files = []
 
         func_inputs = kwargs.get("inputs", [])
         for inp in func_inputs:
@@ -446,6 +451,8 @@ class WorkQueueExecutor(ParslExecutor):
         for kwarg, inp in kwargs.items():
             if isinstance(inp, File):
                 input_files.append(self.create_name_tuple(inp, "in"))
+            elif kwarg == "stdout" or kwarg == "stderr":
+                std_files.append(self.create_name_tuple(inp, "std"))
 
         for inp in args:
             if isinstance(inp, File):
@@ -486,7 +493,8 @@ class WorkQueueExecutor(ParslExecutor):
                "data_loc": function_data_file,
                "result_loc": function_result_file,
                "input_files": input_files,
-               "output_files": output_files}
+               "output_files": output_files,
+               "std_files": std_files}
 
         self.task_queue.put_nowait(msg)
 
