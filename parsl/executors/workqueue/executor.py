@@ -19,6 +19,7 @@ from parsl.executors.workqueue import workqueue_worker
 
 WORK_QUEUE_DEFAULT_PORT = -1
 WORK_QUEUE_RESULT_SUCCESS = 0
+WORK_QUEUE_RESULT_OUTPUT_MISSING = 2
 
 from work_queue import *
 
@@ -106,7 +107,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             input_files = item["input_files"]
             output_files = item["output_files"]
-            std_file = item["std_files"]
+            std_files = item["std_files"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
@@ -192,7 +193,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     result_recieved = True
                     msg = None
 
-                    if status != 0 or task_result != WORK_QUEUE_RESULT_SUCCESS:
+                    if status != 0 or (task_result != WORK_QUEUE_RESULT_SUCCESS and task_result != WORK_QUEUE_RESULT_OUTPUT_MISSING):
                         if task_result == WORK_QUEUE_RESULT_SUCCESS:
                             logger.debug("Workqueue task {} failed with status {}".format(t.id, status))
 
@@ -211,7 +212,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                             logger.debug("Workqueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
 
                         else:
-                            reason = "Workqueue system failure\n"
+                            logger.debug("Workqueue task {} failed with result {}".format(t.id, result))
+                            reason = "Workqueue system failure"
 
                         msg = {"tid": parsl_tid,
                                "result_recieved": False,
@@ -452,7 +454,7 @@ class WorkQueueExecutor(ParslExecutor):
             if isinstance(inp, File):
                 input_files.append(self.create_name_tuple(inp, "in"))
             elif kwarg == "stdout" or kwarg == "stderr":
-                std_files.append(self.create_name_tuple(inp, "std"))
+                std_files.append((inp, os.path.basename(inp), False, "std"))
 
         for inp in args:
             if isinstance(inp, File):
@@ -461,7 +463,7 @@ class WorkQueueExecutor(ParslExecutor):
         func_outputs = kwargs.get("outputs", [])
         for output in func_outputs:
             if isinstance(output, File):
-                input_files.append(self.create_name_tuple(output, "out"))
+                output_files.append(self.create_name_tuple(output, "out"))
 
         if not self.submit_process.is_alive():
             raise ExecutorError(self, "Workqueue Submit Process is not alive")
