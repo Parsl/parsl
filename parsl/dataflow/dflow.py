@@ -248,7 +248,13 @@ class DataFlowKernel(object):
                 res.reraise()
 
         except Exception:
-            logger.exception("Task {} failed".format(task_id))
+            message = "Task {} failed".format(task_id)
+            if self.tasks[task_id]['app_fu'].stdout is not None:
+                message += "\n standard output available at {}".format(self.tasks[task_id]['app_fu'].stdout)
+            if self.tasks[task_id]['app_fu'].stderr is not None:
+                message += "\n standard error available at {}".format(self.tasks[task_id]['app_fu'].stderr)
+
+            logger.exception(message)
 
             # We keep the history separately, since the future itself could be
             # tossed.
