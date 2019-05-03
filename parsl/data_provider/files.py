@@ -9,13 +9,7 @@ being called from.
 import os
 import typeguard
 import logging
-from typing import Dict
 from urllib.parse import urlparse
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from parsl.app.futures import DataFuture
-
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +39,6 @@ class File(object):
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
-        self.data_future = {}  # type: Dict[str, DataFuture]
 
     def __str__(self):
         return self.filepath
@@ -85,32 +78,6 @@ class File(object):
             return self.path
         else:
             raise Exception('Cannot return filepath for unknown scheme {}'.format(self.scheme))
-
-    def __getstate__(self):
-        """Override the default pickling method.
-
-        The File object gets pickled and transmitted to remote executors during app
-        execution. This enables pickling while retaining the lockable resources
-        to the DFK/Client side.
-        """
-
-        state = self.__dict__.copy()
-
-        # We have already made a copy of the future objects, they are now no longer
-        # reliable as means to wait for the staging events
-        for executor in state["data_future"]:
-            # This is assumed to be safe, since the data_future represents staging to a specific executor
-            # and an executor will only have one filepath.
-            state["data_future"][executor] = state["data_future"][executor].filepath
-
-        return state
-
-    def __setstate__(self, state):
-        """ Overloading the default pickle method to reconstruct a File from serialized form
-
-        This might require knowledge of whether a DataManager is already present in the context.
-        """
-        self.__dict__.update(state)
 
 
 if __name__ == '__main__':
