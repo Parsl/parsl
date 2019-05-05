@@ -4,7 +4,7 @@ from ipyparallel.serialize import unpack_apply_message, serialize_object
 
 
 def check_file(parsl_file_obj, mapping, file_type_string):
-    type_desc = type(parsl_file_obj)
+    type_desc = str(type(parsl_file_obj))
     if file_type_string is None:
         file_type_string = "<class 'parsl.data_provider.files.File'>"
     if type_desc == file_type_string:
@@ -73,7 +73,19 @@ if __name__ == "__main__":
                 check_file(inp, mapping, file_type_string)
 
             for kwarg, potential_f in kwargs.items():
-                check_file(potential_f, mapping, file_type_string)
+                if kwarg == "stdout" or kwarg == "stderr":
+                    if (isinstance(potential_f, str) or isinstance(potential_f, tuple)):
+                        if isinstance(potential_f, tuple) and len(potential_f) == 2:
+                            l_f = list(potential_f)
+                            p_f = l_f[0]
+                            if p_f in mapping:
+                                p_f = mapping[p_f]
+                            kwargs[kwarg] = tuple([p_f] + l_f[1:])
+                        elif isinstance(potential_f, str):
+                            if potential_f in mapping:
+                                kwargs[kwarg] = mapping[potential_f]
+                else:
+                    check_file(potential_f, mapping, file_type_string)
 
             for inp in args:
                 check_file(inp, mapping, file_type_string)

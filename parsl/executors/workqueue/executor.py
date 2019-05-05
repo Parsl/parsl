@@ -19,7 +19,6 @@ from parsl.executors.workqueue import workqueue_worker
 
 WORK_QUEUE_DEFAULT_PORT = -1
 WORK_QUEUE_RESULT_SUCCESS = 0
-WORK_QUEUE_RESULT_OUTPUT_MISSING = 2
 
 from work_queue import *
 
@@ -96,6 +95,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             try:
                 # item = task_queue.get_nowait()
                 item = task_queue.get(timeout=1)
+                logger.debug("Removing task from queue")
             except queue.Empty:
                 continue
             parsl_id = item["task_id"]
@@ -114,19 +114,32 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             remapping_string = ""
 
+            std_string = ""
+            logger.debug("looking at input")
             for item in input_files:
-                remapping_string += item[0] + ":" + item[1] + ","
+                if item[3] == "std":
+                    std_string += "mv " + item[1] + " " + item[0] + "; "
+                else:
+                    remapping_string += item[0] + ":" + item[1] + ","
+            logger.debug(remapping_string)
 
+            logger.debug("looking at output")
             for item in output_files:
                 remapping_string += item[0] + ":" + item[1] + ","
+            logger.debug(remapping_string)
 
             if len(input_files) + len(output_files) > 0:
                 remapping_string = "-r " + remapping_string
                 remapping_string = remapping_string[:-1]
 
+            logger.debug(launch_cmd)
             command_str = launch_cmd.format(input_file=function_data_loc_remote,
                                             output_file=function_result_loc_remote,
                                             remapping_string=remapping_string)
+
+            logger.debug(command_str)
+            command_str = std_string + command_str
+            logger.debug(command_str)
 
             logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
             try:
@@ -190,7 +203,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     logger.debug("Completed workqueue task {}, parsl task {}".format(t.id, parsl_tid))
                     status = t.return_status
                     task_result = t.result
-                    result_recieved = True
                     msg = None
 
                     if status != 0 or (task_result != WORK_QUEUE_RESULT_SUCCESS and task_result != WORK_QUEUE_RESULT_OUTPUT_MISSING):
@@ -207,13 +219,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                             if status == 4:
                                 reason += "problem writing out function result"
 
-                            reason += "\nTrace:\n"+t.output
+                            reason += "\nTrace:\n" + t.output
 
                             logger.debug("Workqueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
 
                         else:
-                            logger.debug("Workqueue task {} failed with result {}".format(t.id, result))
-                            reason = "Workqueue system failure"
+                            reason = "Workqueue system failure\n"
 
                         msg = {"tid": parsl_tid,
                                "result_recieved": False,
@@ -451,10 +462,21 @@ class WorkQueueExecutor(ParslExecutor):
                 input_files.append(self.create_name_tuple(inp, "in"))
 
         for kwarg, inp in kwargs.items():
-            if isinstance(inp, File):
+            if kwarg == "stdout" or kwarg == "stderr":
+                if (isinstance(inp, tuple) and len(inp) > 1 and isinstance(inp[0], str) and isinstance(inp[1], str)) or isinstance(inp, str):
+                    if isinstance(inp, tuple):
+                        inp = inp[0]
+                    print(os.path.split(inp))
+                    if not os.path.exists(os.path.join(".", os.path.split(inp)[0])):
+                        continue
+                    if inp in self.registered_files:
+                        input_files.append((inp, os.path.basename(inp) + "-1", False, "std"))
+                        output_files.append((inp, os.path.basename(inp), False, "std"))
+                    else:
+                        output_files.append((inp, os.path.basename(inp), False, "std"))
+                        self.registered_files.add(inp)
+            elif isinstance(inp, File):
                 input_files.append(self.create_name_tuple(inp, "in"))
-            elif kwarg == "stdout" or kwarg == "stderr":
-                std_files.append((inp, os.path.basename(inp), False, "std"))
 
         for inp in args:
             if isinstance(inp, File):

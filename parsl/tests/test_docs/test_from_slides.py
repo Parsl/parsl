@@ -1,4 +1,5 @@
 from parsl.app.app import App
+from parsl.data_provider.files import File
 
 
 @App('bash')
@@ -15,8 +16,8 @@ def cat(inputs=[]):
 def test_slides():
     """Testing code snippet from slides """
 
-    hello = echo("Hello World!", outputs=['hello1.txt'])
-    message = cat(inputs=[hello.outputs[0]])
+    hello = echo("Hello World!", outputs=[File('hello1.txt')])
+    message = cat(inputs=[File(hello.outputs[0].filepath)])
 
     # Waits. This need not be in the slides.
     print(hello.result())
