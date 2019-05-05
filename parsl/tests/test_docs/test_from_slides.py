@@ -17,7 +17,7 @@ def test_slides():
     """Testing code snippet from slides """
 
     hello = echo("Hello World!", outputs=[File('hello1.txt')])
-    message = cat(inputs=[File(hello.outputs[0].filepath)])
+    message = cat(inputs=[hello.outputs[0]])
 
     # Waits. This need not be in the slides.
     print(hello.result())
