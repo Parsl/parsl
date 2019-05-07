@@ -76,6 +76,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
     std_err = open_std_fd('stderr')
     timeout = kwargs.get('walltime')
 
+    if std_out is not None:
+        print('--> executable follows <--\n{}\n--> standard output follows <--'.format(executable), file=std_out)
+
     returncode = None
     try:
         proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
