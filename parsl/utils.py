@@ -175,7 +175,12 @@ class RepresentationMixin(object):
     __max_width__ = 80
 
     def __repr__(self):
-        argspec = inspect.getfullargspec(self.__init__)
+        init = self.__init__
+
+        if hasattr(init, '__wrapped__'):
+            init = init.__wrapped__
+
+        argspec = inspect.getfullargspec(init)
         if len(argspec.args) > 1:
             defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
         else:
