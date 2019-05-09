@@ -1,6 +1,7 @@
 import logging
-
+from functools import update_wrapper
 from inspect import signature, Parameter
+
 from parsl.app.errors import wrap_error
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
@@ -150,7 +151,8 @@ class BashApp(AppBase):
         else:
             dfk = self.data_flow_kernel
 
-        app_fut = dfk.submit(wrap_error(remote_side_bash_executor), self.func, *args,
+        app_fut = dfk.submit(wrap_error(update_wrapper(remote_side_bash_executor, self.func)),
+                             self.func, *args,
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
