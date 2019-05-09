@@ -76,8 +76,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
     std_err = open_std_fd('stderr')
     timeout = kwargs.get('walltime')
 
-    if std_out is not None:
-        print('--> executable follows <--\n{}\n--> standard output follows <--'.format(executable), file=std_out)
+    if std_err is not None:
+        print('--> executable follows <--\n{}\n--> end executable <--'.format(executable), file=std_err)
 
     returncode = None
     try:
