@@ -44,10 +44,8 @@ script:
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
     # parsl
-    - travis_fold start parsl.mypy ; echo MYPY FOLD HERE
-    - (for test in parsl/tests/configs/*.py parsl/tests/test*/test*; do MYPYPATH=$(pwd)/mypy-stubs mypy $test ; export MypyReturnCode=$? ; echo mypy return code is $MypyReturnCode ; if [[ "$MypyReturnCode" != 0 ]] ; then exit 1; fi; done ) 
+    - travis_fold start parsl.mypy ; Folded parsl.mypy output ; (for test in parsl/tests/configs/*.py parsl/tests/test*/test*; do MYPYPATH=$(pwd)/mypy-stubs mypy $test ; export MypyReturnCode=$? ; echo mypy return code is $MypyReturnCode ; if [[ "$MypyReturnCode" != 0 ]] ; then exit 1; fi; done ) && travis_fold end parsl.mypy
 
-    - travis_fold end parsl.mypy
     - rm -f .coverage
 
     - travis_fold start parsl.htex
