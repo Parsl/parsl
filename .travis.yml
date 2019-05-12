@@ -68,7 +68,9 @@ script:
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
+    - travis_fold start parsl.manytasks
     - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
+    - travis_fold end parsl.manytasks
 
     # run specific integration tests that need their own configuration
     - travis_fold start parsl.integration
