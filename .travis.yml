@@ -37,9 +37,8 @@ script:
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - travis_fold end parsl.setup
-    - travis_fold start parsl.flake8
-    - flake8 parsl/
-    - travis_fold end parsl.flake8
+
+    - travis_fold start parsl.flake8 ; flake8 parsl/ && travis_fold end parsl.flake8
 
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
