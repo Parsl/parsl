@@ -44,41 +44,29 @@ script:
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
     # parsl
-    - travis_fold start parsl.mypy ; Folded parsl.mypy output ; (for test in parsl/tests/configs/*.py parsl/tests/test*/test*; do MYPYPATH=$(pwd)/mypy-stubs mypy $test ; export MypyReturnCode=$? ; echo mypy return code is $MypyReturnCode ; if [[ "$MypyReturnCode" != 0 ]] ; then exit 1; fi; done ) && travis_fold end parsl.mypy
+    - travis_fold start parsl.mypy ; echo mypy tests ; (for test in parsl/tests/configs/*.py parsl/tests/test*/test*; do MYPYPATH=$(pwd)/mypy-stubs mypy $test ; export MypyReturnCode=$? ; echo mypy return code is $MypyReturnCode ; if [[ "$MypyReturnCode" != 0 ]] ; then exit 1; fi; done ) && travis_fold end parsl.mypy
 
     - rm -f .coverage
 
-    - travis_fold start parsl.htex
-    - (for test in parsl/tests/test*/test*; do pytest $test -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
-    - travis_fold end parsl.htex
-    - travis_fold start parsl.threads
-    - (for test in parsl/tests/test*/test*; do pytest $test -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
+    - travis_fold start parsl.htex ; echo pytest with high throughput executor ;  (for test in parsl/tests/test*/test*; do pytest $test -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) && travis_fold end parsl.htex
+
+    - travis_fold start parsl.threads ; echo pytest with local thread executor ; (for test in parsl/tests/test*/test*; do pytest $test -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) && travis_fold end parsl.threads
       # allow exit code 5; this means pytest did not run a test in the
       # specified file
-    - travis_fold end parsl.threads
 
     # these tests run with specific configs loaded within the tests themselves.
     # This mode is enabled with: --config local
-    - travis_fold start parsl.local
-    - (for test in parsl/tests/test*/test* parsl/tests/sites/test*; do pytest $test -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
-    - travis_fold end parsl.local
+    - travis_fold start parsl.local ; echo pytest with specific configurations ; (for test in parsl/tests/test*/test* parsl/tests/sites/test*; do pytest $test -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) && travis_fold end parsl.local
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
-    - travis_fold start parsl.manytasks
-    - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
-    - travis_fold end parsl.manytasks
+    - travis_fold start parsl.manytasks ; echo many task test ; coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000 && travis_fold end parsl.manytasks
 
     # run specific integration tests that need their own configuration
-    - travis_fold start parsl.integration
-    - pytest parsl/tests/integration/test_retries.py -k "not cleannet" --config local --cov=parsl --cov-append --cov-report=
-    - pytest parsl/tests/integration/test_parsl_load_default_config.py -k "not cleannet" --config local --cov=parsl --cov-append --cov-report=
-    - travis_fold end parsl.integration
+    - travis_fold start parsl.integration ; echo integration pytests that need their own configuration && pytest parsl/tests/integration/test_retries.py -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= && pytest parsl/tests/integration/test_parsl_load_default_config.py -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= && travis_fold end parsl.integration
   
-    - travis_fold start parsl.coverage
-    - coverage report
+    - travis_fold start parsl.coverage ; echo Coverage report ; coverage report && travis_fold end parsl.coverage
       # prints report of coverage data stored in .coverage
-    - travis_fold end parsl.coverage
 
     # - pytest parsl/tests --config parsl/tests/configs/local_threads.py
     # - pytest parsl/tests --config parsl/tests/configs/local_ipp.py
