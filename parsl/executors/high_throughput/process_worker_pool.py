@@ -320,13 +320,16 @@ class Manager(object):
         return
 
 
-def execute_task(bufs):
+def execute_task(bufs, tid, logger, sandbox):
     """Deserialize the buffer and execute the task.
 
     Returns the result or throws exception.
     """
     user_ns = locals()
-    user_ns.update({'__builtins__': __builtins__})
+    user_ns.update({'__builtins__': __builtins__,
+                    'logger': logger,
+                    'parsl_sandbox_dir': sandbox,
+                    'parsl_task_id': tid})
 
     f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
@@ -391,7 +394,10 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
             pass
 
         try:
-            result = execute_task(req['buffer'])
+            result = execute_task(req['buffer'],
+                                  tid,
+                                  logger,
+                                  '{}/{}'.format(args.logdir, pool_id))
             serialized_result = serialize_object(result)
         except Exception:
             result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}

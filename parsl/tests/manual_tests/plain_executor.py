@@ -109,5 +109,5 @@ if __name__ == '__main__':
     executor = dfk.executors["htex_local"]
     # executor = dfk.executors["llex_local"]
     # config.executors[0].worker_debug = True
-    # call_double(int(args.count), executor)
-    measure_latency(int(args.count), executor)
+    call_double(int(args.count), executor)
+    # measure_latency(int(args.count), executor)
