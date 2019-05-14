@@ -527,7 +527,7 @@ class DataFlowKernel(object):
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
-        """This function should be called **ONLY** when all the futures we track have been resolved.
+        """This function should be called only when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.

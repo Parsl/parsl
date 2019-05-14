@@ -193,7 +193,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         proc = None
         remote_pid = None
         if (self.move_files is None and not isinstance(self.channel, LocalChannel)) or (self.move_files):
-            logger.debug("Moving start script")
+            logger.debug("Pushing start script")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         if not isinstance(self.channel, LocalChannel):
