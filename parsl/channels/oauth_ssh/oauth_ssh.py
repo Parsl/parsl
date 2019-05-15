@@ -2,6 +2,7 @@ import getpass
 import logging
 import select
 import paramiko
+import socket
 
 from parsl.errors import OptionalModuleMissing
 from parsl.channels.ssh.ssh import SSHChannel
@@ -91,15 +92,20 @@ class OAuthSSHChannel(SSHChannel):
         session = self.transport.open_session()
         session.setblocking(0)
 
-        nbytes = 10240
+        nbytes = 1024
         session.exec_command(self.prepend_envs(cmd, envs))
+        session.settimeout(walltime)
 
-        # Wait until command is executed
-        exit_status = session.recv_exit_status()
-        print("exit_status : ", exit_status, type(exit_status))
+        try:
+            # Wait until command is executed
+            exit_status = session.recv_exit_status()
 
-        stdout = session.recv(nbytes).decode('utf-8')
-        stderr = session.recv_stderr(nbytes).decode('utf-8')
+            stdout = session.recv(nbytes).decode('utf-8')
+            stderr = session.recv_stderr(nbytes).decode('utf-8')
+
+        except socket.timeout:
+            logger.exception("Command failed to execute without timeout limit on {}".format(self))
+            raise
 
         return exit_status, stdout, stderr
 
