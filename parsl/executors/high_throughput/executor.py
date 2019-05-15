@@ -146,7 +146,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-<<<<<<< HEAD
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
