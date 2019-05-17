@@ -99,6 +99,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
         self.provisioned_blocks = 0
+        self.template_string = template_string
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -196,7 +197,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                                                   self.nodes_per_block)
 
         logger.debug("Writing submit script")
-        self._write_submit_script(template_string, script_path, job_name, job_config)
+        self._write_submit_script(self.template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 

@@ -52,7 +52,7 @@ class Config(RepresentationMixin):
     # TODO: db_logger_config is not documented here. The type is keyword based here, by the looks of it, which might
     # be better structured as a type-checked config object? For now, I've told mypy it is Optional[Any] which is weak.
     usage_tracking : bool, optional
-        Set this field to True to Opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
+        Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
     """
 
