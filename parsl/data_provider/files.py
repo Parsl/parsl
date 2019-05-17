@@ -9,6 +9,7 @@ being called from.
 import os
 import typeguard
 import logging
+from typing import Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
