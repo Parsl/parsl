@@ -23,7 +23,7 @@ class OAuthSSHChannel(SSHChannel):
     accessible via ssh. This channel uses Globus based OAuth tokens for authentication.
     """
 
-    def __init__(self, hostname, username=None, script_dir=None, envs=None, port=22, **kwargs):
+    def __init__(self, hostname, username=None, script_dir=None, envs=None, port=22):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -32,10 +32,10 @@ class OAuthSSHChannel(SSHChannel):
 
         KWargs:
             - username (string) : Username on remote system
-            - password (string) : Password for remote system
             - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
             - envs (dict) : A dictionary of env variables to be set when executing commands
+            - port (int) : Port at which the SSHService is running
 
         Raises:
         '''
@@ -45,7 +45,6 @@ class OAuthSSHChannel(SSHChannel):
 
         self.hostname = hostname
         self.username = username
-        self.kwargs = kwargs
         self.script_dir = script_dir
 
         self.envs = {}
@@ -68,16 +67,16 @@ class OAuthSSHChannel(SSHChannel):
 
         self.sftp_client = paramiko.SFTPClient.from_transport(self.transport)
 
-    def execute_wait(self, cmd, walltime=2, envs={}):
+    def execute_wait(self, cmd, walltime=60, envs={}):
         ''' Synchronously execute a commandline string on the shell.
 
         This command does *NOT* honor walltime currently.
 
         Args:
             - cmd (string) : Commandline string to execute
-            - walltime (int) : walltime in seconds
 
         Kwargs:
+            - walltime (int) : walltime in seconds
             - envs (dict) : Dictionary of env variables
 
         Returns:
@@ -109,14 +108,14 @@ class OAuthSSHChannel(SSHChannel):
 
         return exit_status, stdout, stderr
 
-    def execute_no_wait(self, cmd, walltime=2, envs={}):
+    def execute_no_wait(self, cmd, walltime=60, envs={}):
         ''' Execute asynchronousely without waiting for exitcode
 
         Args:
             - cmd (string): Commandline string to be executed on the remote side
-            - walltime (int): timeout to exec_command
 
         KWargs:
+            - walltime (int): timeout to exec_command
             - envs (dict): A dictionary of env variables
 
         Returns:
