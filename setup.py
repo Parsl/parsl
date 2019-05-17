@@ -27,7 +27,7 @@ setup(
         'monitoring' : ['psutil', 'sqlalchemy', 'sqlalchemy_utils'],
         'aws' : ['boto3'],
         'kubernetes' : ['kubernetes'],
-        'globus_ssh' : ['globus-ssh>=0.5'],
+        'oauth_ssh' : ['oauth-ssh>=0.5'],
         # Jetstream is deprecated since the interface has not been maintained.
         # 'jetstream' : ['python-novaclient'],
         'extreme_scale' : ['mpi4py'],
@@ -38,6 +38,7 @@ setup(
                  'dash', 'dash-html-components', 'dash-core-components', 'pandas',
                  'boto3',
                  'kubernetes',
+                 'oauth-ssh',
                  'mpi4py',
                  'nbsphinx', 'sphinx_rtd_theme',
                  'google-auth', 'google-api-python-client',
