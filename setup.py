@@ -27,7 +27,7 @@ setup(
         'monitoring' : ['psutil', 'sqlalchemy', 'sqlalchemy_utils'],
         'aws' : ['boto3'],
         'kubernetes' : ['kubernetes'],
-        'oauth_ssh' : ['oauth-ssh>=0.5'],
+        'oauth_ssh' : ['oauth-ssh>=0.9'],
         # Jetstream is deprecated since the interface has not been maintained.
         # 'jetstream' : ['python-novaclient'],
         'extreme_scale' : ['mpi4py'],
