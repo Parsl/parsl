@@ -84,7 +84,7 @@ They do not all play nicely together.
   be possible to do as several steps: for example, a globus transfer to
   the submit side, and a workqueue job-submission staging from there.
 
-## design
+## other concepts
 
 - Files "at rest" have a name/URI: at present, this can either be a
   globally resolvable URI (such as a globus or http URI?) or a file: URI which
