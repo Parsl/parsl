@@ -431,6 +431,22 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         logger.debug("Sent hold request to worker: {}".format(worker_id))
         return c
 
+    def unhold_workers(self, worker_ids):
+        """Puts a worker on hold, preventing scheduling of additional tasks to it.
+
+        This is called "hold" mostly because this only stops scheduling of tasks,
+        and does not actually kill the worker.
+
+        Parameters
+        ----------
+
+        worker_ids : list of str
+            Worker ids to be put back into active state
+        """
+        c = self.command_client.run("UNHOLD_WORKERS;{}".format(','.join(worker_ids)))
+        logger.debug("Sent hold request to workers: {}".format(','.join(worker_ids)))
+        return c
+
     @property
     def outstanding(self):
         outstanding_c = self.command_client.run("OUTSTANDING_C")

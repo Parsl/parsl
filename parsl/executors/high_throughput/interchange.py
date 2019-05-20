@@ -273,6 +273,17 @@ class Interchange(object):
                     else:
                         reply = False
 
+                elif command_req.startswith("UNHOLD_WORKERS"):
+                    cmd, s_manager = command_req.split(';')
+                    managers = s_manager.encode('utf-8').split(',')
+                    logger.info("[CMD] Received UNHOLD_WORKER for {}".format(managers))
+                    for manager in managers:
+                        if manager in self._ready_manager_queue:
+                            self._ready_manager_queue[manager]['active'] = True
+                            reply = True
+                        else:
+                            reply = False
+
                 elif command_req == "SHUTDOWN":
                     logger.info("[CMD] Received SHUTDOWN command")
                     kill_event.set()
