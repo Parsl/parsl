@@ -1,10 +1,12 @@
 # data manager framework from benc's perspective
 
-Theme:
+## Intro
 
 Staging in this abstraction is the act of taking a file "at rest"
 and making its contents visible via posix file accesses to a parsl task
-(or vice-versa)
+(or vice-versa).
+
+Flush away your other preconceptions.
 
 ## requirements
 
