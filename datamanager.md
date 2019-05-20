@@ -1,5 +1,10 @@
 # data manager from benc's perspective
 
+Theme:
+
+Staging in this abstraction is the act of taking a file "at rest"
+and making its contents visible via posix file accesses to a parsl task
+(or vice-versa)
 
 ## requirements
 
@@ -78,4 +83,23 @@ They do not all play nicely together.
   into workqueue) is desired but can't be done as a single step, it might
   be possible to do as several steps: for example, a globus transfer to
   the submit side, and a workqueue job-submission staging from there.
+
+## design
+
+- Files "at rest" have a name/URI: at present, this can either be a
+  globally resolvable URI (such as a globus or http URI?) or a file: URI which
+  means "don't do any staging and assume this path is accessible from
+  everywhere that is necessary". This should be extended to allow specification
+  of files on the submit side posix filesystem (for example, by repurposing the
+  file: URI scheme). This name is represented at present by the `File` class.
+
+- Staging in this abstraction is the act of taking a file "at rest"
+  and making its contents visible via posix file accesses to a parsl task
+  (or vice-versa).
+
+  What that act actually is is deliberately vague: in some cases it will be
+  no action at all, because files might be already accessible via posix.
+  In other cases it might consist of a composite of multiple staging
+  method steps.
+
 
