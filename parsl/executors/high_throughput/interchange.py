@@ -358,6 +358,7 @@ class Interchange(object):
                     # By default we set up to ignore bad nodes/registration messages.
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           'free_capacity': 0,
+                                                          'max_capacity': 0,
                                                           'active': True,
                                                           'tasks': []}
                     if reg_flag is True:
@@ -415,9 +416,12 @@ class Interchange(object):
                 random.shuffle(shuffled_managers)
                 while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
                     manager = shuffled_managers.pop()
-                    if (self._ready_manager_queue[manager]['free_capacity'] and
-                        self._ready_manager_queue[manager]['active']):
-                        tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
+                    tasks_inflight = len(self._ready_manager_queue[manager]['tasks'])
+                    real_capacity = max(self._ready_manager_queue[manager]['free_capacity'],
+                                        self._ready_manager_queue[manager]['max_capacity'] - tasks_inflight)
+
+                    if (real_capacity and self._ready_manager_queue[manager]['active']):
+                        tasks = self.get_tasks(real_capacity)
                         if tasks:
                             self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                             task_count = len(tasks)

@@ -46,7 +46,7 @@ class Manager(object):
     def __init__(self,
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
-                 max_queue_size=10,
+                 max_queue_size=0,
                  cores_per_worker=1,
                  max_workers=float('inf'),
                  uid=None,
@@ -150,6 +150,9 @@ class Manager(object):
                'os': platform.system(),
                'hname': platform.node(),
                'dir': os.getcwd(),
+               'worker_count': self.worker_count,
+               'prefetch': self.max_queue_size - self.worker_count,
+               'max_capacity': self.max_queue_size,
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
@@ -540,6 +543,8 @@ if __name__ == "__main__":
                         help="Unique identifier string for Manager")
     parser.add_argument("-c", "--cores_per_worker", default="1.0",
                         help="Number of cores assigned to each worker process. Default=1.0")
+    parser.add_argument("-p", "--prefetch", default=0,
+                        help="Number of tasks to prefetch. Default=0")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("--max_workers", default=float('inf'),
@@ -574,6 +579,7 @@ if __name__ == "__main__":
         logger.info("Debug logging: {}".format(args.debug))
         logger.info("Log dir: {}".format(args.logdir))
         logger.info("Manager ID: {}".format(args.uid))
+        logger.info("prefetch: {}".format(args.prefetch))
         logger.info("cores_per_worker: {}".format(args.cores_per_worker))
         logger.info("task_url: {}".format(args.task_url))
         logger.info("result_url: {}".format(args.result_url))
@@ -586,6 +592,7 @@ if __name__ == "__main__":
                           result_q_url=args.result_url,
                           uid=args.uid,
                           cores_per_worker=float(args.cores_per_worker),
+                          max_queue_size=int(args.prefetch),
                           max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),

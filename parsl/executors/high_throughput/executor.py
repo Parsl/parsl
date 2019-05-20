@@ -150,6 +150,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  max_workers=float('inf'),
                  heartbeat_threshold=120,
                  heartbeat_period=30,
+                 prefetch=0,
                  poll_period=10,
                  container_image=None,
                  worker_mode="singularity_reuse",
@@ -179,6 +180,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
+        self.prefetch = prefetch
         self.poll_period = poll_period
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
@@ -190,6 +192,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-c {cores_per_worker} "
+                               "-p {prefetch} "
                                "--poll {poll_period} "
                                "--task_url={task_url} "
                                "--result_url={result_url} "
@@ -219,6 +222,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        poll_period=self.poll_period,
                                        logdir="{}/{}".format(self.run_dir, self.label),
                                        worker_mode=self.worker_mode,
+                                       prefetch=self.prefetch,
                                        container_image=self.container_image)
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
