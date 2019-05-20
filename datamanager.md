@@ -1,4 +1,4 @@
-# data manager from benc's perspective
+# data manager framework from benc's perspective
 
 Theme:
 
@@ -83,6 +83,9 @@ They do not all play nicely together.
   into workqueue) is desired but can't be done as a single step, it might
   be possible to do as several steps: for example, a globus transfer to
   the submit side, and a workqueue job-submission staging from there.
+
+- the DM2.0 google doc talks about various other staging mechanisms
+  (eg inside zmq, or using rsync)
 
 ## other concepts
 
