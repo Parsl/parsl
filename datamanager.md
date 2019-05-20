@@ -102,4 +102,30 @@ They do not all play nicely together.
   In other cases it might consist of a composite of multiple staging
   method steps.
 
+## slightly more concrete staging
+
+- a staging action takes a URI/name and turns it into some other URI/name
+  that has the same file content: for example, http stage-in takes an
+  http URI and gives us a local filesystem name that contains the same
+  content: it both downloaded the file, and gives some rewritten URI/name.
+
+- in that case, names that are not URIs - that is, just posix filenames,
+  have some form of scope to describe which filesystem scope they are
+  valid in - for example, submit side, executor shared, worker node local.
+
+- staging, then, is a sequence of staging actions which take an at-rest
+  URI and return a filesystem path scoped to the worker node.
+  The sequence of actions needed will vary depending both on the URI
+  (for example, staging in from globus does different things to staging
+  in from http - in the present implementation, as hard coded choices)
+  and on the configuration of the executor (does it have a shared file
+  system? does it have a globus endpoint?)
+
+
+## configuration
+
+I don't imagine the end user usually configuring explicit sequences of
+staging actions themselves - instead common use cases would be captured as
+pre-defined configurations, representing the various use cases in the
+DM2.0 document
 
