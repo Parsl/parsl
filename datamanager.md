@@ -121,11 +121,28 @@ They do not all play nicely together.
   and on the configuration of the executor (does it have a shared file
   system? does it have a globus endpoint?)
 
+- some staging configurations will have access to things like: a submit side
+  globus endpoint with a suitable submit side working directory.
+  executor-side shared workdir. (that isn't a concept that exists for
+  executors in general - for example, workqueue)
 
 ## configuration
 
 I don't imagine the end user usually configuring explicit sequences of
-staging actions themselves - instead common use cases would be captured as
-pre-defined configurations, representing the various use cases in the
-DM2.0 document
+staging actions themselves, unless they are doing something quite novel
+- instead common use cases would be captured as pre-defined configurations,
+representing the various use cases in the DM2.0 document. These choices
+should not exist as a splattering of `if` statements through the codebase
+but fit into the configuration system. I expect that some users *will* need
+to do their own more complicated configurations, if only because of the
+variety of different systems out there.
+
+The configurations would look something like this, but in the form of
+some python data/code:
+
+  for executor e1, URI scheme `http`,  stage in by:
+       i) run the http staging code as part of the task
+  for executor e1, URI scheme `globus`, stage in by:
+       i) run the globus staging code locally to a submit side local directory
+      ii) run site->executor staging to executor shared directory
 
