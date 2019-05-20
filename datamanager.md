@@ -136,16 +136,36 @@ staging actions themselves, unless they are doing something quite novel
 - instead common use cases would be captured as pre-defined configurations,
 representing the various use cases in the DM2.0 document. These choices
 should not exist as a splattering of `if` statements through the codebase
-but fit into the configuration system. I expect that some users *will* need
-to do their own more complicated configurations, if only because of the
-variety of different systems out there.
+but fit into the configuration system.
+
+I expect that some users *will* need to do their own more complicated
+configurations, if only because of the variety of different systems out there.
+Forcing a limited set of hardcoded staging patterns will exclude those
+users from parsl.
 
 The configurations would look something like this, but in the form of
 some python data/code:
 
   for executor e1, URI scheme `http`,  stage in by:
-       i) run the http staging code as part of the task
+       i) run the http staging code as part of the task, to the task-local
+          work directory
   for executor e1, URI scheme `globus`, stage in by:
        i) run the globus staging code locally to a submit side local directory
       ii) run site->executor staging to executor shared directory
+
+The present configuration for GlobusScheme is a rudimentary form of this.
+
+## code implementation notes
+
+- yadu has at least wanted to have the file object have some ability to
+  transfer itself arbitrarily on demand by the user. That does not fit in
+  with the staging model here where in some circustances the staging
+  must happen as part of a task (workqueue or worker-side staging) rather
+  than arbitrarily.
+
+- The DM2.0 google doc contains a lot of stuff with datafutures being
+  indexed by execution site. That also does not make sense with this staging
+  model.
+  It is unclear to me what the end user use cases for this indexing are, so
+  this document makes no attempt to address those explictly.
 
