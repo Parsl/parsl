@@ -1,12 +1,22 @@
 import logging
+from concurrent.futures import Future
+from typing import Any, Callable, List, Optional, TYPE_CHECKING
 
 from parsl.app.futures import DataFuture
 from parsl.data_provider.files import File
-from parsl.data_provider.ftp import _ftp_stage_in_app
-from parsl.data_provider.globus import _get_globus_scheme
-from parsl.data_provider.http import _http_stage_in_app
+from parsl.data_provider.file_noop import NoOpFileStaging
+from parsl.data_provider.ftp import FTPSeparateTaskStaging
+from parsl.data_provider.http import HTTPSeparateTaskStaging
+from parsl.data_provider.staging import Staging
+
+if TYPE_CHECKING:
+    from parsl.dataflow.dflow import DataFlowKernel
 
 logger = logging.getLogger(__name__)
+
+# these will be shared between all executors that do not explicitly
+# override, so should not contain executor-specific state
+defaultStaging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()]  # type: List[Staging]
 
 
 class DataManager(object):
@@ -14,7 +24,7 @@ class DataManager(object):
 
     """
 
-    def __init__(self, dfk):
+    def __init__(self, dfk: "DataFlowKernel") -> None:
         """Initialize the DataManager.
 
         Args:
@@ -27,7 +37,57 @@ class DataManager(object):
         self.dfk = dfk
         self.globus = None
 
-    def stage_in(self, input, executor):
+    def replace_task_stage_out(self, file: File, func: Callable, executor: str) -> Callable:
+        """This will give staging providers the chance to wrap (or replace entirely!) the task function."""
+        executor_obj = self.dfk.executors[executor]
+        if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
+            storage_access = executor_obj.storage_access  # type: List[Staging]
+        else:
+            storage_access = defaultStaging
+
+        for scheme in storage_access:
+            logger.debug("stage_out checking Staging provider {}".format(scheme))
+            if scheme.can_stage_out(file):
+                newfunc = scheme.replace_task_stage_out(self, executor, file, func)
+                if newfunc:
+                    return newfunc
+                else:
+                    return func
+
+        logger.debug("reached end of staging scheme list")
+        # if we reach here, we haven't found a suitable staging mechanism
+        raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
+
+    def replace_task(self, input: Any, func: Callable, executor: str) -> Callable:
+        """This will give staging providers the chance to wrap (or replace entirely!) the task function."""
+
+        if isinstance(input, DataFuture):
+            file = input.file_obj
+        elif isinstance(input, File):
+            file = input
+        else:
+            return func
+
+        executor_obj = self.dfk.executors[executor]
+        if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
+            storage_access = executor_obj.storage_access
+        else:
+            storage_access = defaultStaging
+
+        for scheme in storage_access:
+            logger.debug("stage_in checking Staging provider {}".format(scheme))
+            if scheme.can_stage_in(file):
+                newfunc = scheme.replace_task(self, executor, file, func)
+                if newfunc:
+                    return newfunc
+                else:
+                    return func
+
+        logger.debug("reached end of staging scheme list")
+        # if we reach here, we haven't found a suitable staging mechanism
+        raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
+
+    def stage_in(self, input: Any, executor: str) -> Any:
         """Transport the input from the input source to the executor, if it is file-like,
         returning a DataFuture that wraps the stage-in operation.
 
@@ -42,68 +102,59 @@ class DataManager(object):
             - executor (str) : an executor the file is going to be staged in to.
         """
 
-        if isinstance(input, DataFuture) and input.file_obj.is_remote():
+        if isinstance(input, DataFuture):
             file = input.file_obj
-            parent_fut = input
-        elif isinstance(input, File) and input.is_remote():
+            parent_fut = input  # type: Optional[Future]
+        elif isinstance(input, File):
             file = input
             parent_fut = None
         else:
             return input
 
-        if file.scheme == 'ftp':
-            working_dir = self.dfk.executors[executor].working_dir
-            stage_in_app = _ftp_stage_in_app(self, executor=executor)
-            app_fut = stage_in_app(working_dir, parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
-            return app_fut._outputs[0]
-        elif file.scheme == 'http' or file.scheme == 'https':
-            working_dir = self.dfk.executors[executor].working_dir
-            stage_in_app = _http_stage_in_app(self, executor=executor)
-            app_fut = stage_in_app(working_dir, parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
-            return app_fut._outputs[0]
-        elif file.scheme == 'globus':
-            # what should happen here is...
-            # we should acquire the GlobusScheme object that goes with
-            # this executor (rather than _get_globus_endpoint)
-            # and then ask the scheme to provide the stage_in_app without
-            # invocations to that app needing any further globus specific
-            # parameters.
-            # The longer term path is then that http/ftp also become a
-            # Scheme, and we allow each one a chance to inspect the
-            # file to see if it can handle it (rather than the data manager
-            # having to know about staging)
-            # At that point, we wouldn't be looking up the GlobusScheme
-            # object explicitly - instead we'd be in possession of it just
-            # like the other schemes... and each scheme would know all the
-            # parameterisation it needs to.
-            # so the three real cases of this if/elif block should
-            # look pretty much identical
-            globus_scheme = _get_globus_scheme(self.dfk, executor)
-            stage_in_app = globus_scheme._globus_stage_in_app(executor=executor, dfk=self.dfk)
-            app_fut = stage_in_app(parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
-            return app_fut._outputs[0]
+        executor_obj = self.dfk.executors[executor]
+        if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
+            storage_access = executor_obj.storage_access
         else:
-            raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
+            storage_access = defaultStaging
 
-    def stage_out(self, file, executor, app_fu):
+        for scheme in storage_access:
+            logger.debug("stage_in checking Staging provider {}".format(scheme))
+            if scheme.can_stage_in(file):
+                staging_fut = scheme.stage_in(self, executor, file, parent_fut=parent_fut)
+                if staging_fut:
+                    return staging_fut
+                else:
+                    return input
+
+        logger.debug("reached end of staging scheme list")
+        # if we reach here, we haven't found a suitable staging mechanism
+        raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
+
+    def stage_out(self, file: File, executor: str, app_fu: Future) -> Optional[Future]:
         """Transport the file from the local filesystem to the remote Globus endpoint.
 
-        This function returns a DataFuture.
+        This function returns either a Future which should complete when the stageout
+        is complete, or None, if no staging needs to be waited for.
 
         Args:
             - self
             - file (File) - file to stage out
             - executor (str) - Which executor the file is going to be staged out from.
+            - app_fu (Future) - a future representing the main body of the task that should
+                                complete before stageout begins.
         """
-
-        if file.scheme == 'http' or file.scheme == 'https':
-            raise Exception('HTTP/HTTPS file staging out is not supported')
-        elif file.scheme == 'ftp':
-            raise Exception('FTP file staging out is not supported')
-        elif file.scheme == 'globus':
-            globus_scheme = _get_globus_scheme(self.dfk, executor)
-            globus_scheme._update_stage_out_local_path(file, executor, self.dfk)
-            stage_out_app = globus_scheme._globus_stage_out_app(executor=executor, dfk=self.dfk)
-            return stage_out_app(app_fu, inputs=[file])
+        executor_obj = self.dfk.executors[executor]
+        if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
+            storage_access = executor_obj.storage_access
         else:
-            raise Exception('Staging out with unknown file scheme {} is not supported'.format(file.scheme))
+            storage_access = defaultStaging
+
+        for scheme in storage_access:
+            logger.debug("stage_out checking Staging provider {}".format(scheme))
+            if scheme.can_stage_out(file):
+                # globus_scheme._update_stage_out_local_path(file, executor, self.dfk)
+                return scheme.stage_out(self, executor, file, app_fu)
+
+        logger.debug("reached end of staging scheme list")
+        # if we reach here, we haven't found a suitable staging mechanism
+        raise ValueError("Executor {} cannot stage out file {}".format(executor, repr(file)))

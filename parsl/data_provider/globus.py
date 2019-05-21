@@ -9,13 +9,13 @@ from functools import partial
 from typing import Optional
 from parsl.app.app import python_app
 from parsl.utils import RepresentationMixin
+from parsl.data_provider.staging import Staging
 
 logger = logging.getLogger(__name__)
 
 # globus staging must be run explicitly in the same process/interpreter
 # as the DFK. it relies on persisting globus state between actions in that
 # process.
-
 
 """
 'Parsl Application' OAuth2 client registered with Globus Auth
@@ -182,7 +182,7 @@ class Globus(object):
             on_refresh=cls._update_tokens_file_on_refresh)
 
 
-class GlobusScheme(RepresentationMixin):
+class GlobusScheme(Staging, RepresentationMixin):
     """Specification for accessing data on a remote executor via Globus.
 
     Parameters
@@ -195,6 +195,29 @@ class GlobusScheme(RepresentationMixin):
     local_path : str, optional
         FIXME
     """
+
+    def can_stage_in(self, file):
+        logger.debug("Globus checking file {}".format(file.__repr__()))
+        logger.debug("file has scheme {}".format(file.scheme))
+        return file.scheme == 'globus'
+
+    def can_stage_out(self, file):
+        logger.debug("Globus checking file {}".format(file.__repr__()))
+        logger.debug("file has scheme {}".format(file.scheme))
+        return file.scheme == 'globus'
+
+    def stage_in(self, dm, executor, file, parent_fut):
+        globus_scheme = _get_globus_scheme(dm.dfk, executor)
+        stage_in_app = globus_scheme._globus_stage_in_app(executor=executor, dfk=dm.dfk)
+        app_fut = stage_in_app(outputs=[file], staging_inhibit_output=True, parent_fut=parent_fut)
+        return app_fut._outputs[0]
+
+    def stage_out(self, dm, executor, file, app_fu):
+        globus_scheme = _get_globus_scheme(dm.dfk, executor)
+        globus_scheme._update_stage_out_local_path(file, executor, dm.dfk)
+        stage_out_app = globus_scheme._globus_stage_out_app(executor=executor, dfk=dm.dfk)
+        return stage_out_app(app_fu, inputs=[file])
+
     @typeguard.typechecked
     def __init__(self, endpoint_uuid: str, endpoint_path: Optional[str] = None, local_path: Optional[str] = None):
         self.endpoint_uuid = endpoint_uuid
