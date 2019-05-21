@@ -2,7 +2,7 @@ from parsl.config import Config
 from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_hostname
-from parsl.data_provider.scheme import GlobusScheme
+from parsl.data_provider.globus import GlobusScheme
 
 
 config = Config(
