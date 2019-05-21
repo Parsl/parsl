@@ -47,15 +47,6 @@ class DataManager(ParslExecutor):
     to it, and DataFutures are returned.
     """
 
-    @classmethod
-    def get_data_manager(cls):
-        """Return the DataManager of the currently loaded DataFlowKernel.
-        """
-        from parsl.dataflow.dflow import DataFlowKernelLoader
-        dfk = DataFlowKernelLoader.dfk()
-
-        return dfk.executors['data_manager']
-
     def __init__(self, dfk, max_threads=10):
         """Initialize the DataManager.
 
