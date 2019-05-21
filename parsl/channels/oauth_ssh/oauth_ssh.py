@@ -1,6 +1,4 @@
-import getpass
 import logging
-import select
 import paramiko
 import socket
 
