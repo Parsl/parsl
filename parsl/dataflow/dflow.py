@@ -108,7 +108,7 @@ class DataFlowKernel(object):
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py']
+                parsl_file_names = ['dflow.py', 'typeguard.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
@@ -845,7 +845,7 @@ class DataFlowKernel(object):
                                   'tasks_completed_count': self.tasks_completed_count,
                                   "time_began": self.time_began,
                                   'time_completed': self.time_completed,
-                                  'workflow_duration': (self.time_completed - self.time_began).total_seconds(),
+                                  'workflow_duration': int((self.time_completed - self.time_began).total_seconds()),
                                   'run_id': self.run_id, 'rundir': self.run_dir})
 
             self.monitoring.close()
