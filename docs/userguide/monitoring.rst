@@ -62,7 +62,7 @@ Run the `parsl-visualize` utility in the directory with the
 
    $ parsl-visualize sqlite:///<absolute-path-to-db>
 
-For example, if `monitoring.db` is in `/tmp`, as `/tmp/monitoring.db`, run `parsl-visualize` as follows::
+For example, if `monitoring.db` is in `/tmp` (as `/tmp/monitoring.db`), run `parsl-visualize` as follows::
 
    $ parsl-visualize sqlite:////tmp/monitoring.db
 
