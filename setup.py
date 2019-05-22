@@ -26,7 +26,7 @@ extras_require = {
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
 }
-extras_require.update({'all': sum(extras_require.values(), [])})
+extras_require['all'] = sum(extras_require.values(), [])
 
 setup(
     name='parsl',
