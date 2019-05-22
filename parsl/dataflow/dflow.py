@@ -281,6 +281,11 @@ class DataFlowKernel(object):
             logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_returned'] = datetime.datetime.now()
 
+        if self.tasks[task_id]['app_fu'].stdout is not None:
+            logger.info("Standard output for task {} available at {}".format(task_id, self.tasks[task_id]['app_fu'].stdout))
+        if self.tasks[task_id]['app_fu'].stderr is not None:
+            logger.info("Standard error for task {} available at {}".format(task_id, self.tasks[task_id]['app_fu'].stderr))
+
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_id, 'lazy')
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
@@ -527,7 +532,7 @@ class DataFlowKernel(object):
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
-        """This function should be called **ONLY** when all the futures we track have been resolved.
+        """This function should be called only when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.
