@@ -229,7 +229,7 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
         return self._dfk_channel.send_pyobj((mtype, message))
 
-    def __del__(self):
+    def close(self):
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
         if self._dfk_channel:
@@ -243,9 +243,6 @@ class MonitoringHub(RepresentationMixin):
             self.logger.info("Terminating Hub")
             self.queue_proc.terminate()
             self.priority_msgs.put(("STOP", 0))
-
-    def close(self):
-        return self.__del__()
 
     @staticmethod
     def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur):
