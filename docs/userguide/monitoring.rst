@@ -2,15 +2,15 @@ Monitoring
 ==========
 
 Parsl aims to make the task of running parallel workflows easy by providing monitoring and diagnostic
-capabilities to help track the state of your workflow down to the individual applications being
-executed on remote machines. To enable Parsl's monitoring feature for your workflow you will need
+capabilities to help track the state of your workflow, down to the individual applications being
+executed on remote machines. To enable Parsl's monitoring feature for your workflow, you will need
 a few additional packages.
 
 Installation
 ------------
 
-Parsl's monitoring model relies on writing workflow progress to a sqlite database and separate tools
-that query this database to create web-based dashboard for the workflow.
+Parsl's monitoring model relies on writing workflow progress to a sqlite database and using separate tools
+that query this database to create avweb-based dashboard for the workflow.
 
 To enable workflow monitoring support install::
 
