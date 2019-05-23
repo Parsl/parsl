@@ -19,12 +19,17 @@ before_install:
     - python$PY -c "import numpy;print(numpy.__version__)"
     - if [[ "$MPI" == "mpich"   ]]; then mpichversion; fi
     - if [[ "$MPI" == "openmpi" ]]; then ompi_info;    fi
+    - |
+        git diff --name-only FETCH_HEAD...$TRAVIS_BRANCH | grep -qvE '(\.rst$)|(^(docs))/' || {
+          echo "Only docs were updated, stopping build process."
+          exit
+        }
+
 
 # command to install dependencies
 install:
     - pip install -r requirements.txt
-    - pip install flake8
-    - python setup.py install
+    - pip install .[extreme_scale]
 
 # Os tests
 os:
