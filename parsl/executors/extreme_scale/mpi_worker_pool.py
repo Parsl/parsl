@@ -99,6 +99,9 @@ class Manager(object):
                'os': platform.system(),
                'hname': platform.node(),
                'dir': os.getcwd(),
+               'prefetch_capacity': 0,
+               'worker_count': (self.comm.size - 1),
+               'max_capacity': (self.comm.size - 1) + 0,  # (+prefetch)
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
