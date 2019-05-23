@@ -126,8 +126,14 @@ class Manager(object):
 
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
+
+        mem_slots = max_workers
+        # Avoid a divide by 0 error.
+        if mem_per_worker > 0:
+            mem_slots = math.floor(available_mem_on_node / mem_per_worker)
+
         self.worker_count = min(max_workers,
-                                math.floor(available_mem_on_node / mem_per_worker),
+                                mem_slots,
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
