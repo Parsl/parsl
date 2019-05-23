@@ -24,9 +24,12 @@ However the following helper functions are provided for logging:
 
 """
 import logging
+import typeguard
+
+from typing import Optional
 
 from parsl.version import VERSION
-from parsl.app.app import App
+from parsl.app.app import App, bash_app, python_app
 from parsl.executors import ThreadPoolExecutor
 from parsl.executors import IPyParallelExecutor
 from parsl.executors import HighThroughputExecutor
@@ -40,8 +43,25 @@ __author__ = 'The Parsl Team'
 __version__ = VERSION
 
 __all__ = [
-    'App', 'DataFlowKernel', 'File', 'set_stream_logger', 'set_file_logger',
-    'ThreadPoolExecutor', 'HighThroughputExecutor', 'ExtremeScaleExecutor', 'IPyParallelExecutor',
+
+    # decorators
+    'App',
+    'bash_app',
+    'python_app',
+
+    # core
+    'DataFlowKernel',
+    'File',
+
+    # logging
+    'set_stream_logger',
+    'set_file_logger',
+
+    # executors
+    'ThreadPoolExecutor',
+    'HighThroughputExecutor',
+    'ExtremeScaleExecutor',
+    'IPyParallelExecutor',
 ]
 
 clear = DataFlowKernelLoader.clear
@@ -50,7 +70,8 @@ dfk = DataFlowKernelLoader.dfk
 wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
+@typeguard.typechecked
+def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
@@ -80,7 +101,8 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     futures_logger.addHandler(handler)
 
 
-def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
+@typeguard.typechecked
+def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
