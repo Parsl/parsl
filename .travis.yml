@@ -19,12 +19,6 @@ before_install:
     - python$PY -c "import numpy;print(numpy.__version__)"
     - if [[ "$MPI" == "mpich"   ]]; then mpichversion; fi
     - if [[ "$MPI" == "openmpi" ]]; then ompi_info;    fi
-    - |
-        git diff --name-only master...$TRAVIS_COMMIT | grep -qvE '(\.rst$)|(^(docs))/' || {
-          echo "Only docs were updated, stopping build process."
-          exit
-        }
-
 
 # command to install dependencies
 install:
