@@ -61,13 +61,13 @@ def remote_side_bash_executor(func, *args, **kwargs):
         elif isinstance(stdfspec, str):
             fname = stdfspec
             mode = 'a+'
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
         elif isinstance(stdfspec, tuple):
             if len(stdfspec) != 2:
                 raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
             fname, mode = stdfspec
         else:
             raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
-        os.makedirs(os.path.dirname(fname), exist_ok=True)
 
         try:
             fd = open(fname, mode)
