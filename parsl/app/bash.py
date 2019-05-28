@@ -67,6 +67,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
             fname, mode = stdfspec
         else:
             raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+
         try:
             fd = open(fname, mode)
         except Exception as e:
