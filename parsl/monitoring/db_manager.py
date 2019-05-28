@@ -117,7 +117,7 @@ class Database(object):
         __tablename__ = TASK
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
-        hostname = Column(Text, nullable=True)
+        hostname = Column('hostname', Text, nullable=True)
         task_depends = Column('task_depends', Text, nullable=True)
         task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
