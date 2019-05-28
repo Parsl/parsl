@@ -181,7 +181,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.blocks = {}  # type: Dict[str, str]
         self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
-        self.mem_per_worker = mem_per_worker if mem_per_worker else 0
+        self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
 

@@ -50,7 +50,7 @@ class Manager(object):
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
                  cores_per_worker=1,
-                 mem_per_worker=0,
+                 mem_per_worker=None,
                  max_workers=float('inf'),
                  prefetch_capacity=0,
                  uid=None,
@@ -75,9 +75,11 @@ class Manager(object):
              by setting cores_per_worker < 1.0. Default=1
 
         mem_per_worker : float
-             GB of memory assigned to each worker. This is used at the start of the node_manager to find
-             available memory on the node and launch only so many workers such that there's sufficient memory
-             available to them. Default=0, implying no memory assignment.
+             GB of memory required per worker. If this option is specified, the node manager
+             will check the available memory at startup and limit the number of workers such that
+             the there's sufficient memory for each worker. If set to None, memory on node is not
+             considered in the determination of workers to be launched on node by the manager.
+             Default: None
 
         max_workers : int
              caps the maximum number of workers that can be launched.
@@ -129,7 +131,7 @@ class Manager(object):
 
         mem_slots = max_workers
         # Avoid a divide by 0 error.
-        if mem_per_worker > 0:
+        if mem_per_worker and mem_per_worker > 0:
             mem_slots = math.floor(available_mem_on_node / mem_per_worker)
 
         self.worker_count = min(max_workers,
@@ -537,7 +539,7 @@ if __name__ == "__main__":
                           uid=args.uid,
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
-                          mem_per_worker=float(args.mem_per_worker),
+                          mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
                           max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
                           prefetch_capacity=int(args.prefetch_capacity),
                           heartbeat_threshold=int(args.hb_threshold),
