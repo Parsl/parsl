@@ -248,7 +248,7 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
                     titlefont=dict(size=16),
                     showlegend=True,
                     hovermode='closest',
-                    margin=dict(b=20, l=5, r=5, t=40),
+                    margin=dict(b=20, l=5, r=5, t=40),   # noqa: E741
                     xaxis=dict(showgrid=False, zeroline=False,
                                showticklabels=False),
                     yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
