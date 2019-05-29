@@ -1,17 +1,17 @@
 .. _configuration-section:
 
-Configuration
+Environment Configuration
 =============
 
 Parsl workflows are developed completely independently from their execution environment.
 There are very many different execution environments in which Parsl programs and their apps can run, and
-mamy of these enviroments have multiple options of how those programs and apps run, which makes
+mamy of these enviroments have multiple options of how those Parsl programs and apps run, which makes
 configuration somewhat complex, and also makes determining how to set up Parsl's configuration
 for a particular set of choices fairly complex, though we think the actual configuration
 itself is reasonable simple.
 
 Parsl offers an extensible configuration model through which the execution environment and
-communication with that environment is configured. Parsl is configured
+communication within that environment is configured. Parsl is configured
 using :class:`~parsl.config.Config` object. For more information, see
 the :class:`~parsl.config.Config` class documentation. The following shows how the
 configuration can be specified.
@@ -34,7 +34,7 @@ configuration can be specified.
    Please note that all configuration examples below require customization for your account, 
    allocation, Python environment, etc. 
 
-How-to Configure
+How to Configure
 ----------------
 
 The configuration provided to Parsl tells Parsl what resources to use to run the Parsl
