@@ -21,6 +21,7 @@ extras_require = {
     ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
+    'oauth_ssh' : ['oauth-ssh>=0.9'],
     'extreme_scale' : ['mpi4py'],
     'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
@@ -45,6 +46,7 @@ setup(
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
     ],
+
     extras_require=extras_require,
     classifiers=[
         # Maturity
@@ -55,7 +57,7 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         # Python versions supported
         'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.6',        
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':
