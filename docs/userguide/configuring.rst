@@ -110,8 +110,8 @@ In addition, examples for some specific configurations follow.
 .. [*] We assume that each node has 32 workers. If there are fewer workers launched
        per node, a higher number of nodes could be supported.
 
-.. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale that
-       we've tested the `ExtremeScaleExecutor` at.
+.. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale at which
+       we've tested the `ExtremeScaleExecutor`.
 
 .. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
              as the recommended replacement.
