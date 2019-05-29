@@ -108,7 +108,7 @@ class DataFlowKernel(object):
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py']
+                parsl_file_names = ['dflow.py', 'typeguard.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
@@ -631,6 +631,20 @@ class DataFlowKernel(object):
 
         # Transform remote input files to data futures
         args, kwargs = self._add_input_deps(executor, args, kwargs)
+        label = kwargs.get('label')
+        for kw in ['stdout', 'stderr']:
+            if kw in kwargs:
+                if kwargs[kw] == parsl.AUTO_LOGNAME:
+                    kwargs[kw] = os.path.join(
+                            self.run_dir,
+                            'task_logs',
+                            str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
+                            'task_{}_{}{}.{}'.format(
+                                str(task_id).zfill(4),
+                                func.__name__,
+                                '' if label is None else '_{}'.format(label),
+                                kw)
+                    )
 
         task_def = {'depends': None,
                     'executor': executor,
