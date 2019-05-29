@@ -182,6 +182,7 @@ class MonitoringHub(RepresentationMixin):
         self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")
+        self.monitoring_hub_active = True
         self._context = zmq.Context()
         self._dfk_channel = self._context.socket(zmq.DEALER)
         self._dfk_channel.set_hwm(0)
@@ -229,10 +230,11 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
         return self._dfk_channel.send_pyobj((mtype, message))
 
-    def __del__(self):
+    def close(self):
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
-        if self._dfk_channel:
+        if self._dfk_channel and self.monitoring_hub_active:
+            self.monitoring_hub_active = False
             self._dfk_channel.close()
             self.logger.info("Waiting Hub to receive all messages and terminate")
             try:
@@ -244,8 +246,8 @@ class MonitoringHub(RepresentationMixin):
             self.queue_proc.terminate()
             self.priority_msgs.put(("STOP", 0))
 
-    def close(self):
-        return self.__del__()
+    def __del__(self):
+        self.close()
 
     @staticmethod
     def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur):
