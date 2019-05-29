@@ -473,7 +473,6 @@ class Interchange(object):
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                 logger.debug("[MAIN] leaving results_incoming section")
 
-            # logger.debug("[MAIN] entering bad_managers section")
             bad_managers = [manager for manager in self._ready_manager_queue if
                             time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
             for manager in bad_managers:
@@ -489,8 +488,6 @@ class Interchange(object):
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
                 self._ready_manager_queue.pop(manager, 'None')
-            # logger.debug("[MAIN] leaving bad_managers section")
-            # logger.debug("[MAIN] ending one main loop iteration")
 
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(count, delta))
