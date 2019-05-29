@@ -391,6 +391,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
     import psutil
+    import platform
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
@@ -411,6 +412,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             d["run_id"] = run_id
             d["task_id"] = task_id
             d['resource_monitoring_interval'] = sleep_dur
+            d['hostname'] = platform.node()
             d['first_msg'] = first_msg
             d['timestamp'] = datetime.datetime.now()
             children = pm.children(recursive=True)
