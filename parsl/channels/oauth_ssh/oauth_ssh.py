@@ -9,7 +9,7 @@ try:
     from oauth_ssh.ssh_service import SSHService
     from oauth_ssh.oauth_ssh_token import find_access_token
     _oauth_ssh_enabled = True
-except (ImportError, NameError, FileNotFoundError):
+except (ImportError, NameError):
     _oauth_ssh_enabled = False
 
 
@@ -60,7 +60,7 @@ class OAuthSSHChannel(SSHChannel):
             self.transport = self.service.login(access_token, username)
 
         except Exception:
-            logger.exception("Caught an in OAuth authentication step with {}".format(hostname))
+            logger.exception("Caught an exception in the OAuth authentication step with {}".format(hostname))
             raise
 
         self.sftp_client = paramiko.SFTPClient.from_transport(self.transport)
