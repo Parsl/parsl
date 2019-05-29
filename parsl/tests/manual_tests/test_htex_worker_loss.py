@@ -64,6 +64,10 @@ def platform(sleep=10, stdout=None):
 
 
 def test_simple(n=2, dur=10):
+    """ Tests whether the right exception is returned when a manager is lost.
+    Check whether the error string reports manager loss on node X.
+
+    """
     start = time.time()
 
     # Prime a worker
@@ -84,6 +88,11 @@ def test_simple(n=2, dur=10):
 
 
 def test_manager_fail(n=2, dur=10):
+    """ Test manager failure due to intermittent n/w loss.
+    Run parsl on laptop, start the worker on a remote node.
+    Once connected and task is executed, kill the network
+    confirm that the interchange does not error out.
+    """
     start = time.time()
 
     # Prime a worker
