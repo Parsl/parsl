@@ -108,7 +108,7 @@ class DataFlowKernel(object):
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py']
+                parsl_file_names = ['dflow.py', 'typeguard.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
