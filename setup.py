@@ -6,6 +6,29 @@ with open('parsl/version.py') as f:
 with open('requirements.txt') as f:
     install_requires = f.readlines()
 
+extras_require = {
+    'monitoring' : [
+        'psutil',
+        'sqlalchemy',
+        'sqlalchemy_utils',
+        'pydot',
+        'networkx',
+        'Flask',
+        'flask_sqlalchemy',
+        'pandas',
+        'plotly',
+        'python-daemon'
+    ],
+    'aws' : ['boto3'],
+    'kubernetes' : ['kubernetes'],
+    'oauth_ssh' : ['oauth-ssh>=0.9'],
+    'extreme_scale' : ['mpi4py'],
+    'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
+    'google_cloud' : ['google-auth', 'google-api-python-client'],
+    'gssapi' : ['python-gssapi'],
+}
+extras_require['all'] = sum(extras_require.values(), [])
+
 setup(
     name='parsl',
     version=VERSION,
@@ -23,29 +46,9 @@ setup(
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
     ],
-    extras_require = {
-        'monitoring' : ['psutil', 'sqlalchemy', 'sqlalchemy_utils'],
-        'aws' : ['boto3'],
-        'kubernetes' : ['kubernetes'],
-        'oauth_ssh' : ['oauth-ssh>=0.9'],
-        # Jetstream is deprecated since the interface has not been maintained.
-        # 'jetstream' : ['python-novaclient'],
-        'extreme_scale' : ['mpi4py'],
-        'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
-        'google_cloud' : ['google-auth', 'google-api-python-client'],
-        'gssapi' : ['python-gssapi'],
-        'all' : ['psutil', 'sqlalchemy', 'sqlalchemy_utils',
-                 'dash', 'dash-html-components', 'dash-core-components', 'pandas',
-                 'boto3',
-                 'kubernetes',
-                 'oauth-ssh',
-                 'mpi4py',
-                 'nbsphinx', 'sphinx_rtd_theme',
-                 'google-auth', 'google-api-python-client',
-                 'python-gssapi']
 
-        },
-    classifiers = [
+    extras_require=extras_require,
+    classifiers=[
         # Maturity
         'Development Status :: 3 - Alpha',
         # Intended audience
@@ -54,11 +57,12 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         # Python versions supported
         'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.6',        
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':
       [
-       'parsl-globus-auth=parsl.data_provider.globus:cli_run'
+       'parsl-globus-auth=parsl.data_provider.globus:cli_run',
+       'parsl-visualize=parsl.monitoring.visualization.app:cli_run',
       ]}
 )
