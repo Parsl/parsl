@@ -13,3 +13,4 @@ sqlalchemy
 sqlalchemy_utils
 mypy
 sqlalchemy-stubs
+psutil
