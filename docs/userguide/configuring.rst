@@ -3,7 +3,18 @@
 Configuration
 =============
 
-Parsl workflows are developed completely independently from their execution environment. Parsl offers an extensible configuration model through which the execution environment and communication with that environment is configured. Parsl is configured using :class:`~parsl.config.Config` object. For more information, see the :class:`~parsl.config.Config` class documentation. The following shows how the configuration can be loaded.
+Parsl workflows are developed completely independently from their execution environment.
+There are very many different execution environments in which Parsl programs and their apps can run, and
+mamy of these enviroments have multiple options of how those programs and apps run, which makes
+configuration somewhat complex, and also makes determining how to set up Parsl's configuration
+for a particular set of choices fairly complex, though we think the actual configuration
+itself is reasonable simple.
+
+Parsl offers an extensible configuration model through which the execution environment and
+communication with that environment is configured. Parsl is configured
+using :class:`~parsl.config.Config` object. For more information, see
+the :class:`~parsl.config.Config` class documentation. The following shows how the
+configuration can be specified.
 
    .. code-block:: python
 
@@ -26,14 +37,20 @@ Parsl workflows are developed completely independently from their execution envi
 How-to Configure
 ----------------
 
-The configuration provided to Parsl dictates the shape and limits of various resources to be provisioned
-for the workflow. Therefore it is important to carefully evaluate certain aspects of the workflow and
-the planned compute resources to determine an ideal configuration match.
+The configuration provided to Parsl tells Parsl what resources to use to run the Parsl
+program and apps, and how to use them.
+Therefore it is important to carefully evaluate certain aspects of the Parsl program and apps,
+and the planned compute resources, to determine an ideal configuration match. These aspects are:
+1) where the Parsl apps will execute;
+2) how many nodes will be used to execute the apps, and how long the apps will run;
+3) should the scheduler allocate multiple nodes at one time; and
+4) where will the main parsl program run and how will it communicate with the apps.
 
-Here are a series of question to help formulate a suitable configuration:
+Stepping through the following question should help you formulate a suitable configuration.
+In addition, examples for some specific configurations follow.
 
 
-1. Where would you like the tasks that comprise the workflow to execute?
+1. Where would you like the apps in the Parsl program to run?
 
 +---------------------+----------------------------+------------------------+
 | Target              | Executor                   | Provider               |
@@ -71,7 +88,7 @@ Here are a series of question to help formulate a suitable configuration:
 |                     | * `HighThroughputExecutor` |                        |
 +---------------------+----------------------------+------------------------+
 
-2. How many nodes do you have to execute them ? What task durations give good performance on different executors?
+2. How many nodes will you use to run them? What task durations give good performance on different executors?
 
 
 +--------------------------+----------------------+------------------------------------+
@@ -100,8 +117,8 @@ Here are a series of question to help formulate a suitable configuration:
              as the recommended replacement.
 
 
-3. If you are running on a cluster or supercomputer, will you request multiple nodes per block ?
-   Note that in this case a block is equivalent to a batch job.
+3. If you are running on a cluster or supercomputer, will you request multiple nodes per batch (scheduler) job?
+(Here we use the term block to be equivalent to a batch job.)
 
 +----------------------------------------------------------------------------+
 | ``nodes_per_block = 1``                                                    |
@@ -133,21 +150,22 @@ Here are a series of question to help formulate a suitable configuration:
           are on a **native Slurm** system like :ref:`configuring_nersc_cori`
 
 
-4. Where will you run the main parsl process vs the tasks?
+4. Where will you run the main Parsl program, given that you already have determined where the apps will run?
+(This is needed to determine how to communicate between the Parsl program and the apps.)
 
-+---------------------+--------------------------+------------------------------------+
-| Workflow location   | Execution target         | Suitable channel                   |
-+=====================+==========================+====================================+
-| Laptop/Workstation  | Laptop/Workstation       | `LocalChannel`                     |
-+---------------------+--------------------------+------------------------------------+
-| Laptop/Workstation  | Cloud Resources          | None                               |
-+---------------------+--------------------------+------------------------------------+
-| Laptop/Workstation  | Clusters with no 2FA     | `SSHChannel`                       |
-+---------------------+--------------------------+------------------------------------+
-| Laptop/Workstation  | Clusters with 2FA        | `SSHInteractiveLoginChannel`       |
-+---------------------+--------------------------+------------------------------------+
-| Login node          | Cluster/Supercomputer    | `LocalChannel`                     |
-+---------------------+--------------------------+------------------------------------+
++------------------------+--------------------------+------------------------------------+
+| Parsl program location | App execution target     | Suitable channel                   |
++========================+==========================+====================================+
+| Laptop/Workstation     | Laptop/Workstation       | `LocalChannel`                     |
++------------------------+--------------------------+------------------------------------+
+| Laptop/Workstation     | Cloud Resources          | None                               |
++------------------------+--------------------------+------------------------------------+
+| Laptop/Workstation     | Clusters with no 2FA     | `SSHChannel`                       |
++------------------------+--------------------------+------------------------------------+
+| Laptop/Workstation     | Clusters with 2FA        | `SSHInteractiveLoginChannel`       |
++------------------------+--------------------------+------------------------------------+
+| Login node             | Cluster/Supercomputer    | `LocalChannel`                     |
++------------------------+--------------------------+------------------------------------+
 
 
 Comet (SDSC)
