@@ -353,10 +353,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             try:
                                 s, _ = deserialize_object(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
-                                try:
-                                    s.reraise()
-                                except Exception as e:
-                                    task_fut.set_exception(e)
+                                if isinstance(s, RemoteExceptionWapper):
+                                    try:
+                                        s.reraise()
+                                    except Exception as e:
+                                        task_fut.set_exception(e)
+                                elif isinstance(s, Exception):
+                                    task_fut.set_exception(s)
+                                else:
+                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
                             except Exception as e:
                                 # TODO could be a proper wrapped exception?
                                 task_fut.set_exception(
