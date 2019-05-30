@@ -11,7 +11,7 @@ def resource_distribution_plot(df_resources, df_task, type='psutil_process_time_
     max_range = max(df_resources[type].astype('float'))
     time_step = (max_range - min_range) / columns
 
-    if min_range == max_range: 
+    if min_range == max_range:
         x_axis = [min_range]
     else:
         x_axis = []
@@ -22,6 +22,7 @@ def resource_distribution_plot(df_resources, df_task, type='psutil_process_time_
     for i in range(len(df_task)):
         row = df_task.iloc[i]
         apps_dict[row['task_id']] = []
+
     def y_axis_setup():
         items = [0] * len(x_axis)
 
@@ -39,7 +40,7 @@ def resource_distribution_plot(df_resources, df_task, type='psutil_process_time_
                 if a and b:
                     items[i] += 1
             if task >= x_axis[-1]:
-               items[-1] += 1
+                items[-1] += 1
         return items
 
     if "memory" not in type:
@@ -68,8 +69,8 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
     tasks['relative_time'] = tasks['epoch_time'] - start
     if end != start:
         bins = pd.cut(tasks['relative_time'],
-               range(0, end - start + 1, step),
-               include_lowest=True)
+                      range(0, end - start + 1, step),
+                      include_lowest=True)
         df = tasks.groupby(bins, as_index=False)[type].mean()
         df['time'] = step * df.index
         fig = go.Figure(
