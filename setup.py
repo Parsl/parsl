@@ -8,7 +8,6 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'psutil',
         'sqlalchemy',
         'sqlalchemy_utils',
         'pydot',

@@ -129,6 +129,10 @@ def workflow_resources(workflow_id):
 
     df_resources = pd.read_sql_query(
         "SELECT * FROM resource WHERE run_id='%s'" % (workflow_id), db.engine)
+    if df_resources.empty:
+        return render_template('error.html',
+                               message="Workflow %s does not have any resource usage records." % workflow_id)
+
     df_task = pd.read_sql_query(
         "SELECT * FROM task WHERE run_id='%s'" % (workflow_id), db.engine)
 
