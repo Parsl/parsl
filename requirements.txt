@@ -8,3 +8,12 @@ ipykernel
 requests
 paramiko
 psutil
+sqlalchemy
+sqlalchemy_utils
+pydot
+networkx
+Flask
+flask_sqlalchemy
+pandas
+plotly
+python-daemon
