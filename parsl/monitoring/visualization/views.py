@@ -13,15 +13,14 @@ import datetime
 
 
 def format_time(value):
-    if value is not None:
-        if isinstance(value, float):
-            return str(datetime.timedelta(seconds=round(value)))
-        elif isinstance(value, datetime.datetime):
-            return value.replace(microsecond=0)
-        else:
-            return "Incorrect time format found (neither float nor datetime.datetime object)"
-    else:
+    if value is None:
         return value
+    elif isinstance(value, float):
+        return str(datetime.timedelta(seconds=round(value)))
+    elif isinstance(value, datetime.datetime):
+        return value.replace(microsecond=0)
+    else:
+        return "Incorrect time format found (neither float nor datetime.datetime object)"
 
 
 app.jinja_env.filters['timeformat'] = format_time
