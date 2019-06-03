@@ -12,9 +12,6 @@ Installation
 Parsl's monitoring model relies on writing workflow progress to a sqlite database and using separate tools
 that query this database to create a web-based dashboard for the workflow.
 
-To enable workflow monitoring support install::
-
-    $ pip install parsl
 
 Monitoring configuration
 ------------------------
