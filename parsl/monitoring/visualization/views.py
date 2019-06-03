@@ -9,6 +9,21 @@ from parsl.monitoring.visualization.plots.default.workflow_resource_plots import
 
 dummy = True
 
+import datetime
+
+
+def format_time(value):
+    if value is not None:
+        if isinstance(value, float):
+            return str(datetime.timedelta(seconds=round(value)))
+        else:
+            return value.replace(microsecond=0)
+    else:
+        return value
+
+
+app.jinja_env.filters['timeformat'] = format_time
+
 
 @app.route('/')
 def index():
