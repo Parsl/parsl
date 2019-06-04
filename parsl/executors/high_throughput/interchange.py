@@ -16,6 +16,8 @@ import json
 from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
+from parsl.app.errors import RemoteExceptionWrapper
+
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
@@ -30,17 +32,24 @@ class ShutdownRequest(Exception):
     def __repr__(self):
         return "Shutdown request received at {}".format(self.tstamp)
 
+    def __str__(self):
+        return self.__repr__()
+
 
 class ManagerLost(Exception):
     ''' Task lost due to worker loss. Worker is considered lost when multiple heartbeats
     have been missed.
     '''
-    def __init__(self, worker_id):
+    def __init__(self, worker_id, hostname):
         self.worker_id = worker_id
         self.tstamp = time.time()
+        self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of worker {}".format(self.worker_id)
+        return "Task failure due to loss of Manager {} on host {}".format(self.worker_id, self.hostname)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class BadRegistration(Exception):
@@ -52,8 +61,12 @@ class BadRegistration(Exception):
         self.handled = "critical" if critical else "suppressed"
 
     def __repr__(self):
-        return "Manager:{} caused a {} failure".format(self.worker_id,
-                                                       self.handled)
+        return "Manager {} attempted to register with a bad registration message. Caused a {} failure".format(
+            self.worker_id,
+            self.handled)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class Interchange(object):
@@ -255,12 +268,19 @@ class Interchange(object):
                         outstanding += len(self._ready_manager_queue[manager]['tasks'])
                     reply = outstanding
 
+                elif command_req == "WORKERS":
+                    num_workers = 0
+                    for manager in self._ready_manager_queue:
+                        num_workers += self._ready_manager_queue[manager]['worker_count']
+                    reply = num_workers
                 elif command_req == "MANAGERS":
                     reply = []
                     for manager in self._ready_manager_queue:
-                        resp = (manager.decode('utf-8'),
-                                len(self._ready_manager_queue[manager]['tasks']),
-                                self._ready_manager_queue[manager]['active'])
+                        resp = {'manager': manager.decode('utf-8'),
+                                'block_id': self._ready_manager_queue[manager]['block_id'],
+                                'worker_count': self._ready_manager_queue[manager]['worker_count'],
+                                'tasks': len(self._ready_manager_queue[manager]['tasks']),
+                                'active': self._ready_manager_queue[manager]['active']}
                         reply.append(resp)
 
                 elif command_req.startswith("HOLD_WORKER"):
@@ -347,6 +367,9 @@ class Interchange(object):
                     # By default we set up to ignore bad nodes/registration messages.
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           'free_capacity': 0,
+                                                          'block_id': None,
+                                                          'max_capacity': 0,
+                                                          'worker_count': 0,
                                                           'active': True,
                                                           'tasks': []}
                     if reg_flag is True:
@@ -355,21 +378,24 @@ class Interchange(object):
                         self._ready_manager_queue[manager].update(msg)
                         logger.info("[MAIN] Registration info for manager {}: {}".format(manager, msg))
 
-                        if (msg['python_v'] != self.current_platform['python_v'] or
+                        if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
                             logger.warn("[MAIN] Manager {} has incompatible version info with the interchange".format(manager))
 
                             if self.suppress_failure is False:
                                 logger.debug("Setting kill event")
                                 self._kill_event.set()
-                                e = ManagerLost(manager)
+                                e = ManagerLost(manager, self._ready_manager_queue[manager]['hname'])
                                 result_package = {'task_id': -1, 'exception': serialize_object(e)}
                                 pkl_package = pickle.dumps(result_package)
                                 self.results_outgoing.send(pkl_package)
                                 logger.warning("[MAIN] Sent failure reports, unregistering manager")
                             else:
                                 logger.debug("[MAIN] Suppressing shutdown due to version incompatibility")
-
+                        else:
+                            logger.info("[MAIN] Manager {} has compatible Parsl version {}".format(manager, msg['parsl_v']))
+                            logger.info("[MAIN] Manager {} has compatible Python version {}".format(manager,
+                                                                                                    msg['python_v'].rsplit(".", 1)[0]))
                     else:
                         # Registration has failed.
                         if self.suppress_failure is False:
@@ -384,12 +410,12 @@ class Interchange(object):
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
-                    logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                     self._ready_manager_queue[manager]['last'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sends heartbeat".format(manager))
+                        logger.debug("[MAIN] Manager {} sent heartbeat".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
+                        logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
                         interesting_managers.add(manager)
                 logger.debug("[MAIN] leaving task_outgoing section")
@@ -402,25 +428,28 @@ class Interchange(object):
             if interesting_managers and not self.pending_task_queue.empty():
                 shuffled_managers = list(interesting_managers)
                 random.shuffle(shuffled_managers)
+
                 while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
                     manager = shuffled_managers.pop()
-                    if (self._ready_manager_queue[manager]['free_capacity'] and
-                        self._ready_manager_queue[manager]['active']):
-                        tasks = self.get_tasks(self._ready_manager_queue[manager]['free_capacity'])
+                    tasks_inflight = len(self._ready_manager_queue[manager]['tasks'])
+                    real_capacity = min(self._ready_manager_queue[manager]['free_capacity'],
+                                        self._ready_manager_queue[manager]['max_capacity'] - tasks_inflight)
+
+                    if (real_capacity and self._ready_manager_queue[manager]['active']):
+                        tasks = self.get_tasks(real_capacity)
                         if tasks:
                             self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                             task_count = len(tasks)
                             count += task_count
                             tids = [t['task_id'] for t in tasks]
-                            logger.debug("[MAIN] Sent tasks: {} to {}".format(tids, manager))
                             self._ready_manager_queue[manager]['free_capacity'] -= task_count
                             self._ready_manager_queue[manager]['tasks'].extend(tids)
-                            logger.info("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
+                            logger.debug("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
                             if self._ready_manager_queue[manager]['free_capacity'] > 0:
-                                logger.info("[MAIN] Manager {} still has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
+                                logger.debug("[MAIN] Manager {} has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
                                 # ... so keep it in the interesting_managers list
                             else:
-                                logger.info("[MAIN] Manager {} is now saturated".format(manager))
+                                logger.debug("[MAIN] Manager {} is now saturated".format(manager))
                                 interesting_managers.remove(manager)
                     else:
                         interesting_managers.remove(manager)
@@ -444,21 +473,21 @@ class Interchange(object):
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                 logger.debug("[MAIN] leaving results_incoming section")
 
-            logger.debug("[MAIN] entering bad_managers section")
             bad_managers = [manager for manager in self._ready_manager_queue if
                             time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
             for manager in bad_managers:
                 logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last'], time.time()))
                 logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
-                e = ManagerLost(manager)
+
                 for tid in self._ready_manager_queue[manager]['tasks']:
-                    result_package = {'task_id': tid, 'exception': serialize_object(e)}
-                    pkl_package = pickle.dumps(result_package)
-                    self.results_outgoing.send(pkl_package)
-                    logger.warning("[MAIN] Sent failure reports, unregistering manager")
+                    try:
+                        raise ManagerLost(manager, self._ready_manager_queue[manager]['hname'])
+                    except Exception:
+                        result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                        pkl_package = pickle.dumps(result_package)
+                        self.results_outgoing.send(pkl_package)
+                        logger.warning("[MAIN] Sent failure reports, unregistering manager")
                 self._ready_manager_queue.pop(manager, 'None')
-            logger.debug("[MAIN] leaving bad_managers section")
-            logger.debug("[MAIN] ending one main loop iteration")
 
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(count, delta))

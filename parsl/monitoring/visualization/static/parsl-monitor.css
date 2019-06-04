@@ -1,0 +1,21 @@
+.task{
+    border: 2px solid;
+    font-size: 10px;
+    padding: 5px;
+    margin-right: 3px;
+}
+
+.task-complete{
+    border-radius: 50%!important;
+    border-color: #006600;
+}
+
+.task-running{
+    border-radius: 50%!important;
+    border: 3px dashed;
+    border-color:  #66ff66;
+}
+
+.task-failed{
+    border-color: red;
+}

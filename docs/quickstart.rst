@@ -41,7 +41,7 @@ To update a previously installed parsl to a newer version, use: ``python3 -m pip
 Installation using Conda
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. Install Conda and setup python3.6 following the instructions `here <https://conda.io/docs/user-guide/install/macos.html>`_::
+1. Install Conda and set up python3.6 following the instructions `here <https://conda.io/docs/user-guide/install/macos.html>`_::
 
      $ conda create --name parsl_py36 python=3.6
      $ source activate parsl_py36
@@ -49,6 +49,11 @@ Installation using Conda
 2. Install Parsl::
 
      $ python3 -m pip install parsl
+     
+     or
+     
+     $ conda config --add channels conda-forge
+     $ conda install parsl
 
 To update a previously installed parsl to a newer version, use: ``python3 -m pip install -U parsl``
 

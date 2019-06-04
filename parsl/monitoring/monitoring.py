@@ -12,10 +12,12 @@ from parsl.utils import RepresentationMixin
 
 from parsl.monitoring.message_type import MessageType
 
+from typing import Optional
+
 try:
     from parsl.monitoring.db_manager import dbm_starter
 except Exception as e:
-    _db_manager_excepts = e
+    _db_manager_excepts = e  # type: Optional[Exception]
 else:
     _db_manager_excepts = None
 
@@ -180,6 +182,7 @@ class MonitoringHub(RepresentationMixin):
         self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")
+        self.monitoring_hub_active = True
         self._context = zmq.Context()
         self._dfk_channel = self._context.socket(zmq.DEALER)
         self._dfk_channel.set_hwm(0)
@@ -227,10 +230,11 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
         return self._dfk_channel.send_pyobj((mtype, message))
 
-    def __del__(self):
+    def close(self):
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
-        if self._dfk_channel:
+        if self._dfk_channel and self.monitoring_hub_active:
+            self.monitoring_hub_active = False
             self._dfk_channel.close()
             self.logger.info("Waiting Hub to receive all messages and terminate")
             try:
@@ -242,8 +246,8 @@ class MonitoringHub(RepresentationMixin):
             self.queue_proc.terminate()
             self.priority_msgs.put(("STOP", 0))
 
-    def close(self):
-        return self.__del__()
+    def __del__(self):
+        self.close()
 
     @staticmethod
     def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur):
@@ -389,6 +393,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
     import psutil
+    import platform
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
@@ -409,6 +414,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             d["run_id"] = run_id
             d["task_id"] = task_id
             d['resource_monitoring_interval'] = sleep_dur
+            d['hostname'] = platform.node()
             d['first_msg'] = first_msg
             d['timestamp'] = datetime.datetime.now()
             children = pm.children(recursive=True)
