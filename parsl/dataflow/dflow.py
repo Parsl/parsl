@@ -219,8 +219,6 @@ class DataFlowKernel(object):
     def config(self):
         """Returns the fully initialized config that the DFK is actively using.
 
-        DO *NOT* update.
-
         Returns:
              - config (dict)
         """
