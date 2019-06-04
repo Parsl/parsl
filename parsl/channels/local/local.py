@@ -146,9 +146,6 @@ class LocalChannel(Channel, RepresentationMixin):
         else:
             os.chmod(local_dest, 0o777)
 
-        else:
-            os.chmod(local_dest, 0o777)
-
         return local_dest
 
     def close(self):
