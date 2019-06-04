@@ -1,8 +1,13 @@
 import logging
+import typeguard
+
+from typing import List, Optional
 
 from parsl.utils import RepresentationMixin
+from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
+from parsl.monitoring import MonitoringHub
 
 logger = logging.getLogger(__name__)
 
@@ -43,22 +48,24 @@ class Config(RepresentationMixin):
         Strategy to use for scaling resources according to workflow needs. Can be 'simple' or `None`. If `None`, dynamic
         scaling will be disabled. Default is 'simple'.
     usage_tracking : bool, optional
-        Set this field to True to Opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
+        Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
     """
+
+    @typeguard.typechecked
     def __init__(self,
-                 executors=None,
-                 app_cache=True,
-                 checkpoint_files=None,
-                 checkpoint_mode=None,
-                 checkpoint_period=None,
-                 data_management_max_threads=10,
-                 lazy_errors=True,
-                 retries=0,
-                 run_dir='runinfo',
-                 strategy='simple',
-                 monitoring=None,
-                 usage_tracking=False):
+                 executors: Optional[List[ParslExecutor]] = None,
+                 app_cache: bool = True,
+                 checkpoint_files: Optional[List[str]] = None,
+                 checkpoint_mode: Optional[str] = None,
+                 checkpoint_period: Optional[str] = None,
+                 data_management_max_threads: int = 10,
+                 lazy_errors: bool = True,
+                 retries: int = 0,
+                 run_dir: str = 'runinfo',
+                 strategy: Optional[str] = 'simple',
+                 monitoring: Optional[MonitoringHub] = None,
+                 usage_tracking: bool = False):
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors

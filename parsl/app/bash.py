@@ -1,6 +1,7 @@
 import logging
-
+from functools import update_wrapper
 from inspect import signature, Parameter
+
 from parsl.app.errors import wrap_error
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
@@ -66,7 +67,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
             fname, mode = stdfspec
         else:
             raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+
         try:
+            if os.path.dirname(fname):
+                os.makedirs(os.path.dirname(fname), exist_ok=True)
             fd = open(fname, mode)
         except Exception as e:
             raise pe.BadStdStreamFile(fname, e)
@@ -75,6 +79,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
     std_out = open_std_fd('stdout')
     std_err = open_std_fd('stderr')
     timeout = kwargs.get('walltime')
+
+    if std_err is not None:
+        print('--> executable follows <--\n{}\n--> end executable <--'.format(executable), file=std_err)
 
     returncode = None
     try:
@@ -150,13 +157,14 @@ class BashApp(AppBase):
         else:
             dfk = self.data_flow_kernel
 
-        app_fut = dfk.submit(wrap_error(remote_side_bash_executor), self.func, *args,
+        app_fut = dfk.submit(wrap_error(update_wrapper(remote_side_bash_executor, self.func)),
+                             self.func, *args,
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
                              **self.kwargs)
 
-        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
+        out_futs = [DataFuture(app_fut, o, tid=app_fut.tid)
                     for o in kwargs.get('outputs', [])]
         app_fut._outputs = out_futs
 

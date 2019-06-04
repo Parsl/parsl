@@ -44,6 +44,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to figure
         this out itself (= None). If True, then will always move. If False, will never move.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     """
 
     def __init__(self,
@@ -98,10 +100,12 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
                 if poll_code is None:
                     self.resources[job_id]['status'] = 'RUNNING'
-                elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
+                elif poll_code == 0:
                     self.resources[job_id]['status'] = 'COMPLETED'
-                elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
+                elif poll_code != 0:
                     self.resources[job_id]['status'] = 'FAILED'
+                else:
+                    logger.error("Internal consistency error: unexpected case in local provider state machine")
 
             elif self.resources[job_id]['remote_pid']:
 
@@ -189,7 +193,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         proc = None
         remote_pid = None
         if (self.move_files is None and not isinstance(self.channel, LocalChannel)) or (self.move_files):
-            logger.debug("Moving start script")
+            logger.debug("Pushing start script")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         if not isinstance(self.channel, LocalChannel):
