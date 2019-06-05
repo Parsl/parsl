@@ -165,7 +165,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self):
+    def start(self, run_id):
 
         if self.logdir is None:
             self.logdir = "."
@@ -194,9 +194,10 @@ class MonitoringHub(RepresentationMixin):
         self.stop_q = Queue(maxsize=10)
         self.priority_msgs = Queue()
         self.resource_msgs = Queue()
+        self.node_msgs = Queue()
 
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.priority_msgs, self.resource_msgs, self.stop_q),
+                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs, self.stop_q),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
@@ -204,12 +205,13 @@ class MonitoringHub(RepresentationMixin):
                                           "client_port": self.dfk_port,
                                           "logdir": self.logdir,
                                           "logging_level": self.logging_level,
+                                          "run_id": run_id
                                   },
         )
         self.queue_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
-                                args=(self.priority_msgs, self.resource_msgs,),
+                                args=(self.priority_msgs, self.node_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": self.logging_level,
                                         "db_url": self.logging_endpoint,
@@ -218,13 +220,13 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc.start()
 
         try:
-            udp_dish_port = comm_q.get(block=True, timeout=120)
+            udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
         except queue.Empty:
             self.logger.error("Hub has not completed initialization in 120s. Aborting")
             raise Exception("Hub failed to start")
 
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_dish_port)
-        return self.monitoring_hub_url
+        return ic_port
 
     def send(self, mtype, message):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
@@ -281,6 +283,7 @@ class Hub(object):
 
                  monitoring_hub_address="127.0.0.1",
                  logdir=".",
+                 run_id=None,
                  logging_level=logging.DEBUG,
                  atexit_timeout=3    # in seconds
                 ):
@@ -326,6 +329,7 @@ class Hub(object):
         self.database = database
         self.visualization_server = visualization_server
         self.atexit_timeout = atexit_timeout
+        self.run_id = run_id
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -349,7 +353,15 @@ class Hub(object):
         self.dfk_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
         self.dfk_channel.connect("tcp://{}:{}".format(client_address, client_port))
 
-    def start(self, priority_msgs, resource_msgs, stop_q):
+        self.ic_channel = self._context.socket(zmq.DEALER)
+        self.ic_channel.set_hwm(0)
+        self.ic_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
+        self.logger.debug("hub_address: {}. hub_port_range {}".format(hub_address, hub_port_range))
+        self.ic_port = self.ic_channel.bind_to_random_port("tcp://*",
+                                                           min_port=hub_port_range[0],
+                                                           max_port=hub_port_range[1])
+
+    def start(self, priority_msgs, node_msgs, resource_msgs, stop_q):
 
         while True:
             try:
@@ -362,10 +374,19 @@ class Hub(object):
 
             try:
                 msg = self.dfk_channel.recv_pyobj()
-                self.logger.debug("Got ZMQ Message: {}".format(msg))
+                self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
                 priority_msgs.put((msg, 0))
                 if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
                     break
+            except zmq.Again:
+                pass
+
+            try:
+                msg = self.ic_channel.recv_pyobj()
+                msg[1]['run_id'] = self.run_id
+                msg = (msg[0], msg[1])
+                self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
+                node_msgs.put((msg, 0))
             except zmq.Again:
                 pass
 
@@ -382,10 +403,10 @@ class Hub(object):
         stop_q.put("STOP")
 
 
-def hub_starter(comm_q, priority_msgs, resource_msgs, stop_q, *args, **kwargs):
+def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, stop_q, *args, **kwargs):
     hub = Hub(*args, **kwargs)
-    comm_q.put(hub.hub_port)
-    hub.start(priority_msgs, resource_msgs, stop_q)
+    comm_q.put((hub.hub_port, hub.ic_port))
+    hub.start(priority_msgs, node_msgs, resource_msgs, stop_q)
 
 
 def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
@@ -450,3 +471,32 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             radio.send(MessageType.TASK_INFO, task_id, d)
             time.sleep(sleep_dur)
             first_msg = False
+
+
+def send_node_info(hub_url, hub_port, run_id, logger):
+    '''
+    Send the resource capacity of a node to MonitoringHub. Currently works for HTEX model only.
+    '''
+
+    import psutil
+    import zmq
+    import hostname
+
+    context = zmq.Context()
+    socket = self._context.socket(zmq.DEALER)
+    socket.set_hwm(0)
+    ports = socket.bind_to_random_port("tcp://{}".format(monitoring_hub_url),
+                                       min_port=client_port_range[0],
+                                       max_port=client_port_range[1])
+    
+    message = {
+               'cpu_core_count': psutil.cpu_count(logical=False),
+               'total_memory': psutil.virtual_memory().total,
+               'run_id': run_id,
+               'hostname': platform.node()
+    }
+
+    logger.debug("Sending node info message {} to Monitoring Hub".format(message))
+    socket.send_pyobj((MessageType.NODE_INFO, message))
+    scoket.close()
+    logger.info("Terminating ZMQ sockets for sending resource capacity messages") 
