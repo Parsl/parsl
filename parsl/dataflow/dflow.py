@@ -86,18 +86,22 @@ class DataFlowKernel(object):
         self.usage_tracker.send_message()
 
         # Monitoring
+        self.run_id = str(uuid4())
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
 
         self.monitoring = config.monitoring
+        # hub address and port for interchange to connect
+        self.hub_address = None
+        self.hub_interchange_port = None
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
-            self.monitoring.start()
+            self.hub_address = self.monitoring.hub_address
+            self.hub_interchange_port = self.monitoring.start(self.run_id)
 
         self.time_began = datetime.datetime.now()
         self.time_completed = None
-        self.run_id = str(uuid4())
 
         # TODO: make configurable
         logger.info("Run id is: " + self.run_id)
@@ -773,6 +777,8 @@ class DataFlowKernel(object):
     def add_executors(self, executors):
         for executor in executors:
             executor.run_dir = self.run_dir
+            executor.hub_address = self.hub_address
+            executor.hub_port = self.hub_interchange_port
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
