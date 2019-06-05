@@ -510,32 +510,3 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             logging.debug("sleeping")
             time.sleep(sleep_dur)
             first_msg = False
-
-
-def send_node_info(hub_url, hub_port, run_id, logger):
-    '''
-    Send the resource capacity of a node to MonitoringHub. Currently works for HTEX model only.
-    '''
-
-    import psutil
-    import zmq
-    import hostname
-
-    context = zmq.Context()
-    socket = self._context.socket(zmq.DEALER)
-    socket.set_hwm(0)
-    ports = socket.bind_to_random_port("tcp://{}".format(monitoring_hub_url),
-                                       min_port=client_port_range[0],
-                                       max_port=client_port_range[1])
-    
-    message = {
-               'cpu_core_count': psutil.cpu_count(logical=False),
-               'total_memory': psutil.virtual_memory().total,
-               'run_id': run_id,
-               'hostname': platform.node()
-    }
-
-    logger.debug("Sending node info message {} to Monitoring Hub".format(message))
-    socket.send_pyobj((MessageType.NODE_INFO, message))
-    scoket.close()
-    logger.info("Terminating ZMQ sockets for sending resource capacity messages") 
