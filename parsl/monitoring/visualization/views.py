@@ -9,6 +9,22 @@ from parsl.monitoring.visualization.plots.default.workflow_resource_plots import
 
 dummy = True
 
+import datetime
+
+
+def format_time(value):
+    if value is None:
+        return value
+    elif isinstance(value, float):
+        return str(datetime.timedelta(seconds=round(value)))
+    elif isinstance(value, datetime.datetime):
+        return value.replace(microsecond=0)
+    else:
+        return "Incorrect time format found (neither float nor datetime.datetime object)"
+
+
+app.jinja_env.filters['timeformat'] = format_time
+
 
 @app.route('/')
 def index():
