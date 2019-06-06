@@ -108,7 +108,7 @@ class DataFlowKernel(object):
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py']
+                parsl_file_names = ['dflow.py', 'typeguard.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
@@ -280,6 +280,11 @@ class DataFlowKernel(object):
 
             logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_returned'] = datetime.datetime.now()
+
+        if self.tasks[task_id]['app_fu'].stdout is not None:
+            logger.info("Standard output for task {} available at {}".format(task_id, self.tasks[task_id]['app_fu'].stdout))
+        if self.tasks[task_id]['app_fu'].stderr is not None:
+            logger.info("Standard error for task {} available at {}".format(task_id, self.tasks[task_id]['app_fu'].stderr))
 
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_id, 'lazy')
@@ -527,7 +532,7 @@ class DataFlowKernel(object):
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
-        """This function should be called **ONLY** when all the futures we track have been resolved.
+        """This function should be called only when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.
@@ -626,6 +631,20 @@ class DataFlowKernel(object):
 
         # Transform remote input files to data futures
         args, kwargs = self._add_input_deps(executor, args, kwargs)
+        label = kwargs.get('label')
+        for kw in ['stdout', 'stderr']:
+            if kw in kwargs:
+                if kwargs[kw] == parsl.AUTO_LOGNAME:
+                    kwargs[kw] = os.path.join(
+                            self.run_dir,
+                            'task_logs',
+                            str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
+                            'task_{}_{}{}.{}'.format(
+                                str(task_id).zfill(4),
+                                func.__name__,
+                                '' if label is None else '_{}'.format(label),
+                                kw)
+                    )
 
         task_def = {'depends': None,
                     'executor': executor,

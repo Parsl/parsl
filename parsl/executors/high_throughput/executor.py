@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
 
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import *
@@ -112,6 +113,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         cores to be assigned to each worker. Oversubscription is possible
         by setting cores_per_worker < 1.0. Default=1
 
+    mem_per_worker : float
+        GB of memory required per worker. If this option is specified, the node manager
+        will check the available memory at startup and limit the number of workers such that
+        the there's sufficient memory for each worker. Default: None
+
     max_workers : int
         Caps the number of workers launched by the manager. Default: infinity
 
@@ -152,6 +158,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  working_dir: Optional[str] = None,
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
+                 mem_per_worker: Optional[float] = None,
                  max_workers: Union[int, float] = float('inf'),
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
@@ -175,6 +182,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.blocks = {}  # type: Dict[str, str]
         self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
+        self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
 
@@ -194,6 +202,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-p {prefetch_capacity} "
                                "-c {cores_per_worker} "
+                               "-m {mem_per_worker} "
                                "--poll {poll_period} "
                                "--task_url={task_url} "
                                "--result_url={result_url} "
@@ -220,6 +229,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                        task_url=self.worker_task_url,
                                        result_url=self.worker_result_url,
                                        cores_per_worker=self.cores_per_worker,
+                                       mem_per_worker=self.mem_per_worker,
                                        max_workers=max_workers,
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
@@ -353,10 +363,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             try:
                                 s, _ = deserialize_object(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
-                                try:
-                                    s.reraise()
-                                except Exception as e:
-                                    task_fut.set_exception(e)
+                                if isinstance(s, RemoteExceptionWrapper):
+                                    try:
+                                        s.reraise()
+                                    except Exception as e:
+                                        task_fut.set_exception(e)
+                                elif isinstance(s, Exception):
+                                    task_fut.set_exception(s)
+                                else:
+                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
                             except Exception as e:
                                 # TODO could be a proper wrapped exception?
                                 task_fut.set_exception(

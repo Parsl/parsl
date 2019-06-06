@@ -63,7 +63,6 @@ class DataFuture(Future):
         else:
             raise ValueError("DataFuture must be initialized with a str or File")
         self.parent = fut
-        self._exception = None
 
         if fut is None:
             logger.debug("Setting result to filepath since no future was passed")
