@@ -590,10 +590,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         if self.provider:
             self.provider.cancel(to_kill)
 
-    def status(self):
+    def status(self) -> List[str]:
         """Return status of all blocks."""
 
-        status = []
+        status = [] #  type: List[str]
         if self.provider:
             status = self.provider.status(self.blocks.values())
 
