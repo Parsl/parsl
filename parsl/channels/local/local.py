@@ -136,7 +136,7 @@ class LocalChannel(Channel, RepresentationMixin):
         local_dest = dest_dir + '/' + os.path.basename(source)
 
         # Only attempt to copy if the target dir and source dir are different
-        if os.path.dirname(source) != dest_dir:
+        if not self.is_same_file(source, local_dest):
             try:
                 shutil.copyfile(source, local_dest)
                 os.chmod(local_dest, 0o777)

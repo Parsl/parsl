@@ -42,8 +42,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
-    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to figure
-        this out itself (= None). If True, then will always move. If False, will never move.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     """
@@ -58,8 +56,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  walltime="00:15:00",
                  worker_init='',
                  cmd_timeout=30,
-                 parallelism=1,
-                 move_files=None):
+                 parallelism=1):
         self.channel = channel
         self._label = 'local'
         self.provisioned_blocks = 0
@@ -73,7 +70,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.walltime = walltime
         self.script_dir = None
         self.cmd_timeout = cmd_timeout
-        self.move_files = move_files
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -192,9 +188,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         job_id = None
         proc = None
         remote_pid = None
-        if (self.move_files is None and not isinstance(self.channel, LocalChannel)) or (self.move_files):
-            logger.debug("Pushing start script")
-            script_path = self.channel.push_file(script_path, self.channel.script_dir)
+        logger.debug("Pushing start script")
+        script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         if not isinstance(self.channel, LocalChannel):
             logger.debug("Launching in remote mode")

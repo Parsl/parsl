@@ -1,6 +1,7 @@
 import errno
 import logging
 import os
+import subprocess
 
 import paramiko
 from parsl.channels.base import Channel
@@ -173,6 +174,10 @@ class SSHChannel(Channel, RepresentationMixin):
             else:
                 logger.exception("File push failed due to SFTP client failure")
                 raise FileCopyException(e, self.hostname)
+
+        if self.is_same_file(local_source, remote_dest):
+            return remote_dest
+
         try:
             self.sftp_client.put(local_source, remote_dest, confirm=True)
             # Set perm because some systems require the script to be executable

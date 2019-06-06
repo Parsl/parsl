@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
+import subprocess
 
 
 class Channel(metaclass=ABCMeta):
@@ -137,3 +138,10 @@ class Channel(metaclass=ABCMeta):
             Path for which the absolute path will be returned.
         """
         pass
+
+    def is_same_file(self, local, remote):
+        if local == remote:
+            local_device_and_inode = subprocess.getoutput('stat -c "%d-%i" {}'.format(local))
+            _, remote_device_and_inode, _ = self.execute_wait('stat -c "%d-%i" {}'.format(remote))
+
+            return local_device_and_inode.strip() == remote_device_and_inode.strip()
