@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
 
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import *
@@ -364,7 +365,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             try:
                                 s, _ = deserialize_object(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
-                                if isinstance(s, RemoteExceptionWapper):
+                                if isinstance(s, RemoteExceptionWrapper):
                                     try:
                                         s.reraise()
                                     except Exception as e:
