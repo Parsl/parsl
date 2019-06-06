@@ -391,13 +391,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """We do not use this yet."""
         q.put(None)
 
-    def _start_local_queue_process(self):
+    def _start_local_queue_process(self) -> None:
         """ Starts the interchange process locally
 
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        comm_q = Queue(maxsize=10)
+        comm_q = Queue(maxsize=10) # type: Queue[Any]
         self.queue_proc = Process(target=interchange.starter,
                                   args=(comm_q,),
                                   kwargs={"client_ports": (self.outgoing_q.port,
