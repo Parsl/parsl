@@ -599,7 +599,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         return status
 
-    def shutdown(self, hub=True, targets='all', block=False):
+    def shutdown(self, hub: bool = True, targets: Union[str, List[int]] = 'all', block: bool = False) -> bool:
         """Shutdown the executor, including all workers and controllers.
 
         This is not implemented.
