@@ -28,6 +28,7 @@ class ExecutionProvider(metaclass=ABCMeta):
     channel: Channel
     min_blocks: int
     max_blocks: int
+    init_blocks: int
     nodes_per_block: int
     script_dir: Optional[str]
     parallelism: float #TODO not sure about this one?

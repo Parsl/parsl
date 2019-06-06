@@ -213,7 +213,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                "--hb_period={heartbeat_period} "
                                "--hb_threshold={heartbeat_threshold} ")
 
-    def initialize_scaling(self):
+    def initialize_scaling(self) -> None:
         """ Compose the launch command and call the scale_out
 
         This should be implemented in the child classes to take care of
