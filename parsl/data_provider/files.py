@@ -18,8 +18,12 @@ logger = logging.getLogger(__name__)
 class File(object):
     """The Parsl File Class.
 
-    This class captures various attributes of a file, and relies on client-side and
-    worker-side systems to enable to appropriate transfer of files.
+    This represents the global, and sometimes local, URI/path to a file.
+
+    Staging-in mechanisms may annotate a file with a local path recording
+    the path at the far end of a staging action. It is up to the user of
+    the File object to track which local scope that local path actually
+    refers to.
 
     """
 
