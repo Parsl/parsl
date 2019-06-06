@@ -422,7 +422,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.worker_task_url = "tcp://{}:{}".format(self.address, worker_task_port)
         self.worker_result_url = "tcp://{}:{}".format(self.address, worker_result_port)
 
-    def _start_queue_management_thread(self):
+    def _start_queue_management_thread(self) -> None:
         """Method to start the management thread as a daemon.
 
         Checks if a thread already exists, then starts it.
@@ -438,7 +438,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         else:
             logger.debug("Management thread already exists, returning")
 
-    def hold_worker(self, worker_id):
+    def hold_worker(self, worker_id: str) -> None:
         """Puts a worker on hold, preventing scheduling of additional tasks to it.
 
         This is called "hold" mostly because this only stops scheduling of tasks,
@@ -470,7 +470,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         workers = self.command_client.run("MANAGERS")
         return workers
 
-    def _hold_block(self, block_id):
+    def _hold_block(self, block_id: str) -> None:
         """ Sends hold command to all managers which are in a specific block
 
         Parameters
