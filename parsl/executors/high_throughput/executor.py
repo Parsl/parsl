@@ -250,7 +250,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 logger.error("Scaling out failed: {}".format(e))
                 raise e
 
-    def start(self):
+    def start(self) -> None:
         """Create the Interchange process and connect to it.
         """
         self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
@@ -387,7 +387,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     # When the executor gets lost, the weakref callback will wake up
     # the queue management thread.
-    def weakref_cb(self, q=None):
+    def weakref_cb(self, q=None) -> None:
         """We do not use this yet."""
         q.put(None)
 
