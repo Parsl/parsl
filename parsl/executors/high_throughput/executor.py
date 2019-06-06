@@ -180,7 +180,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
-        self.tasks = {}  # type: Dict[str, Future]
+        self.tasks = {}  # type: Dict[int, Future]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
@@ -197,6 +197,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
+
+        self._executor_exception = None # Optional[BaseException]
 
         if launch_cmd:
             self.launch_cmd = launch_cmd
@@ -486,7 +488,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 logger.debug("[HOLD_BLOCK]: Sending hold to manager:{}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, *args, **kwargs) -> Future[Any]:
         """Submits work to the the outgoing_q.
 
         The outgoing_q is an external process listens on this
@@ -504,7 +506,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
               Future
         """
         if self._executor_bad_state.is_set():
-            raise self._executor_exception
+            if self._executor_exception is None:
+                raise ValueError("Executor is in bad state, but no exception recorded")
+            else:
+                raise self._executor_exception
 
         self._task_counter += 1
         task_id = self._task_counter
