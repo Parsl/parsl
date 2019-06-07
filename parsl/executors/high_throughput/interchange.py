@@ -7,6 +7,7 @@ import sys
 import platform
 import random
 import time
+import datetime
 import pickle
 import logging
 import queue
@@ -387,6 +388,7 @@ class Interchange(object):
                     if reg_flag is True:
                         interesting_managers.add(manager)
                         logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
+                        msg['reg_time'] = datetime.datetime.strptime(msg['reg_time'], "%Y-%m-%d %H:%M:%S")
                         self._ready_manager_queue[manager].update(msg)
                         logger.info("[MAIN] Registration info for manager {}: {}".format(manager, msg))
                         if self.monitoring_enabled:

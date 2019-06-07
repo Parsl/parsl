@@ -10,6 +10,7 @@ import platform
 import threading
 import pickle
 import time
+import datetime
 import queue
 import uuid
 import zmq
@@ -166,7 +167,8 @@ class Manager(object):
                'hostname': platform.node(),
                'dir': os.getcwd(),
                'cpu_count': psutil.cpu_count(logical=False),
-               'total_memory': psutil.virtual_memory().total
+               'total_memory': psutil.virtual_memory().total,
+               'reg_time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
