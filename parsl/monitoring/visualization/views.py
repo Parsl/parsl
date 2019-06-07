@@ -5,7 +5,7 @@ from parsl.monitoring.visualization.models import *
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
-from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_time_series
+from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_time_series, resource_efficiency
 
 dummy = True
 
@@ -40,11 +40,13 @@ def workflow(workflow_id):
                                 % (workflow_id), db.engine)
     task_summary = db.engine.execute(
         "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
-
+    time_completed = None
+    if hasattr(workflow_details, 'time_completed'):
+        time_completed = workflow_details.time_completed
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
-                           task_gantt=task_gantt_plot(df_task),
+                           task_gantt=task_gantt_plot(df_task, time_completed=time_completed),
                            task_per_app=task_per_app_plot(df_task, df_status))
 
 
@@ -135,6 +137,8 @@ def workflow_resources(workflow_id):
 
     df_task = pd.read_sql_query(
         "SELECT * FROM task WHERE run_id='%s'" % (workflow_id), db.engine)
+    df_node = pd.read_sql_query(
+        "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
 
     df_task_resources = pd.read_sql_query('''
                                           SELECT task_id, timestamp, resource_monitoring_interval,
@@ -153,12 +157,14 @@ def workflow_resources(workflow_id):
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='avg'),
                            memory_usage_distribution_max_plot=resource_distribution_plot(
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='max'),
-                           user_time_time_series=resource_time_series(
-                               df_task_resources, type='psutil_process_time_user', label='CPU User Time'),
-                           cpu_percent_time_series=resource_time_series(
-                               df_task_resources, type='psutil_process_cpu_percent', label='CPU Utilization'),
-                           memory_percent_time_series=resource_time_series(
-                               df_task_resources, type='psutil_process_memory_percent', label='Memory Utilization'),
-                           memory_resident_time_series=resource_time_series(
-                               df_task_resources, type='psutil_process_memory_resident', label='Memory Usage'),
+                           # user_time_time_series=resource_time_series(
+                           #    df_task_resources, type='psutil_process_time_user', label='CPU User Time'),
+                           user_time_time_series=resource_efficiency(df_resources, df_node, label='CPU'),
+                           memory_resident_time_series=resource_efficiency(df_resources, df_node, label='mem'),
+                           # cpu_percent_time_series=resource_time_series(
+                           #    df_task_resources, type='psutil_process_cpu_percent', label='CPU Utilization'),
+                           # memory_percent_time_series=resource_time_series(
+                           #    df_task_resources, type='psutil_process_memory_percent', label='Memory Utilization'),
+                           # memory_resident_time_series=resource_time_series(
+                           #    df_task_resources, type='psutil_process_memory_resident', label='Memory Usage'),
                            )
