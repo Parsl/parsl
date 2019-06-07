@@ -150,8 +150,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
                  address: str = "127.0.0.1",
-                 hub_address: Optional[str] = None,
-                 hub_port: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
@@ -189,8 +187,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self._task_counter = 0
         self.address = address
-        self.hub_address = hub_address
-        self.hub_port = hub_port
+        self.hub_address = None # set to the correct hub address in dfk
+        self.hub_port = None    # set to the correct hub port in dfk
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
