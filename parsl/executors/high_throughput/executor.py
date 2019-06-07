@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
 
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import *
@@ -362,7 +363,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             try:
                                 s, _ = deserialize_object(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
-                                if isinstance(s, RemoteExceptionWapper):
+                                if isinstance(s, RemoteExceptionWrapper):
                                     try:
                                         s.reraise()
                                     except Exception as e:
@@ -506,7 +507,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._task_counter += 1
         task_id = self._task_counter
 
-        logger.debug("Pushing function {} to queue with args {}".format(func, args))
+        # handle people sending blobs gracefully
+        args_to_print = args
+        if logger.getEffectiveLevel() >= logging.DEBUG:
+            args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
+        logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
         self.tasks[task_id] = Future()
 

@@ -114,7 +114,7 @@ class DataFlowKernel(object):
                     self.workflow_name = fname
                     break
 
-        self.workflow_version = str(self.time_began)
+        self.workflow_version = str(self.time_began.replace(microsecond=0))
         if self.monitoring is not None and self.monitoring.workflow_version is not None:
             self.workflow_version = self.monitoring.workflow_version
 
