@@ -107,6 +107,10 @@ class Interchange(object):
         interchange_address : str
              The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
 
+        hub_address : str
+             The ip address at which the interchange can send info about managers to when monitoring is enabled.
+             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
+
         client_ports : triple(int, int, int)
              The ports at which the client can be reached
 
@@ -116,6 +120,10 @@ class Interchange(object):
         worker_port_range : tuple(int, int)
              The interchange picks ports at random from the range which will be used by workers.
              This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
+
+        hub_port : str
+             The port at which the interchange can send info about managers to when monitoring is enabled.
+             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
 
         heartbeat_threshold : int
              Number of seconds since the last heartbeat after which worker is considered lost.
