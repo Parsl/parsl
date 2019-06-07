@@ -72,7 +72,7 @@ This starts a visualization web server on `127.0.0.1:8080`. If you are running o
 
 This binds your local machine's port 50000 to the remote cluster's port 8080. This allows you to access viz_server directly on your local machine's browser via `127.0.0.1:50000`. 
 
-.. warning:: Below is an alternative to host the viz_server on a cluster which may violate the cluster's security policy. Please check with your cluster admin before doing this.
+.. warning:: Below is an alternative to host the viz_server on a cluster, which may violate the cluster's security policy. Please check with your cluster admin before doing this.
 If the cluster allows you to host a web server on its public IP address with a specific port (i.e., open to Internet via `public_IP:55555`), you can run::
 
    $ parsl-visualize --external --port 55555 sqlite:///<absolute-path-to-db>
