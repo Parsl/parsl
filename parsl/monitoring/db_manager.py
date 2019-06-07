@@ -141,12 +141,13 @@ class Database(object):
     class Node(Base):
         __tablename__ = NODE
         run_id = Column('run_id', Text, nullable=False)
-        hostname = Column('hostname', Text, nullable=True)
+        hostname = Column('hostname', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
         total_memory = Column('total_memory', Integer, nullable=False)
         active = Column('active', Boolean, nullable=False)
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
+        reg_time = Column('reg_time', DateTime, nullable=False)
         __table_args__ = (
             PrimaryKeyConstraint('hostname', 'run_id'),
         )
