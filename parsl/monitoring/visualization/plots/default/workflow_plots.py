@@ -8,7 +8,7 @@ import datetime
 from parsl.monitoring.visualization.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
 
 
-def task_gantt_plot(df_task):
+def task_gantt_plot(df_task, time_completed=None):
 
     df_task = df_task.sort_values(by=['task_time_submitted'], ascending=False)
 
@@ -25,11 +25,14 @@ def task_gantt_plot(df_task):
         time_running, time_returned = task['task_time_running'], task['task_time_returned']
         if task['task_time_returned'] is None:
             time_returned = datetime.datetime.now()
+            if time_completed is not None:
+                time_returned = time_completed
         if task['task_time_running'] is None:
-            time_running = datetime.datetime.now()
-        dic1 = dict(Task=task['task_id'], Start=task['task_time_submitted'],
+            time_running = task['task_time_submitted']
+        description = "Task ID: {}, app: {}".format(task['task_id'], task['task_func_name'])
+        dic1 = dict(Task=description, Start=task['task_time_submitted'],
                     Finish=time_running, Resource="Pending")
-        dic2 = dict(Task=task['task_id'], Start=time_running,
+        dic2 = dict(Task=description, Start=time_running,
                     Finish=time_returned, Resource="Running")
         parsl_tasks.extend([dic1, dic2])
     colors = {'Pending': 'rgb(168, 168, 168)', 'Running': 'rgb(0, 0, 255)'}
@@ -40,7 +43,8 @@ def task_gantt_plot(df_task):
                           show_colorbar=True,
                           index_col='Resource',
                           )
-    fig['layout']['yaxis']['title'] = 'Task ID'
+    fig['layout']['yaxis']['title'] = 'Task'
+    fig['layout']['yaxis']['showticklabels'] = False
     fig['layout']['xaxis']['title'] = 'Time'
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
@@ -56,7 +60,6 @@ def task_per_app_plot(df_task, df_status):
             elif count > 0:
                 count -= 1
             items.append(count)
-        print(items)
         return items
 
     # Fill up dict "apps" like: {app1: [#task1, #task2], app2: [#task4], app3: [#task3]}
