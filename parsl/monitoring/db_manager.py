@@ -131,7 +131,7 @@ class Database(object):
         task_memoize = Column('task_memoize', Text, nullable=False)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
-        task_stdin = Column('task_stdin', Text, nullable=True)
+        task_stderr = Column('task_stderr', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id'),
