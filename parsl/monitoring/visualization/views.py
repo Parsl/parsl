@@ -1,3 +1,4 @@
+import datetime
 from flask import render_template
 from flask import current_app as app
 import pandas as pd
@@ -5,11 +6,10 @@ from parsl.monitoring.visualization.models import *
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
-from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_time_series, resource_efficiency
+from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_efficiency
 
 dummy = True
 
-import datetime
 
 
 def format_time(value):
@@ -156,13 +156,13 @@ def workflow_resources(workflow_id):
     df_node = pd.read_sql_query(
         "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
 
-    df_task_resources = pd.read_sql_query('''
-                                          SELECT task_id, timestamp, resource_monitoring_interval,
-                                          psutil_process_cpu_percent, psutil_process_time_user,
-                                          psutil_process_memory_percent, psutil_process_memory_resident
-                                          from resource
-                                          where run_id = '%s'
-                                          ''' % (workflow_id), db.engine)
+    # df_task_resources = pd.read_sql_query('''
+    #                                      SELECT task_id, timestamp, resource_monitoring_interval,
+    #                                      psutil_process_cpu_percent, psutil_process_time_user,
+    #                                      psutil_process_memory_percent, psutil_process_memory_resident
+    #                                      from resource
+    #                                      where run_id = '%s'
+    #                                      ''' % (workflow_id), db.engine)
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
                            user_time_distribution_avg_plot=resource_distribution_plot(

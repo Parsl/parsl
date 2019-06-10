@@ -92,6 +92,7 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
                              title=label))
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
+
 def resource_efficiency(resource, node, label='CPU'):
     try:
         resource['epoch_time'] = (pd.to_datetime(
@@ -103,7 +104,7 @@ def resource_efficiency(resource, node, label='CPU'):
         end = resource['epoch_time'].max()
         resource['relative_time'] = resource['epoch_time'] - start
         node['relative_time'] = node['epoch_time'] - start
-        step = int(resource['resource_monitoring_interval'][0])
+        # step = int(resource['resource_monitoring_interval'][0])
 
         task_plot = [0] * (end-start+1)
         if label == 'CPU':
@@ -119,7 +120,6 @@ def resource_efficiency(resource, node, label='CPU'):
             for index, row in tmp.iterrows():
                 if np.isnan(row['last_timestamp']):
                     continue
-                last = int(row['last_timestamp'] / step)
                 for i in range(int(row['last_timestamp']), int(row['relative_time'])):
                     if label == 'CPU':
                         diff = (row['psutil_process_time_user'] - row['last_cputime']) / (row['relative_time'] - row['last_timestamp'])
@@ -143,11 +143,11 @@ def resource_efficiency(resource, node, label='CPU'):
                              y=task_plot,
                              name=name1,
                              ),
-                 go.Scatter(x=list(range(0, end-start+1)),
+                  go.Scatter(x=list(range(0, end-start+1)),
                              y=[total]*(end-start+1),
                              name=name2,
                              )
-                 ],
+                  ],
             layout=go.Layout(xaxis=dict(autorange=True,
                                         title='Time (seconds)'),
                              yaxis=dict(title=yaxis),
