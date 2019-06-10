@@ -7,19 +7,17 @@
 | ++++++++++++++ |
 ==================
 """
+from parsl.config import Config
 from parsl.channels import LocalChannel
 from parsl.providers import GridEngineProvider
-from parsl.config import Config
-from parsl.executors.ipp import IPyParallelExecutor
-
-# This is an example config, make sure to
-#        replace the specific values below with the literal values
-#          (e.g., 'USERNAME' -> 'your_username')
+from parsl.executors import HighThroughputExecutor
+from parsl.addresses import address_by_query
 
 config = Config(
     executors=[
-        IPyParallelExecutor(
+        HighThroughputExecutor(
             label='cc_in2p3_local_single_node',
+            address=address_by_query(),
             provider=GridEngineProvider(
                 channel=LocalChannel(),
                 nodes_per_block=1,
@@ -27,10 +25,8 @@ config = Config(
                 max_blocks=1,
                 walltime="00:20:00",
                 scheduler_options='',     # Input your scheduler_options if needed
-                worker_init='',     # Input your worker_init if needed
+                worker_init='',           # Input your worker_init if needed
             ),
-            engine_debug_level='DEBUG',
         )
-
     ],
 )
