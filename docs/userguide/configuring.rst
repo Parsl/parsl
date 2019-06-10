@@ -173,9 +173,11 @@ Comet (SDSC)
 
 .. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
-The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
+The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer.
+The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet
+and the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/comet_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/comet_htex_multinode.py
 
 
 .. _configuring_nersc_cori:
@@ -185,9 +187,13 @@ Cori (NERSC)
 
 .. image:: https://6lli539m39y3hpkelqsm3c2fg-wpengine.netdna-ssl.com/wp-content/uploads/2017/08/Cori-NERSC.png
 
-The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
+The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer.
+This example uses the `HighThroughputExecutor` executor and connects to Cori's Slurm scheduler
+from the login node. It is configured to request jobs requesting 2 nodes each and upto 4 workers
+per node. Finally it includes override information to request a particular node type (Knl,quad,cache)
+and finally, configure a specific Python environment on the worker nodes using Anaconda.
 
-.. literalinclude:: ../../parsl/configs/cori_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/cori_htex_local_multinode.py
 
 
 Stampede2 (TACC)
@@ -195,7 +201,8 @@ Stampede2 (TACC)
 
 .. image:: https://www.tacc.utexas.edu/documents/1084364/1413880/stampede2-0717.jpg/
 
-The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
+The following snippet shows an example configuration for executing on TACC's **Stampede2** supercomputer.
+This example uses the `HighThroughputExecutor` and connects to Stampede2's Slurm scheduler.
 
 .. literalinclude:: ../../parsl/configs/stampede2_htex_multinode.py
 
@@ -232,7 +239,7 @@ The following snippet shows an example configuration for executing remotely on S
 The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
 to launch workers on the machine
 
-.. literalinclude:: ../../parsl/configs/swan_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/swan_htex_multinode.py
 
 
 CC-IN2P3
@@ -241,8 +248,8 @@ CC-IN2P3
 .. image:: https://cc.in2p3.fr/wp-content/uploads/2017/03/bandeau_accueil.jpg
 
 The snippet below shows an example configuration for executing from a login node on IN2P3's Computing Centre.
-The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
-This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
+The configuration uses the `LocalProvider` to run on a login node. This system uses Grid Engine which Parsl
+interfaces with using the `GridEngineProvider`.
 
 .. literalinclude:: ../../parsl/configs/cc_in2p3_local_single_node.py
 
