@@ -205,11 +205,11 @@ Theta (ALCF)
 
 .. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
 
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's **Theta** supercomputer.
-This example uses the `IPyParallelExecutor` and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
-assumes that the script is being executed on the login nodes of Theta.
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
+**Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
+using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/theta_local_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/theta_local_htex_multinode.py
 
 
 Cooley (ALCF)
