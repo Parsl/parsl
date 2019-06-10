@@ -56,7 +56,7 @@ def task_per_app_plot(df_task, df_status):
             elif count > 0:
                 count -= 1
             items.append(count)
-        print(items)
+        print("task_per_app_plot", items)
         return items
 
     # Fill up dict "apps" like: {app1: [#task1, #task2], app2: [#task4], app3: [#task3]}
