@@ -234,7 +234,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         cmd = "condor_submit {0}".format(channel_script_path)
         if len(self.schedd_name) > 0:
-            cmd += " -name {0}".format(self.schedd_name)
+            cmd += " -remote {0}".format(self.schedd_name)
         retcode, stdout, stderr = super().execute_wait(cmd, 30)
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
