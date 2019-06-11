@@ -253,10 +253,10 @@ Midway (RCC, UChicago)
 
 This Midway cluster is a campus cluster hosted by the Research Computing Center at the University of Chicago.
 The snippet below shows an example configuration for executing remotely on Midway.
-The configuration uses the `SSHChannel` to connect remotely to Midway, uses the `SlurmProvider` to interface
+The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
 with the scheduler, and uses the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/midway_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/midway_htex_multinode.py
 
 
 Open Science Grid
