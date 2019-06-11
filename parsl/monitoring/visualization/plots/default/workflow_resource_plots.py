@@ -144,7 +144,7 @@ def resource_efficiency(resource, node, label='CPU'):
                              name=name1,
                              ),
                   go.Scatter(x=list(range(0, end - start + 1)),
-                             y=[total]*(end - start + 1),
+                             y=[total] * (end - start + 1),
                              name=name2,
                              )
                   ],
