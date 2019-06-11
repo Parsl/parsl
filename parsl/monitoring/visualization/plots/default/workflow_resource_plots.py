@@ -105,7 +105,7 @@ def resource_efficiency(resource, node, label='CPU'):
         node['relative_time'] = node['epoch_time'] - start
         step = int(resource['resource_monitoring_interval'][0])
 
-        task_plot = [0] * (end-start+1)
+        task_plot = [0] * (end - start + 1)
         if label == 'CPU':
             total = node['cpu_count'].sum()
         elif label == 'mem':
@@ -139,12 +139,12 @@ def resource_efficiency(resource, node, label='CPU'):
             title = 'Memory usage'
 
         fig = go.Figure(
-            data=[go.Scatter(x=list(range(0, end-start+1)),
+            data=[go.Scatter(x=list(range(0, end - start + 1)),
                              y=task_plot,
                              name=name1,
                              ),
-                 go.Scatter(x=list(range(0, end-start+1)),
-                             y=[total]*(end-start+1),
+                  go.Scatter(x=list(range(0, end - start + 1)),
+                             y=[total] * (end - start + 1),
                              name=name2,
                              )
                  ],
