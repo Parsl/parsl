@@ -292,11 +292,12 @@ Ad-Hoc Clusters
 ---------------
 
 Any collection of compute nodes without a scheduler setup for task scheduling can be considered an
-ad-hoc cluster. Often these machines have a shared-filesystem such as NFS or Lustre.
+ad-hoc cluster. Often these machines have a shared filesystem such as NFS or Lustre.
 In order to use these resources with Parsl, they need to set-up for password-less SSH access.
 
-In order to use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
-for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname.
+To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
+for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
+configuration follows.
 
 .. literalinclude:: ../../parsl/configs/ad_hoc_htex.py
 
