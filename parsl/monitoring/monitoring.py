@@ -399,7 +399,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
     import time
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-    logging.basicConfig(filename='{0}/monitor.{1}.log'.format(logbase, time.time()), level=logging.DEBUG, format=format_string)
+    logging.basicConfig(filename='{0}/monitor.{task_id}.{pid}.log'.format(logbase, task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
     logging.debug("start of monitor")
 
     radio = UDPRadio(monitoring_hub_url,
