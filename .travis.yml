@@ -34,6 +34,7 @@ script:
     - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - flake8 parsl/
+    - parsl/tests/lint-inits.sh
 
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
