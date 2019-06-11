@@ -389,18 +389,20 @@ def hub_starter(comm_q, priority_msgs, resource_msgs, stop_q, *args, **kwargs):
 
 
 def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
-    """Internal
-    Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
-    """
-    import psutil
-    import platform
+  """Internal
+  Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
+  """
+  import psutil
+  import platform
 
-    import logging
-    import time
+  import logging
+  import time
 
-    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-    logging.basicConfig(filename='{0}/monitor.{task_id}.{pid}.log'.format(logbase, task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
-    logging.debug("start of monitor")
+  format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+  logging.basicConfig(filename='{0}/monitor.{task_id}.{pid}.log'.format(logbase, task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
+  logging.debug("start of monitor")
+
+  try:
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
@@ -462,3 +464,6 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
             logging.debug("sleeping")
             time.sleep(sleep_dur)
             first_msg = False
+  except:
+      logging.debug("caught an exception that will terminate this process", exc_info=True)
+      raise
