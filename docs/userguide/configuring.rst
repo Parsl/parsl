@@ -304,6 +304,10 @@ configuration follows.
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
 
+.. note::
+   Load-balancing will not work properly with this approach. In future work, a dedicated provider
+   will be implemented which supports load-balancing. You can follow progress on this work
+   `here <https://github.com/Parsl/parsl/issues/941>`_.
 
 
 
