@@ -449,7 +449,7 @@ class DataFlowKernel(object):
             executable = self.monitoring.monitor_wrapper(executable, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
-                                                         self.monitoring.resource_monitoring_interval)
+                                                         self.monitoring.resource_monitoring_interval, self.config.remote_side_bash_executor_log_base)
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, *args, **kwargs)

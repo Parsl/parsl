@@ -250,12 +250,12 @@ class MonitoringHub(RepresentationMixin):
         self.close()
 
     @staticmethod
-    def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur):
+    def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur, remote_side_bash_executor_log_base):
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur))
+            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, remote_side_bash_executor_log_base, sleep_dur))
             p.start()
             try:
                 return f(*args, **kwargs)
@@ -388,12 +388,19 @@ def hub_starter(comm_q, priority_msgs, resource_msgs, stop_q, *args, **kwargs):
     hub.start(priority_msgs, resource_msgs, stop_q)
 
 
-def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
+def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
     import psutil
     import platform
+
+    import logging
+    import time
+
+    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+    logging.basicConfig(filename='{0}/monitor.{1}.log'.format(logbase, time.time()), level=logging.DEBUG, format=format_string)
+    logging.debug("start of monitor")
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
