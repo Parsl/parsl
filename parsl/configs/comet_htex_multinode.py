@@ -5,7 +5,6 @@ from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_query
 
-USERNAME = "USERNAME"
 
 config = Config(
     executors=[
@@ -18,8 +17,8 @@ config = Config(
                 'debug',
                 channel=SSHChannel(
                     hostname='comet.sdsc.xsede.org',
-                    username=USERNAME,
-                    script_dir='/home/{}/parsl_scripts'.format(USERNAME),
+                    username='YOUR_USERNAME',
+                    script_dir='YOUR_SCRIPTDIR',
                 ),
                 launcher=SrunLauncher(),
                 # string to prepend to #SBATCH blocks in the submit
