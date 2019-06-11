@@ -9,16 +9,15 @@ from parsl.addresses import address_by_query
 config = Config(
     executors=[
         HighThroughputExecutor(
-            label='comet_htex_multinode',
+            label='Comet_HTEX_multinode',
             address=address_by_query(),
-            max_workers=4,
-            worker_logdir_root="parsl_logdir",
+            worker_logdir_root='YOUR_LOGDIR_ON_COMET',
             provider=SlurmProvider(
                 'debug',
                 channel=SSHChannel(
                     hostname='comet.sdsc.xsede.org',
                     username='YOUR_USERNAME',
-                    script_dir='YOUR_SCRIPTDIR',
+                    script_dir='YOUR_SCRIPT_DIR',
                 ),
                 launcher=SrunLauncher(),
                 # string to prepend to #SBATCH blocks in the submit
@@ -27,7 +26,7 @@ config = Config(
                 # Command to be run before starting a worker, such as :
                 # 'module load Anaconda; source activate parsl_env'.
                 worker_init='',
-                walltime="00:10:00",
+                walltime='00:10:00',
                 init_blocks=1,
                 max_blocks=1,
                 nodes_per_block=2,

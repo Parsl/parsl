@@ -12,19 +12,20 @@ config = Config(
             max_workers=4,
             address=address_by_hostname(),
             provider=CobaltProvider(
-                queue="debug-flat-quad",
+                queue='YOUR_QUEUE',
+                account='YOUR_ACCOUNT',
                 launcher=AprunLauncher(),
-                walltime="00:30:00",
+                walltime='00:30:00',
                 nodes_per_block=2,
                 init_blocks=1,
-                max_blocks=1,
-                scheduler_options='',     # Input your scheduler_options if needed
-                worker_init='',           # Specify command to initialize worker environment. For eg:
-                # worker_init='source /home/yadunand/setup_theta_env.sh',
-                account='ALCF_ALLOCATION',  # Please replace ALCF_ALLOCATION with your ALCF allocation
+                # string to prepend to #COBALT blocks in the submit
+                # script to the scheduler eg: '#COBALT -t 50'
+                scheduler_options='',
+                # Command to be run before starting a worker, such as :
+                # 'module load Anaconda; source activate parsl_env'.
+                worker_init='',
                 cmd_timeout=120,
             ),
         )
     ],
-
 )
