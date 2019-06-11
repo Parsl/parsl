@@ -283,9 +283,9 @@ Amazon Web Services
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
-re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
+re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
 
-.. literalinclude:: ../../parsl/configs/ec2_single_node.py
+.. literalinclude:: ../../parsl/configs/ec2_htex_single_node.py
 
 
 Ad-Hoc Clusters
