@@ -24,7 +24,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     logbase = kwargs.pop("remote_side_bash_executor_log_base")
 
-    logging.basicConfig(filename='{0}/bashexec.{1}.log'.format(logbase, time.time()), level=logging.DEBUG)
+    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+
+    logging.basicConfig(filename='{0}/bashexec.{1}.log'.format(logbase, time.time()), level=logging.DEBUG, format=format_string)
 
     # start_t = time.time()
 
