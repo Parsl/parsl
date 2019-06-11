@@ -1,4 +1,3 @@
-import logging
 from functools import update_wrapper
 from inspect import signature, Parameter
 
@@ -6,6 +5,7 @@ from parsl.app.errors import wrap_error
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
+
 
 def remote_side_bash_executor(func, *args, **kwargs):
     """Execute the bash app type function and return the command line string.
@@ -31,8 +31,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     logname = __name__ + "." + str(t)
     logger = logging.getLogger(logname)
 
-    parsl.set_file_logger(filename='{0}/bashexec.{1}.log'.format(logbase, t), name = logname, level=logging.DEBUG, format_string = format_string)
-
+    set_file_logger(filename='{0}/bashexec.{1}.log'.format(logbase, t), name=logname, level=logging.DEBUG, format_string=format_string)
 
     # start_t = time.time()
 
