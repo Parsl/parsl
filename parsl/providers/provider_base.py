@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 # for typechecking:
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from parsl.channels.base import Channel
 
 class ExecutionProvider(metaclass=ABCMeta):
@@ -59,7 +59,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def status(self, job_ids):
+    def status(self, job_ids: List[Any]) -> List[str]:
         ''' Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
