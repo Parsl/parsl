@@ -173,9 +173,12 @@ Comet (SDSC)
 
 .. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
-The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
+The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
+Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the
+`SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch
+workers.
 
-.. literalinclude:: ../../parsl/configs/comet_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/comet_htex_multinode.py
 
 
 .. _configuring_nersc_cori:
