@@ -51,6 +51,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         Project which the job will be charged against
     scheduler_options : str
         String to add specific condor attributes to the HTCondor submit script.
+    schedd_name : str
+        String that indicates a specific schedd to use for submission and removal of jobs
     transfer_input_files : list(str)
         List of strings of paths to additional files or directories to transfer to the job
     worker_init : str
@@ -71,6 +73,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  environment=None,
                  project='',
                  scheduler_options='',
+                 schedd_name='',
                  transfer_input_files=[],
                  walltime="00:10:00",
                  worker_init='',
@@ -103,6 +106,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
         self.requirements = requirements
+        self.schedd_name = schedd_name
         self.transfer_input_files = transfer_input_files
 
     def _status(self):
@@ -110,6 +114,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         job_id_list = ' '.join(self.resources.keys())
         cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
+        if len(self.schedd_name) > 0:
+            cmd += " -name {0}".format(self.schedd_name)
         retcode, stdout, stderr = super().execute_wait(cmd)
         """
         Example output:
@@ -227,6 +233,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
+        if len(self.schedd_name) > 0:
+            cmd += " -name {0}".format(self.schedd_name)
         retcode, stdout, stderr = super().execute_wait(cmd, 30)
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
@@ -263,6 +271,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
+        if len(self.schedd_name) > 0:
+            cmd = "condor_rm {0} -name {1}; condor_rm -forcex {0} -name {1}".format(job_id_list, self.schedd_name)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
         retcode, stdout, stderr = self.channel.execute_wait(cmd, 30)
         rets = None
