@@ -416,6 +416,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
     first_msg = True
 
     while True:
+        logging.debug("start of monitoring loop")
         try:
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
@@ -424,7 +425,9 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
             d['hostname'] = platform.node()
             d['first_msg'] = first_msg
             d['timestamp'] = datetime.datetime.now()
+            logging.debug("getting children")
             children = pm.children(recursive=True)
+            logging.debug("got children")
             d["psutil_cpu_count"] = psutil.cpu_count()
             d['psutil_process_memory_virtual'] = pm.memory_info().vms
             d['psutil_process_memory_resident'] = pm.memory_info().rss
@@ -454,6 +457,8 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
                     d['psutil_process_disk_read'] += 0
 
         finally:
+            logging.debug("sending message")
             radio.send(MessageType.TASK_INFO, task_id, d)
+            logging.debug("sleeping")
             time.sleep(sleep_dur)
             first_msg = False
