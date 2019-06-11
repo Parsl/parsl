@@ -36,6 +36,7 @@ script:
     - flake8 parsl/
     - mypy typecheck-root.py
     - (for test in parsl/tests/configs/*.py parsl/tests/test*/test*; do mypy $test ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] ; then exit 1; fi; done ) ;
+    - parsl/tests/lint-inits.sh
 
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
