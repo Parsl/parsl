@@ -297,10 +297,8 @@ In order to use these resources with Parsl, they need to set-up for password-les
 
 In order to use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
 for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname.
-Here's an example configuration using the 2 login nodes from the Midway cluster as a proxy for
-an ad-hoc cluster.
 
-.. literalinclude:: ../../parsl/configs/ad_hoc.py
+.. literalinclude:: ../../parsl/configs/ad_hoc_htex.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
