@@ -11,7 +11,6 @@ from parsl.monitoring.visualization.plots.default.workflow_resource_plots import
 dummy = True
 
 
-
 def format_time(value):
     if value is None:
         return value
