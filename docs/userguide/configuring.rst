@@ -223,6 +223,19 @@ The configuration uses the `CobaltProvider` to interface with Cooley's scheduler
 
 .. literalinclude:: ../../parsl/configs/cooley_ssh_il_single_node.py
 
+
+Blue Waters (Cray)
+-------------
+
+.. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png
+
+The following snippet shows an example configuration for executing remotely on Blue Waters, a flagship machine at the National Center for Supercomputing Applications.
+The configuration assumes the user is running on a login node and uses the `TorqueProvider` to interface
+with the scheduler, and uses the `AprunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/bluewaters_htex.py
+
+
 Swan (Cray)
 -----------
 
