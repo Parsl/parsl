@@ -21,7 +21,7 @@ config = Config(
                 # string to prepend to #COBALT blocks in the submit
                 # script to the scheduler eg: '#COBALT -t 50'
                 scheduler_options='',
-                # Command to be run before starting a worker, such as :
+                # Command to be run before starting a worker, such as:
                 # 'module load Anaconda; source activate parsl_env'.
                 worker_init='',
                 cmd_timeout=120,

@@ -20,7 +20,7 @@ config = Config(
                 # string to prepend to #SBATCH blocks in the submit
                 # script to the scheduler eg: '#SBATCH --constraint=knl,quad,cache'
                 scheduler_options='',
-                # Command to be run before starting a worker, such as :
+                # Command to be run before starting a worker, such as:
                 # 'module load Anaconda; source activate parsl_env'.
                 worker_init='',
                 # We request all hyperthreads on a node.

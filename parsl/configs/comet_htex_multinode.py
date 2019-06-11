@@ -23,7 +23,7 @@ config = Config(
                 # string to prepend to #SBATCH blocks in the submit
                 # script to the scheduler
                 scheduler_options='',
-                # Command to be run before starting a worker, such as :
+                # Command to be run before starting a worker, such as:
                 # 'module load Anaconda; source activate parsl_env'.
                 worker_init='',
                 walltime='00:10:00',

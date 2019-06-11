@@ -21,7 +21,7 @@ config = Config(
                 init_blocks=1,
                 min_blocks=1,
                 max_blocks=1,
-                # Command to be run before starting a worker, such as :
+                # Command to be run before starting a worker, such as:
                 # 'module load Anaconda; source activate parsl_env'.
                 worker_init='',
             ),
