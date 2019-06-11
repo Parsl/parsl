@@ -5,7 +5,7 @@ Configuration
 
 Parsl workflows are developed completely independently from their execution environment.
 There are very many different execution environments in which Parsl programs and their apps can run, and
-mamy of these enviroments have multiple options of how those programs and apps run, which makes
+many of these environments have multiple options of how those programs and apps run, which makes
 configuration somewhat complex, and also makes determining how to set up Parsl's configuration
 for a particular set of choices fairly complex, though we think the actual configuration
 itself is reasonable simple.
