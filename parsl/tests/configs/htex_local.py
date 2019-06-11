@@ -6,6 +6,7 @@ from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 
 config = Config(
+    remote_side_bash_executor_log_base="/home/benc/tmp/parsl/",
     executors=[
         HighThroughputExecutor(
             label="htex_Local",

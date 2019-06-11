@@ -22,7 +22,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
     import logging
     import parsl.app.errors as pe
 
-    logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
+    logbase = kwargs.pop("remote_side_bash_executor_log_base")
+
+    logging.basicConfig(filename='{0}/bashexec.{1}.log'.format(logbase, time.time()), level=logging.DEBUG)
 
     # start_t = time.time()
 
@@ -162,6 +164,7 @@ class BashApp(AppBase):
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
+                             remote_side_bash_executor_log_base=dfk.config.remote_side_bash_executor_log_base,
                              **self.kwargs)
 
         out_futs = [DataFuture(app_fut, o, tid=app_fut.tid)

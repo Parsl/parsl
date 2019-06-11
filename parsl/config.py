@@ -65,7 +65,8 @@ class Config(RepresentationMixin):
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
                  monitoring: Optional[MonitoringHub] = None,
-                 usage_tracking: bool = False):
+                 usage_tracking: bool = False,
+                 remote_side_bash_executor_log_base: str = "/tmp/"):
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
@@ -90,6 +91,7 @@ class Config(RepresentationMixin):
         self.run_dir = run_dir
         self.strategy = strategy
         self.usage_tracking = usage_tracking
+        self.remote_side_bash_executor_log_base = remote_side_bash_executor_log_base
         self.monitoring = monitoring
 
     @property
