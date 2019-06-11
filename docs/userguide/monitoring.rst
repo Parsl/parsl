@@ -68,5 +68,5 @@ This binds your local machine's port 50000 to the remote cluster's port 8080. Th
 .. warning:: Below is an alternative to host the viz_server, which may violate the cluster's security policy. Please check with your cluster admin before doing this.
 If the cluster allows you to host a web server on its public IP address with a specific port (i.e., open to Internet via `public_IP:55555`), you can run::
 
-   $ parsl-visualize -e --port 55555 sqlite:///<absolute-path-to-db>
+   $ parsl-visualize --listen 0.0.0.0 --port 55555 sqlite:///<absolute-path-to-db>
 
