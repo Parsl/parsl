@@ -12,14 +12,11 @@ Installation
 Parsl's monitoring model relies on writing workflow progress to a sqlite database and using separate tools
 that query this database to create a web-based dashboard for the workflow.
 
-To enable workflow monitoring support install::
-
-    $ pip install parsl[monitoring]
 
 Monitoring configuration
 ------------------------
 
-Here's an example configuration that logs monitoring information to a local sqlite database:: 
+Here's an example configuration that logs monitoring information to a local sqlite database: 
 
 .. code-block:: python
 
@@ -53,10 +50,6 @@ Here's an example configuration that logs monitoring information to a local sqli
 Visualization
 -------------
 
-Install the visualization server::
-
-   $ pip install git+https://github.com/Parsl/viz_server.git
-
 Run the `parsl-visualize` utility in the directory with the
 `monitoring.db` sqlite file to launch a web page for the workflow visualization::
 
@@ -75,6 +68,5 @@ This binds your local machine's port 50000 to the remote cluster's port 8080. Th
 .. warning:: Below is an alternative to host the viz_server, which may violate the cluster's security policy. Please check with your cluster admin before doing this.
 If the cluster allows you to host a web server on its public IP address with a specific port (i.e., open to Internet via `public_IP:55555`), you can run::
 
-   $ parsl-visualize -e --port 55555 sqlite:///<absolute-path-to-db>
+   $ parsl-visualize --listen 0.0.0.0 --port 55555 sqlite:///<absolute-path-to-db>
 
-.. warning:: Please note that visualization support is in `alpha` state

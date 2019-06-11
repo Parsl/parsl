@@ -114,7 +114,7 @@ class DataFlowKernel(object):
                     self.workflow_name = fname
                     break
 
-        self.workflow_version = str(self.time_began)
+        self.workflow_version = str(self.time_began.replace(microsecond=0))
         if self.monitoring is not None and self.monitoring.workflow_version is not None:
             self.workflow_version = self.monitoring.workflow_version
 
@@ -449,7 +449,7 @@ class DataFlowKernel(object):
             executable = self.monitoring.monitor_wrapper(executable, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
-                                                         self.monitoring.resource_monitoring_interval)
+                                                         self.monitoring.resource_monitoring_interval, self.config.remote_side_bash_executor_log_base)
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, *args, **kwargs)
