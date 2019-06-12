@@ -812,11 +812,11 @@ class DataFlowKernel(object):
     def cleanup(self):
         """DataFlowKernel cleanup.
 
-        This involves killing resources explicitly and sending die messages to IPP workers.
+        This involves releasing all resources explicitly.
 
         If the executors are managed (created by the DFK), then we call scale_in on each of
-        the executors and call executor.shutdown. Otherwise, we do nothing, and executor
-        cleanup is left to the user.
+        the executors and call executor.shutdown. Otherwise, executor cleanup is left to
+        the user.
         """
         logger.info("DFK cleanup initiated")
 
