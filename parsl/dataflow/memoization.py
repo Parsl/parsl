@@ -2,6 +2,9 @@ import hashlib
 import logging
 from parsl.executors.serialize.serialize import serialize_object
 
+from typing import Dict, Any
+from parsl import DataFlowKernel # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,9 +36,10 @@ class Memoizer(object):
 
     When a task is ready for launch, i.e., all of its arguments
     have resolved, we add its hash to the task datastructure.
+
     """
 
-    def __init__(self, dfk, memoize=True, checkpoint={}):
+    def __init__(self, dfk: "DataFlowKernel", memoize: bool=True, checkpoint: Dict[str, Any]={}):
         """Initialize the memoizer.
 
         Args:
@@ -55,7 +59,7 @@ class Memoizer(object):
             logger.info("App caching disabled for all apps")
             self.memo_lookup_table = {}
 
-    def make_hash(self, task):
+    def make_hash(self, task: Dict[str, Any]) -> str:
         """Create a hash of the task inputs.
 
         This uses a serialization library borrowed from ipyparallel.

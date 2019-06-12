@@ -969,7 +969,7 @@ class DataFlowKernel(object):
 
             return checkpoint_dir
 
-    def _load_checkpoints(self, checkpointDirs):
+    def _load_checkpoints(self, checkpointDirs: List[str]) -> Dict[str, Any]:
         """Load a checkpoint file into a lookup table.
 
         The data being loaded from the pickle file mostly contains input
@@ -996,7 +996,7 @@ class DataFlowKernel(object):
                         try:
                             data = pickle.load(f)
                             # Copy and hash only the input attributes
-                            memo_fu = Future()
+                            memo_fu = Future() #  type: Future[Any]
                             if data['exception']:
                                 memo_fu.set_exception(data['exception'])
                             else:
