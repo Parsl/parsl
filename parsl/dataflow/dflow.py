@@ -436,6 +436,15 @@ class DataFlowKernel(object):
         self.tasks[task_id]['time_submitted'] = datetime.datetime.now()
 
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
+
+
+        # this is probably not the right place to do this
+        # but this is a proof of concept.
+        if 'checkpoint_hash' in kwargs:
+            if kwargs['checkpoint_hash'] == parsl.AUTO_LOGNAME:
+                logger.debug("Setting checkpoint_hash for task {} to {}".format(task_id, self.tasks[task_id]['hashsum']))
+                kwargs['checkpoint_hash'] = self.tasks[task_id]['hashsum']
+
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
             return memo_fu
