@@ -969,7 +969,7 @@ class DataFlowKernel(object):
 
             return checkpoint_dir
 
-    def _load_checkpoints(self, checkpointDirs: List[str]) -> Dict[str, Any]:
+    def _load_checkpoints(self, checkpointDirs: List[str]) -> Dict[str, Future[Any]]:
         """Load a checkpoint file into a lookup table.
 
         The data being loaded from the pickle file mostly contains input
