@@ -16,34 +16,36 @@ that query this database to create a web-based dashboard for the workflow.
 Monitoring configuration
 ------------------------
 
-Here's an example configuration that logs monitoring information to a local sqlite database: 
+Here's an example configuration that logs monitoring information to a local sqlite database:
 
 .. code-block:: python
 
-    import parsl
-    from parsl.monitoring.monitoring import MonitoringHub
-    from parsl.config import Config
-    from parsl.executors import HighThroughputExecutor
-    from parsl.addresses import address_by_hostname
+   import parsl
+   from parsl.monitoring.monitoring import MonitoringHub
+   from parsl.config import Config
+   from parsl.executors import HighThroughputExecutor
+   from parsl.addresses import address_by_hostname
 
-    import logging
+   import logging
 
-    config = Config(
-        executors=[
-            HighThroughputExecutor(
-                label="local_htex",
-                cores_per_worker=1,
-                max_workers=4,
-                address=address_by_hostname(),
-            )
-        ],
-        monitoring=MonitoringHub(
-            hub_address=address_by_hostname(),
-            logging_level=logging.INFO,
-            resource_monitoring_interval=10,
-        ),
-        strategy=None
-    )
+   config = Config(
+      executors=[
+          HighThroughputExecutor(
+              label="local_htex",
+              cores_per_worker=1,
+              max_workers=4,
+              address=address_by_hostname(),
+          )
+      ],
+      monitoring=MonitoringHub(
+          hub_address=address_by_hostname(),
+          logging_level=logging.INFO,
+          resource_monitoring_interval=10,
+      ),
+      strategy=None
+   )
+
+
 
 
 
@@ -68,5 +70,5 @@ This binds your local machine's port 50000 to the remote cluster's port 8080. Th
 .. warning:: Below is an alternative to host the viz_server on a cluster, which may violate the cluster's security policy. Please check with your cluster admin before doing this.
 If the cluster allows you to host a web server on its public IP address with a specific port (i.e., open to Internet via `public_IP:55555`), you can run::
 
-   $ parsl-visualize --external --port 55555 sqlite:///<absolute-path-to-db>
+   $ parsl-visualize --listen 0.0.0.0 --port 55555 sqlite:///<absolute-path-to-db>
 
