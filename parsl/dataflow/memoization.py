@@ -2,7 +2,7 @@ import hashlib
 import logging
 from parsl.executors.serialize.serialize import serialize_object
 
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 from parsl import DataFlowKernel # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ class Memoizer(object):
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
 
-    def check_memo(self, task_id, task):
+    def check_memo(self, task_id: bool, task: Dict[str, Any]) -> Tuple[bool, Any]:
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
         If present, the results are returned. The result is a tuple indicating whether a memo
@@ -101,7 +101,7 @@ class Memoizer(object):
         """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
-            return None, None
+            return False, None
 
         hashsum = self.make_hash(task)
         present = False
