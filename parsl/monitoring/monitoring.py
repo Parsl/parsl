@@ -347,8 +347,6 @@ class Hub(object):
 
         self.hub_port = hub_port
         self.hub_address = hub_address
-        self.database = database
-        self.visualization_server = visualization_server
         self.atexit_timeout = atexit_timeout
 
         self.loop_freq = 10.0  # milliseconds
