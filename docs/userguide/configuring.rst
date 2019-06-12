@@ -1,6 +1,6 @@
 .. _configuration-section:
 
-Environment Configuration
+Configuration
 =============
 
 Parsl workflows are developed completely independently from their execution environment.
