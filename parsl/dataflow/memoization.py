@@ -2,7 +2,7 @@ import hashlib
 import logging
 from parsl.executors.serialize.serialize import serialize_object
 
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Union
 from parsl import DataFlowKernel # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
 from concurrent.futures import Future
 
@@ -83,7 +83,7 @@ class Memoizer(object):
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
 
-    def check_memo(self, task_id: bool, task: Dict[str, Any]) -> Tuple[bool, Any]:
+    def check_memo(self, task_id: bool, task: Dict[str, Any]) -> Tuple[bool, Union[None, Future[Any]]]:
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
         If present, the results are returned. The result is a tuple indicating whether a memo
@@ -132,7 +132,7 @@ class Memoizer(object):
         """
         return self.memo_lookup_table[hashsum]
 
-    def update_memo(self, task_id, task, r):
+    def update_memo(self, task_id: str, task: Dict[str, Any], r: Future[Any]) -> None:
         """Updates the memoization lookup table with the result from a task.
 
         Args:
