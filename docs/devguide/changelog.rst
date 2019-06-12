@@ -1,6 +1,43 @@
 Changelog
 =========
 
+
+Parsl 0.8.0
+-----------
+
+Released on June 13th, 2019
+
+Parsl v0.8.0 includes 58 closed issues and pull requests with contributions (code, tests, reviews and reports)
+from: Anna Woodard @annawoodard, Antonio Villarreal @villarrealas, Ben Clifford @benc, Daniel S. Katz @danielskatz,
+Eric Tatara @etatara, Lindsey Gray @lgray, Tom Glanzman @TomGlanzman, Yadu Nand Babuji @yadudoc and Zhuozhao Li @ZhuozhaoLi
+
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* `Monitoring`: Monitoring is now integrated into parsl as default functionality
+* `parsl.AUTO_LOGNAME`: Support for a special `AUTO_LOGNAME` option to auto generate `stdout` and `stderr` file paths.
+* Cleaner user app file log management
+* Updated configurations using `HighThroughputExecutor` in the configuration section of the userguide.
+
+
+Bug Fixes
+^^^^^^^^^
+
+* Monitoring resource usage bug `issue#975 <https://github.com/Parsl/parsl/issues/975>`_
+* Bash apps fail due to missing dir paths `issue#1001 <https://github.com/Parsl/parsl/issues/1001>`_
+* Viz server explicit binding fix `issue#1023 <https://github.com/Parsl/parsl/issues/1023>`_
+* Fix sqlalchemy version warning `issue#997 <https://github.com/Parsl/parsl/issues/997>`_
+* All workflows are called typeguard `issue#973 <https://github.com/Parsl/parsl/issues/973>`_
+* Fix `ModuleNotFoundError: No module named 'monitoring` `issue#971 <https://github.com/Parsl/parsl/issues/971>`_
+* Fix sqlite3 integrity error `issue#920 <https://github.com/Parsl/parsl/issues/920>`_
+* HTEX interchange check python version mismatch to the micro level `issue#857 <https://github.com/Parsl/parsl/issues/857>`_
+* Clarify warning message when a manager goes missing `issue#698 <https://github.com/Parsl/parsl/issues/698>`_
+* Apps without a specified DFK should use the global DFK in scope at call time, not at other times. `issue#697 <https://github.com/Parsl/parsl/issues/697>`_
+* `issue#1023 <https://github.com/Parsl/parsl/issues/1023>`_
+* `issue#1023 <https://github.com/Parsl/parsl/issues/1023>`_
+
+
 Parsl 0.7.2
 -----------
 
