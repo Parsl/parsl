@@ -16,34 +16,36 @@ that query this database to create a web-based dashboard for the workflow.
 Monitoring configuration
 ------------------------
 
-Here's an example configuration that logs monitoring information to a local sqlite database: 
+Here's an example configuration that logs monitoring information to a local sqlite database:
 
 .. code-block:: python
 
-    import parsl
-    from parsl.monitoring.monitoring import MonitoringHub
-    from parsl.config import Config
-    from parsl.executors import HighThroughputExecutor
-    from parsl.addresses import address_by_hostname
+   import parsl
+   from parsl.monitoring.monitoring import MonitoringHub
+   from parsl.config import Config
+   from parsl.executors import HighThroughputExecutor
+   from parsl.addresses import address_by_hostname
 
-    import logging
+   import logging
 
-    config = Config(
-        executors=[
-            HighThroughputExecutor(
-                label="local_htex",
-                cores_per_worker=1,
-                max_workers=4,
-                address=address_by_hostname(),
-            )
-        ],
-        monitoring=MonitoringHub(
-            hub_address=address_by_hostname(),
-            logging_level=logging.INFO,
-            resource_monitoring_interval=10,
-        ),
-        strategy=None
-    )
+   config = Config(
+      executors=[
+          HighThroughputExecutor(
+              label="local_htex",
+              cores_per_worker=1,
+              max_workers=4,
+              address=address_by_hostname(),
+          )
+      ],
+      monitoring=MonitoringHub(
+          hub_address=address_by_hostname(),
+          logging_level=logging.INFO,
+          resource_monitoring_interval=10,
+      ),
+      strategy=None
+   )
+
+
 
 
 

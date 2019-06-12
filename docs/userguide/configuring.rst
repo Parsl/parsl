@@ -173,9 +173,12 @@ Comet (SDSC)
 
 .. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
-The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
+The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
+Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the
+`SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch
+workers.
 
-.. literalinclude:: ../../parsl/configs/comet_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/comet_htex_multinode.py
 
 
 .. _configuring_nersc_cori:
@@ -187,7 +190,7 @@ Cori (NERSC)
 
 The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
-.. literalinclude:: ../../parsl/configs/cori_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/cori_htex_local_multinode.py
 
 
 Stampede2 (TACC)
@@ -205,11 +208,11 @@ Theta (ALCF)
 
 .. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
 
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's **Theta** supercomputer.
-This example uses the `IPyParallelExecutor` and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
-assumes that the script is being executed on the login nodes of Theta.
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
+**Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
+using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/theta_local_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/theta_local_htex_multinode.py
 
 
 Cooley (ALCF)
@@ -297,9 +300,9 @@ Amazon Web Services
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
-re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
+re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
 
-.. literalinclude:: ../../parsl/configs/ec2_single_node.py
+.. literalinclude:: ../../parsl/configs/ec2_htex_single_node.py
 
 
 Ad-Hoc Clusters
@@ -329,7 +332,7 @@ configuration follows.
 Further help
 ------------
 
-For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.ipp.IPyParallelExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example::
+For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.HighThroughputExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example::
 
     >>> from parsl.config import Config
     >>> help(Config)
