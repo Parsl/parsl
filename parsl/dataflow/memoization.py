@@ -113,14 +113,11 @@ class Memoizer(object):
     def hash_lookup(self, hashsum):
         """Lookup a hash in the memoization table.
 
-        Will raise a KeyError if hash is not in the memoization lookup table.
-
         Args:
-            - hashsum (str?): The same hashes used to uniquely identify apps+inputs
+            - hashsum (str): The same hashes used to uniquely identify apps+inputs
 
         Returns:
-            - Lookup result, this is unlikely to be None, since the hashes are set by this
-              library and could not miss entried in it's dict.
+            - Lookup result
 
         Raises:
             - KeyError: if hash not in table
