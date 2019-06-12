@@ -7,7 +7,7 @@ from parsl.executors import HighThroughputExecutor
 config = Config(
     executors=[
         HighThroughputExecutor(
-            label="midway_htex_multinode",
+            label='Midway_HTEX_multinode',
             worker_debug=False,
             address=address_by_hostname(),
             provider=SlurmProvider(
@@ -17,11 +17,14 @@ config = Config(
                 init_blocks=1,
                 min_blocks=1,
                 max_blocks=1,
-                scheduler_options='',  # string to prepend to #SBATCH blocks in the submit script to the scheduler
-                worker_init='',        # command to run before starting a worker, such as 'source activate env'
+                # string to prepend to #SBATCH blocks in the submit
+                # script to the scheduler eg: '#SBATCH --constraint=knl,quad,cache'
+                scheduler_options='',
+                # Command to be run before starting a worker, such as:
+                # 'module load Anaconda; source activate parsl_env'.
+                worker_init='',
                 walltime='00:30:00'
             ),
         )
-
     ],
 )
