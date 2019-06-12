@@ -159,7 +159,7 @@ class DataFlowKernel(object):
                 logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
-        # if we use the functionality of dynamicall adding executors
+        # if we use the functionality of dynamically adding executors
         # all executors should be managed.
         if any([x.managed for x in config.executors]):
             self.flowcontrol = FlowControl(self)
