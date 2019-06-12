@@ -82,8 +82,8 @@ class Memoizer(object):
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
         If present, the results are returned. The result is a tuple indicating whether a memo
-        exists and the result, since a Null result is possible and could be confusing.
-        This seems like a reasonable option without relying on an cache_miss exception.
+        exists and the result, since a None result is possible and could be confusing.
+        This seems like a reasonable option without relying on a cache_miss exception.
 
         Args:
             - task(task) : task from the dfk.tasks table
