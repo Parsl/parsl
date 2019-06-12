@@ -29,17 +29,6 @@ def test_error_3():
     ''' This should work
     '''
     try:
-        connect_and_list("login.mcs.anl.gov", "yadunand")
-    except AuthException as e:
-        print("Caught exception : ", e)
-    else:
-        assert type(e) == BadHostKeyException, "Expected SSException, got :{0}".format(e)
-
-
-def test_error_3():
-    ''' This should work
-    '''
-    try:
         connect_and_list("edison.nersc.gov", "yadunand")
     except BadHostKeyException as e:
         print("Caught exception BadHostKeyException: ", e)

@@ -83,18 +83,6 @@ def test_python_remote_slow(count=2):
         print(fu.result())
 
 
-def test_python_remote(count=1):
-    """ Run with no delay.
-    """
-    fus = []
-    for i in range(0, count):
-        fu = python_app_slow(0)
-        fus.extend([fu])
-
-    for fu in fus:
-        print(fu.result())
-
-
 def average(l):
     return sum(l) / len(l)
 
