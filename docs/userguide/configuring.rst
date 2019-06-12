@@ -217,11 +217,12 @@ Cooley (ALCF)
 
 .. image:: https://today.anl.gov/wp-content/uploads/sites/44/2015/06/Cray-Cooley.jpg
 
-The following snippet shows an example configuration for executing remotely on Argonne Leadership Computing Facility's **Cooley** analysis and visualization system.
-The example uses an `SSHInteractiveLoginChannel` to connect remotely to Cooley using ALCF's 2FA token.
-The configuration uses the `CobaltProvider` to interface with Cooley's scheduler.
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's 
+**Cooley** analysis and visualization system.
+The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler 
+using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/cooley_ssh_il_single_node.py
+.. literalinclude:: ../../parsl/configs/cooley_htex_multinode.py
 
 
 Blue Waters (Cray)
