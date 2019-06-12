@@ -24,8 +24,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
 
-    # start_t = time.time()
-
     func_name = func.__name__
 
     partial_cmdline = None
@@ -112,7 +110,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
     if missing:
         raise pe.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
 
-    # exec_duration = time.time() - start_t
     return returncode
 
 
