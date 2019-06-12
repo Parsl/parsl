@@ -5,7 +5,7 @@ Configuration
 
 Parsl workflows are developed completely independently from their execution environment.
 There are very many different execution environments in which Parsl programs and their apps can run, and
-mamy of these enviroments have multiple options of how those programs and apps run, which makes
+many of these environments have multiple options of how those programs and apps run, which makes
 configuration somewhat complex, and also makes determining how to set up Parsl's configuration
 for a particular set of choices fairly complex, though we think the actual configuration
 itself is reasonable simple.
@@ -224,6 +224,19 @@ using the `CobaltProvider`. This configuration assumes that the script is being 
 
 .. literalinclude:: ../../parsl/configs/cooley_htex_multinode.py
 
+
+Blue Waters (Cray)
+-------------
+
+.. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png
+
+The following snippet shows an example configuration for executing remotely on Blue Waters, a flagship machine at the National Center for Supercomputing Applications.
+The configuration assumes the user is running on a login node and uses the `TorqueProvider` to interface
+with the scheduler, and uses the `AprunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/bluewaters_htex.py
+
+
 Swan (Cray)
 -----------
 
@@ -293,17 +306,22 @@ Ad-Hoc Clusters
 ---------------
 
 Any collection of compute nodes without a scheduler setup for task scheduling can be considered an
-ad-hoc cluster. Often these machines have a shared-filesystem such as NFS or Lustre.
+ad-hoc cluster. Often these machines have a shared filesystem such as NFS or Lustre.
 In order to use these resources with Parsl, they need to set-up for password-less SSH access.
 
-In order to use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
-for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname.
+To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
+for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
+configuration follows.
 
 .. literalinclude:: ../../parsl/configs/ad_hoc_htex.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
 
+.. note::
+   Load-balancing will not work properly with this approach. In future work, a dedicated provider
+   that supports load-balancing will be implemented. You can follow progress on this work
+   `here <https://github.com/Parsl/parsl/issues/941>`_.
 
 
 
