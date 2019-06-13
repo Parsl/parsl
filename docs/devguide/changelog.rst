@@ -20,6 +20,21 @@ New Functionality
 
 * Monitoring is now integrated into parsl as default functionality.
 * `parsl.AUTO_LOGNAME`: Support for a special `AUTO_LOGNAME` option to auto generate `stdout` and `stderr` file paths.
+* `parsl.Files` no longer behave as strings. This means that operations in apps that treated `parsl.Files` as strings
+  will break. For example the following snippet will have to be updated:
+
+  .. code-block:: python
+
+     # Old style: " ".join(inputs) is legal since inputs will behave like a list of strings
+     @bash_app
+     def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+         return "cat {0} > {1}".format(" ".join(inputs), outputs[0])
+
+     # New style:
+     @bash_app
+     def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+         return "cat {0} > {1}".format(" ".join(list(map(str,inputs))), outputs[0])
+
 * Cleaner user app file log management.
 * Updated configurations using `HighThroughputExecutor` in the configuration section of the userguide.
 * Support for OAuth based SSH with `OAuthSSHChannel`.
