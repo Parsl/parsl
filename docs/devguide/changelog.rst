@@ -8,10 +8,10 @@ Parsl 0.8.0
 Released on June 13th, 2019
 
 Parsl v0.8.0 includes 58 closed issues and pull requests with contributions (code, tests, reviews and reports)
-from: Andrew Litteken @AndrewLitteken,  Anna Woodard @annawoodard, Antonio Villarreal @villarrealas,
+from: Andrew Litteken @AndrewLitteken, Anna Woodard @annawoodard, Antonio Villarreal @villarrealas,
 Ben Clifford @benc, Daniel S. Katz @danielskatz, Eric Tatara @etatara, Juan David Garrido @garri1105,
-Lindsey Gray @lgray, Tim Armstrong @timarmstrong, Tom Glanzman @TomGlanzman, Yadu Nand Babuji @yadudoc
-and Zhuozhao Li @ZhuozhaoLi
+Kyle Chard @@kylechard, Lindsey Gray @lgray, Tim Armstrong @timarmstrong, Tom Glanzman @TomGlanzman,
+Yadu Nand Babuji @yadudoc and Zhuozhao Li @ZhuozhaoLi
 
 
 New Functionality
