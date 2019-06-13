@@ -70,7 +70,6 @@ Here's a list of the components and their extras option:
 * Google Cloud : `google_cloud`
 * Kubernetes : `kubernetes`
 * Extreme Scale Executor (Supercomputing) : `extreme_scale`
-* Logging monitoring data to a database: `monitoring`
 * Jetstream (NSF Cloud) : `jetstream`
 
 Optional extras can be installed using the following syntax::
