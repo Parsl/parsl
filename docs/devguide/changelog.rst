@@ -8,10 +8,11 @@ Parsl 0.8.0
 Released on June 13th, 2019
 
 Parsl v0.8.0 includes 58 closed issues and pull requests with contributions (code, tests, reviews and reports)
+
 from: Andrew Litteken @AndrewLitteken, Anna Woodard @annawoodard, Antonio Villarreal @villarrealas,
 Ben Clifford @benc, Daniel S. Katz @danielskatz, Eric Tatara @etatara, Juan David Garrido @garri1105,
 Kyle Chard @@kylechard, Lindsey Gray @lgray, Tim Armstrong @timarmstrong, Tom Glanzman @TomGlanzman,
-Yadu Nand Babuji @yadudoc and Zhuozhao Li @ZhuozhaoLi
+Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
 
 
 New Functionality
@@ -21,7 +22,7 @@ New Functionality
 * `parsl.AUTO_LOGNAME`: Support for a special `AUTO_LOGNAME` option to auto generate `stdout` and `stderr` file paths.
 * Cleaner user app file log management.
 * Updated configurations using `HighThroughputExecutor` in the configuration section of the userguide.
-* Support for OAuth based SSH with `OAuthSSHChannel` .
+* Support for OAuth based SSH with `OAuthSSHChannel`.
 
 Bug Fixes
 ^^^^^^^^^
@@ -36,8 +37,6 @@ Bug Fixes
 * HTEX interchange check python version mismatch to the micro level `issue#857 <https://github.com/Parsl/parsl/issues/857>`_
 * Clarify warning message when a manager goes missing `issue#698 <https://github.com/Parsl/parsl/issues/698>`_
 * Apps without a specified DFK should use the global DFK in scope at call time, not at other times. `issue#697 <https://github.com/Parsl/parsl/issues/697>`_
-* `issue#1023 <https://github.com/Parsl/parsl/issues/1023>`_
-* `issue#1023 <https://github.com/Parsl/parsl/issues/1023>`_
 
 
 Parsl 0.7.2
@@ -89,7 +88,7 @@ David Heise @daheise, Daniel S. Katz @danielskatz, Dominic Fitzgerald @djf604, F
 Juan David Garrido @garri1105, Gordon Watts @gordonwatts, Justin Wozniak @jmjwozniak,
 Joseph Moon @jmoon1506, Kenyi Hurtado @khurtado, Kyle Chard @kylechard, Lukasz Lacinski @lukaszlacinski,
 Ravi Madduri @madduri, Marco Govoni @mgovoni-devel, Reid McIlroy-Young @reidmcy, Ryan Chard @ryanchard,
-@sdustrud, Yadu Nand Babuji @yadudoc and Zhuozhao Li @ZhuozhaoLi
+@sdustrud, Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
 
 New functionality
 ^^^^^^^^^^^^^^^^^
