@@ -15,11 +15,11 @@ Eric Tatara @etatara, Lindsey Gray @lgray, Tom Glanzman @TomGlanzman, Yadu Nand 
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `Monitoring`: Monitoring is now integrated into parsl as default functionality
+* Monitoring is now integrated into parsl as default functionality.
 * `parsl.AUTO_LOGNAME`: Support for a special `AUTO_LOGNAME` option to auto generate `stdout` and `stderr` file paths.
-* Cleaner user app file log management
+* Cleaner user app file log management.
 * Updated configurations using `HighThroughputExecutor` in the configuration section of the userguide.
-
+* Support for OAuth based SSH with `OAuthSSHChannel` .
 
 Bug Fixes
 ^^^^^^^^^
