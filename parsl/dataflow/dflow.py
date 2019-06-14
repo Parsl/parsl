@@ -443,7 +443,6 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
-            raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             executable = self.monitoring.monitor_wrapper(executable, task_id,
@@ -627,8 +626,6 @@ class DataFlowKernel(object):
             choices = list(e for e in self.executors if e != 'data_manager')
         elif isinstance(executors, list):
             choices = executors
-        else:
-            raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
 
         # Transform remote input files to data futures
