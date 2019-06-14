@@ -11,9 +11,9 @@ from parsl.tests.configs.local_threads import config
 @App('bash')
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
-    return """echo %s
-    cat %s &> {outputs[0]}
-    """ % (infiles, infiles)
+    return """echo {i}
+    cat {i} &> {o}
+    """.format(i=infiles, o=outputs[0])
 
 
 @pytest.mark.usefixtures('setup_data')
