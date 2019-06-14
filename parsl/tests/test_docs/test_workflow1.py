@@ -17,7 +17,7 @@ def generate(limit):
 
 @App('bash')
 def save(message, outputs=[]):
-    return 'echo %s &> {outputs[0]}' % (message)
+    return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
 
 
 def test_procedural(N=2):
