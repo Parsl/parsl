@@ -1,3 +1,4 @@
+import os
 import parsl
 
 from parsl.app.app import App
@@ -23,6 +24,10 @@ def test_procedural(N=2):
     """Procedural workflow example from docs on
     Composing a workflow
     """
+
+    if os.path.exists('output.txt'):
+        os.remove('output.txt')
+
     message = generate(N)
 
     saved = save(message, outputs=['output.txt'])
