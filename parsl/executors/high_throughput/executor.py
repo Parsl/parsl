@@ -597,7 +597,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         status = []
         if self.provider:
-            status = self.provider.status(self.blocks.values())
+            status = self.provider.status(list(self.blocks.values()))
 
         return status
 
