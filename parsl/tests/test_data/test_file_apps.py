@@ -19,6 +19,9 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
 @pytest.mark.usefixtures('setup_data')
 def test_files():
 
+    if os.path.exists('cat_out.txt'):
+        os.remove('cat_out.txt')
+
     fs = [File('data/' + f) for f in os.listdir('data')]
     x = cat(inputs=fs, outputs=['cat_out.txt'],
             stdout='f_app.out', stderr='f_app.err')
