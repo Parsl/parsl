@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import argparse
 import zmq
-# import uuid
 import os
 import sys
 import platform

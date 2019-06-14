@@ -108,11 +108,15 @@ to the decorated function. The string that is returned is formatted by the Pytho
 .. code-block:: python
 
        @bash_app
-       def echo(arg1, inputs=[], stderr='std.err', stdout='std.out'):
-           return 'echo %s %s %s' % (arg1, inputs[0], inputs[1])
+       def echo(arg, inputs=[], stderr=parsl.AUTO_LOGNAME, stdout=parsl.AUTO_LOGNAME):
+           return 'echo {} {} {}'.format(arg, inputs[0], inputs[1])
 
-       # This call echoes "Hello World !" to the file *std.out*
-       echo('Hello', inputs=['World', '!'])
+       future = echo('Hello', inputs=['World', '!'])
+       future.result() # block until task has completed
+
+       with open(future.stdout, 'r') as f:
+           print(f.read()) # prints "Hello World !"
+
 
 Returns
 ^^^^^^^
