@@ -156,10 +156,10 @@ class DataFlowKernel(object):
                 checkpoint_period = (h * 3600) + (m * 60) + s
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
             except Exception:
-                logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
+                logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
-        # if we use the functionality of dynamicall adding executors
+        # if we use the functionality of dynamically adding executors
         # all executors should be managed.
         if any([x.managed for x in config.executors]):
             self.flowcontrol = FlowControl(self)
@@ -218,8 +218,6 @@ class DataFlowKernel(object):
     @property
     def config(self):
         """Returns the fully initialized config that the DFK is actively using.
-
-        DO *NOT* update.
 
         Returns:
              - config (dict)
@@ -815,11 +813,11 @@ class DataFlowKernel(object):
     def cleanup(self):
         """DataFlowKernel cleanup.
 
-        This involves killing resources explicitly and sending die messages to IPP workers.
+        This involves releasing all resources explicitly.
 
         If the executors are managed (created by the DFK), then we call scale_in on each of
-        the executors and call executor.shutdown. Otherwise, we do nothing, and executor
-        cleanup is left to the user.
+        the executors and call executor.shutdown. Otherwise, executor cleanup is left to
+        the user.
         """
         logger.info("DFK cleanup initiated")
 
