@@ -1,3 +1,4 @@
+import os
 import parsl
 
 from parsl.app.app import App
@@ -30,9 +31,14 @@ def test_parallel_dataflow():
     """Test parallel dataflow from docs on Composing workflows
     """
 
+    if os.path.exists('all.txt'):
+        os.remove('all.txt')
+
     # create 5 files with random numbers
     output_files = []
     for i in range(5):
+        if os.path.exists('random-%s.txt' % i):
+            os.remove('random-%s.txt' % i)
         output_files.append(generate(outputs=['random-%s.txt' % i]))
 
     # concatenate the files into a single file
