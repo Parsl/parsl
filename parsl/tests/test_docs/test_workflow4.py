@@ -10,7 +10,7 @@ from parsl.tests.configs.local_threads import config
 
 @App('bash')
 def generate(outputs=[]):
-    return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}"
+    return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {o}".format(o=outputs[0])
 
 
 @App('bash')
