@@ -34,9 +34,9 @@ def test_files():
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
     return """
-    x=$(cat {inputs[0]})
-    echo $(($x+1)) > {outputs[0]}
-    """
+    x=$(cat {i})
+    echo $(($x+1)) > {o}
+    """.format(i=inputs[0], o=outputs[0])
 
 
 @pytest.mark.usefixtures('setup_data')
