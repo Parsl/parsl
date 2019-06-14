@@ -9,9 +9,9 @@ from parsl.tests.configs.local_threads import config
 @App('bash')
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
-    return """echo %s
-    cat %s &> {outputs[0]}
-    """ % (infiles, infiles)
+    return """echo {i}
+    cat {i} &> {o}
+    """.format(i=infiles, o=outputs[0])
 
 
 def test_files():
@@ -31,9 +31,9 @@ def test_files():
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
     return """
-    x=$(cat {inputs[0]})
-    echo $(($x+1)) > {outputs[0]}
-    """
+    x=$(cat {i})
+    echo $(($x+1)) > {o}
+    """.format(i=inputs[0], o=outputs[0])
 
 
 def test_regression_200():
