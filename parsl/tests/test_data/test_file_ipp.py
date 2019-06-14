@@ -16,6 +16,9 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
 
 def test_files():
 
+    if os.path.exists('cat_out.txt'):
+        os.remove('cat_out.txt')
+
     fs = [File('data/' + f) for f in os.listdir('data')]
     x = cat(inputs=fs, outputs=['cat_out.txt'],
             stdout='f_app.out', stderr='f_app.err')
@@ -35,6 +38,9 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
 
 def test_regression_200():
     """Regression test for #200. Pickleablility of Files"""
+
+    if os.path.exists('test_output.txt'):
+        os.remove('test_output.txt')
 
     with open("test.txt", 'w') as f:
         f.write("Hello World")
@@ -60,6 +66,8 @@ def test_increment(depth=5):
     prev = File("test0.txt")
     futs = {}
     for i in range(1, depth):
+        if os.path.exists('test{0}.txt'.format(i)):
+            os.remove('test{0}.txt'.format(i))
         print("Launching {0} with {1}".format(i, prev))
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
