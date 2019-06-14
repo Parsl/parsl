@@ -1,5 +1,7 @@
 from parsl.app.app import App
 
+import os
+
 
 @App('bash')
 def echo(message, outputs=[]):
@@ -14,6 +16,9 @@ def cat(inputs=[]):
 
 def test_slides():
     """Testing code snippet from slides """
+
+    if os.path.exists('hello1.txt'):
+        os.remove('hello1.txt')
 
     hello = echo("Hello World!", outputs=['hello1.txt'])
     message = cat(inputs=[hello.outputs[0]])
