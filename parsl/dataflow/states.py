@@ -11,6 +11,7 @@ class States(IntEnum):
     failed = 4
     dep_fail = 5
     retry = 6
+    launched = 7
 
 
 # states from which we will never move to another state

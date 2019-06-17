@@ -6,6 +6,17 @@ with open('parsl/version.py') as f:
 with open('requirements.txt') as f:
     install_requires = f.readlines()
 
+extras_require = {
+    'aws' : ['boto3'],
+    'kubernetes' : ['kubernetes'],
+    'oauth_ssh' : ['oauth-ssh>=0.9'],
+    'extreme_scale' : ['mpi4py'],
+    'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
+    'google_cloud' : ['google-auth', 'google-api-python-client'],
+    'gssapi' : ['python-gssapi'],
+}
+extras_require['all'] = sum(extras_require.values(), [])
+
 setup(
     name='parsl',
     version=VERSION,
@@ -23,28 +34,9 @@ setup(
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
     ],
-    extras_require = {
-        'visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
-        'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
-        'aws' : ['boto3'],
-        'kubernetes' : ['kubernetes'],
-        # Jetstream is deprecated since the interface has not been maintained.
-        # 'jetstream' : ['python-novaclient'],
-        'extreme_scale' : ['mpi4py'],
-        'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
-        'google_cloud' : ['google-auth', 'google-api-python-client'],
-        'gssapi' : ['python-gssapi'],
-        'all' : ['CMRESHandler', 'psutil', 'sqlalchemy',
-                 'dash', 'dash-html-components', 'dash-core-components', 'pandas',
-                 'boto3',
-                 'kubernetes',
-                 'mpi4py',
-                 'nbsphinx', 'sphinx_rtd_theme',
-                 'google-auth', 'google-api-python-client',
-                 'python-gssapi']
 
-        },
-    classifiers = [
+    extras_require=extras_require,
+    classifiers=[
         # Maturity
         'Development Status :: 3 - Alpha',
         # Intended audience

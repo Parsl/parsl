@@ -3,7 +3,7 @@ Parsl - Parallel Scripting Library
 |licence| |build-status| |docs|
 
 Parsl is a parallel scripting library that enables easy parallelism and workflow design.
-The latest version available on PyPi is v0.7.0.
+The latest version available on PyPi is v0.8.0.
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
@@ -32,7 +32,7 @@ To run the Parsl tutorial notebooks you will need to install Jupyter::
 
 Detailed information about setting up Jupyter with Python3.5 is available `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
 
-Note: By default, Parsl collects anonymous usage statistics for reporting and improvement purposes. To understand what stats are collected and to disable collection please refer to the `usage tracking guide <http://parsl.readthedocs.io/en/stable/userguide/usage_tracking.html>`__
+Note: Parsl uses an opt-in model to collect anonymous usage statistics for reporting and improvement purposes. To understand what stats are collected and enable collection please refer to the `usage tracking guide <http://parsl.readthedocs.io/en/stable/userguide/usage_tracking.html>`__
 
 Documentation
 =============

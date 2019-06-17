@@ -3,6 +3,7 @@ import os
 import re
 import time
 
+from parsl.channels import LocalChannel
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
@@ -50,6 +51,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         Project which the job will be charged against
     scheduler_options : str
         String to add specific condor attributes to the HTCondor submit script.
+    transfer_input_files : list(str)
+        List of strings of paths to additional files or directories to transfer to the job
     worker_init : str
         Command to be run before starting a worker.
     requirements : str
@@ -59,7 +62,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
     """
     def __init__(self,
-                 channel=None,
+                 channel=LocalChannel(),
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
@@ -68,6 +71,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  environment=None,
                  project='',
                  scheduler_options='',
+                 transfer_input_files=[],
                  walltime="00:10:00",
                  worker_init='',
                  launcher=SingleNodeLauncher(),
@@ -99,6 +103,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
         self.requirements = requirements
+        self.transfer_input_files = transfer_input_files
 
     def _status(self):
         """Update the resource dictionary with job statuses."""
@@ -213,7 +218,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             f.write(job_config["worker_init"] + '\n' + wrapped_command)
 
         user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
-        job_config["input_files"] = user_script_path
+        the_input_files = [user_script_path] + self.transfer_input_files
+        job_config["input_files"] = ','.join(the_input_files)
         job_config["job_script"] = os.path.basename(user_script_path)
 
         # Construct and move the submit script
@@ -221,7 +227,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(cmd, 3)
+        retcode, stdout, stderr = super().execute_wait(cmd, 30)
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         job_id = []
@@ -258,7 +264,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, 30)
         rets = None
         if retcode == 0:
             for jid in job_ids:

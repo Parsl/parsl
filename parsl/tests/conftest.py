@@ -59,6 +59,10 @@ def pytest_configure(config):
         'markers',
         'forked: mark test to only run in a subprocess'
     )
+    config.addinivalue_line(
+        'markers',
+        'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
+    )
 
 
 def pytest_generate_tests(metafunc):
@@ -174,12 +178,15 @@ def apply_masks(request):
             else:
                 pytest.skip(m.kwargs['reason'])
     m = request.node.get_closest_marker('local')
-    if m is not None:
+    if m is not None:  # is marked as local
         if config != 'local':
             if len(m.args) == 0:
                 pytest.skip('skipping non-local config')
             else:
                 pytest.skip(m.args[0])
+    else:  # is not marked as local
+        if config == 'local':
+            pytest.skip('skipping local config')
 
 
 @pytest.fixture()

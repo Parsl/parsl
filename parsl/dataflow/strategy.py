@@ -124,6 +124,10 @@ class Strategy(object):
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
+    def add_executors(self, executors):
+        for executor in executors:
+            self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
+
     def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
         """Do nothing.
 
@@ -195,14 +199,16 @@ class Strategy(object):
             active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            if (isinstance(executor, IPyParallelExecutor) or
-                isinstance(executor, HighThroughputExecutor) or
-                isinstance(executor, ExtremeScaleExecutor)):
-                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected engines'.format(
-                    label, active_tasks, running, submitting, pending, len(executor.connected_workers)))
+            if hasattr(executor, 'connected_workers'):
+                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected workers'.format(
+                    label, active_tasks, running, submitting, pending, executor.connected_workers))
             else:
                 logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
                     label, active_tasks, running, submitting, pending))
+
+            # reset kill timer if executor has active tasks
+            if active_tasks > 0 and self.executors[executor.label]['idle_since']:
+                self.executors[executor.label]['idle_since'] = None
 
             # Case 1
             # No tasks.
@@ -253,6 +259,7 @@ class Strategy(object):
                     # logger.debug("Strategy: Case.2b")
                     excess = math.ceil((active_tasks * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
+                    excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
                     executor.scale_out(excess_blocks)
 
@@ -260,7 +267,8 @@ class Strategy(object):
                 # Case 4
                 # Check if slots are being lost quickly ?
                 logger.debug("Requesting single slot")
-                executor.scale_out(1)
+                if active_blocks < max_blocks:
+                    executor.scale_out(1)
             # Case 3
             # tasks ~ slots
             else:
