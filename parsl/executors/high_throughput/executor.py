@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
 
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import *
@@ -112,6 +113,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         cores to be assigned to each worker. Oversubscription is possible
         by setting cores_per_worker < 1.0. Default=1
 
+    mem_per_worker : float
+        GB of memory required per worker. If this option is specified, the node manager
+        will check the available memory at startup and limit the number of workers such that
+        the there's sufficient memory for each worker. Default: None
+
     max_workers : int
         Caps the number of workers launched by the manager. Default: infinity
 
@@ -134,6 +140,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     poll_period : int
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
         trades performance for cpu efficiency. Default: 10ms
+
+    worker_logdir_root : string
+        In case of a remote file system, specify the path to where logs will be kept.
     """
 
     @typeguard.typechecked
@@ -149,13 +158,16 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  working_dir: Optional[str] = None,
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
+                 mem_per_worker: Optional[float] = None,
                  max_workers: Union[int, float] = float('inf'),
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
                  suppress_failure: bool = False,
-                 managed: bool = True):
+                 managed: bool = True,
+                 worker_logdir_root: Optional[str] = None):
+
         logger.debug("Initializing HighThroughputExecutor")
 
         self.label = label
@@ -170,6 +182,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.blocks = {}  # type: Dict[str, str]
         self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
+        self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
 
@@ -183,11 +196,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.poll_period = poll_period
         self.suppress_failure = suppress_failure
         self.run_dir = '.'
+        self.worker_logdir_root = worker_logdir_root
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-p {prefetch_capacity} "
                                "-c {cores_per_worker} "
+                               "-m {mem_per_worker} "
                                "--poll {poll_period} "
                                "--task_url={task_url} "
                                "--result_url={result_url} "
@@ -205,17 +220,22 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
+        worker_logdir = "{}/{}".format(self.run_dir, self.label)
+        if self.worker_logdir_root is not None:
+            worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
+
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
                                        task_url=self.worker_task_url,
                                        result_url=self.worker_result_url,
                                        cores_per_worker=self.cores_per_worker,
+                                       mem_per_worker=self.mem_per_worker,
                                        max_workers=max_workers,
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
-                                       logdir="{}/{}".format(self.run_dir, self.label))
+                                       logdir=worker_logdir)
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -343,10 +363,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             try:
                                 s, _ = deserialize_object(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
-                                try:
-                                    s.reraise()
-                                except Exception as e:
-                                    task_fut.set_exception(e)
+                                if isinstance(s, RemoteExceptionWrapper):
+                                    try:
+                                        s.reraise()
+                                    except Exception as e:
+                                        task_fut.set_exception(e)
+                                elif isinstance(s, Exception):
+                                    task_fut.set_exception(s)
+                                else:
+                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
                             except Exception as e:
                                 # TODO could be a proper wrapped exception?
                                 task_fut.set_exception(
@@ -456,7 +481,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("[HOLD_BLOCK]: Sending hold to manager:{}".format(manager['manager']))
+                logger.debug("[HOLD_BLOCK]: Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
 
     def submit(self, func, *args, **kwargs):
@@ -482,7 +507,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._task_counter += 1
         task_id = self._task_counter
 
-        logger.debug("Pushing function {} to queue with args {}".format(func, args))
+        # handle people sending blobs gracefully
+        args_to_print = args
+        if logger.getEffectiveLevel() >= logging.DEBUG:
+            args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
+        logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
         self.tasks[task_id] = Future()
 
@@ -568,7 +597,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         status = []
         if self.provider:
-            status = self.provider.status(self.blocks.values())
+            status = self.provider.status(list(self.blocks.values()))
 
         return status
 

@@ -140,7 +140,36 @@ class MonitoringHub(RepresentationMixin):
                  resource_monitoring_enabled=True,
                  resource_monitoring_interval=30):  # in seconds
         """
-        Update docs here.
+        Parameters
+        ----------
+        hub_address : str
+             The ip address at which the workers will be able to reach the Hub. Default: "127.0.0.1"
+        hub_port : int
+             The specific port at which workers will be able to reach the Hub via UDP. Default: None
+        hub_port_range : tuple(int, int)
+             The MonitoringHub picks ports at random from the range which will be used by Hub.
+             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+        client_address : str
+             The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
+        client_port_range : tuple(int, int)
+             The MonitoringHub picks ports at random from the range which will be used by Hub.
+             Defauls: (55050, 56000)
+        workflow_name : str
+             The name for the workflow. Default to the name of the parsl script
+        workflow_version : str
+             The version of the workflow. Default to the beginning datetime of the parsl script
+        logging_endpoint : str
+             The database connection url for monitoring to log the information.
+             These URLs follow RFC-1738, and can include username, password, hostname, database name.
+             Default: 'sqlite:///monitoring.db'
+        logdir : str
+             Parsl log directory paths. Logs and temp files go here. Default: '.'
+        logging_level : int
+             Logging level as defined in the logging module. Default: logging.INFO (20)
+        resource_monitoring_enabled : boolean
+             Set this field to True to enable logging the info of resource usage of each task. Default: True
+        resource_monitoring_interval : int
+             The time interval at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
         self.logger = None
         self._dfk_channel = None
@@ -182,6 +211,7 @@ class MonitoringHub(RepresentationMixin):
         self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")
+        self.monitoring_hub_active = True
         self._context = zmq.Context()
         self._dfk_channel = self._context.socket(zmq.DEALER)
         self._dfk_channel.set_hwm(0)
@@ -229,10 +259,11 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
         return self._dfk_channel.send_pyobj((mtype, message))
 
-    def __del__(self):
+    def close(self):
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
-        if self._dfk_channel:
+        if self._dfk_channel and self.monitoring_hub_active:
+            self.monitoring_hub_active = False
             self._dfk_channel.close()
             self.logger.info("Waiting Hub to receive all messages and terminate")
             try:
@@ -244,8 +275,8 @@ class MonitoringHub(RepresentationMixin):
             self.queue_proc.terminate()
             self.priority_msgs.put(("STOP", 0))
 
-    def close(self):
-        return self.__del__()
+    def __del__(self):
+        self.close()
 
     @staticmethod
     def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur):
@@ -271,9 +302,6 @@ class Hub(object):
                  hub_port=None,
                  hub_port_range=(55050, 56000),
 
-                 database=None,              # Zhuozhao, can you put in the right default here?
-                 visualization_server=None,  # Zhuozhao, can you put in the right default here?
-
                  client_address="127.0.0.1",
                  client_port=None,
 
@@ -286,23 +314,21 @@ class Hub(object):
 
         Parameters
         ----------
-        address : str
-            IP address of the node on which the monitoring hub will run, this address must be
-            reachable from the Parsl client as well as the worker nodes. Eg. <NNN>.<NNN>.<NNN>.<NNN>
-
-        port : int
-            Used with Elasticsearch logging, the port of where to access Elasticsearch. Required when using logging_type = 'elasticsearch'.
-
-        logging_endpoint : Endpoint object
-            This is generally a database object to which logging data can be pushed to from the
-            monitoring HUB.
-
-        workflow_name : str, optional
-            Name to record as the workflow base name, defaults to the name of the parsl script file if left as None.
-
-        workflow_version : str, optional
-            Optional workflow identification to distinguish between workflows with the same name, not used internally only for display to user.
-
+        hub_address : str
+             The ip address at which the workers will be able to reach the Hub. Default: "127.0.0.1"
+        hub_port : int
+             The specific port at which workers will be able to reach the Hub via UDP. Default: None
+        hub_port_range : tuple(int, int)
+             The MonitoringHub picks ports at random from the range which will be used by Hub.
+             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+        client_address : str
+             The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
+        client_port : tuple(int, int)
+             The port at which the dfk will be able to reach Hub. Defauls: None
+        logdir : str
+             Parsl log directory paths. Logs and temp files go here. Default: '.'
+        logging_level : int
+             Logging level as defined in the logging module. Default: logging.INFO (20)
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
@@ -321,8 +347,6 @@ class Hub(object):
 
         self.hub_port = hub_port
         self.hub_address = hub_address
-        self.database = database
-        self.visualization_server = visualization_server
         self.atexit_timeout = atexit_timeout
 
         self.loop_freq = 10.0  # milliseconds
@@ -391,6 +415,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
     import psutil
+    import platform
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
@@ -411,6 +436,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             d["run_id"] = run_id
             d["task_id"] = task_id
             d['resource_monitoring_interval'] = sleep_dur
+            d['hostname'] = platform.node()
             d['first_msg'] = first_msg
             d['timestamp'] = datetime.datetime.now()
             children = pm.children(recursive=True)
