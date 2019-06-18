@@ -1,19 +1,19 @@
-import argparse
-
 import pytest
 
 import parsl
+from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app import App
-from parsl.tests.conftest import load_dfk
-from parsl.tests.configs.exex_local import config
+from parsl.tests.configs.local_threads_monitoring import config
 
+parsl.clear()
+dfk = DataFlowKernel(config=config)
 parsl.set_stream_logger()
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-@App("python", executors=['Extreme_Local'])
+@App("python", dfk, executors=['threads'])
 def python_app_2():
     import os
     import threading
@@ -22,7 +22,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", executors=['Extreme_Local'])
+@App("python", dfk, executors=['threads'])
 def python_app_1():
     import os
     import threading
@@ -31,9 +31,9 @@ def python_app_1():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("bash")
+@App("bash", dfk)
 def bash_app(stdout=None, stderr=None):
-    return 'echo "Hello from $(uname -a)" ; sleep 2'
+    return 'echo "Hello from $(uname -a)" ; sleep 15'
 
 
 @pytest.mark.local
@@ -55,10 +55,6 @@ def test_python(N=2):
     return
 
 
-def setup_module(module):
-    parsl.load(config)
-
-
 @pytest.mark.local
 def test_bash():
     """Testing basic bash functionality."""
@@ -69,20 +65,3 @@ def test_bash():
     x = bash_app(stdout="{0}.out".format(fname))
     print("Waiting ....")
     print(x.result())
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--num", default=10,
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    parser.add_argument("-c", "--config", default='local',
-                        help="Path to configuration file to run")
-    args = parser.parse_args()
-    load_dfk(args.config)
-    if args.debug:
-        parsl.set_stream_logger()
-
-    test_python()
-    test_bash()
