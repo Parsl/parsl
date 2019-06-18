@@ -217,7 +217,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for volume in volumes:
             volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
                                                       name=volume[0]))
-        # Configureate Pod template container
+        # Configure Pod template container
         container = None
         if security_context:
             container = client.V1Container(
