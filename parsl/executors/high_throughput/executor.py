@@ -238,6 +238,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
+        """
         if self.interchange_address == "localhost":
             logdir = "{}/{}".format(self.run_dir, self.label)
         else:
@@ -245,6 +246,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                     "runinfo",
                                     os.path.basename(self.run_dir),
                                     self.label))
+        """
         worker_logdir = "{}/{}".format(self.run_dir, self.label)
         if self.worker_logdir_root is not None:
             worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
