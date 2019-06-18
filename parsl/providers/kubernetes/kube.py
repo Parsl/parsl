@@ -190,7 +190,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                     port=80,
                     cmd_string=None,
                     volumes=[]):
-        """ Create a kubernetes non-deployment pod for the job.
+        """ Create a kubernetes pod for the job.
         Args:
               - image (string) : Docker image to launch
               - pod_name (string) : Name of the pod
