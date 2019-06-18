@@ -44,6 +44,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Command to be run first for the workers, such as `python start.py`.
     secret : str
         Docker secret to use to pull images
+    pod_name : str
+        The name for the pod, will be appended with a timestamp.
+        Default is None, meaning parsl automatically names the pod.
     user_id : str
         Unix user id to run the container as.
     group_id : str
