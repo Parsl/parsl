@@ -81,8 +81,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  cmd_timeout=60):
 
         label = 'condor'
-                         launcher)
-
         super().__init__(label,
                          channel,
                          nodes_per_block,
