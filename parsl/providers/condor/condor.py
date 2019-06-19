@@ -60,6 +60,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
+    cmd_timeout : int
+        Timeout for commands made to the scheduler in seconds
     """
     def __init__(self,
                  channel=LocalChannel(),
@@ -75,7 +77,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  walltime="00:10:00",
                  worker_init='',
                  launcher=SingleNodeLauncher(),
-                 requirements=''):
+                 requirements='',
+                 cmd_timeout=60):
 
         label = 'condor'
         super().__init__(label,
@@ -86,8 +89,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
-
+                         launcher,
+                         cmd_timeout=cmd_timeout)
         self.provisioned_blocks = 0
 
         self.environment = environment if environment is not None else {}
@@ -227,7 +230,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(cmd, 30)
+        retcode, stdout, stderr = super().execute_wait(cmd)
         logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
         job_id = []
@@ -264,7 +267,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 30)
+        retcode, stdout, stderr = super().execute_wait(cmd)
         rets = None
         if retcode == 0:
             for jid in job_ids:
