@@ -11,6 +11,10 @@ from parsl.providers.cluster_provider import ClusterProvider
 
 logger = logging.getLogger(__name__)
 
+from typing import Dict, List, Optional
+from parsl.channels.base import Channel
+from parsl.launchers.launchers import Launcher
+
 # See http://pages.cs.wisc.edu/~adesmet/status.html
 translate_table = {
     '1': 'PENDING',
@@ -62,20 +66,20 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
     """
     def __init__(self,
-                 channel=LocalChannel(),
-                 nodes_per_block=1,
-                 init_blocks=1,
-                 min_blocks=0,
-                 max_blocks=10,
-                 parallelism=1,
-                 environment=None,
-                 project='',
-                 scheduler_options='',
-                 transfer_input_files=[],
-                 walltime="00:10:00",
-                 worker_init='',
-                 launcher=SingleNodeLauncher(),
-                 requirements=''):
+                 channel: Channel = LocalChannel(),
+                 nodes_per_block: int = 1,
+                 init_blocks: int = 1,
+                 min_blocks: int = 0,
+                 max_blocks: int = 10,
+                 parallelism: float = 1,
+                 environment: Optional[Dict[str, str]] = None,
+                 project: str = '',
+                 scheduler_options: str = '',
+                 transfer_input_files: List[str] = [],
+                 walltime: str = "00:10:00",
+                 worker_init: str = '',
+                 launcher: Launcher = SingleNodeLauncher(),
+                 requirements: str = '') -> None:
 
         label = 'condor'
         super().__init__(label,
