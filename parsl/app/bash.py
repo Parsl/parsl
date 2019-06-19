@@ -117,7 +117,6 @@ class BashApp(AppBase):
 
     def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
         super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, cache=cache)
-        logger.debug("BashApp init: {}".format(self))
         self.kwargs = {}
 
         # We duplicate the extraction of parameter defaults
@@ -145,7 +144,6 @@ class BashApp(AppBase):
                    App_fut
 
         """
-        logger.debug("BashApp __call__ start: {}".format(self))
         # Update kwargs in the app definition with ones passed in at calltime
         self.kwargs.update(kwargs)
 
@@ -165,5 +163,4 @@ class BashApp(AppBase):
                     for o in kwargs.get('outputs', [])]
         app_fut._outputs = out_futs
 
-        logger.debug("BashApp __call__ end: {}".format(self))
         return app_fut
