@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from parsl.channels.base import Channel
 
 class ExecutionProvider(metaclass=ABCMeta):
-    """ Define the strict interface for all Execution Provider
+    """ Define the strict interface for all Execution Providers
 
     .. code:: python
 

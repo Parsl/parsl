@@ -80,7 +80,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_in(self, amount: int) -> None:
+    def scale_in(self, blocks: int) -> None:
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.

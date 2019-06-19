@@ -26,8 +26,6 @@ def remote_side_bash_executor(func, *args, **kwargs) -> int:
 
     logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
 
-    # start_t = time.time()
-
     func_name = func.__name__
 
     partial_cmdline = None
@@ -92,11 +90,9 @@ def remote_side_bash_executor(func, *args, **kwargs) -> int:
         returncode = proc.returncode
 
     except subprocess.TimeoutExpired:
-        # print("Timeout")
         raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout))
 
     except Exception as e:
-        # print("Caught exception: ", e)
         raise pe.AppException("[{}] App caught exception: {}".format(func_name, proc.returncode), e)
 
     if returncode != 0:
@@ -116,7 +112,6 @@ def remote_side_bash_executor(func, *args, **kwargs) -> int:
     if missing:
         raise pe.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
 
-    # exec_duration = time.time() - start_t
     return returncode
 
 

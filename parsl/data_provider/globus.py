@@ -161,8 +161,8 @@ class Globus(object):
 
 def cli_run():
     parsl.set_stream_logger()
-    print("Parsl Globus command-line authoriser")
-    print("If authorisation to Globus is necessary, the library will prompt you now.")
+    print("Parsl Globus command-line authorizer")
+    print("If authorization to Globus is necessary, the library will prompt you now.")
     print("Otherwise it will do nothing")
     get_globus()
     print("Authorization complete")
