@@ -38,6 +38,7 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         Returns:
              - A job identifier, this could be an integer, string etc
+               or None if submission failed but an exception isn't thrown.
 
         Raises:
              - ExecutionProviderException or its subclasses
