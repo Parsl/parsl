@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from parsl.app.app import App
 
@@ -9,6 +10,7 @@ def foo(z=2, stdout=None):
     """.format(val=z)
 
 
+@pytest.mark.xfail(reason="This failing test demonstrates issue #1058", strict=True)
 def test_command_format_1():
     """Testing command format for BashApps
     """
