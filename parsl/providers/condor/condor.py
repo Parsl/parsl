@@ -8,6 +8,7 @@ from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.error import ScaleOutFailed
 
 logger = logging.getLogger(__name__)
 
@@ -230,8 +231,10 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(cmd)
-        logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+        try:
+            retcode, stdout, stderr = super().execute_wait(cmd)
+        except Exception as e:
+            raise ScaleOutFailed(self.label, str(e))
 
         job_id = []
 
@@ -248,7 +251,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                     job_id += [cluster + process for process in processes]
 
             self._add_resource(job_id)
-        return job_id[0]
+            return job_id[0]
+        else:
+            message = "Command '{}' failed with return code {}".format(cmd, retcode)
+            message += " and standard output '{}'".format(stdout.strip()) if stdout is not None else ''
+            message += " and standard error '{}'".format(stderr.strip()) if stderr is not None else ''
+            raise ScaleOutFailed(self.label, message)
 
     def cancel(self, job_ids):
         """Cancels the jobs specified by a list of job IDs.
