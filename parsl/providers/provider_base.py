@@ -25,7 +25,6 @@ class ExecutionProvider(metaclass=ABCMeta):
                                 +-------------------
      """
 
-    channel: Channel
     min_blocks: int
     max_blocks: int
     init_blocks: int
