@@ -218,26 +218,16 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
                                                       name=volume[0]))
         # Configure Pod template container
-        container = None
-        if security_context:
-            container = client.V1Container(
-                name=pod_name,
-                image=image,
-                ports=[client.V1ContainerPort(container_port=port)],
-                volume_mounts=volume_mounts,
-                command=['/bin/bash'],
-                args=launch_args,
-                env=[environment_vars],
-                security_context=security_context)
-        else:
-            container = client.V1Container(
-                name=pod_name,
-                image=image,
-                ports=[client.V1ContainerPort(container_port=port)],
-                volume_mounts=volume_mounts,
-                command=['/bin/bash'],
-                args=launch_args,
-                env=[environment_vars])
+        container = client.V1Container(
+            name=pod_name,
+            image=image,
+            ports=[client.V1ContainerPort(container_port=port)],
+            volume_mounts=volume_mounts,
+            command=['/bin/bash'],
+            args=launch_args,
+            env=[environment_vars],
+            security_context=security_context)
+
         # Create a secret to enable pulling images from secure repositories
         secret = None
         if self.secret:
