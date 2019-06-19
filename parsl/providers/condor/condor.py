@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import time
+import typeguard
 
 from parsl.channels import LocalChannel
 from parsl.utils import RepresentationMixin
@@ -65,6 +66,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
     """
+    @typeguard.typechecked
     def __init__(self,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
