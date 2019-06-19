@@ -72,3 +72,39 @@ If the cluster allows you to host a web server on its public IP address with a s
 
    $ parsl-visualize --listen 0.0.0.0 --port 55555 sqlite:///<absolute-path-to-db>
 
+Workflows Page
+^^^^^^^^^^^^^^
+
+The workflows page lists all instances of a Parsl workflow that has been executed with monitoring turned on.
+It also gives a high level overview of workflow runs as a table as shown below:
+
+.. image:: ../images/mon_workflows_page.png
+
+Throughout the visualization pages, all blue elements are clickable. For eg, clicking a specific worklow
+name from the table takes you to the Workflow Summary page described in the next section.
+
+Workflow Summary
+^^^^^^^^^^^^^^^^
+
+.. image:: ../images/mon_workflow_summary.png
+
+The above screenshot of the workflow summary page captures the run level details such as start and end times
+as well as task summary statistics. The workflow summary section is followed by the *App Summary* that lists
+the various apps and count of invocations each. This is followed by three different views of the workflow:
+
+* Workflow DAG - colors grouped by apps: This visualization is useful to visually inspect the dependency
+  structure of the workflow DAG. Hovering over the nodes in the DAG shows a tooltip for the app that the
+  node represents and it's task ID.
+
+.. image:: ../images/mon_task_app_grouping.png
+
+* Workflow DAG - colors grouped by task states: This visualization is useful to identify what stages
+  in the workflow are complete and what stages are pending.
+
+.. image:: ../images/mon_task_state_grouping.png
+
+* Workflow resource usage: This visualization provides resource usage information at the workflow level.
+  For eg, cumulative CPU/Memory utilization across workers over time.
+
+.. image:: ../images/mon_resource_summary.png
+
