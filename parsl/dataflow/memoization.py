@@ -97,7 +97,7 @@ class Memoizer(object):
         """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
-            return None, None
+            return False, None
 
         hashsum = self.make_hash(task)
         present = False
