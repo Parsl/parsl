@@ -56,9 +56,8 @@ def workflow(workflow_id):
                                 % (workflow_id), db.engine)
     task_summary = db.engine.execute(
         "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
-    time_completed = None
-    if hasattr(workflow_details, 'time_completed'):
-        time_completed = workflow_details.time_completed
+
+    time_completed = workflow_details.time_completed
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
