@@ -108,14 +108,14 @@ class UDPRadio(object):
                                    int(time.time()),  # epoch timestamp
                                    message_type,
                                    message))
-        except Exception as e:
-            print("Exception during pickling {}".format(e))
+        except Exception:
+            logging.exception("Exception during pickling", exc_info=True)
             return
 
         try:
             x = self.sock.sendto(buffer, (self.ip, self.port))
         except socket.timeout:
-            print("Could not send message within timeout limit")
+            logging.error("Could not send message within timeout limit")
             return False
         return x
 
