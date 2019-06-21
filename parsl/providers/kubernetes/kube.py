@@ -69,7 +69,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  user_id: Optional[str] = None,
                  group_id: Optional[str] = None,
                  run_as_non_root: bool = False,
-                 secret: str = None,
+                 secret: Optional[str] = None,
                  persistent_volumes: List[Tuple[str, str]] = []) -> None:
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
