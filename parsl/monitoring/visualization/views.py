@@ -57,11 +57,10 @@ def workflow(workflow_id):
     task_summary = db.engine.execute(
         "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
 
-    time_completed = workflow_details.time_completed
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
-                           task_gantt=task_gantt_plot(df_task, time_completed=time_completed),
+                           task_gantt=task_gantt_plot(df_task, time_completed=workflow_details.time_completed),
                            task_per_app=task_per_app_plot(df_task, df_status))
 
 
