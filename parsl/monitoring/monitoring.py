@@ -462,8 +462,9 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             try:
                 d['psutil_process_disk_write'] = pm.io_counters().write_bytes
                 d['psutil_process_disk_read'] = pm.io_counters().read_bytes
-            except psutil.AccessDenied:
+            except Exception:
                 # occassionally pid temp files that hold this information are unvailable to be read so set to zero
+                logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0
             for child in children:
@@ -476,8 +477,9 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
                 try:
                     d['psutil_process_disk_write'] += child.io_counters().write_bytes
                     d['psutil_process_disk_read'] += child.io_counters().read_bytes
-                except psutil.AccessDenied:
+                except Exception:
                     # occassionally pid temp files that hold this information are unvailable to be read so add zero
+                    logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
 
