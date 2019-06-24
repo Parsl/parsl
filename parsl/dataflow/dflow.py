@@ -108,13 +108,13 @@ class DataFlowKernel(object):
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py']
+                parsl_file_names = ['dflow.py', 'typeguard.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
                     break
 
-        self.workflow_version = str(self.time_began)
+        self.workflow_version = str(self.time_began.replace(microsecond=0))
         if self.monitoring is not None and self.monitoring.workflow_version is not None:
             self.workflow_version = self.monitoring.workflow_version
 
@@ -156,10 +156,10 @@ class DataFlowKernel(object):
                 checkpoint_period = (h * 3600) + (m * 60) + s
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
             except Exception:
-                logger.error("invalid checkpoint_period provided:{0} expected HH:MM:SS".format(config.checkpoint_period))
+                logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
 
-        # if we use the functionality of dynamicall adding executors
+        # if we use the functionality of dynamically adding executors
         # all executors should be managed.
         if any([x.managed for x in config.executors]):
             self.flowcontrol = FlowControl(self)
@@ -190,6 +190,7 @@ class DataFlowKernel(object):
         task_log_info['task_outputs'] = str(self.tasks[task_id]['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
         task_log_info['task_stdout'] = self.tasks[task_id]['kwargs'].get('stdout', None)
+        task_log_info['task_stderr'] = self.tasks[task_id]['kwargs'].get('stderr', None)
         task_log_info['task_depends'] = None
         if self.tasks[task_id]['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t._tid) for t in self.tasks[task_id]['depends']])
@@ -217,8 +218,6 @@ class DataFlowKernel(object):
     @property
     def config(self):
         """Returns the fully initialized config that the DFK is actively using.
-
-        DO *NOT* update.
 
         Returns:
              - config (dict)
@@ -444,6 +443,7 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
+            raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             executable = self.monitoring.monitor_wrapper(executable, task_id,
@@ -627,10 +627,26 @@ class DataFlowKernel(object):
             choices = list(e for e in self.executors if e != 'data_manager')
         elif isinstance(executors, list):
             choices = executors
+        else:
+            raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
 
         # Transform remote input files to data futures
         args, kwargs = self._add_input_deps(executor, args, kwargs)
+        label = kwargs.get('label')
+        for kw in ['stdout', 'stderr']:
+            if kw in kwargs:
+                if kwargs[kw] == parsl.AUTO_LOGNAME:
+                    kwargs[kw] = os.path.join(
+                            self.run_dir,
+                            'task_logs',
+                            str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
+                            'task_{}_{}{}.{}'.format(
+                                str(task_id).zfill(4),
+                                func.__name__,
+                                '' if label is None else '_{}'.format(label),
+                                kw)
+                    )
 
         task_def = {'depends': None,
                     'executor': executor,
@@ -797,11 +813,11 @@ class DataFlowKernel(object):
     def cleanup(self):
         """DataFlowKernel cleanup.
 
-        This involves killing resources explicitly and sending die messages to IPP workers.
+        This involves releasing all resources explicitly.
 
         If the executors are managed (created by the DFK), then we call scale_in on each of
-        the executors and call executor.shutdown. Otherwise, we do nothing, and executor
-        cleanup is left to the user.
+        the executors and call executor.shutdown. Otherwise, executor cleanup is left to
+        the user.
         """
         logger.info("DFK cleanup initiated")
 
