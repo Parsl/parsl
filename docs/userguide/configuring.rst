@@ -3,7 +3,18 @@
 Configuration
 =============
 
-Parsl workflows are developed completely independently from their execution environment. Parsl offers an extensible configuration model through which the execution environment and communication with that environment is configured. Parsl is configured using :class:`~parsl.config.Config` object. For more information, see the :class:`~parsl.config.Config` class documentation. The following shows how the configuration can be loaded.
+Parsl workflows are developed completely independently from their execution environment.
+There are very many different execution environments in which Parsl programs and their apps can run, and
+many of these environments have multiple options of how those Parsl programs and apps run, which makes
+configuration somewhat complex, and also makes determining how to set up Parsl's configuration
+for a particular set of choices fairly complex, though we think the actual configuration
+itself is reasonable simple.
+
+Parsl offers an extensible configuration model through which the execution environment and
+communication within that environment is configured. Parsl is configured
+using :class:`~parsl.config.Config` object. For more information, see
+the :class:`~parsl.config.Config` class documentation. The following shows how the
+configuration can be specified.
 
    .. code-block:: python
 
@@ -23,17 +34,23 @@ Parsl workflows are developed completely independently from their execution envi
    Please note that all configuration examples below require customization for your account, 
    allocation, Python environment, etc. 
 
-How-to Configure
+How to Configure
 ----------------
 
-The configuration provided to Parsl dictates the shape and limits of various resources to be provisioned
-for the workflow. Therefore it is important to carefully evaluate certain aspects of the workflow and
-the planned compute resources to determine an ideal configuration match.
+The configuration provided to Parsl tells Parsl what resources to use to run the Parsl
+program and apps, and how to use them.
+Therefore it is important to carefully evaluate certain aspects of the Parsl program and apps,
+and the planned compute resources, to determine an ideal configuration match. These aspects are:
+1) where the Parsl apps will execute;
+2) how many nodes will be used to execute the apps, and how long the apps will run;
+3) should the scheduler allocate multiple nodes at one time; and
+4) where will the main parsl program run and how will it communicate with the apps.
 
-Here are a series of question to help formulate a suitable configuration:
+Stepping through the following question should help you formulate a suitable configuration.
+In addition, examples for some specific configurations follow.
 
 
-1. Where would you like the tasks that comprise the workflow to execute?
+1. Where would you like the apps in the Parsl program to run?
 
 +---------------------+----------------------------+------------------------+
 | Target              | Executor                   | Provider               |
@@ -71,7 +88,7 @@ Here are a series of question to help formulate a suitable configuration:
 |                     | * `HighThroughputExecutor` |                        |
 +---------------------+----------------------------+------------------------+
 
-2. How many nodes do you have to execute them ? What task durations give good performance on different executors?
+2. How many nodes will you use to run them? What task durations give good performance on different executors?
 
 
 +--------------------------+----------------------+------------------------------------+
@@ -93,15 +110,15 @@ Here are a series of question to help formulate a suitable configuration:
 .. [*] We assume that each node has 32 workers. If there are fewer workers launched
        per node, a higher number of nodes could be supported.
 
-.. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale that
-       we've tested the `ExtremeScaleExecutor` at.
+.. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale at which
+       we've tested the `ExtremeScaleExecutor`.
 
 .. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
              as the recommended replacement.
 
 
-3. If you are running on a cluster or supercomputer, will you request multiple nodes per block ?
-   Note that in this case a block is equivalent to a batch job.
+3. If you are running on a cluster or supercomputer, will you request multiple nodes per batch (scheduler) job?
+(Here we use the term block to be equivalent to a batch job.)
 
 +----------------------------------------------------------------------------+
 | ``nodes_per_block = 1``                                                    |
@@ -133,21 +150,22 @@ Here are a series of question to help formulate a suitable configuration:
           are on a **native Slurm** system like :ref:`configuring_nersc_cori`
 
 
-4. Where will you run the main parsl process vs the tasks?
+4. Where will you run the main Parsl program, given that you already have determined where the apps will run?
+(This is needed to determine how to communicate between the Parsl program and the apps.)
 
-+---------------------+--------------------------+------------------------------------+
-| Workflow location   | Execution target         | Suitable channel                   |
-+=====================+==========================+====================================+
-| Laptop/Workstation  | Laptop/Workstation       | `LocalChannel`                     |
-+---------------------+--------------------------+------------------------------------+
-| Laptop/Workstation  | Cloud Resources          | None                               |
-+---------------------+--------------------------+------------------------------------+
-| Laptop/Workstation  | Clusters with no 2FA     | `SSHChannel`                       |
-+---------------------+--------------------------+------------------------------------+
-| Laptop/Workstation  | Clusters with 2FA        | `SSHInteractiveLoginChannel`       |
-+---------------------+--------------------------+------------------------------------+
-| Login node          | Cluster/Supercomputer    | `LocalChannel`                     |
-+---------------------+--------------------------+------------------------------------+
++------------------------+--------------------------+------------------------------------+
+| Parsl program location | App execution target     | Suitable channel                   |
++========================+==========================+====================================+
+| Laptop/Workstation     | Laptop/Workstation       | `LocalChannel`                     |
++------------------------+--------------------------+------------------------------------+
+| Laptop/Workstation     | Cloud Resources          | None                               |
++------------------------+--------------------------+------------------------------------+
+| Laptop/Workstation     | Clusters with no 2FA     | `SSHChannel`                       |
++------------------------+--------------------------+------------------------------------+
+| Laptop/Workstation     | Clusters with 2FA        | `SSHInteractiveLoginChannel`       |
++------------------------+--------------------------+------------------------------------+
+| Login node             | Cluster/Supercomputer    | `LocalChannel`                     |
++------------------------+--------------------------+------------------------------------+
 
 
 Comet (SDSC)
@@ -155,9 +173,12 @@ Comet (SDSC)
 
 .. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
-The following snippet shows an example configuration for executing remotely on San Diego Supercomputer Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
+The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
+Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the
+`SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch
+workers.
 
-.. literalinclude:: ../../parsl/configs/comet_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/comet_htex_multinode.py
 
 
 .. _configuring_nersc_cori:
@@ -169,7 +190,7 @@ Cori (NERSC)
 
 The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
-.. literalinclude:: ../../parsl/configs/cori_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/cori_htex_local_multinode.py
 
 
 Stampede2 (TACC)
@@ -187,11 +208,11 @@ Theta (ALCF)
 
 .. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
 
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's **Theta** supercomputer.
-This example uses the `IPyParallelExecutor` and connects to Theta's Cobalt scheduler using the `CobaltProvider`. This configuration
-assumes that the script is being executed on the login nodes of Theta.
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
+**Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
+using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/theta_local_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/theta_local_htex_multinode.py
 
 
 Cooley (ALCF)
@@ -199,11 +220,25 @@ Cooley (ALCF)
 
 .. image:: https://today.anl.gov/wp-content/uploads/sites/44/2015/06/Cray-Cooley.jpg
 
-The following snippet shows an example configuration for executing remotely on Argonne Leadership Computing Facility's **Cooley** analysis and visualization system.
-The example uses an `SSHInteractiveLoginChannel` to connect remotely to Cooley using ALCF's 2FA token.
-The configuration uses the `CobaltProvider` to interface with Cooley's scheduler.
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's 
+**Cooley** analysis and visualization system.
+The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler 
+using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/cooley_ssh_il_single_node.py
+.. literalinclude:: ../../parsl/configs/cooley_htex_multinode.py
+
+
+Blue Waters (Cray)
+-------------
+
+.. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png
+
+The following snippet shows an example configuration for executing remotely on Blue Waters, a flagship machine at the National Center for Supercomputing Applications.
+The configuration assumes the user is running on a login node and uses the `TorqueProvider` to interface
+with the scheduler, and uses the `AprunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/bluewaters_htex.py
+
 
 Swan (Cray)
 -----------
@@ -235,10 +270,10 @@ Midway (RCC, UChicago)
 
 This Midway cluster is a campus cluster hosted by the Research Computing Center at the University of Chicago.
 The snippet below shows an example configuration for executing remotely on Midway.
-The configuration uses the `SSHChannel` to connect remotely to Midway, uses the `SlurmProvider` to interface
+The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
 with the scheduler, and uses the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/midway_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/midway_htex_multinode.py
 
 
 Open Science Grid
@@ -265,28 +300,31 @@ Amazon Web Services
 Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
-re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS
+re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
 
-.. literalinclude:: ../../parsl/configs/ec2_single_node.py
+.. literalinclude:: ../../parsl/configs/ec2_htex_single_node.py
 
 
 Ad-Hoc Clusters
 ---------------
 
 Any collection of compute nodes without a scheduler setup for task scheduling can be considered an
-ad-hoc cluster. Often these machines have a shared-filesystem such as NFS or Lustre.
+ad-hoc cluster. Often these machines have a shared filesystem such as NFS or Lustre.
 In order to use these resources with Parsl, they need to set-up for password-less SSH access.
 
-In order to use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
-for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname.
-Here's an example configuration using the 2 login nodes from the Midway cluster as a proxy for
-an ad-hoc cluster.
+To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
+for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
+configuration follows.
 
-.. literalinclude:: ../../parsl/configs/ad_hoc.py
+.. literalinclude:: ../../parsl/configs/ad_hoc_htex.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
 
+.. note::
+   Load-balancing will not work properly with this approach. In future work, a dedicated provider
+   that supports load-balancing will be implemented. You can follow progress on this work
+   `here <https://github.com/Parsl/parsl/issues/941>`_.
 
 
 
@@ -294,7 +332,7 @@ an ad-hoc cluster.
 Further help
 ------------
 
-For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.ipp.IPyParallelExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example::
+For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.HighThroughputExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example::
 
     >>> from parsl.config import Config
     >>> help(Config)

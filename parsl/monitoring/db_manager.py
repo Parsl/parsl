@@ -117,6 +117,7 @@ class Database(object):
         __tablename__ = TASK
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
+        hostname = Column('hostname', Text, nullable=True)
         task_depends = Column('task_depends', Text, nullable=True)
         task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
@@ -132,6 +133,7 @@ class Database(object):
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
+        task_stderr = Column('task_stderr', Text, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id'),
         )
@@ -319,7 +321,8 @@ class DatabaseManager(object):
                     self._insert(table=STATUS, messages=first_messages)
                     self._update(table=TASK,
                                  columns=['task_time_running',
-                                          'run_id', 'task_id'],
+                                          'run_id', 'task_id',
+                                          'hostname'],
                                  messages=first_messages)
 
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):

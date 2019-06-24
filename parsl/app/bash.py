@@ -24,8 +24,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
 
-    # start_t = time.time()
-
     func_name = func.__name__
 
     partial_cmdline = None
@@ -67,7 +65,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
             fname, mode = stdfspec
         else:
             raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+
         try:
+            if os.path.dirname(fname):
+                os.makedirs(os.path.dirname(fname), exist_ok=True)
             fd = open(fname, mode)
         except Exception as e:
             raise pe.BadStdStreamFile(fname, e)
@@ -87,11 +88,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
         returncode = proc.returncode
 
     except subprocess.TimeoutExpired:
-        # print("Timeout")
         raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout))
 
     except Exception as e:
-        # print("Caught exception: ", e)
         raise pe.AppException("[{}] App caught exception: {}".format(func_name, proc.returncode), e)
 
     if returncode != 0:
@@ -111,7 +110,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
     if missing:
         raise pe.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
 
-    # exec_duration = time.time() - start_t
     return returncode
 
 

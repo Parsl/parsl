@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import argparse
 import zmq
-# import uuid
 import os
 import sys
 import platform
 import random
 import time
+import datetime
 import pickle
 import logging
 import queue
@@ -32,17 +32,24 @@ class ShutdownRequest(Exception):
     def __repr__(self):
         return "Shutdown request received at {}".format(self.tstamp)
 
+    def __str__(self):
+        return self.__repr__()
+
 
 class ManagerLost(Exception):
     ''' Task lost due to worker loss. Worker is considered lost when multiple heartbeats
     have been missed.
     '''
-    def __init__(self, worker_id):
+    def __init__(self, worker_id, hostname):
         self.worker_id = worker_id
         self.tstamp = time.time()
+        self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of worker {}".format(self.worker_id)
+        return "Task failure due to loss of Manager {} on host {}".format(self.worker_id, self.hostname)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class BadRegistration(Exception):
@@ -54,8 +61,12 @@ class BadRegistration(Exception):
         self.handled = "critical" if critical else "suppressed"
 
     def __repr__(self):
-        return "Manager:{} caused a {} failure".format(self.worker_id,
-                                                       self.handled)
+        return "Manager {} attempted to register with a bad registration message. Caused a {} failure".format(
+            self.worker_id,
+            self.handled)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class Interchange(object):
@@ -184,7 +195,7 @@ class Interchange(object):
                                                                sys.version_info.minor,
                                                                sys.version_info.micro),
                                  'os': platform.system(),
-                                 'hname': platform.node(),
+                                 'hostname': platform.node(),
                                  'dir': os.getcwd()}
 
         logger.info("Platform info: {}".format(self.current_platform))
@@ -347,6 +358,7 @@ class Interchange(object):
 
                     try:
                         msg = json.loads(message[1].decode('utf-8'))
+                        msg['reg_time'] = datetime.datetime.strptime(msg['reg_time'], "%Y-%m-%d %H:%M:%S")
                         reg_flag = True
                     except Exception:
                         logger.warning("[MAIN] Got a non-json registration message from manager:{}".format(
@@ -358,6 +370,7 @@ class Interchange(object):
                                                           'free_capacity': 0,
                                                           'block_id': None,
                                                           'max_capacity': 0,
+                                                          'worker_count': 0,
                                                           'active': True,
                                                           'tasks': []}
                     if reg_flag is True:
@@ -373,7 +386,7 @@ class Interchange(object):
                             if self.suppress_failure is False:
                                 logger.debug("Setting kill event")
                                 self._kill_event.set()
-                                e = ManagerLost(manager)
+                                e = ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
                                 result_package = {'task_id': -1, 'exception': serialize_object(e)}
                                 pkl_package = pickle.dumps(result_package)
                                 self.results_outgoing.send(pkl_package)
@@ -461,7 +474,6 @@ class Interchange(object):
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                 logger.debug("[MAIN] leaving results_incoming section")
 
-            logger.debug("[MAIN] entering bad_managers section")
             bad_managers = [manager for manager in self._ready_manager_queue if
                             time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
             for manager in bad_managers:
@@ -470,15 +482,13 @@ class Interchange(object):
 
                 for tid in self._ready_manager_queue[manager]['tasks']:
                     try:
-                        raise ManagerLost(manager)
+                        raise ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
                     except Exception:
                         result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
                 self._ready_manager_queue.pop(manager, 'None')
-            logger.debug("[MAIN] leaving bad_managers section")
-            logger.debug("[MAIN] ending one main loop iteration")
 
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(count, delta))
