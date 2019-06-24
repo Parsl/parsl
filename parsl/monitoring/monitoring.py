@@ -108,14 +108,14 @@ class UDPRadio(object):
                                    int(time.time()),  # epoch timestamp
                                    message_type,
                                    message))
-        except Exception as e:
-            print("Exception during pickling {}".format(e))
+        except Exception:
+            logging.exception("Exception during pickling", exc_info=True)
             return
 
         try:
             x = self.sock.sendto(buffer, (self.ip, self.port))
         except socket.timeout:
-            print("Could not send message within timeout limit")
+            logging.error("Could not send message within timeout limit")
             return False
         return x
 
@@ -426,6 +426,14 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
 
   try:
 
+    import logging
+    import time
+
+    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+    logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
+        logbase="/tmp", task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
+    logging.debug("start of monitor")
+
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
 
@@ -449,9 +457,11 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
             d['hostname'] = platform.node()
             d['first_msg'] = first_msg
             d['timestamp'] = datetime.datetime.now()
+
             logging.debug("getting children")
             children = pm.children(recursive=True)
             logging.debug("got children")
+
             d["psutil_cpu_count"] = psutil.cpu_count()
             d['psutil_process_memory_virtual'] = pm.memory_info().vms
             d['psutil_process_memory_resident'] = pm.memory_info().rss
@@ -461,8 +471,9 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
             try:
                 d['psutil_process_disk_write'] = pm.io_counters().write_bytes
                 d['psutil_process_disk_read'] = pm.io_counters().read_bytes
-            except psutil.AccessDenied:
+            except Exception:
                 # occassionally pid temp files that hold this information are unvailable to be read so set to zero
+                logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0
             for child in children:
@@ -475,8 +486,9 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, logbase, sleep_dur=10):
                 try:
                     d['psutil_process_disk_write'] += child.io_counters().write_bytes
                     d['psutil_process_disk_read'] += child.io_counters().read_bytes
-                except psutil.AccessDenied:
+                except Exception:
                     # occassionally pid temp files that hold this information are unvailable to be read so add zero
+                    logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
 
