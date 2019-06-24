@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+<h2>{{ task_details['task_func_name'] }} ({{ task_details['task_id'] }})</h2>
+<hr>
+<div class="container">
+  <div class="row">
+    <div class="col">
+<ul>
+    <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}">{{ workflow_details['workflow_name'] }}<a/></li>
+    <li><b>Started:</b>  {{ workflow_details['time_began'] | timeformat }}</li>
+    <li><b>Completed:</b>  {{ workflow_details['time_completed'] | timeformat }}</li>
+    <li><b>Workflow duration:</b>  {{ workflow_details['workflow_duration']| timeformat }}</li>
+    <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
+    <li><b>task_func_name:</b>   <a href="/workflow/{{ workflow_details['run_id'] }}/app/{{ task_details['task_func_name'] }}">{{ task_details['task_func_name'] }}</a></li>
+    <li><b>task_id:</b>  {{ task_details['task_id'] }}</li>
+    <li><b>task_depends:</b>
+        {% if task_details['task_depends'] %}
+            {% for id in task_details['task_depends'].split(",") %}
+                <a href="/workflow/{{ workflow_details['run_id'] }}/task/{{ id }}">{{ id }}</a>
+            {% endfor %}
+        {% else %}
+            None
+        {% endif %}
+    </li>
+    <li><b>task_time_submitted:</b>  {{ task_details['task_time_submitted'] | timeformat }}</li>
+    <li><b>task_time_returned:</b>  {{ task_details['task_time_returned'] | timeformat }}</li>
+    <li><b>task_inputs:</b>  {{ task_details['task_inputs'] }}</li>
+    <li><b>task_outputs:</b>  {{ task_details['task_outputs'] }}</li>
+    <li><b>task_stdin:</b>  {{ task_details['task_stdin'] }}</li>
+    <li><b>task_stdout:</b>  {{ task_details['task_stdout'] }}</li>
+    <li><b>task_stderr:</b>  {{ task_details['task_stderr'] }}</li>
+</ul>
+    </div>
+    <div class="col">
+        <h5>Task State</h5>
+
+        <table class="table table-hover" style="width: 400px">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>State</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in task_status %}
+                  <tr>
+                <td>{{ t.timestamp | timeformat }}</td>
+                <td>{{ t.task_status_name }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 350px;">
+{{ time_series_cpu_percent|safe }}
+    </div>
+    <div class="col-6" style="height: 350px;">
+{{ time_series_memory_resident|safe }}
+    </div>
+  </div>
+</div>
+
+<!--
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 300px;">
+{{ time_series_memory_percent|safe }}
+    </div>
+    <div class="col-6" style="height: 300px;">
+{{ time_series_memory_resident|safe }}
+    </div>
+  </div>
+</div>
+-->
+{% endblock %}

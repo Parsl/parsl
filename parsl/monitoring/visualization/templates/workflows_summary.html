@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+  <br />
+  <h2>Workflows</h2>
+
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Version</th>
+        <th>Owner</th>
+        <th>Status</th>
+        <th>Runtime (s)</th>
+        <th>Tasks</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for w in workflows %}
+          <tr>
+        <td><a href="workflow/{{ w['run_id'] }}/">{{ w.workflow_name }}</a></td>
+        <td>{{ w.workflow_version }}</td>
+        <td>{{ w.user }}</td>
+        <td>{{ w.status }}</td>
+        <td>{{ w.workflow_duration | timeformat }}</td>
+        <td>
+             <span class="task task-complete">{{ w['tasks_completed_count'] }}</span>
+             <span class="task task-failed">{{ w['tasks_failed_count'] }}</span>
+
+        </td>
+        <td>
+          <a href="workflow/{{ w['run_id'] }}/resource_usage"><span class="fas fa-chart-bar"></span></a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}
