@@ -6,6 +6,7 @@ import time
 
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
+from parsl.monitoring.message_type import MessageType
 
 try:
     import sqlalchemy as sa
@@ -29,8 +30,6 @@ TASK = 'task'            # Task table includes task metadata
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
-
-from parsl.monitoring.message_type import MessageType
 
 
 class Database(object):
@@ -229,9 +228,9 @@ class DatabaseManager(object):
         self._priority_queue_pull_thread.start()
 
         self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                            args=(
-                                                                node_queue, 'node', self._kill_event,)
-                                                            )
+                                                        args=(
+                                                            node_queue, 'node', self._kill_event,)
+                                                        )
         self._node_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -330,7 +329,6 @@ class DatabaseManager(object):
                 self.logger.debug(
                     "Got {} messages from node queue".format(len(messages)))
                 self._insert(table=NODE, messages=messages)
-
 
             """
             RESOURCE_INFO messages
