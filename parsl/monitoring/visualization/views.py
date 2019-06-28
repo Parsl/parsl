@@ -60,7 +60,7 @@ def workflow(workflow_id):
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
-                           task_gantt=task_gantt_plot(df_task),
+                           task_gantt=task_gantt_plot(df_task, time_completed=workflow_details.time_completed),
                            task_per_app=task_per_app_plot(df_task, df_status))
 
 
