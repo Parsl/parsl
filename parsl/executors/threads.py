@@ -1,6 +1,9 @@
 import logging
 import sys
+import typeguard
 import concurrent.futures as cf
+
+from typing import Any, List, Optional
 
 from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
@@ -25,7 +28,10 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         this is managed by the user.
     """
 
-    def __init__(self, label='threads', max_threads=2, thread_name_prefix='', storage_access=None, working_dir=None, managed=True):
+    @typeguard.typechecked
+    def __init__(self, label: str = 'threads', max_threads: int = 2,
+                 thread_name_prefix: str = '', storage_access: List[Any] = None,
+                 working_dir: Optional[str] = None, managed: bool = True):
         self.label = label
         self._scaling_enabled = False
         self.max_threads = max_threads

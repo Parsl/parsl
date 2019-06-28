@@ -9,7 +9,6 @@ class Launcher(RepresentationMixin, metaclass=ABCMeta):
     @abstractmethod
     def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
         """ Wraps the command with the Launcher calls.
-        *MUST* be implemented by the concrete child classes
         """
         pass
 
@@ -169,6 +168,47 @@ mpiexec --bind-to none -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOB
 
 echo "All workers done"
 '''.format(command, tasks_per_node, nodes_per_block, task_blocks)
+        return x
+
+
+class MpiRunLauncher(Launcher):
+    """ Worker launcher that wraps the user's command with the framework to
+    launch multiple command invocations via mpirun.
+
+    This wrapper sets the bash env variable CORES to the number of cores on the
+    machine.
+
+    This launcher makes the following assumptions:
+    - mpirun is installed and can be located in $PATH
+    - The provider makes available the $PBS_NODEFILE environment variable
+    """
+    def __init__(self, bash_location='/bin/bash'):
+        self.bash_location = bash_location
+
+    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+        """
+        Args:
+        - command (string): The command string to be launched
+        - task_block (string) : bash evaluated string.
+
+        KWargs:
+        - walltime (int) : This is not used by this launcher.
+        """
+        task_blocks = tasks_per_node * nodes_per_block
+
+        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+echo "Found cores : $CORES"
+WORKERCOUNT={3}
+
+cat << MPIRUN_EOF > cmd_$JOBNAME.sh
+{0}
+MPIRUN_EOF
+chmod u+x cmd_$JOBNAME.sh
+
+mpirun -np $WORKERCOUNT {4} cmd_$JOBNAME.sh
+
+echo "All workers done"
+'''.format(command, tasks_per_node, nodes_per_block, task_blocks, self.bash_location)
         return x
 
 

@@ -16,6 +16,7 @@ import json
 
 from mpi4py import MPI
 
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
@@ -99,6 +100,9 @@ class Manager(object):
                'os': platform.system(),
                'hname': platform.node(),
                'dir': os.getcwd(),
+               'prefetch_capacity': 0,
+               'worker_count': (self.comm.size - 1),
+               'max_capacity': (self.comm.size - 1) + 0,  # (+prefetch)
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
@@ -399,7 +403,7 @@ def worker(comm, rank):
         try:
             result = execute_task(req['buffer'])
         except Exception as e:
-            result_package = {'task_id': tid, 'exception': serialize_object(e)}
+            result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
             logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}

@@ -1,6 +1,7 @@
 import logging
-
+from functools import update_wrapper
 from inspect import signature, Parameter
+
 from parsl.app.errors import wrap_error
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
@@ -22,8 +23,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
     import parsl.app.errors as pe
 
     logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
-
-    # start_t = time.time()
 
     func_name = func.__name__
 
@@ -51,21 +50,36 @@ def remote_side_bash_executor(func, *args, **kwargs):
     logging.debug("Executable: %s", executable)
 
     # Updating stdout, stderr if values passed at call time.
-    stdout = kwargs.get('stdout')
-    stderr = kwargs.get('stderr')
+
+    def open_std_fd(fdname):
+        # fdname is 'stdout' or 'stderr'
+        stdfspec = kwargs.get(fdname)  # spec is str name or tuple (name, mode)
+        if stdfspec is None:
+            return None
+        elif isinstance(stdfspec, str):
+            fname = stdfspec
+            mode = 'a+'
+        elif isinstance(stdfspec, tuple):
+            if len(stdfspec) != 2:
+                raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
+            fname, mode = stdfspec
+        else:
+            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+
+        try:
+            if os.path.dirname(fname):
+                os.makedirs(os.path.dirname(fname), exist_ok=True)
+            fd = open(fname, mode)
+        except Exception as e:
+            raise pe.BadStdStreamFile(fname, e)
+        return fd
+
+    std_out = open_std_fd('stdout')
+    std_err = open_std_fd('stderr')
     timeout = kwargs.get('walltime')
-    logging.debug("Stdout: %s", stdout)
-    logging.debug("Stderr: %s", stderr)
 
-    try:
-        std_out = open(stdout, 'a+') if stdout else None
-    except Exception as e:
-        raise pe.BadStdStreamFile(stdout, e)
-
-    try:
-        std_err = open(stderr, 'a+') if stderr else None
-    except Exception as e:
-        raise pe.BadStdStreamFile(stderr, e)
+    if std_err is not None:
+        print('--> executable follows <--\n{}\n--> end executable <--'.format(executable), file=std_err)
 
     returncode = None
     try:
@@ -74,11 +88,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
         returncode = proc.returncode
 
     except subprocess.TimeoutExpired:
-        # print("Timeout")
         raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout))
 
     except Exception as e:
-        # print("Caught exception: ", e)
         raise pe.AppException("[{}] App caught exception: {}".format(func_name, proc.returncode), e)
 
     if returncode != 0:
@@ -98,7 +110,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
     if missing:
         raise pe.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
 
-    # exec_duration = time.time() - start_t
     return returncode
 
 
@@ -141,13 +152,14 @@ class BashApp(AppBase):
         else:
             dfk = self.data_flow_kernel
 
-        app_fut = dfk.submit(wrap_error(remote_side_bash_executor), self.func, *args,
+        app_fut = dfk.submit(wrap_error(update_wrapper(remote_side_bash_executor, self.func)),
+                             self.func, *args,
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
                              **self.kwargs)
 
-        out_futs = [DataFuture(app_fut, o, parent=app_fut, tid=app_fut.tid)
+        out_futs = [DataFuture(app_fut, o, tid=app_fut.tid)
                     for o in kwargs.get('outputs', [])]
         app_fut._outputs = out_futs
 
