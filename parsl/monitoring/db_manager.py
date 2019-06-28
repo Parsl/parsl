@@ -108,6 +108,7 @@ class Database(object):
         task_status_name = Column(Text, nullable=False)
         timestamp = Column(DateTime, nullable=False)
         run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
+        hostname = Column('hostname', Text, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id',
                                  'task_status_name', 'timestamp'),
@@ -134,6 +135,7 @@ class Database(object):
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
+        task_fail_count = Column('task_fail_count', Integer, nullable=False)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id'),
         )
@@ -271,8 +273,11 @@ class DatabaseManager(object):
                         if msg['task_time_returned'] is not None:
                             update_messages.append(msg)
                         else:
-                            inserted_tasks.add(msg['task_id'])
-                            insert_messages.append(msg)
+                            if msg['task_id'] in inserted_tasks:
+                                update_messages.append(msg)
+                            else:
+                                inserted_tasks.add(msg['task_id'])
+                                insert_messages.append(msg)
 
                             # check if there is an left_message for this task
                             if msg['task_id'] in left_messages:
@@ -281,19 +286,20 @@ class DatabaseManager(object):
 
                 self.logger.debug(
                     "Updating and inserting TASK_INFO to all tables")
-                self._update(table=WORKFLOW,
-                             columns=['run_id', 'tasks_failed_count',
-                                      'tasks_completed_count'],
-                             messages=update_messages)
 
                 if insert_messages:
                     self._insert(table=TASK, messages=insert_messages)
                     self.logger.debug(
                         "There are {} inserted task records".format(len(inserted_tasks)))
                 if update_messages:
+                    self._update(table=WORKFLOW,
+                                 columns=['run_id', 'tasks_failed_count',
+                                          'tasks_completed_count'],
+                                 messages=update_messages)
                     self._update(table=TASK,
                                  columns=['task_time_returned',
-                                          'task_elapsed_time', 'run_id', 'task_id'],
+                                          'task_elapsed_time', 'run_id', 'task_id',
+                                          'task_fail_count'],
                                  messages=update_messages)
                 self._insert(table=STATUS, messages=all_messages)
 
