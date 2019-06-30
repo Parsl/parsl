@@ -1,4 +1,3 @@
-import logging
 from functools import update_wrapper
 from inspect import signature, Parameter
 
@@ -6,8 +5,6 @@ from parsl.app.errors import wrap_error
 from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
-
-logger = logging.getLogger(__name__)
 
 
 def remote_side_bash_executor(func, *args, **kwargs):
@@ -21,8 +18,20 @@ def remote_side_bash_executor(func, *args, **kwargs):
     import subprocess
     import logging
     import parsl.app.errors as pe
+    from parsl import set_file_logger
 
-    logging.basicConfig(filename='/tmp/bashexec.{0}.log'.format(time.time()), level=logging.DEBUG)
+    logbase = "/tmp"
+    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+
+    # make this name unique per invocation so that each invocation can
+    # log to its own file. It would be better to include the task_id here
+    # but that is awkward to wire through at the moment as apps do not
+    # have access to that execution context.
+    t = time.time()
+
+    logname = __name__ + "." + str(t)
+    logger = logging.getLogger(logname)
+    set_file_logger(filename='{0}/bashexec.{1}.log'.format(logbase, t), name=logname, level=logging.DEBUG, format_string=format_string)
 
     func_name = func.__name__
 
@@ -44,10 +53,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
     except IndexError as e:
         raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e))
     except Exception as e:
-        logging.error("Caught exception during formatting of app '{}': {}".format(func_name, e))
+        logger.error("Caught exception during formatting of app '{}': {}".format(func_name, e))
         raise e
 
-    logging.debug("Executable: %s", executable)
+    logger.debug("Executable: %s", executable)
 
     # Updating stdout, stderr if values passed at call time.
 
