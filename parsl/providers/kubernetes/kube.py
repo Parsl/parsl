@@ -8,6 +8,9 @@ from parsl.providers.error import *
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.utils import RepresentationMixin
 
+import typeguard
+from typing import Any, Dict, List, Optional, Tuple
+
 try:
     from kubernetes import client, config
     _kubernetes_enabled = True
@@ -52,22 +55,22 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         List of tuples describing persistent volumes to be mounted in the pod.
         The tuples consist of (PVC Name, Mount Directory).
     """
-
+    @typeguard.typechecked
     def __init__(self,
-                 image,
-                 namespace='default',
-                 nodes_per_block=1,
-                 init_blocks=4,
-                 min_blocks=0,
-                 max_blocks=10,
-                 parallelism=1,
-                 worker_init="",
-                 pod_name=None,
-                 user_id=None,
-                 group_id=None,
-                 run_as_non_root=False,
-                 secret=None,
-                 persistent_volumes=[]):
+                 image: str,
+                 namespace: str = 'default',
+                 nodes_per_block: int = 1,
+                 init_blocks: int = 4,
+                 min_blocks: int = 0,
+                 max_blocks: int = 10,
+                 parallelism: float = 1,
+                 worker_init: str = "",
+                 pod_name: Optional[str] = None,
+                 user_id: Optional[str] = None,
+                 group_id: Optional[str] = None,
+                 run_as_non_root: bool = False,
+                 secret: Optional[str] = None,
+                 persistent_volumes: List[Tuple[str, str]] = []) -> None:
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
                                         "Kubernetes provider requires kubernetes module and config.")
@@ -91,7 +94,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.kube_client = client.CoreV1Api()
 
         # Dictionary that keeps track of jobs, keyed on job_id
-        self.resources = {}
+        self.resources = {}  # type: Dict[str, Dict[str, Any]]
 
     def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl"):
         """ Submit a job
