@@ -11,6 +11,10 @@ Parsl is available on PyPI, but first make sure you have Python3.5+
 
 >>> python3 --version
 
+You'll also need gcc to be installed in order to run Parsl. ::
+
+$ gcc --version
+
 Parsl has been tested on Linux and MacOS.
 
 .. note:: As of Parsl v0.7.2 we are switching to an opt-in model for anonymous usage tracking. To help support the

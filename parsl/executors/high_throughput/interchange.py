@@ -361,8 +361,8 @@ class Interchange(object):
                         msg['reg_time'] = datetime.datetime.strptime(msg['reg_time'], "%Y-%m-%d %H:%M:%S")
                         reg_flag = True
                     except Exception:
-                        logger.warning("[MAIN] Got a non-json registration message from manager:{}".format(
-                            manager))
+                        logger.warning("[MAIN] Got Exception reading registration message from manager:{}".format(
+                            manager), exc_info=True)
                         logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
 
                     # By default we set up to ignore bad nodes/registration messages.
