@@ -270,14 +270,11 @@ class DatabaseManager(object):
                                          messages=[msg])
                     else:                             # TASK_INFO message
                         all_messages.append(msg)
-                        if msg['task_time_returned'] is not None:
+                        if msg['task_id'] in inserted_tasks:
                             update_messages.append(msg)
                         else:
-                            if msg['task_id'] in inserted_tasks:
-                                update_messages.append(msg)
-                            else:
-                                inserted_tasks.add(msg['task_id'])
-                                insert_messages.append(msg)
+                            inserted_tasks.add(msg['task_id'])
+                            insert_messages.append(msg)
 
                             # check if there is an left_message for this task
                             if msg['task_id'] in left_messages:
