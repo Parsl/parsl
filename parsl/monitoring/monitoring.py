@@ -482,10 +482,11 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
                     logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
-
-        finally:
             logging.debug("sending message")
             radio.send(MessageType.TASK_INFO, task_id, d)
-            logging.debug("sleeping")
-            time.sleep(sleep_dur)
             first_msg = False
+        except Exception:
+            logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
+
+        logging.debug("sleeping")
+        time.sleep(sleep_dur)
