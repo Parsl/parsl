@@ -244,10 +244,6 @@ class DataFlowKernel(object):
              task_id (string) : Task id which is a uuid string
              future (Future) : The future object corresponding to the task which
              makes this callback
-
-        KWargs:
-             memo_cbk(Bool) : Indicates that the call is coming from a memo update,
-             that does not require additional memo updates.
         """
 
         try:
