@@ -81,3 +81,23 @@ class ParslExecutor(metaclass=ABCMeta):
     @run_dir.setter
     def run_dir(self, value):
         self._run_dir = value
+
+    @property
+    def hub_address(self):
+        """Address to the Hub for monitoring.
+        """
+        return self._hub_address
+
+    @hub_address.setter
+    def hub_address(self, value):
+        self._hub_address = value
+
+    @property
+    def hub_port(self):
+        """Port to the Hub for monitoring.
+        """
+        return self._hub_port
+
+    @hub_port.setter
+    def hub_port(self, value):
+        self._hub_port = value
