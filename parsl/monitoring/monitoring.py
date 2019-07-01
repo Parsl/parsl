@@ -487,7 +487,6 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
-            pass
 
         logging.debug("sleeping")
         time.sleep(sleep_dur)
