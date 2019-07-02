@@ -1,11 +1,10 @@
 import pytest
 
 import parsl
-from parsl import *
 
 parsl.set_stream_logger()
 
-from parsl.executors.swift_t import *
+from parsl.executors.swift_t import TurbineExecutor
 
 
 def foo(x, y):

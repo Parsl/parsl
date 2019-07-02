@@ -1,4 +1,4 @@
-from parsl import *
+from parsl import App, DataFlowKernel
 # from parsl.monitoring.db_logger import MonitoringConfig
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.config import Config

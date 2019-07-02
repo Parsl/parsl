@@ -1,4 +1,4 @@
-from parsl.channels.errors import *
+from parsl.channels.errors import SSHException, BadHostKeyException
 from parsl.channels.ssh.ssh import SSHChannel as SSH
 
 
