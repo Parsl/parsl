@@ -136,6 +136,7 @@ class Database(object):
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
         task_fail_count = Column('task_fail_count', Integer, nullable=False)
+        task_fail_history = Column('task_fail_history', Text, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id'),
         )
@@ -296,7 +297,8 @@ class DatabaseManager(object):
                     self._update(table=TASK,
                                  columns=['task_time_returned',
                                           'task_elapsed_time', 'run_id', 'task_id',
-                                          'task_fail_count'],
+                                          'task_fail_count',
+                                          'task_fail_history'],
                                  messages=update_messages)
                 self._insert(table=STATUS, messages=all_messages)
 

@@ -178,7 +178,7 @@ class DataFlowKernel(object):
         """
 
         info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'checkpoint', 'fail_count',
-                           'fail_history', 'status', 'id', 'time_submitted', 'time_returned', 'executor']
+                           'status', 'id', 'time_submitted', 'time_returned', 'executor']
 
         task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
@@ -191,6 +191,9 @@ class DataFlowKernel(object):
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
         task_log_info['task_stdout'] = self.tasks[task_id]['kwargs'].get('stdout', None)
         task_log_info['task_stderr'] = self.tasks[task_id]['kwargs'].get('stderr', None)
+        task_log_info['task_fail_history'] = None
+        if self.tasks[task_id]['fail_history'] is not None:
+            task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
         task_log_info['task_depends'] = None
         if self.tasks[task_id]['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t._tid) for t in self.tasks[task_id]['depends']])
@@ -246,12 +249,12 @@ class DataFlowKernel(object):
             if isinstance(res, RemoteExceptionWrapper):
                 res.reraise()
 
-        except Exception:
+        except Exception as e:
             logger.exception("Task {} failed".format(task_id))
 
             # We keep the history separately, since the future itself could be
             # tossed.
-            self.tasks[task_id]['fail_history'].append(future._exception)
+            self.tasks[task_id]['fail_history'].append(str(e))
             self.tasks[task_id]['fail_count'] += 1
 
             if not self._config.lazy_errors:
