@@ -152,7 +152,7 @@ class Database(object):
         python_v = Column('python_v', Text, nullable=False)
         reg_time = Column('reg_time', DateTime, nullable=False)
         __table_args__ = (
-            PrimaryKeyConstraint('hostname', 'run_id'),
+            PrimaryKeyConstraint('hostname', 'run_id', 'reg_time'),
         )
 
     class Resource(Base):
