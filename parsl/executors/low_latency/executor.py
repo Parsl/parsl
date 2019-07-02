@@ -5,7 +5,6 @@ from concurrent.futures import Future
 import logging
 import threading
 import queue
-# import pickle
 from multiprocessing import Process, Queue
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
@@ -15,7 +14,6 @@ from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
 from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
 from parsl.executors.base import ParslExecutor
-# from parsl.dataflow.error import ConfigurationError
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
