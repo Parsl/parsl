@@ -123,7 +123,7 @@ class Database(object):
         task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
         task_time_submitted = Column(
-            'task_time_submitted', DateTime, nullable=False)
+            'task_time_submitted', DateTime, nullable=True)
         task_time_running = Column(
             'task_time_running', DateTime, nullable=True)
         task_time_returned = Column(
