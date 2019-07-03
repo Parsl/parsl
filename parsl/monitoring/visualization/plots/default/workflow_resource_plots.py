@@ -31,14 +31,14 @@ def resource_distribution_plot(df_resources, df_task, type='psutil_process_time_
                 task = df_resources[df_resources['task_id'] ==
                                     app][type].astype('float').mean()
             elif option == 'max':
-                task = max(
-                    df_resources[df_resources['task_id'] == app][type].astype('float'))
+                task = df_resources[df_resources['task_id'] == app][type].astype('float').max()
 
             for i in range(len(x_axis) - 1):
                 a = task >= x_axis[i]
                 b = task < x_axis[i + 1]
                 if a and b:
                     items[i] += 1
+                    break
             if task >= x_axis[-1]:
                 items[-1] += 1
         return items
