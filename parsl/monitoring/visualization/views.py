@@ -162,14 +162,6 @@ def workflow_resources(workflow_id):
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='avg'),
                            memory_usage_distribution_max_plot=resource_distribution_plot(
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='max'),
-                           # user_time_time_series=resource_time_series(
-                           #    df_task_resources, type='psutil_process_time_user', label='CPU User Time'),
                            user_time_time_series=resource_efficiency(df_resources, df_node, label='CPU'),
                            memory_resident_time_series=resource_efficiency(df_resources, df_node, label='mem'),
-                           # cpu_percent_time_series=resource_time_series(
-                           #    df_task_resources, type='psutil_process_cpu_percent', label='CPU Utilization'),
-                           # memory_percent_time_series=resource_time_series(
-                           #    df_task_resources, type='psutil_process_memory_percent', label='Memory Utilization'),
-                           # memory_resident_time_series=resource_time_series(
-                           #    df_task_resources, type='psutil_process_memory_resident', label='Memory Usage'),
                            )
