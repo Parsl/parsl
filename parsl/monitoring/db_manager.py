@@ -6,10 +6,11 @@ import time
 
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
+from parsl.monitoring.message_type import MessageType
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, Float, Integer, DateTime, PrimaryKeyConstraint
+    from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
 except ImportError:
@@ -28,8 +29,7 @@ WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
-
-from parsl.monitoring.message_type import MessageType
+NODE = 'node'            # Node table include node info
 
 
 class Database(object):
@@ -141,6 +141,20 @@ class Database(object):
             PrimaryKeyConstraint('task_id', 'run_id'),
         )
 
+    class Node(Base):
+        __tablename__ = NODE
+        run_id = Column('run_id', Text, nullable=False)
+        hostname = Column('hostname', Text, nullable=False)
+        cpu_count = Column('cpu_count', Integer, nullable=False)
+        total_memory = Column('total_memory', Integer, nullable=False)
+        active = Column('active', Boolean, nullable=False)
+        worker_count = Column('worker_count', Integer, nullable=False)
+        python_v = Column('python_v', Text, nullable=False)
+        reg_time = Column('reg_time', DateTime, nullable=False)
+        __table_args__ = (
+            PrimaryKeyConstraint('hostname', 'run_id', 'reg_time'),
+        )
+
     class Resource(Base):
         __tablename__ = RESOURCE
         task_id = Column('task_id', Integer, sa.ForeignKey(
@@ -204,9 +218,10 @@ class DatabaseManager(object):
         self.batching_threshold = batching_threshold
 
         self.pending_priority_queue = queue.Queue()
+        self.pending_node_queue = queue.Queue()
         self.pending_resource_queue = queue.Queue()
 
-    def start(self, priority_queue, resource_queue):
+    def start(self, priority_queue, node_queue, resource_queue):
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -214,6 +229,12 @@ class DatabaseManager(object):
                                                                 priority_queue, 'priority', self._kill_event,)
                                                             )
         self._priority_queue_pull_thread.start()
+
+        self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
+                                                        args=(
+                                                            node_queue, 'node', self._kill_event,)
+                                                        )
+        self._node_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
@@ -303,6 +324,18 @@ class DatabaseManager(object):
                 self._insert(table=STATUS, messages=all_messages)
 
             """
+            NODE_INFO messages
+
+            """
+            messages = self._get_messages_in_batch(self.pending_node_queue,
+                                                   interval=self.batching_interval,
+                                                   threshold=self.batching_threshold)
+            if messages:
+                self.logger.debug(
+                    "Got {} messages from node queue".format(len(messages)))
+                self._insert(table=NODE, messages=messages)
+
+            """
             RESOURCE_INFO messages
 
             """
@@ -348,6 +381,8 @@ class DatabaseManager(object):
                         self.pending_priority_queue.put(x)
                 elif queue_tag == 'resource':
                     self.pending_resource_queue.put(x[-1])
+                elif queue_tag == 'node':
+                    self.pending_node_queue.put(x[-1])
 
     def _update(self, table, columns, messages):
         self.db.update(table=table, columns=columns, messages=messages)
@@ -410,11 +445,11 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
     return logger
 
 
-def dbm_starter(priority_msgs, resource_msgs, *args, **kwargs):
+def dbm_starter(priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
     dbm = DatabaseManager(*args, **kwargs)
-    dbm.start(priority_msgs, resource_msgs)
+    dbm.start(priority_msgs, node_msgs, resource_msgs)
