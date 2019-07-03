@@ -36,7 +36,7 @@ class Node(db.Model):
     python_v = db.Column('python_v', db.Text, nullable=False)
     reg_time = db.Column('reg_time', db.DateTime, nullable=False)
     __table_args__ = (
-        db.PrimaryKeyConstraint('hostname', 'run_id'),
+        db.PrimaryKeyConstraint('hostname', 'run_id', 'reg_time'),
     )
 
 
