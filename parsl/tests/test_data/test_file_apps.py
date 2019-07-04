@@ -51,10 +51,10 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
-        
+
         if os.path.exists('test{0}.txt'.format(i)):
             os.remove('test{0}.txt'.format(i))
- 
+
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
                        outputs=[File("test{0}.txt".format(i))],
