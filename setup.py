@@ -45,7 +45,7 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         # Python versions supported
         'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',        
+        'Programming Language :: Python :: 3.6',
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':

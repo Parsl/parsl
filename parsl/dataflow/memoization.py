@@ -82,8 +82,8 @@ class Memoizer(object):
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
         If present, the results are returned. The result is a tuple indicating whether a memo
-        exists and the result, since a Null result is possible and could be confusing.
-        This seems like a reasonable option without relying on an cache_miss exception.
+        exists and the result, since a None result is possible and could be confusing.
+        This seems like a reasonable option without relying on a cache_miss exception.
 
         Args:
             - task(task) : task from the dfk.tasks table
@@ -97,7 +97,7 @@ class Memoizer(object):
         """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
-            return None, None
+            return False, None
 
         hashsum = self.make_hash(task)
         present = False
@@ -113,14 +113,11 @@ class Memoizer(object):
     def hash_lookup(self, hashsum):
         """Lookup a hash in the memoization table.
 
-        Will raise a KeyError if hash is not in the memoization lookup table.
-
         Args:
-            - hashsum (str?): The same hashes used to uniquely identify apps+inputs
+            - hashsum (str): The same hashes used to uniquely identify apps+inputs
 
         Returns:
-            - Lookup result, this is unlikely to be None, since the hashes are set by this
-              library and could not miss entried in it's dict.
+            - Lookup result
 
         Raises:
             - KeyError: if hash not in table
