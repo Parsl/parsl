@@ -212,7 +212,7 @@ class DataManager(ParslExecutor):
         else:
             raise Exception('Staging out with unknown file scheme {} is not supported'.format(file.scheme))
 
-    def _globus_stage_out_app(self, dfk):
+    def _globus_stage_out_app(self):
         return python_app(executors=['data_manager'], data_flow_kernel=self.dfk)(self._globus_stage_out)
 
     def _globus_stage_out(self, globus_ep, inputs=[]):
