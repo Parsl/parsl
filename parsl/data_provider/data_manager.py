@@ -166,13 +166,13 @@ class DataManager(ParslExecutor):
             raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
 
     def _ftp_stage_in_app(self, executor):
-        return python_app(executors=[executor])(_ftp_stage_in)
+        return python_app(executors=[executor], data_flow_kernel=self.dfk)(_ftp_stage_in)
 
     def _http_stage_in_app(self, executor):
-        return python_app(executors=[executor])(_http_stage_in)
+        return python_app(executors=[executor], data_flow_kernel=self.dfk)(_http_stage_in)
 
     def _globus_stage_in_app(self):
-        return python_app(executors=['data_manager'])(self._globus_stage_in)
+        return python_app(executors=['data_manager'], data_flow_kernel=self.dfk)(self._globus_stage_in)
 
     def _globus_stage_in(self, globus_ep, outputs=[]):
         file = outputs[0]
@@ -213,7 +213,7 @@ class DataManager(ParslExecutor):
             raise Exception('Staging out with unknown file scheme {} is not supported'.format(file.scheme))
 
     def _globus_stage_out_app(self):
-        return python_app(executors=['data_manager'])(self._globus_stage_out)
+        return python_app(executors=['data_manager'], data_flow_kernel=self.dfk)(self._globus_stage_out)
 
     def _globus_stage_out(self, globus_ep, inputs=[]):
         file = inputs[0]
