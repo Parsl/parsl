@@ -6,7 +6,7 @@ def my_app(walltime=3):
   import time
   # the loop count must be substantially bigger than the walltime
   # but not infinite - so that the test eventually terminates
-  # even in the walltime doesn't work.
+  # even if the walltime doesn't work.
   for n in range(0, 6):
     time.sleep(1)    
 
