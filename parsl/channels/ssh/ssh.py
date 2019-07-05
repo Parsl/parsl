@@ -206,7 +206,7 @@ class SSHChannel(Channel, RepresentationMixin):
             os.makedirs(local_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.exception("Failed to create script_dir: {0}".format(script_dir))
+                logger.exception("Failed to create local_dir: {0}".format(local_dir))
                 raise BadScriptPath(e, self.hostname)
 
         # Easier to check this than to waste time trying to pull file and
