@@ -92,6 +92,7 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
                              title=label))
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
+
 def resource_efficiency(resource, node, label='CPU'):
     try:
         resource['epoch_time'] = (pd.to_datetime(
@@ -119,7 +120,6 @@ def resource_efficiency(resource, node, label='CPU'):
             for index, row in tmp.iterrows():
                 if np.isnan(row['last_timestamp']):
                     continue
-                last = int(row['last_timestamp'] / step)
                 for i in range(int(row['last_timestamp']), int(row['relative_time'])):
                     if label == 'CPU':
                         diff = (row['psutil_process_time_user'] - row['last_cputime']) / (row['relative_time'] - row['last_timestamp'])
