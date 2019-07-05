@@ -50,6 +50,7 @@ class PythonApp(AppBase):
             def timeout(f, walltime):
                 def wrapper(*args, **kwargs):
                     import threading
+
                     def stop(thread):
                         import ctypes
                         import parsl.app.errors
