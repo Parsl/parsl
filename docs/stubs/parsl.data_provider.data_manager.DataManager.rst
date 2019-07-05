@@ -32,7 +32,7 @@ parsl.data\_provider.data\_manager.DataManager
 
    .. autosummary::
    
-      ~DataManager.default_data_manager
+      ~DataManager.run_dir
       ~DataManager.scaling_enabled
    
    

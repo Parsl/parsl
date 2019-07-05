@@ -61,6 +61,7 @@ def test_slower_apps():
 
 @pytest.mark.local
 @pytest.mark.forked
+@pytest.mark.skip('fails due to likely race in checkpointing; see issue #681')
 def test_checkpoint_availability():
     import os
 

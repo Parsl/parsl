@@ -1,11 +1,12 @@
 flake8
-ipyparallel
-pytest>=3.6.0
-pytest-xdist
+pytest>=3.6.0,<4.1.0
+pytest-cov
+pytest-xdist==1.26.1
 pytest-ordering
-coverage
-pandas
 coverage
 mock>=1.0.0
 nbsphinx
 sphinx_rtd_theme
+mypy
+sqlalchemy-stubs
+

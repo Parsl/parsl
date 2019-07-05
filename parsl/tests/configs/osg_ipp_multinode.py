@@ -1,6 +1,6 @@
 from parsl.executors.ipp_controller import Controller
 from parsl.channels.ssh.ssh import SSHChannel
-from parsl.providers.condor.condor import Condor
+from parsl.providers.condor.condor import CondorProvider
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 from parsl.tests.utils import get_rundir
@@ -16,7 +16,7 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='osg_remote_ipp',
-            provider=Condor(
+            provider=CondorProvider(
                 channel=SSHChannel(
                     hostname='login.osgconnect.net',
                     username=user_opts['osg']['username'],

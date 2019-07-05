@@ -68,7 +68,7 @@ The following example shows how manual checkpointing can be invoked in a Parsl s
 .. code-block:: python
 
     import parsl
-    from parsl.app.app import python_app
+    from parsl import python_app
     from parsl.configs.local_threads import config
 
     dfk = parsl.load(config)

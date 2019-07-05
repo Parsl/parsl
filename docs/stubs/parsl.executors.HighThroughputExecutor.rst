@@ -15,6 +15,7 @@ parsl.executors.HighThroughputExecutor
    
       ~HighThroughputExecutor.__init__
       ~HighThroughputExecutor.hold_worker
+      ~HighThroughputExecutor.initialize_scaling
       ~HighThroughputExecutor.scale_in
       ~HighThroughputExecutor.scale_out
       ~HighThroughputExecutor.shutdown

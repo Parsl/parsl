@@ -18,29 +18,6 @@ def random_uuid(x):
 
 
 @pytest.mark.local
-def test_python_memoization(n=4):
-    """Testing python memoization disable via config
-    """
-    x = random_uuid(0)
-
-    for i in range(0, n):
-        foo = random_uuid(0)
-        assert foo.result() != x.result(
-        ), "Memoized results were used when memoization was disabled"
-
-
-dfk.cleanup()
-parsl.clear()
-dfk = DataFlowKernel(config)
-
-
-@App('python', dfk)
-def random_uuid(x):
-    import uuid
-    return str(uuid.uuid4())
-
-
-@pytest.mark.local
 def test_python_memoization(n=2):
     """Testing python memoization disable via DFK call
     """

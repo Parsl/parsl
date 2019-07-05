@@ -6,6 +6,17 @@ with open('parsl/version.py') as f:
 with open('requirements.txt') as f:
     install_requires = f.readlines()
 
+extras_require = {
+    'aws' : ['boto3'],
+    'kubernetes' : ['kubernetes'],
+    'oauth_ssh' : ['oauth-ssh>=0.9'],
+    'extreme_scale' : ['mpi4py'],
+    'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
+    'google_cloud' : ['google-auth', 'google-api-python-client'],
+    'gssapi' : ['python-gssapi'],
+}
+extras_require['all'] = sum(extras_require.values(), [])
+
 setup(
     name='parsl',
     version=VERSION,
@@ -20,24 +31,12 @@ setup(
     packages=find_packages(),
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
-               'parsl/executors/extreme_scale/mpi_worker_pool.py'],
-    extras_require = {
-        'parsl-visualize': ['dash', 'dash-html-components', 'dash-core-components', 'pandas'],
-        'db_logging' : ['CMRESHandler', 'psutil', 'sqlalchemy'],
-        'aws' : ['boto3'],
-        # Jetstream is deprecated since the interface has not been maintained.
-        # 'jetstream' : ['python-novaclient'],
-        'extreme_scale' : ['mpi4py'],
-        'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
-        'google_cloud' : ['google-auth', 'google-api-python-client'],
-        'all' : ['CMRESHandler', 'psutil', 'sqlalchemy',
-                 'boto3',
-                 'mpi4py',
-                 'nbsphinx', 'sphinx_rtd_theme',
-                 'google-auth', 'google-api-python-client']
+               'parsl/executors/extreme_scale/mpi_worker_pool.py',
+               'parsl/executors/low_latency/lowlatency_worker.py',
+    ],
 
-        },
-    classifiers = [
+    extras_require=extras_require,
+    classifiers=[
         # Maturity
         'Development Status :: 3 - Alpha',
         # Intended audience
@@ -49,5 +48,9 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     keywords=['Workflows', 'Scientific computing'],
-    entry_points={'console_scripts': ['parsl-visualize=parsl.monitoring.web_app.index:cli_run']}
+    entry_points={'console_scripts':
+      [
+       'parsl-globus-auth=parsl.data_provider.globus:cli_run',
+       'parsl-visualize=parsl.monitoring.visualization.app:cli_run',
+      ]}
 )

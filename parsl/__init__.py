@@ -22,11 +22,19 @@ However the following helper functions are provided for logging:
 2. set_file_logger
     This sets the logging to a file. This is ideal for reporting issues to the dev team.
 
+Constants
+---------
+AUTO_LOGNAME
+    Special value that indicates Parsl should construct a filename for logging.
+
 """
 import logging
+import typeguard
+
+from typing import Optional
 
 from parsl.version import VERSION
-from parsl.app.app import App
+from parsl.app.app import App, bash_app, python_app
 from parsl.executors import ThreadPoolExecutor
 from parsl.executors import IPyParallelExecutor
 from parsl.executors import HighThroughputExecutor
@@ -39,9 +47,29 @@ from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
 __author__ = 'The Parsl Team'
 __version__ = VERSION
 
+AUTO_LOGNAME = -1
+
 __all__ = [
-    'App', 'DataFlowKernel', 'File', 'set_stream_logger', 'set_file_logger',
-    'ThreadPoolExecutor', 'HighThroughputExecutor', 'ExtremeScaleExecutor', 'IPyParallelExecutor',
+
+    # decorators
+    'App',
+    'bash_app',
+    'python_app',
+
+    # core
+    'DataFlowKernel',
+    'File',
+
+    # logging
+    'set_stream_logger',
+    'set_file_logger',
+    'AUTO_LOGNAME',
+
+    # executors
+    'ThreadPoolExecutor',
+    'HighThroughputExecutor',
+    'ExtremeScaleExecutor',
+    'IPyParallelExecutor',
 ]
 
 clear = DataFlowKernelLoader.clear
@@ -50,7 +78,8 @@ dfk = DataFlowKernelLoader.dfk
 wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
+@typeguard.typechecked
+def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
@@ -80,7 +109,8 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     futures_logger.addHandler(handler)
 
 
-def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
+@typeguard.typechecked
+def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
@@ -93,7 +123,7 @@ def set_file_logger(filename, name='parsl', level=logging.DEBUG, format_string=N
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)

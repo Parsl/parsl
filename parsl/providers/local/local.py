@@ -42,6 +42,10 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
+    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to figure
+        this out itself (= None). If True, then will always move. If False, will never move.
+    worker_init : str
+        Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     """
 
     def __init__(self,
@@ -54,9 +58,10 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  walltime="00:15:00",
                  worker_init='',
                  cmd_timeout=30,
-                 parallelism=1):
+                 parallelism=1,
+                 move_files=None):
         self.channel = channel
-        self.label = 'local'
+        self._label = 'local'
         self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
@@ -68,6 +73,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.walltime = walltime
         self.script_dir = None
         self.cmd_timeout = cmd_timeout
+        self.move_files = move_files
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
@@ -83,7 +89,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         '''
 
-        logging.debug("Checking status of : {0}".format(job_ids))
+        logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
 
             if self.resources[job_id]['proc']:
@@ -94,10 +100,12 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
                 if poll_code is None:
                     self.resources[job_id]['status'] = 'RUNNING'
-                elif poll_code == 0 and self.resources[job_id]['status'] != 'RUNNING':
+                elif poll_code == 0:
                     self.resources[job_id]['status'] = 'COMPLETED'
-                elif poll_code < 0 and self.resources[job_id]['status'] != 'RUNNING':
+                elif poll_code != 0:
                     self.resources[job_id]['status'] = 'FAILED'
+                else:
+                    logger.error("Internal consistency error: unexpected case in local provider state machine")
 
             elif self.resources[job_id]['remote_pid']:
 
@@ -135,7 +143,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 f.write(script_string)
 
         except KeyError as e:
-            logger.error("Missing keys for submit script : %s", e)
+            logger.error("Missing keys for submit script: %s", e)
             raise (SchedulerMissingArgs(e.args, self.label))
 
         except IOError as e:
@@ -184,10 +192,12 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         job_id = None
         proc = None
         remote_pid = None
-        if not isinstance(self.channel, LocalChannel):
-            logger.debug("Not a localChannel, files need to be moved")
+        if (self.move_files is None and not isinstance(self.channel, LocalChannel)) or (self.move_files):
+            logger.debug("Pushing start script")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
+        if not isinstance(self.channel, LocalChannel):
+            logger.debug("Launching in remote mode")
             # Bash would return until the streams are closed. So we redirect to a outs file
             cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
             retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
@@ -202,7 +212,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             try:
                 job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
             except Exception as e:
-                logger.debug("Channel execute failed for:{}, {}".format(self.channel, e))
+                logger.debug("Channel execute failed for: {}, {}".format(self.channel, e))
                 raise
 
         self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
@@ -222,7 +232,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         '''
         for job in job_ids:
-            logger.debug("Terminating job/proc_id : {0}".format(job))
+            logger.debug("Terminating job/proc_id: {0}".format(job))
             # Here we are assuming that for local, the job_ids are the process id's
             if self.resources[job]['proc']:
                 proc = self.resources[job]['proc']
@@ -233,8 +243,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 cmd = "kill -- -$(ps -o pgid={} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
                 retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
                 if retcode != 0:
-                    logger.warning("Failed to kill PID:{} and child processes on {}".format(self.resources[job]['remote_pid'],
-                                                                                            self.label))
+                    logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
+                                                                                             self.label))
 
         rets = [True for i in job_ids]
         return rets
@@ -246,6 +256,10 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     @property
     def current_capacity(self):
         return len(self.resources)
+
+    @property
+    def label(self):
+        return self._label
 
 
 if __name__ == "__main__":

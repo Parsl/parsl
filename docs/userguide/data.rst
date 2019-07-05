@@ -91,7 +91,7 @@ Parsl scripts may combine staging of files in and out of apps. For example, the 
 
         @python_app
         def sort_strings(inputs=[], outputs=[]):
-            with open(inputs[0], 'r') as u:
+            with open(inputs[0].filepath, 'r') as u:
                 strs = u.readlines()
                 strs.sort()
                 with open(outputs[0].filepath, 'w') as s:
@@ -146,3 +146,20 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
                 )
             ]
         )
+
+Authorization
+^^^^^^^^^^^^^
+
+In order to interact with Globus, you must be authorised. The first time that
+you use Globus with Parsl, prompts will take you through an authorization
+procedure involving your web browser. You can authorize without having to
+run a script (for example, if you're running your script in a batch system
+where it will be unattended) by running this command line:
+
+.. code-block:: bash
+
+        $ parsl-globus-auth
+        Parsl Globus command-line authoriser
+        If authorisation to Globus is necessary, the library will prompt you now.
+        Otherwise it will do nothing
+        Authorization complete

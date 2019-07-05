@@ -20,7 +20,6 @@ config = Config(
                     script_dir='/home/USERNAME/parsl_scripts/',    # Please replace USERNAME with your username
                 ),
                 nodes_per_block=1,
-                tasks_per_node=1,
                 init_blocks=1,
                 max_blocks=1,
                 walltime="00:05:00",

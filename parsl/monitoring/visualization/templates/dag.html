@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+<h2>{{ workflow_details['workflow_name'] }}</h2>
+
+<hr>
+
+<ul>
+    <li><b>Started:</b>  {{ workflow_details['time_began'] | timeformat }}</li>
+    <li><b>Completed:</b>  {{ workflow_details['time_completed'] | timeformat }}</li>
+    <li><b>Workflow duration:</b>  {{ workflow_details['workflow_duration'] | timeformat }}</li>
+    <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
+    <li><b>host:</b>  {{ workflow_details['host'] }}</li>
+    <li><b>rundir:</b>  {{ workflow_details['rundir'] }}</li>
+    <li><b>tasks_failed_count:</b>  {{ workflow_details['tasks_failed_count'] }}</li>
+    <li><b>tasks_completed_count:</b>  {{ workflow_details['tasks_completed_count'] }}</li>
+</ul>
+
+{% if not group_by_apps %}
+    <a href="dag_group_by_apps">View workflow DAG -- colors grouped by apps</a>
+{% else %}
+    <a href="dag_group_by_states">View workflow DAG -- colors grouped by task states</a>
+{% endif%}
+<br><a href="/workflow/{{ workflow_details['run_id'] }} ">View workflow task summary</a>
+
+<div class="container">
+    <div class="col-12" style='height: 600px'>
+       {{ workflow_dag_plot | safe }}
+    </div>
+</div>
+
+{% endblock %}

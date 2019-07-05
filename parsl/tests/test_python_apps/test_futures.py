@@ -18,9 +18,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
-
 
 @App('python')
 def delay_incr(x, delay=0, outputs=[]):
@@ -131,6 +128,8 @@ def test_fut_case_4():
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",

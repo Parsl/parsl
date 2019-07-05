@@ -2,9 +2,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_ipp import config
 
-parsl.clear()
-parsl.load(config)
-
 
 @App("bash")
 def bash_app(stdout=None, stderr=None):
@@ -23,4 +20,6 @@ def test_bash():
 
 
 if __name__ == "__main__":
+    parsl.clear()
+    parsl.load(config)
     test_bash()

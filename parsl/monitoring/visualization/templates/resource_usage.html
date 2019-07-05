@@ -1,0 +1,73 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+<h2>{{ workflow_details['workflow_name'] }}</h2>
+
+<hr>
+
+<ul>
+    <li><b>Started:</b>  {{ workflow_details['time_began'] | timeformat }}</li>
+    <li><b>Completed:</b>  {{ workflow_details['time_completed'] | timeformat }}</li>
+    <li><b>Workflow duration:</b>  {{ workflow_details['workflow_duration'] | timeformat }}</li>
+    <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
+    <li><b>host:</b>  {{ workflow_details['host'] }}</li>
+    <li><b>rundir:</b>  {{ workflow_details['rundir'] }}</li>
+    <li><b>tasks_failed_count:</b>  {{ workflow_details['tasks_failed_count'] }}</li>
+    <li><b>tasks_completed_count:</b>  {{ workflow_details['tasks_completed_count'] }}</li>
+</ul>
+
+<a href="dag_group_by_apps">View workflow DAG -- colors grouped by apps</a>
+<br><a href="dag_group_by_states">View workflow DAG -- colors grouped by task states</a>
+<br><a href="/workflow/{{ workflow_details['run_id'] }} ">View workflow task summary</a>
+
+
+<h5>CPU Usage</h5>
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 300px;">
+{{ user_time_distribution_avg_plot|safe }}
+    </div>
+    <div class="col-6" style="height: 300px;">
+{{ user_time_distribution_max_plot|safe }}
+    </div>
+  </div>
+</div>
+
+<h5>Memory Usage</h5>
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 300px;">
+{{ memory_usage_distribution_avg_plot|safe }}
+    </div>
+    <div class="col-6" style="height: 300px;">
+{{ memory_usage_distribution_max_plot|safe }}
+    </div>
+  </div>
+</div>
+
+<h5>CPU usage</h5>
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 300px;">
+{{ cpu_percent_time_series|safe }}
+    </div>
+    <div class="col-6" style="height: 300px;">
+{{ user_time_time_series|safe }}
+    </div>
+  </div>
+</div>
+
+<h5>Memory usage</h5>
+<div class="container">
+  <div class="row">
+    <div class="col-6" style="height: 300px;">
+{{ memory_percent_time_series|safe }}
+    </div>
+    <div class="col-6" style="height: 300px;">
+{{ memory_resident_time_series|safe }}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -42,10 +42,8 @@ class ScaleOutFailed(ExecutionProviderException):
         self.provider = provider
         self.reason = reason
 
-    def __repr__(self):
-        return "Unable to Initialize provider.Provider:{0}, Reason:{1}".format(
-            self.provider, self.reason
-        )
+    def __str__(self):
+        return "Unable to scale out {} provider: {}".format(self.provider, self.reason)
 
 
 class SchedulerMissingArgs(ExecutionProviderException):

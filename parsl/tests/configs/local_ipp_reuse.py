@@ -9,8 +9,8 @@ config = Config(
     executors=[
         IPyParallelExecutor(
             label='local_ipp_reuse',
+            controller=Controller(reuse=True),
         ),
     ],
-    controller=Controller(reuse=True),
     run_dir=get_rundir(),
 )

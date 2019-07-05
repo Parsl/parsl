@@ -32,7 +32,7 @@ class LocalChannel(Channel, RepresentationMixin):
         self._envs.update(envs)
         self.script_dir = script_dir
 
-    def execute_wait(self, cmd, walltime, envs={}):
+    def execute_wait(self, cmd, walltime=None, envs={}):
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
@@ -73,12 +73,8 @@ class LocalChannel(Channel, RepresentationMixin):
             retcode = proc.returncode
 
         except Exception as e:
-            print("Caught exception : {0}".format(e))
-            logger.warn("Execution of command [%s] failed due to \n %s ", cmd, e)
-            # Set retcode to non-zero so that this can be handled in the provider.
-            if retcode == 0:
-                retcode = -1
-            return (retcode, None, None)
+            logger.warn("Execution of command '{}' failed due to \n{}".format(cmd, e))
+            raise
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
@@ -89,11 +85,10 @@ class LocalChannel(Channel, RepresentationMixin):
             - cmd (string) : Commandline string to execute
             - walltime (int) : walltime in seconds, this is not really used now.
 
-        Returns:
+        Returns a tuple containing:
 
-           - retcode : Return code from the execution, -1 on fail
-           - stdout  : stdout string
-           - stderr  : stderr string
+           - pid : process id
+           - proc : a subprocess.Popen object
 
         Raises:
          None.
@@ -114,8 +109,8 @@ class LocalChannel(Channel, RepresentationMixin):
             pid = proc.pid
 
         except Exception as e:
-            print("Caught exception : {0}".format(e))
-            logger.warn("Execution of command [%s] failed due to \n %s ", (cmd, e))
+            logger.warn("Execution of command '{}' failed due to \n{}".format(cmd, e))
+            raise
 
         return pid, proc
 
@@ -144,6 +139,9 @@ class LocalChannel(Channel, RepresentationMixin):
 
             except OSError as e:
                 raise FileCopyException(e, self.hostname)
+
+        else:
+            os.chmod(local_dest, 0o777)
 
         return local_dest
 

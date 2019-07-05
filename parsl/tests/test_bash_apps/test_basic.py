@@ -8,9 +8,6 @@ from parsl.app.app import App
 
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-dfk = parsl.load(config)
-
 
 @App('bash')
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
@@ -49,7 +46,7 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '1 4 10\n', 'Output does not match expected string "1 4", Got: "{0}"'.format(
+    assert contents == '1 4 10\n', 'Output does not match expected string "1 4 10", Got: "{0}"'.format(
         contents)
     return True
 
@@ -89,6 +86,8 @@ def test_parallel_for(n=3):
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    dfk = parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", default="10",

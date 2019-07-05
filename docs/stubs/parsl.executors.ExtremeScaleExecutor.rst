@@ -15,6 +15,7 @@ parsl.executors.ExtremeScaleExecutor
    
       ~ExtremeScaleExecutor.__init__
       ~ExtremeScaleExecutor.hold_worker
+      ~ExtremeScaleExecutor.initialize_scaling
       ~ExtremeScaleExecutor.scale_in
       ~ExtremeScaleExecutor.scale_out
       ~ExtremeScaleExecutor.shutdown

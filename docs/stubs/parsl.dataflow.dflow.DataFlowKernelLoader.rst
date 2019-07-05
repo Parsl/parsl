@@ -16,6 +16,7 @@ parsl.dataflow.dflow.DataFlowKernelLoader
       ~DataFlowKernelLoader.clear
       ~DataFlowKernelLoader.dfk
       ~DataFlowKernelLoader.load
+      ~DataFlowKernelLoader.wait_for_current_tasks
    
    
 

@@ -175,11 +175,24 @@ class RepresentationMixin(object):
     __max_width__ = 80
 
     def __repr__(self):
-        argspec = inspect.getfullargspec(self.__init__)
+        init = self.__init__
+
+        # This test looks for a single layer of wrapping performed by
+        # functools.update_wrapper, commonly used in decorators. This will
+        # allow RepresentationMixing to see through a single such decorator
+        # applied to the __init__ method of a class, and find the underlying
+        # arguments. It will not see through multiple layers of such
+        # decorators, or cope with other decorators which do not use
+        # functools.update_wrapper.
+
+        if hasattr(init, '__wrapped__'):
+            init = init.__wrapped__
+
+        argspec = inspect.getfullargspec(init)
         if len(argspec.args) > 1:
             defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
         else:
-            defaults = []
+            defaults = {}
 
         for arg in argspec.args[1:]:
             if not hasattr(self, arg):

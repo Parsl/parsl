@@ -4,9 +4,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
-
 
 @App('python')
 def fan_out(x, dur):
@@ -63,6 +60,9 @@ def test_mapred_type2(width=2):
 
 
 if __name__ == '__main__':
+
+    parsl.clear()
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--width", default="5",

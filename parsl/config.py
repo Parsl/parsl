@@ -1,8 +1,13 @@
 import logging
+import typeguard
+
+from typing import List, Optional
 
 from parsl.utils import RepresentationMixin
+from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
+from parsl.monitoring import MonitoringHub
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +35,7 @@ class Config(RepresentationMixin):
     data_management_max_threads : int, optional
         Maximum number of threads to allocate for the data manager to use for managing input and output transfers.
         Default is 10.
-    monitoring_config : MonitoringConfig, optional
+    monitoring : MonitoringHub, optional
         The config to use for database monitoring. Default is None which does not log to a database.
     lazy_errors : bool, optional
         If True, errors from task failures will not be raised until `future.result()` is called. Otherwise, they will
@@ -43,21 +48,24 @@ class Config(RepresentationMixin):
         Strategy to use for scaling resources according to workflow needs. Can be 'simple' or `None`. If `None`, dynamic
         scaling will be disabled. Default is 'simple'.
     usage_tracking : bool, optional
-        Enable usage tracking. Default is True.
+        Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
+        information used for reporting to our funding agencies. Default is False.
     """
+
+    @typeguard.typechecked
     def __init__(self,
-                 executors=None,
-                 app_cache=True,
-                 checkpoint_files=None,
-                 checkpoint_mode=None,
-                 checkpoint_period=None,
-                 data_management_max_threads=10,
-                 lazy_errors=True,
-                 retries=0,
-                 run_dir='runinfo',
-                 strategy='simple',
-                 monitoring_config=None,
-                 usage_tracking=True):
+                 executors: Optional[List[ParslExecutor]] = None,
+                 app_cache: bool = True,
+                 checkpoint_files: Optional[List[str]] = None,
+                 checkpoint_mode: Optional[str] = None,
+                 checkpoint_period: Optional[str] = None,
+                 data_management_max_threads: int = 10,
+                 lazy_errors: bool = True,
+                 retries: int = 0,
+                 run_dir: str = 'runinfo',
+                 strategy: Optional[str] = 'simple',
+                 monitoring: Optional[MonitoringHub] = None,
+                 usage_tracking: bool = False):
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
@@ -69,11 +77,11 @@ class Config(RepresentationMixin):
                 logger.debug('The requested `checkpoint_period={}` will have no effect because `checkpoint_mode=None`'.format(
                     checkpoint_period)
                 )
-            elif checkpoint_mode is not 'periodic':
+            elif checkpoint_mode != 'periodic':
                 logger.debug("Requested checkpoint period of {} only has an effect with checkpoint_mode='periodic'".format(
                     checkpoint_period)
                 )
-        if checkpoint_mode is 'periodic' and checkpoint_period is None:
+        if checkpoint_mode == 'periodic' and checkpoint_period is None:
             checkpoint_period = "00:30:00"
         self.checkpoint_period = checkpoint_period
         self.data_management_max_threads = data_management_max_threads
@@ -82,7 +90,7 @@ class Config(RepresentationMixin):
         self.run_dir = run_dir
         self.strategy = strategy
         self.usage_tracking = usage_tracking
-        self.monitoring_config = monitoring_config
+        self.monitoring = monitoring
 
     @property
     def executors(self):

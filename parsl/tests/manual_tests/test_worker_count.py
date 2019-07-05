@@ -14,7 +14,6 @@ EXPECTED_WORKERS = math.floor(CORES / CORES_PER_WORKER)
 from htex_local import config
 config.executors[0].cores_per_worker = CORES_PER_WORKER
 config.executors[0].provider.init_blocks = 1
-parsl.set_stream_logger()
 
 # from htex_midway import config
 # from htex_swan import config
@@ -43,7 +42,8 @@ def test_worker(n=2, sleep=0):
     worker_ids = set([f[1] for f in foo])
 
     print("Got workers : {}".format(worker_ids))
-    assert len(manager_ids) == 1, "Expected only 1 manager id, got ids : {}".format(manager_ids)
+    assert len(manager_ids) == 1, "Expected only 1 manager id, got ids : {}".format(
+        manager_ids)
     assert len(worker_ids) == EXPECTED_WORKERS, "Exptected {} workers, instead got {}".format(EXPECTED_WORKERS,
                                                                                               len(worker_ids))
 

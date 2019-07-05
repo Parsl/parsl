@@ -1,3 +1,6 @@
+import typeguard
+from typing import Optional
+
 from parsl.utils import RepresentationMixin
 
 
@@ -14,7 +17,8 @@ class GlobusScheme(RepresentationMixin):
     local_path : str, optional
         FIXME
     """
-    def __init__(self, endpoint_uuid, endpoint_path=None, local_path=None):
+    @typeguard.typechecked
+    def __init__(self, endpoint_uuid: str, endpoint_path: Optional[str] = None, local_path: Optional[str] = None):
         self.endpoint_uuid = endpoint_uuid
         self.endpoint_path = endpoint_path
         self.local_path = local_path

@@ -27,6 +27,7 @@ parsl.executors.base.ParslExecutor
 
    .. autosummary::
    
+      ~ParslExecutor.run_dir
       ~ParslExecutor.scaling_enabled
    
    

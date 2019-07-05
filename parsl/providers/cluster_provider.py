@@ -58,7 +58,7 @@ class ClusterProvider(ExecutionProvider):
                  cmd_timeout=10):
 
         self._scaling_enabled = True
-        self.label = label
+        self._label = label
         self.channel = channel
         self.nodes_per_block = nodes_per_block
         self.init_blocks = init_blocks
@@ -199,3 +199,7 @@ class ClusterProvider(ExecutionProvider):
         { minsize, maxsize, current_requested }
         """
         return self.provisioned_blocks
+
+    @property
+    def label(self):
+        return self._label

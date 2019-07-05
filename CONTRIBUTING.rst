@@ -33,32 +33,70 @@ style. A concise summary is available `here <http://sphinxcontrib-napoleon.readt
 `ReadTheDocs <https://parsl.readthedocs.io>`_.
 
 Testing
-==================
+=======
 
-Parsl uses ``pytest`` to run unit tests. All tests should be included in the ``parsl/parsl/tests``
-directory. Before running tests usage tracking should be disabled using the PARSL_TESTING environment variable::
+Parsl uses ``pytest`` to run most tests. All tests should be placed
+the ``parsl/tests`` directory. Before running tests usage tracking
+should be disabled using the PARSL_TESTING environment variable::
 
   $ export PARSL_TESTING="true"
 
-Testing configurations are collected in ``parsl/parsl/tests/configs``. Each file in that directory should contain a single config
-dictionary ``config``. Configurations for remote sites which rely on user-specific options are skipped unless they have been specified in
-``parsl/parsl/tests/user_opts.py``. To run the tests::
+There are two broad groups of tests: those which must run with a
+specific configuration, and those which should work with any
+reasonable configuration.
 
-  $ pytest tests --basic
+Tests which run with a specific configuration live under the
+``parsl/tests/sites`` and ``parsl/tests/integration`` directory.
+They are launched by .travis.yaml with a pytest parameter of
+``--config local`` and each test file should initialise a DFK
+explicitly.
 
-This will run the tests on a basic selection of configs (which is what Travis CI will test). Omitting the ``--basic`` will run all of the configs. Running, for example::
+Tests which should with with any configuration live under
+themed directories ``parsl/tests/test*/`` and should named ``test*.py``.
+They can be run with any configuration, by specifying ``--config CONFIGPATH``
+where CONFIGPATH is a path to a ``.py`` file exporting a parsl configuration
+object named ``config``. The parsl-specific test fixtures with ensure
+a suitable DFK is loaded with that configuration for each test.
 
-  $ pytest tests --config config.py
+There is more fine-grained enabling and disabling of tests within the
+above categories:
 
-Will run all of the tests for config ``config.py``. To run a specific test, for example:::
+A pytest marker of ``cleannet`` (for clean network) can be used to select
+or deselect tests which need a very cleen network (for example, for tests
+making FTP transfers). Travis does not provide a sufficiently clean
+network and so .travis.yml runs all tests with ``-k "not cleannet"`` to
+disable those tests.
 
-  $ pytest test_python_apps/test_basic.py::test_simple --basic
+Some other markers are available but unused in travis testing; 
+see ``pytest --markers parsl/tests/`` for more details.
 
-To run tests with a timeout limit of one minute, run::
+A specific test in a specific file can be run like this:::
 
-  $ pytest tests --basic --timeout=60
+  $ pytest test_python_apps/test_basic.py::test_simple
 
-Several parsl-specific decorators are available for specifying certain configurations to test with; see ``pytest --markers`` for more details.
+A timeout can be added to test runs using a pytest parameter such as
+``--timeout=60``
+
+Many tests are marked with ``@pytest.mark.skip`` for reasons usually
+specified directly in the annotation - generally because they are broken
+in one way or another.
+
+
+Coverage testing
+================
+
+There is also some coverage testing available. The CI by default records
+coverage for most of the tests that it runs and outputs a brief report
+at the end of each CI run. This is purely informational and a Lack of
+coverage won't produce a CI failure.
+
+It is possible to produce a more detailed coverage report on your
+development machine: make sure you have no `.coverage` file, run the
+test commands as shown in `.travis.yml`, and then run
+`coverage report` to produce the summary as seen in CI, or run
+`coverage html` to produce annotated source code in the `htmlcov/`
+subdirectory. This will show, line by line, if each line of parsl
+source code was executed during the coverage test.
 
 Development Process
 -------------------

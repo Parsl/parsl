@@ -32,7 +32,6 @@ config = Config(
                 profile="default",
                 state_file='awsproviderstate.json',
                 nodes_per_block=1,
-                tasks_per_node=2,
                 init_blocks=1,
                 max_blocks=1,
                 min_blocks=0,

@@ -21,15 +21,11 @@ Parsl can be used to realize a variety of workflows:
 * Interactive and dynamic workflows in which the workflow is dynamically expanded during execution by users or the workflow itself.
 * Procedural workflows in which serial execution of tasks are managed by Parsl.
 
-.. note::
-   Parsl collects anonymous usage statistics for reporting and
-   improvement purposes. To understand what stats are collected and to disable
-   collection please refer to the `usage tracking guide <http://parsl.readthedocs.io/en/latest/userguide/usage_tracking.html>`__
 =======
 .. libsubmit documentation master file, created by
-   sphinx-quickstart on Mon Oct  2 13:39:42 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. sphinx-quickstart on Mon Oct  2 13:39:42 2017
+.. You can adapt this file completely to your liking, but it should at least
+.. contain the root `toctree` directive.
 
 
 .. Libsubmit is responsible for managing execution resources with a Local Resource

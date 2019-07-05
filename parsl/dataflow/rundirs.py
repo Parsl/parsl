@@ -33,7 +33,7 @@ def make_rundir(path):
             current_rundir = os.path.join(path, '{0:03}'.format(x + 1))
 
         os.makedirs(current_rundir)
-        logger.debug("Parsl run initializing in rundir:{0}".format(current_rundir))
+        logger.debug("Parsl run initializing in rundir: {0}".format(current_rundir))
         return os.path.abspath(current_rundir)
 
     except Exception as e:

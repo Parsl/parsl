@@ -1,21 +1,25 @@
-Babuji, Yadu, Brizius, Alison, Chard, Kyle, Foster, Ian, Katz, Daniel S., Wilde, Michael, & Wozniak, Justin. (2017, August 30). Introducing Parsl: A Python Parallel Scripting Library. Zenodo. https://doi.org/10.5281/zenodo.853492
+Babuji, Y., Woodard, A., Li, Z., Katz, D. S., Clifford, B., Kumar, R., Lacinski, L., Chard, R., Wozniak, J., Foster, I., Wilde, M., and Chard, K., Parsl: Pervasive Parallel Programming in Python. 28th ACM International Symposium on High-Performance Parallel and Distributed Computing (HPDC). 2019.
 
 or
 
 ```{tex}
-@misc{babuji_yadu_2017_891533,
+@inproceedings{babuji19parsl,
   author       = {Babuji, Yadu and
-                  Brizius, Alison and
-                  Chard, Kyle and
-                  Foster, Ian and
+                  Woodard, Anna and
+                  Li, Zhuozhao and
                   Katz, Daniel S. and
-                  Wilde, Michael and
-                  Wozniak, Justin},
-  title        = {{Introducing Parsl: A Python Parallel Scripting 
-                   Library}},
-  month        = aug,
-  year         = 2017,
-  doi          = {10.5281/zenodo.891533},
-  url          = {https://doi.org/10.5281/zenodo.891533}
+                  Clifford, Ben and
+                  Kumar, Rohan and
+                  Lacinski, Lukasz and
+                  Chard, Ryan and 
+                  Wozniak, Justin and
+                  Foster, Ian and 
+                  Wilde, Mike and
+                  Chard, Kyle},
+  title        = {Parsl: Pervasive Parallel Programming in Python},
+  booktitle    = {28th ACM International Symposium on High-Performance Parallel and Distributed Computing (HPDC)},
+  doi          = {10.1145/3307681.3325400},
+  year         = {2019},
+  url          = {https://doi.org/10.1145/3307681.3325400}
 }
 ```

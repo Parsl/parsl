@@ -29,6 +29,7 @@ parsl.executors.swift\_t.TurbineExecutor
 
    .. autosummary::
    
+      ~TurbineExecutor.run_dir
       ~TurbineExecutor.scaling_enabled
    
    

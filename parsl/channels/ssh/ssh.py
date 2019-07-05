@@ -10,17 +10,23 @@ from parsl.utils import RepresentationMixin
 logger = logging.getLogger(__name__)
 
 
+class NoAuthSSHClient(paramiko.SSHClient):
+    def _auth(self, username, *args):
+        self._transport.auth_none(username)
+        return
+
+
 class SSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
-    test on the commandline should work :
+    test on the commandline should work:
 
     >>> ssh <username>@<hostname>
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -42,8 +48,13 @@ class SSHChannel(Channel, RepresentationMixin):
         self.password = password
         self.kwargs = kwargs
         self.script_dir = script_dir
+        self.skip_auth = skip_auth
+        self.gssapi_auth = gssapi_auth
 
-        self.ssh_client = paramiko.SSHClient()
+        if self.skip_auth:
+            self.ssh_client = NoAuthSSHClient()
+        else:
+            self.ssh_client = paramiko.SSHClient()
         self.ssh_client.load_system_host_keys()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -56,7 +67,9 @@ class SSHChannel(Channel, RepresentationMixin):
                 hostname,
                 username=username,
                 password=password,
-                allow_agent=True
+                allow_agent=True,
+                gss_auth=gssapi_auth,
+                gss_kex=gssapi_auth,
             )
             t = self.ssh_client.get_transport()
             self.sftp_client = paramiko.SFTPClient.from_transport(t)
@@ -86,7 +99,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
         Args:
             - cmd (string) : Commandline string to execute
-            - walltime (int) : walltime in seconds, this is not really used now.
+            - walltime (int) : walltime in seconds
 
         Kwargs:
             - envs (dict) : Dictionary of env variables
@@ -129,7 +142,6 @@ class SSHChannel(Channel, RepresentationMixin):
         stdin, stdout, stderr = self.ssh_client.exec_command(
             self.prepend_envs(cmd, envs), bufsize=-1, timeout=walltime
         )
-        # Block on exit status from the command
         return None, stdout, stderr
 
     def push_file(self, local_source, remote_dir):
@@ -194,7 +206,7 @@ class SSHChannel(Channel, RepresentationMixin):
             os.makedirs(local_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.exception("Failed to create script_dir: {0}".format(script_dir))
+                logger.exception("Failed to create local_dir: {0}".format(local_dir))
                 raise BadScriptPath(e, self.hostname)
 
         # Easier to check this than to waste time trying to pull file and

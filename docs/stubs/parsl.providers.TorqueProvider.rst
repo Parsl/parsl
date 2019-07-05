@@ -28,6 +28,7 @@ parsl.providers.TorqueProvider
    .. autosummary::
    
       ~TorqueProvider.current_capacity
+      ~TorqueProvider.label
       ~TorqueProvider.scaling_enabled
    
    

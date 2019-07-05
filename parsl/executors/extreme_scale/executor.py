@@ -78,6 +78,9 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     launch_cmd : str
         Command line string to launch the mpi_worker_pool from the provider.
+        The command line string will be formatted with appropriate values for the following values (debug, task_url, result_url,
+        ranks_per_node, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For eg:
+        launch_cmd="mpiexec -np {ranks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url}"
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
@@ -107,6 +110,15 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     ranks_per_node : int
         Specify the ranks to be launched per node.
+
+    heartbeat_threshold : int
+        Seconds since the last message from the counterpart in the communication pair:
+        (interchange, manager) after which the counterpart is assumed to be un-available. Default:120s
+
+    heartbeat_period : int
+        Number of seconds after which a heartbeat message indicating liveness is sent to the
+        counterpart (interchange, manager). Default:30s
+
     """
 
     def __init__(self,
@@ -121,6 +133,8 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  working_dir=None,
                  worker_debug=False,
                  ranks_per_node=1,
+                 heartbeat_threshold=120,
+                 heartbeat_period=30,
                  managed=True):
 
         super().__init__(label=label,
@@ -133,6 +147,8 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                          storage_access=storage_access,
                          working_dir=working_dir,
                          worker_debug=worker_debug,
+                         heartbeat_threshold=heartbeat_threshold,
+                         heartbeat_period=heartbeat_period,
                          managed=managed)
 
         if not _mpi_enabled:
@@ -146,7 +162,13 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         logger.debug("Initializing ExtremeScaleExecutor")
 
         if not launch_cmd:
-            self.launch_cmd = """mpiexec -np {ranks_per_node} mpi_worker_pool.py {debug} --task_url={task_url} --result_url={result_url} --logdir={logdir}"""
+            self.launch_cmd = ("mpiexec -np {ranks_per_node} mpi_worker_pool.py "
+                               "{debug} "
+                               "--task_url={task_url} "
+                               "--result_url={result_url} "
+                               "--logdir={logdir} "
+                               "--hb_period={heartbeat_period} "
+                               "--hb_threshold={heartbeat_threshold} ")
         self.worker_debug = worker_debug
 
     def initialize_scaling(self):
@@ -159,6 +181,8 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                                        # This is here only to support the exex mpiexec call
                                        ranks_per_node=self.ranks_per_node,
                                        nodes_per_block=self.provider.nodes_per_block,
+                                       heartbeat_period=self.heartbeat_period,
+                                       heartbeat_threshold=self.heartbeat_threshold,
                                        logdir="{}/{}".format(self.run_dir, self.label))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))

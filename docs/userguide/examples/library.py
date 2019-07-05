@@ -1,4 +1,4 @@
-from parsl.app.app import python_app
+from parsl import python_app
 
 @python_app
 def increment(x):

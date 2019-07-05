@@ -3,8 +3,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
 
 # parsl.set_stream_logger()
 
@@ -36,5 +34,7 @@ def test_procedural(N=2):
 
 
 if __name__ == "__main__":
+    parsl.clear()
+    parsl.load(config)
 
     test_procedural()

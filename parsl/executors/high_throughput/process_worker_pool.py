@@ -10,13 +10,16 @@ import platform
 import threading
 import pickle
 import time
+import datetime
 import queue
 import uuid
 import zmq
 import math
 import json
+import psutil
 
 from parsl.version import VERSION as PARSL_VERSION
+from parsl.app.errors import RemoteExceptionWrapper
 import multiprocessing
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -24,8 +27,6 @@ from ipyparallel.serialize import serialize_object
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
-
-LOOP_SLOWDOWN = 0.01  # in seconds
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
@@ -49,10 +50,15 @@ class Manager(object):
     def __init__(self,
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
-                 max_queue_size=10,
                  cores_per_worker=1,
+                 mem_per_worker=None,
+                 max_workers=float('inf'),
+                 prefetch_capacity=0,
                  uid=None,
-                 heartbeat_period=30):
+                 block_id=None,
+                 heartbeat_threshold=120,
+                 heartbeat_period=30,
+                 poll_period=10):
         """
         Parameters
         ----------
@@ -62,38 +68,89 @@ class Manager(object):
         uid : str
              string unique identifier
 
+        block_id : str
+             Block identifier that maps managers to the provider blocks they belong to.
+
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0. Default=1
 
+        mem_per_worker : float
+             GB of memory required per worker. If this option is specified, the node manager
+             will check the available memory at startup and limit the number of workers such that
+             the there's sufficient memory for each worker. If set to None, memory on node is not
+             considered in the determination of workers to be launched on node by the manager.
+             Default: None
+
+        max_workers : int
+             caps the maximum number of workers that can be launched.
+             default: infinity
+
+        prefetch_capacity : int
+             Number of tasks that could be prefetched over available worker capacity.
+             When there are a few tasks (<100) or when tasks are long running, this option should
+             be set to 0 for better load balancing. Default is 0.
+
+        heartbeat_threshold : int
+             Seconds since the last message from the interchange after which the
+             interchange is assumed to be un-available, and the manager initiates shutdown. Default:120s
+
+             Number of seconds since the last message from the interchange after which the worker
+             assumes that the interchange is lost and the manager shuts down. Default:120
+
+        heartbeat_period : int
+             Number of seconds after which a heartbeat message is sent to the interchange
+
+        poll_period : int
+             Timeout period used by the manager in milliseconds. Default: 10ms
         """
+
         logger.info("Manager started")
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
+        # Linger is set to 0, so that the manager can exit even when there might be
+        # messages in the pipe
+        self.task_incoming.setsockopt(zmq.LINGER, 0)
         self.task_incoming.connect(task_q_url)
 
         self.result_outgoing = self.context.socket(zmq.DEALER)
         self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
+        self.result_outgoing.setsockopt(zmq.LINGER, 0)
         self.result_outgoing.connect(result_q_url)
         logger.info("Manager connected")
 
         self.uid = uid
+        self.block_id = block_id
 
         cores_on_node = multiprocessing.cpu_count()
-        self.worker_count = math.floor(cores_on_node / cores_per_worker)
+        available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
+
+        self.max_workers = max_workers
+        self.prefetch_capacity = prefetch_capacity
+
+        mem_slots = max_workers
+        # Avoid a divide by 0 error.
+        if mem_per_worker and mem_per_worker > 0:
+            mem_slots = math.floor(available_mem_on_node / mem_per_worker)
+
+        self.worker_count = min(max_workers,
+                                mem_slots,
+                                math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
-        self.pending_task_queue = multiprocessing.Queue(maxsize=self.worker_count + max_queue_size)
-        self.pending_result_queue = multiprocessing.Queue(maxsize=10 ^ 4)
-        self.ready_worker_queue = multiprocessing.Queue(maxsize=self.worker_count + 1)
+        self.pending_task_queue = multiprocessing.Queue()
+        self.pending_result_queue = multiprocessing.Queue()
+        self.ready_worker_queue = multiprocessing.Queue()
 
-        self.max_queue_size = max_queue_size + self.worker_count
+        self.max_queue_size = self.prefetch_capacity + self.worker_count
 
         self.tasks_per_round = 1
 
         self.heartbeat_period = heartbeat_period
+        self.heartbeat_threshold = heartbeat_threshold
+        self.poll_period = poll_period
 
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
@@ -102,9 +159,16 @@ class Manager(object):
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
+               'worker_count': self.worker_count,
+               'block_id': self.block_id,
+               'prefetch_capacity': self.prefetch_capacity,
+               'max_capacity': self.worker_count + self.prefetch_capacity,
                'os': platform.system(),
-               'hname': platform.node(),
+               'hostname': platform.node(),
                'dir': os.getcwd(),
+               'cpu_count': psutil.cpu_count(logical=False),
+               'total_memory': psutil.virtual_memory().total,
+               'reg_time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
@@ -134,12 +198,12 @@ class Manager(object):
         logger.debug("Sending registration message: {}".format(msg))
         self.task_incoming.send(msg)
         last_beat = time.time()
+        last_interchange_contact = time.time()
         task_recv_counter = 0
 
-        poll_timer = 1
+        poll_timer = self.poll_period
 
         while not kill_event.is_set():
-            time.sleep(LOOP_SLOWDOWN)
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
@@ -158,13 +222,19 @@ class Manager(object):
             socks = dict(poller.poll(timeout=poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                poll_timer = 1
+                poll_timer = 0
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
+                last_interchange_contact = time.time()
+
                 if tasks == 'STOP':
                     logger.critical("[TASK_PULL_THREAD] Received stop request")
                     kill_event.set()
                     break
+
+                elif tasks == HEARTBEAT_CODE:
+                    logger.debug("Got heartbeat from interchange")
+
                 else:
                     task_recv_counter += len(tasks)
                     logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
@@ -174,11 +244,21 @@ class Manager(object):
                         self.pending_task_queue.put(task)
                         # logger.debug("[TASK_PULL_THREAD] Ready tasks: {}".format(
                         #    [i['task_id'] for i in self.pending_task_queue]))
+
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
                 # Limit poll duration to heartbeat_period
                 # heartbeat_period is in s vs poll_timer in ms
+                if not poll_timer:
+                    poll_timer = self.poll_period
                 poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
+
+                # Only check if no messages were received.
+                if time.time() > last_interchange_contact + self.heartbeat_threshold:
+                    logger.critical("[TASK_PULL_THREAD] Missing contact with interchange beyond heartbeat_threshold")
+                    kill_event.set()
+                    logger.critical("[TASK_PULL_THREAD] Exiting")
+                    break
 
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
@@ -189,28 +269,32 @@ class Manager(object):
               Event to let the thread know when it is time to die.
         """
 
-        # We set this timeout so that the thread checks the kill_event and does not
-        # block forever on the internal result queue
-        timeout = 0.001  # Seconds
-        # timer = time.time()
         logger.debug("[RESULT_PUSH_THREAD] Starting thread")
 
+        push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
+        logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
+
+        last_beat = time.time()
+        items = []
+
         while not kill_event.is_set():
-            time.sleep(LOOP_SLOWDOWN)
-            items = []
+
             try:
-                while not self.pending_result_queue.empty():
-                    r = self.pending_result_queue.get(block=True)
-                    items.append(r)
-
-                if items:
-                    self.result_outgoing.send_multipart(items)
-
+                r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
+                items.append(r)
             except queue.Empty:
-                logger.debug("[RESULT_PUSH_THREAD] No results to send in past {} seconds".format(timeout))
-
+                pass
             except Exception as e:
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
+
+            # If we have reached poll_period duration or timer has expired, we send results
+            if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
+                last_beat = time.time()
+                if items:
+                    self.result_outgoing.send_multipart(items)
+                    items = []
+
+        logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
     def start(self):
         """ Start the worker processes.
@@ -230,6 +314,7 @@ class Manager(object):
                                                          ))
             p.start()
             self.procs[worker_id] = p
+
         logger.debug("Manager synced with workers")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
@@ -239,23 +324,28 @@ class Manager(object):
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
 
-        abort_flag = False
-
         logger.info("Loop start")
 
         # TODO : Add mechanism in this loop to stop the worker pool
         # This might need a multiprocessing event to signal back.
-        while not abort_flag:
-            time.sleep(0.1)
+        self._kill_event.wait()
+        logger.critical("[MAIN] Received kill event, terminating worker processes")
 
+        self._task_puller_thread.join()
+        self._result_pusher_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
+            logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
+                                                              self.procs[proc_id].is_alive()))
+            self.procs[proc_id].join()
+            logger.debug("Worker:{} joined successfully".format(self.procs[proc_id]))
 
-        # self._task_puller_thread.join()
-        # self._result_pusher_thread.join()
+        self.task_incoming.close()
+        self.result_outgoing.close()
+        self.context.term()
         delta = time.time() - start
         logger.info("process_worker_pool ran for {} seconds".format(delta))
-        sys.exit(0)
+        return
 
 
 def execute_task(bufs):
@@ -331,8 +421,8 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         try:
             result = execute_task(req['buffer'])
             serialized_result = serialize_object(result)
-        except Exception as e:
-            result_package = {'task_id': tid, 'exception': serialize_object("Exception which we cannot send the full exception object back for: {}".format(e))}
+        except Exception:
+            result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
@@ -356,7 +446,7 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
 
     global logger
     logger = logging.getLogger(name)
@@ -402,10 +492,24 @@ if __name__ == "__main__":
                         help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
                         help="Unique identifier string for Manager")
+    parser.add_argument("-b", "--block_id", default=None,
+                        help="Block identifier for Manager")
     parser.add_argument("-c", "--cores_per_worker", default="1.0",
                         help="Number of cores assigned to each worker process. Default=1.0")
+    parser.add_argument("-m", "--mem_per_worker", default=0,
+                        help="GB of memory assigned to each worker process. Default=0, no assignment")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
+    parser.add_argument("--max_workers", default=float('inf'),
+                        help="Caps the maximum workers that can be launched, default:infinity")
+    parser.add_argument("-p", "--prefetch_capacity", default=0,
+                        help="Number of tasks that can be prefetched to the manager. Default is 0.")
+    parser.add_argument("--hb_period", default=30,
+                        help="Heartbeat period in seconds. Uses manager default unless set")
+    parser.add_argument("--hb_threshold", default=120,
+                        help="Heartbeat threshold in seconds. Uses manager default unless set")
+    parser.add_argument("--poll", default=10,
+                        help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
 
@@ -425,19 +529,32 @@ if __name__ == "__main__":
         logger.info("Debug logging: {}".format(args.debug))
         logger.info("Log dir: {}".format(args.logdir))
         logger.info("Manager ID: {}".format(args.uid))
+        logger.info("Block ID: {}".format(args.block_id))
         logger.info("cores_per_worker: {}".format(args.cores_per_worker))
+        logger.info("mem_per_worker: {}".format(args.mem_per_worker))
         logger.info("task_url: {}".format(args.task_url))
         logger.info("result_url: {}".format(args.result_url))
+        logger.info("max_workers: {}".format(args.max_workers))
+        logger.info("poll_period: {}".format(args.poll))
+        logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
 
         manager = Manager(task_q_url=args.task_url,
                           result_q_url=args.result_url,
                           uid=args.uid,
-                          cores_per_worker=float(args.cores_per_worker))
+                          block_id=args.block_id,
+                          cores_per_worker=float(args.cores_per_worker),
+                          mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
+                          max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
+                          prefetch_capacity=int(args.prefetch_capacity),
+                          heartbeat_threshold=int(args.hb_threshold),
+                          heartbeat_period=int(args.hb_period),
+                          poll_period=int(args.poll))
         manager.start()
+
     except Exception as e:
         logger.critical("process_worker_pool exiting from an exception")
         logger.exception("Caught error: {}".format(e))
         raise
     else:
         logger.info("process_worker_pool exiting")
-        print("PROCESS_WORKER_POOL exiting.")
+        print("PROCESS_WORKER_POOL exiting")

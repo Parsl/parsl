@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+<h2>{{ app_name }}</h2>
+<hr>
+
+
+<ul>
+    <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}">{{ workflow_details['workflow_name'] }}<a/></li>
+    <li><b>Started:</b>  {{ workflow_details['time_began'] | timeformat }}</li>
+    <li><b>Completed:</b>  {{ workflow_details['time_completed'] | timeformat }}</li>
+    <li><b>Workflow duration:</b>  {{ workflow_details['workflow_duration'] | timeformat }}</li>
+    <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
+    <li><b>host:</b>  {{ workflow_details['host'] }}</li>
+    <li><b>rundir:</b>  {{ workflow_details['rundir'] }}</li>
+    <li><b>tasks_failed_count:</b>  {{ workflow_details['tasks_failed_count'] }}</li>
+    <li><b>tasks_completed_count:</b>  {{ workflow_details['tasks_completed_count'] }}</li>
+</ul>
+
+
+
+ <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Task_ID</th>
+        <th>Dependencies</th>
+        <th>Executor</th>
+        <th>Started</th>
+        <th>Completed</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in task_summary %}
+      <tr>
+        <td><a href="/workflow/{{ workflow_details['run_id'] }}/task/{{ t['task_id'] }}">{{ t.task_func_name }}</a></td>
+        <td>{{ t['task_id'] }}</td>
+        <td>
+        {% if t['task_depends'] %}
+            {% for id in t['task_depends'].split(",") %}
+                <a href="/workflow/{{ workflow_details['run_id'] }}/task/{{ id }}">{{ id }} </a>
+            {% endfor %}
+        {% else %}
+            None
+        {% endif %}
+        </td>
+        <td>{{ t['task_executor'] }}</td>
+        <td>{{ t['task_time_submitted'] | timeformat }}</td>
+        <td> {{ t['task_time_returned'] | timeformat }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}

@@ -13,7 +13,7 @@ benefits to be obtained by modularizing the workflow, including:
    3. Ease of reuse of components
 
 
-.. caution::
+.. note::
    Support for isolating configuration loading and app definition is available since 0.6.0.
    Refer: `Issue#50 <https://github.com/Parsl/parsl/issues/50>`_
 

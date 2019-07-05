@@ -9,6 +9,7 @@ import platform
 import threading
 import pickle
 import time
+import datetime
 import queue
 import uuid
 import zmq
@@ -16,6 +17,7 @@ import json
 
 from mpi4py import MPI
 
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
@@ -41,6 +43,7 @@ class Manager(object):
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
                  max_queue_size=10,
+                 heartbeat_threshold=120,
                  heartbeat_period=30,
                  uid=None):
         """
@@ -48,16 +51,28 @@ class Manager(object):
         ----------
         worker_url : str
              Worker url on which workers will attempt to connect back
+
+        heartbeat_threshold : int
+             Number of seconds since the last message from the interchange after which the worker
+             assumes that the interchange is lost and the manager shuts down. Default:120
+
+        heartbeat_period : int
+             Number of seconds after which a heartbeat message is sent to the interchange
+
         """
         self.uid = uid
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
+        # Linger is set to 0, so that the manager can exit even when there might be
+        # messages in the pipe
+        self.task_incoming.setsockopt(zmq.LINGER, 0)
         self.task_incoming.connect(task_q_url)
 
         self.result_outgoing = self.context.socket(zmq.DEALER)
         self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
+        self.result_outgoing.setsockopt(zmq.LINGER, 0)
         self.result_outgoing.connect(result_q_url)
 
         logger.info("Manager connected")
@@ -65,13 +80,14 @@ class Manager(object):
 
         # Creating larger queues to avoid queues blocking
         # These can be updated after queue limits are better understood
-        self.pending_task_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
-        self.pending_result_queue = queue.Queue(maxsize=10 ^ 4)
-        self.ready_worker_queue = queue.Queue(maxsize=max_queue_size + 10 ^ 3)
+        self.pending_task_queue = queue.Queue()
+        self.pending_result_queue = queue.Queue()
+        self.ready_worker_queue = queue.Queue()
 
         self.tasks_per_round = 1
 
         self.heartbeat_period = heartbeat_period
+        self.heartbeat_threshold = heartbeat_threshold
         self.comm = comm
         self.rank = rank
 
@@ -83,8 +99,12 @@ class Manager(object):
                                              sys.version_info.minor,
                                              sys.version_info.micro),
                'os': platform.system(),
-               'hname': platform.node(),
+               'hostname': platform.node(),
                'dir': os.getcwd(),
+               'prefetch_capacity': 0,
+               'worker_count': (self.comm.size - 1),
+               'max_capacity': (self.comm.size - 1) + 0,  # (+prefetch)
+               'reg_time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
@@ -139,6 +159,7 @@ class Manager(object):
         logger.debug("Sending registration message: {}".format(msg))
         self.task_incoming.send(msg)
         last_beat = time.time()
+        last_interchange_contact = time.time()
         task_recv_counter = 0
 
         poll_timer = 1
@@ -165,15 +186,22 @@ class Manager(object):
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
+                last_interchange_contact = time.time()
+
                 if tasks == 'STOP':
                     logger.critical("[TASK_PULL_THREAD] Received stop request")
                     kill_event.set()
                     break
+
+                elif tasks == HEARTBEAT_CODE:
+                    logger.debug("Got heartbeat from interchange")
+
                 else:
+                    # Reset timer on receiving message
+                    poll_timer = 1
                     task_recv_counter += len(tasks)
                     logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
                                                                                  task_recv_counter))
-
                     for task in tasks:
                         self.pending_task_queue.put(task)
             else:
@@ -181,6 +209,13 @@ class Manager(object):
                 # Limit poll duration to heartbeat_period
                 # heartbeat_period is in s vs poll_timer in ms
                 poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
+
+                # Only check if no messages were received.
+                if time.time() > last_interchange_contact + self.heartbeat_threshold:
+                    logger.critical("[TASK_PULL_THREAD] Missing contact with interchange beyond heartbeat_threshold")
+                    kill_event.set()
+                    logger.critical("[TASK_PULL_THREAD] Exiting")
+                    break
 
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
@@ -213,6 +248,8 @@ class Manager(object):
             except Exception as e:
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception : {}".format(e))
 
+        logger.critical("[RESULT_PUSH_THREAD] Exiting")
+
     def start(self):
         """ Start the Manager process.
 
@@ -237,14 +274,13 @@ class Manager(object):
         self._result_pusher_thread.start()
 
         start = None
-        abort_flag = False
 
         result_counter = 0
         task_recv_counter = 0
         task_sent_counter = 0
 
         logger.info("Loop start")
-        while not abort_flag:
+        while not self._kill_event.is_set():
             time.sleep(LOOP_SLOWDOWN)
 
             # In this block we attempt to probe MPI for a set amount of time,
@@ -290,7 +326,7 @@ class Manager(object):
                 task = self.pending_task_queue.get()
                 comm.send(task, dest=worker_rank, tag=worker_rank)
                 task_sent_counter += 1
-                logger.debug("Assigning Worker:{} task:{}".format(worker_rank, task['task_id']))
+                logger.debug("Assigning worker:{} task:{}".format(worker_rank, task['task_id']))
 
             if not start:
                 start = time.time()
@@ -299,12 +335,13 @@ class Manager(object):
                 task_recv_counter, task_sent_counter, result_counter))
             # print("[{}] Received: {}".format(self.identity, msg))
             # time.sleep(random.randint(4,10)/10)
-            if self._kill_event.is_set():
-                logger.critical("mpi_worker_pool received kill message. Initiating exit")
-                break
 
         self._task_puller_thread.join()
         self._result_pusher_thread.join()
+
+        self.task_incoming.close()
+        self.result_outgoing.close()
+        self.context.term()
 
         delta = time.time() - start
         logger.info("mpi_worker_pool ran for {} seconds".format(delta))
@@ -363,16 +400,16 @@ def worker(comm, rank):
         req = comm.recv(source=0, tag=rank)
         logger.debug("Got req: {}".format(req))
         tid = req['task_id']
-        logger.debug("Got task : {}".format(tid))
+        logger.debug("Got task: {}".format(tid))
 
         try:
             result = execute_task(req['buffer'])
         except Exception as e:
-            result_package = {'task_id': tid, 'exception': serialize_object(e)}
+            result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
             logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
             result_package = {'task_id': tid, 'result': serialize_object(result)}
-            logger.debug("Result : {}".format(result))
+            logger.debug("Result: {}".format(result))
 
         pkl_package = pickle.dumps(result_package)
         comm.send(pkl_package, dest=0, tag=RESULT_TAG)
@@ -391,7 +428,7 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
 
     global logger
     logger = logging.getLogger(name)
@@ -439,6 +476,10 @@ if __name__ == "__main__":
                         help="Unique identifier string for Manager")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
+    parser.add_argument("--hb_period", default=30,
+                        help="Heartbeat period in seconds. Uses manager default unless set")
+    parser.add_argument("--hb_threshold", default=120,
+                        help="Heartbeat threshold in seconds. Uses manager default unless set")
     parser.add_argument("-r", "--result_url", required=True,
                         help="REQUIRED: ZMQ url for posting results")
 
@@ -446,7 +487,7 @@ if __name__ == "__main__":
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    print("Start rank :", rank)
+    print("Starting rank: {}".format(rank))
 
     try:
         os.makedirs(args.logdir)
@@ -456,24 +497,29 @@ if __name__ == "__main__":
     # set_stream_logger()
     try:
         if rank == 0:
-            start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
+            start_file_logger('{}/manager.mpi_rank_{}.log'.format(args.logdir, rank),
                               rank,
                               level=logging.DEBUG if args.debug is True else logging.INFO)
 
             logger.info("Python version: {}".format(sys.version))
+
             manager = Manager(comm, rank,
                               task_q_url=args.task_url,
                               result_q_url=args.result_url,
-                              uid=args.uid)
+                              uid=args.uid,
+                              heartbeat_threshold=int(args.hb_threshold),
+                              heartbeat_period=int(args.hb_period))
             manager.start()
+            logger.debug("Finalizing MPI Comm")
+            comm.Abort()
         else:
-            start_file_logger('{}/mpi_rank.{}.log'.format(args.logdir, rank),
+            start_file_logger('{}/worker.mpi_rank_{}.log'.format(args.logdir, rank),
                               rank,
                               level=logging.DEBUG if args.debug is True else logging.INFO)
             worker(comm, rank)
     except Exception as e:
         logger.critical("mpi_worker_pool exiting from an exception")
-        logger.exception("Caught error : {}".format(e))
+        logger.exception("Caught error: {}".format(e))
         raise
     else:
         logger.info("mpi_worker_pool exiting")

@@ -1,7 +1,7 @@
 Quickstart
 ==========
 
-To try Parsl now (without installing any code) experiment with our `hosted tutorial notebooks <http://try.parsl-project.org>`_.
+To try Parsl now (without installing any code) experiment with our `hosted tutorial notebooks <https://mybinder.org/v2/gh/Parsl/parsl-tutorial/master>`_.
 
 
 Installation
@@ -11,8 +11,16 @@ Parsl is available on PyPI, but first make sure you have Python3.5+
 
 >>> python3 --version
 
+You'll also need gcc to be installed in order to run Parsl. ::
+
+$ gcc --version
+
 Parsl has been tested on Linux and MacOS.
 
+.. note:: As of Parsl v0.7.2 we are switching to an opt-in model for anonymous usage tracking. To help support the
+   Parsl project we request that users opt-in where possible by setting ``PARSL_TRACKING=true`` in their environment
+   or by setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). To read more about
+   what information is collected and how it is used see :ref:`label-usage-tracking`.
 
 Installation using Pip
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -24,7 +32,7 @@ for reliable installation when many Python environments are avaialble.
 
      $ python3 -m pip install parsl
 
-     (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
+To update a previously installed parsl to a newer version, use: ``python3 -m pip install -U parsl``
 
 2. Install Jupyter for Tutorial notebooks::
 
@@ -37,7 +45,7 @@ for reliable installation when many Python environments are avaialble.
 Installation using Conda
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. Install Conda and setup python3.6 following the instructions `here <https://conda.io/docs/user-guide/install/macos.html>`_::
+1. Install Conda and set up python3.6 following the instructions `here <https://conda.io/docs/user-guide/install/macos.html>`_::
 
      $ conda create --name parsl_py36 python=3.6
      $ source activate parsl_py36
@@ -45,8 +53,13 @@ Installation using Conda
 2. Install Parsl::
 
      $ python3 -m pip install parsl
+     
+     or
+     
+     $ conda config --add channels conda-forge
+     $ conda install parsl
 
-     (to update a previously installed parsl to a newer version, use: python3 -m pip install -U parsl)
+To update a previously installed parsl to a newer version, use: ``python3 -m pip install -U parsl``
 
 Installation of Optional Packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -59,8 +72,9 @@ Here's a list of the components and their extras option:
 
 * Amazon Web Services (Cloud) : `aws`
 * Google Cloud : `google_cloud`
+* Kubernetes : `kubernetes`
 * Extreme Scale Executor (Supercomputing) : `extreme_scale`
-* Database logging of monitoring data : `db_logging`
+* Logging monitoring data to a database: `monitoring`
 * Jetstream (NSF Cloud) : `jetstream`
 
 Optional extras can be installed using the following syntax::
@@ -77,7 +91,9 @@ For Developers
 2. Install::
 
     $ cd parsl
-    $ python3 setup.py install
+    $ pip install .
+    ( To install specific extra options from the source :)
+    $ pip install .[<optional_pacakge1>...]
 
 3. Use Parsl!
 

@@ -1,6 +1,279 @@
 Changelog
 =========
 
+
+Parsl 0.8.0
+-----------
+
+Released on June 13th, 2019
+
+Parsl v0.8.0 includes 58 closed issues and pull requests with contributions (code, tests, reviews and reports)
+
+from: Andrew Litteken @AndrewLitteken, Anna Woodard @annawoodard, Antonio Villarreal @villarrealas,
+Ben Clifford @benc, Daniel S. Katz @danielskatz, Eric Tatara @etatara, Juan David Garrido @garri1105,
+Kyle Chard @@kylechard, Lindsey Gray @lgray, Tim Armstrong @timarmstrong, Tom Glanzman @TomGlanzman,
+Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
+
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* Monitoring is now integrated into parsl as default functionality.
+* `parsl.AUTO_LOGNAME`: Support for a special `AUTO_LOGNAME` option to auto generate `stdout` and `stderr` file paths.
+* `parsl.Files` no longer behave as strings. This means that operations in apps that treated `parsl.Files` as strings
+  will break. For example the following snippet will have to be updated:
+
+  .. code-block:: python
+
+     # Old style: " ".join(inputs) is legal since inputs will behave like a list of strings
+     @bash_app
+     def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+         return "cat {0} > {1}".format(" ".join(inputs), outputs[0])
+
+     # New style:
+     @bash_app
+     def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+         return "cat {0} > {1}".format(" ".join(list(map(str,inputs))), outputs[0])
+
+* Cleaner user app file log management.
+* Updated configurations using `HighThroughputExecutor` in the configuration section of the userguide.
+* Support for OAuth based SSH with `OAuthSSHChannel`.
+
+Bug Fixes
+^^^^^^^^^
+
+* Monitoring resource usage bug `issue#975 <https://github.com/Parsl/parsl/issues/975>`_
+* Bash apps fail due to missing dir paths `issue#1001 <https://github.com/Parsl/parsl/issues/1001>`_
+* Viz server explicit binding fix `issue#1023 <https://github.com/Parsl/parsl/issues/1023>`_
+* Fix sqlalchemy version warning `issue#997 <https://github.com/Parsl/parsl/issues/997>`_
+* All workflows are called typeguard `issue#973 <https://github.com/Parsl/parsl/issues/973>`_
+* Fix `ModuleNotFoundError: No module named 'monitoring` `issue#971 <https://github.com/Parsl/parsl/issues/971>`_
+* Fix sqlite3 integrity error `issue#920 <https://github.com/Parsl/parsl/issues/920>`_
+* HTEX interchange check python version mismatch to the micro level `issue#857 <https://github.com/Parsl/parsl/issues/857>`_
+* Clarify warning message when a manager goes missing `issue#698 <https://github.com/Parsl/parsl/issues/698>`_
+* Apps without a specified DFK should use the global DFK in scope at call time, not at other times. `issue#697 <https://github.com/Parsl/parsl/issues/697>`_
+
+
+Parsl 0.7.2
+-----------
+
+Released on Mar 14th, 2019
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* `Monitoring`: Support for reporting monitoring data to a local sqlite database is now available.
+* Parsl is switching to an opt-in model for anonymous usage tracking. Read more here: :ref:`label-usage-tracking`.
+* `bash_app` now supports specification of write modes for `stdout` and `stderr`.
+* Persistent volume support added to `Kubernetes` provider.
+* Scaling recommendations from study on Bluewaters is now available in the userguide.
+
+
+Parsl 0.7.1
+-----------
+
+Released on Jan 18th, 2019
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* `LowLatencyExecutor`: a new executor designed to address use-cases with tight latency requirements
+  such as model serving (Machine Learning), function serving and interactive analyses is now available.
+* New options in `HighThroughputExecutor`:
+     * `suppress_failure`: Enable suppression of worker rejoin errors.
+     * `max_workers`: Limit workers spawned by manager
+* Late binding of DFK, allows apps to pick DFK dynamically at call time. This functionality adds safety
+  to cases where a new config is loaded and a new DFK is created.
+
+Bug fixes
+^^^^^^^^^
+
+* A critical bug in `HighThroughputExecutor` that led to debug logs overflowing channels and terminating
+  blocks of resource is fixed `issue#738 <https://github.com/Parsl/parsl/issues/738>`_
+
+
+Parsl 0.7.0
+-----------
+
+Released on Dec 20st, 2018
+
+Parsl v0.7.0 includes 110 closed issues with contributions (code, tests, reviews and reports)
+from: Alex Hays @ahayschi, Anna Woodard @annawoodard, Ben Clifford @benc, Connor Pigg @ConnorPigg,
+David Heise @daheise, Daniel S. Katz @danielskatz, Dominic Fitzgerald @djf604, Francois Lanusse @EiffL,
+Juan David Garrido @garri1105, Gordon Watts @gordonwatts, Justin Wozniak @jmjwozniak,
+Joseph Moon @jmoon1506, Kenyi Hurtado @khurtado, Kyle Chard @kylechard, Lukasz Lacinski @lukaszlacinski,
+Ravi Madduri @madduri, Marco Govoni @mgovoni-devel, Reid McIlroy-Young @reidmcy, Ryan Chard @ryanchard,
+@sdustrud, Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
+
+New functionality
+^^^^^^^^^^^^^^^^^
+
+
+* `HighThroughputExecutor`: a new executor intended to replace the `IPyParallelExecutor` is now available.
+  This new executor addresses several limitations of `IPyParallelExecutor` such as:
+
+  * Scale beyond the ~300 worker limitation of IPP.
+  * Multi-processing manager supports execution on all cores of a single node.
+  * Improved worker side reporting of version, system and status info.
+  * Supports failure detection and cleaner manager shutdown.
+
+  Here's a sample configuration for using this executor locally:
+
+   .. code-block:: python
+
+        from parsl.providers import LocalProvider
+        from parsl.channels import LocalChannel
+
+        from parsl.config import Config
+        from parsl.executors import HighThroughputExecutor
+
+        config = Config(
+            executors=[
+                HighThroughputExecutor(
+                    label="htex_local",
+                    cores_per_worker=1,
+                    provider=LocalProvider(
+                        channel=LocalChannel(),
+                        init_blocks=1,
+                        max_blocks=1,
+                    ),
+                )
+            ],
+        )
+
+   More information on configuring is available in the :ref:`configuration-section` section.
+
+* `ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
+
+  Here's a sample configuration for using this executor locally:
+
+   .. code-block:: python
+
+        from parsl.providers import LocalProvider
+        from parsl.channels import LocalChannel
+        from parsl.launchers import SimpleLauncher
+
+        from parsl.config import Config
+        from parsl.executors import ExtremeScaleExecutor
+
+        config = Config(
+            executors=[
+                ExtremeScaleExecutor(
+                    label="extreme_local",
+                    ranks_per_node=4,
+                    provider=LocalProvider(
+                        channel=LocalChannel(),
+                        init_blocks=0,
+                        max_blocks=1,
+                        launcher=SimpleLauncher(),
+                    )
+                )
+            ],
+            strategy=None,
+        )
+
+  More information on configuring is available in the :ref:`configuration-section` section.
+
+
+* The libsubmit repository has been merged with Parsl to reduce overheads on maintenance with respect to documentation,
+  testing, and release synchronization. Since the merge, the API has undergone several updates to support
+  the growing collection of executors, and as a result Parsl 0.7.0+ will not be backwards compatible with
+  the standalone libsubmit repos. The major components of libsubmit are now available through Parsl, and
+  require the following changes to import lines to migrate scripts to 0.7.0:
+
+    * ``from libsubmit.providers import <ProviderName>``  is now ``from parsl.providers import <ProviderName>``
+    * ``from libsubmit.channels import <ChannelName>``  is now ``from parsl.channels import <ChannelName>``
+    * ``from libsubmit.launchers import <LauncherName>``  is now ``from parsl.launchers import <LauncherName>``
+
+
+    .. warning::
+       This is a breaking change from Parsl v0.6.0
+
+* To support resource-based requests for workers and to maintain uniformity across interfaces, ``tasks_per_node`` is
+  no longer a **provider** option. Instead, the notion of ``tasks_per_node`` is defined via executor specific options,
+  for eg:
+
+    * `IPyParallelExecutor` provides ``workers_per_node``
+    * `HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
+      the number of cores on the compute node.
+    * `ExtremeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
+
+    .. warning::
+       This is a breaking change from Parsl v0.6.0
+
+
+* Major upgrades to the monitoring infrastructure.
+    * Monitoring information can now be written to a SQLite database, created on the fly by Parsl
+    * Web-based monitoring to track workflow progress
+
+
+* Determining the correct IP address/interface given network firewall rules is often a nuisance.
+  To simplify this, three new methods are now supported:
+
+    * ``parsl.addresses.address_by_route``
+    * ``parsl.addresses.address_by_query``
+    * ``parsl.addresses.address_by_hostname``
+
+* `AprunLauncher` now supports ``overrides`` option that allows arbitrary strings to be added
+  to the aprun launcher call.
+
+* `DataFlowKernel` has a new method ``wait_for_current_tasks()``
+
+* `DataFlowKernel` now uses per-task locks and an improved mechanism to handle task completions
+  improving performance for workflows with large number of tasks.
+
+
+Bug fixes (highlights)
+^^^^^^^^^^^^^^^^^^^^^^
+
+
+* Ctlr+C should cause fast DFK cleanup `issue#641 <https://github.com/Parsl/parsl/issues/641>`_
+* Fix to avoid padding in ``wtime_to_minutes()`` `issue#522 <https://github.com/Parsl/parsl/issues/522>`_
+* Updates to block semantics `issue#557 <https://github.com/Parsl/parsl/issues/557>`_
+* Updates ``public_ip`` to ``address`` for clarity `issue#557 <https://github.com/Parsl/parsl/issues/557>`_
+* Improvements to launcher docs `issue#424 <https://github.com/Parsl/parsl/issues/424>`_
+* Fixes for inconsistencies between stream_logger and file_logger `issue#629 <https://github.com/Parsl/parsl/issues/629>`_
+* Fixes to DFK discarding some un-executed tasks at end of workflow `issue#222 <https://github.com/Parsl/parsl/issues/222>`_
+* Implement per-task locks to avoid deadlocks `issue#591 <https://github.com/Parsl/parsl/issues/591>`_
+* Fixes to internal consistency errors `issue#604 <https://github.com/Parsl/parsl/issues/604>`_
+* Removed unnecessary provider labels `issue#440 <https://github.com/Parsl/parsl/issues/440>`_
+* Fixes to `TorqueProvider` to work on NSCC `issue#489 <https://github.com/Parsl/parsl/issues/489>`_
+* Several fixes and updates to monitoring subsystem `issue#471 <https://github.com/Parsl/parsl/issues/471>`_
+* DataManager calls wrong DFK `issue#412 <https://github.com/Parsl/parsl/issues/412>`_
+* Config isn't reloading properly in notebooks `issue#549 <https://github.com/Parsl/parsl/issues/549>`_
+* Cobalt provider ``partition`` should be ``queue`` `issue#353 <https://github.com/Parsl/parsl/issues/353>`_
+* bash AppFailure exceptions contain useful but un-displayed information `issue#384 <https://github.com/Parsl/parsl/issues/384>`_
+* Do not CD to engine_dir `issue#543 <https://github.com/Parsl/parsl/issues/543>`_
+* Parsl install fails without kubernetes config file `issue#527 <https://github.com/Parsl/parsl/issues/527>`_
+* Fix import error `issue#533  <https://github.com/Parsl/parsl/issues/533>`_
+* Change Local Database Strategy from Many Writers to a Single Writer `issue#472 <https://github.com/Parsl/parsl/issues/472>`_
+* All run-related working files should go in the rundir unless otherwise configured `issue#457 <https://github.com/Parsl/parsl/issues/457>`_
+* Fix concurrency issue with many engines accessing the same IPP config `issue#469 <https://github.com/Parsl/parsl/issues/469>`_
+* Ensure we are not caching failed tasks `issue#368 <https://github.com/Parsl/parsl/issues/368>`_
+* File staging of unknown schemes fails silently `issue#382 <https://github.com/Parsl/parsl/issues/382>`_
+* Inform user checkpointed results are being used `issue#494 <https://github.com/Parsl/parsl/issues/494>`_
+* Fix IPP + python 3.5 failure `issue#490 <https://github.com/Parsl/parsl/issues/490>`_
+* File creation fails if no executor has been loaded `issue#482 <https://github.com/Parsl/parsl/issues/482>`_
+* Make sure tasks in `dep_fail` state are retried `issue#473 <https://github.com/Parsl/parsl/issues/473>`_
+* Hard requirement for CMRESHandler `issue#422 <https://github.com/Parsl/parsl/issues/422>`_
+* Log error Globus events to stderr `issue#436 <https://github.com/Parsl/parsl/issues/436>`_
+* Take 'slots' out of logging `issue#411 <https://github.com/Parsl/parsl/issues/411>`_
+* Remove redundant logging `issue#267 <https://github.com/Parsl/parsl/issues/267>`_
+* Zombie ipcontroller processes - Process cleanup in case of interruption `issue#460 <https://github.com/Parsl/parsl/issues/460>`_
+* IPyparallel failure when submitting several apps in parallel threads `issue#451 <https://github.com/Parsl/parsl/issues/451>`_
+* `SlurmProvider` + `SingleNodeLauncher` starts all engines on a single core `issue#454 <https://github.com/Parsl/parsl/issues/454>`_
+* IPP ``engine_dir`` has no effect if indicated dir does not exist `issue#446 <https://github.com/Parsl/parsl/issues/446>`_
+* Clarify AppBadFormatting error `issue#433 <https://github.com/Parsl/parsl/issues/433>`_
+* confusing error message with simple configs `issue#379 <https://github.com/Parsl/parsl/issues/379>`_
+* Error due to missing kubernetes config file `issue#432 <https://github.com/Parsl/parsl/issues/432>`_
+* ``parsl.configs`` and ``parsl.tests.configs`` missing init files `issue#409 <https://github.com/Parsl/parsl/issues/409>`_
+* Error when Python versions differ `issue#62 <https://github.com/Parsl/parsl/issues/62>`_
+* Fixing ManagerLost error in HTEX/EXEX `issue#577 <https://github.com/Parsl/parsl/issues/577>`_
+* Write all debug logs to rundir by default in HTEX/EXEX `issue#574 <https://github.com/Parsl/parsl/issues/574>`_
+* Write one log per HTEX worker `issue#572 <https://github.com/Parsl/parsl/issues/572>`_
+* Fixing ManagerLost error in HTEX/EXEX `issue#577 <https://github.com/Parsl/parsl/issues/577>`_
+
+
 Parsl 0.6.1
 -----------
 
@@ -484,8 +757,10 @@ Bug Fixes
 * Initial release, no listed bugs.
 
 
-Changelog
-=========
+Libsubmit Changelog
+===================
+
+As of Parsl 0.7.0 the libsubmit repository has been merged into Parsl.
 
 Libsubmit 0.4.1
 ---------------
@@ -524,4 +799,3 @@ Bug Fixes
 * Worker launches on Cori seem to fail from broken ENV `issue#27 <https://github.com/Parsl/libsubmit/issues/27>`_
 
 * EC2 provider throwing an exception at initial run `issue#46 <https://github.com/Parsl/parsl/issues/46>`_
-

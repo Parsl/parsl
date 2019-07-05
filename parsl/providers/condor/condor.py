@@ -3,10 +3,12 @@ import os
 import re
 import time
 
+from parsl.channels import LocalChannel
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.error import ScaleOutFailed
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         Project which the job will be charged against
     scheduler_options : str
         String to add specific condor attributes to the HTCondor submit script.
+    transfer_input_files : list(str)
+        List of strings of paths to additional files or directories to transfer to the job
     worker_init : str
         Command to be run before starting a worker.
     requirements : str
@@ -57,9 +61,11 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
+    cmd_timeout : int
+        Timeout for commands made to the scheduler in seconds
     """
     def __init__(self,
-                 channel=None,
+                 channel=LocalChannel(),
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
@@ -68,10 +74,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  environment=None,
                  project='',
                  scheduler_options='',
+                 transfer_input_files=[],
                  walltime="00:10:00",
                  worker_init='',
                  launcher=SingleNodeLauncher(),
-                 requirements=''):
+                 requirements='',
+                 cmd_timeout=60):
 
         label = 'condor'
         super().__init__(label,
@@ -82,8 +90,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
-
+                         launcher,
+                         cmd_timeout=cmd_timeout)
         self.provisioned_blocks = 0
 
         self.environment = environment if environment is not None else {}
@@ -99,6 +107,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
         self.requirements = requirements
+        self.transfer_input_files = transfer_input_files
 
     def _status(self):
         """Update the resource dictionary with job statuses."""
@@ -213,7 +222,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             f.write(job_config["worker_init"] + '\n' + wrapped_command)
 
         user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
-        job_config["input_files"] = user_script_path
+        the_input_files = [user_script_path] + self.transfer_input_files
+        job_config["input_files"] = ','.join(the_input_files)
         job_config["job_script"] = os.path.basename(user_script_path)
 
         # Construct and move the submit script
@@ -221,8 +231,10 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(cmd, 3)
-        logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+        try:
+            retcode, stdout, stderr = super().execute_wait(cmd)
+        except Exception as e:
+            raise ScaleOutFailed(self.label, str(e))
 
         job_id = []
 
@@ -239,7 +251,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                     job_id += [cluster + process for process in processes]
 
             self._add_resource(job_id)
-        return job_id[0]
+            return job_id[0]
+        else:
+            message = "Command '{}' failed with return code {}".format(cmd, retcode)
+            message += " and standard output '{}'".format(stdout.strip()) if stdout is not None else ''
+            message += " and standard error '{}'".format(stderr.strip()) if stderr is not None else ''
+            raise ScaleOutFailed(self.label, message)
 
     def cancel(self, job_ids):
         """Cancels the jobs specified by a list of job IDs.
@@ -258,7 +275,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 3)
+        retcode, stdout, stderr = super().execute_wait(cmd)
         rets = None
         if retcode == 0:
             for jid in job_ids:

@@ -26,8 +26,7 @@ def test_explicit_staging():
     Create a remote input file that points to unsorted.txt on a publicly shared
     endpoint.
     """
-    unsorted_file = File(
-        "globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt")
+    unsorted_file = File("globus://03d7d06a-cb6b-11e8-8c6a-0a1d4c5c824a/unsorted.txt")
 
     # Create a remote output file that points to sorted.txt on the go#ep1 Globus endpoint
 

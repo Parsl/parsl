@@ -2,17 +2,9 @@ import logging
 import json
 import globus_sdk
 import os
-
+import parsl
 
 logger = logging.getLogger(__name__)
-# Add StreamHandler to print error Globus events to stderr
-handler = logging.StreamHandler()
-handler.setLevel(logging.WARN)
-format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-
 
 """
 'Parsl Application' OAuth2 client registered with Globus Auth
@@ -23,72 +15,8 @@ REDIRECT_URI = 'https://auth.globus.org/v2/web/auth-code'
 SCOPES = ('openid '
           'urn:globus:auth:scope:transfer.api.globus.org:all')
 
-token_path = os.path.join(os.path.expanduser('~'), '.parsl')
-if not os.path.isdir(token_path):
-    os.mkdir(token_path)
-TOKEN_FILE = os.path.join(token_path, '.globus.json')
 
 get_input = getattr(__builtins__, 'raw_input', input)
-
-
-def _load_tokens_from_file(filepath):
-    with open(filepath, 'r') as f:
-        tokens = json.load(f)
-    return tokens
-
-
-def _save_tokens_to_file(filepath, tokens):
-    with open(filepath, 'w') as f:
-        json.dump(tokens, f)
-
-
-def _update_tokens_file_on_refresh(token_response):
-    _save_tokens_to_file(TOKEN_FILE, token_response.by_resource_server)
-
-
-def _do_native_app_authentication(client_id, redirect_uri,
-                                  requested_scopes=None):
-
-    client = globus_sdk.NativeAppAuthClient(client_id=client_id)
-    client.oauth2_start_flow(
-        requested_scopes=requested_scopes,
-        redirect_uri=redirect_uri,
-        refresh_tokens=True)
-
-    url = client.oauth2_get_authorize_url()
-    print('Please visit the following URL to provide authorization: \n{}'.format(url))
-    auth_code = get_input('Enter the auth code: ').strip()
-    token_response = client.oauth2_exchange_code_for_tokens(auth_code)
-    return token_response.by_resource_server
-
-
-def _get_native_app_authorizer(client_id):
-    tokens = None
-    try:
-        tokens = _load_tokens_from_file(TOKEN_FILE)
-    except Exception:
-        pass
-
-    if not tokens:
-        tokens = _do_native_app_authentication(
-            client_id=client_id,
-            redirect_uri=REDIRECT_URI,
-            requested_scopes=SCOPES)
-        try:
-            _save_tokens_to_file(TOKEN_FILE, tokens)
-        except Exception:
-            pass
-
-    transfer_tokens = tokens['transfer.api.globus.org']
-
-    auth_client = globus_sdk.NativeAppAuthClient(client_id=client_id)
-
-    return globus_sdk.RefreshTokenAuthorizer(
-        transfer_tokens['refresh_token'],
-        auth_client,
-        access_token=transfer_tokens['access_token'],
-        expires_at=transfer_tokens['expires_at_seconds'],
-        on_refresh=_update_tokens_file_on_refresh)
 
 
 def get_globus():
@@ -111,9 +39,14 @@ class Globus(object):
 
     @classmethod
     def init(cls):
+        token_path = os.path.join(os.path.expanduser('~'), '.parsl')
+        if not os.path.isdir(token_path):
+            os.mkdir(token_path)
+        cls.TOKEN_FILE = os.path.join(token_path, '.globus.json')
+
         if cls.authorizer:
             return
-        cls.authorizer = _get_native_app_authorizer(CLIENT_ID)
+        cls.authorizer = cls._get_native_app_authorizer(CLIENT_ID)
 
     @classmethod
     def get_authorizer(cls):
@@ -163,3 +96,72 @@ class Globus(object):
             event = events.data[0]
             raise Exception('Globus transfer {}, from {}{} to {}{} failed due to error: "{}"'.format(
                 task['task_id'], src_ep, src_path, dst_ep, dst_path, event['details']))
+
+    @classmethod
+    def _load_tokens_from_file(cls, filepath):
+        with open(filepath, 'r') as f:
+            tokens = json.load(f)
+        return tokens
+
+    @classmethod
+    def _save_tokens_to_file(cls, filepath, tokens):
+        with open(filepath, 'w') as f:
+            json.dump(tokens, f)
+
+    @classmethod
+    def _update_tokens_file_on_refresh(cls, token_response):
+        cls._save_tokens_to_file(cls.TOKEN_FILE, token_response.by_resource_server)
+
+    @classmethod
+    def _do_native_app_authentication(cls, client_id, redirect_uri,
+                                      requested_scopes=None):
+
+        client = globus_sdk.NativeAppAuthClient(client_id=client_id)
+        client.oauth2_start_flow(
+            requested_scopes=requested_scopes,
+            redirect_uri=redirect_uri,
+            refresh_tokens=True)
+
+        url = client.oauth2_get_authorize_url()
+        print('Please visit the following URL to provide authorization: \n{}'.format(url))
+        auth_code = get_input('Enter the auth code: ').strip()
+        token_response = client.oauth2_exchange_code_for_tokens(auth_code)
+        return token_response.by_resource_server
+
+    @classmethod
+    def _get_native_app_authorizer(cls, client_id):
+        tokens = None
+        try:
+            tokens = cls._load_tokens_from_file(cls.TOKEN_FILE)
+        except Exception:
+            pass
+
+        if not tokens:
+            tokens = cls._do_native_app_authentication(
+                client_id=client_id,
+                redirect_uri=REDIRECT_URI,
+                requested_scopes=SCOPES)
+            try:
+                cls._save_tokens_to_file(cls.TOKEN_FILE, tokens)
+            except Exception:
+                pass
+
+        transfer_tokens = tokens['transfer.api.globus.org']
+
+        auth_client = globus_sdk.NativeAppAuthClient(client_id=client_id)
+
+        return globus_sdk.RefreshTokenAuthorizer(
+            transfer_tokens['refresh_token'],
+            auth_client,
+            access_token=transfer_tokens['access_token'],
+            expires_at=transfer_tokens['expires_at_seconds'],
+            on_refresh=cls._update_tokens_file_on_refresh)
+
+
+def cli_run():
+    parsl.set_stream_logger()
+    print("Parsl Globus command-line authorizer")
+    print("If authorization to Globus is necessary, the library will prompt you now.")
+    print("Otherwise it will do nothing")
+    get_globus()
+    print("Authorization complete")

@@ -41,6 +41,7 @@ parsl.providers.AWSProvider
    .. autosummary::
    
       ~AWSProvider.current_capacity
+      ~AWSProvider.label
       ~AWSProvider.scaling_enabled
    
    

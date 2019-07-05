@@ -29,6 +29,7 @@ parsl.providers.GridEngineProvider
    .. autosummary::
    
       ~GridEngineProvider.current_capacity
+      ~GridEngineProvider.label
       ~GridEngineProvider.scaling_enabled
    
    

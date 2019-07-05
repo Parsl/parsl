@@ -11,6 +11,7 @@ import _pytest.runner as runner
 from pytest_forked import forked_run_report
 
 import parsl
+from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger('parsl')
@@ -57,6 +58,10 @@ def pytest_configure(config):
     config.addinivalue_line(
         'markers',
         'forked: mark test to only run in a subprocess'
+    )
+    config.addinivalue_line(
+        'markers',
+        'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
 
 
@@ -130,10 +135,19 @@ def load_dfk(config):
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
+
+            if DataFlowKernelLoader._dfk is not None:
+                raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
+
             parsl.clear()
             dfk = parsl.load(module.config)
+
             yield
+
+            if(parsl.dfk() != dfk):
+                raise ValueError("DFK changed unexpectedly during test")
             dfk.cleanup()
+            parsl.clear()
         except KeyError:
             pytest.skip('options in user_opts.py not configured for {}'.format(config))
     else:
@@ -164,12 +178,15 @@ def apply_masks(request):
             else:
                 pytest.skip(m.kwargs['reason'])
     m = request.node.get_closest_marker('local')
-    if m is not None:
+    if m is not None:  # is marked as local
         if config != 'local':
             if len(m.args) == 0:
                 pytest.skip('skipping non-local config')
             else:
                 pytest.skip(m.args[0])
+    else:  # is not marked as local
+        if config == 'local':
+            pytest.skip('skipping local config')
 
 
 @pytest.fixture()

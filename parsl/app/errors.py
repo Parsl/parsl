@@ -1,10 +1,13 @@
-"""Exceptions raise by Apps."""
+"""Exceptions raised by Apps."""
 from functools import wraps
 
 import dill
+import logging
 from tblib import Traceback
 
 from six import reraise
+
+logger = logging.getLogger(__name__)
 
 
 class ParslError(Exception):
@@ -83,7 +86,7 @@ class MissingOutputs(ParslError):
     """
 
     def __init__(self, reason, outputs):
-        super().__init__(reason)
+        super().__init__(reason, outputs)
         self.reason = reason
         self.outputs = outputs
 
@@ -104,13 +107,13 @@ class BadStdStreamFile(ParslError):
     """
 
     def __init__(self, outputs, exception):
-        super().__init__()
+        super().__init__(outputs, exception)
         self._outputs = outputs
         self._exception = exception
 
     def __repr__(self):
-        return "FilePath:[{}] Exception:{}".format(self._outputs,
-                                                   self._exception)
+        return "FilePath: [{}] Exception: {}".format(self._outputs,
+                                                     self._exception)
 
     def __str__(self):
         return self.__repr__()
@@ -146,7 +149,18 @@ class RemoteExceptionWrapper:
 
     def reraise(self):
 
-        reraise(dill.loads(self.e_type), dill.loads(self.e_value), self.e_traceback.as_traceback())
+        t = dill.loads(self.e_type)
+
+        # the type is logged here before deserialising v and tb
+        # because occasionally there are problems deserialising the
+        # value (see #785, #548) and the fix is related to the
+        # specific exception type.
+        logger.debug("Reraising exception of type {}".format(t))
+
+        v = dill.loads(self.e_value)
+        tb = self.e_traceback.as_traceback()
+
+        reraise(t, v, tb)
 
 
 def wrap_error(func):

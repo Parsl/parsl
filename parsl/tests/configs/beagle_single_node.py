@@ -28,7 +28,7 @@ config = Config(
             label='beagle_multinode_mpi',
             workers_per_node=1,
             provider=TorqueProvider(
-                'debug',
+                queue='debug',
                 channel=SSHChannel(
                     hostname='login4.beagle.ci.uchicago.edu',
                     username=user_opts['beagle']['username'],

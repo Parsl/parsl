@@ -26,7 +26,7 @@ def test_implicit_staging_globus():
     Create a remote input file (globus) that points to unsorted.txt.
     """
 
-    unsorted_file = File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
+    unsorted_file = File('globus://03d7d06a-cb6b-11e8-8c6a-0a1d4c5c824a/unsorted.txt')
 
     # Create a local file for output data
     sorted_file = File('sorted.txt')

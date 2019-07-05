@@ -7,9 +7,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-dfk = parsl.load(config)
-
 
 @App('bash')
 def multiline(
@@ -64,6 +61,8 @@ def test_multiline():
 
 
 if __name__ == '__main__':
+    parsl.clear()
+    dfk = parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',

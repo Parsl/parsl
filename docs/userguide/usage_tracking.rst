@@ -3,9 +3,9 @@
 Usage statistics collection
 ===========================
 
-Parsl sends anonymized usage statistics back to the Parsl development team to measure worldwide usage and improve
-reliability and usability. The usage statistics are used only for improvements and reporting. They are not 
-shared in raw form outside of the Parsl team. 
+Parsl uses an **Opt-in** model to send anonymized usage statistics back to the Parsl development team to
+measure worldwide usage and improve reliability and usability. The usage statistics are used only for
+improvements and reporting. They are not shared in raw form outside of the Parsl team.
 
 
 Why are we doing this?
@@ -23,17 +23,18 @@ we want to provide generic usage data about such things as the following:
 By participating in this project, you help justify continuing support for the software on which you rely.
 The data sent is as generic as possible and is anonymized (see :ref:`What is sent? <_what-is-sent>` below).
 
-Opt-Out
--------
+Opt-In
+------
 
-We have chosen opt-out collection rather than opt-in. The reason is that we need this data - it is a
-requirement for funding. We believe we have set a good balance between the benefits to the project and the
-users by showing that Parsl works and is in use, which helps the project continue, and the costs to users
-of providing generic information. 
-By not opting out, and allowing these statistics to be reported back, you are explicitly supporting the
+We have chosen opt-in collection rather than opt-out with the hope that workflow developers and researchers
+would choose to send us this information. The reason is that we need this data - it is a requirement for funding.
+We believe by leaving the decision to the users, we set a good balance between the benefits to the project and
+respecting the privacy of our users.
+
+By opting-in, and allowing these statistics to be reported back, you are explicitly supporting the
 further development of Parsl.
 
-If you wish to opt out of usage reporting, set ``PARSL_TRACKING=false`` in your environment.
+If you wish to opt in to usage reporting, set ``PARSL_TRACKING=true`` in your environment or set ``usage_tracking=True`` in the configuration object (`parsl.config.Config`).
 
 
 .. _what-is-sent:

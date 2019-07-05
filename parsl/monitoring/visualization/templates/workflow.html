@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+<h2>{{ workflow_details['workflow_name'] }}</h2>
+<hr>
+
+<div class="container">
+  <div class="row">
+    <div class="col">
+        <h5>Workflow Summary</h5>
+
+        <ul>
+            <li><b>Started:</b>  {{ workflow_details['time_began'] | timeformat}}</li>
+            <li><b>Completed:</b>  {{ workflow_details['time_completed'] | timeformat }}</li>
+            <li><b>Workflow duration:</b>  {{ workflow_details['workflow_duration'] | timeformat }}</li>
+            <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
+            <li><b>host:</b>  {{ workflow_details['host'] }}</li>
+            <li><b>rundir:</b>  {{ workflow_details['rundir'] }}</li>
+            <li><b>tasks_failed_count:</b>  {{ workflow_details['tasks_failed_count'] }}</li>
+            <li><b>tasks_completed_count:</b>  {{ workflow_details['tasks_completed_count'] }}</li>
+        </ul>
+    </div>
+    <div class="col">
+        <h5>App Summary</h5>
+
+        <table class="table table-hover" style="width: 400px">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in task_summary %}
+                  <tr>
+                <td><a href="app/{{ t['task_func_name'] }}">{{ t.task_func_name }}</a></td>
+                <td>{{ t.frequency }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+    </div>
+  </div>
+</div>
+
+<a href="dag_group_by_apps">View workflow DAG -- colors grouped by apps</a>
+<br><a href="dag_group_by_states">View workflow DAG -- colors grouped by task states</a>
+<br><a href="resource_usage">View workflow resource usage</a>
+
+{{ task_gantt | safe }}
+{{ task_per_app |safe }}
+
+{% endblock %}
