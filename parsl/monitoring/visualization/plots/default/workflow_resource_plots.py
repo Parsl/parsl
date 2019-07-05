@@ -104,7 +104,6 @@ def resource_efficiency(resource, node, label='CPU'):
         end = resource['epoch_time'].max()
         resource['relative_time'] = resource['epoch_time'] - start
         node['relative_time'] = node['epoch_time'] - start
-        step = int(resource['resource_monitoring_interval'][0])
 
         task_plot = [0] * (end - start + 1)
         if label == 'CPU':
