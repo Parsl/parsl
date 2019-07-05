@@ -1,5 +1,5 @@
 import parsl
-from parsl import *
+from parsl import App, DataFlowKernel
 from parsl.monitoring.db_logger import MonitoringConfig
 
 threads_config = parsl.config.Config(executors=[parsl.executors.threads.ThreadPoolExecutor(label='threads', max_threads=4)],
