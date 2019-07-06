@@ -15,11 +15,10 @@ logger = logging.getLogger(__name__)
 def timeout(f, seconds):
     def wrapper(*args, **kwargs):
         import threading
+        import ctypes
+        import parsl.app.errors
 
         def stop(thread):
-            import ctypes
-            import parsl.app.errors
-
             ctypes.pythonapi.PyThreadState_SetAsyncExc(
                 ctypes.c_long(thread),
                 ctypes.py_object(parsl.app.errors.AppTimeout)
