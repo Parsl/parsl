@@ -18,14 +18,14 @@ def timeout(f, seconds):
         import ctypes
         import parsl.app.errors
 
-        def stop(thread):
+        def inject_exception(thread):
             ctypes.pythonapi.PyThreadState_SetAsyncExc(
                 ctypes.c_long(thread),
                 ctypes.py_object(parsl.app.errors.AppTimeout)
             )
 
         thread = threading.current_thread().ident
-        timer = threading.Timer(seconds, stop, args=[thread])
+        timer = threading.Timer(seconds, inject_exception, args=[thread])
         timer.start()
         result = f(*args, **kwargs)
         timer.cancel()
