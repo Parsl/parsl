@@ -53,7 +53,7 @@ Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_a
 2. outputs: (list) This keyword argument defines a list of output :ref:`label-futures` that
    will be produced by this app. Parsl will track these files and ensure they are correctly created.
    They can then be passed to other apps as input arguments.
-3. walltime: (int) If the app runs longer than ``walltime`` seconds, a ``TimeoutError`` will be raised.
+3. walltime: (int) If the app runs longer than ``walltime`` seconds, a ``parsl.app.errors.AppTimeout`` will be raised.
 
 Returns
 ^^^^^^^
