@@ -1,6 +1,6 @@
 import logging
 
-from parsl import *
+from parsl import ThreadPoolExecutor
 from parsl.config import Config
 from parsl.monitoring import MonitoringHub
 
