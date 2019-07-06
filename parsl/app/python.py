@@ -12,6 +12,28 @@ from parsl.dataflow.dflow import DataFlowKernelLoader
 logger = logging.getLogger(__name__)
 
 
+def timeout(f, seconds):
+    def wrapper(*args, **kwargs):
+        import threading
+
+        def stop(thread):
+            import ctypes
+            import parsl.app.errors
+
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                ctypes.c_long(thread),
+                ctypes.py_object(parsl.app.errors.AppTimeout)
+            )
+
+        thread = threading.current_thread().ident
+        timer = threading.Timer(seconds, stop, args=[thread])
+        timer.start()
+        result = f(*args, **kwargs)
+        timer.cancel()
+        return result
+    return wrapper
+
+
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
@@ -47,26 +69,6 @@ class PythonApp(AppBase):
 
         walltime = self.kwargs.get('walltime')
         if walltime is not None:
-            def timeout(f, walltime):
-                def wrapper(*args, **kwargs):
-                    import threading
-
-                    def stop(thread):
-                        import ctypes
-                        import parsl.app.errors
-
-                        ctypes.pythonapi.PyThreadState_SetAsyncExc(
-                            ctypes.c_long(thread),
-                            ctypes.py_object(parsl.app.errors.AppTimeout)
-                        )
-
-                    thread = threading.current_thread().ident
-                    timer = threading.Timer(walltime, stop, args=[thread])
-                    timer.start()
-                    result = f(*args, **kwargs)
-                    timer.cancel()
-                    return result
-                return wrapper
             self.func = timeout(self.func, walltime)
         app_fut = dfk.submit(self.func, *args,
                              executors=self.executors,
