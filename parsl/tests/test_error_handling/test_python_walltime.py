@@ -1,3 +1,5 @@
+import pytest
+
 import parsl
 from parsl.app.errors import AppTimeout
 
@@ -14,10 +16,5 @@ def my_app(walltime=3):
 
 def test_python_walltime():
     f = my_app()
-    try:
+    with pytest.raises(AppTimeout):
         f.result()
-        raise ValueError("Expected an exception, not a result")
-    except AppTimeout:
-        # AppTimeout is the correct result.
-        # Any other exception should propagate upwards
-        pass
