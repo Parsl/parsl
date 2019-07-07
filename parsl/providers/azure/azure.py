@@ -6,7 +6,7 @@ from string import Template
 import base64
 
 from parsl.dataflow.error import ConfigurationError
-from template import template_string
+from parsl.providers.azure.template import template_string
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers.error import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
