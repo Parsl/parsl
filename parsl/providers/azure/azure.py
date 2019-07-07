@@ -87,10 +87,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     key_name : str
         Name of the Azure private key (.pem file) that is usually generated on the console
         to allow SSH access to the Azure instances. This is mostly used for debugging.
-    spot_max_bid : float
-        Maximum bid price (if requesting spot market machines).
-    iam_instance_profile_arn : str
-        Launch instance with a specific role.
     walltime : str
         Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
     launcher : Launcher
@@ -110,14 +106,12 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                  nodes_per_block=1,
                  parallelism=1,
                  worker_init='',
-                 instance_type_ref=None,
+                 vm_reference=None,
                  location='westus',
                  group_name='parsl.auto',
                  key_name=None,
                  key_file=None,
-                 profile=None,
                  vnet_name="parsl.auto",
-                 state_file=None,
                  walltime="01:00:00",
                  linger=False,
                  launcher=SingleNodeLauncher()):
@@ -134,7 +128,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         self.parallelism = parallelism
 
         self.worker_init = worker_init
-        self.vm_reference = instance_type_ref
+        self.vm_reference = vm_reference
         self.vm_disk_size = self.vm_reference["disk_size_gb"]
         self.region = location
         self.vnet_name = vnet_name
