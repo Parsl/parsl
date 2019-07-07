@@ -386,6 +386,9 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             logger.info('Found Existing Vnet. Proceeding.')
 
         # Create Subnet
+        if not self.resources.get("subnets", None):
+            self.resources["subnets"] = {}
+
         try:
             logger.info('\nCreating (or updating) Subnet')
             async_subnet_creation = self.network_client.subnets.create_or_update(
@@ -393,11 +396,13 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                     self.group_name), {'address_prefix': '10.0.0.0/20'})
             subnet_info = async_subnet_creation.result()
 
-            if not self.resources.get("subnets", None):
-                self.resources["subnets"] = {}
-
             self.resources["subnets"][subnet_info.id] = subnet_info
+
         except Exception:
+
+            subnet_info = self.network_client.subnets.get(self.group_name, self.vnet_name, "{}.subnet".format(
+                    self.group_name))
+            self.resources["subnets"][subnet_info.id] = subnet_info
             logger.info('Found Existing Subnet. Proceeding.')
 
         # Create NIC
