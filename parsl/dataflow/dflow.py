@@ -476,12 +476,17 @@ class DataFlowKernel(object):
         if executor == 'data_manager':
             return args, kwargs, func
 
+        if self.check_staging_inhibited(kwargs):
+            return args, kwargs, func
+
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             (inputs[idx], func) = self.data_manager.stage_in_rename_this(f, func, executor)
 
         for kwarg, f in kwargs.items():
+            logger.debug("Performing potential stage-in for kwarg {} = {}".format(kwarg, repr(kwargs[kwarg])))
             (kwargs[kwarg], func) = self.data_manager.stage_in_rename_this(f, func, executor)
+            logger.debug("Performed potential stage-in for kwarg {} = {}".format(kwarg, repr(kwargs[kwarg])))
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
@@ -493,7 +498,9 @@ class DataFlowKernel(object):
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         app_fut._outputs = []
-        for f in outputs:
+        unwrap_func = id_func
+        for n in range(0,len(outputs)):
+            f = outputs[n]
             if isinstance(f, File) and not self.check_staging_inhibited(kwargs):
                 # replace a File with a DataFuture - either completing when the stageout
                 # future completes, or if no stage out future is returned, then when the
@@ -501,7 +508,13 @@ class DataFlowKernel(object):
 
                 # The staging code will get a clean copy which it is allowed to mutate,
                 # while the DataFuture-contained original will not be modified by any staging.
-                f_copy = f.cleancopy()
+                f_copy = f.cleancopy() # ... TODO: but this copy is not the version that comes in through output=[]...
+                # ... is it sufficient to replace the outputs entry here with f_copy?
+                # it seems like it on the local executor? but I'm not sure if multiple
+                # files will get staged around then over serialisation and not be properly
+                # shared, when running on a serialisation based executor? Test this with
+                # local htex + file_args.
+                outputs[n] = f_copy
                 logger.debug("Submitting stage out for output file {}".format(f))
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
@@ -512,15 +525,11 @@ class DataFlowKernel(object):
                     app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
 
                 # this is a hook for post-task stageout
-                # note that nothing depends on the output - which is maybe a bug
-                # in the not-very-tested stageout system?
-                newfunc = self.data_manager.replace_task_stage_out(f, func, executor)
-                if newfunc:
-                    func = newfunc
+                (func, unwrap_func) = self.data_manager.replace_task_stage_out(f_copy, func, unwrap_func, executor)
             else:
                 logger.debug("Not performing staging for: {}".format(repr(f)))
                 app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
-        return func
+        return (func, unwrap_func)
 
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
@@ -696,11 +705,12 @@ class DataFlowKernel(object):
         # Transform remote input files to data futures
         args, kwargs, func = self._add_input_deps(executor, args, kwargs, func)
 
-        self._add_output_deps(executor, args, kwargs, app_fu, func)
+        (func, unwrap_func) = self._add_output_deps(executor, args, kwargs, app_fu, func)
 
         task_def.update({
                     'args': args,
                     'func': func,
+                    'unwrap_func': unwrap_func,
                     'kwargs': kwargs,
                     'app_fu': app_fu})
 
@@ -1114,3 +1124,10 @@ class DataFlowKernelLoader(object):
         if cls._dfk is None:
             raise RuntimeError('Must first load config')
         return cls._dfk
+
+def id_func(x):
+    """This is a function that does nothing, to act as a neutral unwrapper when no
+    unwrapping is needed for file staging
+    """
+    return x
+

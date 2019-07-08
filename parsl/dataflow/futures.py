@@ -111,9 +111,25 @@ class AppFuture(Future):
 
             try:
                 res = executor_fu.result()
+
+                # RemoteExeceptionWrapper is tested twice here because there might be
+                # one at the very core, coming from the wrap_error call, and/or there might
+                # be one coming from the outer, executor layer. This code assumes that if a
+                # staging wrapper is going to put in its own RemoteExceptionWrapper in the
+                # stack, it will handle its own unwrapping of that RemoteExceptionWrapper
+                # in its unwrap function.
+
                 if isinstance(res, RemoteExceptionWrapper):
                     res.reraise()
-                self.set_result(executor_fu.result())
+
+                task_unwrapper = self.task_def['unwrap_func']
+
+                res = task_unwrapper(res)
+
+                if isinstance(res, RemoteExceptionWrapper):
+                    res.reraise()
+
+                self.set_result(res)
 
             except Exception as e:
                 if executor_fu.retries_left > 0:

@@ -34,7 +34,7 @@ class DataManager(object):
 
         self.dfk = dfk
 
-    def replace_task_stage_out(self, file: File, func: Callable, executor: str) -> Callable:
+    def replace_task_stage_out(self, file: File, func: Callable, unwrap_func: Callable, executor: str) -> (Callable, Callable):
         """This will give staging providers the chance to wrap (or replace entirely!) the task function."""
         executor_obj = self.dfk.executors[executor]
         if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
@@ -45,11 +45,12 @@ class DataManager(object):
         for scheme in storage_access:
             logger.debug("stage_out checking Staging provider {}".format(scheme))
             if scheme.can_stage_out(file):
-                newfunc = scheme.replace_task_stage_out(self, executor, file, func)
-                if newfunc:
-                    return newfunc
+                v = scheme.replace_task_stage_out(self, executor, file, func, unwrap_func)
+                if v:
+                    (newfunc, new_unwrapfunc) = v
+                    return (newfunc, new_unwrapfunc)
                 else:
-                    return func
+                    return (func, unwrap_func)
 
         logger.debug("reached end of staging scheme list")
         # if we reach here, we haven't found a suitable staging mechanism

@@ -155,7 +155,7 @@ class BashApp(AppBase):
         else:
             dfk = self.data_flow_kernel
 
-        app_fut = dfk.submit(wrap_error(update_wrapper(remote_side_bash_executor, self.func)),
+        app_fut = dfk.submit(update_wrapper(remote_side_bash_executor, self.func),
                              self.func, *args,
                              executors=self.executors,
                              fn_hash=self.func_hash,

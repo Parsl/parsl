@@ -27,7 +27,7 @@ class File(object):
     """
 
     @typeguard.typechecked
-    def __init__(self, url: str):
+    def __init__(self, url: str, forced_submit_side: bool = True):
         """Construct a File object from a url string.
 
         Args:
@@ -36,6 +36,7 @@ class File(object):
               - 'file:///scratch/proj101/input.txt'
               - 'globus://go#ep1/~/data/input.txt'
               - 'globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/home/johndoe/data/input.txt'
+         forced_submit_side is an internal consistency check to determine if a File came from a root constructor or from a cleancopy. regular constructions of File will have this set to true
         """
         self.url = url
         parsed_url = urlparse(self.url)
@@ -44,6 +45,7 @@ class File(object):
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
         self._local_path = None
+        self.forced_submit_side = forced_submit_side
 
     def cleancopy(self) -> "File":
         """Returns a copy of the file containing only the global immutable state,
@@ -51,7 +53,7 @@ class File(object):
            object will be as the original object was when it was constructed.
         """
         logger.debug("Making clean copy of File object {}".format(repr(self)))
-        return File(self.url)
+        return File(self.url, forced_submit_side=False)
 
     def __str__(self):
         return self.filepath
@@ -72,6 +74,9 @@ class File(object):
 
     @local_path.setter
     def local_path(self, p):
+        if self.forced_submit_side:
+            raise ValueError("Attempt to set local_path on a forced submit side file: {}".format(repr(self)))
+
         if self._local_path is None:
             self._local_path = p
         else:

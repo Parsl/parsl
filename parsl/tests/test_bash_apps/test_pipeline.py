@@ -5,7 +5,7 @@ import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
 
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_threads_file_args import config
 
 
 @App('bash')
@@ -126,5 +126,5 @@ if __name__ == '__main__':
         parsl.set_stream_logger()
 
     # test_increment(depth=int(args.width))
-    # test_increment(depth=int(args.width))
+    test_increment(depth=int(args.width))
     test_increment_slow(depth=int(args.width))

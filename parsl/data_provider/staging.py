@@ -1,5 +1,5 @@
 from concurrent.futures import Future
-from typing import Optional, Callable
+from typing import Optional, Tuple, Callable
 from parsl.app.futures import DataFuture
 from parsl.data_provider.files import File
 
@@ -64,5 +64,15 @@ class Staging:
         """
         return None
 
-    def replace_task_stage_out(self, dm: "DataManager", executor: str, file: File, func: Callable) -> Optional[Callable]:
+    def replace_task_stage_out(self, dm: "DataManager", executor: str, file: File, func: Callable, unwrap_func: Callable) -> Optional[Tuple[Callable, Callable]]:
+        """
+        For a file to be staged out, optionally return a pair of a replacement app
+        function (which usually should be the original app function wrapped
+        in staging code) and an unwrapper function which be called on the submit side
+        after the task returns.
+
+        This is not symmetric with the stage_in replace_task, because code to be called
+        before wrapper functions on the submit side can be called inside the replace_task
+        call itself.
+        """
         return None
