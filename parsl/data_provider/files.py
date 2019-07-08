@@ -49,9 +49,9 @@ class File(object):
 
     def __repr__(self):
         if hasattr(self, 'local_path'):
-            return "<{} at %#x url={} localpath={}>".format(self.__class__, id(self), self.url, self.localpath)
+            return "<{0} at 0x{1:x} url={2} local_path={3}>".format(self.__class__, id(self), self.url, self.local_path)
         else:
-            return "<{} at %#x url={}>".format(self.__class__, id(self), self.url)
+            return "<{0} at 0x{1:x} url={2}>".format(self.__class__, id(self), self.url)
 
     def __fspath__(self):
         return self.filepath
