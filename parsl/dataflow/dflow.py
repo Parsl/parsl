@@ -333,19 +333,26 @@ class DataFlowKernel(object):
             if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
-        # Submit _*_stage_out tasks for output data futures that correspond with remote files
-        if (self.tasks[task_id]['app_fu'] and
-            self.tasks[task_id]['app_fu'].done() and
-            self.tasks[task_id]['app_fu'].exception() is None and
-            self.tasks[task_id]['executor'] != 'data_manager' and
-            self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
-            self.tasks[task_id]['func_name'] != '_http_stage_in'):
-            for dfu in self.tasks[task_id]['app_fu'].outputs:
+        # Submit _*_stage_out tasks for output data futures that have output files,
+        # that do not have stageing inhibited.
+
+        logger.debug("Submitting stage out jobs")
+        app_fu = self.tasks[task_id]['app_fu']
+
+        if app_fu.exception() is None and not self.check_staging_inhibited(self.tasks[task_id]['kwargs']):
+            for dfu in app_fu.outputs:
                 f = dfu.file_obj
                 if isinstance(f, File) and f.is_remote():
+                    logger.debug("Submitting stage out job for output file {}".format(f))
                     self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
+                else:
+                    logger.debug("Skipping stageout for output {}".format(f))
 
         return
+
+    @staticmethod
+    def check_staging_inhibited(kwargs):
+        return kwargs.get('staging_inhibit_output', False)
 
     def launch_if_ready(self, task_id):
         """
