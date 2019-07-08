@@ -27,6 +27,41 @@ class HTTPSeparateTaskStaging(Staging, RepresentationMixin):
         return app_fut._outputs[0]
 
 
+class HTTPInTaskStaging(Staging, RepresentationMixin):
+    """A staging provider that performs HTTP and HTTPS staging
+    as in a wrapper around each task. In contrast to
+    HTTPSeparateTaskStaging, this provider does not require a
+    shared file system."""
+
+    def can_stage_in(self, file):
+        logger.debug("HTTPInTaskStaging checking file {}".format(file.__repr__()))
+        logger.debug("file has scheme {}".format(file.scheme))
+        return file.scheme == 'http' or file.scheme == 'https'
+
+    def replace_task(self, dm, executor, file, f):
+        working_dir = dm.dfk.executors[executor].working_dir
+        return in_task_transfer_wrapper(f, file, working_dir)
+
+
+def in_task_transfer_wrapper(func, file, working_dir):
+    def wrapper(*args, **kwargs):
+        import requests
+        if working_dir:
+            os.makedirs(working_dir, exist_ok=True)
+            file.local_path = os.path.join(working_dir, file.filename)
+        else:
+            file.local_path = file.filename
+        resp = requests.get(file.url, stream=True)
+        with open(file.local_path, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+
+        result = func(*args, **kwargs)
+        return result
+    return wrapper
+
+
 def _http_stage_in(working_dir, parent_fut=None, outputs=[], staging_inhibit_output=True):
     file = outputs[0]
     if working_dir:
