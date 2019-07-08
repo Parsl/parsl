@@ -21,7 +21,7 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
 @App('bash')
 def foo(x, y, z=10, stdout=None):
     return """echo {0} {1} {z}
-    """
+    """.format(x, y, z=z)
 
 
 def test_command_format_1():

@@ -1,5 +1,5 @@
 import parsl
-from parsl import *
+from parsl import App
 
 dfk = parsl.load()
 

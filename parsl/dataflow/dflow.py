@@ -24,7 +24,7 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.error import *
+from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, DuplicateTaskError
 from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -86,18 +86,22 @@ class DataFlowKernel(object):
         self.usage_tracker.send_message()
 
         # Monitoring
+        self.run_id = str(uuid4())
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
 
         self.monitoring = config.monitoring
+        # hub address and port for interchange to connect
+        self.hub_address = None
+        self.hub_interchange_port = None
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
-            self.monitoring.start()
+            self.hub_address = self.monitoring.hub_address
+            self.hub_interchange_port = self.monitoring.start(self.run_id)
 
         self.time_began = datetime.datetime.now()
         self.time_completed = None
-        self.run_id = str(uuid4())
 
         # TODO: make configurable
         logger.info("Run id is: " + self.run_id)
@@ -178,7 +182,7 @@ class DataFlowKernel(object):
         """
 
         info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'checkpoint', 'fail_count',
-                           'fail_history', 'status', 'id', 'time_submitted', 'time_returned', 'executor']
+                           'status', 'id', 'time_submitted', 'time_returned', 'executor']
 
         task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
@@ -191,6 +195,9 @@ class DataFlowKernel(object):
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
         task_log_info['task_stdout'] = self.tasks[task_id]['kwargs'].get('stdout', None)
         task_log_info['task_stderr'] = self.tasks[task_id]['kwargs'].get('stderr', None)
+        task_log_info['task_fail_history'] = None
+        if self.tasks[task_id]['fail_history'] is not None:
+            task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
         task_log_info['task_depends'] = None
         if self.tasks[task_id]['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t._tid) for t in self.tasks[task_id]['depends']])
@@ -246,12 +253,12 @@ class DataFlowKernel(object):
             if isinstance(res, RemoteExceptionWrapper):
                 res.reraise()
 
-        except Exception:
+        except Exception as e:
             logger.exception("Task {} failed".format(task_id))
 
             # We keep the history separately, since the future itself could be
             # tossed.
-            self.tasks[task_id]['fail_history'].append(future._exception)
+            self.tasks[task_id]['fail_history'].append(str(e))
             self.tasks[task_id]['fail_count'] += 1
 
             if not self._config.lazy_errors:
@@ -773,6 +780,8 @@ class DataFlowKernel(object):
     def add_executors(self, executors):
         for executor in executors:
             executor.run_dir = self.run_dir
+            executor.hub_address = self.hub_address
+            executor.hub_port = self.hub_interchange_port
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')

@@ -1,7 +1,7 @@
 from flask import render_template
 from flask import current_app as app
 import pandas as pd
-from parsl.monitoring.visualization.models import *
+from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
@@ -60,7 +60,7 @@ def workflow(workflow_id):
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
-                           task_gantt=task_gantt_plot(df_task),
+                           task_gantt=task_gantt_plot(df_task, time_completed=workflow_details.time_completed),
                            task_per_app=task_per_app_plot(df_task, df_status))
 
 

@@ -11,3 +11,6 @@ class MessageType(Enum):
 
     # Top level workflow information
     WORKFLOW_INFO = 2
+
+    # Reports of the resource capacity for each node
+    NODE_INFO = 3

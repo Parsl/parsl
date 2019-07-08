@@ -1,6 +1,7 @@
 ''' Testing bash apps
 '''
-from parsl import *
+import parsl
+from parsl import App, DataFlowKernel
 
 import time
 import argparse
