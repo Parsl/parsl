@@ -107,7 +107,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                  launcher=SingleNodeLauncher()):
         if not _api_enabled:
             raise OptionalModuleMissing(
-                ['azure'], "Azure Provider requires the azure module.")
+                ['azure', 'msrestazure'], "Azure Provider requires the azure module.")
 
         self._label = 'azure'
         self.init_blocks = init_blocks
