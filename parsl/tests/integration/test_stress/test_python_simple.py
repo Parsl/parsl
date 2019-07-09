@@ -6,6 +6,7 @@ from parsl.configs.htex_local import config
 import time
 import argparse
 
+
 @python_app
 def increment(x):
     return x + 1
