@@ -3,7 +3,6 @@ import logging
 import os
 import time
 from string import Template
-import base64
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.azure.template import template_string
@@ -116,6 +115,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         self.max_blocks = max_blocks
         self.max_nodes = max_blocks
         self.parallelism = parallelism
+        self.nodes_per_block = 1
 
         self.worker_init = worker_init
         self.vm_reference = vm_reference
@@ -275,17 +275,13 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("attempting to connect instance to Parsl master")
         run_command_parameters = {
-            'command_id': 'RunShellScript', # For linux, don't change it
-            'script': wrapped_cmd.split("\n")
-         }
-        poller = self.compute_client.virtual_machines.run_command(
+                                    'command_id': 'RunShellScript',
+                                    'script': cmd_str.split("\n")
+                                }
+        self.compute_client.virtual_machines.run_command(
                                         self.group_name,
                                         virtual_machine.name,
                                         run_command_parameters)
-        result = poller.result()  # Blocking till executed
-        logger.error(result.value[0].message)  # stdout/stderr
-
-
 
         return virtual_machine.name
 
