@@ -6,8 +6,6 @@ from parsl.configs.htex_local import config
 import time
 import argparse
 
-parsl.load(config)
-
 @python_app
 def increment(x):
     return x + 1
@@ -30,6 +28,7 @@ def test_stress(count=1000):
 
 
 if __name__ == '__main__':
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--count", type=int, default=1000,
