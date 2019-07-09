@@ -9,4 +9,3 @@ nbsphinx
 sphinx_rtd_theme
 mypy
 sqlalchemy-stubs
-
