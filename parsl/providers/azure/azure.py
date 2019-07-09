@@ -239,8 +239,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         logger.info('\nCreating Linux Virtual Machine')
         vm_parameters = self.create_vm_parameters(nic.id,
-                                                  self.vm_reference,
-                                                  cmd_str)
+                                                  self.vm_reference)
 
         # Uniqueness strategy from AWS provider
         job_name = "parsl.auto.{0}".format(time.time())
@@ -285,6 +284,20 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         async_vm_start = self.compute_client.virtual_machines.start(
             self.group_name, job_name)
         async_vm_start.wait()
+
+        logger.debug("attempting to connect instance to Parsl master")
+        run_command_parameters = {
+            'command_id': 'RunShellScript', # For linux, don't change it
+            'script': wrapped_cmd.split("\n")
+         }
+        poller = self.compute_client.virtual_machines.run_command(
+                                        self.group_name,
+                                        virtual_machine.name,
+                                        run_command_parameters)
+        result = poller.result()  # Blocking till executed
+        logger.error(result.value[0].message)  # stdout/stderr
+
+
 
         return virtual_machine.name
 
@@ -382,7 +395,9 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             vnet_info = async_vnet_creation.result()
             self.resources["vnet"] = vnet_info
 
-        except Exception:
+        except Exception as e:
+
+            #logger.info(e)
             logger.info('Found Existing Vnet. Proceeding.')
 
         # Create Subnet
@@ -398,7 +413,9 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
             self.resources["subnets"][subnet_info.id] = subnet_info
 
-        except Exception:
+        except Exception as e:
+
+            #logger.info(e)
 
             subnet_info = self.network_client.subnets.get(self.group_name, self.vnet_name, "{}.subnet".format(
                     self.group_name))
@@ -431,7 +448,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         return nic_info
 
-    def create_vm_parameters(self, nic_id, vm_reference, cmd_str):
+    def create_vm_parameters(self, nic_id, vm_reference):
         """Create the VM parameters structure.
         """
         return {
@@ -456,19 +473,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                 'network_interfaces': [{
                     'id': nic_id,
                 }]
-            },
-            'resources': [{
-                "location": self.location,
-                "properties": {
-                    "publisher": "Microsoft.Azure.Extensions",
-                    "type": "CustomScript",
-                    "typeHandlerVersion": "2.0",
-                    "autoUpgradeMinorVersion": False,
-                    "protectedSettings": {
-                        "script": str(base64.b64encode(bytes(cmd_str, encoding='utf-8')))
-                    }
-                }
-            }]
+            }
         }
 
     def create_disk(self):
