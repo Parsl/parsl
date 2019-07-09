@@ -20,6 +20,7 @@ try:
     from azure.mgmt.network import NetworkManagementClient
     from azure.mgmt.compute import ComputeManagementClient
     from azure.mgmt.compute.models import DiskCreateOption
+    from msrestazure.azure_exceptions import CloudError
 
     _api_enabled = True
 
@@ -68,14 +69,8 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     worker_init : str
         String to append to the Userdata script executed in the cloudinit phase of
         instance initialization.
-    walltime : str
-        Walltime requested per block in HH:MM:SS.
     key_file : str
         Path to json file that contains 'Azure keys'
-    nodes_per_block : int
-        This is always 1 for Azure. Nodes to provision per block.
-    nodes_per_block : int
-        Nodes to provision per block. Default is 1.
     init_blocks : int
         Number of blocks to provision at the start of the run. Default is 1.
     min_blocks : int
@@ -87,8 +82,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     key_name : str
         Name of the Azure private key (.pem file) that is usually generated on the console
         to allow SSH access to the Azure instances. This is mostly used for debugging.
-    walltime : str
-        Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
@@ -103,7 +96,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
-                 nodes_per_block=1,
                  parallelism=1,
                  worker_init='',
                  vm_reference=None,
@@ -112,7 +104,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                  key_name=None,
                  key_file=None,
                  vnet_name="parsl.auto",
-                 walltime="01:00:00",
                  linger=False,
                  launcher=SingleNodeLauncher()):
         if not _api_enabled:
@@ -123,8 +114,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
-        self.nodes_per_block = nodes_per_block
-        self.max_nodes = max_blocks * nodes_per_block
+        self.max_nodes = max_blocks
         self.parallelism = parallelism
 
         self.worker_init = worker_init
@@ -138,7 +128,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         self.location = location
         self.group_name = group_name
 
-        self.walltime = walltime
         self.launcher = launcher
         self.linger = linger
         self.resources = {}
@@ -226,18 +215,17 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             self.group_name, {'location': self.location})
         self.resources["group"] = self.group_name
 
-        logger.info('\nCreating NIC')
+        logger.info('Creating NIC')
         nic = self.create_nic(self.network_client)
 
-        wrapped_cmd = self.launcher(command, tasks_per_node,
-                                    self.nodes_per_block)
+        wrapped_cmd = self.launcher(command, tasks_per_node, 1)
 
         cmd_str = Template(template_string).substitute(jobname=job_name,
                                                        user_script=wrapped_cmd,
                                                        linger=str(self.linger).lower(),
                                                        worker_init=self.worker_init)
 
-        logger.info('\nCreating Linux Virtual Machine')
+        logger.info('Creating Linux Virtual Machine')
         vm_parameters = self.create_vm_parameters(nic.id,
                                                   self.vm_reference)
 
@@ -313,7 +301,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             The status codes of the requsted jobs.
         """
         statuses = []
-        logger.info('\nList VMs in resource group')
+        logger.info('List VMs in resource group')
         for job_id in job_ids:
             try:
                 vm = self.compute_client.virtual_machines.get(
@@ -345,7 +333,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         for job_id in job_ids:
             try:
-                logger.debug('\nDelete VM {}'.format(job_id))
+                logger.debug('Delete VM {}'.format(job_id))
                 async_vm_delete = self.compute_client.virtual_machines.delete(
                     self.group_name, job_id)
                 async_vm_delete.wait()
@@ -383,7 +371,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         """
         try:
-            logger.info('\nCreating (or updating) Vnet')
+            logger.info('Creating (or updating) Vnet')
             async_vnet_creation = self.network_client.virtual_networks.\
                 create_or_update(
                     self.group_name, self.vnet_name, {
@@ -395,17 +383,18 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             vnet_info = async_vnet_creation.result()
             self.resources["vnet"] = vnet_info
 
-        except Exception as e:
+        except CloudError as e:
 
-            #logger.info(e)
-            logger.info('Found Existing Vnet. Proceeding.')
+            if "InUse" in str(e):
+                logger.info('Found Existing Vnet. Proceeding.')
+            else:
+                raise e
 
-        # Create Subnet
         if not self.resources.get("subnets", None):
             self.resources["subnets"] = {}
 
         try:
-            logger.info('\nCreating (or updating) Subnet')
+            logger.info('Creating (or updating) Subnet')
             async_subnet_creation = self.network_client.subnets.create_or_update(
                 self.group_name, self.vnet_name, "{}.subnet".format(
                     self.group_name), {'address_prefix': '10.0.0.0/20'})
@@ -413,17 +402,16 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
             self.resources["subnets"][subnet_info.id] = subnet_info
 
-        except Exception as e:
+        except CloudError as e:
+            if "InUse" in str(e):
+                subnet_info = self.network_client.subnets.get(self.group_name, self.vnet_name, "{}.subnet".format(
+                        self.group_name))
+                self.resources["subnets"][subnet_info.id] = subnet_info
+                logger.info('Found Existing Subnet. Proceeding.')
+            else:
+                raise e
 
-            #logger.info(e)
-
-            subnet_info = self.network_client.subnets.get(self.group_name, self.vnet_name, "{}.subnet".format(
-                    self.group_name))
-            self.resources["subnets"][subnet_info.id] = subnet_info
-            logger.info('Found Existing Subnet. Proceeding.')
-
-        # Create NIC
-        logger.info('\nCreating (or updating) NIC')
+        logger.info('Creating (or updating) NIC')
         async_nic_creation = self.network_client.network_interfaces.\
             create_or_update(
                 self.group_name,
@@ -480,7 +468,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         """Create a managed data disk of size specified in config.
 
         Each instance gets one disk"""
-        logger.info('\nCreate (empty) managed Data Disk')
+        logger.info('Create (empty) managed Data Disk')
         name = '{}.{}'.format(self.group_name, time.time())
         async_disk_creation = self.compute_client.disks.create_or_update(
             self.group_name, name, {
