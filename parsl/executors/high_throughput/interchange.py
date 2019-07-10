@@ -512,7 +512,8 @@ class Interchange(object):
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
                 self._ready_manager_queue.pop(manager, 'None')
-                interesting_managers.remove(manager)
+                if manager in interesting_managers:
+                    interesting_managers.remove(manager)
 
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(count, delta))
