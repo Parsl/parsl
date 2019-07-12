@@ -62,8 +62,8 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
           'version': VM OS version
           'vm_size': VM Size, analogous to instance type for AWS
           'disk_size_gb': (int) size of VM disk in gb
-          "admin_username": (str) admin username of VM instances,
-          "password": (str) admin password for VM instances
+          'admin_username': (str) admin username of VM instances,
+          'password': (str) admin password for VM instances
         }
 
         VM Publisher, author, SKU, and Version can be found in the Azure marketplace.
@@ -108,12 +108,12 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     """
 
     def __init__(self,
+                 vm_reference,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
                  parallelism=1,
                  worker_init='',
-                 vm_reference=None,
                  location='westus',
                  group_name='parsl.auto',
                  key_name=None,
@@ -135,7 +135,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         self.worker_init = worker_init
         self.vm_reference = vm_reference
-        self.vm_disk_size = self.vm_reference["disk_size_gb"]
         self.region = location
         self.vnet_name = vnet_name
 
@@ -150,7 +149,8 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         self.instances = []
 
         env_specified = os.getenv("AZURE_CLIENT_ID") is not None and os.getenv(
-            "AZURE_CLIENT_SECRET") is not None
+            "AZURE_CLIENT_SECRET") is not None and os.getenv(
+            "AZURE_TENANT_ID") is not None and os.getenv("AZURE_SUBSCRIPTION_ID") is not None
 
         if key_file is None and not env_specified:
             raise ConfigurationError("Must specify either, 'key_file', or\
@@ -246,7 +246,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                                                   self.vm_reference)
 
         # Uniqueness strategy from AWS provider
-        job_name = "parsl.auto.{0}".format(time.time())
+        job_name = "{0}-parsl-auto".format(time.time())
 
         async_vm_creation = self.compute_client.\
             virtual_machines.create_or_update(
@@ -259,17 +259,14 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("Started instance_id: {0}".format(vm_info.id))
 
-        # state = translate_table.get(instance.state['Name'], "PENDING")
-
         self.resources[vm_info.id] = {
             "job_id": vm_info.id,
             "instance": vm_info,
-            "status": "Test State"
+            "status": "PENDING"
         }
 
-        virtual_machine = async_vm_creation.result()
 
-        virtual_machine.storage_profile.data_disks.append({
+        vm_info.storage_profile.data_disks.append({
             'lun':
             12,
             'name':
@@ -282,7 +279,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         })
         async_disk_attach = self.\
             compute_client.virtual_machines.create_or_update(
-                self.group_name, virtual_machine.name, virtual_machine)
+                self.group_name, vm_info.name, vm_info)
         async_disk_attach.wait()
 
         async_vm_start = self.compute_client.virtual_machines.start(
