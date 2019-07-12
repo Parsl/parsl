@@ -65,11 +65,27 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
           "admin_username": (str) admin username of VM instances,
           "password": (str) admin password for VM instances
         }
+
+        VM Publisher, author, SKU, and Version can be found in the Azure marketplace.
+        One way to do so is to use the CLI, as described
+        [here](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage)
+
+        Another way is to look in the marketplace's GUI,
+        [here](https://azuremarketplace.microsoft.com/en-us/marketplace/apps?filters=virtual-machine-images%3Blinux&page=1).
+
     worker_init : str
         String to append to the Userdata script executed in the cloudinit phase of
         instance initialization.
     key_file : str
         Path to json file that contains 'Azure keys'
+        The structure of the key file is as follows:
+        {
+            "AZURE_CLIENT_ID": (str) azure client id [from account principal],
+            "AZURE_CLIENT_SECRET":(str) azure client secret [from account principal],
+            "AZURE_TENANT_ID": (str) azure tenant [account] id,
+            "AZURE_SUBSCRIPTION_ID": (str) azure subscription id
+
+        }
     init_blocks : int
         Number of blocks to provision at the start of the run. Default is 1.
     min_blocks : int
