@@ -255,45 +255,49 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         vm_info = async_vm_creation.result()
         self.instances.append(vm_info.name)
 
-        disk, d_name = self.create_disk()
+        try:
 
-        logger.debug("Started instance_id: {0}".format(vm_info.id))
+            logger.debug("Started instance_id: {0}".format(vm_info.id))
+            disk, d_name = self.create_disk()
 
-        self.resources[vm_info.id] = {
-            "job_id": vm_info.id,
-            "instance": vm_info,
-            "status": "PENDING"
-        }
-
-        vm_info.storage_profile.data_disks.append({
-            'lun':
-            12,
-            'name':
-            d_name,
-            'create_option':
-            DiskCreateOption.attach,
-            'managed_disk': {
-                'id': disk.id
+            self.resources[vm_info.id] = {
+                "job_id": vm_info.id,
+                "instance": vm_info,
+                "status": "PENDING"
             }
-        })
-        async_disk_attach = self.\
-            compute_client.virtual_machines.create_or_update(
-                self.group_name, vm_info.name, vm_info)
-        async_disk_attach.wait()
 
-        async_vm_start = self.compute_client.virtual_machines.start(
-            self.group_name, job_name)
-        async_vm_start.wait()
+            vm_info.storage_profile.data_disks.append({
+                'lun':
+                12,
+                'name':
+                d_name,
+                'create_option':
+                DiskCreateOption.attach,
+                'managed_disk': {
+                    'id': disk.id
+                }
+            })
+            async_disk_attach = self.\
+                compute_client.virtual_machines.create_or_update(
+                    self.group_name, vm_info.name, vm_info)
+            async_disk_attach.wait()
 
-        logger.debug("attempting to connect instance to Parsl master")
-        run_command_parameters = {
-                                    'command_id': 'RunShellScript',
-                                    'script': cmd_str.split("\n")
-                                }
-        self.compute_client.virtual_machines.run_command(
-                                        self.group_name,
-                                        vm_info.name,
-                                        run_command_parameters)
+            async_vm_start = self.compute_client.virtual_machines.start(
+                self.group_name, job_name)
+            async_vm_start.wait()
+
+            logger.debug("attempting to connect instance to Parsl master")
+            run_command_parameters = {
+                                        'command_id': 'RunShellScript',
+                                        'script': cmd_str.split("\n")
+                                    }
+            self.compute_client.virtual_machines.run_command(
+                                            self.group_name,
+                                            vm_info.name,
+                                            run_command_parameters)
+        except KeyboardInterrupt as e:
+            self.cancel([vm_info.name])
+            raise KeyboardInterrupt
 
         return vm_info.name
 
