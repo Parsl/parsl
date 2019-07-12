@@ -246,7 +246,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                                                   self.vm_reference)
 
         # Uniqueness strategy from AWS provider
-        job_name = "{0}-parsl-auto".format(time.time())
+        job_name = "{0}-parsl-auto".format(str(time.time()).replace(".", ""))
 
         async_vm_creation = self.compute_client.\
             virtual_machines.create_or_update(
@@ -264,7 +264,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             "instance": vm_info,
             "status": "PENDING"
         }
-
 
         vm_info.storage_profile.data_disks.append({
             'lun':
@@ -293,10 +292,10 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                                 }
         self.compute_client.virtual_machines.run_command(
                                         self.group_name,
-                                        virtual_machine.name,
+                                        vm_info.name,
                                         run_command_parameters)
 
-        return virtual_machine.name
+        return vm_info.name
 
     def status(self, job_ids):
         """Get the status of a list of jobs identified by their ids.
