@@ -295,7 +295,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                                             self.group_name,
                                             vm_info.name,
                                             run_command_parameters)
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
             self.cancel([vm_info.name])
             raise KeyboardInterrupt
 
