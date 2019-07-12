@@ -25,7 +25,7 @@ We will be working on Stampede 2. we haven't put our code in a repo (though we s
 
 """
 
-from parsl import *
+from parsl import App, DataFlowKernel, ThreadPoolExecutor
 import os
 import shutil
 import random

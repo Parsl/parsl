@@ -93,6 +93,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def __init__(self,
                  image_id,
+                 key_name,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -104,7 +105,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  region='us-east-2',
                  spot_max_bid=0,
 
-                 key_name=None,
                  key_file=None,
                  profile=None,
                  iam_instance_profile_arn='',

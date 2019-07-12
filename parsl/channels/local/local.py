@@ -5,7 +5,7 @@ import shutil
 import subprocess
 
 from parsl.channels.base import Channel
-from parsl.channels.errors import *
+from parsl.channels.errors import FileCopyException
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)

@@ -16,7 +16,7 @@ from ipyparallel.serialize import deserialize_object  # ,serialize_object
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import *
+from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
 from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.provider_base import ExecutionProvider
