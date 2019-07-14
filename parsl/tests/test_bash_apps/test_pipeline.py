@@ -64,7 +64,7 @@ def test_increment_slow(depth=5, dur=0.5):
     prev = File("test0.txt")
     # Create the first entry in the dictionary holding the futures
     futs = {}
-    print("**************TYpe : ", type(dur), dur)
+    print("************** Type: ", type(dur), dur)
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
         output = File("test{0}.txt".format(i))
