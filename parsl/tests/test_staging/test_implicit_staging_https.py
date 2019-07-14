@@ -109,6 +109,8 @@ def test_implicit_staging_https_additional_executor():
 
 if __name__ == "__main__":
 
+    parsl.load()
+
     import argparse
 
     parser = argparse.ArgumentParser()
