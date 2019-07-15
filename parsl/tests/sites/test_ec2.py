@@ -1,16 +1,14 @@
-import argparse
-
 import pytest
 
 import parsl
 
 if __name__ == "__main__":
-    parsl.set_stream_logger() # before import config, to get logging show from config declaration
-                              # as it looks like the AWS initializer is doing more than just
-                              # creating data structures
+    parsl.set_stream_logger()
+    # initialise logging before importing config, to get logging
+    # from config declaration # as it looks like the AWS initializer
+    # is doing more than just creating data structures
 
 from parsl.app.app import App
-from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.ec2_single_node import config
 
 import logging
