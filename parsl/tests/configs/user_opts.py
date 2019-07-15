@@ -109,5 +109,5 @@ try:
     from .local_user_opts import local_user_opts
     user_opts.update(local_user_opts)
 
-except ModuleNotFoundError:
+except ImportError:
     pass
