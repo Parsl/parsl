@@ -9,7 +9,7 @@ from parsl.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.executors.base import ParslExecutor
-from parsl.executors.errors import *
+from parsl.executors.errors import ScalingFailed
 from parsl.executors.ipp_controller import Controller
 from parsl.utils import wait_for_file
 
