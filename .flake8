@@ -9,7 +9,7 @@
 # E129: Visual indent to not match indent as next line, counter eg here:
 # https://github.com/PyCQA/pycodestyle/issues/386
 # W504: Raised by flake8 even when it is followed
-ignore = D203, E124, E126, F405, E402, E129, W605, W504
+ignore = D203, E124, E126, F405, E402, E129, W504
 max-line-length = 160
 exclude = parsl/executors/serialize/, test_import_fail.py
 # E741 disallows ambiguous single letter names which look like numbers
