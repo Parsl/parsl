@@ -1,16 +1,13 @@
-"""Testing bash apps
-"""
 import parsl
-from parsl import *
+from parsl import python_app
+from parsl.configs.htex_local import config
+# from parsl.configs.local_threads import config
 
 import time
 import argparse
 
-workers = ThreadPoolExecutor(max_workers=100)
-dfk = DataFlowKernel(executors=[workers])
 
-
-@App('python', dfk)
+@python_app
 def increment(x):
     return x + 1
 
@@ -20,27 +17,28 @@ def test_stress(count=1000):
 
     start = time.time()
     x = []
-    for i in range(int(count)):
-        fu = increment(i)
-        x.append(fu)
+    for i in range(count):
+        f = increment(i)
+        x.append(f)
     end = time.time()
-    print("Launched {0} tasks in {1} s".format(count, end - start))
+    print("Launched {0} tasks in {1:.2f} s".format(count, end - start))
 
-    [fu.result() for fu in x]
+    [f.result() for f in x]
     end = time.time()
-    print("Completed {0} tasks in {1} s".format(count, end - start))
+    print("Completed {0} tasks in {1:.2f} s".format(count, end - start))
 
 
 if __name__ == '__main__':
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="100",
+    parser.add_argument("-c", "--count", type=int, default=1000,
                         help="width of the pipeline")
     parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
+                        help="Enable stream logging")
     args = parser.parse_args()
 
     if args.debug:
         parsl.set_stream_logger()
 
-    test_stress(count=int(args.count))
+    test_stress(count=args.count)

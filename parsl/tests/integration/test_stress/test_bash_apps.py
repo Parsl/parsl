@@ -1,7 +1,7 @@
 """Testing bash apps
 """
 import parsl
-from parsl import *
+from parsl import App, DataFlowKernel, ThreadPoolExecutor
 
 print("Parsl version: ", parsl.__version__)
 
