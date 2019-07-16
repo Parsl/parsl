@@ -19,7 +19,7 @@ def multiline(
     echo {inputs[2]} &> {outputs[2]}
     echo "Testing STDOUT"
     echo "Testing STDERR" 1>&2
-    """
+    """.format(inputs=inputs, outputs=outputs)
 
 
 def test_multiline():

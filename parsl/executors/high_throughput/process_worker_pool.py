@@ -4,12 +4,12 @@ import argparse
 import logging
 import os
 import sys
-import sys
 import platform
 # import random
 import threading
 import pickle
 import time
+import datetime
 import queue
 import uuid
 import zmq
@@ -163,8 +163,11 @@ class Manager(object):
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,
                'os': platform.system(),
-               'hname': platform.node(),
+               'hostname': platform.node(),
                'dir': os.getcwd(),
+               'cpu_count': psutil.cpu_count(logical=False),
+               'total_memory': psutil.virtual_memory().total,
+               'reg_time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg

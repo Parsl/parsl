@@ -108,14 +108,14 @@ class UDPRadio(object):
                                    int(time.time()),  # epoch timestamp
                                    message_type,
                                    message))
-        except Exception as e:
-            print("Exception during pickling {}".format(e))
+        except Exception:
+            logging.exception("Exception during pickling", exc_info=True)
             return
 
         try:
             x = self.sock.sendto(buffer, (self.ip, self.port))
         except socket.timeout:
-            print("Could not send message within timeout limit")
+            logging.error("Could not send message within timeout limit")
             return False
         return x
 
@@ -194,7 +194,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self):
+    def start(self, run_id):
 
         if self.logdir is None:
             self.logdir = "."
@@ -223,9 +223,10 @@ class MonitoringHub(RepresentationMixin):
         self.stop_q = Queue(maxsize=10)
         self.priority_msgs = Queue()
         self.resource_msgs = Queue()
+        self.node_msgs = Queue()
 
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.priority_msgs, self.resource_msgs, self.stop_q),
+                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs, self.stop_q),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
@@ -233,12 +234,13 @@ class MonitoringHub(RepresentationMixin):
                                           "client_port": self.dfk_port,
                                           "logdir": self.logdir,
                                           "logging_level": self.logging_level,
+                                          "run_id": run_id
                                   },
         )
         self.queue_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
-                                args=(self.priority_msgs, self.resource_msgs,),
+                                args=(self.priority_msgs, self.node_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": self.logging_level,
                                         "db_url": self.logging_endpoint,
@@ -247,13 +249,13 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc.start()
 
         try:
-            udp_dish_port = comm_q.get(block=True, timeout=120)
+            udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
         except queue.Empty:
             self.logger.error("Hub has not completed initialization in 120s. Aborting")
             raise Exception("Hub failed to start")
 
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_dish_port)
-        return self.monitoring_hub_url
+        return ic_port
 
     def send(self, mtype, message):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
@@ -307,6 +309,7 @@ class Hub(object):
 
                  monitoring_hub_address="127.0.0.1",
                  logdir=".",
+                 run_id=None,
                  logging_level=logging.DEBUG,
                  atexit_timeout=3    # in seconds
                 ):
@@ -348,6 +351,7 @@ class Hub(object):
         self.hub_port = hub_port
         self.hub_address = hub_address
         self.atexit_timeout = atexit_timeout
+        self.run_id = run_id
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -371,7 +375,15 @@ class Hub(object):
         self.dfk_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
         self.dfk_channel.connect("tcp://{}:{}".format(client_address, client_port))
 
-    def start(self, priority_msgs, resource_msgs, stop_q):
+        self.ic_channel = self._context.socket(zmq.DEALER)
+        self.ic_channel.set_hwm(0)
+        self.ic_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
+        self.logger.debug("hub_address: {}. hub_port_range {}".format(hub_address, hub_port_range))
+        self.ic_port = self.ic_channel.bind_to_random_port("tcp://*",
+                                                           min_port=hub_port_range[0],
+                                                           max_port=hub_port_range[1])
+
+    def start(self, priority_msgs, node_msgs, resource_msgs, stop_q):
 
         while True:
             try:
@@ -384,10 +396,19 @@ class Hub(object):
 
             try:
                 msg = self.dfk_channel.recv_pyobj()
-                self.logger.debug("Got ZMQ Message: {}".format(msg))
+                self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
                 priority_msgs.put((msg, 0))
                 if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
                     break
+            except zmq.Again:
+                pass
+
+            try:
+                msg = self.ic_channel.recv_pyobj()
+                msg[1]['run_id'] = self.run_id
+                msg = (msg[0], msg[1])
+                self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
+                node_msgs.put((msg, 0))
             except zmq.Again:
                 pass
 
@@ -404,10 +425,10 @@ class Hub(object):
         stop_q.put("STOP")
 
 
-def hub_starter(comm_q, priority_msgs, resource_msgs, stop_q, *args, **kwargs):
+def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, stop_q, *args, **kwargs):
     hub = Hub(*args, **kwargs)
-    comm_q.put(hub.hub_port)
-    hub.start(priority_msgs, resource_msgs, stop_q)
+    comm_q.put((hub.hub_port, hub.ic_port))
+    hub.start(priority_msgs, node_msgs, resource_msgs, stop_q)
 
 
 def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
@@ -416,6 +437,14 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
     """
     import psutil
     import platform
+
+    import logging
+    import time
+
+    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+    logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
+        logbase="/tmp", task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
+    logging.debug("start of monitor")
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
@@ -431,6 +460,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
     first_msg = True
 
     while True:
+        logging.debug("start of monitoring loop")
         try:
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
@@ -439,7 +469,11 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             d['hostname'] = platform.node()
             d['first_msg'] = first_msg
             d['timestamp'] = datetime.datetime.now()
+
+            logging.debug("getting children")
             children = pm.children(recursive=True)
+            logging.debug("got children")
+
             d["psutil_cpu_count"] = psutil.cpu_count()
             d['psutil_process_memory_virtual'] = pm.memory_info().vms
             d['psutil_process_memory_resident'] = pm.memory_info().rss
@@ -449,8 +483,9 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             try:
                 d['psutil_process_disk_write'] = pm.io_counters().write_bytes
                 d['psutil_process_disk_read'] = pm.io_counters().read_bytes
-            except psutil._exceptions.AccessDenied:
+            except Exception:
                 # occassionally pid temp files that hold this information are unvailable to be read so set to zero
+                logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0
             for child in children:
@@ -463,12 +498,16 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
                 try:
                     d['psutil_process_disk_write'] += child.io_counters().write_bytes
                     d['psutil_process_disk_read'] += child.io_counters().read_bytes
-                except psutil._exceptions.AccessDenied:
+                except Exception:
                     # occassionally pid temp files that hold this information are unvailable to be read so add zero
+                    logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
-
-        finally:
+            logging.debug("sending message")
             radio.send(MessageType.TASK_INFO, task_id, d)
-            time.sleep(sleep_dur)
             first_msg = False
+        except Exception:
+            logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
+
+        logging.debug("sleeping")
+        time.sleep(sleep_dur)

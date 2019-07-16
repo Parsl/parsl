@@ -4,7 +4,7 @@ import os
 
 import paramiko
 from parsl.channels.base import Channel
-from parsl.channels.errors import *
+from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException, FileExists
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -206,7 +206,7 @@ class SSHChannel(Channel, RepresentationMixin):
             os.makedirs(local_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.exception("Failed to create script_dir: {0}".format(script_dir))
+                logger.exception("Failed to create local_dir: {0}".format(local_dir))
                 raise BadScriptPath(e, self.hostname)
 
         # Easier to check this than to waste time trying to pull file and

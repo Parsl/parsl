@@ -9,11 +9,10 @@ from parsl.tests.configs.local_threads import config
 
 @App('bash')
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
-    # Place double braces to avoid python complaining about missing keys for {item = $1}
     cmd_line = """
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
-    """
+    """.format(inputs=inputs, outputs=outputs)
     return cmd_line
 
 
@@ -23,7 +22,7 @@ def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
     sleep {0}
-    """
+    """.format(dur, inputs=inputs, outputs=outputs)
     return cmd_line
 
 

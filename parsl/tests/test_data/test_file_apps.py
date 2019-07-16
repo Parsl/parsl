@@ -11,13 +11,16 @@ from parsl.tests.configs.local_threads import config
 @App('bash')
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
-    return """echo %s
-    cat %s &> {outputs[0]}
-    """ % (infiles, infiles)
+    return """echo {i}
+    cat {i} &> {o}
+    """.format(i=infiles, o=outputs[0])
 
 
 @pytest.mark.usefixtures('setup_data')
 def test_files():
+
+    if os.path.exists('cat_out.txt'):
+        os.remove('cat_out.txt')
 
     fs = [File('data/' + f) for f in os.listdir('data')]
     x = cat(inputs=fs, outputs=[File('cat_out.txt')],
@@ -31,9 +34,9 @@ def test_files():
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
     return """
-    x=$(cat {inputs[0]})
-    echo $(($x+1)) > {outputs[0]}
-    """
+    x=$(cat {i})
+    echo $(($x+1)) > {o}
+    """.format(i=inputs[0], o=outputs[0])
 
 
 @pytest.mark.usefixtures('setup_data')
@@ -48,6 +51,10 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
+
+        if os.path.exists('test{0}.txt'.format(i)):
+            os.remove('test{0}.txt'.format(i))
+
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
                        outputs=[File("test{0}.txt".format(i))],

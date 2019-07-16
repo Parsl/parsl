@@ -10,8 +10,7 @@ except ImportError:
 else:
     _mpi_enabled = True
 
-from parsl.errors import *
-from parsl.executors.errors import *
+from parsl.errors import OptionalModuleMissing
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
 
 from parsl.utils import RepresentationMixin

@@ -67,6 +67,8 @@ class AppBase(metaclass=ABCMeta):
             self.kwargs['stdout'] = params['stdout'].default
         if 'stderr' in params:
             self.kwargs['stderr'] = params['stderr'].default
+        if 'walltime' in params:
+            self.kwargs['walltime'] = params['walltime'].default
         self.outputs = params['outputs'].default if 'outputs' in params else []
         self.inputs = params['inputs'].default if 'inputs' in params else []
 

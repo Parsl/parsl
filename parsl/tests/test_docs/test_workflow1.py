@@ -1,3 +1,4 @@
+import os
 import parsl
 
 from parsl.app.app import App
@@ -17,13 +18,17 @@ def generate(limit):
 
 @App('bash')
 def save(message, outputs=[]):
-    return 'echo %s &> {outputs[0]}' % (message)
+    return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
 
 
 def test_procedural(N=2):
     """Procedural workflow example from docs on
     Composing a workflow
     """
+
+    if os.path.exists('output.txt'):
+        os.remove('output.txt')
+
     message = generate(N)
 
     saved = save(message, outputs=[File('output.txt')])

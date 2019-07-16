@@ -27,7 +27,7 @@ Simple sequential or procedural workflows can be created by passing an AppFuture
       # Write a message to a file
       @bash_app
       def save(message, outputs=[]):
-            return 'echo %s &> {outputs[0]}' % (message)
+            return 'echo {} &> {}'.format(message, outputs[0])
 
       message = generate(10)
 
@@ -95,7 +95,7 @@ Parallel dataflows can be developed by passing data between apps. In the followi
 
       @bash_app
       def generate(outputs=[]):
-          return 'echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}'
+          return 'echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {}'.format(outputs[0])
 
       @bash_app
       def concat(inputs=[], outputs=[], stdout='stdout.txt', stderr='stderr.txt'):

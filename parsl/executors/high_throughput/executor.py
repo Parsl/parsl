@@ -16,7 +16,7 @@ from ipyparallel.serialize import deserialize_object  # ,serialize_object
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import *
+from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
 from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.provider_base import ExecutionProvider
@@ -188,6 +188,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self._task_counter = 0
         self.address = address
+        self.hub_address = None  # set to the correct hub address in dfk
+        self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
@@ -403,6 +405,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                                            self.command_client.port),
                                           "worker_ports": self.worker_ports,
                                           "worker_port_range": self.worker_port_range,
+                                          "hub_address": self.hub_address,
+                                          "hub_port": self.hub_port,
                                           "logdir": "{}/{}".format(self.run_dir, self.label),
                                           "suppress_failure": self.suppress_failure,
                                           "heartbeat_threshold": self.heartbeat_threshold,
