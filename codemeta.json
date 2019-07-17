@@ -58,6 +58,13 @@
             "givenName": "Ian",
             "familyName": "Foster",
             "email": "foster@anl.gov"
+        }, 
+        {
+            "@id":"http://orcid.org/0000-0002-0762-2684",
+            "@type": "Person",
+            "givenName": "Ben",
+            "familyName": "Glick",
+            "email": "glick@lclark.edu"
         }
     ],
     "softwareRequirements": [

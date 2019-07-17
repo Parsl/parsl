@@ -4,7 +4,6 @@ import argparse
 import logging
 import os
 import sys
-import sys
 import platform
 # import random
 import threading

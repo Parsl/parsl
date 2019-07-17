@@ -1,7 +1,7 @@
 from flask import render_template
 from flask import current_app as app
 import pandas as pd
-from parsl.monitoring.visualization.models import *
+from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot

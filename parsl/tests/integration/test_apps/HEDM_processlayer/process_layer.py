@@ -15,7 +15,8 @@ Foreach .. from .csv
 
 """
 
-from parsl import *
+import parsl
+from parsl import App, DataFlowKernel, ThreadPoolExecutor
 import os
 import shutil
 import random
