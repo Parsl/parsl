@@ -139,6 +139,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.launcher = launcher
         self.linger = linger
         self.resources = {}
+        self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(self.label)
 
         env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
         if profile is None and key_file is None and not env_specified:
@@ -153,7 +154,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         state_file_exists = False
         try:
-            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(self.label)
             self.read_state_file(self.state_file)
             state_file_exists = True
         except Exception:
