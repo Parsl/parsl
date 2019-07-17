@@ -133,9 +133,6 @@ class DataManager(ParslExecutor):
             - self
             - file (File) : file to stage in
             - executor (str) : an executor the file is going to be staged in to.
-                                If the executor argument is not specified for a file
-                                with 'globus' scheme, the file will be staged in to
-                                the first executor with the "globus" key in a config.
         """
 
         if file.scheme == 'ftp':
@@ -187,9 +184,6 @@ class DataManager(ParslExecutor):
             - self
             - file (File) - file to stage out
             - executor (str) - Which executor the file is going to be staged out from.
-                                If the executor argument is not specified for a file
-                                with the 'globus' scheme, the file will be staged in to
-                                the first executor with the "globus" key in a config.
         """
 
         if file.scheme == 'http' or file.scheme == 'https':
