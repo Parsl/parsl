@@ -269,7 +269,7 @@ class MonitoringHub(RepresentationMixin):
         if self._dfk_channel and self.monitoring_hub_active:
             self.monitoring_hub_active = False
             self._dfk_channel.close()
-            self.logger.info("Waiting Hub to receive all messages and terminate")
+            self.logger.info("Waiting for Hub to receive all messages and terminate")
             try:
                 msg = self.stop_q.get()
                 self.logger.info("Received {} from Hub".format(msg))
