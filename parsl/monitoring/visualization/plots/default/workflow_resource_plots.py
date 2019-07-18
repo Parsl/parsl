@@ -128,12 +128,12 @@ def resource_efficiency(resource, node, label='CPU'):
 
         if label == 'CPU':
             name1 = 'Used CPU cores'
-            name2 = 'Requested CPU cores'
+            name2 = 'Total CPU cores'
             yaxis = 'Number of CPU cores'
             title = 'CPU usage'
         elif label == 'mem':
             name1 = 'Used memory'
-            name2 = 'Requested memory'
+            name2 = 'Total memory'
             yaxis = 'Memory (GB)'
             title = 'Memory usage'
 
