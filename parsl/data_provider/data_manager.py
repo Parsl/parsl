@@ -18,15 +18,6 @@ class DataManager(ParslExecutor):
     to it, and DataFutures are returned.
     """
 
-    @classmethod
-    def get_data_manager(cls):
-        """Return the DataManager of the currently loaded DataFlowKernel.
-        """
-        from parsl.dataflow.dflow import DataFlowKernelLoader
-        dfk = DataFlowKernelLoader.dfk()
-
-        return dfk.executors['data_manager']
-
     def __init__(self, dfk, max_threads=10):
         """Initialize the DataManager.
 
@@ -113,9 +104,6 @@ class DataManager(ParslExecutor):
             - self
             - file (File) : file to stage in
             - executor (str) : an executor the file is going to be staged in to.
-                                If the executor argument is not specified for a file
-                                with 'globus' scheme, the file will be staged in to
-                                the first executor with the "globus" key in a config.
         """
 
         if file.scheme == 'ftp':
@@ -161,9 +149,6 @@ class DataManager(ParslExecutor):
             - self
             - file (File) - file to stage out
             - executor (str) - Which executor the file is going to be staged out from.
-                                If the executor argument is not specified for a file
-                                with the 'globus' scheme, the file will be staged in to
-                                the first executor with the "globus" key in a config.
         """
 
         if file.scheme == 'http' or file.scheme == 'https':
