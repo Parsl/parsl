@@ -39,7 +39,7 @@ def test_parallel_dataflow():
     for i in range(5):
         if os.path.exists('random-%s.txt' % i):
             os.remove('random-%s.txt' % i)
-        output_files.append(generate(outputs=['random-%s.txt' % i]))
+        output_files.append(generate(outputs=[File('random-%s.txt' % i)]))
 
     # concatenate the files into a single file
     cc = concat(inputs=[i.outputs[0]

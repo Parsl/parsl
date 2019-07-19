@@ -14,7 +14,6 @@ def check_file(parsl_file_obj, mapping, file_type_string):
 
 if __name__ == "__main__":
     name = "parsl"
-    # logger = logging.getLogger(name)
 
     shared_fs = False
     input_function_file = ""
@@ -112,7 +111,6 @@ if __name__ == "__main__":
                                            argname, kwargname)
 
     try:
-        # logger.debug("[RUNNER] Executing: {0}".format(code))
         exec(code, user_ns, user_ns)
     except Exception as e:
         print(e)

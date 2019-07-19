@@ -177,7 +177,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 logger.error("Unable to create task: {}".format(e))
 
                 msg = {"tid": parsl_id,
-                       "result_recieved": False,
+                       "result_received": False,
                        "reason": "Workqueue Task Start Failure",
                        "status": 1}
 
@@ -231,7 +231,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                             reason = "Workqueue system failure\n"
 
                         msg = {"tid": parsl_tid,
-                               "result_recieved": False,
+                               "result_received": False,
                                "reason": reason,
                                "status": status}
 
@@ -249,7 +249,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         f.close()
 
                         msg = {"tid": parsl_tid,
-                               "result_recieved": True,
+                               "result_received": True,
                                "result": result}
                         wq_tasks.remove(t.id)
 
@@ -291,13 +291,13 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
             continue
 
         parsl_tid = item["tid"]
-        recieved = item["result_recieved"]
+        received = item["result_received"]
 
         tasks_lock.acquire()
         future = tasks[parsl_tid]
         tasks_lock.release()
 
-        if recieved is False:
+        if received is False:
             reason = item["reason"]
             status = item["status"]
             future.set_exception(AppFailure(reason, status))
@@ -315,16 +315,31 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
 
 
 class WorkQueueExecutor(ParslExecutor):
-    """Define the strict interface for all Executor classes.
+    """Executor to use Workqueue batch system
 
-    This is a metaclass that only enforces concrete implementations of
-    functionality by the child classes.
+        label: str
+            a human readable label for the executor, unique
+            with respect to other executors.
+        working_dir: str
+            the directory location for parsl to run the process
+        managed: bool
+        project_name: str
+            workqueue process name
+        project_password: str
+            password for the work queue project
+        project_password_file: str
+            password file for the work queue project
+        port: int
+            port to connect to
+        env: dict{str}
+            environmental variables
+        shared_fs: bool
+            define if working in a shared file system or not
+        init_command: str
+            command to run before constructed workqueue commnad
+        see_worker_output: bool
+            choose whether to put worker output to standard out
 
-    In addition to the listed methods, a ParslExecutor instance must always
-    have a member field:
-
-       label: str - a human readable label for the executor, unique
-              with respect to other executors.
 
     """
 
@@ -364,7 +379,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.cancel_value = multiprocessing.Value('i', 1)
 
         if self.project_password is not None and self.project_password_file is not None:
-            logger.debug("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
+            logger.warning("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
             self.project_password_file = None
         if self.project_password_file is not None:
             if os.path.exists(self.project_password_file) is False:
