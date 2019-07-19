@@ -16,14 +16,15 @@ from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
 from parsl.executors.workqueue import workqueue_worker
 
-WORK_QUEUE_DEFAULT_PORT = -1
-WORK_QUEUE_RESULT_SUCCESS = 0
-
 from work_queue import WorkQueue
 from work_queue import Task
 from work_queue import WORK_QUEUE_DEFAULT_PORT
 from work_queue import WORK_QUEUE_INPUT
 from work_queue import WORK_QUEUE_OUTPUT
+from work_queue import WORK_QUEUE_RESULT_SUCCESS
+from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
+from work_queue import cctools_debug_flags_set
+from work_queue import cctools_debug_config_file
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +153,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 continue
             if env is not None:
                 for var in env:
-                    t.specify_environment_variable(var, self.env[var])
+                    t.specify_environment_variable(var, env[var])
 
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
@@ -175,7 +176,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
 
-                msg = {"tid": parsl_tid,
+                msg = {"tid": parsl_id,
                        "result_recieved": False,
                        "reason": "Workqueue Task Start Failure",
                        "status": 1}
