@@ -1,43 +1,14 @@
 import os
 import logging
-import requests
-import ftplib
 import concurrent.futures as cf
 from parsl.data_provider.scheme import GlobusScheme
 from parsl.executors.base import ParslExecutor
+from parsl.data_provider.ftp import _ftp_stage_in_app
 from parsl.data_provider.globus import get_globus
+from parsl.data_provider.http import _http_stage_in_app
 from parsl.app.app import python_app
 
 logger = logging.getLogger(__name__)
-
-
-def _http_stage_in(working_dir, outputs=[]):
-    file = outputs[0]
-    if working_dir:
-        os.makedirs(working_dir, exist_ok=True)
-        file.local_path = os.path.join(working_dir, file.filename)
-    else:
-        file.local_path = file.filename
-    resp = requests.get(file.url, stream=True)
-    with open(file.local_path, 'wb') as f:
-        for chunk in resp.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
-
-
-def _ftp_stage_in(working_dir, outputs=[]):
-    file = outputs[0]
-    if working_dir:
-        os.makedirs(working_dir, exist_ok=True)
-        file.local_path = os.path.join(working_dir, file.filename)
-    else:
-        file.local_path = file.filename
-    with open(file.local_path, 'wb') as f:
-        ftp = ftplib.FTP(file.netloc)
-        ftp.login()
-        ftp.cwd(os.path.dirname(file.path))
-        ftp.retrbinary('RETR {}'.format(file.filename), f.write)
-        ftp.quit()
 
 
 class DataManager(ParslExecutor):
@@ -137,12 +108,12 @@ class DataManager(ParslExecutor):
 
         if file.scheme == 'ftp':
             working_dir = self.dfk.executors[executor].working_dir
-            stage_in_app = self._ftp_stage_in_app(executor=executor)
+            stage_in_app = _ftp_stage_in_app(self, executor=executor)
             app_fut = stage_in_app(working_dir, outputs=[file])
             return app_fut._outputs[0]
         elif file.scheme == 'http' or file.scheme == 'https':
             working_dir = self.dfk.executors[executor].working_dir
-            stage_in_app = self._http_stage_in_app(executor=executor)
+            stage_in_app = _http_stage_in_app(self, executor=executor)
             app_fut = stage_in_app(working_dir, outputs=[file])
             return app_fut._outputs[0]
         elif file.scheme == 'globus':
@@ -152,12 +123,6 @@ class DataManager(ParslExecutor):
             return app_fut._outputs[0]
         else:
             raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
-
-    def _ftp_stage_in_app(self, executor):
-        return python_app(executors=[executor], data_flow_kernel=self.dfk)(_ftp_stage_in)
-
-    def _http_stage_in_app(self, executor):
-        return python_app(executors=[executor], data_flow_kernel=self.dfk)(_http_stage_in)
 
     def _globus_stage_in_app(self):
         return python_app(executors=['data_manager'], data_flow_kernel=self.dfk)(self._globus_stage_in)
