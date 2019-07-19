@@ -54,9 +54,6 @@ class PythonApp(AppBase):
              - Arbitrary
 
         Returns:
-             If outputs=[...] was a kwarg then:
-                   App_fut, [Data_Futures...]
-             else:
                    App_fut
 
         """

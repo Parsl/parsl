@@ -1,8 +1,4 @@
 """This module implements DataFutures.
-
-We have two basic types of futures:
-    1. DataFutures which represent data objects
-    2. AppFutures which represent the futures on App/Leaf tasks.
 """
 import os
 import logging
