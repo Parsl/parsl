@@ -828,7 +828,7 @@ class DataFlowKernel(object):
 
         This involves releasing all resources explicitly.
 
-        If the executors are managed (created by the DFK), then we call scale_in on each of
+        If the executors are managed by the DFK, then we call scale_in on each of
         the executors and call executor.shutdown. Otherwise, executor cleanup is left to
         the user.
         """
