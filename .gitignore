@@ -12,6 +12,10 @@ web/*
 api/*
 .idea/*
 
+# local user configuration which should never be
+# version controlled
+./parsl/tests/configs/local_user_opts.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
