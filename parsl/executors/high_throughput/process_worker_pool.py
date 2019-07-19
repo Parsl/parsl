@@ -521,10 +521,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    try:
-        os.makedirs(os.path.join(args.logdir, args.uid))
-    except FileExistsError:
-        pass
+    os.makedirs(os.path.join(args.logdir, args.uid), exist_ok=True)
 
     try:
         start_file_logger('{}/{}/manager.log'.format(args.logdir, args.uid),
