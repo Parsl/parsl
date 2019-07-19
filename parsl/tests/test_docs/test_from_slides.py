@@ -21,7 +21,7 @@ def test_slides():
     if os.path.exists('hello1.txt'):
         os.remove('hello1.txt')
 
-    hello = echo("Hello World!", outputs=['hello1.txt'])
+    hello = echo("Hello World!", outputs=[File('hello1.txt')])
 
     message = cat(inputs=[hello.outputs[0]])
 

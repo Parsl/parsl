@@ -9,7 +9,6 @@ import queue
 
 from ipyparallel.serialize import pack_apply_message, deserialize_object
 
-from parsl.executors.errors import *
 from parsl.app.errors import AppFailure
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
@@ -20,7 +19,11 @@ from parsl.executors.workqueue import workqueue_worker
 WORK_QUEUE_DEFAULT_PORT = -1
 WORK_QUEUE_RESULT_SUCCESS = 0
 
-from work_queue import *
+from work_queue import WorkQueue
+from work_queue import Task
+from work_queue import WORK_QUEUE_DEFAULT_PORT
+from work_queue import WORK_QUEUE_INPUT
+from work_queue import WORK_QUEUE_OUTPUT, 
 
 logger = logging.getLogger(__name__)
 
