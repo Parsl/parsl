@@ -23,7 +23,7 @@ from work_queue import WorkQueue
 from work_queue import Task
 from work_queue import WORK_QUEUE_DEFAULT_PORT
 from work_queue import WORK_QUEUE_INPUT
-from work_queue import WORK_QUEUE_OUTPUT, 
+from work_queue import WORK_QUEUE_OUTPUT
 
 logger = logging.getLogger(__name__)
 
