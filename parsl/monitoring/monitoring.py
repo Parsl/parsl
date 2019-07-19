@@ -100,7 +100,9 @@ class UDPRadio(object):
             Arbitrary pickle-able object that is to be sent
 
         Returns:
-            # bytes sent
+            # bytes sent,
+         or False if there was a timeout during send,
+         or None if there was an exception during pickling
         """
         x = 0
         try:
