@@ -76,7 +76,8 @@ class DataFlowKernel(object):
                     'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
-        parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+        parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=config.logging_level,
+                              file_level=config.stream_file_logging_level)
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         logger.info("Parsl version: {}".format(get_version()))
 

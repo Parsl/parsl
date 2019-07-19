@@ -50,6 +50,13 @@ class Config(RepresentationMixin):
     usage_tracking : bool, optional
         Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
+    logging_level : int, optional
+        Level of logging to report for to the main Python logger outputs (often STDOUT). Accepts values of the int
+        representation of the Python logging module levels (e.g. logger.DEBUG = 10). Default is logging.DEBUG
+    stream_file_logging_level : int, optional
+        Level of logging to report for to the streams and files separate from the main loggers. Accepts values of the
+        int representation of the Python logging module levels (e.g. logger.DEBUG = 10). Default is same value as
+        logging_level
     """
 
     @typeguard.typechecked
@@ -65,7 +72,9 @@ class Config(RepresentationMixin):
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
                  monitoring: Optional[MonitoringHub] = None,
-                 usage_tracking: bool = False):
+                 usage_tracking: bool = False,
+                 logging_level: int = logging.DEBUG,
+                 stream_file_logging_level: Optional[int] = None):
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
@@ -91,6 +100,9 @@ class Config(RepresentationMixin):
         self.strategy = strategy
         self.usage_tracking = usage_tracking
         self.monitoring = monitoring
+        self.logging_level = logging_level
+        self.stream_file_logging_level = (logging_level if stream_file_logging_level is None
+                                          else stream_file_logging_level)
 
     @property
     def executors(self):

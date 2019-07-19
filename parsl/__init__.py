@@ -79,12 +79,14 @@ wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
 @typeguard.typechecked
-def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
+def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, stream_level: Optional[int] = None,
+                      format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
          - name (string) : Set the logger name.
          - level (logging.LEVEL) : Set to logging.DEBUG by default.
+         - stream_level (logging.LEVEL) : Set to same value as level by default
          - format_string (string) : Set to None by default.
 
     Returns:
@@ -94,10 +96,11 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
         # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
         format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
+    stream_level = level if stream_level is None else stream_level
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(level)
     handler = logging.StreamHandler()
-    handler.setLevel(level)
+    handler.setLevel(stream_level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -107,16 +110,19 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
     # and then discarded. (see #240)
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
+    futures_logger.setLevel(level)
 
 
 @typeguard.typechecked
-def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
+def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG,
+                    file_level: Optional[int] = None, format_string: Optional[str] = None):
     """Add a stream log handler.
 
     Args:
         - filename (string): Name of the file to write logs to
         - name (string): Logger name
         - level (logging.LEVEL): Set the logging level.
+        - file_level (logging.LEVEL) : Set to same value as level by default
         - format_string (string): Set the format string
 
     Returns:
@@ -125,10 +131,11 @@ def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEB
     if format_string is None:
         format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
+    file_level = level if file_level is None else file_level
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(level)
     handler = logging.FileHandler(filename)
-    handler.setLevel(level)
+    handler.setLevel(file_level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -137,6 +144,7 @@ def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEB
     # concurrent.futures
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
+    futures_logger.setLevel(level)
 
 
 class NullHandler(logging.Handler):
