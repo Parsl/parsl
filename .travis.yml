@@ -8,12 +8,16 @@ env:
     - HYDRA_LAUNCHER=fork
     - OMPI_MCA_rmaps_base_oversubscribe=yes
     - MPI=mpich
+    - CCTOOLS_VERSION=7.0.11
 
 before_install:
     - sudo apt-get update -q
     - python$PY -m pip install Cython
     - python$PY -m pip install numpy
     - bash parsl/executors/extreme_scale/install-mpi.sh $MPI
+    - bash parsl/executors/workqueue/install-workqueue.sh
+    - export PATH=$PATH:/tmp/cctools/bin
+    - export PYTHONPATH=/tmp/cctools/lib/python3.5/site-packages
     - python$PY --version
     - python$PY -m cython --version
     - python$PY -c "import numpy;print(numpy.__version__)"
@@ -46,8 +50,11 @@ script:
 
     - (for test in parsl/tests/test*/test*; do pytest $test -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
     - (for test in parsl/tests/test*/test*; do pytest $test -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
-      # allow exit code 5; this means pytest did not run a test in the
-      # specified file
+    - work_queue_worker localhost 9000 &> /dev/null &
+    - (for test in parsl/tests/test*/test*; do pytest $test -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
+    - kill -3 $(ps aux | grep -E -e "[0-9]+:[0-9]+ work_queue_worker" | tr -s ' ' | cut -f 2 -d " ")
+    # allow exit code 5; this means pytest did not run a test in the
+    # specified file
 
     # these tests run with specific configs loaded within the tests themselves.
     # This mode is enabled with: --config local

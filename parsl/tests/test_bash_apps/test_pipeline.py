@@ -2,6 +2,8 @@ import argparse
 
 import parsl
 from parsl.app.app import App
+from parsl.data_provider.files import File
+
 from parsl.tests.configs.local_threads import config
 
 
@@ -31,13 +33,14 @@ def test_increment(depth=5):
     open("test0.txt", 'w').write('0\n')
 
     # Create the first entry in the dictionary holding the futures
-    prev = "test0.txt"
+    prev = File("test0.txt")
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
+        output = File("test{0}.txt".format(i))
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
-                       outputs=["test{0}.txt".format(i)],
+                       outputs=[output],
                        stdout="incr{0}.out".format(i),
                        stderr="incr{0}.err".format(i))
         [prev] = fu.outputs
@@ -58,17 +61,18 @@ def test_increment_slow(depth=5, dur=0.5):
     # Create the first file
     open("test0.txt", 'w').write('0\n')
 
+    prev = File("test0.txt")
     # Create the first entry in the dictionary holding the futures
-    prev = "test0.txt"
     futs = {}
     print("**************TYpe : ", type(dur), dur)
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
+        output = File("test{0}.txt".format(i))
         fu = slow_increment(dur,
                             # Depend on the future from previous call
                             inputs=[prev],
                             # Name the file to be created here
-                            outputs=["test{0}.txt".format(i)],
+                            outputs=[output],
                             stdout="incr{0}.out".format(i),
                             stderr="incr{0}.err".format(i))
         [prev] = fu.outputs

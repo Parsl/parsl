@@ -7,6 +7,7 @@ import pytest
 
 import parsl
 from parsl.app.app import App
+from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
@@ -110,13 +111,13 @@ def cat(inputs=[], outputs=[], stdout='cat.out', stderr='cat.err'):
 def test_5():
     """Testing behavior of outputs """
     # Call echo specifying the outputfile
-    hello = echo("Hello World!", outputs=['hello1.txt'])
+    hello = echo("Hello World!", outputs=[File('hello1.txt')])
 
     # the outputs attribute of the AppFuture is a list of DataFutures
     print(hello.outputs)
 
     # This step *cat*s hello1.txt to hello2.txt
-    hello2 = cat(inputs=[hello.outputs[0]], outputs=['hello2.txt'])
+    hello2 = cat(inputs=[hello.outputs[0]], outputs=[File('hello2.txt')])
 
     hello2.result()
     with open(hello2.outputs[0].result().filepath, 'r') as f:
