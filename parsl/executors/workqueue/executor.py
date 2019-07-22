@@ -35,6 +35,7 @@ else:
 
 logger = logging.getLogger(__name__)
 
+
 def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           queue_lock=threading.Lock(),
                           launch_cmd=None,
@@ -333,7 +334,6 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         except queue.Empty:
             continue
 
-
         parsl_tid = item["tid"]
         received = item["result_received"]
 
@@ -600,20 +600,20 @@ class WorkQueueExecutor(ParslExecutor):
             # Obtain function information and put into dictionary
             source_code = inspect.getsource(func)
             name = func.__name__
-            function_info = { "source code": source_code,
-                              "name": name,
-                              "args": args,
-                              "kwargs": kwargs }
+            function_info = {"source code": source_code,
+                             "name": name,
+                             "args": args,
+                             "kwargs": kwargs}
 
             # Pack the function data into file
             f = open(function_data_file, "wb")
             pickle.dump(function_info, f)
             f.close()
         else:
-            # Serialize function information 
-            function_info = pack_apply_message(func, args, kwargs, 
-                                        buffer_threshold=1024*1024,
-                                        item_threshold=1024)
+            # Serialize function information
+            function_info = pack_apply_message(func, args, kwargs,
+                                               buffer_threshold=1024 * 1024,
+                                               item_threshold=1024)
 
             # Pack the function data into file
             f = open(function_data_file, "wb")
