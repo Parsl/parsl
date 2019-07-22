@@ -432,6 +432,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.registered_files = set()
         self.worker_output = see_worker_output
         self.full = full_debug
+        self.source = source
         self.cancel_value = multiprocessing.Value('i', 1)
 
         # Resolve ambiguity when password and password_file are both specified
