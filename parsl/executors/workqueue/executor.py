@@ -33,9 +33,6 @@ except ImportError:
 else:
     _work_queue_enabled = True
 
-WORK_QUEUE_RESULT_SUCCESS = 0
-WORK_QUEUE_RESULT_OUTPUT_MISSING = 2
-
 logger = logging.getLogger(__name__)
 
 def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
@@ -243,8 +240,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                                 reason += "problem writing out function result"
                             else:
                                 reason += "unable to process wrapper script failure"
-                            reason += "\nTrace:\n" + t.output
-                            logger.debug("WorkQueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
                         # WorkQueue system failure
                         else:
                             reason = "WorkQueue System Failure: "
@@ -362,7 +357,6 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
             else:
                 future_fail = pickle.loads(future_update)
                 exc = RemoteExceptionWrapper(*future_fail)
-                logger.debug("**************************** exc type: {}******************".format(type(exc)))
                 try:
                     exc.reraise()
                 except Exception as e:
