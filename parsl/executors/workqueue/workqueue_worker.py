@@ -129,12 +129,12 @@ if __name__ == "__main__":
     # Import function source code and create function call
     if source:
         source_list = source_code.split('\n')[1:]
-        source = ""
+        full_source = ""
         for line in source_list:
-            source = source + line + "\n"
+            full_source = full_source + line + "\n"
         code = "{0} = {1}(*{2}, **{3})".format(resultname, name,
                                                argname, kwargname)
-        code = source + code
+        code = full_source + code
     # Otherwise, only import function call
     else:
         fname = prefix + "f"
