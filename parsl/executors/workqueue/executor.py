@@ -420,7 +420,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.shared_files = set()
         self.registered_files = set()
         self.worker_output = see_worker_output
-        self.full = False     # Resource Monitor 
+        self.full = False   
         self.source = source
         self.cancel_value = multiprocessing.Value('i', 1)
 
