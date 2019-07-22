@@ -12,7 +12,7 @@ extras_require = {
         'sqlalchemy_utils',
         'pydot',
         'networkx',
-        'Flask',
+        'Flask>=1.0.2',
         'flask_sqlalchemy',
         'pandas',
         'plotly',
