@@ -27,7 +27,7 @@ before_install:
 # command to install dependencies
 install:
     - pip install -r requirements.txt
-    - pip install .[extreme_scale] .[monitoring]
+    - pip install .[extreme_scale,monitoring]
 
 # Os tests
 os:
