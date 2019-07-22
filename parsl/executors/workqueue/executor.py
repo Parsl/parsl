@@ -28,6 +28,7 @@ from work_queue import cctools_debug_config_file
 
 logger = logging.getLogger(__name__)
 
+
 def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           queue_lock=threading.Lock(),
                           launch_cmd=None,
@@ -61,7 +62,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         logger.error("Unable to create WorkQueue object: {}".format(e))
         raise e
 
-    # Specify WorkQueue queue attributes 
+    # Specify WorkQueue queue attributes
     if project_name:
         q.specify_name(project_name)
     if project_password:
@@ -105,7 +106,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 continue
             parsl_id = item["task_id"]
 
-            # Extract information about the task 
+            # Extract information about the task
             function_data_loc = item["data_loc"]
             function_data_loc_remote = function_data_loc.split("/")[-1]
             function_result_loc = item["result_loc"]
@@ -159,7 +160,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             if env is not None:
                 for var in env:
                     t.specify_environment_variable(var, env[var])
-            
+
             # Specify script, and data/result files for task
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
@@ -217,7 +218,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     task_result = t.result
                     msg = None
 
-                    # Task failure 
+                    # Task failure
                     if status != 0 or (task_result != WORK_QUEUE_RESULT_SUCCESS and task_result != WORK_QUEUE_RESULT_OUTPUT_MISSING):
                         logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}".format(status, task_result))
                         # Wrapper script failure
@@ -243,21 +244,21 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                                 reason += "unable to generate output file"
                             elif task_result == 4:
                                 reason += "stdout has been truncated"
-                            elif task_result == 1<<3:
+                            elif task_result == 1 << 3:
                                 reason += "task terminated with a signal"
-                            elif task_result == 2<<3:
+                            elif task_result == 2 << 3:
                                 reason += "task used more resources than requested"
-                            elif task_result == 3<<3:
+                            elif task_result == 3 << 3:
                                 reason += "task ran past the specified end time"
-                            elif task_result == 4<<3:
+                            elif task_result == 4 << 3:
                                 reason += "result could not be classified"
-                            elif task_result == 5<<3:
+                            elif task_result == 5 << 3:
                                 reason += "task failed, but not a task error"
-                            elif task_result == 6<<3:
+                            elif task_result == 6 << 3:
                                 reason += "unable to complete after specified number of retries"
-                            elif task_result == 7<<3:
+                            elif task_result == 7 << 3:
                                 reason += "task ran for more than the specified time"
-                            elif task_result == 8<<3:
+                            elif task_result == 8 << 3:
                                 reason += "task needed more space to complete task"
 
                         msg = {"tid": parsl_tid,
@@ -324,7 +325,6 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
             item = collector_queue.get(timeout=1)
         except queue.Empty:
             continue
-
 
         parsl_tid = item["tid"]
         received = item["result_received"]
@@ -420,11 +420,11 @@ class WorkQueueExecutor(ParslExecutor):
         self.shared_files = set()
         self.registered_files = set()
         self.worker_output = see_worker_output
-        self.full = False   
+        self.full = False
         self.source = source
         self.cancel_value = multiprocessing.Value('i', 1)
 
-        # Resolve ambiguity when password and password_file are both specified 
+        # Resolve ambiguity when password and password_file are both specified
         if self.project_password is not None and self.project_password_file is not None:
             logger.warning("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
             self.project_password_file = None
@@ -544,7 +544,7 @@ class WorkQueueExecutor(ParslExecutor):
                         inp = inp[0]
                     if not os.path.exists(os.path.join(".", os.path.split(inp)[0])):
                         continue
-                    # Create "std" files instead of input or output files 
+                    # Create "std" files instead of input or output files
                     if inp in self.registered_files:
                         input_files.append((inp, os.path.basename(inp) + "-1", False, "std"))
                         output_files.append((inp, os.path.basename(inp), False, "std"))
@@ -589,26 +589,25 @@ class WorkQueueExecutor(ParslExecutor):
             # Obtain function information and put into dictionary
             source_code = inspect.getsource(func)
             name = func.__name__
-            function_info = { "source code": source_code,
-                              "name": name,
-                              "args": args,
-                              "kwargs": kwargs }
+            function_info = {"source code": source_code,
+                             "name": name,
+                             "args": args,
+                             "kwargs": kwargs}
 
             # Pack the function data into file
             f = open(function_data_file, "wb")
             pickle.dump(function_info, f)
             f.close()
         else:
-            # Serialize function information 
-            function_info = pack_apply_message(func, args, kwargs, 
-                                        buffer_threshold=1024*1024,
-                                        item_threshold=1024)
+            # Serialize function information
+            function_info = pack_apply_message(func, args, kwargs,
+                                               buffer_threshold=1024 * 1024,
+                                               item_threshold=1024)
 
             # Pack the function data into file
             f = open(function_data_file, "wb")
             pickle.dump(function_info, f)
             f.close()
-
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))

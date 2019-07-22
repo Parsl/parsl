@@ -1,12 +1,13 @@
 import sys
 import pickle
 
+
 def check_file(parsl_file_obj, mapping, file_type_string):
     type_desc = str(type(parsl_file_obj))
     # Rename the file type string to the appropriate string
     if file_type_string is None:
         file_type_string = "<class 'parsl.data_provider.files.File'>"
-    # Obtain the local_path from the mapping 
+    # Obtain the local_path from the mapping
     if type_desc == file_type_string:
         if parsl_file_obj.filepath in mapping:
             parsl_file_obj.local_path = mapping[parsl_file_obj.filepath]
@@ -53,7 +54,7 @@ if __name__ == "__main__":
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
-    # Load function data 
+    # Load function data
     try:
         input_function = open(input_function_file, "rb")
         function_info = pickle.load(input_function)
@@ -131,7 +132,7 @@ if __name__ == "__main__":
         source = ""
         for line in source_list:
             source = source + line + "\n"
-        code = "{0} = {1}(*{2}, **{3})".format(resultname, name, 
+        code = "{0} = {1}(*{2}, **{3})".format(resultname, name,
                                                argname, kwargname)
         code = source + code
     # Otherwise, only import function call
@@ -145,7 +146,7 @@ if __name__ == "__main__":
     try:
         exec(code, user_ns, user_ns)
     # Failed function execution
-    except Exception as e:
+    except Exception:
         from tblib import pickling_support
         pickling_support.install()
         exec_info = sys.exc_info()
@@ -155,7 +156,7 @@ if __name__ == "__main__":
         result = user_ns.get(resultname)
         result_package = {"failure": False, "result": result}
 
-    # Write out function result to the result file 
+    # Write out function result to the result file
     try:
         f = open(output_result_file, "wb")
         pickle.dump(result_package, f)
