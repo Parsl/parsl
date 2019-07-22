@@ -26,9 +26,6 @@ from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
 from work_queue import cctools_debug_flags_set
 from work_queue import cctools_debug_config_file
 
-WORK_QUEUE_RESULT_SUCCESS = 0
-WORK_QUEUE_RESULT_OUTPUT_MISSING = 2
-
 logger = logging.getLogger(__name__)
 
 def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
@@ -178,10 +175,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             for item in std_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
 
-            t.specify_cores(1)
-            t.specify_memory(1000)
-            t.specify_disk(100)
-
             # Submit the task to the WorkQueue object
             logger.debug("Submitting task {} to WorkQueue".format(parsl_id))
             try:
@@ -233,20 +226,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                             reason = "Wrapper Script Failure: "
                             if status == 1:
                                 reason += "problem parsing command line options"
-                            if status == 2:
+                            elif status == 2:
                                 reason += "problem loading function data"
-                            if status == 3:
+                            elif status == 3:
                                 reason += "problem remapping file names"
-                            if status == 4:
+                            elif status == 4:
                                 reason += "problem writing out function result"
-                            if status == 127: 
-                                logger.debug("*****************************************************************************************************************************************************************************************************************************unable to run command on host, blacklisting host {} and resubmitting task".format(t.hostname))
-                                q.blacklist(t.hostname)
-                                t2 = t.clone()
-                                wq_tasks.remove(t.id)
-                                new_id = q.submit(t2)
-                                wq_tasks.add(new_id)
-                                continue
                             reason += "\nTrace:\n" + t.output
                             logger.debug("WorkQueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
                         # WorkQueue system failure
@@ -254,25 +239,25 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                             reason = "WorkQueue System Failure: "
                             if task_result == 1:
                                 reason += "missing input file"
-                            if task_result == 2:
+                            elif task_result == 2:
                                 reason += "unable to generate output file"
-                            if task_result == 4:
+                            elif task_result == 4:
                                 reason += "stdout has been truncated"
-                            if task_result == 1<<3:
+                            elif task_result == 1<<3:
                                 reason += "task terminated with a signal"
-                            if task_result == 2<<3:
+                            elif task_result == 2<<3:
                                 reason += "task used more resources than requested"
-                            if task_result == 3<<3:
+                            elif task_result == 3<<3:
                                 reason += "task ran past the specified end time"
-                            if task_result == 4<<3:
+                            elif task_result == 4<<3:
                                 reason += "result could not be classified"
-                            if task_result == 5<<3:
+                            elif task_result == 5<<3:
                                 reason += "task failed, but not a task error"
-                            if task_result == 6<<3:
+                            elif task_result == 6<<3:
                                 reason += "unable to complete after specified number of retries"
-                            if task_result == 7<<3:
+                            elif task_result == 7<<3:
                                 reason += "task ran for more than the specified time"
-                            if task_result == 8<<3:
+                            elif task_result == 8<<3:
                                 reason += "task needed more space to complete task"
 
                         msg = {"tid": parsl_tid,
@@ -350,7 +335,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         tasks_lock.release()
 
         # Failed task
-        if recieved is False:
+        if received is False:
             reason = item["reason"]
             status = item["status"]
             future.set_exception(AppFailure(reason, status))
@@ -364,7 +349,6 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
             else:
                 future_fail = pickle.loads(future_update)
                 exc = RemoteExceptionWrapper(*future_fail)
-                logger.debug("**************************** exc type: {}******************".format(type(exc)))
                 try:
                     exc.reraise()
                 except Exception as e:
