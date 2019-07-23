@@ -3,7 +3,7 @@ import parsl
 
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
-
+from parsl.data_provider.files import File
 
 # parsl.set_stream_logger()
 
@@ -39,11 +39,11 @@ def test_parallel_dataflow():
     for i in range(5):
         if os.path.exists('random-%s.txt' % i):
             os.remove('random-%s.txt' % i)
-        output_files.append(generate(outputs=['random-%s.txt' % i]))
+        output_files.append(generate(outputs=[File('random-%s.txt' % i)]))
 
     # concatenate the files into a single file
     cc = concat(inputs=[i.outputs[0]
-                        for i in output_files], outputs=["all.txt"])
+                        for i in output_files], outputs=[File("all.txt")])
 
     # calculate the average of the random numbers
     totals = total(inputs=[cc.outputs[0]])

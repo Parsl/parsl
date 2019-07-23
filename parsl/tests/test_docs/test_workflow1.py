@@ -2,6 +2,7 @@ import os
 import parsl
 
 from parsl.app.app import App
+from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
@@ -30,7 +31,7 @@ def test_procedural(N=2):
 
     message = generate(N)
 
-    saved = save(message, outputs=['output.txt'])
+    saved = save(message, outputs=[File('output.txt')])
 
     with open(saved.outputs[0].result().filepath, 'r') as f:
         item = int(f.read().strip())
