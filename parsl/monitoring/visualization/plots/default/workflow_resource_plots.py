@@ -111,17 +111,18 @@ def resource_efficiency(resource, node, label='CPU'):
         elif label == 'mem':
             total = node['total_memory'].sum() / 1024 / 1024 / 1024
 
+        resource['total_cpu_time'] = resource['psutil_process_time_user'] + resource['psutil_process_time_system']
         for task_id in resource['task_id'].unique():
             tmp = resource[resource['task_id'] == task_id]
             tmp['last_timestamp'] = tmp['relative_time'].shift(1)
             if label == 'CPU':
-                tmp['last_cputime'] = tmp['psutil_process_time_user'].shift(1)
+                tmp['last_cputime'] = tmp['total_cpu_time'].shift(1)
             for index, row in tmp.iterrows():
                 if np.isnan(row['last_timestamp']):
                     continue
                 for i in range(int(row['last_timestamp']), int(row['relative_time'])):
                     if label == 'CPU':
-                        diff = (row['psutil_process_time_user'] - row['last_cputime']) / (row['relative_time'] - row['last_timestamp'])
+                        diff = (row['total_cpu_time'] - row['last_cputime']) / (row['relative_time'] - row['last_timestamp'])
                     elif label == 'mem':
                         diff = row['psutil_process_memory_resident'] / 1024 / 1024 / 1024
                     task_plot[i] += diff
