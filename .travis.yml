@@ -54,7 +54,7 @@ script:
     - export PATH=$PATH:/tmp/cctools/bin
     - export PYTHONPATH=/tmp/cctools/lib/python3.5/site-packages
 
-    - pip install .[extreme_scale,monitoring,workqueue]
+    - pip install .[extreme_scale,monitoring]
 
     - work_queue_worker localhost 9000 &> /dev/null &
 
