@@ -7,6 +7,17 @@ with open('requirements.txt') as f:
     install_requires = f.readlines()
 
 extras_require = {
+    'monitoring' : [
+        'sqlalchemy>=1.3.0,!=1.3.4',
+        'sqlalchemy_utils',
+        'pydot',
+        'networkx',
+        'Flask>=1.0.2',
+        'flask_sqlalchemy',
+        'pandas',
+        'plotly',
+        'python-daemon'
+    ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
     'oauth_ssh' : ['oauth-ssh>=0.9'],
