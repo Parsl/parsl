@@ -53,17 +53,17 @@ script:
     - bash parsl/executors/workqueue/install-workqueue.sh
     - export PATH=$PATH:/tmp/cctools/bin
     - export PYTHONPATH=/tmp/cctools/lib/python3.5/site-packages
+
+    - pip install .[extreme_scale,monitoring,workqueue]
+
     - work_queue_worker localhost 9000 &> /dev/null &
 
     - (for test in parsl/tests/test*/test*; do pytest $test -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= ; export PytestReturnCode=$? ; echo pytest return code is $PytestReturnCode ; if [[ "$PytestReturnCode" != 0 ]] && [[ "$PytestReturnCode" != 5 ]]; then exit 1; fi; done ) ;
     - kill -3 $(ps aux | grep -E -e "[0-9]+:[0-9]+ work_queue_worker" | tr -s ' ' | cut -f 2 -d " ")
 
-    - pip install .[extreme_scale,monitoring,workqueue]
-
     - bash parsl/executors/extreme_scale/install-mpi.sh $MPI
     - if [[ "$MPI" == "mpich"   ]]; then mpichversion; fi
     - if [[ "$MPI" == "openmpi" ]]; then ompi_info;    fi
-
 
     # these tests run with specific configs loaded within the tests themselves.
     # This mode is enabled with: --config local
