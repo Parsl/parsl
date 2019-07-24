@@ -1,9 +1,9 @@
 """Exceptions raised by Apps."""
 from functools import wraps
 
-import dill
+# import dill
 import logging
-from tblib import Traceback
+# from tblib import Traceback
 
 from six import reraise
 
@@ -143,24 +143,27 @@ class DependencyError(ParslError):
 class RemoteExceptionWrapper:
     def __init__(self, e_type, e_value, traceback):
 
-        self.e_type = dill.dumps(e_type)
-        self.e_value = dill.dumps(e_value)
-        self.e_traceback = Traceback(traceback)
+        self.e_type = e_type
+        self.e_value = e_value
+        self.e_traceback = traceback
+
+        # self.e_type = dill.dumps(e_type)
+        # self.e_value = dill.dumps(e_value)
+        # self.e_traceback = Traceback(traceback)
+
+        # t = dill.loads(self.e_type)
+        # v = dill.loads(self.e_value)
+        # tb = self.e_traceback.as_traceback()
 
     def reraise(self):
-
-        t = dill.loads(self.e_type)
 
         # the type is logged here before deserialising v and tb
         # because occasionally there are problems deserialising the
         # value (see #785, #548) and the fix is related to the
         # specific exception type.
-        logger.debug("Reraising exception of type {}".format(t))
+        logger.debug("Reraising exception of type {}".format(self.e_type))
 
-        v = dill.loads(self.e_value)
-        tb = self.e_traceback.as_traceback()
-
-        reraise(t, v, tb)
+        reraise(self.e_type, self.e_value, self.e_traceback)
 
 
 def wrap_error(func):
