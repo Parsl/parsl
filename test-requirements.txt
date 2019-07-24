@@ -1,4 +1,5 @@
 flake8
+pandas
 pytest>=3.6.0,<4.1.0
 pytest-cov
 pytest-xdist==1.26.1
