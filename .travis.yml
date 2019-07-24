@@ -19,9 +19,9 @@ before_install:
     - python$PY -c "import numpy;print(numpy.__version__)"
 
 
-# command to install dependencies
+# install parsl with no optional extras
 install:
-    - pip install -r requirements.txt
+    - pip install .
 
 # Os tests
 os:
