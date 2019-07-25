@@ -122,8 +122,7 @@ if __name__ == "__main__":
     resultname = prefix + "result"
 
     # Add variables to the namespace to make function call
-    user_ns.update({fname: f,
-                    argname: args,
+    user_ns.update({argname: args,
                     kwargname: kwargs,
                     resultname: resultname})
 
