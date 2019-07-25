@@ -166,7 +166,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_tag(str(parsl_id))
-            logger.debug(t.id)
+            logger.debug("Parsl ID: {}".format(t.id))
 
             # Specify all input/output files for task
             for item in input_files:
@@ -192,7 +192,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 collector_queue.put_nowait(msg)
                 continue
 
-            logger.debug("Task {} submitted WorkQueue with id {}".format(parsl_id, wq_id))
+            logger.debug("Task {} submitted to WorkQueue with id {}".format(parsl_id, wq_id))
 
         if cancel_value.value == 0:
             continue_running = False
@@ -233,6 +233,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                                 reason += "problem remapping file names"
                             elif status == 4:
                                 reason += "problem writing out function result"
+                            else:
+                                reason += "unable to process wrapper script failure"
                             reason += "\nTrace:\n" + t.output
                             logger.debug("WorkQueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
                         # WorkQueue system failure
@@ -260,6 +262,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                                 reason += "task ran for more than the specified time"
                             elif task_result == 8 << 3:
                                 reason += "task needed more space to complete task"
+                            else:
+                                reason += "unable to process Work Queue system failure"
 
                         msg = {"tid": parsl_tid,
                                "result_received": False,
@@ -393,6 +397,7 @@ class WorkQueueExecutor(ParslExecutor):
                  env=None,
                  shared_fs=False,
                  init_command="",
+                 full_debug=True,
                  see_worker_output=False):
 
         self.label = label
@@ -414,7 +419,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.shared_files = set()
         self.registered_files = set()
         self.worker_output = see_worker_output
-        self.full = False
+        self.full = full_debug
         self.cancel_value = multiprocessing.Value('i', 1)
 
         # Resolve ambiguity when password and password_file are both specified
