@@ -1,9 +1,7 @@
 """Exceptions raised by Apps."""
 from functools import wraps
 
-import dill
 import logging
-from tblib import Traceback
 
 from six import reraise
 
@@ -147,18 +145,15 @@ class RemoteExceptionWrapper:
         self.e_value = e_value
         self.e_traceback = traceback
 
+        # self.e_type = dill.dumps(e_type)
+        # self.e_value = dill.dumps(e_value)
+        # self.e_traceback = Traceback(traceback)
 
-
-        #self.e_type = dill.dumps(e_type)
-        #self.e_value = dill.dumps(e_value)
-        #self.e_traceback = Traceback(traceback)
-
-        #t = dill.loads(self.e_type)
-        #v = dill.loads(self.e_value)
-        #tb = self.e_traceback.as_traceback()
+        # t = dill.loads(self.e_type)
+        # v = dill.loads(self.e_value)
+        # tb = self.e_traceback.as_traceback()
 
     def reraise(self):
-
 
         # the type is logged here before deserialising v and tb
         # because occasionally there are problems deserialising the
