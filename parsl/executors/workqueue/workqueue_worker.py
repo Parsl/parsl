@@ -1,6 +1,6 @@
 import sys
 import pickle
-from ipyparallel.serialize import unpack_apply_meessage, serialize_object
+from ipyparallel.serialize import unpack_apply_message, serialize_object
 
 
 def check_file(parsl_file_obj, mapping, file_type_string):
