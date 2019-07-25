@@ -1,5 +1,6 @@
 import sys
 import pickle
+from ipyparallel.serialize import unpack_apply_meessage, serialize_object
 
 
 def check_file(parsl_file_obj, mapping, file_type_string):
@@ -16,7 +17,6 @@ def check_file(parsl_file_obj, mapping, file_type_string):
 if __name__ == "__main__":
     name = "parsl"
     shared_fs = False
-    source = False
     input_function_file = ""
     output_result_file = ""
     remapping_string = None
@@ -40,8 +40,6 @@ if __name__ == "__main__":
                 index += 1
             elif sys.argv[index] == "--shared-fs":
                 shared_fs = True
-            elif sys.argv[index] == "--source":
-                source = True
             else:
                 print("command line argument not supported")
                 exit(1)
@@ -50,28 +48,18 @@ if __name__ == "__main__":
         print(e)
         exit(1)
 
-    # Get all variables from the user namespace, and add __builtins__
-    user_ns = locals()
-    user_ns.update({'__builtins__': __builtins__})
-
     # Load function data
     try:
         input_function = open(input_function_file, "rb")
-        function_info = pickle.load(input_function)
-        # Extract information from transferred source code
-        if source:
-            source_code = function_info["source code"]
-            name = function_info["name"]
-            args = function_info["args"]
-            kwargs = function_info["kwargs"]
-        # Extract information from function pointer
-        else:
-            from ipyparallel.serialize import unpack_apply_message
-            func, args, kwargs = unpack_apply_message(function_info, user_ns, copy=False)
+        function_tuple = pickle.load(input_function)
         input_function.close()
     except Exception as e:
         print(e)
         exit(2)
+
+    user_ns = locals()
+    user_ns.update({'__builtins__':__builtins__})
+    f, args, kwargs = unpack_apply_message(function_tuple, user_ns, copy=False)
 
     # Remapping file names using remapping string
     mapping = {}
@@ -117,44 +105,32 @@ if __name__ == "__main__":
         exit(3)
 
     prefix = "parsl_"
+    fname = prefix + "f"
     argname = prefix + "args"
     kwargname = prefix + "kwargs"
     resultname = prefix + "result"
 
     # Add variables to the namespace to make function call
-    user_ns.update({argname: args,
+    user_ns.update({fname: f,
+                    argname: args,
                     kwargname: kwargs,
                     resultname: resultname})
 
-    # Import function source code and create function call
-    if source:
-        source_list = source_code.split('\n')[1:]
-        full_source = ""
-        for line in source_list:
-            full_source = full_source + line + "\n"
-        code = "{0} = {1}(*{2}, **{3})".format(resultname, name,
-                                               argname, kwargname)
-        code = full_source + code
-    # Otherwise, only import function call
-    else:
-        fname = prefix + "f"
-        user_ns.update({fname: func})
-        code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                               argname, kwargname)
+    code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
+                                           argname, kwargname)
 
     # Perform the function call and handle errors
     try:
         exec(code, user_ns, user_ns)
     # Failed function execution
-    except Exception:
-        from tblib import pickling_support
-        pickling_support.install()
+    except Exception as e:
+        print(e)
         exec_info = sys.exc_info()
-        result_package = {"failure": True, "result": pickle.dumps(exec_info)}
+        result_package = {"failure": True, "result": serialize_object(exec_info)}
     # Successful function execution
     else:
         result = user_ns.get(resultname)
-        result_package = {"failure": False, "result": result}
+        result_package = {"failure": False, "result": serialize_object(result)}
 
     # Write out function result to the result file
     try:

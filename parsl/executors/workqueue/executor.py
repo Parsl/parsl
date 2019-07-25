@@ -6,8 +6,8 @@ from concurrent.futures import Future
 import os
 import pickle
 import queue
-import inspect
-from ipyparallel import pack_apply_message
+
+from ipyparallel.serialize import pack_apply_message, deserialize_object
 
 from parsl.app.errors import AppFailure
 from parsl.app.errors import RemoteExceptionWrapper
@@ -342,17 +342,12 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         # Successful task
         else:
             result = item["result"]
-            future_update = result["result"]
+            future_update, _ = deserialize_object(result["result"])
             logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
             if result["failure"] is False:
                 future.set_result(future_update)
             else:
-                future_fail = pickle.loads(future_update)
-                exc = RemoteExceptionWrapper(*future_fail)
-                try:
-                    exc.reraise()
-                except Exception as e:
-                    future.set_exception(e)
+                future.set_exception(RemoteExceptionWrapper(*future_update))
 
     logger.debug("Exiting Collector Thread")
     return
@@ -397,7 +392,6 @@ class WorkQueueExecutor(ParslExecutor):
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
-                 source=False,
                  init_command="",
                  see_worker_output=False):
 
@@ -421,7 +415,6 @@ class WorkQueueExecutor(ParslExecutor):
         self.registered_files = set()
         self.worker_output = see_worker_output
         self.full = False
-        self.source = source
         self.cancel_value = multiprocessing.Value('i', 1)
 
         # Resolve ambiguity when password and password_file are both specified
@@ -437,8 +430,6 @@ class WorkQueueExecutor(ParslExecutor):
         self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
         if self.shared_fs is True:
             self.launch_cmd += " --shared-fs"
-        if self.source is True:
-            self.launch_cmd += " --source"
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -584,30 +575,12 @@ class WorkQueueExecutor(ParslExecutor):
         logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
 
-        # Obtain function information and put into dictionary
-        if self.source:
-            # Obtain function information and put into dictionary
-            source_code = inspect.getsource(func)
-            name = func.__name__
-            function_info = {"source code": source_code,
-                             "name": name,
-                             "args": args,
-                             "kwargs": kwargs}
-
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
-        else:
-            # Serialize function information
-            function_info = pack_apply_message(func, args, kwargs,
-                                               buffer_threshold=1024 * 1024,
-                                               item_threshold=1024)
-
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
+        f = open(function_data_file, "wb")
+        fn_buf = pack_apply_message(func, args, kwargs,
+                                    buffer_threshold=1024 * 1024,
+                                    item_threshold=1024)
+        pickle.dump(fn_buf, f)
+        f.close()
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
