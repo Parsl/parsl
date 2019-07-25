@@ -7,6 +7,17 @@ with open('requirements.txt') as f:
     install_requires = f.readlines()
 
 extras_require = {
+    'monitoring' : [
+        'sqlalchemy>=1.3.0,!=1.3.4',
+        'sqlalchemy_utils',
+        'pydot',
+        'networkx',
+        'Flask>=1.0.2',
+        'flask_sqlalchemy',
+        'pandas',
+        'plotly',
+        'python-daemon'
+    ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
     'oauth_ssh' : ['oauth-ssh>=0.9'],
@@ -14,7 +25,8 @@ extras_require = {
     'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
-    'azure' : ['azure', 'msrestazure']
+    'azure' : ['azure', 'msrestazure'],
+    'workqueue': ['work_queue'],
 }
 extras_require['all'] = sum(extras_require.values(), [])
 

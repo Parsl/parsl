@@ -14,17 +14,24 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
+from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import workqueue_worker
 
-from work_queue import WorkQueue
-from work_queue import Task
-from work_queue import WORK_QUEUE_DEFAULT_PORT
-from work_queue import WORK_QUEUE_INPUT
-from work_queue import WORK_QUEUE_OUTPUT
-from work_queue import WORK_QUEUE_RESULT_SUCCESS
-from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
-from work_queue import cctools_debug_flags_set
-from work_queue import cctools_debug_config_file
+try:
+    from work_queue import WorkQueue
+    from work_queue import Task
+    from work_queue import WORK_QUEUE_DEFAULT_PORT
+    from work_queue import WORK_QUEUE_INPUT
+    from work_queue import WORK_QUEUE_OUTPUT
+    from work_queue import WORK_QUEUE_RESULT_SUCCESS
+    from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
+    from work_queue import cctools_debug_flags_set
+    from work_queue import cctools_debug_config_file
+except ImportError:
+    _work_queue_enabled = False
+    WORK_QUEUE_DEFAULT_PORT = 0
+else:
+    _work_queue_enabled = True
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +50,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           project_password=None,
                           project_password_file=None,
                           project_name=None):
-
     logger.debug("Starting WorkQueue Submit/Wait Process")
 
     # Enable debugging flags and create logging file
@@ -399,6 +405,8 @@ class WorkQueueExecutor(ParslExecutor):
                  init_command="",
                  full_debug=True,
                  see_worker_output=False):
+        if not _work_queue_enabled:
+            raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
         self.label = label
         self.managed = managed
