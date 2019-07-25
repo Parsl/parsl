@@ -58,7 +58,7 @@ if __name__ == "__main__":
         exit(2)
 
     user_ns = locals()
-    user_ns.update({'__builtins__':__builtins__})
+    user_ns.update({'__builtins__': __builtins__})
     f, args, kwargs = unpack_apply_message(function_tuple, user_ns, copy=False)
 
     # Remapping file names using remapping string
