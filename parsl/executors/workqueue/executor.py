@@ -7,7 +7,7 @@ import os
 import pickle
 import queue
 import inspect
-from ipyparallel import pack_apply_message
+from ipyparallel.serialize import pack_apply_message
 
 from parsl.app.errors import AppFailure
 from parsl.app.errors import RemoteExceptionWrapper
