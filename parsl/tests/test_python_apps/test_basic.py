@@ -91,7 +91,6 @@ def test_stdout():
     print("[TEST STATUS] test_stdout [SUCCESS]")
 
 
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_custom_exception():
     from globus_sdk import GlobusError
 
