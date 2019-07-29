@@ -3,8 +3,19 @@ import json
 import globus_sdk
 import os
 import parsl
+import typeguard
+
+from functools import partial
+from typing import Optional
+from parsl.app.app import python_app
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
+
+# globus staging must be run explicitly in the same process/interpreter
+# as the DFK. it relies on persisting globus state between actions in that
+# process.
+
 
 """
 'Parsl Application' OAuth2 client registered with Globus Auth
@@ -17,6 +28,19 @@ SCOPES = ('openid '
 
 
 get_input = getattr(__builtins__, 'raw_input', input)
+
+
+def _get_globus_scheme(dfk, executor_label):
+    if executor_label is None:
+        raise ValueError("executor_label is mandatory")
+    executor = dfk.executors[executor_label]
+    if not hasattr(executor, "storage_access"):
+        raise ValueError("specified executor does not have storage_access attribute")
+    for scheme in executor.storage_access:
+        if isinstance(scheme, GlobusScheme):
+            return scheme
+
+    raise Exception('No suitable Globus endpoint defined for executor {}'.format(executor_label))
 
 
 def get_globus():
@@ -156,6 +180,92 @@ class Globus(object):
             access_token=transfer_tokens['access_token'],
             expires_at=transfer_tokens['expires_at_seconds'],
             on_refresh=cls._update_tokens_file_on_refresh)
+
+
+class GlobusScheme(RepresentationMixin):
+    """Specification for accessing data on a remote executor via Globus.
+
+    Parameters
+    ----------
+    endpoint_uuid : str
+        Universally unique identifier of the Globus endpoint at which the data can be accessed.
+        This can be found in the `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page.
+    endpoint_path : str, optional
+        FIXME
+    local_path : str, optional
+        FIXME
+    """
+    @typeguard.typechecked
+    def __init__(self, endpoint_uuid: str, endpoint_path: Optional[str] = None, local_path: Optional[str] = None):
+        self.endpoint_uuid = endpoint_uuid
+        self.endpoint_path = endpoint_path
+        self.local_path = local_path
+        self.globus = None
+
+    def _globus_stage_in_app(self, executor, dfk):
+        executor_obj = dfk.executors[executor]
+        f = partial(_globus_stage_in, self, executor_obj)
+        return python_app(executors=['data_manager'], data_flow_kernel=dfk)(f)
+
+    def _globus_stage_out_app(self, executor, dfk):
+        executor_obj = dfk.executors[executor]
+        f = partial(_globus_stage_out, self, executor_obj)
+        return python_app(executors=['data_manager'], data_flow_kernel=dfk)(f)
+
+    # could this happen at __init__ time?
+    def initialize_globus(self):
+        if self.globus is None:
+            self.globus = get_globus()
+
+    def _get_globus_endpoint(self, executor):
+        if executor.working_dir:
+            working_dir = os.path.normpath(executor.working_dir)
+        else:
+            raise ValueError("executor working_dir must be specified for GlobusScheme")
+        if self.endpoint_path and self.local_path:
+            endpoint_path = os.path.normpath(self.endpoint_path)
+            local_path = os.path.normpath(self.local_path)
+            common_path = os.path.commonpath((local_path, working_dir))
+            if local_path != common_path:
+                raise Exception('"local_path" must be equal or an absolute subpath of "working_dir"')
+            relative_path = os.path.relpath(working_dir, common_path)
+            endpoint_path = os.path.join(endpoint_path, relative_path)
+        else:
+            endpoint_path = working_dir
+        return {'endpoint_uuid': self.endpoint_uuid,
+                'endpoint_path': endpoint_path,
+                'working_dir': working_dir}
+
+
+# this cannot be a class method, but must be a function, because I want
+# to be able to use partial() on it - and partial() does not work on
+# class methods
+def _globus_stage_in(scheme, executor, outputs=[]):
+    globus_ep = scheme._get_globus_endpoint(executor)
+    file = outputs[0]
+    file.local_path = os.path.join(
+            globus_ep['working_dir'], file.filename)
+    dst_path = os.path.join(
+            globus_ep['endpoint_path'], file.filename)
+
+    scheme.initialize_globus()
+
+    scheme.globus.transfer_file(
+            file.netloc, globus_ep['endpoint_uuid'],
+            file.path, dst_path)
+
+
+def _globus_stage_out(scheme, executor, inputs=[]):
+    globus_ep = scheme._get_globus_endpoint(executor)
+    file = inputs[0]
+    src_path = os.path.join(globus_ep['endpoint_path'], file.filename)
+
+    scheme.initialize_globus()
+
+    scheme.globus.transfer_file(
+        globus_ep['endpoint_uuid'], file.netloc,
+        src_path, file.path
+    )
 
 
 def cli_run():
