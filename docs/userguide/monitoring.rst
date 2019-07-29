@@ -39,6 +39,7 @@ Here's an example configuration that logs monitoring information to a local sqli
       ],
       monitoring=MonitoringHub(
           hub_address=address_by_hostname(),
+          hub_port=55055,
           logging_level=logging.INFO,
           resource_monitoring_interval=10,
       ),
@@ -52,13 +53,13 @@ Here's an example configuration that logs monitoring information to a local sqli
 Visualization
 -------------
 
-Run the `parsl-visualize` utility:
+Run the `parsl-visualize` utility::
 
    $ parsl-visualize
 
 If your monitoring database is not the default of `monitoring.db` in the current working directory,
 you can specify a different database URI on the command line.  For example, if the full path
-to your `monitoring.db` is `/tmp/monitoring.db`, run:
+to your `monitoring.db` is `/tmp/monitoring.db`, run::
 
    $ parsl-visualize sqlite:////tmp/monitoring.db
 
