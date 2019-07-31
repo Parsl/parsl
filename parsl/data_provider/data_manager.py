@@ -24,7 +24,7 @@ class DataManager(object):
         self.dfk = dfk
         self.globus = None
 
-    def stage_in(self, file, executor):
+    def stage_in(self, file, executor, parent_fut):
         """Transport the file from the input source to the executor.
 
         This function returns a DataFuture.
@@ -33,6 +33,9 @@ class DataManager(object):
             - self
             - file (File) : file to stage in
             - executor (str) : an executor the file is going to be staged in to.
+            - parent_fut: (optional DataFuture) : If specified, stage in tasks will depend on this
+                future completing before executing, and the File contained in that future will be
+                used as input.
         """
 
         if file.scheme == 'ftp':
