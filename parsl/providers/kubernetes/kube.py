@@ -222,9 +222,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
                                                       name=volume[0]))
         resources = client.V1ResourceRequirements(limits={'cpu': str(self.max_cpu),
-                                                          'mem': self.max_mem},
+                                                          'memory': self.max_mem},
                                                   requests={'cpu': str(self.init_cpu),
-                                                            'mem': self.init_mem}
+                                                            'memory': self.init_mem}
                                                   )
         # Configure Pod template container
         container = client.V1Container(
