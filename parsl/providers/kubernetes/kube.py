@@ -63,6 +63,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  init_blocks: int = 4,
                  min_blocks: int = 0,
                  max_blocks: int = 10,
+                 max_cpu: float = 2,
+                 max_mem: str = "500Mi",  # Unit in Mi, Gi
+                 init_cpu: float = 1,
+                 init_mem: str = "250Mi",  # Unit in Mi, Gi
                  parallelism: float = 1,
                  worker_init: str = "",
                  pod_name: Optional[str] = None,
@@ -82,6 +86,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
+        self.max_cpu = max_cpu
+        self.max_mem = max_mem
+        self.init_cpu = init_cpu
+        self.init_mem = init_mem
         self.parallelism = parallelism
         self.worker_init = worker_init
         self.secret = secret
@@ -213,10 +221,16 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for volume in volumes:
             volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
                                                       name=volume[0]))
+        resources = client.V1ResourceRequirements(limits={'cpu': str(self.max_cpu),
+                                                          'mem': self.max_mem},
+                                                  requests={'cpu': str(self.init_cpu),
+                                                            'mem': self.init_mem}
+                                                  )
         # Configure Pod template container
         container = client.V1Container(
             name=pod_name,
             image=image,
+            resources=resources,
             ports=[client.V1ContainerPort(container_port=port)],
             volume_mounts=volume_mounts,
             command=['/bin/bash'],
