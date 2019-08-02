@@ -39,13 +39,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         In cpu units, check kubernetes docs for more details. Default is 2.
     max_mem : str
         Memory limits of the blocks (pods).
-        In Mi or Gi, check kubernetes docs for more details. Default is 500MiB.
+        In Mi or Gi, check kubernetes docs for more details. Default is 500Mi.
     init_cpu : float
         CPU initial requests of the blocks (pods).
         In cpu units, check kubernetes docs for more details. Default is 1.
     init_mem : str
         Memory initial requests of the blocks (pods).
-        In Mi or Gi, check kubernetes docs for more details. Default is 250MiB.
+        In Mi or Gi, check kubernetes docs for more details. Default is 250Mi.
     parallelism : float
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
