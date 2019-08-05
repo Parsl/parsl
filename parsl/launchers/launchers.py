@@ -372,6 +372,7 @@ echo "Done"
            overrides=self.overrides)
         return x
 
+
 class JsrunLauncher(Launcher):
     """  Worker launcher that wraps the user's command with the Jsrun launch framework
     to launch multiple cmd invocations in parallel on a single job allocation
@@ -394,8 +395,6 @@ class JsrunLauncher(Launcher):
         - tasks_per_node (int) : Workers to launch per node
         - nodes_per_block (int) : Number of nodes in a block
 
-        KWargs:
-        - walltime (int) : This is not used by this launcher.
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block

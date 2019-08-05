@@ -18,11 +18,11 @@ translate_table = {
     'PSUSP': 'CANCELLED',
     'USUSP': 'CANCELLED',
     'SSUSP': 'CANCELLED',
-}  # (special exit state
+}
 
 
 class LSFProvider(ClusterProvider, RepresentationMixin):
-    """Slurm Execution Provider
+    """LSF Execution Provider
 
     This provider uses sbatch to submit, squeue for status and scancel to cancel
     jobs. The sbatch script to be used is created from a template file in this
@@ -75,7 +75,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                  cmd_timeout=10,
                  move_files=True,
                  launcher=SingleNodeLauncher()):
-        label = 'slurm'
+        label = 'LSF'
         super().__init__(label,
                          channel,
                          nodes_per_block,
@@ -125,7 +125,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
     def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        """Submit the command as a slurm job of blocksize parallel elements.
+        """Submit the command as a LSF job of blocksize parallel elements.
 
         Parameters
         ----------
@@ -144,7 +144,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         """
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
+            logger.warn("LSF provider '{}' is at capacity (no more blocks will be added)".format(self.label))
             return None
 
         job_name = "{0}.{1}".format(job_name, time.time())
@@ -180,8 +180,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             channel_script_path = script_path
 
         retcode, stdout, stderr = super().execute_wait("bsub {0}".format(channel_script_path))
-        #logger.info("Stdout : {}".format(stdout))
-        #logger.info("Stderr : {}".format(stderr))
 
         job_id = None
         if retcode == 0:
