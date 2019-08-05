@@ -1,6 +1,6 @@
 from parsl.launchers.launchers import SimpleLauncher, SingleNodeLauncher, \
     SrunLauncher, AprunLauncher, SrunMPILauncher, AprunLauncher, \
-    GnuParallelLauncher, MpiExecLauncher, MpiRunLauncher
+    GnuParallelLauncher, MpiExecLauncher, MpiRunLauncher, JsrunLauncher
 
 __all__ = ['SimpleLauncher',
            'SingleNodeLauncher',
@@ -8,6 +8,7 @@ __all__ = ['SimpleLauncher',
            'AprunLauncher',
            'SrunMPILauncher',
            'AprunLauncher',
+           'JsrunLauncher',
            'GnuParallelLauncher',
            'MpiExecLauncher',
            'MpiRunLauncher']
