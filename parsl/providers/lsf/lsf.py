@@ -53,6 +53,8 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
+    cmd_timeout : int
+        Seconds after which requests to the scheduler will timeout. Default: 120s
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
@@ -72,7 +74,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                  scheduler_options='',
                  worker_init='',
                  project=None,
-                 cmd_timeout=10,
+                 cmd_timeout=120,
                  move_files=True,
                  launcher=SingleNodeLauncher()):
         label = 'LSF'
@@ -107,6 +109,8 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         retcode, stdout, stderr = super().execute_wait(cmd)
         # Execute_wait failed. Do no update
         if retcode != 0:
+            logger.debug("Updating job status from {} failed with return code {}".format(self.label,
+                                                                                         retcode))
             return
 
         jobs_missing = list(self.resources.keys())
@@ -188,7 +192,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.split()[1].strip('<>')
                     self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
         else:
-            print("Submission of command to scale_out failed")
+            logger.warning("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 
@@ -217,8 +221,3 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
     def _test_add_resource(self, job_id):
         self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])
         return True
-
-
-if __name__ == "__main__":
-
-    print("None")
