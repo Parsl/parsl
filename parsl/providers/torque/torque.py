@@ -130,8 +130,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = translate_table['E']
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+        ''' Submits the command onto an Local Resource Manager job.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
@@ -140,11 +140,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
              A single node is provisioned
 
         If tasks_per_node >  1 :
-             tasks_per_node * blocksize number of nodes are provisioned.
+             tasks_per_node number of nodes are provisioned.
 
         Args:
              - command  :(String) Commandline invocation to be made on the remote side.
-             - blocksize   :(float)
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
@@ -160,11 +159,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             logger.warn("[%s] at capacity, cannot add more blocks now", self.label)
             return None
 
-        # Note: Fix this later to avoid confusing behavior.
-        # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.nodes_per_block:
-            blocksize = self.nodes_per_block
-
         # Set job name
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
@@ -172,7 +166,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        logger.debug("Requesting blocksize:%s nodes_per_block:%s tasks_per_node:%s", blocksize, self.nodes_per_block,
+        logger.debug("Requesting nodes_per_block:%s tasks_per_node:%s", self.nodes_per_block,
                      tasks_per_node)
 
         job_config = {}
@@ -211,7 +205,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             for line in stdout.split('\n'):
                 if line.strip():
                     job_id = line.strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
+                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
         else:
             message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
             if (stdout is not None) and (stderr is not None):
