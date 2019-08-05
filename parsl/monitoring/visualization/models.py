@@ -58,6 +58,7 @@ class Task(db.Model):
     task_outputs = db.Column('task_outputs', db.Text, nullable=True)
     task_stdin = db.Column('task_stdin', db.Text, nullable=True)
     task_stdout = db.Column('task_stdout', db.Text, nullable=True)
+    task_stderr = db.Column('task_stderr', db.Text, nullable=True)
     __table_args__ = (
         db.PrimaryKeyConstraint('task_id', 'run_id'),
     )

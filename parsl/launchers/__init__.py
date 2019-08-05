@@ -1,5 +1,5 @@
 from parsl.launchers.launchers import SimpleLauncher, SingleNodeLauncher, \
-    SrunLauncher, AprunLauncher, SrunMPILauncher, AprunLauncher, \
+    SrunLauncher, AprunLauncher, SrunMPILauncher, \
     GnuParallelLauncher, MpiExecLauncher, MpiRunLauncher, JsrunLauncher
 
 __all__ = ['SimpleLauncher',

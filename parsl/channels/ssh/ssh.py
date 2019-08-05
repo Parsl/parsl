@@ -4,7 +4,7 @@ import os
 
 import paramiko
 from parsl.channels.base import Channel
-from parsl.channels.errors import *
+from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException, FileExists
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, port=22, **kwargs):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -36,6 +36,7 @@ class SSHChannel(Channel, RepresentationMixin):
         KWargs:
             - username (string) : Username on remote system
             - password (string) : Password for remote system
+            - port : The port designated for the ssh connection. Default is 22.
             - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
             - envs (dict) : A dictionary of environment variables to be set when executing commands
@@ -46,6 +47,7 @@ class SSHChannel(Channel, RepresentationMixin):
         self.hostname = hostname
         self.username = username
         self.password = password
+        self.port = port
         self.kwargs = kwargs
         self.script_dir = script_dir
         self.skip_auth = skip_auth
@@ -67,6 +69,7 @@ class SSHChannel(Channel, RepresentationMixin):
                 hostname,
                 username=username,
                 password=password,
+                port=port,
                 allow_agent=True,
                 gss_auth=gssapi_auth,
                 gss_kex=gssapi_auth,
@@ -206,7 +209,7 @@ class SSHChannel(Channel, RepresentationMixin):
             os.makedirs(local_dir)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                logger.exception("Failed to create script_dir: {0}".format(script_dir))
+                logger.exception("Failed to create local_dir: {0}".format(local_dir))
                 raise BadScriptPath(e, self.hostname)
 
         # Easier to check this than to waste time trying to pull file and

@@ -53,6 +53,7 @@ Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_a
 2. outputs: (list) This keyword argument defines a list of output :ref:`label-futures` that
    will be produced by this app. Parsl will track these files and ensure they are correctly created.
    They can then be passed to other apps as input arguments.
+3. walltime: (int) If the app runs longer than ``walltime`` seconds, a ``parsl.app.errors.AppTimeout`` will be raised.
 
 Returns
 ^^^^^^^
@@ -108,11 +109,15 @@ to the decorated function. The string that is returned is formatted by the Pytho
 .. code-block:: python
 
        @bash_app
-       def echo(arg1, inputs=[], stderr='std.err', stdout='std.out'):
-           return 'echo %s %s %s' % (arg1, inputs[0], inputs[1])
+       def echo(arg, inputs=[], stderr=parsl.AUTO_LOGNAME, stdout=parsl.AUTO_LOGNAME):
+           return 'echo {} {} {}'.format(arg, inputs[0], inputs[1])
 
-       # This call echoes "Hello World !" to the file *std.out*
-       echo('Hello', inputs=['World', '!'])
+       future = echo('Hello', inputs=['World', '!'])
+       future.result() # block until task has completed
+
+       with open(future.stdout, 'r') as f:
+           print(f.read()) # prints "Hello World !"
+
 
 Returns
 ^^^^^^^

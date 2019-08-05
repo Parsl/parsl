@@ -1,5 +1,5 @@
 from parsl.config import Config
-from parsl.data_provider.scheme import GlobusScheme
+from parsl.data_provider.globus import GlobusScheme
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.tests.utils import get_rundir
 

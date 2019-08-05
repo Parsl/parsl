@@ -14,15 +14,15 @@ Apps
 ====
 
 Apps are parallelized functions that execute independent of the control flow of the main python
-interpreter. We have two main types of Apps : PythonApps and BashApps. These are subclassed from
+interpreter. We have two main types of Apps: PythonApps and BashApps. These are subclassed from
 AppBase.
 
 AppBase
 -------
 
 This is the base class that defines the two external facing functions that an App must define.
-The  __init__ () which is called when the interpreter sees the definition of the decorated
-function, and the __call__ () which is invoked when a decorated function is called by the user.
+The  __init__ (), which is called when the interpreter sees the definition of the decorated
+function, and the __call__ (), which is invoked when a decorated function is called by the user.
 
 .. autoclass:: parsl.app.app.AppBase
    :members:
@@ -338,7 +338,7 @@ For certain resources such as campus clusters or supercomputers at research labo
 may require authentication. For instance some resources may allow access to their job schedulers from only
 their login-nodes which require you to authenticate on through SSH, GSI-SSH and sometimes even require
 two factor authentication. Channels are simple abstractions that enable the ExecutionProvider component to talk
-to the resource managers of compute facilities. The simplest Channel, *LocalChannel* simply executes commands
+to the resource managers of compute facilities. The simplest Channel, *LocalChannel*, simply executes commands
 locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
 .. autoclass:: parsl.channels.base.Channel

@@ -1,13 +1,29 @@
 from flask import render_template
 from flask import current_app as app
 import pandas as pd
-from parsl.monitoring.visualization.models import *
+from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
 from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_time_series
 
 dummy = True
+
+import datetime
+
+
+def format_time(value):
+    if value is None:
+        return value
+    elif isinstance(value, float):
+        return str(datetime.timedelta(seconds=round(value)))
+    elif isinstance(value, datetime.datetime):
+        return value.replace(microsecond=0)
+    else:
+        return "Incorrect time format found (neither float nor datetime.datetime object)"
+
+
+app.jinja_env.filters['timeformat'] = format_time
 
 
 @app.route('/')
@@ -44,7 +60,7 @@ def workflow(workflow_id):
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
-                           task_gantt=task_gantt_plot(df_task),
+                           task_gantt=task_gantt_plot(df_task, time_completed=workflow_details.time_completed),
                            task_per_app=task_per_app_plot(df_task, df_status))
 
 

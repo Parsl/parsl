@@ -8,6 +8,7 @@ from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.error import ScaleOutFailed
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
+    cmd_timeout : int
+        Timeout for commands made to the scheduler in seconds
     """
     def __init__(self,
                  channel=LocalChannel(),
@@ -75,7 +78,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  walltime="00:10:00",
                  worker_init='',
                  launcher=SingleNodeLauncher(),
-                 requirements=''):
+                 requirements='',
+                 cmd_timeout=60):
 
         label = 'condor'
         super().__init__(label,
@@ -86,8 +90,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
-
+                         launcher,
+                         cmd_timeout=cmd_timeout)
         self.provisioned_blocks = 0
 
         self.environment = environment if environment is not None else {}
@@ -227,8 +231,10 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         cmd = "condor_submit {0}".format(channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(cmd, 30)
-        logger.debug("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+        try:
+            retcode, stdout, stderr = super().execute_wait(cmd)
+        except Exception as e:
+            raise ScaleOutFailed(self.label, str(e))
 
         job_id = []
 
@@ -245,7 +251,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                     job_id += [cluster + process for process in processes]
 
             self._add_resource(job_id)
-        return job_id[0]
+            return job_id[0]
+        else:
+            message = "Command '{}' failed with return code {}".format(cmd, retcode)
+            message += " and standard output '{}'".format(stdout.strip()) if stdout is not None else ''
+            message += " and standard error '{}'".format(stderr.strip()) if stderr is not None else ''
+            raise ScaleOutFailed(self.label, message)
 
     def cancel(self, job_ids):
         """Cancels the jobs specified by a list of job IDs.
@@ -264,7 +275,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, 30)
+        retcode, stdout, stderr = super().execute_wait(cmd)
         rets = None
         if retcode == 0:
             for jid in job_ids:

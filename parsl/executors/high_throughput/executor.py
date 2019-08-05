@@ -13,9 +13,10 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
 
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import *
+from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
 from parsl.executors.base import ParslExecutor
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.provider_base import ExecutionProvider
@@ -187,6 +188,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self._task_counter = 0
         self.address = address
+        self.hub_address = None  # set to the correct hub address in dfk
+        self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
@@ -362,7 +365,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                             try:
                                 s, _ = deserialize_object(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
-                                if isinstance(s, RemoteExceptionWapper):
+                                if isinstance(s, RemoteExceptionWrapper):
                                     try:
                                         s.reraise()
                                     except Exception as e:
@@ -402,6 +405,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                                            self.command_client.port),
                                           "worker_ports": self.worker_ports,
                                           "worker_port_range": self.worker_port_range,
+                                          "hub_address": self.hub_address,
+                                          "hub_port": self.hub_port,
                                           "logdir": "{}/{}".format(self.run_dir, self.label),
                                           "suppress_failure": self.suppress_failure,
                                           "heartbeat_threshold": self.heartbeat_threshold,
@@ -480,7 +485,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("[HOLD_BLOCK]: Sending hold to manager:{}".format(manager['manager']))
+                logger.debug("[HOLD_BLOCK]: Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
 
     def submit(self, func, *args, **kwargs):
@@ -506,7 +511,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._task_counter += 1
         task_id = self._task_counter
 
-        logger.debug("Pushing function {} to queue with args {}".format(func, args))
+        # handle people sending blobs gracefully
+        args_to_print = args
+        if logger.getEffectiveLevel() >= logging.DEBUG:
+            args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
+        logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
         self.tasks[task_id] = Future()
 
@@ -592,7 +601,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         status = []
         if self.provider:
-            status = self.provider.status(self.blocks.values())
+            status = self.provider.status(list(self.blocks.values()))
 
         return status
 

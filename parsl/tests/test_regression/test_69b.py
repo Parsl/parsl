@@ -7,6 +7,7 @@ import pytest
 
 import parsl
 from parsl.app.app import App
+from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
@@ -96,7 +97,7 @@ def test_4():
 
 @App('bash')
 def echo(message, outputs=[]):
-    return 'echo {0} &> {outputs[0]}'
+    return 'echo {0} &> {outputs[0]}'.format(message, outputs=outputs)
 
 # This app *cat*sthe contents ofthe first file in its inputs[] kwargs to
 # the first file in its outputs[] kwargs
@@ -104,19 +105,19 @@ def echo(message, outputs=[]):
 
 @App('bash')
 def cat(inputs=[], outputs=[], stdout='cat.out', stderr='cat.err'):
-    return 'cat {inputs[0]} > {outputs[0]}'
+    return 'cat {inputs[0]} > {outputs[0]}'.format(inputs=inputs, outputs=outputs)
 
 
 def test_5():
     """Testing behavior of outputs """
     # Call echo specifying the outputfile
-    hello = echo("Hello World!", outputs=['hello1.txt'])
+    hello = echo("Hello World!", outputs=[File('hello1.txt')])
 
     # the outputs attribute of the AppFuture is a list of DataFutures
     print(hello.outputs)
 
     # This step *cat*s hello1.txt to hello2.txt
-    hello2 = cat(inputs=[hello.outputs[0]], outputs=['hello2.txt'])
+    hello2 = cat(inputs=[hello.outputs[0]], outputs=[File('hello2.txt')])
 
     hello2.result()
     with open(hello2.outputs[0].result().filepath, 'r') as f:

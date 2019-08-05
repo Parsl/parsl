@@ -1,36 +1,26 @@
-"""
-================== Block
-| ++++++++++++++ | Node
-| |            | |
-| |    Task    | |             . . .
-| |            | |
-| ++++++++++++++ |
-==================
-"""
-from parsl.channels import LocalChannel
-from parsl.providers import GridEngineProvider
 from parsl.config import Config
-from parsl.executors.ipp import IPyParallelExecutor
+from parsl.providers import GridEngineProvider
+from parsl.executors import HighThroughputExecutor
+from parsl.addresses import address_by_query
 
-# This is an example config, make sure to
-#        replace the specific values below with the literal values
-#          (e.g., 'USERNAME' -> 'your_username')
 
 config = Config(
     executors=[
-        IPyParallelExecutor(
-            label='cc_in2p3_local_single_node',
+        HighThroughputExecutor(
+            label='CC.IN2P3_HTEX',
+            address=address_by_query(),
             provider=GridEngineProvider(
-                channel=LocalChannel(),
                 nodes_per_block=1,
                 init_blocks=1,
                 max_blocks=1,
-                walltime="00:20:00",
-                scheduler_options='',     # Input your scheduler_options if needed
-                worker_init='',     # Input your worker_init if needed
+                # string to prepend to #SBATCH blocks in the submit
+                # script to the scheduler eg: '#$ -M YOUR_EMAIL@gmail.com
+                scheduler_options='',
+                # Command to be run before starting a worker, such as:
+                # 'module load Anaconda; source activate parsl_env'.
+                worker_init='',
+                walltime='00:20:00',
             ),
-            engine_debug_level='DEBUG',
         )
-
     ],
 )

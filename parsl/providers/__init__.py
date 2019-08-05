@@ -15,6 +15,7 @@ from parsl.providers.lsf.lsf import LSFProvider
 from parsl.providers.aws.aws import AWSProvider
 from parsl.providers.googlecloud.googlecloud import GoogleCloudProvider
 from parsl.providers.jetstream.jetstream import JetstreamProvider
+from parsl.providers.azure.azure import AzureProvider
 
 # Kubernetes
 from parsl.providers.kubernetes.kube import KubernetesProvider
@@ -30,4 +31,5 @@ __all__ = ['LocalProvider',
            'AWSProvider',
            'GoogleCloudProvider',
            'JetstreamProvider',
-           'KubernetesProvider']
+           'KubernetesProvider',
+           'AzureProvider']

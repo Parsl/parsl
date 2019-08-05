@@ -1,6 +1,59 @@
 Changelog
 =========
 
+
+Parsl 0.8.0
+-----------
+
+Released on June 13th, 2019
+
+Parsl v0.8.0 includes 58 closed issues and pull requests with contributions (code, tests, reviews and reports)
+
+from: Andrew Litteken @AndrewLitteken, Anna Woodard @annawoodard, Antonio Villarreal @villarrealas,
+Ben Clifford @benc, Daniel S. Katz @danielskatz, Eric Tatara @etatara, Juan David Garrido @garri1105,
+Kyle Chard @@kylechard, Lindsey Gray @lgray, Tim Armstrong @timarmstrong, Tom Glanzman @TomGlanzman,
+Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
+
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* Monitoring is now integrated into parsl as default functionality.
+* `parsl.AUTO_LOGNAME`: Support for a special `AUTO_LOGNAME` option to auto generate `stdout` and `stderr` file paths.
+* `parsl.Files` no longer behave as strings. This means that operations in apps that treated `parsl.Files` as strings
+  will break. For example the following snippet will have to be updated:
+
+  .. code-block:: python
+
+     # Old style: " ".join(inputs) is legal since inputs will behave like a list of strings
+     @bash_app
+     def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+         return "cat {0} > {1}".format(" ".join(inputs), outputs[0])
+
+     # New style:
+     @bash_app
+     def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+         return "cat {0} > {1}".format(" ".join(list(map(str,inputs))), outputs[0])
+
+* Cleaner user app file log management.
+* Updated configurations using `HighThroughputExecutor` in the configuration section of the userguide.
+* Support for OAuth based SSH with `OAuthSSHChannel`.
+
+Bug Fixes
+^^^^^^^^^
+
+* Monitoring resource usage bug `issue#975 <https://github.com/Parsl/parsl/issues/975>`_
+* Bash apps fail due to missing dir paths `issue#1001 <https://github.com/Parsl/parsl/issues/1001>`_
+* Viz server explicit binding fix `issue#1023 <https://github.com/Parsl/parsl/issues/1023>`_
+* Fix sqlalchemy version warning `issue#997 <https://github.com/Parsl/parsl/issues/997>`_
+* All workflows are called typeguard `issue#973 <https://github.com/Parsl/parsl/issues/973>`_
+* Fix `ModuleNotFoundError: No module named 'monitoring` `issue#971 <https://github.com/Parsl/parsl/issues/971>`_
+* Fix sqlite3 integrity error `issue#920 <https://github.com/Parsl/parsl/issues/920>`_
+* HTEX interchange check python version mismatch to the micro level `issue#857 <https://github.com/Parsl/parsl/issues/857>`_
+* Clarify warning message when a manager goes missing `issue#698 <https://github.com/Parsl/parsl/issues/698>`_
+* Apps without a specified DFK should use the global DFK in scope at call time, not at other times. `issue#697 <https://github.com/Parsl/parsl/issues/697>`_
+
+
 Parsl 0.7.2
 -----------
 
@@ -50,7 +103,7 @@ David Heise @daheise, Daniel S. Katz @danielskatz, Dominic Fitzgerald @djf604, F
 Juan David Garrido @garri1105, Gordon Watts @gordonwatts, Justin Wozniak @jmjwozniak,
 Joseph Moon @jmoon1506, Kenyi Hurtado @khurtado, Kyle Chard @kylechard, Lukasz Lacinski @lukaszlacinski,
 Ravi Madduri @madduri, Marco Govoni @mgovoni-devel, Reid McIlroy-Young @reidmcy, Ryan Chard @ryanchard,
-@sdustrud, Yadu Nand Babuji @yadudoc and Zhuozhao Li @ZhuozhaoLi
+@sdustrud, Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
 
 New functionality
 ^^^^^^^^^^^^^^^^^
