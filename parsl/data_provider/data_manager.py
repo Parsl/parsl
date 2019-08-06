@@ -86,6 +86,7 @@ class DataManager(object):
             raise Exception('FTP file staging out is not supported')
         elif file.scheme == 'globus':
             globus_scheme = _get_globus_scheme(self.dfk, executor)
+            globus_scheme._update_stage_out_local_path(file, executor, self.dfk)
             stage_out_app = globus_scheme._globus_stage_out_app(executor=executor, dfk=self.dfk)
             return stage_out_app(app_fu, inputs=[file])
         else:

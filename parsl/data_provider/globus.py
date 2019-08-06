@@ -236,6 +236,11 @@ class GlobusScheme(RepresentationMixin):
                 'endpoint_path': endpoint_path,
                 'working_dir': working_dir}
 
+    def _update_stage_out_local_path(self, file, executor, dfk):
+        executor_obj = dfk.executors[executor]
+        globus_ep = self._get_globus_endpoint(executor_obj)
+        file.local_path = os.path.join(globus_ep['working_dir'], file.filename)
+
 
 # this cannot be a class method, but must be a function, because I want
 # to be able to use partial() on it - and partial() does not work on
