@@ -384,7 +384,7 @@ class JsrunLauncher(Launcher):
         ----------
 
         overrides: str
-             This string will be passed to the aprun launcher. Default: ''
+             This string will be passed to the JSrun launcher. Default: ''
         """
         self.overrides = overrides
 
