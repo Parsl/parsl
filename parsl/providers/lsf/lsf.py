@@ -37,6 +37,8 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
+    init_blocks : int
+        Number of blocks to request at the start of the run.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
