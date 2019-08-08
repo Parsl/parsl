@@ -516,28 +516,27 @@ class DataFlowKernel(object):
         """
         # Check the positional args
         depends = []
-        count = 0
+        unfinished_depends = []
+
+        def check_dep(d):
+            if isinstance(d, Future):
+                if self.tasks[d.tid]['status'] not in FINAL_STATES:
+                    unfinished_depends.extend([d])
+                depends.extend([d])
+
         for dep in args:
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
+        count = len(unfinished_depends)
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
