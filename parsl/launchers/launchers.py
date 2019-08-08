@@ -372,7 +372,7 @@ class JsrunLauncher(Launcher):
         """
         self.overrides = overrides
 
-    def __call__(self, command, tasks_per_node, nodes_per_block, walltime=None):
+    def __call__(self, command, tasks_per_node, nodes_per_block):
         """
         Args:
         - command (string): The command string to be launched
