@@ -146,8 +146,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        """Submits the command onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+        """Submits the command onto an Local Resource Manager job.
 
         example file with the complex case of multiple submits per job:
             Universe =vanilla
@@ -169,8 +169,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         ----------
         command : str
             Command to execute
-        blocksize : int
-            Number of blocks to request.
         job_name : str
             Job name prefix.
         tasks_per_node : int
@@ -181,15 +179,11 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             None if at capacity and cannot provision more; otherwise the identifier for the job.
         """
 
-        logger.debug("Attempting to launch with blocksize: {}".format(blocksize))
+        logger.debug("Attempting to launch")
         if self.provisioned_blocks >= self.max_blocks:
             template = "Provider {} is currently using {} blocks while max_blocks is {}; no blocks will be added"
             logger.warn(template.format(self.label, self.provisioned_blocks, self.max_blocks))
             return None
-
-        # Note: Fix this later to avoid confusing behavior.
-        # We should always allocate blocks in integer counts of node_granularity
-        blocksize = max(self.nodes_per_block, blocksize)
 
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
 
