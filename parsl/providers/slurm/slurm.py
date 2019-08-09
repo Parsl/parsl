@@ -136,15 +136,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        """Submit the command as a slurm job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+        """Submit the command as a slurm job.
 
         Parameters
         ----------
         command : str
             Command to be made on the remote side.
-        blocksize : int
-            Not implemented.
         tasks_per_node : int
             Command invocations to be launched per node
         job_name : str
@@ -198,7 +196,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             for line in stdout.split('\n'):
                 if line.startswith("Submitted batch job"):
                     job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
+                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
         else:
             print("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())

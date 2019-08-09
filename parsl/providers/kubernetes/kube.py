@@ -120,11 +120,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}  # type: Dict[str, Dict[str, Any]]
 
-    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl"):
+    def submit(self, cmd_string, tasks_per_node, job_name="parsl"):
         """ Submit a job
         Args:
              - cmd_string  :(String) - Name of the container to initiate
-             - blocksize   :(float) - Number of replicas
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
@@ -152,8 +151,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                          job_name=job_name,
                          cmd_string=formatted_cmd,
                          volumes=self.persistent_volumes)
-        self.resources[pod_name] = {'status': 'RUNNING',
-                                    'pods': blocksize}
+        self.resources[pod_name] = {'status': 'RUNNING'}
 
         return pod_name
 
