@@ -35,17 +35,21 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     max_blocks : int
         Maximum number of blocks to maintain.
     max_cpu : float
-        CPU limits of the blocks (pods).
-        In cpu units, check kubernetes docs for more details. Default is 2.
+        CPU limits of the blocks (pods), in cpu units.
+        This is the cpu "limits" option for resource specification.
+        Check kubernetes docs for more details. Default is 2.
     max_mem : str
-        Memory limits of the blocks (pods).
-        In Mi or Gi, check kubernetes docs for more details. Default is 500Mi.
+        Memory limits of the blocks (pods), in Mi or Gi.
+        This is the memory "limits" option for resource specification on kubernetes.
+        Check kubernetes docs for more details. Default is 500Mi.
     init_cpu : float
-        CPU initial requests of the blocks (pods).
-        In cpu units, check kubernetes docs for more details. Default is 1.
+        CPU limits of the blocks (pods), in cpu units.
+        This is the cpu "requests" option for resource specification.
+        Check kubernetes docs for more details. Default is 1.
     init_mem : str
-        Memory initial requests of the blocks (pods).
-        In Mi or Gi, check kubernetes docs for more details. Default is 250Mi.
+        Memory limits of the blocks (pods), in Mi or Gi.
+        This is the memory "requests" option for resource specification on kubernetes.
+        Check kubernetes docs for more details. Default is 250Mi.
     parallelism : float
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
@@ -75,10 +79,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  init_blocks: int = 4,
                  min_blocks: int = 0,
                  max_blocks: int = 10,
-                 max_cpu: float = 2,  # in cpu units
-                 max_mem: str = "500Mi",  # in Mi, Gi
-                 init_cpu: float = 1,  # in cpu units
-                 init_mem: str = "250Mi",  # in Mi, Gi
+                 max_cpu: float = 2,
+                 max_mem: str = "500Mi",
+                 init_cpu: float = 1,
+                 init_mem: str = "250Mi",
                  parallelism: float = 1,
                  worker_init: str = "",
                  pod_name: Optional[str] = None,
