@@ -206,7 +206,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
     def submit(self,
                command='sleep 1',
-               blocksize=1,
                tasks_per_node=1,
                job_name="parsl.auto"):
         """
@@ -216,8 +215,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         ----------
         command : str
             Command to be invoked on the remote side.
-        blocksize : int
-            Number of blocks requested.
         tasks_per_node : int (default=1)
             Number of command invocations to be launched per node
         job_name : str

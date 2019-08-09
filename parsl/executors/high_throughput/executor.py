@@ -547,7 +547,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             if self.provider:
                 external_block_id = str(len(self.blocks))
                 launch_cmd = self.launch_cmd.format(block_id=external_block_id)
-                internal_block = self.provider.submit(launch_cmd, 1, 1)
+                internal_block = self.provider.submit(launch_cmd, 1)
                 logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
                 if not internal_block:
                     raise(ScalingFailed(self.provider.label,

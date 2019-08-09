@@ -31,6 +31,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.executors.threads import ThreadPoolExecutor
 from parsl.utils import get_version
 
 from parsl.monitoring.message_type import MessageType
@@ -150,9 +151,10 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        self.data_manager = DataManager(self, max_threads=config.data_management_max_threads)
+        self.data_manager = DataManager(self)
         self.executors = {}
-        self.add_executors(config.executors + [self.data_manager])
+        data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='data_manager')
+        self.add_executors(config.executors + [data_manager_executor])
 
         if self.checkpoint_mode == "periodic":
             try:
@@ -521,28 +523,27 @@ class DataFlowKernel(object):
         """
         # Check the positional args
         depends = []
-        count = 0
+        unfinished_depends = []
+
+        def check_dep(d):
+            if isinstance(d, Future):
+                if self.tasks[d.tid]['status'] not in FINAL_STATES:
+                    unfinished_depends.extend([d])
+                depends.extend([d])
+
         for dep in args:
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
+        count = len(unfinished_depends)
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):

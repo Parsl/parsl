@@ -90,7 +90,7 @@ class Globus(object):
         last_event_time = None
         """
         A Globus transfer job (task) can be in one of the three states: ACTIVE, SUCCEEDED, FAILED.
-        Parsl every 20 seconds polls a status of the transfer job (task) from the Globus Transfer service,
+        Parsl every 15 seconds polls a status of the transfer job (task) from the Globus Transfer service,
         with 60 second timeout limit. If the task is ACTIVE after time runs out 'task_wait' returns False,
         and True otherwise.
         """
