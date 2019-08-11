@@ -60,25 +60,20 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, tid=None, stdout=None, stderr=None):
+    def __init__(self, task_def):
         """Initialize the AppFuture.
 
         Args:
 
         KWargs:
-             - tid (Int) : Task id should be any unique identifier. Now Int.
-             - stdout (str) : Stdout file of the app.
-                   Default: None
-             - stderr (str) : Stderr file of the app.
-                   Default: None
+             - task_def : The DFK task definition dictionary for the task represented
+                   by this future.
         """
-        self._tid = tid
         super().__init__()
         self.parent = None
         self._update_lock = threading.Lock()
         self._outputs = []
-        self._stdout = stdout
-        self._stderr = stderr
+        self.task_def = task_def
 
     def parent_callback(self, executor_fu):
         """Callback from a parent future to update the AppFuture.
@@ -131,15 +126,15 @@ class AppFuture(Future):
 
     @property
     def stdout(self):
-        return self._stdout
+        return self.task_def['kwargs']['stdout']
 
     @property
     def stderr(self):
-        return self._stderr
+        return self.task_def['kwargs']['stderr']
 
     @property
     def tid(self):
-        return self._tid
+        return self.task_def['id']
 
     def update_parent(self, fut):
         """Add a callback to the parent to update the state.
