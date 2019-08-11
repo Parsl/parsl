@@ -240,7 +240,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                             elif status == 4:
                                 reason += "problem writing out function result"
                             else:
-                                reason += "unable to process wrapper script failure"
+                                reason += "unable to process wrapper script failure with status = {}".format(status)
                             reason += "\nTrace:\n" + str(t.output)
                             logger.debug("WorkQueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
                         # WorkQueue system failure
