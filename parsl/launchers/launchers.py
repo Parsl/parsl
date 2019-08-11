@@ -357,6 +357,50 @@ echo "Done"
         return x
 
 
+class JsrunLauncher(Launcher):
+    """  Worker launcher that wraps the user's command with the Jsrun launch framework
+    to launch multiple cmd invocations in parallel on a single job allocation
+
+    """
+    def __init__(self, overrides=''):
+        """
+        Parameters
+        ----------
+
+        overrides: str
+             This string will be passed to the JSrun launcher. Default: ''
+        """
+        self.overrides = overrides
+
+    def __call__(self, command, tasks_per_node, nodes_per_block):
+        """
+        Args:
+        - command (string): The command string to be launched
+        - tasks_per_node (int) : Workers to launch per node
+        - nodes_per_block (int) : Number of nodes in a block
+
+        """
+
+        tasks_per_block = tasks_per_node * nodes_per_block
+        x = '''
+WORKERCOUNT={1}
+
+cat << JSRUN_EOF > cmd_$JOBNAME.sh
+{0}
+JSRUN_EOF
+chmod a+x cmd_$JOBNAME.sh
+
+jsrun -n {tasks_per_block} -r {tasks_per_node} {overrides} /bin/bash cmd_$JOBNAME.sh &
+wait
+
+echo "Done"
+'''.format(command, tasks_per_block,
+           tasks_per_block=tasks_per_block,
+           tasks_per_node=tasks_per_node,
+           overrides=self.overrides)
+        return x
+
+
 if __name__ == '__main__':
 
     s = SingleNodeLauncher()
