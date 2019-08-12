@@ -18,10 +18,6 @@ def test_stdout_simple():
     len1 = len(open(out).readlines())
     assert len1 == 1,  "Line count of first output should be 1 but len1={}".format(len1)
 
-    echo_to_streams('hi', stdout=out, stderr=err).result()
-    len2 = len(open(out).readlines())
-    assert len2 == 2,  "Line count of second output should be 2 but len2={}".format(len2)
-
     os.system('rm -f ' + out + ' ' + err)
 
 
@@ -39,10 +35,6 @@ def test_stdout_abspath():
     len1 = len(open(out).readlines())
     assert len1 == 1,  "Line count of first output should be 1 but len1={}".format(len1)
 
-    echo_to_streams('hi', stdout=out, stderr=err).result()
-    len2 = len(open(out).readlines())
-    assert len2 == 2,  "Line count of second output should be 2 but len2={}".format(len2)
-
     os.system('rm -f ' + out + ' ' + err)
 
 
@@ -55,10 +47,6 @@ def test_stdout_subdir():
     echo_to_streams('hi', stdout=out, stderr=err).result()
     len1 = len(open(out).readlines())
     assert len1 == 1,  "Line count of first output should be 1 but len1={}".format(len1)
-
-    echo_to_streams('hi', stdout=out, stderr=err).result()
-    len2 = len(open(out).readlines())
-    assert len2 == 2,  "Line count of second output should be 2 but len2={}".format(len2)
 
     os.system('rm -f ' + out + ' ' + err)
 
