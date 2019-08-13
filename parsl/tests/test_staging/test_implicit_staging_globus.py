@@ -55,8 +55,9 @@ def test_stage_in_out_globus():
 
     # wait for both the app to complete, and the stageout DataFuture to complete.
     # It isn't clearly defined whether we need to wait for both, or whether
-    # waiting for both is sufficient, but at time of writing this test,
-    # neither is sufficient (!) - see issue #778
+    # waiting for one is sufficient, but at time of writing this test,
+    # neither is sufficient (!) - see issue #778 - and instead this test will
+    # sometimes pass even though stageout is not working.
 
     f.result()
     f.outputs[0].result()
