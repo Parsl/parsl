@@ -126,11 +126,11 @@ class AppFuture(Future):
 
     @property
     def stdout(self):
-        return self.task_def['kwargs']['stdout']
+        return self.task_def['kwargs'].get('stdout')
 
     @property
     def stderr(self):
-        return self.task_def['kwargs']['stderr']
+        return self.task_def['kwargs'].get('stderr')
 
     @property
     def tid(self):
