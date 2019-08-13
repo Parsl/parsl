@@ -693,18 +693,12 @@ class DataFlowKernel(object):
         dep_cnt, depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
-        # Extract stdout and stderr to pass to AppFuture:
-        task_stdout = kwargs.get('stdout')
-        task_stderr = kwargs.get('stderr')
-
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
                                                                                task_def['func_name'],
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(tid=task_id,
-                           stdout=task_stdout,
-                           stderr=task_stderr)
+        app_fu = AppFuture(task_def)
 
         self.tasks[task_id]['app_fu'] = app_fu
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
