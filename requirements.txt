@@ -7,10 +7,4 @@ tblib
 ipykernel
 requests
 paramiko
-pydot
-networkx
-Flask
-flask_sqlalchemy
-pandas
-plotly
-python-daemon
+psutil>=5.5.1

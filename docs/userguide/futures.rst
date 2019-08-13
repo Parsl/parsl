@@ -84,7 +84,7 @@ The following code snippet shows how DataFutures are used:
       # outputs list
       @bash_app
       def echo(message, outputs=[]):
-          return 'echo %s &> {outputs[0]}' % (message)
+          return 'echo {} &> {}'.format(message, outputs[0])
 
       # Call echo specifying the output file
       hello = echo('Hello World!', outputs=['hello1.txt'])

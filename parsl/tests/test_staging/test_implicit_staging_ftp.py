@@ -35,6 +35,8 @@ if __name__ == "__main__":
 
     import argparse
 
+    parsl.load()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")

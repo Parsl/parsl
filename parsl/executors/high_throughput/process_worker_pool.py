@@ -4,17 +4,18 @@ import argparse
 import logging
 import os
 import sys
-import sys
 import platform
 # import random
 import threading
 import pickle
 import time
+import datetime
 import queue
 import uuid
 import zmq
 import math
 import json
+import psutil
 
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
@@ -49,6 +50,7 @@ class Manager(object):
                  task_q_url="tcp://127.0.0.1:50097",
                  result_q_url="tcp://127.0.0.1:50098",
                  cores_per_worker=1,
+                 mem_per_worker=None,
                  max_workers=float('inf'),
                  prefetch_capacity=0,
                  uid=None,
@@ -71,6 +73,13 @@ class Manager(object):
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
              by setting cores_per_worker < 1.0. Default=1
+
+        mem_per_worker : float
+             GB of memory required per worker. If this option is specified, the node manager
+             will check the available memory at startup and limit the number of workers such that
+             the there's sufficient memory for each worker. If set to None, memory on node is not
+             considered in the determination of workers to be launched on node by the manager.
+             Default: None
 
         max_workers : int
              caps the maximum number of workers that can be launched.
@@ -115,9 +124,18 @@ class Manager(object):
         self.block_id = block_id
 
         cores_on_node = multiprocessing.cpu_count()
+        available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
+
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
+
+        mem_slots = max_workers
+        # Avoid a divide by 0 error.
+        if mem_per_worker and mem_per_worker > 0:
+            mem_slots = math.floor(available_mem_on_node / mem_per_worker)
+
         self.worker_count = min(max_workers,
+                                mem_slots,
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
@@ -145,8 +163,11 @@ class Manager(object):
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,
                'os': platform.system(),
-               'hname': platform.node(),
+               'hostname': platform.node(),
                'dir': os.getcwd(),
+               'cpu_count': psutil.cpu_count(logical=False),
+               'total_memory': psutil.virtual_memory().total,
+               'reg_time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
@@ -474,6 +495,8 @@ if __name__ == "__main__":
                         help="Block identifier for Manager")
     parser.add_argument("-c", "--cores_per_worker", default="1.0",
                         help="Number of cores assigned to each worker process. Default=1.0")
+    parser.add_argument("-m", "--mem_per_worker", default=0,
+                        help="GB of memory assigned to each worker process. Default=0, no assignment")
     parser.add_argument("-t", "--task_url", required=True,
                         help="REQUIRED: ZMQ url for receiving tasks")
     parser.add_argument("--max_workers", default=float('inf'),
@@ -507,6 +530,7 @@ if __name__ == "__main__":
         logger.info("Manager ID: {}".format(args.uid))
         logger.info("Block ID: {}".format(args.block_id))
         logger.info("cores_per_worker: {}".format(args.cores_per_worker))
+        logger.info("mem_per_worker: {}".format(args.mem_per_worker))
         logger.info("task_url: {}".format(args.task_url))
         logger.info("result_url: {}".format(args.result_url))
         logger.info("max_workers: {}".format(args.max_workers))
@@ -518,6 +542,7 @@ if __name__ == "__main__":
                           uid=args.uid,
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
+                          mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
                           max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
                           prefetch_capacity=int(args.prefetch_capacity),
                           heartbeat_threshold=int(args.hb_threshold),

@@ -9,9 +9,9 @@
 
 <ul>
     <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}">{{ workflow_details['workflow_name'] }}<a/></li>
-    <li><b>Started:</b>  {{ workflow_details['time_began'] }}</li>
-    <li><b>Completed:</b>  {{ workflow_details['time_completed'] }}</li>
-    <li><b>Workflow duration:</b>  {{ workflow_details['workflow_duration'] }} s</li>
+    <li><b>Started:</b>  {{ workflow_details['time_began'] | timeformat }}</li>
+    <li><b>Completed:</b>  {{ workflow_details['time_completed'] | timeformat }}</li>
+    <li><b>Workflow duration:</b>  {{ workflow_details['workflow_duration'] | timeformat }}</li>
     <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
     <li><b>host:</b>  {{ workflow_details['host'] }}</li>
     <li><b>rundir:</b>  {{ workflow_details['rundir'] }}</li>
@@ -47,8 +47,8 @@
         {% endif %}
         </td>
         <td>{{ t['task_executor'] }}</td>
-        <td>{{ t['task_time_submitted'] }}</td>
-        <td> {{ t['task_time_returned'] }}</td>
+        <td>{{ t['task_time_submitted'] | timeformat }}</td>
+        <td> {{ t['task_time_returned'] | timeformat }}</td>
       </tr>
     {% endfor %}
     </tbody>

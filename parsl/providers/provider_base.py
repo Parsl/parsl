@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class ExecutionProvider(metaclass=ABCMeta):
-    """ Define the strict interface for all Execution Provider
+    """ Define the strict interface for all Execution Providers
 
     .. code:: python
 
@@ -23,14 +23,13 @@ class ExecutionProvider(metaclass=ABCMeta):
      """
 
     @abstractmethod
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
              - command (str) : The bash command string to be executed
-             - blocksize (int) : Blocksize to be requested
              - tasks_per_node (int) : command invocations to be launched per node
 
         KWargs:
@@ -38,6 +37,8 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         Returns:
              - A job identifier, this could be an integer, string etc
+               or None or any other object that evaluates to boolean false
+                  if submission failed but an exception isn't thrown.
 
         Raises:
              - ExecutionProviderException or its subclasses

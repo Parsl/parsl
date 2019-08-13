@@ -53,6 +53,7 @@ Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_a
 2. outputs: (list) This keyword argument defines a list of output :ref:`label-futures` that
    will be produced by this app. Parsl will track these files and ensure they are correctly created.
    They can then be passed to other apps as input arguments.
+3. walltime: (int) If the app runs longer than ``walltime`` seconds, a ``parsl.app.errors.AppTimeout`` will be raised.
 
 Returns
 ^^^^^^^
@@ -98,8 +99,9 @@ Special Keywords
 
 1. inputs: (list) A list of input :ref:`label-futures` on which to wait before execution.
 2. outputs: (list) A list of output :ref:`label-futures` that will be created by the app.
-3. stdout: (string) The path to a file to which STDOUT should be redirected.
-4. stderr: (string) The path to a file to which STDERR should be redirected.
+3. stdout: (string or parsl.AUTO_LOGNAME) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory.
+4. stderr: (string or parsl.AUTO_LOGNAME) The path to a file to which standard error should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory.
+5. label: (string) If the app is invoked with `stdout=parsl.AUTO_LOGNAME` or `stderr=parsl.AUTO_LOGNAME`, append `label` to the log name.
 
 A Bash app allows for the composition of the string to execute on the command-line from the arguments passed
 to the decorated function. The string that is returned is formatted by the Python string `format <https://docs.python.org/3.4/library/functions.html#format>`_  (`PEP 3101 <https://www.python.org/dev/peps/pep-3101/>`_).
@@ -107,11 +109,15 @@ to the decorated function. The string that is returned is formatted by the Pytho
 .. code-block:: python
 
        @bash_app
-       def echo(arg1, inputs=[], stderr='std.err', stdout='std.out'):
-           return 'echo %s %s %s' % (arg1, inputs[0], inputs[1])
+       def echo(arg, inputs=[], stderr=parsl.AUTO_LOGNAME, stdout=parsl.AUTO_LOGNAME):
+           return 'echo {} {} {}'.format(arg, inputs[0], inputs[1])
 
-       # This call echoes "Hello World !" to the file *std.out*
-       echo('Hello', inputs=['World', '!'])
+       future = echo('Hello', inputs=['World', '!'])
+       future.result() # block until task has completed
+
+       with open(future.stdout, 'r') as f:
+           print(f.read()) # prints "Hello World !"
+
 
 Returns
 ^^^^^^^

@@ -22,6 +22,11 @@ However the following helper functions are provided for logging:
 2. set_file_logger
     This sets the logging to a file. This is ideal for reporting issues to the dev team.
 
+Constants
+---------
+AUTO_LOGNAME
+    Special value that indicates Parsl should construct a filename for logging.
+
 """
 import logging
 import typeguard
@@ -42,6 +47,8 @@ from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
 __author__ = 'The Parsl Team'
 __version__ = VERSION
 
+AUTO_LOGNAME = -1
+
 __all__ = [
 
     # decorators
@@ -56,6 +63,7 @@ __all__ = [
     # logging
     'set_stream_logger',
     'set_file_logger',
+    'AUTO_LOGNAME',
 
     # executors
     'ThreadPoolExecutor',

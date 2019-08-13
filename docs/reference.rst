@@ -24,6 +24,7 @@ Reference guide
     parsl.executors.swift_t.TurbineExecutor
     parsl.channels.LocalChannel
     parsl.channels.SSHChannel
+    parsl.channels.OAuthSSHChannel
     parsl.channels.SSHInteractiveLoginChannel
     parsl.providers.AWSProvider
     parsl.providers.CobaltProvider
@@ -43,7 +44,7 @@ Reference guide
     parsl.launchers.SrunMPILauncher
     parsl.launchers.GnuParallelLauncher
     parsl.launchers.MpiExecLauncher
-    parsl.monitoring.db_logger.MonitoringConfig
+    parsl.monitoring.MonitoringHub
 
 .. autosummary::
     :toctree: stubs

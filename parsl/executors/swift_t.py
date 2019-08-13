@@ -343,7 +343,7 @@ class TurbineExecutor(ParslExecutor):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def scale_out(self, workers=1):
+    def scale_out(self, blocks=1):
         """Scales out the number of active workers by 1.
 
         This method is not implemented for threads and will raise the error if called.
@@ -354,7 +354,7 @@ class TurbineExecutor(ParslExecutor):
         """
         raise NotImplementedError
 
-    def scale_in(self, workers):
+    def scale_in(self, blocks):
         """Scale in the number of active blocks by specified amount.
 
         This method is not implemented for turbine and will raise an error if called.

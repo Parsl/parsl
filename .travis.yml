@@ -8,22 +8,20 @@ env:
     - HYDRA_LAUNCHER=fork
     - OMPI_MCA_rmaps_base_oversubscribe=yes
     - MPI=mpich
+    - CCTOOLS_VERSION=7.0.11
 
 before_install:
     - sudo apt-get update -q
     - python$PY -m pip install Cython
     - python$PY -m pip install numpy
-    - bash parsl/executors/extreme_scale/install-mpi.sh $MPI
     - python$PY --version
     - python$PY -m cython --version
     - python$PY -c "import numpy;print(numpy.__version__)"
-    - if [[ "$MPI" == "mpich"   ]]; then mpichversion; fi
-    - if [[ "$MPI" == "openmpi" ]]; then ompi_info;    fi
 
-# command to install dependencies
+
+# install parsl with no optional extras
 install:
-    - pip install -r requirements.txt
-    - pip install .[extreme_scale]
+    - pip install .
 
 # Os tests
 os:
@@ -31,6 +29,5 @@ os:
 
 # command to run tests
 script:
-    - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - bash parsl/tests/run.sh

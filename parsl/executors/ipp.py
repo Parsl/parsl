@@ -9,7 +9,7 @@ from parsl.utils import RepresentationMixin
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.executors.base import ParslExecutor
-from parsl.executors.errors import *
+from parsl.executors.errors import ScalingFailed
 from parsl.executors.ipp_controller import Controller
 from parsl.utils import wait_for_file
 
@@ -238,7 +238,7 @@ sleep infinity
         r = []
         for i in range(blocks):
             if self.provider:
-                block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
+                block = self.provider.submit(self.launch_cmd, self.workers_per_node)
                 logger.debug("Launched block {}:{}".format(i, block))
                 if not block:
                     raise(ScalingFailed(self.provider.label,
