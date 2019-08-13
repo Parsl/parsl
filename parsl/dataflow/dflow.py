@@ -643,17 +643,6 @@ class DataFlowKernel(object):
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
 
-        task_stdout = kwargs.get('stdout')
-        task_stderr = kwargs.get('stderr')
-        app_fu = AppFuture(tid=task_id,
-                           stdout=task_stdout,
-                           stderr=task_stderr)
-
-        # Transform remote input files to data futures
-        args, kwargs = self._add_input_deps(executor, args, kwargs)
-
-        self._add_output_deps(executor, args, kwargs, app_fu)
-
         label = kwargs.get('label')
         for kw in ['stdout', 'stderr']:
             if kw in kwargs:
@@ -673,8 +662,6 @@ class DataFlowKernel(object):
                     'executor': executor,
                     'func': func,
                     'func_name': func.__name__,
-                    'args': args,
-                    'kwargs': kwargs,
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'callback': None,
@@ -686,8 +673,21 @@ class DataFlowKernel(object):
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
-                    'time_returned': None,
-                    'app_fu': None}
+                    'time_returned': None}
+
+
+        app_fu = AppFuture(task_def)
+
+        # Transform remote input files to data futures
+        args, kwargs = self._add_input_deps(executor, args, kwargs)
+
+        self._add_output_deps(executor, args, kwargs, app_fu)
+
+        task_def.update({
+                    'args': args,
+                    'kwargs': kwargs,
+                    'app_fu': app_fu})
+
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
@@ -705,7 +705,6 @@ class DataFlowKernel(object):
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
 
-        self.tasks[task_id]['app_fu'] = app_fu
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
         self.tasks[task_id]['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
