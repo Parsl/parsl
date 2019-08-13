@@ -36,6 +36,7 @@ def test_stage_in_globus():
 
     f.result()
 
+
 @pytest.mark.local
 def test_stage_in_out_globus():
     """Test stage-in then stage-out to/from Globus
@@ -59,6 +60,7 @@ def test_stage_in_out_globus():
 
     f.result()
     f.outputs[0].result()
+
 
 if __name__ == "__main__":
 
