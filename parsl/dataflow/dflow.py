@@ -675,7 +675,6 @@ class DataFlowKernel(object):
                     'time_submitted': None,
                     'time_returned': None}
 
-
         app_fu = AppFuture(task_def)
 
         # Transform remote input files to data futures
@@ -687,7 +686,6 @@ class DataFlowKernel(object):
                     'args': args,
                     'kwargs': kwargs,
                     'app_fu': app_fu})
-
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
