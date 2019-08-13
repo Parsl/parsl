@@ -1,4 +1,7 @@
 import logging
+
+from parsl.app.futures import DataFuture
+from parsl.data_provider.files import File
 from parsl.data_provider.ftp import _ftp_stage_in_app
 from parsl.data_provider.globus import _get_globus_scheme
 from parsl.data_provider.http import _http_stage_in_app
@@ -24,19 +27,31 @@ class DataManager(object):
         self.dfk = dfk
         self.globus = None
 
-    def stage_in(self, file, executor, parent_fut):
-        """Transport the file from the input source to the executor.
+    def stage_in(self, input, executor):
+        """Transport the input from the input source to the executor, if it is file-like,
+        returning a DataFuture that wraps the stage-in operation.
 
-        This function returns a DataFuture.
+        If no staging in is required - because the `file` parameter is not file-like,
+        then return that parameter unaltered.
 
         Args:
             - self
-            - file (File) : file to stage in
+            - input (Any) : input to stage in. If this is a File or a
+              DataFuture, stage in tasks will be launched with appropriate
+              dependencies. Otherwise, no stage-in will be performed.
             - executor (str) : an executor the file is going to be staged in to.
-            - parent_fut: (optional DataFuture) : If specified, stage in tasks will depend on this
-                future completing before executing, and the File contained in that future will be
-                used as input.
         """
+
+        if isinstance(input, DataFuture) and input.file_obj.is_remote():
+            file = input.file_obj
+            parent_fut = input
+        elif isinstance(input, File) and input.is_remote():
+            file = input
+            parent_fut = None
+        else:
+            return input
+
+        file = input
 
         if file.scheme == 'ftp':
             working_dir = self.dfk.executors[executor].working_dir

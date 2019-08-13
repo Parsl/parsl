@@ -20,7 +20,6 @@ from concurrent.futures import Future
 from functools import partial
 
 import parsl
-from parsl.app.futures import DataFuture
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
@@ -497,25 +496,14 @@ class DataFlowKernel(object):
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            if isinstance(f, DataFuture) and f.file_obj.is_remote():
-                inputs[idx] = self.data_manager.stage_in(f.file_obj, executor, f)
-            if isinstance(f, File) and f.is_remote():
-                inputs[idx] = self.data_manager.stage_in(f, executor, None)
-            # if neither of the above, then local File, or local DataFuture, or non-File-related
-            # so do no stage-in
+            inputs[idx] = self.data_manager.stage_in(f, executor)
 
         for kwarg, f in kwargs.items():
-            if isinstance(f, DataFuture) and f.file_obj.is_remote():
-                kwargs[kwarg] = self.data_manager.stage_in(f.file_obj, executor, f)
-            elif isinstance(f, File) and f.is_remote():
-                kwargs[kwarg] = self.data_manager.stage_in(f, executor, None)
+            kwargs[kwarg] = self.data_manager.stage_in(f, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
-            if isinstance(f, DataFuture) and f.file_obj.is_remote():
-                newargs[idx] = self.data_manager.stage_in(f.file_obj, executor, f)
-            if isinstance(f, File) and f.is_remote():
-                newargs[idx] = self.data_manager.stage_in(f, executor, None)
+            newargs[idx] = self.data_manager.stage_in(f, executor)
 
         return tuple(newargs), kwargs
 
