@@ -51,8 +51,6 @@ class DataManager(object):
         else:
             return input
 
-        file = input
-
         if file.scheme == 'ftp':
             working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = _ftp_stage_in_app(self, executor=executor)
