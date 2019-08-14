@@ -5,28 +5,24 @@ import logging
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
-from parsl.providers.slurm.template import template_string
+from parsl.providers.lsf.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
 translate_table = {
-    'PD': 'PENDING',
-    'R': 'RUNNING',
-    'CA': 'CANCELLED',
-    'CF': 'PENDING',  # (configuring),
-    'CG': 'RUNNING',  # (completing),
-    'CD': 'COMPLETED',
-    'F': 'FAILED',  # (failed),
-    'TO': 'TIMEOUT',  # (timeout),
-    'NF': 'FAILED',  # (node failure),
-    'RV': 'FAILED',  # (revoked) and
-    'SE': 'FAILED'
-}  # (special exit state
+    'PEND': 'PENDING',
+    'RUN': 'RUNNING',
+    'DONE': 'COMPLETED',
+    'EXIT': 'FAILED',  # (failed),
+    'PSUSP': 'CANCELLED',
+    'USUSP': 'CANCELLED',
+    'SSUSP': 'CANCELLED',
+}
 
 
-class SlurmProvider(ClusterProvider, RepresentationMixin):
-    """Slurm Execution Provider
+class LSFProvider(ClusterProvider, RepresentationMixin):
+    """LSF Execution Provider
 
     This provider uses sbatch to submit, squeue for status and scancel to cancel
     jobs. The sbatch script to be used is created from a template file in this
@@ -34,8 +30,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
     Parameters
     ----------
-    partition : str
-        Slurm partition to request blocks from.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
@@ -43,6 +37,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
+    init_blocks : int
+        Number of blocks to request at the start of the run.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
@@ -53,12 +49,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     walltime : str
         Walltime requested per block in HH:MM:SS.
+    project : str
+        Project to which the resources must be charged
     scheduler_options : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
-    exclusive : bool (Default = True)
-        Requests nodes which are not shared with other running jobs.
+    cmd_timeout : int
+        Seconds after which requests to the scheduler will timeout. Default: 120s
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
@@ -68,7 +66,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     """
 
     def __init__(self,
-                 partition,
                  channel=LocalChannel(),
                  nodes_per_block=1,
                  init_blocks=1,
@@ -78,11 +75,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  walltime="00:10:00",
                  scheduler_options='',
                  worker_init='',
-                 cmd_timeout=10,
-                 exclusive=True,
+                 project=None,
+                 cmd_timeout=120,
                  move_files=True,
                  launcher=SingleNodeLauncher()):
-        label = 'slurm'
+        label = 'LSF'
         super().__init__(label,
                          channel,
                          nodes_per_block,
@@ -94,13 +91,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                          cmd_timeout=cmd_timeout,
                          launcher=launcher)
 
-        self.partition = partition
-        self.exclusive = exclusive
+        self.project = project
         self.move_files = move_files
-        if exclusive:
-            self.scheduler_options = "#SBATCH --exclusive\n" + scheduler_options
-        else:
-            self.scheduler_options = scheduler_options
+        self.scheduler_options = scheduler_options
         self.worker_init = worker_init
 
     def _status(self):
@@ -113,12 +106,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         '''
         job_id_list = ','.join(self.resources.keys())
-        cmd = "squeue --job {0}".format(job_id_list)
+        cmd = "bjobs {0}".format(job_id_list)
 
         retcode, stdout, stderr = super().execute_wait(cmd)
-
         # Execute_wait failed. Do no update
         if retcode != 0:
+            logger.debug("Updating job status from {} failed with return code {}".format(self.label,
+                                                                                         retcode))
             return
 
         jobs_missing = list(self.resources.keys())
@@ -126,7 +120,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             parts = line.split()
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
-                status = translate_table.get(parts[4], 'UNKNOWN')
+                status = translate_table.get(parts[2], 'UNKNOWN')
                 self.resources[job_id]['status'] = status
                 jobs_missing.remove(job_id)
 
@@ -137,7 +131,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
-        """Submit the command as a slurm job.
+        """Submit the command as an LSF job.
 
         Parameters
         ----------
@@ -154,7 +148,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         """
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
+            logger.warn("LSF provider '{}' is at capacity (no more blocks will be added)".format(self.label))
             return None
 
         job_name = "{0}.{1}".format(job_name, time.time())
@@ -171,7 +165,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config["walltime"] = wtime_to_minutes(self.walltime)
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
-        job_config["partition"] = self.partition
+        job_config["project"] = self.project
         job_config["user_script"] = command
 
         # Wrap the command
@@ -189,16 +183,16 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug("not moving files")
             channel_script_path = script_path
 
-        retcode, stdout, stderr = super().execute_wait("sbatch {0}".format(channel_script_path))
+        retcode, stdout, stderr = super().execute_wait("bsub {0}".format(channel_script_path))
 
         job_id = None
         if retcode == 0:
             for line in stdout.split('\n'):
-                if line.startswith("Submitted batch job"):
-                    job_id = line.split("Submitted batch job")[1].strip()
+                if line.lower().startswith("job") and "is submitted to" in line.lower():
+                    job_id = line.split()[1].strip('<>')
                     self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
         else:
-            print("Submission of command to scale_out failed")
+            logger.warning("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 
@@ -213,22 +207,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("scancel {0}".format(job_id_list))
+        retcode, stdout, stderr = super().execute_wait("bkill {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['CA']  # Setting state to cancelled
+                self.resources[jid]['status'] = translate_table['USUSP']  # Job suspended by user/admin
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
 
         return rets
-
-    def _test_add_resource(self, job_id):
-        self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])
-        return True
-
-
-if __name__ == "__main__":
-
-    print("None")

@@ -31,6 +31,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.executors.threads import ThreadPoolExecutor
 from parsl.utils import get_version
 
 from parsl.monitoring.message_type import MessageType
@@ -150,9 +151,10 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        self.data_manager = DataManager(self, max_threads=config.data_management_max_threads)
+        self.data_manager = DataManager(self)
         self.executors = {}
-        self.add_executors(config.executors + [self.data_manager])
+        data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='data_manager')
+        self.add_executors(config.executors + [data_manager_executor])
 
         if self.checkpoint_mode == "periodic":
             try:
@@ -333,19 +335,26 @@ class DataFlowKernel(object):
             if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
-        # Submit _*_stage_out tasks for output data futures that correspond with remote files
-        if (self.tasks[task_id]['app_fu'] and
-            self.tasks[task_id]['app_fu'].done() and
-            self.tasks[task_id]['app_fu'].exception() is None and
-            self.tasks[task_id]['executor'] != 'data_manager' and
-            self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
-            self.tasks[task_id]['func_name'] != '_http_stage_in'):
-            for dfu in self.tasks[task_id]['app_fu'].outputs:
+        # Submit _*_stage_out tasks for output data futures that have output files,
+        # that do not have stageing inhibited.
+
+        logger.debug("Submitting stage out jobs")
+        app_fu = self.tasks[task_id]['app_fu']
+
+        if app_fu.exception() is None and not self.check_staging_inhibited(self.tasks[task_id]['kwargs']):
+            for dfu in app_fu.outputs:
                 f = dfu.file_obj
                 if isinstance(f, File) and f.is_remote():
+                    logger.debug("Submitting stage out job for output file {}".format(f))
                     self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
+                else:
+                    logger.debug("Skipping stageout for output {}".format(f))
 
         return
+
+    @staticmethod
+    def check_staging_inhibited(kwargs):
+        return kwargs.get('staging_inhibit_output', False)
 
     def launch_if_ready(self, task_id):
         """
@@ -514,28 +523,27 @@ class DataFlowKernel(object):
         """
         # Check the positional args
         depends = []
-        count = 0
+        unfinished_depends = []
+
+        def check_dep(d):
+            if isinstance(d, Future):
+                if self.tasks[d.tid]['status'] not in FINAL_STATES:
+                    unfinished_depends.extend([d])
+                depends.extend([d])
+
         for dep in args:
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
+        count = len(unfinished_depends)
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
@@ -685,18 +693,12 @@ class DataFlowKernel(object):
         dep_cnt, depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
-        # Extract stdout and stderr to pass to AppFuture:
-        task_stdout = kwargs.get('stdout')
-        task_stderr = kwargs.get('stderr')
-
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
                                                                                task_def['func_name'],
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(tid=task_id,
-                           stdout=task_stdout,
-                           stderr=task_stderr)
+        app_fu = AppFuture(task_def)
 
         self.tasks[task_id]['app_fu'] = app_fu
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
