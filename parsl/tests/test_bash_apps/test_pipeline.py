@@ -52,7 +52,7 @@ def test_increment(depth=5):
             fu = futs[key]
             data = open(fu.result().filepath, 'r').read().strip()
             assert data == str(
-                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+                key), "[TEST] incr failed for key: {0} got: {1}".format(key, data)
 
 
 def test_increment_slow(depth=5, dur=0.5):
@@ -84,7 +84,7 @@ def test_increment_slow(depth=5, dur=0.5):
             fu = futs[key]
             data = open(fu.result().filepath, 'r').read().strip()
             assert data == str(
-                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+                key), "[TEST] incr failed for key: {0} got: {1}".format(key, data)
 
 
 if __name__ == '__main__':
