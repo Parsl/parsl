@@ -304,6 +304,17 @@ re-used in subsequent runs. The configuration uses the `AWSProvider` to connect 
 
 .. literalinclude:: ../../parsl/configs/ec2_htex_single_node.py
 
+Kubernetes Clusters
+-------------------
+
+.. image:: https://d1.awsstatic.com/PAC/kuberneteslogo.eabc6359f48c8e30b7a138c18177f3fd39338e05.png
+
+Kubernetes is an open-source system for container management, such as automating deployment and scaling of containers.
+The snippet below shows an example configuration for deploying non-deployment pods as workers on a Kubernetes cluster.
+The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in `~/.kube/config`.
+
+.. literalinclude:: ../../parsl/configs/kubernetes_htex.py
+
 
 Ad-Hoc Clusters
 ---------------
