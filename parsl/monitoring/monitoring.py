@@ -458,7 +458,10 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
     pm.cpu_percent()
 
     first_msg = True
-
+    children_user_time = {}
+    children_system_time = {}
+    total_children_user_time = 0.0
+    total_children_system_time = 0.0
     while True:
         logging.debug("start of monitoring loop")
         try:
@@ -491,8 +494,12 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             for child in children:
                 for k, v in child.as_dict(attrs=summable_values).items():
                     d['psutil_process_' + str(k)] += v
-                d['psutil_process_time_user'] += child.cpu_times().user
-                d['psutil_process_time_system'] += child.cpu_times().system
+                child_user_time = child.cpu_times().user
+                child_system_time = child.cpu_times().system
+                total_children_user_time += child_user_time - children_user_time.get(child.pid, 0)
+                total_children_system_time += child_system_time - children_system_time.get(child.pid, 0)
+                children_user_time[child.pid] = child_user_time
+                children_system_time[child.pid] = child_system_time
                 d['psutil_process_memory_virtual'] += child.memory_info().vms
                 d['psutil_process_memory_resident'] += child.memory_info().rss
                 try:
@@ -503,6 +510,8 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
                     logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
+            d['psutil_process_time_user'] += total_children_user_time
+            d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
             radio.send(MessageType.TASK_INFO, task_id, d)
             first_msg = False
