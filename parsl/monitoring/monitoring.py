@@ -345,9 +345,6 @@ class Hub(object):
                                         level=logging_level)
         self.logger.debug("Hub starting")
 
-        if not hub_port:
-            self.logger.critical("At this point the hub port must be set")
-
         self.hub_port = hub_port
         self.hub_address = hub_address
         self.atexit_timeout = atexit_timeout
@@ -356,15 +353,19 @@ class Hub(object):
         self.loop_freq = 10.0  # milliseconds
 
         # Initialize the UDP socket
-        self.logger.debug("Intiializing the UDP socket on 0.0.0.0:{}".format(hub_port))
         try:
             self.sock = socket.socket(socket.AF_INET,
                                       socket.SOCK_DGRAM,
                                       socket.IPPROTO_UDP)
 
             # We are trying to bind to all interfaces with 0.0.0.0
-            self.sock.bind(('0.0.0.0', hub_port))
+            if not self.hub_port:
+                self.sock.bind(('0.0.0.0', 0))
+                self.hub_port = self.sock.getsockname()[1]
+            else:
+                self.sock.bind(('0.0.0.0', self.hub_port))
             self.sock.settimeout(self.loop_freq / 1000)
+            self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
         except OSError:
             self.logger.critical("The port is already in use")
             self.hub_port = -1
