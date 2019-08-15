@@ -18,7 +18,7 @@ config = Config(
                 nodes_per_block=1,
                 init_blocks=1,  
                 max_blocks=10,  # Maximum number of pods to scale up
-                worker_init="""pip install git+https://github.com/Parsl/parsl""", # install Parsl when the pod starts
+                worker_init="""pip install parsl""",  # install Parsl when the pod starts
                 secret="kube-secret",  # The secret key to download the image
                 pod_name='test-pod',  # Should follow the Kubernetes naming rules
             ),
