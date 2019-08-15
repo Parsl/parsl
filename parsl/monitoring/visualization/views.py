@@ -5,7 +5,7 @@ from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
-from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_time_series
+from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_efficiency
 
 dummy = True
 
@@ -56,7 +56,6 @@ def workflow(workflow_id):
                                 % (workflow_id), db.engine)
     task_summary = db.engine.execute(
         "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
-
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
@@ -151,14 +150,8 @@ def workflow_resources(workflow_id):
 
     df_task = pd.read_sql_query(
         "SELECT * FROM task WHERE run_id='%s'" % (workflow_id), db.engine)
-
-    df_task_resources = pd.read_sql_query('''
-                                          SELECT task_id, timestamp, resource_monitoring_interval,
-                                          psutil_process_cpu_percent, psutil_process_time_user,
-                                          psutil_process_memory_percent, psutil_process_memory_resident
-                                          from resource
-                                          where run_id = '%s'
-                                          ''' % (workflow_id), db.engine)
+    df_node = pd.read_sql_query(
+        "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
                            user_time_distribution_avg_plot=resource_distribution_plot(
@@ -169,12 +162,6 @@ def workflow_resources(workflow_id):
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='avg'),
                            memory_usage_distribution_max_plot=resource_distribution_plot(
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='max'),
-                           user_time_time_series=resource_time_series(
-                               df_task_resources, type='psutil_process_time_user', label='CPU User Time'),
-                           cpu_percent_time_series=resource_time_series(
-                               df_task_resources, type='psutil_process_cpu_percent', label='CPU Utilization'),
-                           memory_percent_time_series=resource_time_series(
-                               df_task_resources, type='psutil_process_memory_percent', label='Memory Utilization'),
-                           memory_resident_time_series=resource_time_series(
-                               df_task_resources, type='psutil_process_memory_resident', label='Memory Usage'),
+                           cpu_efficiency=resource_efficiency(df_resources, df_node, label='CPU'),
+                           memory_efficiency=resource_efficiency(df_resources, df_node, label='mem'),
                            )
