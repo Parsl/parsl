@@ -255,7 +255,14 @@ def _globus_stage_in(scheme, executor, outputs=[], staging_inhibit_output=True):
             file.path, dst_path)
 
 
-def _globus_stage_out(scheme, executor, inputs=[]):
+def _globus_stage_out(scheme, executor, app_fu, inputs=[]):
+    """
+    Although app_fu isn't directly used in the stage out code,
+    it is needed as an input dependency to ensure this code
+    doesn't run until the app_fu is complete. The actual change
+    that is represented by the app_fu completing is that the
+    executor filesystem will now contain the file to stage out.
+    """
     globus_ep = scheme._get_globus_endpoint(executor)
     file = inputs[0]
     src_path = os.path.join(globus_ep['endpoint_path'], file.filename)
