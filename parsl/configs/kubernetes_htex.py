@@ -5,7 +5,7 @@ from parsl.addresses import address_by_route
 
 
 config = Config(
-    executors = [
+    executors=[
         HighThroughputExecutor(
             label='kube-htex',
             cores_per_worker=1,
@@ -16,7 +16,7 @@ config = Config(
                 namespace="default",
                 image='CONTAINER_LOCATION',  # Specify where to download the image
                 nodes_per_block=1,
-                init_blocks=1,  
+                init_blocks=1,
                 max_blocks=10,  # Maximum number of pods to scale up
                 worker_init="""pip install parsl""",  # install Parsl when the pod starts
                 secret="kube-secret",  # The secret key to download the image
@@ -25,4 +25,3 @@ config = Config(
         ),
     ]
 )
-
