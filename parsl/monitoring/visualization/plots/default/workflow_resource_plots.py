@@ -91,3 +91,68 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
                              yaxis=dict(title=label),
                              title=label))
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
+
+
+def resource_efficiency(resource, node, label='CPU'):
+    try:
+        resource['epoch_time'] = (pd.to_datetime(
+            resource['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        node['epoch_time'] = (pd.to_datetime(
+            node['reg_time']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        resource = resource.sort_values(by='epoch_time')
+        start = min(resource['epoch_time'].min(), node['epoch_time'].min())
+        end = resource['epoch_time'].max()
+        resource['relative_time'] = resource['epoch_time'] - start
+        node['relative_time'] = node['epoch_time'] - start
+
+        task_plot = [0] * (end - start + 1)
+        if label == 'CPU':
+            total = node['cpu_count'].sum()
+        elif label == 'mem':
+            total = node['total_memory'].sum() / 1024 / 1024 / 1024
+
+        resource['total_cpu_time'] = resource['psutil_process_time_user'] + resource['psutil_process_time_system']
+        for task_id in resource['task_id'].unique():
+            tmp = resource[resource['task_id'] == task_id]
+            tmp['last_timestamp'] = tmp['relative_time'].shift(1)
+            if label == 'CPU':
+                tmp['last_cputime'] = tmp['total_cpu_time'].shift(1)
+            for index, row in tmp.iterrows():
+                if np.isnan(row['last_timestamp']):
+                    continue
+                for i in range(int(row['last_timestamp']), int(row['relative_time'])):
+                    if label == 'CPU':
+                        diff = (row['total_cpu_time'] - row['last_cputime']) / (row['relative_time'] - row['last_timestamp'])
+                    elif label == 'mem':
+                        diff = row['psutil_process_memory_resident'] / 1024 / 1024 / 1024
+                    task_plot[i] += diff
+
+        if label == 'CPU':
+            name1 = 'Used CPU cores'
+            name2 = 'Total CPU cores'
+            yaxis = 'Number of CPU cores'
+            title = 'CPU usage'
+        elif label == 'mem':
+            name1 = 'Used memory'
+            name2 = 'Total memory'
+            yaxis = 'Memory (GB)'
+            title = 'Memory usage'
+
+        fig = go.Figure(
+            data=[go.Scatter(x=list(range(0, end - start + 1)),
+                             y=task_plot,
+                             name=name1,
+                             ),
+                  go.Scatter(x=list(range(0, end - start + 1)),
+                             y=[total] * (end - start + 1),
+                             name=name2,
+                             )
+                 ],
+            layout=go.Layout(xaxis=dict(autorange=True,
+                                        title='Time (seconds)'),
+                             yaxis=dict(title=yaxis),
+                             title=title))
+        return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
+    except Exception as e:
+        print(e)
+        return "The resource efficiency plot cannot be generated because of exception {}.".format(e)
