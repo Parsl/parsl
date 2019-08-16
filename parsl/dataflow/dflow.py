@@ -335,21 +335,6 @@ class DataFlowKernel(object):
             if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
-        # Submit _*_stage_out tasks for output data futures that have output files,
-        # that do not have stageing inhibited.
-
-        logger.debug("Submitting stage out jobs")
-        app_fu = self.tasks[task_id]['app_fu']
-
-        if app_fu.exception() is None and not self.check_staging_inhibited(self.tasks[task_id]['kwargs']):
-            for dfu in app_fu.outputs:
-                f = dfu.file_obj
-                if isinstance(f, File) and f.is_remote():
-                    logger.debug("Submitting stage out job for output file {}".format(f))
-                    self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
-                else:
-                    logger.debug("Skipping stageout for output {}".format(f))
-
         return
 
     @staticmethod
@@ -507,6 +492,18 @@ class DataFlowKernel(object):
 
         return tuple(newargs), kwargs
 
+    def _add_output_deps(self, executor, args, kwargs, app_fu):
+        logger.debug("Adding output dependencies")
+
+        if not self.check_staging_inhibited(kwargs):
+            outputs = kwargs.get('outputs', [])
+            for f in outputs:
+                if isinstance(f, File) and f.is_remote():
+                    logger.debug("Submitting stage out job for output file {}".format(f))
+                    self.data_manager.stage_out(f, executor, app_fu)
+                else:
+                    logger.debug("Skipping stageout for output {}".format(f))
+
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
 
@@ -524,7 +521,7 @@ class DataFlowKernel(object):
 
         def check_dep(d):
             if isinstance(d, Future):
-                if self.tasks[d.tid]['status'] not in FINAL_STATES:
+                if d.tid not in self.tasks or self.tasks[d.tid]['status'] not in FINAL_STATES:
                     unfinished_depends.extend([d])
                 depends.extend([d])
 
@@ -643,8 +640,6 @@ class DataFlowKernel(object):
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
 
-        # Transform remote input files to data futures
-        args, kwargs = self._add_input_deps(executor, args, kwargs)
         label = kwargs.get('label')
         for kw in ['stdout', 'stderr']:
             if kw in kwargs:
@@ -664,8 +659,6 @@ class DataFlowKernel(object):
                     'executor': executor,
                     'func': func,
                     'func_name': func.__name__,
-                    'args': args,
-                    'kwargs': kwargs,
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'callback': None,
@@ -677,8 +670,19 @@ class DataFlowKernel(object):
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
-                    'time_returned': None,
-                    'app_fu': None}
+                    'time_returned': None}
+
+        app_fu = AppFuture(task_def)
+
+        # Transform remote input files to data futures
+        args, kwargs = self._add_input_deps(executor, args, kwargs)
+
+        self._add_output_deps(executor, args, kwargs, app_fu)
+
+        task_def.update({
+                    'args': args,
+                    'kwargs': kwargs,
+                    'app_fu': app_fu})
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
@@ -690,20 +694,12 @@ class DataFlowKernel(object):
         dep_cnt, depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
-        # Extract stdout and stderr to pass to AppFuture:
-        task_stdout = kwargs.get('stdout')
-        task_stderr = kwargs.get('stderr')
-
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
                                                                                task_def['func_name'],
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(tid=task_id,
-                           stdout=task_stdout,
-                           stderr=task_stderr)
 
-        self.tasks[task_id]['app_fu'] = app_fu
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
         self.tasks[task_id]['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))

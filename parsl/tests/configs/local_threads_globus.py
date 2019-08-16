@@ -23,3 +23,5 @@ config = Config(
     ],
     run_dir=get_rundir()
 )
+
+remote_writeable = user_opts['globus']['remote_writeable']
