@@ -54,12 +54,12 @@ class DataManager(object):
         if file.scheme == 'ftp':
             working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = _ftp_stage_in_app(self, executor=executor)
-            app_fut = stage_in_app(working_dir, outputs=[file], staging_inhibit_output=True)
+            app_fut = stage_in_app(working_dir, parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
             return app_fut._outputs[0]
         elif file.scheme == 'http' or file.scheme == 'https':
             working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = _http_stage_in_app(self, executor=executor)
-            app_fut = stage_in_app(working_dir, outputs=[file], staging_inhibit_output=True)
+            app_fut = stage_in_app(working_dir, parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
             return app_fut._outputs[0]
         elif file.scheme == 'globus':
             # what should happen here is...
@@ -80,7 +80,7 @@ class DataManager(object):
             # look pretty much identical
             globus_scheme = _get_globus_scheme(self.dfk, executor)
             stage_in_app = globus_scheme._globus_stage_in_app(executor=executor, dfk=self.dfk)
-            app_fut = stage_in_app(outputs=[file], staging_inhibit_output=True)
+            app_fut = stage_in_app(parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
             return app_fut._outputs[0]
         else:
             raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
