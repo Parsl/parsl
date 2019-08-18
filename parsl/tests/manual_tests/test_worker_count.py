@@ -44,8 +44,8 @@ def test_worker(n=2, sleep=0):
     print("Got workers : {}".format(worker_ids))
     assert len(manager_ids) == 1, "Expected only 1 manager id, got ids : {}".format(
         manager_ids)
-    assert len(worker_ids) == EXPECTED_WORKERS, "Exptected {} workers, instead got {}".format(EXPECTED_WORKERS,
-                                                                                              len(worker_ids))
+    assert len(worker_ids) == EXPECTED_WORKERS, "Expected {} workers, instead got {}".format(EXPECTED_WORKERS,
+                                                                                             len(worker_ids))
 
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")

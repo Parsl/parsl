@@ -48,15 +48,13 @@ def test_bad_stdout_specs(spec):
         fn.result()
     except Exception as e:
         assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got :{0}".format(type(e))
+            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
     else:
         assert False, "Did not raise expected exception BadStdStreamFile"
 
     return
 
 
-# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-# @pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_bad_stderr_file():
 
     """ Testing bad stderr file """
@@ -70,7 +68,7 @@ def test_bad_stderr_file():
         fn.result()
     except Exception as e:
         assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got :{0}".format(type(e))
+            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
     else:
         assert False, "Did not raise expected exception BadStdStreamFile"
 
@@ -121,7 +119,7 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--count", default="10",
                         help="Count of apps to launch")
     parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
+                        help="Enable debug output to console")
     args = parser.parse_args()
 
     if args.debug:

@@ -381,7 +381,7 @@ class Interchange(object):
                         msg['reg_time'] = datetime.datetime.strptime(msg['reg_time'], "%Y-%m-%d %H:%M:%S")
                         reg_flag = True
                     except Exception:
-                        logger.warning("[MAIN] Got Exception reading registration message from manager:{}".format(
+                        logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
                             manager), exc_info=True)
                         logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
 
