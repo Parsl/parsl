@@ -517,7 +517,7 @@ class DataFlowKernel(object):
                 if newfunc:
                     func = newfunc
             else:
-                logger.debug("Not performing staging for: {}".format(f))
+                logger.debug("Not performing staging for: {}".format(repr(f)))
                 app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
         return func
 
