@@ -20,6 +20,11 @@ class FTPSeparateTaskStaging(Staging, RepresentationMixin):
 
     def stage_in(self, dm, executor, file, parent_fut):
         working_dir = dm.dfk.executors[executor].working_dir
+        if working_dir:
+            os.makedirs(working_dir, exist_ok=True)
+            file.local_path = os.path.join(working_dir, file.filename)
+        else:
+            file.local_path = file.filename
         stage_in_app = _ftp_stage_in_app(dm, executor=executor)
         app_fut = stage_in_app(working_dir, outputs=[file], staging_inhibit_output=True, parent_fut=parent_fut)
         return app_fut._outputs[0]
@@ -32,6 +37,15 @@ class FTPInTaskStaging(Staging, RepresentationMixin):
         logger.debug("FTPInTaskStaging checking file {}".format(file.__repr__()))
         return file.scheme == 'ftp'
 
+    def stage_in(self, dm, executor, file, parent_fut):
+        working_dir = dm.dfk.executors[executor].working_dir
+        if working_dir:
+            file.local_path = os.path.join(working_dir, file.filename)
+        else:
+            file.local_path = file.filename
+
+        return file
+
     def replace_task(self, dm, executor, file, f):
         working_dir = dm.dfk.executors[executor].working_dir
         return in_task_transfer_wrapper(f, file, working_dir)
@@ -42,9 +56,6 @@ def in_task_transfer_wrapper(func, file, working_dir):
         import ftplib
         if working_dir:
             os.makedirs(working_dir, exist_ok=True)
-            file.local_path = os.path.join(working_dir, file.filename)
-        else:
-            file.local_path = file.filename
 
         with open(file.local_path, 'wb') as f:
             ftp = ftplib.FTP(file.netloc)
@@ -62,9 +73,6 @@ def _ftp_stage_in(working_dir, parent_fut=None, outputs=[], staging_inhibit_outp
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
-        file.local_path = os.path.join(working_dir, file.filename)
-    else:
-        file.local_path = file.filename
     with open(file.local_path, 'wb') as f:
         ftp = ftplib.FTP(file.netloc)
         ftp.login()
