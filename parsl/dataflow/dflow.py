@@ -477,17 +477,14 @@ class DataFlowKernel(object):
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            if isinstance(f, File) and f.is_remote():
-                inputs[idx] = self.data_manager.stage_in(f, executor)
+            inputs[idx] = self.data_manager.stage_in(f, executor)
 
         for kwarg, f in kwargs.items():
-            if isinstance(f, File) and f.is_remote():
-                kwargs[kwarg] = self.data_manager.stage_in(f, executor)
+            kwargs[kwarg] = self.data_manager.stage_in(f, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
-            if isinstance(f, File) and f.is_remote():
-                newargs[idx] = self.data_manager.stage_in(f, executor)
+            newargs[idx] = self.data_manager.stage_in(f, executor)
 
         return tuple(newargs), kwargs
 

@@ -1,4 +1,7 @@
 import logging
+
+from parsl.app.futures import DataFuture
+from parsl.data_provider.files import File
 from parsl.data_provider.ftp import _ftp_stage_in_app
 from parsl.data_provider.globus import _get_globus_scheme
 from parsl.data_provider.http import _http_stage_in_app
@@ -24,26 +27,39 @@ class DataManager(object):
         self.dfk = dfk
         self.globus = None
 
-    def stage_in(self, file, executor):
-        """Transport the file from the input source to the executor.
+    def stage_in(self, input, executor):
+        """Transport the input from the input source to the executor, if it is file-like,
+        returning a DataFuture that wraps the stage-in operation.
 
-        This function returns a DataFuture.
+        If no staging in is required - because the `file` parameter is not file-like,
+        then return that parameter unaltered.
 
         Args:
             - self
-            - file (File) : file to stage in
+            - input (Any) : input to stage in. If this is a File or a
+              DataFuture, stage in tasks will be launched with appropriate
+              dependencies. Otherwise, no stage-in will be performed.
             - executor (str) : an executor the file is going to be staged in to.
         """
+
+        if isinstance(input, DataFuture) and input.file_obj.is_remote():
+            file = input.file_obj
+            parent_fut = input
+        elif isinstance(input, File) and input.is_remote():
+            file = input
+            parent_fut = None
+        else:
+            return input
 
         if file.scheme == 'ftp':
             working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = _ftp_stage_in_app(self, executor=executor)
-            app_fut = stage_in_app(working_dir, outputs=[file], staging_inhibit_output=True)
+            app_fut = stage_in_app(working_dir, parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
             return app_fut._outputs[0]
         elif file.scheme == 'http' or file.scheme == 'https':
             working_dir = self.dfk.executors[executor].working_dir
             stage_in_app = _http_stage_in_app(self, executor=executor)
-            app_fut = stage_in_app(working_dir, outputs=[file], staging_inhibit_output=True)
+            app_fut = stage_in_app(working_dir, parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
             return app_fut._outputs[0]
         elif file.scheme == 'globus':
             # what should happen here is...
@@ -64,7 +80,7 @@ class DataManager(object):
             # look pretty much identical
             globus_scheme = _get_globus_scheme(self.dfk, executor)
             stage_in_app = globus_scheme._globus_stage_in_app(executor=executor, dfk=self.dfk)
-            app_fut = stage_in_app(outputs=[file], staging_inhibit_output=True)
+            app_fut = stage_in_app(parent_fut=parent_fut, outputs=[file], staging_inhibit_output=True)
             return app_fut._outputs[0]
         else:
             raise Exception('Staging in with unknown file scheme {} is not supported'.format(file.scheme))
