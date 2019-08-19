@@ -187,7 +187,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
         self._scaling_enabled = self.provider.scaling_enabled
-        logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        logger.debug("Starting ExtremeScaleExecutor with provider:\n%s", self.provider)
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
