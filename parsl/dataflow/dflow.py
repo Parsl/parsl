@@ -21,6 +21,7 @@ from functools import partial
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -488,17 +489,26 @@ class DataFlowKernel(object):
 
         return tuple(newargs), kwargs
 
-    def _add_output_deps(self, executor, args, kwargs, app_fu):
+    def _add_output_deps(self, executor, args, kwargs, app_fut):
         logger.debug("Adding output dependencies")
-
-        if not self.check_staging_inhibited(kwargs):
-            outputs = kwargs.get('outputs', [])
-            for f in outputs:
-                if isinstance(f, File) and f.is_remote():
-                    logger.debug("Submitting stage out job for output file {}".format(f))
-                    self.data_manager.stage_out(f, executor, app_fu)
-                else:
-                    logger.debug("Skipping stageout for output {}".format(f))
+        inhibit = self.check_staging_inhibited(kwargs)
+        outputs = kwargs.get('outputs', [])
+        app_fut._outputs = []
+        for f in outputs:
+            if isinstance(f, File) and f.is_remote() and not inhibit:
+                # with remote stageout, the DataFuture will be complete when
+                # the staging task is complete
+                logger.debug("Submitting stage out job for output file {}".format(f))
+                stageout_fut = self.data_manager.stage_out(f, executor, app_fut)
+                app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))
+            else:
+                # with local stageout, the DataFuture will be complete when
+                # the core task future is complete
+                # with remote URLs, if staging is inhibited, the app future completing
+                # will signal that stage-out is complete - because that app *is* the
+                # stageout task
+                logger.debug("Skipping stageout for output {}".format(f))
+                app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
 
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
