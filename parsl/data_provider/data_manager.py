@@ -20,12 +20,9 @@ class DataManager(object):
         Args:
            - dfk (DataFlowKernel): The DataFlowKernel that this DataManager is managing data for.
 
-        Kwargs:
-           - executors (list of Executors): Executors for which data transfer will be managed.
         """
 
         self.dfk = dfk
-        self.globus = None
 
     def stage_in(self, input, executor):
         """Transport the input from the input source to the executor, if it is file-like,
