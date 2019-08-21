@@ -465,17 +465,14 @@ class DataFlowKernel(object):
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            inputs[idx] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         for kwarg, f in kwargs.items():
-            kwargs[kwarg] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
-            newargs[idx] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (newargs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         return tuple(newargs), kwargs, func
 
