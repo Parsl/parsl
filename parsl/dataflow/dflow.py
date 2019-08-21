@@ -498,8 +498,12 @@ class DataFlowKernel(object):
                 # replace a File with a DataFuture - either completing when the stageout
                 # future completes, or if no stage out future is returned, then when the
                 # app itself completes.
+
+                # The staging code will get a clean copy which it is allowed to mutate,
+                # while the DataFuture-contained original will not be modified by any staging.
+                f_copy = f.cleancopy()
                 logger.debug("Submitting stage out for output file {}".format(f))
-                stageout_fut = self.data_manager.stage_out(f, executor, app_fut)
+                stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
                     logger.debug("Adding a dependency on stageout future for {}".format(f))
                     app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))

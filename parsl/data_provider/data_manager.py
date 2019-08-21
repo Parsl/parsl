@@ -57,9 +57,9 @@ class DataManager(object):
 
     def stage_in_rename_this(self, input, func, executor):
         if isinstance(input, DataFuture):
-            file = input.file_obj
+            file = input.file_obj.cleancopy()
         elif isinstance(input, File):
-            file = input
+            file = input.cleancopy()
         else:
             return (input, func)
 

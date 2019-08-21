@@ -45,6 +45,14 @@ class File(object):
         self.filename = os.path.basename(self.path)
         self._local_path = None
 
+    def cleancopy(self) -> "File":
+        """Returns a copy of the file containing only the global immutable state,
+           without any mutable site-local local_path information. The returned File
+           object will be as the original object was when it was constructed.
+        """
+        logger.debug("Making clean copy of File object {}".format(repr(self)))
+        return File(self.url)
+
     def __str__(self):
         return self.filepath
 
