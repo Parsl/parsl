@@ -43,6 +43,7 @@ class File(object):
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
+        self._local_path = None
 
     def __str__(self):
         return self.filepath
@@ -50,13 +51,23 @@ class File(object):
     def __repr__(self):
         content = "{0} at 0x{1:x} url={2} scheme={3} netloc={4} path={5} filename={6}".format(
             self.__class__, id(self), self.url, self.scheme, self.netloc, self.path, self.filename)
-        if hasattr(self, 'local_path'):
-            content += " local_path={0}".format(self.local_path)
+        content += " _local_path={0}".format(self._local_path)
 
         return "<{}>".format(content)
 
     def __fspath__(self):
         return self.filepath
+
+    @property
+    def local_path(self):
+        return self._local_path
+
+    @local_path.setter
+    def local_path(self, p):
+        if self._local_path is None:
+            self._local_path = p
+        else:
+            raise ValueError("Local path is already set for file {}".format(repr(self)))
 
     @property
     def filepath(self):
@@ -70,7 +81,8 @@ class File(object):
         Returns:
              - filepath (string)
         """
-        if hasattr(self, 'local_path'):
+        if self._local_path is not None:
+            logger.debug("File {} has filepath from local_path {}".format(repr(self), self._local_path))
             return self.local_path
 
         if self.scheme in ['ftp', 'http', 'https', 'globus']:

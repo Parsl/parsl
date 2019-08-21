@@ -53,9 +53,7 @@ def test_increment(depth=5):
             file = fu.result()
             filename = file.filepath
 
-            # this test is a bit close to a test of the specific implementation
-            # of File
-            assert not hasattr(file, 'local_path'), "File on local side has overridden local_path, file: {}".format(repr(file))
+            assert file.local_path is None, "File on local side has overridden local_path, file: {}".format(repr(file))
 
             data = open(filename, 'r').read().strip()
             assert data == str(
