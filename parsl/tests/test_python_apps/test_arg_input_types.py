@@ -10,9 +10,11 @@ from parsl import python_app
 def take_a_value(inputs=[]):
     return str(inputs[0])
 
+
 @python_app
 def add_two_values(inputs=[]):
     return inputs[0] + inputs[1]
+
 
 def test_input_str():
     f = take_a_value(inputs=["hi"])
