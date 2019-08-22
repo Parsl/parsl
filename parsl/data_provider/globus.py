@@ -37,7 +37,7 @@ def _get_globus_scheme(dfk, executor_label):
     if not hasattr(executor, "storage_access"):
         raise ValueError("specified executor does not have storage_access attribute")
     for scheme in executor.storage_access:
-        if isinstance(scheme, GlobusScheme):
+        if isinstance(scheme, GlobusStaging):
             return scheme
 
     raise Exception('No suitable Globus endpoint defined for executor {}'.format(executor_label))
@@ -182,7 +182,7 @@ class Globus(object):
             on_refresh=cls._update_tokens_file_on_refresh)
 
 
-class GlobusScheme(Staging, RepresentationMixin):
+class GlobusStaging(Staging, RepresentationMixin):
     """Specification for accessing data on a remote executor via Globus.
 
     Parameters
@@ -244,7 +244,7 @@ class GlobusScheme(Staging, RepresentationMixin):
         if executor.working_dir:
             working_dir = os.path.normpath(executor.working_dir)
         else:
-            raise ValueError("executor working_dir must be specified for GlobusScheme")
+            raise ValueError("executor working_dir must be specified for GlobusStaging")
         if self.endpoint_path and self.local_path:
             endpoint_path = os.path.normpath(self.endpoint_path)
             local_path = os.path.normpath(self.local_path)
