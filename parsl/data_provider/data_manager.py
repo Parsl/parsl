@@ -30,12 +30,9 @@ class DataManager(object):
         Args:
            - dfk (DataFlowKernel): The DataFlowKernel that this DataManager is managing data for.
 
-        Kwargs:
-           - executors (list of Executors): Executors for which data transfer will be managed.
         """
 
         self.dfk = dfk
-        self.globus = None
 
     def replace_task_stage_out(self, file: File, func: Callable, executor: str) -> Callable:
         """This will give staging providers the chance to wrap (or replace entirely!) the task function."""
