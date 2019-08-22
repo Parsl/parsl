@@ -10,7 +10,7 @@ Parsl aims to abstract not only parallel execution but also execution location, 
 Files
 -----
 
-The :py:class:`~parsl.data_provider.files.File` class abstracts the file access layer. Irrespective of where the script or its apps are executed, Parsl uses this abstraction to access that file. When referencing a Parsl file in an app, Parsl maps the object to the appropriate access path according to the selected access *scheme*: Local, FTP, HTTP, HTTPS and Globus.
+The :py:class:`~parsl.data_provider.files.File` class abstracts the file access layer. Irrespective of where the script or its apps are executed, Parsl uses this abstraction to access that file. When referencing a Parsl file in an app, Parsl maps the object to the appropriate access path according to the selected URL *scheme*: Local, FTP, HTTP, HTTPS and Globus.
 
 
 Local
@@ -132,7 +132,7 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
 
         from parsl.config import Config
         from parsl.executors.ipp import IPyParallelExecutor
-        from parsl.data_provider.scheme import GlobusStaging
+        from parsl.data_provider.globus import GlobusStaging
 
         config = Config(
             executors=[

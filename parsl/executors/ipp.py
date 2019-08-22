@@ -47,7 +47,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Directory where engine logs and configuration files will be stored.
     working_dir : str
         Directory where input data should be staged to.
-    storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
+    storage_access : list of :class:`~parsl.data_provider.staging.Staging`
         Specifications for accessing data this executor remotely.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,

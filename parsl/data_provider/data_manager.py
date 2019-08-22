@@ -45,16 +45,16 @@ class DataManager(object):
         else:
             storage_access = default_staging
 
-        for scheme in storage_access:
-            logger.debug("stage_out checking Staging provider {}".format(scheme))
-            if scheme.can_stage_out(file):
-                newfunc = scheme.replace_task_stage_out(self, executor, file, func)
+        for provider in storage_access:
+            logger.debug("stage_out checking Staging provider {}".format(provider))
+            if provider.can_stage_out(file):
+                newfunc = provider.replace_task_stage_out(self, executor, file, func)
                 if newfunc:
                     return newfunc
                 else:
                     return func
 
-        logger.debug("reached end of staging scheme list")
+        logger.debug("reached end of staging provider list")
         # if we reach here, we haven't found a suitable staging mechanism
         raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
 
@@ -74,16 +74,16 @@ class DataManager(object):
         else:
             storage_access = default_staging
 
-        for scheme in storage_access:
-            logger.debug("stage_in checking Staging provider {}".format(scheme))
-            if scheme.can_stage_in(file):
-                newfunc = scheme.replace_task(self, executor, file, func)
+        for provider in storage_access:
+            logger.debug("stage_in checking Staging provider {}".format(provider))
+            if provider.can_stage_in(file):
+                newfunc = provider.replace_task(self, executor, file, func)
                 if newfunc:
                     return newfunc
                 else:
                     return func
 
-        logger.debug("reached end of staging scheme list")
+        logger.debug("reached end of staging provider list")
         # if we reach here, we haven't found a suitable staging mechanism
         raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
 
@@ -117,16 +117,16 @@ class DataManager(object):
         else:
             storage_access = default_staging
 
-        for scheme in storage_access:
-            logger.debug("stage_in checking Staging provider {}".format(scheme))
-            if scheme.can_stage_in(file):
-                staging_fut = scheme.stage_in(self, executor, file, parent_fut=parent_fut)
+        for provider in storage_access:
+            logger.debug("stage_in checking Staging provider {}".format(provider))
+            if provider.can_stage_in(file):
+                staging_fut = provider.stage_in(self, executor, file, parent_fut=parent_fut)
                 if staging_fut:
                     return staging_fut
                 else:
                     return input
 
-        logger.debug("reached end of staging scheme list")
+        logger.debug("reached end of staging provider list")
         # if we reach here, we haven't found a suitable staging mechanism
         raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
 
@@ -149,12 +149,11 @@ class DataManager(object):
         else:
             storage_access = default_staging
 
-        for scheme in storage_access:
-            logger.debug("stage_out checking Staging provider {}".format(scheme))
-            if scheme.can_stage_out(file):
-                # globus_scheme._update_stage_out_local_path(file, executor, self.dfk)
-                return scheme.stage_out(self, executor, file, app_fu)
+        for provider in storage_access:
+            logger.debug("stage_out checking Staging provider {}".format(provider))
+            if provider.can_stage_out(file):
+                return provider.stage_out(self, executor, file, app_fu)
 
-        logger.debug("reached end of staging scheme list")
+        logger.debug("reached end of staging provider list")
         # if we reach here, we haven't found a suitable staging mechanism
         raise ValueError("Executor {} cannot stage out file {}".format(executor, repr(file)))

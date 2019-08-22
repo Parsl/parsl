@@ -30,15 +30,15 @@ SCOPES = ('openid '
 get_input = getattr(__builtins__, 'raw_input', input)
 
 
-def _get_globus_scheme(dfk, executor_label):
+def _get_globus_provider(dfk, executor_label):
     if executor_label is None:
         raise ValueError("executor_label is mandatory")
     executor = dfk.executors[executor_label]
     if not hasattr(executor, "storage_access"):
         raise ValueError("specified executor does not have storage_access attribute")
-    for scheme in executor.storage_access:
-        if isinstance(scheme, GlobusStaging):
-            return scheme
+    for provider in executor.storage_access:
+        if isinstance(provider, GlobusStaging):
+            return provider
 
     raise Exception('No suitable Globus endpoint defined for executor {}'.format(executor_label))
 
@@ -207,15 +207,15 @@ class GlobusStaging(Staging, RepresentationMixin):
         return file.scheme == 'globus'
 
     def stage_in(self, dm, executor, file, parent_fut):
-        globus_scheme = _get_globus_scheme(dm.dfk, executor)
-        stage_in_app = globus_scheme._globus_stage_in_app(executor=executor, dfk=dm.dfk)
+        globus_provider = _get_globus_provider(dm.dfk, executor)
+        stage_in_app = globus_provider._globus_stage_in_app(executor=executor, dfk=dm.dfk)
         app_fut = stage_in_app(outputs=[file], staging_inhibit_output=True, parent_fut=parent_fut)
         return app_fut._outputs[0]
 
     def stage_out(self, dm, executor, file, app_fu):
-        globus_scheme = _get_globus_scheme(dm.dfk, executor)
-        globus_scheme._update_stage_out_local_path(file, executor, dm.dfk)
-        stage_out_app = globus_scheme._globus_stage_out_app(executor=executor, dfk=dm.dfk)
+        globus_provider = _get_globus_provider(dm.dfk, executor)
+        globus_provider._update_stage_out_local_path(file, executor, dm.dfk)
+        stage_out_app = globus_provider._globus_stage_out_app(executor=executor, dfk=dm.dfk)
         return stage_out_app(app_fu, inputs=[file])
 
     @typeguard.typechecked
@@ -268,22 +268,22 @@ class GlobusStaging(Staging, RepresentationMixin):
 # this cannot be a class method, but must be a function, because I want
 # to be able to use partial() on it - and partial() does not work on
 # class methods
-def _globus_stage_in(scheme, executor, parent_fut=None, outputs=[], staging_inhibit_output=True):
-    globus_ep = scheme._get_globus_endpoint(executor)
+def _globus_stage_in(provider, executor, parent_fut=None, outputs=[], staging_inhibit_output=True):
+    globus_ep = provider._get_globus_endpoint(executor)
     file = outputs[0]
     file.local_path = os.path.join(
             globus_ep['working_dir'], file.filename)
     dst_path = os.path.join(
             globus_ep['endpoint_path'], file.filename)
 
-    scheme.initialize_globus()
+    provider.initialize_globus()
 
-    scheme.globus.transfer_file(
+    provider.globus.transfer_file(
             file.netloc, globus_ep['endpoint_uuid'],
             file.path, dst_path)
 
 
-def _globus_stage_out(scheme, executor, app_fu, inputs=[]):
+def _globus_stage_out(provider, executor, app_fu, inputs=[]):
     """
     Although app_fu isn't directly used in the stage out code,
     it is needed as an input dependency to ensure this code
@@ -291,13 +291,13 @@ def _globus_stage_out(scheme, executor, app_fu, inputs=[]):
     that is represented by the app_fu completing is that the
     executor filesystem will now contain the file to stage out.
     """
-    globus_ep = scheme._get_globus_endpoint(executor)
+    globus_ep = provider._get_globus_endpoint(executor)
     file = inputs[0]
     src_path = os.path.join(globus_ep['endpoint_path'], file.filename)
 
-    scheme.initialize_globus()
+    provider.initialize_globus()
 
-    scheme.globus.transfer_file(
+    provider.globus.transfer_file(
         globus_ep['endpoint_uuid'], file.netloc,
         src_path, file.path
     )
