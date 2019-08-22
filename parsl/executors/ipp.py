@@ -48,7 +48,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
     working_dir : str
         Directory where input data should be staged to.
     storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
-        Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
+        Specifications for accessing data this executor remotely.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
         this is managed by the user.
