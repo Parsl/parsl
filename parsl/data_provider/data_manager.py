@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # these will be shared between all executors that do not explicitly
 # override, so should not contain executor-specific state
-defaultStaging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()]  # type: List[Staging]
+default_staging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()]  # type: List[Staging]
 
 
 class DataManager(object):
@@ -43,7 +43,7 @@ class DataManager(object):
         if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
             storage_access = executor_obj.storage_access  # type: List[Staging]
         else:
-            storage_access = defaultStaging
+            storage_access = default_staging
 
         for scheme in storage_access:
             logger.debug("stage_out checking Staging provider {}".format(scheme))
@@ -72,7 +72,7 @@ class DataManager(object):
         if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
             storage_access = executor_obj.storage_access
         else:
-            storage_access = defaultStaging
+            storage_access = default_staging
 
         for scheme in storage_access:
             logger.debug("stage_in checking Staging provider {}".format(scheme))
@@ -115,7 +115,7 @@ class DataManager(object):
         if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
             storage_access = executor_obj.storage_access
         else:
-            storage_access = defaultStaging
+            storage_access = default_staging
 
         for scheme in storage_access:
             logger.debug("stage_in checking Staging provider {}".format(scheme))
@@ -147,7 +147,7 @@ class DataManager(object):
         if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
             storage_access = executor_obj.storage_access
         else:
-            storage_access = defaultStaging
+            storage_access = default_staging
 
         for scheme in storage_access:
             logger.debug("stage_out checking Staging provider {}".format(scheme))

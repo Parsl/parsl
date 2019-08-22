@@ -1,5 +1,5 @@
 from parsl.config import Config
-from parsl.data_provider.data_manager import defaultStaging
+from parsl.data_provider.data_manager import default_staging
 from parsl.data_provider.globus import GlobusScheme
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.tests.utils import get_rundir
@@ -11,7 +11,7 @@ from parsl.tests.utils import get_rundir
 #          (i.e., user_opts['swan']['username'] -> 'your_username')
 from .user_opts import user_opts
 
-storage_access = defaultStaging + [GlobusScheme(
+storage_access = default_staging + [GlobusScheme(
                 endpoint_uuid=user_opts['globus']['endpoint'],
                 endpoint_path=user_opts['globus']['path']
             )]
