@@ -39,7 +39,7 @@ Documentation
 
 The complete parsl documentation is hosted `here <http://parsl.readthedocs.io/en/stable/>`_.
 
-The Parsl tutorial is `here <http://parsl.readthedocs.io/en/stable/tutorial.html>`_ and the same tutorial set hosted on live Jupyter notebooks are available `here <http://try.parsl-project.org:8000/>`_
+The Parsl tutorial is hosted on live Jupyter notebooks `here <https://mybinder.org/v2/gh/Parsl/parsl-tutorial/master>`_
 
 
 For Developers
