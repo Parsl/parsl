@@ -2,7 +2,6 @@ import parsl
 from parsl import App, python_app
 import pytest
 
-# dfk = parsl.load()
 
 @python_app
 def cpu_stress(inputs=[], outputs=[]):
@@ -13,11 +12,12 @@ def cpu_stress(inputs=[], outputs=[]):
 
 @pytest.mark.noci
 def test_parsl_load_default_config():
+    dfk = parsl.load()
     a1, b1 = [cpu_stress(),
               cpu_stress()]
     a1.result()
     b1.result()
-    # dfk.cleanup()
+    dfk.cleanup()
 
 
 if __name__ == '__main__':
