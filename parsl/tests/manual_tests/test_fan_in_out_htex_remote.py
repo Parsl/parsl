@@ -11,35 +11,35 @@ import logging
 from parsl.app.app import python_app
 
 
-threads_config = Config(
-    executors=[
-        HighThroughputExecutor(
-            label="theta_htex",
-            # worker_debug=True,
-            cores_per_worker=4,
-            address=address_by_hostname(),
-            provider=CobaltProvider(
-                queue='debug-flat-quad',
-                account='CSC249ADCD01',
-                launcher=AprunLauncher(overrides="-d 64"),
-                worker_init='source activate parsl-issues',
-                init_blocks=1,
-                max_blocks=1,
-                min_blocks=1,
-                nodes_per_block=4,
-                cmd_timeout=60,
-                walltime='00:10:00',
-            ),
-        )
-    ],
-    monitoring=MonitoringHub(
-        hub_address=address_by_hostname(),
-        hub_port=55055,
-        logging_level=logging.DEBUG,
-        resource_monitoring_interval=10,
-    ),
-    strategy=None
-)
+#threads_config = Config(
+#    executors=[
+#        HighThroughputExecutor(
+#            label="theta_htex",
+#            # worker_debug=True,
+#            cores_per_worker=4,
+#            address=address_by_hostname(),
+#            provider=CobaltProvider(
+#                queue='debug-flat-quad',
+#                account='CSC249ADCD01',
+#                launcher=AprunLauncher(overrides="-d 64"),
+#                worker_init='source activate parsl-issues',
+#                init_blocks=1,
+#                max_blocks=1,
+#                min_blocks=1,
+#                nodes_per_block=4,
+#                cmd_timeout=60,
+#                walltime='00:10:00',
+#            ),
+#        )
+#    ],
+#    monitoring=MonitoringHub(
+#        hub_address=address_by_hostname(),
+#        hub_port=55055,
+#        logging_level=logging.DEBUG,
+#        resource_monitoring_interval=10,
+#    ),
+#    strategy=None
+# )
 
 # dfk = parsl.load(threads_config)
 

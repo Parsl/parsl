@@ -3,11 +3,12 @@ import pytest
 import parsl
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app import App
-from parsl.tests.configs.local_threads_monitoring import config
+# from parsl.tests.configs.local_threads_monitoring import config
 
-parsl.clear()
-dfk = DataFlowKernel(config=config)
-parsl.set_stream_logger()
+# parsl.clear()
+# dfk = DataFlowKernel(config=config)
+dfk=None
+# parsl.set_stream_logger()
 
 import logging
 logger = logging.getLogger(__name__)

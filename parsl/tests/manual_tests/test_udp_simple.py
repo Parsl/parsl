@@ -7,18 +7,18 @@ import logging
 
 # parsl.set_stream_logger()
 
-threads_config = Config(
-    executors=[ThreadPoolExecutor(
-        label='threads',
-        max_threads=4)
-    ],
-    monitoring=MonitoringHub(
-        hub_address="127.0.0.1",
-        hub_port=55055,
-        logging_level=logging.INFO,
-        resource_monitoring_interval=10,
-    )
-)
+#threads_config = Config(
+#    executors=[ThreadPoolExecutor(
+#        label='threads',
+#        max_threads=4)
+#    ],
+#    monitoring=MonitoringHub(
+#        hub_address="127.0.0.1",
+#        hub_port=55055,
+#        logging_level=logging.INFO,
+#        resource_monitoring_interval=10,
+#    )
+#)
 
 # dfk = DataFlowKernel(config=threads_config)
 dfk = None
