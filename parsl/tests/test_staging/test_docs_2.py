@@ -3,8 +3,8 @@ from parsl import App, File
 import parsl
 from parsl.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
+#parsl.clear()
+#parsl.load(config)
 
 
 @App('bash')

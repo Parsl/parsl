@@ -7,9 +7,9 @@ from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
 
-parsl.set_stream_logger()
-parsl.clear()
-parsl.load(config)
+#parsl.set_stream_logger()
+#parsl.clear()
+#parsl.load(config)
 
 
 @App('python')

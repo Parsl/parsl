@@ -7,11 +7,12 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
 
 pytestmark = pytest.mark.skip('not asserting anything')
 
+# TODO: breaks testing of local
+#parsl.clear()
+#parsl.load(config)
 
 @App('python')
 def multiply_rand(x):

@@ -5,8 +5,8 @@ from parsl.app.app import App
 
 from parsl.tests.configs.midway_ipp import config
 
-parsl.clear()
-parsl.load(config)
+#parsl.clear()
+#parsl.load(config)
 
 
 @App("python")

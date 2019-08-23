@@ -13,8 +13,8 @@ from parsl.tests.configs.local_threads_checkpoint import config
 rundir = test_initial_checkpoint_write()
 config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
 
-parsl.clear()
-parsl.load(config)
+#parsl.clear()
+#parsl.load(config)
 
 
 @App('python', cache=True)
