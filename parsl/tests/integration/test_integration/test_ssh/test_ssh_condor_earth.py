@@ -1,11 +1,12 @@
 import os
 import time
+import pytest
 
 import parsl
 from parsl.providers.condor import Condor
 from parsl.channels.ssh import SSHChannel
 
-
+@pytest.mark.skip('manual run only')
 def test_1():
     config = {
         "site": "T3_US_NotreDame",

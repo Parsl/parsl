@@ -1,6 +1,7 @@
 from parsl.channels.local.local import LocalChannel
+import pytest
 
-
+@pytest.mark.skip('manual run only')
 def test_local():
 
     channel = LocalChannel(None, None)

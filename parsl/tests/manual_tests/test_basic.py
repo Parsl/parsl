@@ -1,5 +1,6 @@
 import argparse
 import time
+import pytest
 
 import parsl
 # Tested. Confirmed. Local X Local X SingleNodeLauncher
@@ -77,6 +78,7 @@ def platform(sleep=10, stdout=None):
     return platform.uname()
 
 
+@pytest.mark.skip('manual run only')
 def test_simple(n=2):
     start = time.time()
     x = double(n)
@@ -89,6 +91,7 @@ def test_simple(n=2):
     return True
 
 
+@pytest.mark.skip('manual run only')
 def test_imports(n=2):
     start = time.time()
     x = import_echo(n, "hello world")
@@ -101,6 +104,7 @@ def test_imports(n=2):
     return True
 
 
+@pytest.mark.skip('manual run only')
 def test_platform(n=2):
     # sync
     x = platform(sleep=0)
@@ -116,6 +120,7 @@ def test_platform(n=2):
     return True
 
 
+@pytest.mark.skip('manual run only')
 def test_parallel_for(n=2):
     d = {}
     start = time.time()

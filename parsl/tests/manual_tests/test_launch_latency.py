@@ -1,5 +1,6 @@
 import argparse
 import time
+import pytest
 
 import parsl
 
@@ -14,14 +15,14 @@ from llex_local import config
 import pickle
 
 from parsl.app.app import python_app  # , bash_app
-parsl.load(config)
+# parsl.load(config)
 
 
 @python_app
 def double(x):
     return x * 2
 
-
+@pytest.mark.skip('not asserting anything')
 def test_launch_latency(n=2):
     d = {}
 
@@ -48,7 +49,7 @@ def test_launch_latency(n=2):
     print("[TEST STATMS] test_parallel_for [SUCCESS]")
     return d
 
-
+@pytest.mark.skip('not asserting anything')
 def test_total_latency(n=100):
     d = {}
 

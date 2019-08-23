@@ -1,13 +1,14 @@
 import argparse
 import os
+import pytest
 
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-config.retries = 2
-parsl.clear()
-parsl.load(config)
+#config.retries = 2
+#parsl.clear()
+#parsl.load(config)
 
 
 @App('python')
@@ -45,7 +46,7 @@ def sleep(sleep_dur=0.1):
     time.sleep(sleep_dur)
     return 0
 
-
+@pytest.mark.skip('manual run only')
 def test_fail_nowait(numtasks=10):
     """Test retries on tasks with no dependencies.
     """
@@ -62,7 +63,7 @@ def test_fail_nowait(numtasks=10):
 
     print("Done")
 
-
+@pytest.mark.skip('manual run only')
 def test_fail_delayed(numtasks=10):
     """Test retries on tasks with dependencies.
 
@@ -84,7 +85,7 @@ def test_fail_delayed(numtasks=10):
 
     print("Done")
 
-
+@pytest.mark.skip('manual run only')
 def test_retry():
     """Test retries via app that succeeds on the Nth retry.
     """

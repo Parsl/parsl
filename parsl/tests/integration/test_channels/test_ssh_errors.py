@@ -8,14 +8,14 @@ def connect_and_list(hostname, username):
     conn.close()
     return out
 
-
+@pytest.mark.skip('manual run only')
 def test_error_1():
     try:
         connect_and_list("bad.url.gov", "ubuntu")
     except Exception as e:
         assert type(e) == SSHException, "Expected SSException, got: {0}".format(e)
 
-
+@pytest.mark.skip('manual run only')
 def test_error_2():
     try:
         connect_and_list("swift.rcc.uchicago.edu", "mango")
@@ -24,7 +24,7 @@ def test_error_2():
     else:
         raise Exception("Expected SSException, got: {0}".format(e))
 
-
+@pytest.mark.skip('manual run only')
 def test_error_3():
     ''' This should work
     '''

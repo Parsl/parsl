@@ -2,6 +2,7 @@ import argparse
 import time
 import math
 import multiprocessing
+import pytest
 
 import parsl
 
@@ -12,15 +13,15 @@ EXPECTED_WORKERS = math.floor(CORES / CORES_PER_WORKER)
 
 # from parsl.tests.configs.htex_local import config
 from htex_local import config
-config.executors[0].cores_per_worker = CORES_PER_WORKER
-config.executors[0].provider.init_blocks = 1
+# config.executors[0].cores_per_worker = CORES_PER_WORKER
+# config.executors[0].provider.init_blocks = 1
 
 # from htex_midway import config
 # from htex_swan import config
 
 
 from parsl.app.app import python_app  # , bash_app
-parsl.load(config)
+# parsl.load(config)
 
 
 @python_app
@@ -30,7 +31,7 @@ def slow_pid(sleep=1):
     time.sleep(sleep)
     return os.getppid(), os.getpid()
 
-
+@pytest.mark.skip('manual run only')
 def test_worker(n=2, sleep=0):
     d = {}
     start = time.time()

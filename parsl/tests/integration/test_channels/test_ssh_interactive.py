@@ -1,6 +1,6 @@
 import parsl
 from parsl.channels.ssh_il.ssh_il import SSHInteractiveLoginChannel as SSH
-
+import pytest
 
 def connect_and_list(hostname, username):
     conn = SSH(hostname, username=username)
@@ -8,7 +8,7 @@ def connect_and_list(hostname, username):
     conn.close()
     return out
 
-
+@pytest.mark.skip('manual run only')
 def test_cooley():
     ''' Test ssh channels to midway
     '''

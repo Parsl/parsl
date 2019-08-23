@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from parsl.channels.ssh.ssh import SSHChannel as SSH
 
@@ -19,7 +20,7 @@ cat /proc/cpuinfo
 echo "Done----------"
 '''
 
-
+@pytest.mark.skip('manual run only')
 def test_connect_1():
     with open('remote_run.sh', 'w') as f:
         f.write(script)

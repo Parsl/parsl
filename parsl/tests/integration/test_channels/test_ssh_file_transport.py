@@ -1,6 +1,6 @@
 import parsl
 from parsl.channels.ssh.ssh import SSHChannel as SSH
-
+import pytest
 
 def connect_and_list(hostname, username):
     conn = SSH(hostname, username=username)
@@ -8,7 +8,7 @@ def connect_and_list(hostname, username):
     conn.close()
     return out
 
-
+@pytest.mark.skip('manual run only')
 def test_push(conn, fname="test001.txt"):
 
     with open(fname, 'w') as f:
@@ -18,7 +18,7 @@ def test_push(conn, fname="test001.txt"):
     ec, out, err = conn.execute_wait("ls /tmp/{0}".format(fname))
     print(ec, out, err)
 
-
+@pytest.mark.skip('manual run only')
 def test_pull(conn, fname="test001.txt"):
 
     local = "foo"

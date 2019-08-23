@@ -1,9 +1,9 @@
 import argparse
 import time
 import parsl
+import pytest
 
-
-parsl.set_stream_logger()
+# parsl.set_stream_logger()
 from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
@@ -46,7 +46,7 @@ config = Config(
 
 
 # config.executors[0].provider.tasks_per_node = 4
-parsl.load(config)
+# parsl.load(config)
 from parsl.app.app import python_app  # , bash_app
 
 
@@ -63,6 +63,7 @@ def platform(sleep=10, stdout=None):
     return platform.uname()
 
 
+@pytest.mark.skip('not asserting anything')
 def test_simple(n=2, dur=10):
     """ Tests whether the right exception is returned when a manager is lost.
     Check whether the error string reports manager loss on node X.
@@ -86,7 +87,7 @@ def test_simple(n=2, dur=10):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
-
+@pytest.mark.skip('not asserting anything')
 def test_manager_fail(n=2, dur=10):
     """ Test manager failure due to intermittent n/w loss.
     Run parsl on laptop, start the worker on a remote node.

@@ -1,10 +1,11 @@
 import time
+import pytest
 
 import parsl
 from parsl.providers.slurm import Slurm
 from parsl.channels.ssh import SSHChannel
 
-
+@pytest.mark.skip('manual run only')
 def test_1():
 
     slurm_config = {

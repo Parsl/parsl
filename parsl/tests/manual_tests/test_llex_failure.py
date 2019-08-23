@@ -1,12 +1,13 @@
 import argparse
 import time
+import pytest
 
 import parsl
 from llex_local import config
 # parsl.set_stream_logger()
 
 from parsl.app.app import python_app  # , bash_app
-parsl.load(config)
+# parsl.load(config)
 
 
 @python_app
@@ -26,7 +27,7 @@ def import_echo(x, string, stdout=None):
 def math_error(x):
     return x / 0
 
-
+@pytest.mark.skip('manual run only')
 def test_simple(n=2):
     start = time.time()
     x = double(n)
@@ -39,6 +40,7 @@ def test_simple(n=2):
     return True
 
 
+@pytest.mark.skip('manual run only')
 def test_imports(n=2):
     start = time.time()
     x = import_echo(n, "hello world")
@@ -51,6 +53,7 @@ def test_imports(n=2):
     return True
 
 
+@pytest.mark.skip('manual run only')
 def test_failure(n=2):
     error = None
     try:

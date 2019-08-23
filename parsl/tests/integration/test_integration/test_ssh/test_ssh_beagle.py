@@ -1,10 +1,11 @@
 import time
+import pytest
 
 import parsl
 from parsl.channels.ssh import SSHChannel
 from parsl.channels.torque import TorqueProvider
 
-
+@pytest.mark.skip('manual run only')
 def test_1():
 
     torque_config = {

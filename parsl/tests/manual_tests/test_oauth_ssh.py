@@ -1,6 +1,7 @@
 from parsl.channels import OAuthSSHChannel
+import pytest
 
-
+@pytest.mark.skip('manual run only')
 def test_channel():
     channel = OAuthSSHChannel(hostname='ssh.demo.globus.org', username='yadunand')
     x, stdout, stderr = channel.execute_wait('ls')

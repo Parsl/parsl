@@ -1,8 +1,9 @@
 import parsl
 from parsl.channels.aws import EC2Provider as ec2
 import time
+import pytest
 
-
+@pytest.mark.skip('manual run only')
 def test_1():
 
     config = {
@@ -48,7 +49,7 @@ def test_1():
     provider.cancel([x, y])
     print(stats)
 
-
+@pytest.mark.skip('manual run only')
 def test_2():
 
     config = {

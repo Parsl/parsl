@@ -2,6 +2,7 @@ import argparse
 import parsl
 import psutil
 import multiprocessing
+import pytest
 
 # parsl.set_stream_logger()
 from parsl.providers import LocalProvider
@@ -17,7 +18,7 @@ from parsl.app.app import python_app  # , bash_app
 def double(x):
     return x * 2
 
-
+@pytest.mark.skip('manual run only')
 def test_simple(mem_per_worker):
 
     config = Config(

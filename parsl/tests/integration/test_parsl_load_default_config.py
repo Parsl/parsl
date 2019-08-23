@@ -1,23 +1,23 @@
 import parsl
-from parsl import App
+from parsl import App, python_app
+import pytest
 
-dfk = parsl.load()
+# dfk = parsl.load()
 
-
-@App('python', dfk)
+@python_app
 def cpu_stress(inputs=[], outputs=[]):
     s = 0
     for i in range(10**8):
         s += i
     return s
 
-
+@pytest.mark.skip('manual run only')
 def test_parsl_load_default_config():
     a1, b1 = [cpu_stress(),
               cpu_stress()]
     a1.result()
     b1.result()
-    dfk.cleanup()
+    # dfk.cleanup()
 
 
 if __name__ == '__main__':
