@@ -8,9 +8,10 @@ from parsl.app.app import App
 from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.local_threads_ipp import config
 
-parsl.clear()
-dfk = DataFlowKernel(config=config)
-parsl.set_stream_logger()
+#parsl.clear()
+#dfk = DataFlowKernel(config=config)
+dfk = None
+# parsl.set_stream_logger()
 
 import logging
 logger = logging.getLogger(__name__)

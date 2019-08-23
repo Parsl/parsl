@@ -91,6 +91,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
             self.debug_option = "--log-level={}".format(self.engine_debug_level)
 
     def start(self):
+        raise RuntimeError('trying to start ipp engines.... naughty. here is a stack trace.')
         self.controller.profile = self.label
         self.controller.ipython_dir = self.run_dir
         if self.engine_dir is None:
