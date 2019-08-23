@@ -73,10 +73,6 @@ script:
     # a stdout/stderr buffering bug in present master.
     - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
 
-    # run specific integration tests that need their own configuration
-    - pytest parsl/tests/integration/test_retries.py -k "not cleannet" --config local --cov=parsl --cov-append --cov-report=
-    - pytest parsl/tests/integration/test_parsl_load_default_config.py -k "not cleannet" --config local --cov=parsl --cov-append --cov-report=
-  
     - coverage report
       # prints report of coverage data stored in .coverage
 
