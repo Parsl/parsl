@@ -19,7 +19,6 @@ import time
 import pytest
 
 from parsl.tests.configs.local_ipp import config
-# dfk = DataFlowKernel(config=config)
 
 
 @python_app
@@ -28,9 +27,11 @@ def sleep_double(x):
     time.sleep(1)
     return x * 2
 
+
 @pytest.mark.noci
 def test_z_cleanup():
-    # dfk.cleanup()
+    dfk = DataFlowKernel(config=config)
+    dfk.cleanup()
     pass
 
 
