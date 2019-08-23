@@ -123,8 +123,15 @@ class Manager(object):
         self.uid = uid
         self.block_id = block_id
 
-        cores_on_node = multiprocessing.cpu_count()
-        available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
+        if os.environ.get('PARSL_CORES'):
+            cores_on_node = int(os.environ['PARSL_CORES'])
+        else:
+            cores_on_node = multiprocessing.cpu_count()
+
+        if os.environ.get('PARSL_MEMORY_GB'):
+            available_mem_on_node = float(os.environ['PARSL_MEMORY_GB'])
+        else:
+            available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
 
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
