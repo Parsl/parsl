@@ -128,8 +128,8 @@ class Manager(object):
         else:
             cores_on_node = multiprocessing.cpu_count()
 
-        if os.environ.get('PARSL_GB_MEMORY'):
-            available_mem_on_node = float(os.environ['PARSL_GB_MEMORY'])
+        if os.environ.get('PARSL_MEMORY_GB'):
+            available_mem_on_node = float(os.environ['PARSL_MEMORY_GB'])
         else:
             available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
 
