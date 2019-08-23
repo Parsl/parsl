@@ -37,7 +37,8 @@ script:
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
     # parsl
-    - (for test in parsl/tests/configs/*.py parsl/tests/test*/test*; do MYPYPATH=$(pwd)/mypy-stubs mypy $test ; export MypyReturnCode=$? ; echo mypy return code is $MypyReturnCode ; if [[ "$MypyReturnCode" != 0 ]] ; then exit 1; fi; done ) ;
+    - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/tests/configs/
+    - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/tests/test*/
 
       # do this before any testing, but not in-between tests
     - rm -f .coverage
