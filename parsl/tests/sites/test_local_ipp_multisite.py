@@ -3,12 +3,12 @@ import argparse
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import App, bash_app
 from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.local_ipp_multisite import config
 
-parsl.clear()
-dfk = parsl.load(config)
+# parsl.clear()
+# dfk = parsl.load(config)
 
 
 @App("python", executors=['local_ipp_2'])
@@ -29,7 +29,7 @@ def python_app_1():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("bash", dfk)
+@bash_app
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 

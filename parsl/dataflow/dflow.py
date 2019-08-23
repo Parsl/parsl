@@ -1080,7 +1080,7 @@ class DataFlowKernelLoader(object):
 
     @classmethod
     @typeguard.typechecked
-    def load(cls, config: Optional[Config] = None):
+    def load(cls, config: Optional[Config] = None, conftest = False):
         """Load a DataFlowKernel.
 
         Args:
@@ -1091,6 +1091,9 @@ class DataFlowKernelLoader(object):
         """
         if cls._dfk is not None:
             raise RuntimeError('Config has already been loaded')
+
+        if not conftest:
+            raise RuntimeError('Someone other than the pytest conftest code tried to load a DFK, and here should be the stack trace')
 
         if config is None:
             cls._dfk = DataFlowKernel(Config())

@@ -9,8 +9,8 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads_checkpoint_periodic import config
 
-parsl.clear()
-dfk = parsl.load(config)
+# parsl.clear()
+# dfk = parsl.load(config)
 
 
 @App('python', cache=True)

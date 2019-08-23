@@ -48,7 +48,7 @@ parsl.set_stream_logger()
 
 
 from parsl.app.app import python_app  # , bash_app
-parsl.load(config)
+# parsl.load(config)
 
 
 @python_app

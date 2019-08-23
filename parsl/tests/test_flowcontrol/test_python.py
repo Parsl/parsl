@@ -1,14 +1,14 @@
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import App, python_app
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_ipp import config
 
-config.executors[0].init_blocks = 0
-dfk = DataFlowKernel(config=config)
+# config.executors[0].init_blocks = 0
+# dfk = DataFlowKernel(config=config)
 
 
-@App("python", dfk)
+@python_app
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())

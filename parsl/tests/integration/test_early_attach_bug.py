@@ -31,6 +31,7 @@ def sleep_double(x):
 @pytest.mark.skip('manual run only')
 def test_z_cleanup():
     # dfk.cleanup()
+    pass
 
 
 if __name__ == "__main__":

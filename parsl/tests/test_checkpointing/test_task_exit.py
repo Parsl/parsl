@@ -8,8 +8,8 @@ from parsl.app.app import App
 from parsl.utils import time_limited_open
 from parsl.tests.configs.local_threads_checkpoint_task_exit import config
 
-parsl.clear()
-dfk = parsl.load(config)
+#parsl.clear()
+#dfk = parsl.load(config)
 
 
 @App('python', cache=True)

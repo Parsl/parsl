@@ -140,7 +140,7 @@ def load_dfk(config):
                 raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
 
             parsl.clear()
-            dfk = parsl.load(module.config)
+            dfk = parsl.load(module.config, conftest=True)
 
             yield
 

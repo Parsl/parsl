@@ -25,7 +25,7 @@ config = Config(
     strategy=None,
 )
 
-dfk = parsl.load(config)
+# dfk = parsl.load(config)
 
 
 @python_app(executors=['htex_local'])

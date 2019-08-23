@@ -41,7 +41,7 @@ threads_config = Config(
     strategy=None
 )
 
-dfk = parsl.load(threads_config)
+# dfk = parsl.load(threads_config)
 
 
 @python_app

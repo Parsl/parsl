@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import pytest
 import argparse
 import time
 
@@ -44,7 +45,7 @@ def platform(sleep=10, stdout=None):
     time.sleep(sleep)
     return platform.uname()
 
-
+@pytest.mark.skip('manual run only')
 def test_simple(n=2):
     start = time.time()
     x = double(n)
@@ -56,7 +57,7 @@ def test_simple(n=2):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
-
+@pytest.mark.skip('manual run only')
 def test_imports(n=2):
     start = time.time()
     x = import_echo(n, "hello world")
@@ -68,7 +69,7 @@ def test_imports(n=2):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
-
+@pytest.mark.skip('manual run only')
 def test_platform(n=2, sleep=1):
 
     dfk = parsl.dfk()
@@ -97,7 +98,7 @@ def test_platform(n=2, sleep=1):
 
     return True
 
-
+@pytest.mark.skip('manual run only')
 def test_parallel_for(n=2, sleep=1):
     d = {}
 

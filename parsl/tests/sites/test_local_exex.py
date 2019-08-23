@@ -55,8 +55,8 @@ def test_python(N=2):
     return
 
 
-def setup_module(module):
-    parsl.load(config)
+# def setup_module(module):
+#    parsl.load(config)
 
 
 @pytest.mark.local

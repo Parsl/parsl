@@ -8,9 +8,9 @@ from parsl.app.app import App
 from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.midway_ipp_multicore import config
 
-parsl.clear()
-parsl.load(config)
-parsl.set_stream_logger()
+#parsl.clear()
+#parsl.load(config)
+#parsl.set_stream_logger()
 
 
 @App('bash')
