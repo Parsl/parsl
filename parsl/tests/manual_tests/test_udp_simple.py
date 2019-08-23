@@ -20,7 +20,8 @@ threads_config = Config(
     )
 )
 
-dfk = DataFlowKernel(config=threads_config)
+# dfk = DataFlowKernel(config=threads_config)
+dfk = None
 
 
 @App('python', dfk)
