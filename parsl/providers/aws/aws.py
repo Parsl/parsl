@@ -497,7 +497,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         self.instances.append(instance[0].id)
         logger.info(
-            "Started up 1 instance {} . Instance type:{}".format(instance[0].id, instance_type)
+            "Started up 1 instance {}. Instance type: {}".format(instance[0].id, instance_type)
         )
         return instance
 

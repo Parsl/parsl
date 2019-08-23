@@ -52,7 +52,7 @@ def test_increment(depth=5):
             fu = futs[key]
             data = open(fu.result().filepath, 'r').read().strip()
             assert data == str(
-                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+                key), "[TEST] incr failed for key: {0} got: {1}".format(key, data)
 
 
 def test_increment_slow(depth=5, dur=0.5):
@@ -64,7 +64,7 @@ def test_increment_slow(depth=5, dur=0.5):
     prev = File("test0.txt")
     # Create the first entry in the dictionary holding the futures
     futs = {}
-    print("**************TYpe : ", type(dur), dur)
+    print("************** Type: ", type(dur), dur)
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
         output = File("test{0}.txt".format(i))
@@ -84,7 +84,7 @@ def test_increment_slow(depth=5, dur=0.5):
             fu = futs[key]
             data = open(fu.result().filepath, 'r').read().strip()
             assert data == str(
-                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+                key), "[TEST] incr failed for key: {0} got: {1}".format(key, data)
 
 
 if __name__ == '__main__':
