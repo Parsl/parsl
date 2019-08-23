@@ -7,7 +7,7 @@ def connect_and_list(hostname, username):
     conn.close()
     return out
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_midway():
     ''' Test ssh channels to midway
     '''
@@ -16,7 +16,7 @@ def test_midway():
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_beagle():
     ''' Test ssh channels to beagle
     '''
@@ -25,7 +25,7 @@ def test_beagle():
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_osg():
     ''' Test ssh connectivity to osg
     '''
@@ -34,7 +34,7 @@ def test_osg():
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_cori():
     ''' Test ssh connectivity to cori
     '''

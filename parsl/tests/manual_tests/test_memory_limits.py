@@ -18,7 +18,7 @@ from parsl.app.app import python_app  # , bash_app
 def double(x):
     return x * 2
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_simple(mem_per_worker):
 
     config = Config(

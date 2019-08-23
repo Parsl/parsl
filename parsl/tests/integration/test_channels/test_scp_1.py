@@ -20,7 +20,7 @@ cat /proc/cpuinfo
 echo "Done----------"
 '''
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_connect_1():
     with open('remote_run.sh', 'w') as f:
         f.write(script)

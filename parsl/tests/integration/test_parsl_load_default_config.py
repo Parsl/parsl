@@ -11,7 +11,7 @@ def cpu_stress(inputs=[], outputs=[]):
         s += i
     return s
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_parsl_load_default_config():
     a1, b1 = [cpu_stress(),
               cpu_stress()]

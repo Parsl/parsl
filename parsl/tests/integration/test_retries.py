@@ -46,7 +46,7 @@ def sleep(sleep_dur=0.1):
     time.sleep(sleep_dur)
     return 0
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_fail_nowait(numtasks=10):
     """Test retries on tasks with no dependencies.
     """
@@ -63,7 +63,7 @@ def test_fail_nowait(numtasks=10):
 
     print("Done")
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_fail_delayed(numtasks=10):
     """Test retries on tasks with dependencies.
 
@@ -85,7 +85,7 @@ def test_fail_delayed(numtasks=10):
 
     print("Done")
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_retry():
     """Test retries via app that succeeds on the Nth retry.
     """

@@ -13,7 +13,7 @@ import pytest
 def increment(x):
     return x + 1
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_stress(count=1000):
     """Threaded app RTT stress test"""
 

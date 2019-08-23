@@ -28,7 +28,7 @@ def sleep_double(x):
     time.sleep(1)
     return x * 2
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_z_cleanup():
     # dfk.cleanup()
     pass

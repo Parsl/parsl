@@ -8,7 +8,7 @@ def connect_and_list(hostname, username):
     conn.close()
     return out
 
-@pytest.mark.skip('manual run only')
+@pytest.mark.noci
 def test_cooley():
     ''' Test ssh channels to midway
     '''
