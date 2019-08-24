@@ -24,8 +24,10 @@ def pytest_addoption(parser):
         '--config',
         action='store',
         metavar='CONFIG',
+        type='string',
         nargs=1,
-        help="only run parsl CONFIG; use 'local' to run locally-defined config"
+        required=True,
+        help="run with parsl CONFIG; use 'local' to run locally-defined config"
     )
 
 
@@ -103,7 +105,7 @@ def load_dfk_session(request, pytestconfig):
     load_dfk_local_module for module-level configuration management.
     """
 
-    config = pytestconfig.getoption('config')
+    config = pytestconfig.getoption('config')[0]
 
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
@@ -143,7 +145,7 @@ def load_dfk_local_module(request, pytestconfig):
     with local_config.
     """
 
-    config = pytestconfig.getoption('config')
+    config = pytestconfig.getoption('config')[0]
 
     if config == 'local':
         local_setup = getattr(request.module, "local_setup", None)
@@ -179,7 +181,7 @@ def apply_masks(request, pytestconfig):
     not in the whitelist are skipped. Similarly, configs in a blacklist are skipped,
     and configs which are not `local` are skipped if the `local` decorator is applied.
     """
-    config = pytestconfig.getoption('config')
+    config = pytestconfig.getoption('config')[0]
     m = request.node.get_marker('whitelist')
     if m is not None:
         if os.path.abspath(config) not in chain.from_iterable([glob(x) for x in m.args]):
