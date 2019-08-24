@@ -63,6 +63,10 @@ def pytest_configure(config):
         'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
+    config.addinivalue_line(
+        'markers',
+        'noci: mark test to be unsuitable for running during automated tests'
+    )
 
 
 def pytest_generate_tests(metafunc):
@@ -117,8 +121,14 @@ def setup_docker():
             subprocess.call(cmd, cwd=pdir)
 
 
-@pytest.fixture(autouse=True)
-def load_dfk(config):
+# TODO: should become scope=session in order to use a single DFK for the whole
+# session? for specified configs yes... for 'local' configs, this needs to be per
+# test moduke?
+# scope=sessions fails for me with the a new DFK being initialised for subsequent
+# modules, without de-initialising the previous one. it's not immediately obvious
+# why so I'll leave that till later.
+@pytest.fixture(autouse=True, scope='module')
+def load_dfk(request, config):
     """Load the dfk before running a test.
 
     The special path `local` indicates that whatever configuration is loaded
@@ -150,8 +160,17 @@ def load_dfk(config):
             parsl.clear()
         except KeyError:
             pytest.skip('options in user_opts.py not configured for {}'.format(config))
-    else:
+    else:  # local config
+        local_setup = getattr(request.module, "local_setup", None)
+        local_teardown = getattr(request.module, "local_teardown", None)
+
+        if(callable(local_setup)):
+            local_setup()
+
         yield
+
+        if(callable(local_teardown)):
+            local_down()
 
 
 @pytest.fixture(autouse=True)
