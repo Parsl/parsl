@@ -38,7 +38,8 @@ def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 
 
-@pytest.mark.local
+# @pytest.mark.local
+@pytest.mark.noci
 def test_python(N=2):
     """Testing basic python functionality."""
 
@@ -57,11 +58,15 @@ def test_python(N=2):
     return
 
 
-#def setup_module(module):
-#    parsl.load(config)
+def local_setup():
+    parsl.load(config)
+
+def local_teardown():
+    parsl.clear()
 
 
-@pytest.mark.local
+# @pytest.mark.local
+@pytest.mark.noci
 def test_bash():
     """Testing basic bash functionality."""
 
