@@ -8,7 +8,9 @@ from parsl.launchers import SrunLauncher
 from parsl.providers.slurm.slurm import SlurmProvider
 from parsl.addresses import address_by_hostname
 
-# parsl.set_stream_logger()
+# TODO: this test doesn't do anything in pytest
+# instead it needs to be run by hand.
+# it should be runnable in pytest, though?
 
 config = Config(
     executors=[
@@ -25,7 +27,14 @@ config = Config(
     strategy=None,
 )
 
-# dfk = parsl.load(config)
+
+def local_setup():
+    global dfk
+    dfk = parsl.load(config)
+
+
+def local_teardown():
+    parsl.clear()
 
 
 @python_app(executors=['htex_local'])

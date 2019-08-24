@@ -1,6 +1,5 @@
 import pytest
 from parsl import App, File
-import parsl
 from parsl.configs.local_threads import config
 
 local_config = config

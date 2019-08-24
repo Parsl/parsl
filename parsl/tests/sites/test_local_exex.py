@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 local_config = config
 
+
 @App("python", executors=['Extreme_Local'])
 def python_app_2():
     import os
@@ -81,7 +82,6 @@ if __name__ == "__main__":
     if args.debug:
         parsl.set_stream_logger()
 
-    local_setup()
+    parsl.load(config)
     test_python()
     test_bash()
-    local_teardown()

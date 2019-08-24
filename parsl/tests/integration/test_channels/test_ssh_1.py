@@ -7,6 +7,7 @@ def connect_and_list(hostname, username):
     conn.close()
     return out
 
+
 @pytest.mark.noci
 def test_midway():
     ''' Test ssh channels to midway
@@ -15,6 +16,7 @@ def test_midway():
     uname = 'yadunand'
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
+
 
 @pytest.mark.noci
 def test_beagle():
@@ -25,6 +27,7 @@ def test_beagle():
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
+
 @pytest.mark.noci
 def test_osg():
     ''' Test ssh connectivity to osg
@@ -33,6 +36,7 @@ def test_osg():
     uname = 'yadunand'
     out = connect_and_list(url, uname)
     print("Sitename :{0}  hostname:{1}".format(url, out))
+
 
 @pytest.mark.noci
 def test_cori():

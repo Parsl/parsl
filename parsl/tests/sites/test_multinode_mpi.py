@@ -7,9 +7,8 @@ from parsl.app.app import App
 from parsl.tests.configs.cori_ipp_multinode import config
 from parsl.tests.conftest import load_dfk
 
-#parsl.clear()
-#parsl.load(config)
-#parsl.set_stream_logger()
+
+local_config = config
 
 
 @App("python")

@@ -57,6 +57,7 @@ def test_simple(n=2):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
+
 @pytest.mark.noci
 def test_imports(n=2):
     start = time.time()
@@ -68,6 +69,7 @@ def test_imports(n=2):
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
+
 
 @pytest.mark.noci
 def test_platform(n=2, sleep=1):
@@ -97,6 +99,7 @@ def test_platform(n=2, sleep=1):
     print("Outstanding : ", dfk.executors[name].outstanding)
 
     return True
+
 
 @pytest.mark.noci
 def test_parallel_for(n=2, sleep=1):

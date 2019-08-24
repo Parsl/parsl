@@ -2,11 +2,13 @@ import parsl
 from parsl.channels.ssh.ssh import SSHChannel as SSH
 import pytest
 
+
 def connect_and_list(hostname, username):
     conn = SSH(hostname, username=username)
     ec, out, err = conn.execute_wait("echo $HOSTNAME")
     conn.close()
     return out
+
 
 @pytest.mark.noci
 def test_push(conn, fname="test001.txt"):
@@ -17,6 +19,7 @@ def test_push(conn, fname="test001.txt"):
     conn.push_file(fname, "/tmp")
     ec, out, err = conn.execute_wait("ls /tmp/{0}".format(fname))
     print(ec, out, err)
+
 
 @pytest.mark.noci
 def test_pull(conn, fname="test001.txt"):

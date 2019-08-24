@@ -87,6 +87,7 @@ def test_simple(n=2, dur=10):
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
+
 @pytest.mark.skip('not asserting anything')
 def test_manager_fail(n=2, dur=10):
     """ Test manager failure due to intermittent n/w loss.

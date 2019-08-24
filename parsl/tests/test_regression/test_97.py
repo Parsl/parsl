@@ -5,14 +5,17 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-#config.executors[0].tasks_per_block = 4
-#config.executors[0].init_blocks = 0
-#config.executors[0].min_blocks = 0
-#config.executors[0].max_blocks = 10
-#config.executors[0].parallelism = 0
+# TODO: this needs to be done in a non-mutating fashion
+# because the global config does not belong to this test
+# to mutate
+# config.executors[0].tasks_per_block = 4
+# config.executors[0].init_blocks = 0
+# config.executors[0].min_blocks = 0
+# config.executors[0].max_blocks = 10
+# config.executors[0].parallelism = 0
 
-#parsl.clear()
-#parsl.load(config)
+# parsl.clear()
+# parsl.load(config)
 
 
 @App("python")

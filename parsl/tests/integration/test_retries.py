@@ -46,6 +46,7 @@ def sleep(sleep_dur=0.1):
     time.sleep(sleep_dur)
     return 0
 
+
 @pytest.mark.noci
 def test_fail_nowait(numtasks=10):
     """Test retries on tasks with no dependencies.
@@ -62,6 +63,7 @@ def test_fail_nowait(numtasks=10):
             e, TypeError), "Expected a TypeError, got {}".format(e)
 
     print("Done")
+
 
 @pytest.mark.noci
 def test_fail_delayed(numtasks=10):
@@ -84,6 +86,7 @@ def test_fail_delayed(numtasks=10):
             e, TypeError), "Expected a TypeError, got {}".format(e)
 
     print("Done")
+
 
 @pytest.mark.noci
 def test_retry():

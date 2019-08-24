@@ -10,9 +10,9 @@ from parsl.tests.configs.local_threads import config
 
 pytestmark = pytest.mark.skip('not asserting anything')
 
-# TODO: breaks testing of local
-#parsl.clear()
-#parsl.load(config)
+
+local_config = config
+
 
 @App('python')
 def multiply_rand(x):

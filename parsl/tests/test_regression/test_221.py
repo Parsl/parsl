@@ -1,6 +1,5 @@
 import pytest
 
-import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_ipp import config
 
