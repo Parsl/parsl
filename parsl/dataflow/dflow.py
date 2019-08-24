@@ -820,6 +820,7 @@ class DataFlowKernel(object):
             self.flowcontrol.strategy.add_executors(executors)
 
     def atexit_cleanup(self):
+        logger.info("atexit cleanup initiated")
         if not self.cleanup_called:
             self.cleanup()
 
@@ -861,6 +862,7 @@ class DataFlowKernel(object):
 
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
+        logger.debug("cleanup checkpoints")
         if self.checkpoint_mode is not None:
             self.checkpoint()
 
@@ -869,21 +871,33 @@ class DataFlowKernel(object):
                 self._checkpoint_timer.close()
 
         # Send final stats
+        logger.debug("cleanup usage tracking")
         self.usage_tracker.send_message()
         self.usage_tracker.close()
 
         logger.info("Terminating flow_control and strategy threads")
         self.flowcontrol.close()
 
+        logger.debug("cleaning up executors")
         for executor in self.executors.values():
+            logger.debug("cleanup an executor {}"+format(executor.label))
             if executor.managed:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
+                    logger.debug("scaling in executor")
                     executor.scale_in(len(job_ids))
+                    logger.debug("scaled in executor")
+                else:
+                    logger.debug("not scaling in")
+                logger.debug("shutting down executor")
                 executor.shutdown()
+                logger.debug("shut down executor")
+            logger.debug("cleaned up an executor")
+        logger.debug("cleaning up executors")
 
         self.time_completed = datetime.datetime.now()
 
+        logger.debug("cleanup monitoring")
         if self.monitoring:
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  {'tasks_failed_count': self.tasks_failed_count,

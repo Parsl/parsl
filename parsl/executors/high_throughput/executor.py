@@ -467,7 +467,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     @property
     def connected_managers(self):
+        logger.debug("in connected_managers, running client command")
         workers = self.command_client.run("MANAGERS")
+        logger.debug("in conected_managers, ran client command")
         return workers
 
     def _hold_block(self, block_id):
@@ -479,12 +481,20 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
              Block identifier of the block to be put on hold
         """
 
+        logger.debug("sending hold block {}".format(block_id))
+
+        logger.debug("Looking up connected_managers")
         managers = self.connected_managers
+        logger.debug("Looked up connected_managers")
 
         for manager in managers:
             if manager['block_id'] == block_id:
                 logger.debug("[HOLD_BLOCK]: Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
+            else:
+                logger.debug("[HOLD_BLOCK]: Manager did not match block id: {}".format(manager['block_id', block_id]))
+ 
+        logger.debug("done with send hold block {}".format(block_id))
 
     def submit(self, func, *args, **kwargs):
         """Submits work to the the outgoing_q.
@@ -577,21 +587,31 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
              NotImplementedError
         """
 
+        logger.debug("scale_in started")
         if block_ids:
             block_ids_to_kill = block_ids
         else:
             block_ids_to_kill = list(self.blocks.keys())[:blocks]
 
         # Hold the block
+        logger.debug("holding blocks")
         for block_id in block_ids_to_kill:
+            logger.debug("holding block {}".format(block_id))
             self._hold_block(block_id)
+            logger.debug("held block {}".format(block_id))
+        logger.debug("held blocks")
 
-        # Now kill via provider
+        logger.debug("killing blocks via provider")
         to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill]
 
         if self.provider:
             r = self.provider.cancel(to_kill)
+            logger.debug("killed blocks via provider")
+        else:
+            logger.debug("no provider - not killing blocks via provider")
 
+
+        logger.debug("scale_in finished")
         return r
 
     def status(self):
