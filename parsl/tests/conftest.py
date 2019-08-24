@@ -63,10 +63,6 @@ def pytest_configure(config):
         'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
-    config.addinivalue_line(
-        'markers',
-        'noci: mark test to be unsuitable for running during automated tests'
-    )
 
 
 def pytest_generate_tests(metafunc):
@@ -121,14 +117,8 @@ def setup_docker():
             subprocess.call(cmd, cwd=pdir)
 
 
-# TODO: should become scope=session in order to use a single DFK for the whole
-# session? for specified configs yes... for 'local' configs, this needs to be per
-# test moduke?
-# scope=sessions fails for me with the a new DFK being initialised for subsequent
-# modules, without de-initialising the previous one. it's not immediately obvious
-# why so I'll leave that till later.
-@pytest.fixture(autouse=True, scope='module')
-def load_dfk(request, config):
+@pytest.fixture(autouse=True)
+def load_dfk(config):
     """Load the dfk before running a test.
 
     The special path `local` indicates that whatever configuration is loaded
@@ -149,6 +139,7 @@ def load_dfk(request, config):
             if DataFlowKernelLoader._dfk is not None:
                 raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
 
+            parsl.clear()
             dfk = parsl.load(module.config)
 
             yield
@@ -159,27 +150,8 @@ def load_dfk(request, config):
             parsl.clear()
         except KeyError:
             pytest.skip('options in user_opts.py not configured for {}'.format(config))
-    else:  # local config
-        local_setup = getattr(request.module, "local_setup", None)
-        local_teardown = getattr(request.module, "local_teardown", None)
-        local_config = getattr(request.module, "local_config", None)
-
-        if(local_config):
-            dfk = parsl.load(local_config)
-
-        if(callable(local_setup)):
-            local_setup()
-
+    else:
         yield
-
-        if(callable(local_teardown)):
-            local_teardown()
-
-        if(local_config):
-            if(parsl.dfk() != dfk):
-                raise ValueError("DFK changed unexpectedly during test")
-            dfk.cleanup()
-            parsl.clear()
 
 
 @pytest.fixture(autouse=True)
