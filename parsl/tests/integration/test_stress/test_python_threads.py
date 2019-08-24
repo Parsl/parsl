@@ -1,7 +1,7 @@
 ''' Testing bash apps
 '''
 import parsl
-from parsl import App, DataFlowKernel, python_app
+from parsl import python_app
 
 import pytest
 import time

@@ -6,9 +6,10 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-#config.retries = 2
-#parsl.clear()
-#parsl.load(config)
+# TODO: this needs fixing to not mutate global config
+# config.retries = 2
+# parsl.clear()
+# parsl.load(config)
 
 
 @App('python')

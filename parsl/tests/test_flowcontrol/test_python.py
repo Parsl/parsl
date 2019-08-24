@@ -1,7 +1,6 @@
 import pytest
 
-from parsl.app.app import App, python_app
-from parsl.dataflow.dflow import DataFlowKernel
+from parsl.app.app import python_app
 from parsl.tests.configs.local_ipp import config
 
 # config.executors[0].init_blocks = 0

@@ -1,5 +1,5 @@
 import parsl
-from parsl import App, python_app
+from parsl import python_app
 import pytest
 
 

@@ -3,7 +3,6 @@ import argparse
 import pytest
 
 import parsl
-from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app import App
 from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.local_threads_ipp import config

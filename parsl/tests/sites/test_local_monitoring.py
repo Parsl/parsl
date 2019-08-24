@@ -1,6 +1,5 @@
 import pytest
 
-from parsl.dataflow.dflow import DataFlowKernel
 from parsl.app.app import App
 from parsl.tests.configs.local_threads_monitoring import config
 
