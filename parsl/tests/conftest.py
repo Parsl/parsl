@@ -56,6 +56,11 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
+        'noci: mark test to be unsuitable for running during automated tests'
+    )
+
+    config.addinivalue_line(
+        'markers',
         'forked: mark test to only run in a subprocess'
     )
     config.addinivalue_line(
