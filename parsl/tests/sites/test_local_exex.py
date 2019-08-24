@@ -87,5 +87,7 @@ if __name__ == "__main__":
     if args.debug:
         parsl.set_stream_logger()
 
+    local_setup()
     test_python()
     test_bash()
+    local_teardown()
