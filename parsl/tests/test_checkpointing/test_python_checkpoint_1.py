@@ -8,8 +8,13 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-# parsl.clear()
-# dfk = parsl.load(config)
+
+def local_setup():
+    global dfk
+    dfk = parsl.load(config)
+
+def local_teardown():
+    parsl.clear()
 
 
 @App('python', cache=True)

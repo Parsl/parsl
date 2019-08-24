@@ -8,16 +8,18 @@ from parsl.app.app import App
 from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.local_threads_ipp import config
 
-#parsl.clear()
-#dfk = DataFlowKernel(config=config)
-dfk = None
-# parsl.set_stream_logger()
-
 import logging
 logger = logging.getLogger(__name__)
 
 
-@App("python", dfk, executors=['local_threads'])
+def local_setup():
+    parsl.load(config)
+
+def local_teardown():
+    parsl.clear()
+
+
+@App("python", executors=['local_threads'])
 def python_app_2():
     import os
     import threading
@@ -26,7 +28,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", dfk, executors=['local_ipp'])
+@App("python", executors=['local_ipp'])
 def python_app_1():
     import os
     import threading
@@ -35,7 +37,7 @@ def python_app_1():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("bash", dfk)
+@App("bash")
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 
