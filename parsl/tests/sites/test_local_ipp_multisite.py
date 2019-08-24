@@ -8,12 +8,7 @@ from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.local_ipp_multisite import config
 
 
-def local_setup():
-    parsl.load(config)
-
-
-def local_teardown():
-    parsl.clear()
+local_config = config
 
 
 @App("python", executors=['local_ipp_2'])

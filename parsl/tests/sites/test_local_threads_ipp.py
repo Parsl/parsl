@@ -12,11 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def local_setup():
-    parsl.load(config)
-
-def local_teardown():
-    parsl.clear()
+local_config = config
 
 
 @App("python", executors=['local_threads'])
