@@ -181,6 +181,7 @@ def load_dfk(request, config):
             dfk.cleanup()
             parsl.clear()
 
+
 @pytest.fixture(autouse=True)
 def apply_masks(request):
     """Apply whitelist, blacklist, and local markers.

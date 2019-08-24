@@ -15,6 +15,7 @@ from parsl.tests.configs.local_ipp import config
 def increment(x):
     return x + 1
 
+
 @pytest.mark.noci
 def test_stress(count=1000):
     """IPP app launch stress test"""

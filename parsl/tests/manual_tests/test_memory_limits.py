@@ -4,7 +4,6 @@ import psutil
 import multiprocessing
 import pytest
 
-# parsl.set_stream_logger()
 from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
@@ -17,6 +16,7 @@ from parsl.app.app import python_app  # , bash_app
 @python_app
 def double(x):
     return x * 2
+
 
 @pytest.mark.noci
 def test_simple(mem_per_worker):

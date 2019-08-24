@@ -45,6 +45,7 @@ def platform(sleep=10, stdout=None):
     time.sleep(sleep)
     return platform.uname()
 
+
 @pytest.mark.noci
 def test_simple(n=2):
     start = time.time()

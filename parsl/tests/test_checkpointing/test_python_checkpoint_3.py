@@ -6,6 +6,7 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
+
 def local_setup():
     global dfk
     dfk = parsl.load(config)

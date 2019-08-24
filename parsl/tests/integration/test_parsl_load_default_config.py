@@ -10,6 +10,7 @@ def cpu_stress(inputs=[], outputs=[]):
         s += i
     return s
 
+
 @pytest.mark.noci
 def test_parsl_load_default_config():
     dfk = parsl.load()

@@ -8,12 +8,15 @@ import time
 import argparse
 
 from parsl.tests.configs.local_threads import config
-# dfk = DataFlowKernel(config=config)
+
+
+local_config = config
 
 
 @python_app
 def increment(x):
     return x + 1
+
 
 @pytest.mark.noci
 def test_stress(count=1000):
@@ -24,7 +27,6 @@ def test_stress(count=1000):
         x[i] = increment(i)
     end = time.time()
     print("Launched {0} tasks in {1} s".format(count, end - start))
-    # dfk.cleanup()
 
 
 if __name__ == '__main__':

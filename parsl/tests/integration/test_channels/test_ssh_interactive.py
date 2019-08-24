@@ -2,11 +2,13 @@ import parsl
 from parsl.channels.ssh_il.ssh_il import SSHInteractiveLoginChannel as SSH
 import pytest
 
+
 def connect_and_list(hostname, username):
     conn = SSH(hostname, username=username)
     ec, out, err = conn.execute_wait("echo $HOSTNAME")
     conn.close()
     return out
+
 
 @pytest.mark.noci
 def test_cooley():

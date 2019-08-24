@@ -3,6 +3,7 @@ from parsl.channels.ssh.ssh import SSHChannel as SSH
 
 import pytest
 
+
 def connect_and_list(hostname, username):
     conn = SSH(hostname, username=username)
     ec, out, err = conn.execute_wait("echo $HOSTNAME")
