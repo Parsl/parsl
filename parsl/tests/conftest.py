@@ -21,14 +21,13 @@ def pytest_addoption(parser):
     """Add parsl-specific command-line options to pytest.
     """
     parser.addoption(
-        '--configs',
+        '--config',
         action='store',
         metavar='CONFIG',
-        nargs='*',
-        help="only run parsl CONFIG; use 'local' to run locally-defined config"
-    )
-    parser.addoption(
-        '--basic', action='store_true', default=False, help='only run basic configs (local, local_ipp and local_threads)'
+        type='string',
+        nargs=1,
+        required=True,
+        help="run with parsl CONFIG; use 'local' to run locally-defined config"
     )
 
 
@@ -65,26 +64,6 @@ def pytest_configure(config):
     )
 
 
-def pytest_generate_tests(metafunc):
-    """Assemble the list of configs to test.
-    """
-    config_dir = os.path.join(os.path.dirname(__file__), 'configs')
-
-    configs = metafunc.config.getoption('configs')
-    basic = metafunc.config.getoption('basic')
-    if basic:
-        configs = ['local'] + [os.path.join(config_dir, x) for x in ['local_threads.py', 'local_ipp.py']]
-    elif configs is None:
-        configs = ['local']
-        for dirpath, _, filenames in os.walk(config_dir):
-            for fn in filenames:
-                path = os.path.join(dirpath, fn)
-                if ('pycache' not in path) and path.endswith('.py'):
-                    configs += [path]
-
-    metafunc.parametrize('config', configs, scope='session')
-
-
 @pytest.fixture(scope='session')
 def setup_docker():
     """Set up containers for docker tests.
@@ -117,18 +96,17 @@ def setup_docker():
             subprocess.call(cmd, cwd=pdir)
 
 
-@pytest.fixture(autouse=True)
-def load_dfk(config):
-    """Load the dfk before running a test.
+@pytest.fixture(autouse=True, scope='session')
+def load_dfk_session(request, pytestconfig):
+    """Load a dfk around entire test suite, except in local mode.
 
-    The special path `local` indicates that whatever configuration is loaded
-    locally in the test should not be replaced. Otherwise, it is expected that
-    the supplied file contains a dictionary called `config`, which will be
-    loaded before the test runs.
-
-    Args:
-        config (str) : path to config to load (this is a parameterized pytest fixture)
+    The special path `local` indicates that configuration will not come
+    from a pytest managed configuration file; in that case, see
+    load_dfk_local_module for module-level configuration management.
     """
+
+    config = pytestconfig.getoption('config')[0]
+
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
         try:
@@ -155,14 +133,55 @@ def load_dfk(config):
 
 
 @pytest.fixture(autouse=True)
-def apply_masks(request):
+def load_dfk_local_module(request, pytestconfig):
+    """Load the dfk around test modules, in local mode.
+
+    If local_config is specified in the test module, it will be loaded using
+    parsl.load. It should be a parsl Config() object.
+
+    If local_setup and/or local_teardown are callables (such as functions) in
+    the test module, they they will be invoked before/after the tests. This
+    can be used to perform more interesting DFK initialisation not possible
+    with local_config.
+    """
+
+    config = pytestconfig.getoption('config')[0]
+
+    if config == 'local':
+        local_setup = getattr(request.module, "local_setup", None)
+        local_teardown = getattr(request.module, "local_teardown", None)
+        local_config = getattr(request.module, "local_config", None)
+
+        if(local_config):
+            dfk = parsl.load(local_config)
+
+        if(callable(local_setup)):
+            local_setup()
+
+        yield
+
+        if(callable(local_teardown)):
+            local_teardown()
+
+        if(local_config):
+            if(parsl.dfk() != dfk):
+                raise ValueError("DFK changed unexpectedly during test")
+            dfk.cleanup()
+            parsl.clear()
+
+    else:
+        yield
+
+
+@pytest.fixture(autouse=True)
+def apply_masks(request, pytestconfig):
     """Apply whitelist, blacklist, and local markers.
 
     These ensure that if a whitelist decorator is applied to a test, configs which are
     not in the whitelist are skipped. Similarly, configs in a blacklist are skipped,
     and configs which are not `local` are skipped if the `local` decorator is applied.
     """
-    config = request.getfixturevalue('config')
+    config = pytestconfig.getoption('config')[0]
     m = request.node.get_marker('whitelist')
     if m is not None:
         if os.path.abspath(config) not in chain.from_iterable([glob(x) for x in m.args]):
