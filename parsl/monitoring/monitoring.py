@@ -121,9 +121,6 @@ class UDPRadio(object):
             return False
         return x
 
-    def __del__(self):
-        self.sock.close()
-
 
 class MonitoringHub(RepresentationMixin):
     def __init__(self,
@@ -278,9 +275,6 @@ class MonitoringHub(RepresentationMixin):
             self.logger.info("Terminating Hub")
             self.queue_proc.terminate()
             self.priority_msgs.put(("STOP", 0))
-
-    def __del__(self):
-        self.close()
 
     @staticmethod
     def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur):
