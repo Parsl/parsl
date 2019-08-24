@@ -14,7 +14,7 @@ among the engine once it has been sent to the the engine's queue.
 
 
 """
-from parsl import App, DataFlowKernel, python_app
+from parsl import DataFlowKernel, python_app
 import time
 import pytest
 

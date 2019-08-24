@@ -1,7 +1,7 @@
 """Testing bash apps
 """
 import parsl
-from parsl import App, DataFlowKernel, ThreadPoolExecutor, bash_app
+from parsl import DataFlowKernel, ThreadPoolExecutor, bash_app
 
 
 import time

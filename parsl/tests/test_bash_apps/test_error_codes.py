@@ -8,8 +8,8 @@ from parsl.app.app import App
 
 from parsl.tests.configs.local_threads import config
 
-# parsl.clear()
-# dfk = parsl.load(config)
+
+local_config = config
 
 
 @App('bash')

@@ -36,10 +36,8 @@ def local_setup():
             hub_address=address_by_hostname(),
             hub_port=55055,
             logging_level=logging.DEBUG,
-            resource_monitoring_interval=10,
-       ),
-        strategy=None
-     )
+            resource_monitoring_interval=10),
+        strategy=None)
     parsl.load(threads_config)
 
 

@@ -3,7 +3,6 @@ import time
 import pytest
 
 from parsl.app.app import App
-from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_ipp import config
 
 # TODO: this needs to be done in a non-globally-mutating way
