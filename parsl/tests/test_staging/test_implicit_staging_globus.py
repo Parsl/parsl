@@ -5,8 +5,7 @@ from parsl.app.app import App
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads_globus import config, remote_writeable
 
-#parsl.clear()
-#parsl.load(config)
+local_config = config
 
 
 @App('python')
