@@ -1,10 +1,11 @@
 import pytest
 
 from parsl.app.app import python_app
-from parsl.tests.configs.local_ipp import config
+from parsl.tests.configs.local_ipp import fresh_config
 
-# config.executors[0].init_blocks = 0
-# dfk = DataFlowKernel(config=config)
+
+local_config = fresh_config()
+local_config.executors[0].init_blocks = 0
 
 
 @python_app
