@@ -5,12 +5,13 @@ import pytest
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
+
+## TODO: this needs doing properly - can't mutate global configs
+## because it will likely interfere with other tests using that
+## same config
 #config.retries = 2
 
-
-#parsl.clear()
-#parsl.load(config)
-
+local_config = config
 
 @App('python')
 def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):

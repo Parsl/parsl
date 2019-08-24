@@ -12,6 +12,7 @@ parsl.set_stream_logger()
 import logging
 logger = logging.getLogger(__name__)
 
+local_config = config
 
 @App("python", executors=['Extreme_Local'])
 def python_app_2():
@@ -53,13 +54,6 @@ def test_python(N=2):
         print("python_app_2 : ", r2[x].result())
 
     return
-
-
-def local_setup():
-    parsl.load(config)
-
-def local_teardown():
-    parsl.clear()
 
 
 @pytest.mark.local

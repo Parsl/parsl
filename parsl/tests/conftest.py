@@ -149,7 +149,6 @@ def load_dfk(request, config):
             if DataFlowKernelLoader._dfk is not None:
                 raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
 
-            parsl.clear()
             dfk = parsl.load(module.config)
 
             yield
@@ -163,6 +162,10 @@ def load_dfk(request, config):
     else:  # local config
         local_setup = getattr(request.module, "local_setup", None)
         local_teardown = getattr(request.module, "local_teardown", None)
+        local_config = getattr(request.module, "local_config", None)
+
+        if(local_config):
+            dfk = parsl.load(local_config)
 
         if(callable(local_setup)):
             local_setup()
@@ -172,6 +175,11 @@ def load_dfk(request, config):
         if(callable(local_teardown)):
             local_teardown()
 
+        if(local_config):
+            if(parsl.dfk() != dfk):
+                raise ValueError("DFK changed unexpectedly during test")
+            dfk.cleanup()
+            parsl.clear()
 
 @pytest.fixture(autouse=True)
 def apply_masks(request):
