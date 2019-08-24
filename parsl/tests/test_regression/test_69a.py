@@ -1,8 +1,6 @@
 '''
 Regression tests for issue #69
 '''
-import parsl
-
 import pytest
 
 from parsl.app.app import App

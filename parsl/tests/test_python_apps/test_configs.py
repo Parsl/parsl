@@ -1,11 +1,10 @@
 import pytest
 
-import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-#parsl.clear()
-#parsl.load(config)
+
+local_config = config
 
 
 @App('python')

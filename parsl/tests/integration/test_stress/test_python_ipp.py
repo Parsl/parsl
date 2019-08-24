@@ -1,14 +1,13 @@
 ''' Testing bash apps
 '''
 import parsl
-from parsl import App, DataFlowKernel, python_app
+from parsl import DataFlowKernel, python_app
 import pytest
 
 import time
 import argparse
 
 from parsl.tests.configs.local_ipp import config
-# dfk = DataFlowKernel(config=config)
 
 
 @python_app
@@ -39,5 +38,7 @@ if __name__ == '__main__':
 
     if args.debug:
         parsl.set_stream_logger()
+
+    dfk = DataFlowKernel(config=config)
 
     test_stress(count=int(args.count))

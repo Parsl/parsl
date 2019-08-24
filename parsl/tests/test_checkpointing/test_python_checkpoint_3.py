@@ -13,7 +13,7 @@ def local_setup():
 
 
 def local_teardown():
-    parsl.clear() 
+    parsl.clear()
 
 
 @App('python')

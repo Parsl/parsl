@@ -1,4 +1,3 @@
-import parsl
 from parsl.app.app import App
 from parsl.tests.configs.cooley_local_single_node import config
 
