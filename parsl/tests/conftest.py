@@ -24,7 +24,7 @@ def pytest_addoption(parser):
         '--config',
         action='store',
         metavar='CONFIG',
-        nargs='1',
+        nargs=1,
         help="only run parsl CONFIG; use 'local' to run locally-defined config"
     )
 
@@ -103,7 +103,7 @@ def load_dfk_session(request, pytestconfig):
     load_dfk_local_module for module-level configuration management.
     """
 
-    config = pytestconfig.getoption('config')[0] # silently ignore the rest ... TODO
+    config = pytestconfig.getoption('config')
 
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
@@ -129,24 +129,46 @@ def load_dfk_session(request, pytestconfig):
     else:
         yield
 
+
 @pytest.fixture(autouse=True)
 def load_dfk_local_module(request, pytestconfig):
-    """Load the dfk before running a test.
+    """Load the dfk around test modules, in local mode.
 
-    The special path `local` indicates that whatever configuration is loaded
-    locally in the test should not be replaced. Otherwise, it is expected that
-    the supplied file contains a dictionary called `config`, which will be
-    loaded before the test runs.
+    If local_config is specified in the test module, it will be loaded using
+    parsl.load. It should be a parsl Config() object.
 
+    If local_setup and/or local_teardown are callables (such as functions) in
+    the test module, they they will be invoked before/after the tests. This
+    can be used to perform more interesting DFK initialisation not possible
+    with local_config.
     """
 
-    config = pytestconfig.getoption('config')[0] # silently ignore the rest ... TODO
+    config = pytestconfig.getoption('config')
 
-    if config != 'local':
+    if config == 'local':
+        local_setup = getattr(request.module, "local_setup", None)
+        local_teardown = getattr(request.module, "local_teardown", None)
+        local_config = getattr(request.module, "local_config", None)
+
+        if(local_config):
+            dfk = parsl.load(local_config)
+
+        if(callable(local_setup)):
+            local_setup()
+
         yield
+
+        if(callable(local_teardown)):
+            local_teardown()
+
+        if(local_config):
+            if(parsl.dfk() != dfk):
+                raise ValueError("DFK changed unexpectedly during test")
+            dfk.cleanup()
+            parsl.clear()
+
     else:
         yield
-
 
 
 @pytest.fixture(autouse=True)
@@ -157,7 +179,7 @@ def apply_masks(request, pytestconfig):
     not in the whitelist are skipped. Similarly, configs in a blacklist are skipped,
     and configs which are not `local` are skipped if the `local` decorator is applied.
     """
-    config = pytestconfig.getoption('config')[0] # silently ignore the rest ... TODO
+    config = pytestconfig.getoption('config')
     m = request.node.get_marker('whitelist')
     if m is not None:
         if os.path.abspath(config) not in chain.from_iterable([glob(x) for x in m.args]):
