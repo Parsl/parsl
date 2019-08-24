@@ -34,7 +34,6 @@ import time
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.conftest import load_dfk
 
 
 @App("python")
@@ -133,16 +132,3 @@ def test_bash():
     x = bash_app(stdout="{0}.out".format(fname))
     print("Waiting ....")
     print(x.result())
-
-
-if __name__ == "__main__":
-    config_dir = os.path.join(os.path.dirname(parsl.__file__), 'tests', 'configs')
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--num", default=10,
-                        help="Number of apps to launch")
-    parser.add_argument("-c", "--config", default=os.path.join(config_dir, 'local_threads.py'),
-                        help="Config to run")
-    args = parser.parse_args()
-    load_dfk(args.config)
-
-    test_python(args.num)

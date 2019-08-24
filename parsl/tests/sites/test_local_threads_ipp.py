@@ -4,7 +4,6 @@ import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.local_threads_ipp import config
 
 import logging
@@ -66,20 +65,3 @@ def test_bash():
     x = bash_app(stdout="{0}.out".format(fname))
     print("Waiting ....")
     print(x.result())
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--num", default=10,
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    parser.add_argument("-c", "--config", default='local',
-                        help="Path to configuration file to run")
-    args = parser.parse_args()
-    load_dfk(args.config)
-    if args.debug:
-        parsl.set_stream_logger()
-
-    test_python()
-    test_bash()

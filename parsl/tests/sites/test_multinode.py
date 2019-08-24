@@ -4,7 +4,6 @@ import pytest
 
 from parsl.app.app import App
 from parsl.tests.configs.cori_ipp_multinode import config
-from parsl.tests.conftest import load_dfk
 
 
 local_config = config
@@ -40,14 +39,3 @@ def test_python_remote_slow(count=20):
 
     for fu in fus:
         print(fu.result())
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", default='local',
-                        help="Path to configuration file to run")
-    args = parser.parse_args()
-
-    load_dfk(args.config)
-    test_python_remote()
-    test_python_remote_slow()

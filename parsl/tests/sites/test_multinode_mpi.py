@@ -4,7 +4,6 @@ import pytest
 
 from parsl.app.app import App
 from parsl.tests.configs.cori_ipp_multinode import config
-from parsl.tests.conftest import load_dfk
 
 
 local_config = config
@@ -47,21 +46,3 @@ def bash_mpi_app(stdout=None, stderr=None):
     return """ls -thor
 mpi_hello
     """
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", default='local',
-                        help="Path to configuration file to run")
-    args = parser.parse_args()
-
-    load_dfk(args.config)
-
-    items = []
-    for i in range(0, 4):
-        x = bash_mpi_app(stdout="parsl.{0}.out".format(i),
-                         stderr="parsl.{0}.err".format(i))
-        items.extend([x])
-
-    for i in items:
-        print(i.result())
