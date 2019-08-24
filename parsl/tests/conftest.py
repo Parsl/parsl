@@ -170,7 +170,7 @@ def load_dfk(request, config):
         yield
 
         if(callable(local_teardown)):
-            local_down()
+            local_teardown()
 
 
 @pytest.fixture(autouse=True)
