@@ -1,13 +1,19 @@
 import pytest
+import parsl
 
 from parsl.app.app import App
-from parsl.tests.configs.local_threads_monitoring import config
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-local_config = config
+def local_setup():
+    from parsl.tests.configs.local_threads_monitoring import config
+    parsl.load(config, pytest_secret_arg=True)
+
+
+def local_teardown():
+    parsl.clear()
 
 
 @App("python", executors=['threads'])
