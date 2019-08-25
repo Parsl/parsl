@@ -74,8 +74,5 @@ script:
     # a stdout/stderr buffering bug in present master.
     - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
 
+    # prints report of coverage data stored in .coverage
     - coverage report
-      # prints report of coverage data stored in .coverage
-
-    # - pytest parsl/tests --config parsl/tests/configs/local_threads.py
-    # - pytest parsl/tests --config parsl/tests/configs/local_ipp.py
