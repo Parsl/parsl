@@ -8,7 +8,6 @@ from itertools import chain
 
 import pytest
 import _pytest.runner as runner
-from pytest_forked import forked_run_report
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -59,10 +58,6 @@ def pytest_configure(config):
         'noci: mark test to be unsuitable for running during automated tests'
     )
 
-    config.addinivalue_line(
-        'markers',
-        'forked: mark test to only run in a subprocess'
-    )
     config.addinivalue_line(
         'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
@@ -223,15 +218,6 @@ def setup_data():
         f.write("1\n")
     with open("data/test2.txt", 'w') as f:
         f.write("2\n")
-
-
-@pytest.mark.tryfirst
-def pytest_runtest_protocol(item):
-    if 'forked' in item.keywords:
-        reports = forked_run_report(item)
-        for rep in reports:
-            item.ihook.pytest_runtest_logreport(report=rep)
-        return True
 
 
 def pytest_make_collect_report(collector):
