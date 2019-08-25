@@ -52,7 +52,7 @@ script:
     # so that the above tests happen with only the basic requirements installed.
 
     # workqueue
-    - bash parsl/executors/workqueue/install-workqueue.sh
+    - ./parsl/executors/workqueue/install-workqueue.sh
     - export PATH=$PATH:/tmp/cctools/bin
     - export PYTHONPATH=/tmp/cctools/lib/python3.5/site-packages
 
