@@ -14,6 +14,7 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     cat {i} &> {o}
     """.format(i=infiles, o=outputs[0])
 
+
 @pytest.mark.usefixtures('setup_data')
 def test_files():
 
