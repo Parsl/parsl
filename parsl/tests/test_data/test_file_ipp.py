@@ -1,5 +1,6 @@
 import os
 
+import pytest
 import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
