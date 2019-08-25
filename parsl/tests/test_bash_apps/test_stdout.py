@@ -6,7 +6,7 @@ import pytest
 import parsl
 import parsl.app.errors as perror
 from parsl.app.app import App
-from parsl.tests.configs.workqueue_ex import config
+from parsl.tests.configs.local_threads import config
 
 
 @App('bash')
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     if args.debug:
         parsl.set_stream_logger()
 
-    parsl.load(config, pytest_secret_arg = True)
+    parsl.load(config)
 
     # test_bad_stdout_specs is omitted because it is called in a
     # more complicated parameterised fashion by pytest.
