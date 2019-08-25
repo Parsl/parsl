@@ -1,8 +1,5 @@
-import argparse
-
 import pytest
 
-import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads_ipp import config
 

@@ -879,7 +879,7 @@ class DataFlowKernel(object):
 
         logger.debug("cleaning up executors")
         for executor in self.executors.values():
-            logger.debug("cleanup an executor {}"+format(executor.label))
+            logger.debug("cleanup an executor {}".format(executor.label))
             if executor.managed:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()

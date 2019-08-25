@@ -1,5 +1,3 @@
-import argparse
-
 import pytest
 
 from parsl.app.app import App

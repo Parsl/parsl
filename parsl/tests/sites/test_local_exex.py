@@ -1,5 +1,3 @@
-import argparse
-
 import pytest
 
 import parsl
@@ -66,5 +64,3 @@ def test_bash():
     x = bash_app(stdout="{0}.out".format(fname))
     print("Waiting ....")
     print(x.result())
-
-

@@ -1,8 +1,5 @@
-import argparse
-
 import pytest
 
-import parsl
 from parsl.app.app import App, bash_app
 from parsl.tests.configs.local_ipp_multisite import config
 

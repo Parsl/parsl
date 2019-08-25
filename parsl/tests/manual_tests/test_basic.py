@@ -4,7 +4,7 @@ import pytest
 
 import parsl
 # Tested. Confirmed. Local X Local X SingleNodeLauncher
-from parsl.tests.configs.local_ipp import config
+# from parsl.tests.configs.local_ipp import config
 
 # Tested. Confirmed. ssh X Slurm X SingleNodeLauncher
 # from parsl.tests.configs.midway_ipp import config
@@ -148,10 +148,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.sitespec:
-        config = None
+        c = None
         try:
             exec("import parsl; from {} import config".format(args.sitespec))
-            parsl.load(config)
+            parsl.load(c)
         except Exception:
             print("Failed to load the requested config : ", args.sitespec)
             exit(0)

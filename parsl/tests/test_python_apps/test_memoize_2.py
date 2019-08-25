@@ -4,7 +4,6 @@ import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_threads_no_cache import config
 
 local_config = config

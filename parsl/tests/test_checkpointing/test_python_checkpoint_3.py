@@ -9,7 +9,7 @@ from parsl.tests.configs.local_threads import config
 
 def local_setup():
     global dfk
-    dfk = parsl.load(config, pytest_secret_arg = True)
+    dfk = parsl.load(config, pytest_secret_arg=True)
 
 
 def local_teardown():

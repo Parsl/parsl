@@ -28,11 +28,8 @@ Results from running on Midway with IPP executor.
 Latency   |   Min:0.005968570709228516 Max:0.011006593704223633 Average:0.0065019774436950685
 Roundtrip |   Min:0.00716400146484375  Max:0.012288331985473633 Average:0.007741005420684815
 """
-import argparse
-import os
 import time
 
-import parsl
 from parsl.app.app import App
 
 

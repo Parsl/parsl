@@ -164,7 +164,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                                "--hb_threshold={heartbeat_threshold} ")
         self.worker_debug = worker_debug
 
-
     def start(self):
         if not _mpi_enabled:
             raise OptionalModuleMissing("mpi4py", "Cannot initialize ExtremeScaleExecutor without mpi4py")

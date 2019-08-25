@@ -494,7 +494,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             else:
                 logger.debug("[HOLD_BLOCK]: Manager {} did not match block id: {}".format(manager['block_id'], block_id))
 
- 
         logger.debug("done with send hold block {}".format(block_id))
 
     def submit(self, func, *args, **kwargs):
@@ -610,7 +609,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             logger.debug("killed blocks via provider")
         else:
             logger.debug("no provider - not killing blocks via provider")
-
 
         logger.debug("scale_in finished")
         return r
