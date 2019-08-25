@@ -39,7 +39,7 @@ def add(dur=0.01):
 
 @pytest.mark.local
 def test_dynamic_executor():
-    dfk = parsl.load()
+    dfk = parsl.load(pytest_secret_arg=True)
     tasks = [sleeper() for i in range(5)]
     results = [i.result() for i in tasks]
     print("Done with initial test. The results are", results)
