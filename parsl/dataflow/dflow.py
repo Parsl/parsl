@@ -68,7 +68,6 @@ class DataFlowKernel(object):
             A specification of all configuration options. For more details see the
             :class:~`parsl.config.Config` documentation.
         """
-
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
@@ -1094,7 +1093,7 @@ class DataFlowKernelLoader(object):
 
     @classmethod
     @typeguard.typechecked
-    def load(cls, config: Optional[Config] = None):
+    def load(cls, config: Optional[Config] = None, pytest_secret_arg: bool = False):
         """Load a DataFlowKernel.
 
         Args:
@@ -1103,6 +1102,9 @@ class DataFlowKernelLoader(object):
         Returns:
             - DataFlowKernel : The loaded DataFlowKernel object.
         """
+        if not pytest_secret_arg:
+            raise RuntimeError("DataFlowKernel initialised in a bad place")
+
         if cls._dfk is not None:
             raise RuntimeError('Config has already been loaded')
 
