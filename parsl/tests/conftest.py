@@ -132,7 +132,7 @@ def load_dfk_session(request, pytestconfig):
         yield
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope='module')
 def load_dfk_local_module(request, pytestconfig):
     """Load the dfk around test modules, in local mode.
 
