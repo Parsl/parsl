@@ -492,7 +492,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                 logger.debug("[HOLD_BLOCK]: Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
             else:
-                logger.debug("[HOLD_BLOCK]: Manager did not match block id: {}".format(manager['block_id', block_id]))
+                logger.debug("[HOLD_BLOCK]: Manager {} did not match block id: {}".format(manager['block_id'], block_id))
+
  
         logger.debug("done with send hold block {}".format(block_id))
 
