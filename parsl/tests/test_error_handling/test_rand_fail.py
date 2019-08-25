@@ -4,14 +4,11 @@ import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_threads import fresh_config
 
-# TODO: this needs doing properly - can't mutate global configs
-# because it will likely interfere with other tests using that
-# same config
-# config.retries = 2
 
-local_config = config
+local_config = fresh_config()
+local_config.retries = 2
 
 
 @App('python')
