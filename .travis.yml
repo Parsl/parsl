@@ -72,7 +72,9 @@ script:
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
-    - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
+    # - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
+    # TODO: ^ this test has been removed pending investigation ... when restored or removed,
+    #       sort out this commented out block appropriately.
 
     # prints report of coverage data stored in .coverage
     - coverage report
