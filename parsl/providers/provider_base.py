@@ -96,3 +96,18 @@ class ExecutionProvider(metaclass=ABCMeta):
     def label(self):
         ''' Provides the label for this provider '''
         pass
+
+    def mem_per_node(self):
+        """Real memory to provision per node in GB.
+
+        If set to None, no explicit request will be made.
+        """
+        return None
+
+    def cores_per_node(self):
+        """Number of cores to provision per node.
+
+        If set to None, executors will assume all cores on the node are
+        available for computation.
+        """
+        return None
