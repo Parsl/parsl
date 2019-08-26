@@ -81,8 +81,5 @@ script:
     - pytest parsl/tests/integration/test_retries.py -k "not cleannet" --config local --cov=parsl --cov-append --cov-report=
     - pytest parsl/tests/integration/test_parsl_load_default_config.py -k "not cleannet" --config local --cov=parsl --cov-append --cov-report=
   
+    # prints report of coverage data stored in .coverage
     - coverage report
-      # prints report of coverage data stored in .coverage
-
-    # - pytest parsl/tests --config parsl/tests/configs/local_threads.py
-    # - pytest parsl/tests --config parsl/tests/configs/local_ipp.py
