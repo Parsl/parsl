@@ -9,6 +9,7 @@ import queue
 import pickle
 from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple, Union
+import math
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
@@ -183,6 +184,21 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
+
+        mem_slots = max_workers
+        cpu_slots = max_workers
+        if hasattr(self.provider, 'mem_per_node') and \
+                self.provider.mem_per_node is not None and \
+                mem_per_worker is not None and \
+                mem_per_worker > 0:
+            mem_slots = math.floor(self.provider.mem_per_node / mem_per_worker)
+        if hasattr(self.provider, 'cores_per_node') and \
+                self.provider.cores_per_node is not None:
+            cpu_slots = math.floor(self.provider.cores_per_node / cores_per_worker)
+
+        self.workers_per_node = min(max_workers, mem_slots, cpu_slots)
+        if self.workers_per_node == float('inf'):
+            self.workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
         self.address = address
