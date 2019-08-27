@@ -290,3 +290,13 @@ def pytest_make_collect_report(collector):
     rep = runner.CollectReport(collector.nodeid, outcome, longrepr, getattr(call, 'result', None))
     rep.call = call  # see collect_one_node
     return rep
+
+def pytest_ignore_collect(path):
+    if 'integration' in path.strpath:
+        return True
+    elif 'manual_tests' in path.strpath:
+        return True
+    elif 'workqueue_tests/test_scale' in path.strpath:
+        return True
+    else:
+        return False

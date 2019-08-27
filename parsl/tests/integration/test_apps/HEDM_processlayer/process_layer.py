@@ -123,7 +123,6 @@ def main(count):
     return c3
 
 
-@pytest.mark.noci
 def test_HEDM(count=10):
     x = main(count)
     x.result()

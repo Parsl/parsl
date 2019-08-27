@@ -32,7 +32,6 @@ def slow_pid(sleep=1):
     return os.getppid(), os.getpid()
 
 
-@pytest.mark.noci
 def test_worker(n=2, sleep=0):
     d = {}
     start = time.time()

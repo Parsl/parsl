@@ -21,7 +21,6 @@ echo "Done----------"
 '''
 
 
-@pytest.mark.noci
 def test_connect_1():
     with open('remote_run.sh', 'w') as f:
         f.write(script)

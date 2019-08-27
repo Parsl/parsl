@@ -10,7 +10,6 @@ def connect_and_list(hostname, username):
     return out
 
 
-@pytest.mark.noci
 def test_cooley():
     ''' Test ssh channels to midway
     '''

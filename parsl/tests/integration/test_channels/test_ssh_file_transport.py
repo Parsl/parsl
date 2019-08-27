@@ -10,7 +10,6 @@ def connect_and_list(hostname, username):
     return out
 
 
-@pytest.mark.noci
 def test_push(conn, fname="test001.txt"):
 
     with open(fname, 'w') as f:
@@ -21,7 +20,6 @@ def test_push(conn, fname="test001.txt"):
     print(ec, out, err)
 
 
-@pytest.mark.noci
 def test_pull(conn, fname="test001.txt"):
 
     local = "foo"

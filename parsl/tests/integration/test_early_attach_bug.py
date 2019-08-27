@@ -28,7 +28,6 @@ def sleep_double(x):
     return x * 2
 
 
-@pytest.mark.noci
 def test_z_cleanup():
     dfk = DataFlowKernel(config=config)
     dfk.cleanup()

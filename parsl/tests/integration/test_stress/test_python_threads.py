@@ -18,7 +18,6 @@ def increment(x):
     return x + 1
 
 
-@pytest.mark.noci
 def test_stress(count=1000):
     """Threaded app launch stress test"""
     start = time.time()

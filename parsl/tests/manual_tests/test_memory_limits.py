@@ -18,7 +18,6 @@ def double(x):
     return x * 2
 
 
-@pytest.mark.noci
 def test_simple(mem_per_worker):
 
     config = Config(

@@ -46,7 +46,6 @@ def sleep(sleep_dur=0.1):
     return 0
 
 
-@pytest.mark.noci
 def test_fail_nowait(numtasks=10):
     """Test retries on tasks with no dependencies.
     """
@@ -64,7 +63,6 @@ def test_fail_nowait(numtasks=10):
     print("Done")
 
 
-@pytest.mark.noci
 def test_fail_delayed(numtasks=10):
     """Test retries on tasks with dependencies.
 
@@ -87,7 +85,6 @@ def test_fail_delayed(numtasks=10):
     print("Done")
 
 
-@pytest.mark.noci
 def test_retry():
     """Test retries via app that succeeds on the Nth retry.
     """
