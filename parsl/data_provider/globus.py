@@ -197,13 +197,11 @@ class GlobusStaging(Staging, RepresentationMixin):
     """
 
     def can_stage_in(self, file):
-        logger.debug("Globus checking file {}".format(file.__repr__()))
-        logger.debug("file has scheme {}".format(file.scheme))
+        logger.debug("Globus checking file {}".format(repr(file)))
         return file.scheme == 'globus'
 
     def can_stage_out(self, file):
-        logger.debug("Globus checking file {}".format(file.__repr__()))
-        logger.debug("file has scheme {}".format(file.scheme))
+        logger.debug("Globus checking file {}".format(repr(file)))
         return file.scheme == 'globus'
 
     def stage_in(self, dm, executor, file, parent_fut):
