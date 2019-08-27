@@ -151,7 +151,6 @@ def load_dfk_bodge_per_test_for_workqueue(request, pytestconfig):
         yield
         return
 
-
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
         try:
