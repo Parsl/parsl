@@ -21,8 +21,8 @@ class ExecutionProvider(metaclass=ABCMeta):
                                 |
                                 +-------------------
      """
-     _cores_per_node = None
-     _mem_per_node = None
+    _cores_per_node = None
+    _mem_per_node = None
 
     @abstractmethod
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
@@ -117,6 +117,7 @@ class ExecutionProvider(metaclass=ABCMeta):
     def mem_per_node(self, value):
         self._mem_per_node = value
 
+    @property
     def cores_per_node(self):
         """Number of cores to provision per node.
 
@@ -128,7 +129,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         run concurrently per node. This information is used by dataflow.Strategy to estimate
         the resources required to run all outstanding tasks.
         """
-        return None
+        return self._cores_per_node
 
     @property.setter
     def cores_per_node(self, value):
