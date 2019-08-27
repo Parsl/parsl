@@ -1,4 +1,5 @@
 from parsl.channels.ssh.ssh import SSHChannel as SSH
+import pytest
 
 
 def connect_and_list(hostname, username):
@@ -8,6 +9,7 @@ def connect_and_list(hostname, username):
     return out
 
 
+@pytest.mark.noci
 def test_midway():
     ''' Test ssh channels to midway
     '''
@@ -17,6 +19,7 @@ def test_midway():
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
 
+@pytest.mark.noci
 def test_beagle():
     ''' Test ssh channels to beagle
     '''
@@ -26,6 +29,7 @@ def test_beagle():
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
 
+@pytest.mark.noci
 def test_osg():
     ''' Test ssh connectivity to osg
     '''
@@ -35,6 +39,7 @@ def test_osg():
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
 
+@pytest.mark.noci
 def test_cori():
     ''' Test ssh connectivity to cori
     '''
