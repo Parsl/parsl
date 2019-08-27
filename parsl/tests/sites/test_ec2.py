@@ -1,5 +1,3 @@
-import pytest
-
 import parsl
 
 if __name__ == "__main__":

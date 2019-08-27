@@ -2,7 +2,6 @@
 '''
 import parsl
 from parsl import DataFlowKernel, python_app
-import pytest
 
 import time
 import argparse

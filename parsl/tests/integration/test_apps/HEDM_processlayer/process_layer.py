@@ -14,7 +14,6 @@ Foreach .. from .csv
 <Bash> wait on all for loop
 
 """
-import pytest
 
 import parsl
 from parsl import App, DataFlowKernel, ThreadPoolExecutor

@@ -1,5 +1,4 @@
 import os
-import pytest
 
 from parsl.channels.ssh.ssh import SSHChannel as SSH
 

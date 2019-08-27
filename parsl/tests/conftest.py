@@ -291,6 +291,7 @@ def pytest_make_collect_report(collector):
     rep.call = call  # see collect_one_node
     return rep
 
+
 def pytest_ignore_collect(path):
     if 'integration' in path.strpath:
         return True

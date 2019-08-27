@@ -3,7 +3,6 @@
 import parsl
 from parsl import python_app
 
-import pytest
 import time
 import argparse
 

@@ -1,6 +1,5 @@
 import parsl
 from parsl import python_app
-import pytest
 
 
 @python_app

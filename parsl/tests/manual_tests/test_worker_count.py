@@ -2,7 +2,6 @@ import argparse
 import time
 import math
 import multiprocessing
-import pytest
 
 import parsl
 

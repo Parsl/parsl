@@ -1,5 +1,4 @@
 from parsl.channels.local.local import LocalChannel
-import pytest
 
 
 def test_local():

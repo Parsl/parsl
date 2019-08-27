@@ -1,5 +1,4 @@
 from parsl.channels.ssh.ssh import SSHChannel as SSH
-import pytest
 
 
 def connect_and_list(hostname, username):

@@ -1,5 +1,4 @@
 from parsl.channels import OAuthSSHChannel
-import pytest
 
 
 def test_channel():

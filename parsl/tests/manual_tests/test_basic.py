@@ -1,6 +1,5 @@
 import argparse
 import time
-import pytest
 
 import parsl
 # Tested. Confirmed. Local X Local X SingleNodeLauncher

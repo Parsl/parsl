@@ -16,7 +16,6 @@ among the engine once it has been sent to the the engine's queue.
 """
 from parsl import DataFlowKernel, python_app
 import time
-import pytest
 
 from parsl.tests.configs.local_ipp import config
 
