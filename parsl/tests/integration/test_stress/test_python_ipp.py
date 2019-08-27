@@ -24,7 +24,6 @@ def test_stress(count=1000):
         x[i] = increment(i)
     end = time.time()
     print("Launched {0} tasks in {1} s".format(count, end - start))
-    # dfk.cleanup()
 
 
 if __name__ == '__main__':
