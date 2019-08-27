@@ -1,12 +1,12 @@
 import pytest
 
-import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
 
 from parsl.tests.configs.local_threads_http_in_task import config
 
-parsl.load(config)
+
+local_config = config
 
 
 @App('python')
