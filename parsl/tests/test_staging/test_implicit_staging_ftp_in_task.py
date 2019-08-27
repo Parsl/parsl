@@ -5,7 +5,7 @@ from parsl.app.app import App
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads_ftp_in_task import config
 
-parsl.load(config)
+local_config = config
 
 
 @App('python')
@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     import argparse
 
-    parsl.load()
+    parsl.load(config)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
