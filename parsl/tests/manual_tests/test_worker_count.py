@@ -11,7 +11,7 @@ EXPECTED_WORKERS = math.floor(CORES / CORES_PER_WORKER)
 
 
 # from parsl.tests.configs.htex_local import config
-from htex_local import config
+from parsl.tests.manual_tests.htex_local import config
 config.executors[0].cores_per_worker = CORES_PER_WORKER
 config.executors[0].provider.init_blocks = 1
 
