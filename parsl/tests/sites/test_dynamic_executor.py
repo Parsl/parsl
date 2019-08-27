@@ -39,7 +39,6 @@ def add(dur=0.01):
 
 @pytest.mark.local
 def test_dynamic_executor():
-    parsl.clear()
     dfk = parsl.load()
     tasks = [sleeper() for i in range(5)]
     results = [i.result() for i in tasks]
@@ -73,6 +72,7 @@ def test_dynamic_executor():
     print("Successfully added htex executor and ran with it. The results are", results)
 
     print("Done testing")
+    parsl.clear()
 
 
 if __name__ == "__main__":

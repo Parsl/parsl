@@ -1,15 +1,13 @@
 '''
 Regression tests for issue #69
 '''
-import parsl
-
 import pytest
 
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
+
+local_config = config
 
 
 @App('bash')
