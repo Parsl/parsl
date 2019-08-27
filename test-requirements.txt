@@ -3,7 +3,7 @@ pandas
 pytest>=3.6.0,<4.1.0
 pytest-cov
 pytest-xdist==1.26.1
-pytest-ordering
+pytest-random-order
 coverage
 mock>=1.0.0
 nbsphinx

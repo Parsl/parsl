@@ -1,13 +1,13 @@
 import argparse
 import os
+import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_threads import fresh_config
 
-config.retries = 2
-parsl.clear()
-parsl.load(config)
+local_config = fresh_config()
+local_config.retries = 2
 
 
 @App('python')
@@ -46,6 +46,7 @@ def sleep(sleep_dur=0.1):
     return 0
 
 
+@pytest.mark.noci
 def test_fail_nowait(numtasks=10):
     """Test retries on tasks with no dependencies.
     """
@@ -63,6 +64,7 @@ def test_fail_nowait(numtasks=10):
     print("Done")
 
 
+@pytest.mark.noci
 def test_fail_delayed(numtasks=10):
     """Test retries on tasks with dependencies.
 
@@ -85,6 +87,7 @@ def test_fail_delayed(numtasks=10):
     print("Done")
 
 
+@pytest.mark.noci
 def test_retry():
     """Test retries via app that succeeds on the Nth retry.
     """

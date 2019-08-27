@@ -1,6 +1,8 @@
 from parsl.channels.errors import SSHException, BadHostKeyException
 from parsl.channels.ssh.ssh import SSHChannel as SSH
 
+import pytest
+
 
 def connect_and_list(hostname, username):
     conn = SSH(hostname, username=username)
@@ -9,6 +11,7 @@ def connect_and_list(hostname, username):
     return out
 
 
+@pytest.mark.noci
 def test_error_1():
     try:
         connect_and_list("bad.url.gov", "ubuntu")
@@ -16,6 +19,7 @@ def test_error_1():
         assert type(e) == SSHException, "Expected SSException, got: {0}".format(e)
 
 
+@pytest.mark.noci
 def test_error_2():
     try:
         connect_and_list("swift.rcc.uchicago.edu", "mango")
@@ -25,6 +29,7 @@ def test_error_2():
         raise Exception("Expected SSException, got: {0}".format(e))
 
 
+@pytest.mark.noci
 def test_error_3():
     ''' This should work
     '''

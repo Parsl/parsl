@@ -1,20 +1,24 @@
 ''' Testing bash apps
 '''
 import parsl
-from parsl import App, DataFlowKernel
+from parsl import python_app
 
+import pytest
 import time
 import argparse
 
 from parsl.tests.configs.local_threads import config
-dfk = DataFlowKernel(config=config)
 
 
-@App('python', dfk)
+local_config = config
+
+
+@python_app
 def increment(x):
     return x + 1
 
 
+@pytest.mark.noci
 def test_stress(count=1000):
     """Threaded app launch stress test"""
     start = time.time()
@@ -23,7 +27,6 @@ def test_stress(count=1000):
         x[i] = increment(i)
     end = time.time()
     print("Launched {0} tasks in {1} s".format(count, end - start))
-    dfk.cleanup()
 
 
 if __name__ == '__main__':

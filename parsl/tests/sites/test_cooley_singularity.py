@@ -1,10 +1,8 @@
-import parsl
 from parsl.app.app import App
 from parsl.tests.configs.cooley_local_single_node import config
 
-parsl.clear()
-parsl.load(config)
-parsl.set_stream_logger()
+
+local_config = config
 
 
 @App("bash")
