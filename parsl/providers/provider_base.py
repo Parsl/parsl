@@ -113,7 +113,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         """
         return self._mem_per_node
 
-    @property.setter
+    @mem_per_node.setter
     def mem_per_node(self, value):
         self._mem_per_node = value
 
@@ -131,6 +131,6 @@ class ExecutionProvider(metaclass=ABCMeta):
         """
         return self._cores_per_node
 
-    @property.setter
+    @cores_per_node.setter
     def cores_per_node(self, value):
         self._cores_per_node = value
