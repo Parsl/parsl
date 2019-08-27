@@ -65,5 +65,5 @@ if __name__ == "__main__":
                          stderr="parsl.{0}.err".format(i))
         items.extend([x])
 
-    for i in items:
-        print(i.result())
+    for f in items:
+        print(f.result())
