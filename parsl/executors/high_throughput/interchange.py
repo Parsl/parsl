@@ -279,7 +279,6 @@ class Interchange(object):
         """
         logger.debug("[COMMAND] Command Server Starting")
         while not kill_event.is_set():
-            logger.debug("[COMMAND] loop start")
             try:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("[COMMAND] Received command request: {}".format(command_req))
@@ -326,9 +325,8 @@ class Interchange(object):
                 self.command_channel.send_pyobj(reply)
 
             except zmq.Again:
-                logger.debug("[COMMAND] zmq.Again exception ... Command server is alive")
+                logger.debug("[COMMAND] is alive")
                 continue
-            logger.debug("[COMMAND] loop end")
 
     def start(self, poll_period=None):
         """ Start the NeedNameQeueu

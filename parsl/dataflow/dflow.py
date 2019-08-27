@@ -68,6 +68,7 @@ class DataFlowKernel(object):
             A specification of all configuration options. For more details see the
             :class:~`parsl.config.Config` documentation.
         """
+
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
@@ -819,7 +820,6 @@ class DataFlowKernel(object):
             self.flowcontrol.strategy.add_executors(executors)
 
     def atexit_cleanup(self):
-        logger.info("atexit cleanup initiated")
         if not self.cleanup_called:
             self.cleanup()
 
@@ -861,7 +861,6 @@ class DataFlowKernel(object):
 
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
-        logger.debug("cleanup checkpoints")
         if self.checkpoint_mode is not None:
             self.checkpoint()
 
@@ -870,33 +869,21 @@ class DataFlowKernel(object):
                 self._checkpoint_timer.close()
 
         # Send final stats
-        logger.debug("cleanup usage tracking")
         self.usage_tracker.send_message()
         self.usage_tracker.close()
 
         logger.info("Terminating flow_control and strategy threads")
         self.flowcontrol.close()
 
-        logger.debug("cleaning up executors")
         for executor in self.executors.values():
-            logger.debug("cleanup an executor {}".format(executor.label))
             if executor.managed:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
-                    logger.debug("scaling in executor")
                     executor.scale_in(len(job_ids))
-                    logger.debug("scaled in executor")
-                else:
-                    logger.debug("not scaling in")
-                logger.debug("shutting down executor")
                 executor.shutdown()
-                logger.debug("shut down executor")
-            logger.debug("cleaned up an executor")
-        logger.debug("cleaning up executors")
 
         self.time_completed = datetime.datetime.now()
 
-        logger.debug("cleanup monitoring")
         if self.monitoring:
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  {'tasks_failed_count': self.tasks_failed_count,
@@ -1093,7 +1080,7 @@ class DataFlowKernelLoader(object):
 
     @classmethod
     @typeguard.typechecked
-    def load(cls, config: Optional[Config] = None, pytest_secret_arg: bool = False):
+    def load(cls, config: Optional[Config] = None):
         """Load a DataFlowKernel.
 
         Args:
@@ -1102,9 +1089,6 @@ class DataFlowKernelLoader(object):
         Returns:
             - DataFlowKernel : The loaded DataFlowKernel object.
         """
-        if not pytest_secret_arg:
-            raise RuntimeError("DataFlowKernel initialised in a bad place")
-
         if cls._dfk is not None:
             raise RuntimeError('Config has already been loaded')
 

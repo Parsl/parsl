@@ -121,7 +121,7 @@ def load_dfk_session(request, pytestconfig):
             if DataFlowKernelLoader._dfk is not None:
                 raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
 
-            dfk = parsl.load(module.config, pytest_secret_arg=True)
+            dfk = parsl.load(module.config)
 
             yield
 
@@ -160,7 +160,7 @@ def load_dfk_bodge_per_test_for_workqueue(request, pytestconfig):
             if DataFlowKernelLoader._dfk is not None:
                 raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
 
-            dfk = parsl.load(module.config, pytest_secret_arg=True)
+            dfk = parsl.load(module.config)
 
             yield
 
@@ -195,7 +195,7 @@ def load_dfk_local_module(request, pytestconfig):
         local_config = getattr(request.module, "local_config", None)
 
         if(local_config):
-            dfk = parsl.load(local_config, pytest_secret_arg=True)
+            dfk = parsl.load(local_config)
 
         if(callable(local_setup)):
             local_setup()

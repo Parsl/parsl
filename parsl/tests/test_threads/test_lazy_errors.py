@@ -10,7 +10,7 @@ def test_lazy_behavior():
 
     config = fresh_config()
     config.lazy_errors = True
-    parsl.load(config, pytest_secret_arg=True)
+    parsl.load(config)
 
     @App('python')
     def divide(a, b):

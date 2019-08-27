@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def local_setup():
     from parsl.tests.configs.local_threads_monitoring import config
-    parsl.load(config, pytest_secret_arg=True)
+    parsl.load(config)
 
 
 def local_teardown():
