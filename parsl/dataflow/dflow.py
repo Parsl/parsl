@@ -21,6 +21,7 @@ from functools import partial
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -448,10 +449,10 @@ class DataFlowKernel(object):
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
-    def _add_input_deps(self, executor, args, kwargs):
-        """Look for inputs of the app that are remote files. Submit stage_in
-        apps for such files and replace the file objects in the inputs list with
-        corresponding DataFuture objects.
+    def _add_input_deps(self, executor, args, kwargs, func):
+        """Look for inputs of the app that are files. Give the data manager
+        the opportunity to replace a file with a data future for that file,
+        for example wrapping the result of a staging action.
 
         Args:
             - executor (str) : executor where the app is going to be launched
@@ -461,32 +462,52 @@ class DataFlowKernel(object):
 
         # Return if the task is _*_stage_in
         if executor == 'data_manager':
-            return args, kwargs
+            return args, kwargs, func
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             inputs[idx] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
         for kwarg, f in kwargs.items():
             kwargs[kwarg] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
             newargs[idx] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
-        return tuple(newargs), kwargs
+        return tuple(newargs), kwargs, func
 
-    def _add_output_deps(self, executor, args, kwargs, app_fu):
+    def _add_output_deps(self, executor, args, kwargs, app_fut, func):
         logger.debug("Adding output dependencies")
-
-        if not self.check_staging_inhibited(kwargs):
-            outputs = kwargs.get('outputs', [])
-            for f in outputs:
-                if isinstance(f, File) and f.is_remote():
-                    logger.debug("Submitting stage out job for output file {}".format(f))
-                    self.data_manager.stage_out(f, executor, app_fu)
+        outputs = kwargs.get('outputs', [])
+        app_fut._outputs = []
+        for f in outputs:
+            if isinstance(f, File) and not self.check_staging_inhibited(kwargs):
+                # replace a File with a DataFuture - either completing when the stageout
+                # future completes, or if no stage out future is returned, then when the
+                # app itself completes.
+                logger.debug("Submitting stage out for output file {}".format(f))
+                stageout_fut = self.data_manager.stage_out(f, executor, app_fut)
+                if stageout_fut:
+                    logger.debug("Adding a dependency on stageout future for {}".format(f))
+                    app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))
                 else:
-                    logger.debug("Skipping stageout for output {}".format(f))
+                    logger.debug("No stageout dependency for {}".format(f))
+                    app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+
+                # this is a hook for post-task stageout
+                # note that nothing depends on the output - which is maybe a bug
+                # in the not-very-tested stageout system?
+                newfunc = self.data_manager.replace_task_stage_out(f, func, executor)
+                if newfunc:
+                    func = newfunc
+            else:
+                logger.debug("Not performing staging for: {}".format(f))
+                app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+        return func
 
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
@@ -624,6 +645,8 @@ class DataFlowKernel(object):
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
 
+        # The below uses func.__name__ before it has been wrapped by any staging code.
+
         label = kwargs.get('label')
         for kw in ['stdout', 'stderr']:
             if kw in kwargs:
@@ -641,7 +664,6 @@ class DataFlowKernel(object):
 
         task_def = {'depends': None,
                     'executor': executor,
-                    'func': func,
                     'func_name': func.__name__,
                     'fn_hash': fn_hash,
                     'memoize': cache,
@@ -659,12 +681,13 @@ class DataFlowKernel(object):
         app_fu = AppFuture(task_def)
 
         # Transform remote input files to data futures
-        args, kwargs = self._add_input_deps(executor, args, kwargs)
+        args, kwargs, func = self._add_input_deps(executor, args, kwargs, func)
 
-        self._add_output_deps(executor, args, kwargs, app_fu)
+        self._add_output_deps(executor, args, kwargs, app_fu, func)
 
         task_def.update({
                     'args': args,
+                    'func': func,
                     'kwargs': kwargs,
                     'app_fu': app_fu})
 

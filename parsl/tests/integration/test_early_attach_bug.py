@@ -14,22 +14,25 @@ among the engine once it has been sent to the the engine's queue.
 
 
 """
-from parsl import App, DataFlowKernel
+from parsl import DataFlowKernel, python_app
 import time
+import pytest
 
 from parsl.tests.configs.local_ipp import config
-dfk = DataFlowKernel(config=config)
 
 
-@App('python', dfk)
+@python_app
 def sleep_double(x):
     import time
     time.sleep(1)
     return x * 2
 
 
+@pytest.mark.noci
 def test_z_cleanup():
+    dfk = DataFlowKernel(config=config)
     dfk.cleanup()
+    pass
 
 
 if __name__ == "__main__":

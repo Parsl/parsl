@@ -1,9 +1,10 @@
 import argparse
 import time
+import pytest
 
 import parsl
 # Tested. Confirmed. Local X Local X SingleNodeLauncher
-from parsl.tests.configs.local_ipp import config
+# from parsl.tests.configs.local_ipp import config
 
 # Tested. Confirmed. ssh X Slurm X SingleNodeLauncher
 # from parsl.tests.configs.midway_ipp import config
@@ -47,7 +48,6 @@ parsl.set_stream_logger()
 
 
 from parsl.app.app import python_app  # , bash_app
-parsl.load(config)
 
 
 @python_app
@@ -77,6 +77,7 @@ def platform(sleep=10, stdout=None):
     return platform.uname()
 
 
+@pytest.mark.noci
 def test_simple(n=2):
     start = time.time()
     x = double(n)
@@ -89,6 +90,7 @@ def test_simple(n=2):
     return True
 
 
+@pytest.mark.noci
 def test_imports(n=2):
     start = time.time()
     x = import_echo(n, "hello world")
@@ -101,6 +103,7 @@ def test_imports(n=2):
     return True
 
 
+@pytest.mark.noci
 def test_platform(n=2):
     # sync
     x = platform(sleep=0)
@@ -116,6 +119,7 @@ def test_platform(n=2):
     return True
 
 
+@pytest.mark.noci
 def test_parallel_for(n=2):
     d = {}
     start = time.time()
@@ -143,10 +147,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.sitespec:
-        config = None
+        c = None
         try:
             exec("import parsl; from {} import config".format(args.sitespec))
-            parsl.load(config)
+            parsl.load(c)
         except Exception:
             print("Failed to load the requested config : ", args.sitespec)
             exit(0)

@@ -82,7 +82,7 @@ class AppFuture(Future):
         Returns:
             - None
 
-        Updates the super() with the result() or exception()
+        Updates the future with the result() or exception()
         """
         with self._update_lock:
 
@@ -93,7 +93,7 @@ class AppFuture(Future):
                 res = executor_fu.result()
                 if isinstance(res, RemoteExceptionWrapper):
                     res.reraise()
-                super().set_result(executor_fu.result())
+                self.set_result(executor_fu.result())
 
             except Exception as e:
                 if executor_fu.retries_left > 0:
@@ -102,7 +102,7 @@ class AppFuture(Future):
                     # will provide the answer
                     pass
                 else:
-                    super().set_exception(e)
+                    self.set_exception(e)
 
     @property
     def stdout(self):

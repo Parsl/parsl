@@ -2,17 +2,25 @@ import time
 
 import pytest
 
+import parsl
 from parsl.app.app import App
-from parsl.dataflow.dflow import DataFlowKernel
-from parsl.tests.configs.local_ipp import config
-
-config.executors[0].init_blocks = 0
-config.executors[0].min_blocks = 0
-config.executors[0].max_blocks = 4
-dfk = DataFlowKernel(config=config)
+from parsl.tests.configs.local_ipp import fresh_config
 
 
-@App("python", dfk)
+def local_setup():
+    global dfk
+    config = fresh_config()
+    config.executors[0].init_blocks = 0
+    config.executors[0].min_blocks = 0
+    config.executors[0].max_blocks = 4
+    dfk = parsl.load(config)
+
+
+def local_teardown():
+    parsl.clear()
+
+
+@App("python")
 def diamond(sleep=0, inputs=[]):
     import time
     time.sleep(sleep)
