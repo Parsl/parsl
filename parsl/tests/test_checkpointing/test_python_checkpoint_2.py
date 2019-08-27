@@ -28,8 +28,8 @@ def test_loading_checkpoint(n=2):
     parsl.clear()
 
     local_config = fresh_config()
-    config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
-    parsl.load(config)
+    local_config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
+    parsl.load(local_config)
 
     d = {}
 
@@ -44,7 +44,7 @@ def test_loading_checkpoint(n=2):
     print("Done sleeping")
 
     delta = time.time() - start
-    assert delta < 1, "Took longer than a second, restore from checkpoint failed"
+    assert delta < 1, "Took longer than a second ({}), assuming restore from checkpoint failed".format(delta)
     parsl.clear()
 
 
@@ -59,7 +59,5 @@ if __name__ == '__main__':
 
     if args.debug:
         parsl.set_stream_logger()
-    parsl.clear()
-    parsl.load(local_config)
 
-    x = test_initial_checkpoint_write(n=4)
+    x = test_loading_checkpoint()
