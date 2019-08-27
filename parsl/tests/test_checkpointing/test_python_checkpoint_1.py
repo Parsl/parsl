@@ -9,12 +9,7 @@ from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
 
 
-def local_setup():
-    parsl.load(config)
-
-
-def local_teardown():
-    parsl.clear()
+local_config = config
 
 
 @App('python', cache=True)
