@@ -34,8 +34,7 @@ class HTTPInTaskStaging(Staging, RepresentationMixin):
     shared file system."""
 
     def can_stage_in(self, file):
-        logger.debug("HTTPInTaskStaging checking file {}".format(file.__repr__()))
-        logger.debug("file has scheme {}".format(file.scheme))
+        logger.debug("HTTPInTaskStaging checking file {}".format(repr(file)))
         return file.scheme == 'http' or file.scheme == 'https'
 
     def replace_task(self, dm, executor, file, f):
