@@ -31,7 +31,6 @@ class FTPInTaskStaging(Staging, RepresentationMixin):
 
     def can_stage_in(self, file):
         logger.debug("FTPInTaskStaging checking file {}".format(file.__repr__()))
-        logger.debug("file has scheme {}".format(file.scheme))
         return file.scheme == 'ftp'
 
     def replace_task(self, dm, executor, file, f):
