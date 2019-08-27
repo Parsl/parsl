@@ -28,6 +28,7 @@ def pytest_addoption(parser):
         required=True,
         help="run with parsl CONFIG; use 'local' to run locally-defined config"
     )
+    parser.addoption('--bodge-dfk-per-test', action='store_true')
 
 
 def pytest_configure(config):
@@ -107,7 +108,7 @@ def load_dfk_session(request, pytestconfig):
 
     config = pytestconfig.getoption('config')[0]
 
-    if config == "parsl/tests/configs/workqueue_ex.py":
+    if pytestconfig.getoption('bodge_dfk_per_test'):
         yield
         return
 
@@ -146,9 +147,10 @@ def load_dfk_bodge_per_test_for_workqueue(request, pytestconfig):
 
     config = pytestconfig.getoption('config')[0]
 
-    if config != "parsl/tests/configs/workqueue_ex.py":
+    if not pytestconfig.getoption('bodge_dfk_per_test'):
         yield
         return
+
 
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
