@@ -3,7 +3,6 @@
 import parsl
 from parsl import python_app
 
-import pytest
 import time
 import argparse
 
@@ -18,7 +17,6 @@ def increment(x):
     return x + 1
 
 
-@pytest.mark.noci
 def test_stress(count=1000):
     """Threaded app launch stress test"""
     start = time.time()
