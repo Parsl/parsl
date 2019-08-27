@@ -6,14 +6,9 @@ import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.test_checkpointing.test_python_checkpoint_1 import \
-    test_initial_checkpoint_write
+import parsl.tests.test_checkpointing.test_python_checkpoint_1 as test1
+from parsl.tests.configs.local_threads import config
 from parsl.tests.configs.local_threads_checkpoint import fresh_config
-
-rundir = test_initial_checkpoint_write()
-
-local_config = fresh_config()
-local_config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
 
 
 @App('python', cache=True)
@@ -25,8 +20,16 @@ def slow_double(x, sleep_dur=1):
 
 @pytest.mark.local
 def test_loading_checkpoint(n=2):
-    """2. Load the memoization table from previous checkpoint
+    """Load memoization table from previous checkpoint
     """
+
+    parsl.load(config)
+    rundir = test1.test_initial_checkpoint_write()
+    parsl.clear()
+
+    local_config = fresh_config()
+    config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
+    parsl.load(config)
 
     d = {}
 
@@ -42,6 +45,7 @@ def test_loading_checkpoint(n=2):
 
     delta = time.time() - start
     assert delta < 1, "Took longer than a second, restore from checkpoint failed"
+    parsl.clear()
 
 
 if __name__ == '__main__':

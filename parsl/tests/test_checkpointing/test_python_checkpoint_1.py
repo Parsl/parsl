@@ -10,8 +10,7 @@ from parsl.tests.configs.local_threads import config
 
 
 def local_setup():
-    global dfk
-    dfk = parsl.load(config)
+    parsl.load(config)
 
 
 def local_teardown():
@@ -40,7 +39,7 @@ def test_initial_checkpoint_write(n=2):
     for i in range(0, n):
         d[i].result()
     print("Done sleeping")
-    cpt_dir = dfk.checkpoint()
+    cpt_dir = parsl.dfk().checkpoint()
 
     cptpath = cpt_dir + '/dfk.pkl'
     print("Path exists : ", os.path.exists(cptpath))
@@ -52,7 +51,7 @@ def test_initial_checkpoint_write(n=2):
     assert os.path.exists(
         cptpath), "Tasks checkpoint missing: {0}".format(cptpath)
 
-    return dfk.run_dir
+    return parsl.dfk().run_dir
 
 
 if __name__ == '__main__':
