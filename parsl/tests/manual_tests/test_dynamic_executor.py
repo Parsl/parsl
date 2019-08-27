@@ -8,9 +8,6 @@ from parsl.launchers import SrunLauncher
 from parsl.providers.slurm.slurm import SlurmProvider
 from parsl.addresses import address_by_hostname
 
-# TODO: this test doesn't do anything in pytest
-# instead it needs to be run by hand.
-# it should be runnable in pytest, though?
 
 config = Config(
     executors=[
