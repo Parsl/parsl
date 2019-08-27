@@ -15,8 +15,7 @@ class FTPSeparateTaskStaging(Staging, RepresentationMixin):
     """Performs FTP staging as a separate parsl level task."""
 
     def can_stage_in(self, file):
-        logger.debug("FTPSeparateTaskStaging checking file {}".format(file.__repr__()))
-        logger.debug("file has scheme {}".format(file.scheme))
+        logger.debug("FTPSeparateTaskStaging checking file {}".format(repr(file)))
         return file.scheme == 'ftp'
 
     def stage_in(self, dm, executor, file, parent_fut):
