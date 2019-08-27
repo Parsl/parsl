@@ -21,7 +21,7 @@ def sort_strings(inputs=[], outputs=[]):
 
 @pytest.mark.local
 def test_implicit_staging_https():
-    """Test implicit staging for an ftp file
+    """Test implicit staging for an http file
 
     Create a remote input file (https) that points to unsorted.txt.
     """
