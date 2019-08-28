@@ -1,5 +1,3 @@
-import pytest
-
 import parsl
 
 if __name__ == "__main__":
@@ -39,7 +37,6 @@ def bash_app(stdout=None, stderr=None):
 
 
 # @pytest.mark.local
-@pytest.mark.noci
 def test_python(N=2):
     """Testing basic python functionality."""
 
@@ -62,7 +59,6 @@ local_config = config
 
 
 # @pytest.mark.local
-@pytest.mark.noci
 def test_bash():
     """Testing basic bash functionality."""
 

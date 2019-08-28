@@ -38,6 +38,7 @@ Reference guide
     parsl.providers.SlurmProvider
     parsl.providers.TorqueProvider
     parsl.providers.KubernetesProvider
+    parsl.providers.PBSProProvider
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher
