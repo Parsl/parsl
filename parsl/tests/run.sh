@@ -1,3 +1,5 @@
+export PARSL_TESTING="true"
+
 set -e
 
 flake8 parsl/
