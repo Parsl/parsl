@@ -201,10 +201,7 @@ class MonitoringHub(RepresentationMixin):
         if self.logdir is None:
             self.logdir = "."
 
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         # Initialize the ZMQ pipe to the Parsl Client
         self.logger = start_file_logger("{}/monitoring_hub.log".format(self.logdir),
@@ -338,10 +335,7 @@ class Hub(object):
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
         """
-        try:
-            os.makedirs(logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(logdir, exist_ok=True)
         self.logger = start_file_logger("{}/hub.log".format(logdir),
                                         name="hub",
                                         level=logging_level)

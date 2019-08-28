@@ -204,10 +204,7 @@ class DatabaseManager(object):
                  ):
 
         self.logdir = logdir
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         self.logger = start_file_logger(
             "{}/database_manager.log".format(self.logdir), level=logging_level)
