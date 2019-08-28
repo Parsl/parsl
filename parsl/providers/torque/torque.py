@@ -114,7 +114,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = super().execute_wait("qstat {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("qstat {0}".format(job_id_list))
         for line in stdout.split('\n'):
             parts = line.split()
             if not parts or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
@@ -198,7 +198,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             submit_options = '{0} -A {1}'.format(submit_options, self.account)
 
         launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(launch_cmd)
+        retcode, stdout, stderr = self.execute_wait(launch_cmd)
 
         job_id = None
         if retcode == 0:
@@ -225,7 +225,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("qdel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("qdel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:

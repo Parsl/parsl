@@ -125,7 +125,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_id_list = ','.join(self.resources.keys())
         cmd = "squeue --job {0}".format(job_id_list)
 
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
@@ -209,7 +209,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug("not moving files")
             channel_script_path = script_path
 
-        retcode, stdout, stderr = super().execute_wait("sbatch {0}".format(channel_script_path))
+        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
 
         job_id = None
         if retcode == 0:
@@ -233,7 +233,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("scancel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("scancel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
