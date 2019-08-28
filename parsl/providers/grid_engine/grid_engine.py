@@ -141,7 +141,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
         cmd = "qsub -terse {0}".format(channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(cmd, 10)
+        retcode, stdout, stderr = self.execute_wait(cmd, 10)
 
         if retcode == 0:
             for line in stdout.split('\n'):
@@ -169,7 +169,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         cmd = "qstat"
 
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
@@ -207,7 +207,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         job_id_list = ' '.join(job_ids)
         cmd = "qdel {}".format(job_id_list)
-        retcode, stdout, stderr = super().execute_wait(cmd, 3)
+        retcode, stdout, stderr = self.execute_wait(cmd, 3)
 
         rets = None
         if retcode == 0:
