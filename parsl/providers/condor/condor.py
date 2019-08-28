@@ -114,7 +114,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         job_id_list = ' '.join(self.resources.keys())
         cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
         """
         Example output:
 
@@ -226,7 +226,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         cmd = "condor_submit {0}".format(channel_script_path)
         try:
-            retcode, stdout, stderr = super().execute_wait(cmd)
+            retcode, stdout, stderr = self.execute_wait(cmd)
         except Exception as e:
             raise ScaleOutFailed(self.label, str(e))
 
@@ -269,7 +269,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
         rets = None
         if retcode == 0:
             for jid in job_ids:
