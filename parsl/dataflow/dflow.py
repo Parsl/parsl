@@ -21,6 +21,7 @@ from functools import partial
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -244,10 +245,6 @@ class DataFlowKernel(object):
              task_id (string) : Task id which is a uuid string
              future (Future) : The future object corresponding to the task which
              makes this callback
-
-        KWargs:
-             memo_cbk(Bool) : Indicates that the call is coming from a memo update,
-             that does not require additional memo updates.
         """
 
         try:
@@ -334,21 +331,6 @@ class DataFlowKernel(object):
 
             if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
-
-        # Submit _*_stage_out tasks for output data futures that have output files,
-        # that do not have stageing inhibited.
-
-        logger.debug("Submitting stage out jobs")
-        app_fu = self.tasks[task_id]['app_fu']
-
-        if app_fu.exception() is None and not self.check_staging_inhibited(self.tasks[task_id]['kwargs']):
-            for dfu in app_fu.outputs:
-                f = dfu.file_obj
-                if isinstance(f, File) and f.is_remote():
-                    logger.debug("Submitting stage out job for output file {}".format(f))
-                    self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
-                else:
-                    logger.debug("Skipping stageout for output {}".format(f))
 
         return
 
@@ -479,10 +461,10 @@ class DataFlowKernel(object):
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
-    def _add_input_deps(self, executor, args, kwargs):
-        """Look for inputs of the app that are remote files. Submit stage_in
-        apps for such files and replace the file objects in the inputs list with
-        corresponding DataFuture objects.
+    def _add_input_deps(self, executor, args, kwargs, func):
+        """Look for inputs of the app that are files. Give the data manager
+        the opportunity to replace a file with a data future for that file,
+        for example wrapping the result of a staging action.
 
         Args:
             - executor (str) : executor where the app is going to be launched
@@ -492,23 +474,52 @@ class DataFlowKernel(object):
 
         # Return if the task is _*_stage_in
         if executor == 'data_manager':
-            return args, kwargs
+            return args, kwargs, func
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            if isinstance(f, File) and f.is_remote():
-                inputs[idx] = self.data_manager.stage_in(f, executor)
+            inputs[idx] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
         for kwarg, f in kwargs.items():
-            if isinstance(f, File) and f.is_remote():
-                kwargs[kwarg] = self.data_manager.stage_in(f, executor)
+            kwargs[kwarg] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
-            if isinstance(f, File) and f.is_remote():
-                newargs[idx] = self.data_manager.stage_in(f, executor)
+            newargs[idx] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
-        return tuple(newargs), kwargs
+        return tuple(newargs), kwargs, func
+
+    def _add_output_deps(self, executor, args, kwargs, app_fut, func):
+        logger.debug("Adding output dependencies")
+        outputs = kwargs.get('outputs', [])
+        app_fut._outputs = []
+        for f in outputs:
+            if isinstance(f, File) and not self.check_staging_inhibited(kwargs):
+                # replace a File with a DataFuture - either completing when the stageout
+                # future completes, or if no stage out future is returned, then when the
+                # app itself completes.
+                logger.debug("Submitting stage out for output file {}".format(f))
+                stageout_fut = self.data_manager.stage_out(f, executor, app_fut)
+                if stageout_fut:
+                    logger.debug("Adding a dependency on stageout future for {}".format(f))
+                    app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))
+                else:
+                    logger.debug("No stageout dependency for {}".format(f))
+                    app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+
+                # this is a hook for post-task stageout
+                # note that nothing depends on the output - which is maybe a bug
+                # in the not-very-tested stageout system?
+                newfunc = self.data_manager.replace_task_stage_out(f, func, executor)
+                if newfunc:
+                    func = newfunc
+            else:
+                logger.debug("Not performing staging for: {}".format(f))
+                app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+        return func
 
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
@@ -527,7 +538,7 @@ class DataFlowKernel(object):
 
         def check_dep(d):
             if isinstance(d, Future):
-                if self.tasks[d.tid]['status'] not in FINAL_STATES:
+                if d.tid not in self.tasks or self.tasks[d.tid]['status'] not in FINAL_STATES:
                     unfinished_depends.extend([d])
                 depends.extend([d])
 
@@ -646,8 +657,8 @@ class DataFlowKernel(object):
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
 
-        # Transform remote input files to data futures
-        args, kwargs = self._add_input_deps(executor, args, kwargs)
+        # The below uses func.__name__ before it has been wrapped by any staging code.
+
         label = kwargs.get('label')
         for kw in ['stdout', 'stderr']:
             if kw in kwargs:
@@ -665,10 +676,7 @@ class DataFlowKernel(object):
 
         task_def = {'depends': None,
                     'executor': executor,
-                    'func': func,
                     'func_name': func.__name__,
-                    'args': args,
-                    'kwargs': kwargs,
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'callback': None,
@@ -680,8 +688,20 @@ class DataFlowKernel(object):
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
-                    'time_returned': None,
-                    'app_fu': None}
+                    'time_returned': None}
+
+        app_fu = AppFuture(task_def)
+
+        # Transform remote input files to data futures
+        args, kwargs, func = self._add_input_deps(executor, args, kwargs, func)
+
+        self._add_output_deps(executor, args, kwargs, app_fu, func)
+
+        task_def.update({
+                    'args': args,
+                    'func': func,
+                    'kwargs': kwargs,
+                    'app_fu': app_fu})
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
@@ -698,9 +718,7 @@ class DataFlowKernel(object):
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(task_def)
 
-        self.tasks[task_id]['app_fu'] = app_fu
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
         self.tasks[task_id]['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
@@ -826,7 +844,7 @@ class DataFlowKernel(object):
 
         This involves releasing all resources explicitly.
 
-        If the executors are managed (created by the DFK), then we call scale_in on each of
+        If the executors are managed by the DFK, then we call scale_in on each of
         the executors and call executor.shutdown. Otherwise, executor cleanup is left to
         the user.
         """

@@ -1,16 +1,13 @@
-import argparse
 import os
 
 import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.conftest import load_dfk
 from parsl.tests.configs.midway_ipp_multicore import config
 
-parsl.clear()
-parsl.load(config)
-parsl.set_stream_logger()
+
+local_config = config
 
 
 @App('bash')
@@ -35,12 +32,3 @@ def test_mpi():
     x = mpi_test(4, stdout="hello.out", stderr="hello.err")
     print("Launched the mpi_hello app")
     x.result()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", default='local',
-                        help="Path to configuration file to run")
-    args = parser.parse_args()
-    load_dfk(args.config)
-    test_mpi()

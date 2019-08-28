@@ -5,6 +5,7 @@ WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
+NODE = 'node'            # Node table include node info
 
 db = SQLAlchemy()
 
@@ -22,6 +23,21 @@ class Workflow(db.Model):
     rundir = db.Column(db.Text, nullable=False)
     tasks_failed_count = db.Column(db.Integer, nullable=False)
     tasks_completed_count = db.Column(db.Integer, nullable=False)
+
+
+class Node(db.Model):
+    __tablename__ = NODE
+    run_id = db.Column('run_id', db.Text, nullable=False)
+    hostname = db.Column('hostname', db.Text, nullable=False)
+    cpu_count = db.Column('cpu_count', db.Integer, nullable=False)
+    total_memory = db.Column('total_memory', db.Integer, nullable=False)
+    active = db.Column('active', db.Boolean, nullable=False)
+    worker_count = db.Column('worker_count', db.Integer, nullable=False)
+    python_v = db.Column('python_v', db.Text, nullable=False)
+    reg_time = db.Column('reg_time', db.DateTime, nullable=False)
+    __table_args__ = (
+        db.PrimaryKeyConstraint('hostname', 'run_id', 'reg_time'),
+    )
 
 
 # TODO: expand to full set of info
