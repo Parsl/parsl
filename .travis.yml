@@ -40,6 +40,7 @@ script:
     - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/tests/configs/
     - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/tests/test*/
     - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/tests/sites/
+    - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/
 
       # do this before any testing, but not in-between tests
     - rm -f .coverage
