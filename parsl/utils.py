@@ -101,7 +101,7 @@ def timeout(seconds=None):
     def decorator(func, *args, **kwargs):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            t = threading.Thread(target=func, args=args, kwargs=kwargs)
+            t = threading.Thread(target=func, args=args, kwargs=kwargs, name="Timeout-Decorator")
             t.start()
             result = t.join(seconds)
             if t.is_alive():
