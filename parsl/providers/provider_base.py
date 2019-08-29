@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from typing import Any, List, Optional
 
+
 class ExecutionProvider(metaclass=ABCMeta):
     """ Define the strict interface for all Execution Providers
 
@@ -25,7 +26,7 @@ class ExecutionProvider(metaclass=ABCMeta):
     _mem_per_node = None  # type: Optional[float]
 
     @abstractmethod
-    def submit(self, command: str, tasks_per_node: int, job_name:str = "parsl.auto") -> Any:
+    def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> Any:
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
