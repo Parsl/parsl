@@ -1,11 +1,12 @@
 import pytest
 
+import parsl
 from parsl.app.app import App
 
 
 def local_setup():
     from parsl.tests.configs.cori_ipp_multinode import config
-    parsl.load(config)    
+    parsl.load(config)
 
 
 def local_teardown():
