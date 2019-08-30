@@ -93,7 +93,7 @@ class FlowControl(object):
         self._event_buffer = []
         self._wake_up_time = time.time() + 1
         self._kill_event = threading.Event()
-        self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,))
+        self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name="FlowControl-Thread")
         self._thread.daemon = True
         self._thread.start()
 
@@ -168,7 +168,7 @@ class Timer(object):
 
     """
 
-    def __init__(self, callback, *args, interval=5):
+    def __init__(self, callback, *args, interval=5, name=None):
         """Initialize the flowcontrol object
         We start the timer thread here
 
@@ -178,6 +178,7 @@ class Timer(object):
         KWargs:
              - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
+             - name (str) : a base name to use when naming the started thread
         """
 
         self.interval = interval
@@ -186,7 +187,11 @@ class Timer(object):
         self._wake_up_time = time.time() + 1
 
         self._kill_event = threading.Event()
-        self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,))
+        if name is None:
+            name = "Timer-Thread-{}".format(id(self))
+        else:
+            name = "{}-Timer-Thread-{}".format(name, id(self))
+        self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name=name)
         self._thread.daemon = True
         self._thread.start()
 

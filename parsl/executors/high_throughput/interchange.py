@@ -343,11 +343,13 @@ class Interchange(object):
 
         self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
-                                                    args=(self._kill_event,))
+                                                    args=(self._kill_event,),
+                                                    name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                args=(self._kill_event,))
+                                                args=(self._kill_event,),
+                                                name="Interchange-Command")
         self._command_thread.start()
 
         poller = zmq.Poller()
