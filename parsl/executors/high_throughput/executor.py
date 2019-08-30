@@ -427,7 +427,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                           "poll_period": self.poll_period,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
-                                  daemon=True
+                                  daemon=True,
+                                  name="HTEX-Interchange"
         )
         self.queue_proc.start()
         try:
@@ -447,7 +448,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         if self._queue_management_thread is None:
             logger.debug("Starting queue management thread")
-            self._queue_management_thread = threading.Thread(target=self._queue_management_worker)
+            self._queue_management_thread = threading.Thread(target=self._queue_management_worker, name="HTEX-Queue-Management-Thread")
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
             logger.debug("Started queue management thread")
