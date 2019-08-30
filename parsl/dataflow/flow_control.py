@@ -136,7 +136,10 @@ class FlowControl(object):
                  triggered the callback
         """
         self._wake_up_time = time.time() + self.interval
-        self.callback(tasks=self._event_buffer, kind=kind)
+        try:
+            self.callback(tasks=self._event_buffer, kind=kind)
+        except Exception:
+            logger.error("Flow control callback threw an exception - logging and proceeding anyway", exc_info=True)
         self._event_buffer = []
 
     def close(self):
