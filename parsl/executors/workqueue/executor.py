@@ -407,7 +407,7 @@ class WorkQueueExecutor(ParslExecutor):
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
-                 source=False,
+                 source=True,
                  init_command="",
                  full_debug=True,
                  see_worker_output=False):
