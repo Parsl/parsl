@@ -152,8 +152,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return True
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+        ''' Submits the command onto an Local Resource Manager job.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1:
@@ -163,11 +163,10 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
              A single node is provisioned
 
         If tasks_per_node >  1 :
-             tasks_per_node * blocksize number of nodes are provisioned.
+             tasks_per_node nodes are provisioned.
 
         Args:
              - command  :(String) Commandline invocation to be made on the remote side.
-             - blocksize   :(float) - Not really used for local
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
@@ -216,7 +215,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 raise
 
         self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
-                                  'blocksize': blocksize,
                                   'remote_pid': remote_pid,
                                   'proc': proc}
 

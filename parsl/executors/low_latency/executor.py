@@ -101,7 +101,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                 try:
                     for i in range(self.provider.init_blocks):
                         block = self.provider.submit(
-                            self.launch_cmd, 1, self.workers_per_node)
+                            self.launch_cmd, self.workers_per_node)
                         logger.debug("Launched block {}:{}".format(i, block))
                         if not block:
                             raise(ScalingFailed(self.provider.label,
@@ -231,7 +231,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         for i in range(blocks):
             if self.provider:
                 block = self.provider.submit(
-                    self.launch_cmd, 1, self.workers_per_node)
+                    self.launch_cmd, self.workers_per_node)
                 logger.debug("Launched block {}:{}".format(i, block))
                 if not block:
                     raise(ScalingFailed(self.provider.label,

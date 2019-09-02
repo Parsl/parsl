@@ -150,12 +150,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                          heartbeat_period=heartbeat_period,
                          managed=managed)
 
-        if not _mpi_enabled:
-            raise OptionalModuleMissing("mpi4py", "Cannot initialize ExtremeScaleExecutor without mpi4py")
-        else:
-            # This is only to stop flake8 from complaining
-            logger.debug("MPI version :{}".format(mpi4py.__version__))
-
         self.ranks_per_node = ranks_per_node
 
         logger.debug("Initializing ExtremeScaleExecutor")
@@ -169,6 +163,15 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                                "--hb_period={heartbeat_period} "
                                "--hb_threshold={heartbeat_threshold} ")
         self.worker_debug = worker_debug
+
+    def start(self):
+        if not _mpi_enabled:
+            raise OptionalModuleMissing("mpi4py", "Cannot initialize ExtremeScaleExecutor without mpi4py")
+        else:
+            # This is only to stop flake8 from complaining
+            logger.debug("MPI version :{}".format(mpi4py.__version__))
+
+        super().start()
 
     def initialize_scaling(self):
 
@@ -187,7 +190,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
         self._scaling_enabled = self.provider.scaling_enabled
-        logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        logger.debug("Starting ExtremeScaleExecutor with provider:\n%s", self.provider)
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)

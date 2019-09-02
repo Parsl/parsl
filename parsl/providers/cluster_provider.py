@@ -124,14 +124,13 @@ class ClusterProvider(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, cmd_string, tasks_per_node, job_name="parsl.auto"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
              - cmd_string (str) : The bash command string to be executed
-             - blocksize (int) : Blocksize to be requested
              - tasks_per_node (int) : command invocations to be launched per node
 
         KWargs:

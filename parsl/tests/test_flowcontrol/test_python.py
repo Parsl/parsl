@@ -1,15 +1,15 @@
 import pytest
 
-from parsl.app.app import App
-from parsl.dataflow.dflow import DataFlowKernel
-from parsl.tests.configs.local_ipp import config
-
-config.executors[0].init_blocks = 0
-dfk = DataFlowKernel(config=config)
+from parsl.app.app import python_app
+from parsl.tests.configs.local_ipp import fresh_config
 
 
-@App("python", dfk)
-def python_app():
+local_config = fresh_config()
+local_config.executors[0].init_blocks = 0
+
+
+@python_app
+def py_app():
     import platform
     return "Hello from {0}".format(platform.uname())
 
@@ -21,7 +21,7 @@ def test_python(N=2):
 
     results = {}
     for i in range(0, N):
-        results[i] = python_app()
+        results[i] = py_app()
 
     print("Waiting ....")
     for i in range(0, N):
