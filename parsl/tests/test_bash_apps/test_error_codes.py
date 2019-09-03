@@ -4,7 +4,7 @@ import os
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 
 from parsl.tests.configs.local_threads import config
 
@@ -12,37 +12,37 @@ from parsl.tests.configs.local_threads import config
 local_config = config
 
 
-@App('bash')
+@bash_app
 def command_not_found(stderr='std.err', stdout='std.out'):
     cmd_line = 'catdogcat'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def bash_misuse(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit(15)'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def div_0(stderr='std.err', stdout='std.out'):
     cmd_line = '$((5/0))'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def invalid_exit(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit 3.141'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def not_executable(stderr='std.err', stdout='std.out'):
     cmd_line = '/dev/null'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def bad_format(stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {0}'
     return cmd_line
