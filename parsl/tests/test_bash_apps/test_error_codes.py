@@ -5,6 +5,8 @@ import pytest
 
 import parsl
 from parsl.app.app import bash_app
+import parsl.app.errors as pe
+
 
 from parsl.tests.configs.local_threads import config
 
@@ -106,14 +108,13 @@ def test_bash_misuse(test_fn=bash_misuse):
     f = test_fn()
     try:
         f.result()
-    except Exception as e:
-        print("Caught exception", e)
+    except pe.AppFailure as e:
+        print("Caught expected AppFailure", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
                                                                                       e.exitcode)
     os.remove('std.err')
     os.remove('std.out')
-    return True
 
 
 # @pytest.mark.whitelist(whitelist, reason='broken in IPP')
