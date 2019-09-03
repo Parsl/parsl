@@ -117,14 +117,12 @@ def test_bash_misuse(test_fn=bash_misuse):
     os.remove('std.out')
 
 
-# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_command_not_found(test_fn=command_not_found):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
         f.result()
-    except Exception as e:
+    except pe.AppFailure as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
