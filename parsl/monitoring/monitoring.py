@@ -235,6 +235,7 @@ class MonitoringHub(RepresentationMixin):
                                           "logging_level": self.logging_level,
                                           "run_id": run_id
                                   },
+                                  name="Monitoring-Queue-Process"
         )
         self.queue_proc.start()
 
@@ -244,6 +245,7 @@ class MonitoringHub(RepresentationMixin):
                                         "logging_level": self.logging_level,
                                         "db_url": self.logging_endpoint,
                                   },
+                                name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
 
@@ -285,7 +287,7 @@ class MonitoringHub(RepresentationMixin):
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur))
+            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur), name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
                 return f(*args, **kwargs)
