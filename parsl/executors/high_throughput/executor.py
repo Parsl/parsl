@@ -427,6 +427,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                           "poll_period": self.poll_period,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
+                                  daemon=True,
                                   name="HTEX-Interchange"
         )
         self.queue_proc.start()

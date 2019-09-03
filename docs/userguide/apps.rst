@@ -122,8 +122,10 @@ to the decorated function. The string that is returned is formatted by the Pytho
 Returns
 ^^^^^^^
 
-A Bash app returns an AppFuture just like a Python app, however the values returned by the
-future are different. The result made available upon
-completion is the **return/exit code** of the Bash script. This future may also hold various
-exceptions that capture errors during execution such as incorrect privileges, missing output
-files, etc.
+A Bash app returns an AppFuture just like a Python app; however the value returned inside the
+AppFuture has no real meaning.
+
+If a bash app exits with unix exit code 0, then the AppFuture will complete. If a bash app
+exits with any other code, this will be treated as a failure, and the AppFuture will instead
+contain an AppFailure exception. The unix edit code can be accessed through the
+`exitcode` attribute of that AppFailure.
