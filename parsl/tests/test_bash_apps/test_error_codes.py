@@ -20,7 +20,7 @@ def command_not_found(stderr='std.err', stdout='std.out'):
 
 @bash_app
 def bash_misuse(stderr='std.err', stdout='std.out'):
-    cmd_line = 'exit(15)'
+    cmd_line = 'exit 15'
     return cmd_line
 
 
@@ -101,7 +101,6 @@ def test_div_0(test_fn=div_0):
     return True
 
 
-@pytest.mark.skip('broken')
 def test_bash_misuse(test_fn=bash_misuse):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
