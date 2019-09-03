@@ -390,8 +390,8 @@ class WorkQueueExecutor(ParslExecutor):
         shared_fs: bool
             define if working in a shared file system or not
         source: bool
-            choose whether to transfer parsl app information as 
-            source code. (Note: this increases throughput for 
+            choose whether to transfer parsl app information as
+            source code. (Note: this increases throughput for
             @python_apps, but the implementation does not include
             functionality for @bash_apps, and thus source=False
             must be used for programs utilizing @bash_apps.)
