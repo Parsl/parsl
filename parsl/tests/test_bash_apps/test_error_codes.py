@@ -4,7 +4,9 @@ import os
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
+import parsl.app.errors as pe
+
 
 from parsl.tests.configs.local_threads import config
 
@@ -12,37 +14,37 @@ from parsl.tests.configs.local_threads import config
 local_config = config
 
 
-@App('bash')
+@bash_app
 def command_not_found(stderr='std.err', stdout='std.out'):
     cmd_line = 'catdogcat'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def bash_misuse(stderr='std.err', stdout='std.out'):
-    cmd_line = 'exit(15)'
+    cmd_line = 'exit 15'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def div_0(stderr='std.err', stdout='std.out'):
     cmd_line = '$((5/0))'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def invalid_exit(stderr='std.err', stdout='std.out'):
     cmd_line = 'exit 3.141'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def not_executable(stderr='std.err', stdout='std.out'):
     cmd_line = '/dev/null'
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def bad_format(stderr='std.err', stdout='std.out'):
     cmd_line = 'echo {0}'
     return cmd_line
@@ -101,30 +103,26 @@ def test_div_0(test_fn=div_0):
     return True
 
 
-@pytest.mark.skip('broken')
 def test_bash_misuse(test_fn=bash_misuse):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
         f.result()
-    except Exception as e:
-        print("Caught exception", e)
+    except pe.AppFailure as e:
+        print("Caught expected AppFailure", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
                                                                                       e.exitcode)
     os.remove('std.err')
     os.remove('std.out')
-    return True
 
 
-# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_command_not_found(test_fn=command_not_found):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
         f.result()
-    except Exception as e:
+    except pe.AppFailure as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
