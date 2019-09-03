@@ -3,7 +3,7 @@ import time
 
 import parsl
 # Tested. Confirmed. Local X Local X SingleNodeLauncher
-from parsl.tests.configs.local_ipp import config
+# from parsl.tests.configs.local_ipp import config
 
 # Tested. Confirmed. ssh X Slurm X SingleNodeLauncher
 # from parsl.tests.configs.midway_ipp import config
@@ -47,7 +47,6 @@ parsl.set_stream_logger()
 
 
 from parsl.app.app import python_app  # , bash_app
-parsl.load(config)
 
 
 @python_app
@@ -143,10 +142,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.sitespec:
-        config = None
+        c = None
         try:
             exec("import parsl; from {} import config".format(args.sitespec))
-            parsl.load(config)
+            parsl.load(c)
         except Exception:
             print("Failed to load the requested config : ", args.sitespec)
             exit(0)

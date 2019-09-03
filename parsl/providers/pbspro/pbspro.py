@@ -96,15 +96,13 @@ class PBSProProvider(TorqueProvider):
         self._label = 'pbspro'
         self.cpus_per_node = cpus_per_node
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl"):
-        """Submits the command job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl"):
+        """Submits the command job.
 
         Parameters
         ----------
         command : str
             Command to be executed on the remote side.
-        blocksize : int
-            Not implemented.
         tasks_per_node : int
             Command invocations to be launched per node.
         job_name : str

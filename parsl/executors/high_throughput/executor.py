@@ -8,7 +8,8 @@ import threading
 import queue
 import pickle
 from multiprocessing import Process, Queue
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
+import math
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
@@ -18,8 +19,8 @@ from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
 from parsl.executors.base import ParslExecutor
-from parsl.dataflow.error import ConfigurationError
 from parsl.providers.provider_base import ExecutionProvider
+from parsl.data_provider.staging import Staging
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -154,7 +155,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
-                 storage_access: Optional[List[Any]] = None,
+                 storage_access: Optional[List[Staging]] = None,
                  working_dir: Optional[str] = None,
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
@@ -174,9 +175,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.launch_cmd = launch_cmd
         self.provider = provider
         self.worker_debug = worker_debug
-        self.storage_access = storage_access if storage_access is not None else []
-        if len(self.storage_access) > 1:
-            raise ConfigurationError('Multiple storage access schemes are not supported')
+        self.storage_access = storage_access
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
@@ -185,6 +184,21 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
+
+        mem_slots = max_workers
+        cpu_slots = max_workers
+        if hasattr(self.provider, 'mem_per_node') and \
+                self.provider.mem_per_node is not None and \
+                mem_per_worker is not None and \
+                mem_per_worker > 0:
+            mem_slots = math.floor(self.provider.mem_per_node / mem_per_worker)
+        if hasattr(self.provider, 'cores_per_node') and \
+                self.provider.cores_per_node is not None:
+            cpu_slots = math.floor(self.provider.cores_per_node / cores_per_worker)
+
+        self.workers_per_node = min(max_workers, mem_slots, cpu_slots)
+        if self.workers_per_node == float('inf'):
+            self.workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
         self.address = address
@@ -413,6 +427,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                                           "poll_period": self.poll_period,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                   },
+                                  name="HTEX-Interchange"
         )
         self.queue_proc.start()
         try:
@@ -432,7 +447,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         if self._queue_management_thread is None:
             logger.debug("Starting queue management thread")
-            self._queue_management_thread = threading.Thread(target=self._queue_management_worker)
+            self._queue_management_thread = threading.Thread(target=self._queue_management_worker, name="HTEX-Queue-Management-Thread")
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
             logger.debug("Started queue management thread")
@@ -547,7 +562,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             if self.provider:
                 external_block_id = str(len(self.blocks))
                 launch_cmd = self.launch_cmd.format(block_id=external_block_id)
-                internal_block = self.provider.submit(launch_cmd, 1, 1)
+                internal_block = self.provider.submit(launch_cmd, 1)
                 logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
                 if not internal_block:
                     raise(ScalingFailed(self.provider.label,

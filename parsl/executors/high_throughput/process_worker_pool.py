@@ -123,8 +123,15 @@ class Manager(object):
         self.uid = uid
         self.block_id = block_id
 
-        cores_on_node = multiprocessing.cpu_count()
-        available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
+        if os.environ.get('PARSL_CORES'):
+            cores_on_node = int(os.environ['PARSL_CORES'])
+        else:
+            cores_on_node = multiprocessing.cpu_count()
+
+        if os.environ.get('PARSL_MEMORY_GB'):
+            available_mem_on_node = float(os.environ['PARSL_MEMORY_GB'])
+        else:
+            available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
 
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
@@ -310,16 +317,18 @@ class Manager(object):
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
-                                                         ))
+                                                         ), name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
 
         logger.debug("Manager synced with workers")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
-                                                    args=(self._kill_event,))
+                                                    args=(self._kill_event,),
+                                                    name="Task-Puller")
         self._result_pusher_thread = threading.Thread(target=self.push_results,
-                                                      args=(self._kill_event,))
+                                                      args=(self._kill_event,),
+                                                      name="Result-Pusher")
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
 
@@ -514,10 +523,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    try:
-        os.makedirs(os.path.join(args.logdir, args.uid))
-    except FileExistsError:
-        pass
+    os.makedirs(os.path.join(args.logdir, args.uid), exist_ok=True)
 
     try:
         start_file_logger('{}/{}/manager.log'.format(args.logdir, args.uid),

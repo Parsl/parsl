@@ -93,7 +93,12 @@ user_opts = {
     # },
     # 'globus': {
     #     'endpoint': 'fixme',
-    #     'path': 'fixme'
+    #     'path': 'fixme',
+    #
+    #     # remote_writeable should specify a directory on a globus endpoint somewhere else,
+    #     # where files can be staged out to via globus during globus staging tests.
+    #     # For example:
+    #     'remote_writeable': 'globus://af7bda53-6d04-11e5-ba46-22000b92c6ec/home/bzc/'
     # }
 }  # type: Dict[str, Any]
 

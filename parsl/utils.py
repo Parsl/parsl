@@ -101,7 +101,7 @@ def timeout(seconds=None):
     def decorator(func, *args, **kwargs):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            t = threading.Thread(target=func, args=args, kwargs=kwargs)
+            t = threading.Thread(target=func, args=args, kwargs=kwargs, name="Timeout-Decorator")
             t.start()
             result = t.join(seconds)
             if t.is_alive():
@@ -179,7 +179,7 @@ class RepresentationMixin(object):
 
         # This test looks for a single layer of wrapping performed by
         # functools.update_wrapper, commonly used in decorators. This will
-        # allow RepresentationMixing to see through a single such decorator
+        # allow RepresentationMixin to see through a single such decorator
         # applied to the __init__ method of a class, and find the underlying
         # arguments. It will not see through multiple layers of such
         # decorators, or cope with other decorators which do not use

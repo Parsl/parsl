@@ -2,7 +2,7 @@ from parsl.config import Config
 from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_hostname
-from parsl.data_provider.scheme import GlobusScheme
+from parsl.data_provider.globus import GlobusStaging
 
 
 config = Config(
@@ -23,7 +23,7 @@ config = Config(
                 worker_init='',
                 walltime='00:30:00'
             ),
-            storage_access=[GlobusScheme(
+            storage_access=[GlobusStaging(
                 endpoint_uuid='ceea5ca0-89a9-11e7-a97f-22000a92523b',
                 endpoint_path='/',
                 local_path='/'
