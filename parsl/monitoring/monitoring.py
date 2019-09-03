@@ -201,10 +201,7 @@ class MonitoringHub(RepresentationMixin):
         if self.logdir is None:
             self.logdir = "."
 
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         # Initialize the ZMQ pipe to the Parsl Client
         self.logger = start_file_logger("{}/monitoring_hub.log".format(self.logdir),
@@ -238,6 +235,7 @@ class MonitoringHub(RepresentationMixin):
                                           "logging_level": self.logging_level,
                                           "run_id": run_id
                                   },
+                                  name="Monitoring-Queue-Process"
         )
         self.queue_proc.start()
 
@@ -247,6 +245,7 @@ class MonitoringHub(RepresentationMixin):
                                         "logging_level": self.logging_level,
                                         "db_url": self.logging_endpoint,
                                   },
+                                name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
 
@@ -288,7 +287,7 @@ class MonitoringHub(RepresentationMixin):
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur))
+            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur), name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
                 return f(*args, **kwargs)
@@ -338,10 +337,7 @@ class Hub(object):
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
         """
-        try:
-            os.makedirs(logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(logdir, exist_ok=True)
         self.logger = start_file_logger("{}/hub.log".format(logdir),
                                         name="hub",
                                         level=logging_level)

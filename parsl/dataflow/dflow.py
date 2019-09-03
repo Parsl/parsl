@@ -161,10 +161,10 @@ class DataFlowKernel(object):
             try:
                 h, m, s = map(int, config.checkpoint_period.split(':'))
                 checkpoint_period = (h * 3600) + (m * 60) + s
-                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
+                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
             except Exception:
                 logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
-                self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
+                self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60), name="Checkpoint")
 
         # if we use the functionality of dynamically adding executors
         # all executors should be managed.
@@ -924,10 +924,7 @@ class DataFlowKernel(object):
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
             if not os.path.exists(checkpoint_dir):
-                try:
-                    os.makedirs(checkpoint_dir)
-                except FileExistsError:
-                    pass
+                os.makedirs(checkpoint_dir, exist_ok=True)
 
             with open(checkpoint_dfk, 'wb') as f:
                 state = {'rundir': self.run_dir,

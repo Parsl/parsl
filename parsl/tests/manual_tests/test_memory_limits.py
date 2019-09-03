@@ -2,7 +2,6 @@ import argparse
 import parsl
 import psutil
 import multiprocessing
-import pytest
 
 from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
@@ -18,7 +17,6 @@ def double(x):
     return x * 2
 
 
-@pytest.mark.noci
 def test_simple(mem_per_worker):
 
     config = Config(

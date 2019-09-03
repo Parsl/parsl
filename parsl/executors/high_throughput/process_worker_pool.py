@@ -317,16 +317,18 @@ class Manager(object):
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
-                                                         ))
+                                                         ), name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
 
         logger.debug("Manager synced with workers")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
-                                                    args=(self._kill_event,))
+                                                    args=(self._kill_event,),
+                                                    name="Task-Puller")
         self._result_pusher_thread = threading.Thread(target=self.push_results,
-                                                      args=(self._kill_event,))
+                                                      args=(self._kill_event,),
+                                                      name="Result-Pusher")
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
 
@@ -521,10 +523,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    try:
-        os.makedirs(os.path.join(args.logdir, args.uid))
-    except FileExistsError:
-        pass
+    os.makedirs(os.path.join(args.logdir, args.uid), exist_ok=True)
 
     try:
         start_file_logger('{}/{}/manager.log'.format(args.logdir, args.uid),

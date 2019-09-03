@@ -6,15 +6,12 @@ from parsl.configs.htex_local import config
 import time
 import argparse
 
-import pytest
-
 
 @python_app
 def increment(x):
     return x + 1
 
 
-@pytest.mark.noci
 def test_stress(count=1000):
     """Threaded app RTT stress test"""
 
