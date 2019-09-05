@@ -4,7 +4,7 @@ import os
 import logging
 from concurrent.futures import Future
 
-from parsl.dataflow.futures import AppFuture, _STATE_TO_DESCRIPTION_MAP, FINISHED
+from parsl.dataflow.futures import _STATE_TO_DESCRIPTION_MAP, FINISHED
 from parsl.app.errors import NotFutureError
 from parsl.data_provider.files import File
 
@@ -103,12 +103,7 @@ class DataFuture(Future):
 
     def __repr__(self):
 
-        # The DataFuture could be wrapping an AppFuture whose parent is a Future
-        # check to find the top level parent
-        if isinstance(self.parent, AppFuture):
-            parent = self.parent.parent
-        else:
-            parent = self.parent
+        parent = self.parent
 
         if parent:
             with parent._condition:

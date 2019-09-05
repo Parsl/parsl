@@ -247,6 +247,8 @@ class DataFlowKernel(object):
              makes this callback
         """
 
+        self.tasks[task_id]['app_fu'].parent_callback(future)
+
         try:
             res = future.result()
             if isinstance(res, RemoteExceptionWrapper):
@@ -378,13 +380,6 @@ class DataFlowKernel(object):
                         logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
                     self.tasks[task_id]['exec_fu'] = exec_fu
-                    try:
-                        self.tasks[task_id]['app_fu'].update_parent(exec_fu)
-                        self.tasks[task_id]['exec_fu'] = exec_fu
-                    except AttributeError as e:
-                        logger.error(
-                            "Task {}: Caught AttributeError at update_parent".format(task_id))
-                        raise e
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
@@ -394,19 +389,12 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-                try:
-                    fu = Future()
-                    fu.retries_left = 0
-                    self.tasks[task_id]['exec_fu'] = fu
-                    self.tasks[task_id]['app_fu'].update_parent(fu)
-                    fu.set_exception(DependencyError(exceptions,
-                                                     task_id,
-                                                     None))
-
-                except AttributeError as e:
-                    logger.error(
-                        "Task {} AttributeError at update_parent".format(task_id))
-                    raise e
+                fu = Future()
+                fu.retries_left = 0
+                self.tasks[task_id]['exec_fu'] = fu
+                fu.set_exception(DependencyError(exceptions,
+                                                 task_id,
+                                                 None))
 
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.

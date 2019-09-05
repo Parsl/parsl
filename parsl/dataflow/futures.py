@@ -35,14 +35,11 @@ _STATE_TO_DESCRIPTION_MAP = {
 class AppFuture(Future):
     """An AppFuture wraps a sequence of Futures which may fail and be retried.
 
-    An AppFuture starts with no parent future. A sequence of parent futures may
-    be assigned by code outside of this class, by passing that new parent future
-    into "update_future".
-
-    The AppFuture will set its result to the result of the parent future, if that
-    parent future completes without an exception. This result setting should
-    cause .result(), .exception() and done callbacks to fire as expected when a
-    Future has a result set.
+    The AppFuture will wait for the DFK to provide a result from an appropriate
+    parent future, through `parent_callback`. It will set its result to the
+    result of that parent future, if that parent future completes without an
+    exception. This result setting should cause .result(), .exception() and done
+    callbacks to fire as expected.
 
     The AppFuture will not set its result to the result of the parent future, if
     that parent future completes with an exception, and if that parent future
@@ -70,7 +67,6 @@ class AppFuture(Future):
                    by this future.
         """
         super().__init__()
-        self.parent = None
         self._update_lock = threading.Lock()
         self._outputs = []
         self.task_def = task_def
@@ -82,13 +78,6 @@ class AppFuture(Future):
 
         Args:
             - executor_fu (Future): Future returned by the executor along with callback.
-              This may not be the current parent future, as the parent future may have
-              already been updated to point to a retrying execution, and in that case,
-              this is logged.
-
-              In the case that a new parent has been attached, we must immediately discard
-              this result no matter what it contains (although it might be interesting
-              to log if it was successful...)
 
         Returns:
             - None
@@ -99,15 +88,6 @@ class AppFuture(Future):
 
             if not executor_fu.done():
                 raise ValueError("done callback called, despite future not reporting itself as done")
-
-            # this is for consistency checking
-            if executor_fu != self.parent:
-                if executor_fu.exception() is None and not isinstance(executor_fu.result(), RemoteExceptionWrapper):
-                    # ... then we completed with a value, not an exception or wrapped exception,
-                    # but we've got an updated executor future.
-                    # This is bad - for example, we've started a retry even though we have a result
-
-                    raise ValueError("internal consistency error: AppFuture done callback called without an exception, but parent has been changed since then")
 
             try:
                 res = executor_fu.result()
@@ -136,37 +116,17 @@ class AppFuture(Future):
     def tid(self):
         return self.task_def['id']
 
-    def update_parent(self, fut):
-        """Add a callback to the parent to update the state.
-
-        This handles the case where the user has called result on the AppFuture
-        before the parent exists.
-        """
-        self.parent = fut
-
-        try:
-            fut.add_done_callback(self.parent_callback)
-        except Exception as e:
-            logger.error("add_done_callback got an exception {} which will be ignored".format(e))
-
     def cancel(self):
         raise NotImplementedError("Cancel not implemented")
 
     def cancelled(self):
         return False
 
-    def running(self):
-        if self.parent:
-            return self.parent.running()
-        else:
-            return False
-
     @property
     def outputs(self):
         return self._outputs
 
     def __repr__(self):
-        return '<%s super=%s parent=%s>' % (
+        return '<%s super=%s>' % (
             self.__class__.__name__,
-            super().__repr__(),
-            self.parent.__repr__())
+            super().__repr__())
