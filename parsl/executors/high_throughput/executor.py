@@ -81,7 +81,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     launch_cmd : str
         Command line string to launch the process_worker_pool from the provider. The command line string
         will be formatted with appropriate values for the following values (debug, task_url, result_url,
-        cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For eg:
+        cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For example:
         launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
 
     address : string
@@ -89,7 +89,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         workers will be running. This can be either a hostname as returned by `hostname` or an
         IP address. Most login nodes on clusters have several network interfaces available, only
         some of which can be reached from the compute nodes.  Some trial and error might be
-        necessary to indentify what addresses are reachable from compute nodes.
+        necessary to identify what addresses are reachable from compute nodes.
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
