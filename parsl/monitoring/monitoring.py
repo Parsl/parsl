@@ -338,7 +338,7 @@ class Hub(object):
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO (20)
+             Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
