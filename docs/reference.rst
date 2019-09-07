@@ -14,6 +14,7 @@ Reference guide
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
     parsl.data_provider.data_manager.DataManager
+    parsl.data_provider.data_manager.Staging
     parsl.data_provider.files.File
     parsl.executors.base.ParslExecutor
     parsl.executors.ThreadPoolExecutor
@@ -37,6 +38,7 @@ Reference guide
     parsl.providers.SlurmProvider
     parsl.providers.TorqueProvider
     parsl.providers.KubernetesProvider
+    parsl.providers.PBSProProvider
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher

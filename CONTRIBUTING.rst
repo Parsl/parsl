@@ -35,7 +35,7 @@ style. A concise summary is available `here <http://sphinxcontrib-napoleon.readt
 Testing
 =======
 
-Parsl uses ``pytest`` to run most tests. All tests should be placed
+Parsl uses ``pytest`` to run most tests. All tests should be placed in
 the ``parsl/tests`` directory. Before running tests usage tracking
 should be disabled using the PARSL_TESTING environment variable::
 
@@ -52,10 +52,10 @@ They are launched by .travis.yaml with a pytest parameter of
 explicitly.
 
 Tests which should with with any configuration live under
-themed directories ``parsl/tests/test*/`` and should named ``test*.py``.
+themed directories ``parsl/tests/test*/`` and should be named ``test*.py``.
 They can be run with any configuration, by specifying ``--config CONFIGPATH``
 where CONFIGPATH is a path to a ``.py`` file exporting a parsl configuration
-object named ``config``. The parsl-specific test fixtures with ensure
+object named ``config``. The parsl-specific test fixtures will ensure
 a suitable DFK is loaded with that configuration for each test.
 
 There is more fine-grained enabling and disabling of tests within the

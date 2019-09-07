@@ -9,7 +9,6 @@ import typeguard
 import inspect
 import threading
 import sys
-# import multiprocessing
 import datetime
 
 from getpass import getuser
@@ -21,6 +20,7 @@ from functools import partial
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -31,6 +31,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.executors.threads import ThreadPoolExecutor
 from parsl.utils import get_version
 
 from parsl.monitoring.message_type import MessageType
@@ -150,18 +151,19 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        self.data_manager = DataManager(self, max_threads=config.data_management_max_threads)
+        self.data_manager = DataManager(self)
         self.executors = {}
-        self.add_executors(config.executors + [self.data_manager])
+        data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='data_manager')
+        self.add_executors(config.executors + [data_manager_executor])
 
         if self.checkpoint_mode == "periodic":
             try:
                 h, m, s = map(int, config.checkpoint_period.split(':'))
                 checkpoint_period = (h * 3600) + (m * 60) + s
-                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period)
+                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
             except Exception:
                 logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
-                self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60))
+                self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60), name="Checkpoint")
 
         # if we use the functionality of dynamically adding executors
         # all executors should be managed.
@@ -242,11 +244,9 @@ class DataFlowKernel(object):
              task_id (string) : Task id which is a uuid string
              future (Future) : The future object corresponding to the task which
              makes this callback
-
-        KWargs:
-             memo_cbk(Bool) : Indicates that the call is coming from a memo update,
-             that does not require additional memo updates.
         """
+
+        self.tasks[task_id]['app_fu'].parent_callback(future)
 
         try:
             res = future.result()
@@ -333,19 +333,11 @@ class DataFlowKernel(object):
             if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
-        # Submit _*_stage_out tasks for output data futures that correspond with remote files
-        if (self.tasks[task_id]['app_fu'] and
-            self.tasks[task_id]['app_fu'].done() and
-            self.tasks[task_id]['app_fu'].exception() is None and
-            self.tasks[task_id]['executor'] != 'data_manager' and
-            self.tasks[task_id]['func_name'] != '_ftp_stage_in' and
-            self.tasks[task_id]['func_name'] != '_http_stage_in'):
-            for dfu in self.tasks[task_id]['app_fu'].outputs:
-                f = dfu.file_obj
-                if isinstance(f, File) and f.is_remote():
-                    self.data_manager.stage_out(f, self.tasks[task_id]['executor'])
-
         return
+
+    @staticmethod
+    def check_staging_inhibited(kwargs):
+        return kwargs.get('staging_inhibit_output', False)
 
     def launch_if_ready(self, task_id):
         """
@@ -387,13 +379,6 @@ class DataFlowKernel(object):
                         logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
                     self.tasks[task_id]['exec_fu'] = exec_fu
-                    try:
-                        self.tasks[task_id]['app_fu'].update_parent(exec_fu)
-                        self.tasks[task_id]['exec_fu'] = exec_fu
-                    except AttributeError as e:
-                        logger.error(
-                            "Task {}: Caught AttributeError at update_parent".format(task_id))
-                        raise e
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
@@ -403,19 +388,12 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-                try:
-                    fu = Future()
-                    fu.retries_left = 0
-                    self.tasks[task_id]['exec_fu'] = fu
-                    self.tasks[task_id]['app_fu'].update_parent(fu)
-                    fu.set_exception(DependencyError(exceptions,
-                                                     task_id,
-                                                     None))
-
-                except AttributeError as e:
-                    logger.error(
-                        "Task {} AttributeError at update_parent".format(task_id))
-                    raise e
+                fu = Future()
+                fu.retries_left = 0
+                self.tasks[task_id]['exec_fu'] = fu
+                fu.set_exception(DependencyError(exceptions,
+                                                 task_id,
+                                                 None))
 
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
@@ -470,10 +448,10 @@ class DataFlowKernel(object):
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
-    def _add_input_deps(self, executor, args, kwargs):
-        """Look for inputs of the app that are remote files. Submit stage_in
-        apps for such files and replace the file objects in the inputs list with
-        corresponding DataFuture objects.
+    def _add_input_deps(self, executor, args, kwargs, func):
+        """Look for inputs of the app that are files. Give the data manager
+        the opportunity to replace a file with a data future for that file,
+        for example wrapping the result of a staging action.
 
         Args:
             - executor (str) : executor where the app is going to be launched
@@ -483,23 +461,52 @@ class DataFlowKernel(object):
 
         # Return if the task is _*_stage_in
         if executor == 'data_manager':
-            return args, kwargs
+            return args, kwargs, func
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            if isinstance(f, File) and f.is_remote():
-                inputs[idx] = self.data_manager.stage_in(f, executor)
+            inputs[idx] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
         for kwarg, f in kwargs.items():
-            if isinstance(f, File) and f.is_remote():
-                kwargs[kwarg] = self.data_manager.stage_in(f, executor)
+            kwargs[kwarg] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
-            if isinstance(f, File) and f.is_remote():
-                newargs[idx] = self.data_manager.stage_in(f, executor)
+            newargs[idx] = self.data_manager.stage_in(f, executor)
+            func = self.data_manager.replace_task(f, func, executor)
 
-        return tuple(newargs), kwargs
+        return tuple(newargs), kwargs, func
+
+    def _add_output_deps(self, executor, args, kwargs, app_fut, func):
+        logger.debug("Adding output dependencies")
+        outputs = kwargs.get('outputs', [])
+        app_fut._outputs = []
+        for f in outputs:
+            if isinstance(f, File) and not self.check_staging_inhibited(kwargs):
+                # replace a File with a DataFuture - either completing when the stageout
+                # future completes, or if no stage out future is returned, then when the
+                # app itself completes.
+                logger.debug("Submitting stage out for output file {}".format(f))
+                stageout_fut = self.data_manager.stage_out(f, executor, app_fut)
+                if stageout_fut:
+                    logger.debug("Adding a dependency on stageout future for {}".format(f))
+                    app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))
+                else:
+                    logger.debug("No stageout dependency for {}".format(f))
+                    app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+
+                # this is a hook for post-task stageout
+                # note that nothing depends on the output - which is maybe a bug
+                # in the not-very-tested stageout system?
+                newfunc = self.data_manager.replace_task_stage_out(f, func, executor)
+                if newfunc:
+                    func = newfunc
+            else:
+                logger.debug("Not performing staging for: {}".format(f))
+                app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+        return func
 
     def _gather_all_deps(self, args, kwargs):
         """Count the number of unresolved futures on which a task depends.
@@ -514,28 +521,27 @@ class DataFlowKernel(object):
         """
         # Check the positional args
         depends = []
-        count = 0
+        unfinished_depends = []
+
+        def check_dep(d):
+            if isinstance(d, Future):
+                if d.tid not in self.tasks or self.tasks[d.tid]['status'] not in FINAL_STATES:
+                    unfinished_depends.extend([d])
+                depends.extend([d])
+
         for dep in args:
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
         # Check for futures in inputs=[<fut>...]
         for dep in kwargs.get('inputs', []):
-            if isinstance(dep, Future):
-                if self.tasks[dep.tid]['status'] not in FINAL_STATES:
-                    count += 1
-                depends.extend([dep])
+            check_dep(dep)
 
+        count = len(unfinished_depends)
         return count, depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
@@ -638,8 +644,8 @@ class DataFlowKernel(object):
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
 
-        # Transform remote input files to data futures
-        args, kwargs = self._add_input_deps(executor, args, kwargs)
+        # The below uses func.__name__ before it has been wrapped by any staging code.
+
         label = kwargs.get('label')
         for kw in ['stdout', 'stderr']:
             if kw in kwargs:
@@ -657,10 +663,7 @@ class DataFlowKernel(object):
 
         task_def = {'depends': None,
                     'executor': executor,
-                    'func': func,
                     'func_name': func.__name__,
-                    'args': args,
-                    'kwargs': kwargs,
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'callback': None,
@@ -672,8 +675,20 @@ class DataFlowKernel(object):
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
-                    'time_returned': None,
-                    'app_fu': None}
+                    'time_returned': None}
+
+        app_fu = AppFuture(task_def)
+
+        # Transform remote input files to data futures
+        args, kwargs, func = self._add_input_deps(executor, args, kwargs, func)
+
+        self._add_output_deps(executor, args, kwargs, app_fu, func)
+
+        task_def.update({
+                    'args': args,
+                    'func': func,
+                    'kwargs': kwargs,
+                    'app_fu': app_fu})
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
@@ -685,20 +700,12 @@ class DataFlowKernel(object):
         dep_cnt, depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
-        # Extract stdout and stderr to pass to AppFuture:
-        task_stdout = kwargs.get('stdout')
-        task_stderr = kwargs.get('stderr')
-
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
                                                                                task_def['func_name'],
                                                                                [fu.tid for fu in depends]))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
-        app_fu = AppFuture(tid=task_id,
-                           stdout=task_stdout,
-                           stderr=task_stderr)
 
-        self.tasks[task_id]['app_fu'] = app_fu
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
         self.tasks[task_id]['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
@@ -824,7 +831,7 @@ class DataFlowKernel(object):
 
         This involves releasing all resources explicitly.
 
-        If the executors are managed (created by the DFK), then we call scale_in on each of
+        If the executors are managed by the DFK, then we call scale_in on each of
         the executors and call executor.shutdown. Otherwise, executor cleanup is left to
         the user.
         """
@@ -916,10 +923,7 @@ class DataFlowKernel(object):
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
             if not os.path.exists(checkpoint_dir):
-                try:
-                    os.makedirs(checkpoint_dir)
-                except FileExistsError:
-                    pass
+                os.makedirs(checkpoint_dir, exist_ok=True)
 
             with open(checkpoint_dfk, 'wb') as f:
                 state = {'rundir': self.run_dir,

@@ -1,4 +1,5 @@
 import os
+import math
 import time
 import logging
 
@@ -43,6 +44,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
+    cores_per_node : int
+        Specify the number of cores to provision per node. If set to None, executors
+        will assume all cores on the node are available for computation. Default is None.
+    mem_per_node : float
+        Specify the real memory to provision per node in GB. If set to None, no
+        explicit request to the scheduler will be made. Default is None.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
@@ -71,6 +78,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  partition,
                  channel=LocalChannel(),
                  nodes_per_block=1,
+                 cores_per_node=None,
+                 mem_per_node=None,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -95,13 +104,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                          launcher=launcher)
 
         self.partition = partition
+        self.cores_per_node = cores_per_node
+        self.mem_per_node = mem_per_node
         self.exclusive = exclusive
         self.move_files = move_files
+        self.scheduler_options = scheduler_options + '\n'
         if exclusive:
-            self.scheduler_options = "#SBATCH --exclusive\n" + scheduler_options
-        else:
-            self.scheduler_options = scheduler_options
-        self.worker_init = worker_init
+            self.scheduler_options += "#SBATCH --exclusive\n"
+        self.worker_init = worker_init + '\n'
 
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
@@ -115,7 +125,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_id_list = ','.join(self.resources.keys())
         cmd = "squeue --job {0}".format(job_id_list)
 
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
@@ -136,15 +146,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        """Submit the command as a slurm job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+        """Submit the command as a slurm job.
 
         Parameters
         ----------
         command : str
             Command to be made on the remote side.
-        blocksize : int
-            Not implemented.
         tasks_per_node : int
             Command invocations to be launched per node
         job_name : str
@@ -159,6 +167,16 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.warn("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
             return None
 
+        scheduler_options = self.scheduler_options
+        worker_init = self.worker_init
+        if self.mem_per_node is not None:
+            scheduler_options += '#SBATCH --mem={}g\n'.format(self.mem_per_node)
+            worker_init += 'export PARSL_MEMORY_GB={}\n'.format(self.mem_per_node)
+        if self.cores_per_node is not None:
+            cpus_per_task = math.floor(self.cores_per_node / tasks_per_node)
+            scheduler_options += '#SBATCH --cpus-per-task={}'.format(cpus_per_task)
+            worker_init += 'export PARSL_CORES={}\n'.format(cpus_per_task)
+
         job_name = "{0}.{1}".format(job_name, time.time())
 
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
@@ -171,8 +189,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config["nodes"] = self.nodes_per_block
         job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
-        job_config["scheduler_options"] = self.scheduler_options
-        job_config["worker_init"] = self.worker_init
+        job_config["scheduler_options"] = scheduler_options
+        job_config["worker_init"] = worker_init
         job_config["partition"] = self.partition
         job_config["user_script"] = command
 
@@ -191,14 +209,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug("not moving files")
             channel_script_path = script_path
 
-        retcode, stdout, stderr = super().execute_wait("sbatch {0}".format(channel_script_path))
+        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
 
         job_id = None
         if retcode == 0:
             for line in stdout.split('\n'):
                 if line.startswith("Submitted batch job"):
                     job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
+                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
         else:
             print("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
@@ -215,7 +233,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("scancel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("scancel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:

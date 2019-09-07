@@ -5,7 +5,6 @@ from concurrent.futures import Future
 import logging
 import threading
 import queue
-# import pickle
 from multiprocessing import Process, Queue
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
@@ -15,7 +14,6 @@ from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
 from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
 from parsl.executors.base import ParslExecutor
-# from parsl.dataflow.error import ConfigurationError
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -101,7 +99,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                 try:
                     for i in range(self.provider.init_blocks):
                         block = self.provider.submit(
-                            self.launch_cmd, 1, self.workers_per_node)
+                            self.launch_cmd, self.workers_per_node)
                         logger.debug("Launched block {}:{}".format(i, block))
                         if not block:
                             raise(ScalingFailed(self.provider.label,
@@ -231,7 +229,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         for i in range(blocks):
             if self.provider:
                 block = self.provider.submit(
-                    self.launch_cmd, 1, self.workers_per_node)
+                    self.launch_cmd, self.workers_per_node)
                 logger.debug("Launched block {}:{}".format(i, block))
                 if not block:
                     raise(ScalingFailed(self.provider.label,

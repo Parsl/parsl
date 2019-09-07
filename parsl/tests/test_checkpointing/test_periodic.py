@@ -9,8 +9,16 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads_checkpoint_periodic import config
 
-parsl.clear()
-dfk = parsl.load(config)
+
+def local_setup():
+    global dfk
+    dfk = parsl.load(config)
+
+
+def local_teardown():
+    # explicit clear without dfk.cleanup here, because the
+    # test does that already
+    parsl.clear()
 
 
 @App('python', cache=True)

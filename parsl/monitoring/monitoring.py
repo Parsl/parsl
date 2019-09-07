@@ -100,7 +100,9 @@ class UDPRadio(object):
             Arbitrary pickle-able object that is to be sent
 
         Returns:
-            # bytes sent
+            # bytes sent,
+         or False if there was a timeout during send,
+         or None if there was an exception during pickling
         """
         x = 0
         try:
@@ -199,10 +201,7 @@ class MonitoringHub(RepresentationMixin):
         if self.logdir is None:
             self.logdir = "."
 
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         # Initialize the ZMQ pipe to the Parsl Client
         self.logger = start_file_logger("{}/monitoring_hub.log".format(self.logdir),
@@ -236,6 +235,7 @@ class MonitoringHub(RepresentationMixin):
                                           "logging_level": self.logging_level,
                                           "run_id": run_id
                                   },
+                                  name="Monitoring-Queue-Process"
         )
         self.queue_proc.start()
 
@@ -245,6 +245,7 @@ class MonitoringHub(RepresentationMixin):
                                         "logging_level": self.logging_level,
                                         "db_url": self.logging_endpoint,
                                   },
+                                name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
 
@@ -267,7 +268,7 @@ class MonitoringHub(RepresentationMixin):
         if self._dfk_channel and self.monitoring_hub_active:
             self.monitoring_hub_active = False
             self._dfk_channel.close()
-            self.logger.info("Waiting Hub to receive all messages and terminate")
+            self.logger.info("Waiting for Hub to receive all messages and terminate")
             try:
                 msg = self.stop_q.get()
                 self.logger.info("Received {} from Hub".format(msg))
@@ -286,7 +287,7 @@ class MonitoringHub(RepresentationMixin):
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur))
+            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur), name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
                 return f(*args, **kwargs)
@@ -336,17 +337,11 @@ class Hub(object):
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
         """
-        try:
-            os.makedirs(logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(logdir, exist_ok=True)
         self.logger = start_file_logger("{}/hub.log".format(logdir),
                                         name="hub",
                                         level=logging_level)
         self.logger.debug("Hub starting")
-
-        if not hub_port:
-            self.logger.critical("At this point the hub port must be set")
 
         self.hub_port = hub_port
         self.hub_address = hub_address
@@ -356,15 +351,19 @@ class Hub(object):
         self.loop_freq = 10.0  # milliseconds
 
         # Initialize the UDP socket
-        self.logger.debug("Intiializing the UDP socket on 0.0.0.0:{}".format(hub_port))
         try:
             self.sock = socket.socket(socket.AF_INET,
                                       socket.SOCK_DGRAM,
                                       socket.IPPROTO_UDP)
 
             # We are trying to bind to all interfaces with 0.0.0.0
-            self.sock.bind(('0.0.0.0', hub_port))
+            if not self.hub_port:
+                self.sock.bind(('0.0.0.0', 0))
+                self.hub_port = self.sock.getsockname()[1]
+            else:
+                self.sock.bind(('0.0.0.0', self.hub_port))
             self.sock.settimeout(self.loop_freq / 1000)
+            self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
         except OSError:
             self.logger.critical("The port is already in use")
             self.hub_port = -1
@@ -458,7 +457,10 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
     pm.cpu_percent()
 
     first_msg = True
-
+    children_user_time = {}
+    children_system_time = {}
+    total_children_user_time = 0.0
+    total_children_system_time = 0.0
     while True:
         logging.debug("start of monitoring loop")
         try:
@@ -491,8 +493,12 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
             for child in children:
                 for k, v in child.as_dict(attrs=summable_values).items():
                     d['psutil_process_' + str(k)] += v
-                d['psutil_process_time_user'] += child.cpu_times().user
-                d['psutil_process_time_system'] += child.cpu_times().system
+                child_user_time = child.cpu_times().user
+                child_system_time = child.cpu_times().system
+                total_children_user_time += child_user_time - children_user_time.get(child.pid, 0)
+                total_children_system_time += child_system_time - children_system_time.get(child.pid, 0)
+                children_user_time[child.pid] = child_user_time
+                children_system_time[child.pid] = child_system_time
                 d['psutil_process_memory_virtual'] += child.memory_info().vms
                 d['psutil_process_memory_resident'] += child.memory_info().rss
                 try:
@@ -503,6 +509,8 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
                     logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
+            d['psutil_process_time_user'] += total_children_user_time
+            d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
             radio.send(MessageType.TASK_INFO, task_id, d)
             first_msg = False

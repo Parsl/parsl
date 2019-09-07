@@ -4,11 +4,6 @@ import pytest
 
 from parsl.data_provider.files import File
 
-import parsl
-from parsl.tests.configs.local_threads import config
-parsl.clear()
-dfk = parsl.load(config)
-
 
 @pytest.mark.local
 def test_files():

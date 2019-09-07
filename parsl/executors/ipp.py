@@ -7,7 +7,6 @@ from ipyparallel import Client
 from parsl.providers import LocalProvider
 from parsl.utils import RepresentationMixin
 
-from parsl.dataflow.error import ConfigurationError
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.ipp_controller import Controller
@@ -48,8 +47,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Directory where engine logs and configuration files will be stored.
     working_dir : str
         Directory where input data should be staged to.
-    storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
-        Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
+    storage_access : list of :class:`~parsl.data_provider.staging.Staging`
+        Specifications for accessing data this executor remotely.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
         this is managed by the user.
@@ -84,9 +83,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.container_image = container_image
         self.engine_dir = engine_dir
         self.workers_per_node = workers_per_node
-        self.storage_access = storage_access if storage_access is not None else []
-        if len(self.storage_access) > 1:
-            raise ConfigurationError('Multiple storage access schemes are not yet supported')
+        self.storage_access = storage_access
         self.managed = managed
 
         self.debug_option = ""
@@ -238,7 +235,7 @@ sleep infinity
         r = []
         for i in range(blocks):
             if self.provider:
-                block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
+                block = self.provider.submit(self.launch_cmd, self.workers_per_node)
                 logger.debug("Launched block {}:{}".format(i, block))
                 if not block:
                     raise(ScalingFailed(self.provider.label,
