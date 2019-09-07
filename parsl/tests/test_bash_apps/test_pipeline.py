@@ -28,7 +28,7 @@ def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
 
 
 def cleanup_work(depth):
-    for i in range(0,depth):
+    for i in range(0, depth):
         fn = "test{0}.txt".format(i)
         if os.path.exists(fn):
             os.remove(fn)
