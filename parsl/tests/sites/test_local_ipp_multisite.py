@@ -31,7 +31,6 @@ def bash(stdout=None, stderr=None):
 
 
 @pytest.mark.local
-@pytest.mark.skip('broken in pytest')
 def test_python(N=2):
     """Testing basic python functionality."""
 
