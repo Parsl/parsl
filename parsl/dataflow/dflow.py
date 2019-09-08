@@ -371,14 +371,6 @@ class DataFlowKernel(object):
                         exec_fu = self.launch_task(
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
-                if exec_fu:
-
-                    try:
-                        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-                    except Exception as e:
-                        logger.error("add_done_callback got an exception {} which will be ignored".format(e))
-
-                    self.tasks[task_id]['exec_fu'] = exec_fu
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
@@ -388,12 +380,20 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-                fu = Future()
-                fu.retries_left = 0
-                self.tasks[task_id]['exec_fu'] = fu
-                fu.set_exception(DependencyError(exceptions,
-                                                 task_id,
-                                                 None))
+                exec_fu = Future()
+                exec_fu.retries_left = 0
+                exec_fu.set_exception(DependencyError(exceptions,
+                                                      task_id,
+                                                      None))
+
+            if exec_fu:
+
+                try:
+                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                except Exception as e:
+                    logger.error("add_done_callback got an exception {} which will be ignored".format(e))
+
+                self.tasks[task_id]['exec_fu'] = exec_fu
 
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
