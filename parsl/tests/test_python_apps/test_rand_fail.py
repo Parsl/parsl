@@ -10,9 +10,6 @@ from parsl.tests.configs.local_threads import config
 local_config = config
 
 
-pytestmark = pytest.mark.skip('not asserting anything; hanging in Travis')
-
-
 @App('python')
 def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     import time
@@ -115,9 +112,9 @@ def test_deps(numtasks=2):
         print("Caught the right exception")
         print("Exception : ", e)
     except Exception as e:
-        assert 5 == 1, "Expected DependencyError got : %s" % e
+        assert False, "Expected DependencyError but got: %s" % e
     else:
-        print("Shoot! no errors ")
+        raise RuntimeError("Expected DependencyError, but got no exception")
 
 
 if __name__ == "__main__":
