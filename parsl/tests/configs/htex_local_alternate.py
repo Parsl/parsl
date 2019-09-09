@@ -58,6 +58,6 @@ config = Config(
                     hub_address="localhost",
                     hub_port=55055,
                     logging_level=logging.INFO,
-                    resource_monitoring_interval=10,
+                    resource_monitoring_interval=1,
                 ),
 )
