@@ -190,9 +190,6 @@ class Database(object):
             PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
         )
 
-    def __del__(self):
-        self.session.close()
-
 
 class DatabaseManager(object):
     def __init__(self,
