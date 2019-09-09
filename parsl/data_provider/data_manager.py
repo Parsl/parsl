@@ -55,15 +55,20 @@ class DataManager(object):
         # if we reach here, we haven't found a suitable staging mechanism
         raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
 
-    def replace_task(self, input: Any, func: Callable, executor: str) -> Callable:
-        """This will give staging providers the chance to wrap (or replace entirely!) the task function."""
-
+    def optionally_stage_in(self, input, func, executor):
         if isinstance(input, DataFuture):
             file = input.file_obj
         elif isinstance(input, File):
             file = input
         else:
-            return func
+            return (input, func)
+
+        task = self.stage_in(file, input, executor)
+        func = self.replace_task(file, func, executor)
+        return (task, func)
+
+    def replace_task(self, file: File, func: Callable, executor: str) -> Callable:
+        """This will give staging providers the chance to wrap (or replace entirely!) the task function."""
 
         executor_obj = self.dfk.executors[executor]
         if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
@@ -84,7 +89,7 @@ class DataManager(object):
         # if we reach here, we haven't found a suitable staging mechanism
         raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
 
-    def stage_in(self, input: Any, executor: str) -> Any:
+    def stage_in(self, file: File, input: Any, executor: str) -> Any:
         """Transport the input from the input source to the executor, if it is file-like,
         returning a DataFuture that wraps the stage-in operation.
 
@@ -100,13 +105,11 @@ class DataManager(object):
         """
 
         if isinstance(input, DataFuture):
-            file = input.file_obj
             parent_fut = input  # type: Optional[Future]
         elif isinstance(input, File):
-            file = input
             parent_fut = None
         else:
-            return input
+            raise ValueError("Internal consistency error - should have checked DataFuture/File earlier")
 
         executor_obj = self.dfk.executors[executor]
         if hasattr(executor_obj, "storage_access") and executor_obj.storage_access is not None:
