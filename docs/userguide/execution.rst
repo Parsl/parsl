@@ -66,7 +66,7 @@ Launchers are responsible for abstracting these different task-launch systems to
 7. `SingleNodeLauncher`: This launcher launches ``workers_per_node`` count workers on a single node.
 
 Additionally, custom launchers which are aware of more specific environments (for example, to
-launch node processes inside containers with custom environments) can written as part of workflow
+launch node processes inside containers with custom environments) can be written as part of the workflow
 configuration. For example, this launcher uses Srun to launch `worker-wrapper`, passing the
 command to be run as parameters to `worker-wrapper`. It is the responsibility of `worker-wrapper`
 to launch the command it is given inside the appropriate environment.
