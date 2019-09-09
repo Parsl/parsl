@@ -22,7 +22,8 @@ config = Config(
             cores_per_worker=1,
             provider=LocalProvider(
                 channel=LocalChannel(),
-                init_blocks=1,
+                init_blocks=0,
+                min_blocks=0,
                 max_blocks=5,
                 launcher=SimpleLauncher(),
             ),
