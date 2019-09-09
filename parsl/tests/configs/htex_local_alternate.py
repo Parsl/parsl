@@ -1,3 +1,20 @@
+"""
+The aim of this configuration is to run a local htex
+in a similar manner to htex_local.py, but with lots of
+options different and more complicated than in that
+configuration, so that more code paths are executed
+than when testing only with htex_local.
+
+It does not matter too much *what* is different in this
+configuration; what matters is that the differences
+cause significantly different pieces of parsl code to be
+run - for example, by turning on monitoring, by allowing
+blocks to be started by a strategy, by using a different
+set of staging providers, by using timing parameters that
+will cause substantially different behaviour on whatever
+those timing parameters control.
+"""
+
 import logging
 import os
 
