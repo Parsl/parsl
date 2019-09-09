@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import parsl
 from parsl.app.app import App
@@ -26,9 +27,19 @@ def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
     return cmd_line
 
 
+def cleanup_work(depth):
+    for i in range(0, depth):
+        fn = "test{0}.txt".format(i)
+        if os.path.exists(fn):
+            os.remove(fn)
+
+
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """
+
+    cleanup_work(depth)
+
     # Create the first file
     open("test0.txt", 'w').write('0\n')
 
@@ -61,10 +72,15 @@ def test_increment(depth=5):
             assert data == str(
                 key), "[TEST] incr failed for key: {0} got data: {1} from filename {2}".format(key, data, filename)
 
+    cleanup_work(depth)
+
 
 def test_increment_slow(depth=5, dur=0.5):
     """Test simple pipeline slow (sleep.5) A->B...->N
     """
+
+    cleanup_work(depth)
+
     # Create the first file
     open("test0.txt", 'w').write('0\n')
 
@@ -92,6 +108,8 @@ def test_increment_slow(depth=5, dur=0.5):
             data = open(fu.result().filepath, 'r').read().strip()
             assert data == str(
                 key), "[TEST] incr failed for key: {0} got: {1}".format(key, data)
+
+    cleanup_work(depth)
 
 
 if __name__ == '__main__':
