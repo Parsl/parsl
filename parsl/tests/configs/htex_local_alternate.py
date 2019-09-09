@@ -1,4 +1,5 @@
 import logging
+import os
 
 from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
@@ -13,13 +14,18 @@ from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
 from parsl.data_provider.file_noop import NoOpFileStaging
 
+working_dir = os.getcwd() + "/" + "test_htex_alternate"
+
 config = Config(
     executors=[
         HighThroughputExecutor(
             label="htex_Local",
+            working_dir=working_dir,
             storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
             worker_debug=True,
             cores_per_worker=1,
+            heartbeat_period=2,
+            heartbeat_threshold=5,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=0,
