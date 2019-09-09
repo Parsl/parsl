@@ -47,7 +47,6 @@ script:
 
     - pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= --random-order
     - pytest parsl -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= --random-order
-    - pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
 
     # some of the site/ tests require more dependencies. These are installed here as needed,
     # so that the above tests happen with only the basic requirements installed.
@@ -63,6 +62,8 @@ script:
     - if [[ "$MPI" == "openmpi" ]]; then ompi_info;    fi
 
     - pip install .[extreme_scale,monitoring]
+
+    - pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
 
     - work_queue_worker localhost 9000 &> /dev/null &
 
