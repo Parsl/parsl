@@ -246,8 +246,6 @@ class DataFlowKernel(object):
              makes this callback
         """
 
-        self.tasks[task_id]['app_fu'].parent_callback(future)
-
         try:
             res = future.result()
             if isinstance(res, RemoteExceptionWrapper):
@@ -300,6 +298,8 @@ class DataFlowKernel(object):
         # pending - in which case, we should consider ourself for relaunch
         if self.tasks[task_id]['status'] == States.pending:
             self.launch_if_ready(task_id)
+
+        self.tasks[task_id]['app_fu'].parent_callback(future)
 
         return
 
