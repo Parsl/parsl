@@ -43,6 +43,7 @@ config = Config(
             cores_per_worker=1,
             heartbeat_period=2,
             heartbeat_threshold=5,
+            poll_period=3000,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=0,
