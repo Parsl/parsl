@@ -4,7 +4,6 @@ import pytest
 
 import parsl
 from parsl import bash_app, python_app
-from parsl.app.app import App
 from parsl.tests.configs.local_threads import fresh_config
 
 local_config = fresh_config()
