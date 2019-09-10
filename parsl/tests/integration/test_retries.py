@@ -1,7 +1,9 @@
 import argparse
 import os
+import pytest
 
 import parsl
+from parsl import bash_app, python_app
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import fresh_config
 
@@ -9,7 +11,7 @@ local_config = fresh_config()
 local_config.retries = 2
 
 
-@App('python')
+@python_app
 def sleep_then_fail(inputs=[], sleep_dur=0.1):
     import time
     import math
@@ -18,15 +20,15 @@ def sleep_then_fail(inputs=[], sleep_dur=0.1):
     return 0
 
 
-@App('bash')
-def succeed_on_retry(filename, success_on=2, stdout="succeed.out"):
+@bash_app
+def succeed_on_retry(filename, success_on=1, stdout="succeed.out"):
     """If the input file does not exist it creates it.
     Then, if the file contains success_on lines it exits with 0
     """
 
-    return """if [[ ! -e {0} ]]; then touch {0}; fi;
-    tries=`wc -l {0} | cut -f1 -d' '`
-    echo $tries >> {0}
+    return """if [[ ! -e {filename} ]]; then touch {filename}; fi;
+    tries=`wc -l {filename} | cut -f1 -d' '`
+    echo $tries >> {filename}
 
     if [[ "$tries" -eq "{success_on}" ]]
     then
@@ -35,16 +37,18 @@ def succeed_on_retry(filename, success_on=2, stdout="succeed.out"):
         echo "Tries != success_on , exiting with error"
         exit 5
     fi
-    """
+    """.format(filename=filename, success_on=success_on)
 
 
-@App('python')
+@python_app
 def sleep(sleep_dur=0.1):
     import time
     time.sleep(sleep_dur)
     return 0
 
 
+@pytest.mark.local
+@pytest.mark.skip('passes even without retries enabled')
 def test_fail_nowait(numtasks=10):
     """Test retries on tasks with no dependencies.
     """
@@ -62,6 +66,8 @@ def test_fail_nowait(numtasks=10):
     print("Done")
 
 
+@pytest.mark.local
+@pytest.mark.skip('passes even without retries enabled')
 def test_fail_delayed(numtasks=10):
     """Test retries on tasks with dependencies.
 
@@ -84,6 +90,7 @@ def test_fail_delayed(numtasks=10):
     print("Done")
 
 
+@pytest.mark.local
 def test_retry():
     """Test retries via app that succeeds on the Nth retry.
     """
