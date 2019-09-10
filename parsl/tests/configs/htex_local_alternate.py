@@ -79,7 +79,7 @@ big_config = Config(
     ],
     strategy='simple',
     app_cache=True, checkpoint_mode='task_exit',
-    # TODO: retries
+    retries=2,
     monitoring=MonitoringHub(
                     hub_address="localhost",
                     hub_port=55055,
