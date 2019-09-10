@@ -64,7 +64,6 @@ script:
     - pip install .[extreme_scale,monitoring]
 
     - pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order --random-order-bucket=module  --random-order-seed=827811 --log-cli-level=DEBUG &
-    - sleep 300s ; killall -INT pytest
 
     # - work_queue_worker localhost 9000 &> /dev/null &
 
