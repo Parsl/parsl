@@ -232,7 +232,7 @@ class MonitoringHub(RepresentationMixin):
                                           "logging_level": self.logging_level,
                                           "run_id": run_id
                                   },
-                                  name="Monitoring-Queue-Process", daemon=True
+                                  name="Monitoring-Queue-Process"
         )
         self.queue_proc.start()
 
@@ -242,7 +242,7 @@ class MonitoringHub(RepresentationMixin):
                                         "logging_level": self.logging_level,
                                         "db_url": self.logging_endpoint,
                                   },
-                                name="Monitoring-DBM-Process", daemon=True
+                                name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
 
