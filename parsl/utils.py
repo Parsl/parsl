@@ -122,8 +122,8 @@ def wait_for_file(path, seconds=10):
 
 @contextmanager
 def time_limited_open(path, mode, seconds=1):
-    wait_for_file(path, seconds)
-
+    with wait_for_file(path, seconds):
+        logger.debug("wait_for_file yielded")
     f = open(path, mode)
     yield f
     f.close()
