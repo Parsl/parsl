@@ -31,7 +31,6 @@ def test_bash_memoization(n=2):
     for i in range(0, n):
         d[i] = fail_on_presence(outputs=[temp_filename])
 
-    print("Waiting for results from round1")
     for i in d:
         assert isinstance(d[i].exception(), AppFailure)
 
