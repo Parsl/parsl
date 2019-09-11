@@ -480,7 +480,7 @@ class DataFlowKernel(object):
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         app_fut._outputs = []
-        for f in outputs:
+        for idx, f in enumerate(outputs):
             if isinstance(f, File) and not self.check_staging_inhibited(kwargs):
                 # replace a File with a DataFuture - either completing when the stageout
                 # future completes, or if no stage out future is returned, then when the
@@ -489,19 +489,21 @@ class DataFlowKernel(object):
                 # The staging code will get a clean copy which it is allowed to mutate,
                 # while the DataFuture-contained original will not be modified by any staging.
                 f_copy = f.cleancopy()
-                logger.debug("Submitting stage out for output file {}".format(f))
+                outputs[idx] = f_copy
+
+                logger.debug("Submitting stage out for output file {}".format(repr(f)))
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
-                    logger.debug("Adding a dependency on stageout future for {}".format(f))
+                    logger.debug("Adding a dependency on stageout future for {}".format(repr(f)))
                     app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))
                 else:
-                    logger.debug("No stageout dependency for {}".format(f))
+                    logger.debug("No stageout dependency for {}".format(repr(f)))
                     app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
 
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
                 # in the not-very-tested stageout system?
-                newfunc = self.data_manager.replace_task_stage_out(f, func, executor)
+                newfunc = self.data_manager.replace_task_stage_out(f_copy, func, executor)
                 if newfunc:
                     func = newfunc
             else:
