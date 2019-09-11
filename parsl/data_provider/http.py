@@ -2,8 +2,6 @@ import logging
 import os
 import requests
 
-from parsl.app.futures import DataFuture
-
 from parsl import python_app
 
 from parsl.utils import RepresentationMixin
@@ -58,7 +56,6 @@ class HTTPInTaskStaging(Staging, RepresentationMixin):
 # rest of the app calls - what can be returned here is, I think,
 # either a DataFuture (in the case of staging apps) or plain
 # File (if no dependency needs to happen)
-
 
     def replace_task(self, dm, executor, file, f):
         working_dir = dm.dfk.executors[executor].working_dir
