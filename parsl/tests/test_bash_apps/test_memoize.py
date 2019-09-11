@@ -1,12 +1,9 @@
 import argparse
 import os
 
-import pytest
-
 import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_threads import config
-from parsl.app.errors import AppFailure
 
 
 @App('bash', cache=True)
@@ -31,7 +28,7 @@ def test_bash_memoization(n=2):
         d[i] = fail_on_presence(outputs=[temp_filename])
 
     for i in d:
-        assert d[i].exception() == None
+        assert d[i].exception() is None
 
 
 if __name__ == '__main__':
