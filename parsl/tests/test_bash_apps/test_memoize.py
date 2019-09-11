@@ -14,7 +14,7 @@ def fail_on_presence(outputs=[]):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
 
 
-@pytest.mark.xfail(reason="This failing test demonstrates broken @bash_app checkpointing", strict=True)
+@pytest.mark.xfail(reason="This test demonstrates issue #1269: broken @bash_app checkpointing", strict=True)
 def test_bash_memoization(n=2):
     """Testing bash memoization
     """
