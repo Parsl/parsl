@@ -267,7 +267,9 @@ class DataFlowKernel(object):
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
                 return
 
-            if self.tasks[task_id]['fail_count'] <= self._config.retries:
+            if self.tasks[task_id]['status'] == States.dep_fail:
+                logger.debug("Task {} failed due to dependency failure so skipping retries".format(task_id))
+            elif self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
 
