@@ -8,7 +8,6 @@ from itertools import chain
 
 import pytest
 import _pytest.runner as runner
-from pytest_forked import forked_run_report
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -21,15 +20,15 @@ def pytest_addoption(parser):
     """Add parsl-specific command-line options to pytest.
     """
     parser.addoption(
-        '--configs',
+        '--config',
         action='store',
         metavar='CONFIG',
-        nargs='*',
-        help="only run parsl CONFIG; use 'local' to run locally-defined config"
+        type='string',
+        nargs=1,
+        required=True,
+        help="run with parsl CONFIG; use 'local' to run locally-defined config"
     )
-    parser.addoption(
-        '--basic', action='store_true', default=False, help='only run basic configs (local, local_ipp and local_threads)'
-    )
+    parser.addoption('--bodge-dfk-per-test', action='store_true')
 
 
 def pytest_configure(config):
@@ -57,32 +56,13 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'forked: mark test to only run in a subprocess'
+        'noci: mark test to be unsuitable for running during automated tests'
     )
+
     config.addinivalue_line(
         'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
-
-
-def pytest_generate_tests(metafunc):
-    """Assemble the list of configs to test.
-    """
-    config_dir = os.path.join(os.path.dirname(__file__), 'configs')
-
-    configs = metafunc.config.getoption('configs')
-    basic = metafunc.config.getoption('basic')
-    if basic:
-        configs = ['local'] + [os.path.join(config_dir, x) for x in ['local_threads.py', 'local_ipp.py']]
-    elif configs is None:
-        configs = ['local']
-        for dirpath, _, filenames in os.walk(config_dir):
-            for fn in filenames:
-                path = os.path.join(dirpath, fn)
-                if ('pycache' not in path) and path.endswith('.py'):
-                    configs += [path]
-
-    metafunc.parametrize('config', configs, scope='session')
 
 
 @pytest.fixture(scope='session')
@@ -117,18 +97,21 @@ def setup_docker():
             subprocess.call(cmd, cwd=pdir)
 
 
-@pytest.fixture(autouse=True)
-def load_dfk(config):
-    """Load the dfk before running a test.
+@pytest.fixture(autouse=True, scope='session')
+def load_dfk_session(request, pytestconfig):
+    """Load a dfk around entire test suite, except in local mode.
 
-    The special path `local` indicates that whatever configuration is loaded
-    locally in the test should not be replaced. Otherwise, it is expected that
-    the supplied file contains a dictionary called `config`, which will be
-    loaded before the test runs.
-
-    Args:
-        config (str) : path to config to load (this is a parameterized pytest fixture)
+    The special path `local` indicates that configuration will not come
+    from a pytest managed configuration file; in that case, see
+    load_dfk_local_module for module-level configuration management.
     """
+
+    config = pytestconfig.getoption('config')[0]
+
+    if pytestconfig.getoption('bodge_dfk_per_test'):
+        yield
+        return
+
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
         try:
@@ -139,7 +122,6 @@ def load_dfk(config):
             if DataFlowKernelLoader._dfk is not None:
                 raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
 
-            parsl.clear()
             dfk = parsl.load(module.config)
 
             yield
@@ -154,15 +136,95 @@ def load_dfk(config):
         yield
 
 
+@pytest.fixture(autouse=True, scope='function')
+def load_dfk_bodge_per_test_for_workqueue(request, pytestconfig):
+    """Load a dfk around entire test suite, except in local mode.
+
+    The special path `local` indicates that configuration will not come
+    from a pytest managed configuration file; in that case, see
+    load_dfk_local_module for module-level configuration management.
+    """
+
+    config = pytestconfig.getoption('config')[0]
+
+    if not pytestconfig.getoption('bodge_dfk_per_test'):
+        yield
+        return
+
+    if config != 'local':
+        spec = importlib.util.spec_from_file_location('', config)
+        try:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
+
+            if DataFlowKernelLoader._dfk is not None:
+                raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
+
+            dfk = parsl.load(module.config)
+
+            yield
+
+            if(parsl.dfk() != dfk):
+                raise ValueError("DFK changed unexpectedly during test")
+            dfk.cleanup()
+            parsl.clear()
+        except KeyError:
+            pytest.skip('options in user_opts.py not configured for {}'.format(config))
+    else:
+        yield
+
+
+@pytest.fixture(autouse=True, scope='module')
+def load_dfk_local_module(request, pytestconfig):
+    """Load the dfk around test modules, in local mode.
+
+    If local_config is specified in the test module, it will be loaded using
+    parsl.load. It should be a parsl Config() object.
+
+    If local_setup and/or local_teardown are callables (such as functions) in
+    the test module, they they will be invoked before/after the tests. This
+    can be used to perform more interesting DFK initialisation not possible
+    with local_config.
+    """
+
+    config = pytestconfig.getoption('config')[0]
+
+    if config == 'local':
+        local_setup = getattr(request.module, "local_setup", None)
+        local_teardown = getattr(request.module, "local_teardown", None)
+        local_config = getattr(request.module, "local_config", None)
+
+        if(local_config):
+            dfk = parsl.load(local_config)
+
+        if(callable(local_setup)):
+            local_setup()
+
+        yield
+
+        if(callable(local_teardown)):
+            local_teardown()
+
+        if(local_config):
+            if(parsl.dfk() != dfk):
+                raise ValueError("DFK changed unexpectedly during test")
+            dfk.cleanup()
+            parsl.clear()
+
+    else:
+        yield
+
+
 @pytest.fixture(autouse=True)
-def apply_masks(request):
+def apply_masks(request, pytestconfig):
     """Apply whitelist, blacklist, and local markers.
 
     These ensure that if a whitelist decorator is applied to a test, configs which are
     not in the whitelist are skipped. Similarly, configs in a blacklist are skipped,
     and configs which are not `local` are skipped if the `local` decorator is applied.
     """
-    config = request.getfixturevalue('config')
+    config = pytestconfig.getoption('config')[0]
     m = request.node.get_marker('whitelist')
     if m is not None:
         if os.path.abspath(config) not in chain.from_iterable([glob(x) for x in m.args]):
@@ -201,15 +263,6 @@ def setup_data():
         f.write("2\n")
 
 
-@pytest.mark.tryfirst
-def pytest_runtest_protocol(item):
-    if 'forked' in item.keywords:
-        reports = forked_run_report(item)
-        for rep in reports:
-            item.ihook.pytest_runtest_logreport(report=rep)
-        return True
-
-
 def pytest_make_collect_report(collector):
     call = runner.CallInfo(lambda: list(collector.collect()), 'collect')
     longrepr = None
@@ -237,3 +290,14 @@ def pytest_make_collect_report(collector):
     rep = runner.CollectReport(collector.nodeid, outcome, longrepr, getattr(call, 'result', None))
     rep.call = call  # see collect_one_node
     return rep
+
+
+def pytest_ignore_collect(path):
+    if 'integration' in path.strpath:
+        return True
+    elif 'manual_tests' in path.strpath:
+        return True
+    elif 'workqueue_tests/test_scale' in path.strpath:
+        return True
+    else:
+        return False

@@ -12,7 +12,6 @@ from parsl.tests.configs.local_threads import config
 
 
 @pytest.mark.local
-@pytest.mark.forked
 def test_immutable_config(n=2):
     """Regression test for immutable config #98
     """

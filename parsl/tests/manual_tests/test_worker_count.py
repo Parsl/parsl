@@ -11,16 +11,16 @@ EXPECTED_WORKERS = math.floor(CORES / CORES_PER_WORKER)
 
 
 # from parsl.tests.configs.htex_local import config
-from htex_local import config
+from parsl.tests.manual_tests.htex_local import config
 config.executors[0].cores_per_worker = CORES_PER_WORKER
 config.executors[0].provider.init_blocks = 1
 
 # from htex_midway import config
 # from htex_swan import config
 
+local_config = config
 
 from parsl.app.app import python_app  # , bash_app
-parsl.load(config)
 
 
 @python_app
@@ -64,5 +64,7 @@ if __name__ == '__main__':
 
     if args.debug:
         parsl.set_stream_logger()
+
+    parsl.load(local_config)
 
     x = test_worker(n=int(args.count), sleep=float(args.sleep))

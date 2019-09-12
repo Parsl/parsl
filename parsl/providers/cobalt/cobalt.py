@@ -98,7 +98,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = super().execute_wait("qstat -u $USER")
+        retcode, stdout, stderr = self.execute_wait("qstat -u $USER")
 
         # Execute_wait failed. Do no update.
         if retcode != 0:
@@ -183,7 +183,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
             self.nodes_per_block, queue_opt, wtime_to_minutes(self.walltime), account_opt, channel_script_path)
         logger.debug("Executing {}".format(command))
 
-        retcode, stdout, stderr = super().execute_wait(command)
+        retcode, stdout, stderr = self.execute_wait(command)
 
         # TODO : FIX this block
         if retcode != 0:
@@ -216,7 +216,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         """
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("qdel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("qdel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:

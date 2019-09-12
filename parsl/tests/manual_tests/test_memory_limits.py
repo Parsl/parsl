@@ -3,7 +3,6 @@ import parsl
 import psutil
 import multiprocessing
 
-# parsl.set_stream_logger()
 from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher

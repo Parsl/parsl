@@ -2,7 +2,6 @@ from functools import update_wrapper
 from inspect import signature, Parameter
 
 from parsl.app.errors import wrap_error
-from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
@@ -162,9 +161,5 @@ class BashApp(AppBase):
                              fn_hash=self.func_hash,
                              cache=self.cache,
                              **self.kwargs)
-
-        out_futs = [DataFuture(app_fut, o, tid=app_fut.tid)
-                    for o in kwargs.get('outputs', [])]
-        app_fut._outputs = out_futs
 
         return app_fut

@@ -1,4 +1,5 @@
 import logging
+from abc import abstractmethod
 from string import Template
 
 from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
@@ -71,7 +72,7 @@ class ClusterProvider(ExecutionProvider):
         self.cmd_timeout = cmd_timeout
         if not callable(self.launcher):
             raise(BadLauncher(self.launcher,
-                              "Launcher for executor:{} is of type:{}. Expects a parsl.launcher.launcher.Launcher or callable".format(
+                              "Launcher for executor: {} is of type: {}. Expects a parsl.launcher.launcher.Launcher or callable".format(
                                   label, type(self.launcher))))
 
         self.script_dir = None
@@ -124,28 +125,9 @@ class ClusterProvider(ExecutionProvider):
 
         return True
 
-    def submit(self, cmd_string, tasks_per_node, job_name="parsl.auto"):
-        ''' The submit method takes the command string to be executed upon
-        instantiation of a resource most often to start a pilot (such as IPP engine
-        or even Swift-T engines).
-
-        Args :
-             - cmd_string (str) : The bash command string to be executed
-             - tasks_per_node (int) : command invocations to be launched per node
-
-        KWargs:
-             - job_name (str) : Human friendly name to be assigned to the job request
-
-        Returns:
-             - A job identifier, this could be an integer, string etc
-
-        Raises:
-             - ExecutionProviderExceptions or its subclasses
-        '''
-        raise NotImplementedError
-
+    @abstractmethod
     def _status(self):
-        raise NotImplementedError
+        pass
 
     def status(self, job_ids):
         """ Get the status of a list of jobs identified by the job identifiers
@@ -165,21 +147,6 @@ class ClusterProvider(ExecutionProvider):
         if job_ids:
             self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
-
-    def cancel(self, job_ids):
-        """ Cancels the resources identified by the job_ids provided by the user.
-
-        Args:
-             - job_ids (list): A list of job identifiers
-
-        Returns:
-             - A list of status from cancelling the job which can be True, False
-
-        Raises:
-             - ExecutionProviderException or its subclasses
-        """
-
-        raise NotImplementedError
 
     @property
     def scaling_enabled(self):

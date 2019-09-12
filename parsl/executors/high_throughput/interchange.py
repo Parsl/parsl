@@ -141,10 +141,7 @@ class Interchange(object):
 
         """
         self.logdir = logdir
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
         logger.debug("Initializing Interchange process")
@@ -346,11 +343,13 @@ class Interchange(object):
 
         self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
-                                                    args=(self._kill_event,))
+                                                    args=(self._kill_event,),
+                                                    name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                args=(self._kill_event,))
+                                                args=(self._kill_event,),
+                                                name="Interchange-Command")
         self._command_thread.start()
 
         poller = zmq.Poller()
