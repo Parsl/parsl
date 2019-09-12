@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import time
+import math
 
 from parsl.channels import LocalChannel
 from parsl.utils import RepresentationMixin
@@ -35,6 +36,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
+    cores_per_node : int
+        Specify the number of cores to provision per node. If set to None, executors
+        will assume all cores on the node are available for computation. Default is None.
+    mem_per_node : float
+        Specify the real memory to provision per node in GB. If set to None, no
+        explicit request to the scheduler will be made. Default is None.
     init_blocks : int
         Number of blocks to provision at time of initialization
     min_blocks : int
@@ -67,6 +74,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     def __init__(self,
                  channel=LocalChannel(),
                  nodes_per_block=1,
+                 cores_per_node=None,
+                 mem_per_node=None,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -93,6 +102,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                          launcher,
                          cmd_timeout=cmd_timeout)
         self.provisioned_blocks = 0
+        self.cores_per_node = cores_per_node
+        self.mem_per_node = mem_per_node
 
         self.environment = environment if environment is not None else {}
         for key, value in self.environment.items():
@@ -104,8 +115,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                 pass
 
         self.project = project
-        self.scheduler_options = scheduler_options
-        self.worker_init = worker_init
+        self.scheduler_options = scheduler_options + '\n'
+        self.worker_init = worker_init + '\n'
         self.requirements = requirements
         self.transfer_input_files = transfer_input_files
 
@@ -186,6 +197,16 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             return None
 
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
+
+        scheduler_options = self.scheduler_options
+        worker_init = self.worker_init
+        if self.mem_per_node is not None:
+            scheduler_options += 'RequestMemory = {}'.format(self.mem_per_node * 1024)
+            worker_init += 'export PARSL_MEMORY_GB={}\n'.format(self.mem_per_node)
+        if self.cores_per_node is not None:
+            cpus_per_task = math.floor(self.cores_per_node / tasks_per_node)
+            scheduler_options += 'RequestCpus = {}'.format(cpus_per_task)
+            worker_init += 'export PARSL_CORES={}\n'.format(cpus_per_task)
 
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
