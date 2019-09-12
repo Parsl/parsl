@@ -220,8 +220,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["project"] = self.project
         job_config["nodes"] = self.nodes_per_block
-        job_config["scheduler_options"] = self.scheduler_options
-        job_config["worker_init"] = self.worker_init
+        job_config["scheduler_options"] = scheduler_options
+        job_config["worker_init"] = worker_init
         job_config["user_script"] = command
         job_config["tasks_per_node"] = tasks_per_node
         job_config["requirements"] = self.requirements
