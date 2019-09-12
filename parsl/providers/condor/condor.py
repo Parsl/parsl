@@ -204,9 +204,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             scheduler_options += 'RequestMemory = {}'.format(self.mem_per_node * 1024)
             worker_init += 'export PARSL_MEMORY_GB={}\n'.format(self.mem_per_node)
         if self.cores_per_node is not None:
-            cpus_per_task = math.floor(self.cores_per_node / tasks_per_node)
-            scheduler_options += 'RequestCpus = {}'.format(cpus_per_task)
-            worker_init += 'export PARSL_CORES={}\n'.format(cpus_per_task)
+            scheduler_options += 'RequestCpus = {}'.format(self.cores_per_node)
+            worker_init += 'export PARSL_CORES={}\n'.format(self.cores_per_node)
 
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
