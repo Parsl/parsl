@@ -354,6 +354,18 @@ class DataFlowKernel(object):
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
+        try:
+            self._launch_if_ready(task_id)
+        except Exception as ex:
+            # catch errors properly, otherwise it's possible for code to
+            # throw an exception before the task is launched, which causes
+            # things to just hang.
+            #
+            # may want to wrap this exception into something that clearly
+            # indicates that this is an internal error
+            self.tasks[task_id]['app_fu'].set_exception(ex)
+
+    def _launch_if_ready(self, task_id):
         if self._count_deps(self.tasks[task_id]['depends']) == 0:
 
             # We can now launch *task*
