@@ -2,7 +2,6 @@ import logging
 import os
 import re
 import time
-import math
 
 from parsl.channels import LocalChannel
 from parsl.utils import RepresentationMixin
