@@ -35,11 +35,11 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
-    cores_per_node : int
-        Specify the number of cores to provision per node. If set to None, executors
+    cores_per_slot : int
+        Specify the number of cores to provision per slot. If set to None, executors
         will assume all cores on the node are available for computation. Default is None.
-    mem_per_node : float
-        Specify the real memory to provision per node in GB. If set to None, no
+    mem_per_slot : float
+        Specify the real memory to provision per slot in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
     init_blocks : int
         Number of blocks to provision at time of initialization
@@ -73,8 +73,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     def __init__(self,
                  channel=LocalChannel(),
                  nodes_per_block=1,
-                 cores_per_node=None,
-                 mem_per_node=None,
+                 cores_per_slot=None,
+                 mem_per_slot=None,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -101,8 +101,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                          launcher,
                          cmd_timeout=cmd_timeout)
         self.provisioned_blocks = 0
-        self.cores_per_node = cores_per_node
-        self.mem_per_node = mem_per_node
+        self.cores_per_slot = cores_per_slot
+        self.mem_per_slot = mem_per_slot
+
+        # To Parsl, Condor slots should be treated equivalently to nodes
+        self.cores_per_node = cores_per_slot
+        self.mem_per_node = mem_per_slot
 
         self.environment = environment if environment is not None else {}
         for key, value in self.environment.items():
@@ -199,12 +203,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         scheduler_options = self.scheduler_options
         worker_init = self.worker_init
-        if self.mem_per_node is not None:
-            scheduler_options += 'RequestMemory = {}'.format(self.mem_per_node * 1024)
-            worker_init += 'export PARSL_MEMORY_GB={}\n'.format(self.mem_per_node)
-        if self.cores_per_node is not None:
-            scheduler_options += 'RequestCpus = {}'.format(self.cores_per_node)
-            worker_init += 'export PARSL_CORES={}\n'.format(self.cores_per_node)
+        if self.mem_per_slot is not None:
+            scheduler_options += 'RequestMemory = {}\n'.format(self.mem_per_slot * 1024)
+            worker_init += 'export PARSL_MEMORY_GB={}\n'.format(self.mem_per_slot)
+        if self.cores_per_slot is not None:
+            scheduler_options += 'RequestCpus = {}\n'.format(self.cores_per_slot)
+            worker_init += 'export PARSL_CORES={}\n'.format(self.cores_per_slot)
 
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
