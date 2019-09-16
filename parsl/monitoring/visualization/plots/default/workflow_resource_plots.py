@@ -105,7 +105,6 @@ def worker_efficiency(task, node):
             task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = min(task['epoch_time_start'].min(), node['epoch_time'].min())
         end = task['epoch_time_returned'].max()
-        node['relative_time'] = node['epoch_time'] - start
 
         worker_plot = [0] * (end - start + 1)
         total_workers = node['worker_count'].sum()
