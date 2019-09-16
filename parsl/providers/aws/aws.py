@@ -93,6 +93,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def __init__(self,
                  image_id,
+                 key_name,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=10,
@@ -104,7 +105,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  region='us-east-2',
                  spot_max_bid=0,
 
-                 key_name=None,
                  key_file=None,
                  profile=None,
                  iam_instance_profile_arn='',
@@ -139,6 +139,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.launcher = launcher
         self.linger = linger
         self.resources = {}
+        self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(self.label)
 
         env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
         if profile is None and key_file is None and not env_specified:
@@ -153,7 +154,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         state_file_exists = False
         try:
-            self.state_file = state_file if state_file is not None else '.ec2_{}.json'.format(self.label)
             self.read_state_file(self.state_file)
             state_file_exists = True
         except Exception:
@@ -497,7 +497,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         self.instances.append(instance[0].id)
         logger.info(
-            "Started up 1 instance {} . Instance type:{}".format(instance[0].id, instance_type)
+            "Started up 1 instance {}. Instance type: {}".format(instance[0].id, instance_type)
         )
         return instance
 
@@ -563,7 +563,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         return all_states
 
-    def submit(self, command='sleep 1', blocksize=1, tasks_per_node=1, job_name="parsl.auto"):
+    def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.auto"):
         """Submit the command onto a freshly instantiated AWS EC2 instance.
 
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -572,8 +572,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         ----------
         command : str
             Command to be invoked on the remote side.
-        blocksize : int
-            Number of blocks requested.
         tasks_per_node : int (default=1)
             Number of command invocations to be launched per node
         job_name : str

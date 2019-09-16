@@ -6,6 +6,7 @@ import sys
 import platform
 import random
 import time
+import datetime
 import pickle
 import logging
 import queue
@@ -16,6 +17,8 @@ from parsl.version import VERSION as PARSL_VERSION
 from ipyparallel.serialize import serialize_object
 
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.monitoring.message_type import MessageType
+
 
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
@@ -83,9 +86,11 @@ class Interchange(object):
     def __init__(self,
                  client_address="127.0.0.1",
                  interchange_address="127.0.0.1",
+                 hub_address=None,
                  client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
+                 hub_port=None,
                  heartbeat_threshold=60,
                  logdir=".",
                  logging_level=logging.INFO,
@@ -101,6 +106,10 @@ class Interchange(object):
         interchange_address : str
              The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
 
+        hub_address : str
+             The ip address at which the interchange can send info about managers to when monitoring is enabled.
+             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
+
         client_ports : triple(int, int, int)
              The ports at which the client can be reached
 
@@ -110,6 +119,10 @@ class Interchange(object):
         worker_port_range : tuple(int, int)
              The interchange picks ports at random from the range which will be used by workers.
              This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
+
+        hub_port : str
+             The port at which the interchange can send info about managers to when monitoring is enabled.
+             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
 
         heartbeat_threshold : int
              Number of seconds since the last heartbeat after which worker is considered lost.
@@ -128,10 +141,7 @@ class Interchange(object):
 
         """
         self.logdir = logdir
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
         logger.debug("Initializing Interchange process")
@@ -156,6 +166,14 @@ class Interchange(object):
         self.command_channel.RCVTIMEO = 1000  # in milliseconds
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
+
+        self.monitoring_enabled = False
+        if hub_address and hub_port:
+            self.hub_channel = self.context.socket(zmq.DEALER)
+            self.hub_channel.set_hwm(0)
+            self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
+            self.monitoring_enabled = True
+            logger.info("Monitoring enabled and connected to hub")
 
         self.pending_task_queue = queue.Queue(maxsize=10 ** 6)
 
@@ -194,7 +212,7 @@ class Interchange(object):
                                                                sys.version_info.minor,
                                                                sys.version_info.micro),
                                  'os': platform.system(),
-                                 'hname': platform.node(),
+                                 'hostname': platform.node(),
                                  'dir': os.getcwd()}
 
         logger.info("Platform info: {}".format(self.current_platform))
@@ -325,11 +343,13 @@ class Interchange(object):
 
         self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
-                                                    args=(self._kill_event,))
+                                                    args=(self._kill_event,),
+                                                    name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                args=(self._kill_event,))
+                                                args=(self._kill_event,),
+                                                name="Interchange-Command")
         self._command_thread.start()
 
         poller = zmq.Poller()
@@ -357,10 +377,11 @@ class Interchange(object):
 
                     try:
                         msg = json.loads(message[1].decode('utf-8'))
+                        msg['reg_time'] = datetime.datetime.strptime(msg['reg_time'], "%Y-%m-%d %H:%M:%S")
                         reg_flag = True
                     except Exception:
-                        logger.warning("[MAIN] Got a non-json registration message from manager:{}".format(
-                            manager))
+                        logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
+                            manager), exc_info=True)
                         logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
 
                     # By default we set up to ignore bad nodes/registration messages.
@@ -376,6 +397,9 @@ class Interchange(object):
                         logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                         self._ready_manager_queue[manager].update(msg)
                         logger.info("[MAIN] Registration info for manager {}: {}".format(manager, msg))
+                        if self.monitoring_enabled:
+                            logger.info("Sending message {} to hub".format(self._ready_manager_queue[manager]))
+                            self.hub_channel.send_pyobj((MessageType.NODE_INFO, self._ready_manager_queue[manager]))
 
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
@@ -384,7 +408,7 @@ class Interchange(object):
                             if self.suppress_failure is False:
                                 logger.debug("Setting kill event")
                                 self._kill_event.set()
-                                e = ManagerLost(manager, self._ready_manager_queue[manager]['hname'])
+                                e = ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
                                 result_package = {'task_id': -1, 'exception': serialize_object(e)}
                                 pkl_package = pickle.dumps(result_package)
                                 self.results_outgoing.send(pkl_package)
@@ -480,13 +504,15 @@ class Interchange(object):
 
                 for tid in self._ready_manager_queue[manager]['tasks']:
                     try:
-                        raise ManagerLost(manager, self._ready_manager_queue[manager]['hname'])
+                        raise ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
                     except Exception:
                         result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
                 self._ready_manager_queue.pop(manager, 'None')
+                if manager in interesting_managers:
+                    interesting_managers.remove(manager)
 
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(count, delta))

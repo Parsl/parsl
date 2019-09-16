@@ -53,7 +53,7 @@ class AppBase(metaclass=ABCMeta):
             try:
                 self.fn_source = getsource(func)
             except OSError:
-                logger.debug("Unable to get source code for AppCaching. Recommend creating module")
+                logger.warning("Unable to get source code for AppCaching. Recommend creating module")
                 self.fn_source = func.__name__
 
             self.func_hash = md5(self.fn_source.encode('utf-8')).hexdigest()
@@ -67,6 +67,8 @@ class AppBase(metaclass=ABCMeta):
             self.kwargs['stdout'] = params['stdout'].default
         if 'stderr' in params:
             self.kwargs['stderr'] = params['stderr'].default
+        if 'walltime' in params:
+            self.kwargs['walltime'] = params['walltime'].default
         self.outputs = params['outputs'].default if 'outputs' in params else []
         self.inputs = params['inputs'].default if 'inputs' in params else []
 

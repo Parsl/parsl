@@ -1,11 +1,9 @@
 import pytest
 
-import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_ipp import config
 
-parsl.clear()
-dfk = parsl.load(config)
+local_config = config
 
 
 @App('python')
@@ -31,8 +29,6 @@ def test_cleanup_behavior_221():
     for i in round_1:
         f = slow_double(i)
         round_2.append(f)
-
-    dfk.cleanup()
 
 
 if __name__ == "__main__":

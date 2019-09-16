@@ -5,7 +5,7 @@ import shutil
 import subprocess
 
 from parsl.channels.base import Channel
-from parsl.channels.errors import *
+from parsl.channels.errors import FileCopyException
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -73,12 +73,8 @@ class LocalChannel(Channel, RepresentationMixin):
             retcode = proc.returncode
 
         except Exception as e:
-            print("Caught exception: {0}".format(e))
-            logger.warn("Execution of command [%s] failed due to \n %s ", cmd, e)
-            # Set retcode to non-zero so that this can be handled in the provider.
-            if retcode == 0:
-                retcode = -1
-            return (retcode, None, None)
+            logger.warn("Execution of command '{}' failed due to \n{}".format(cmd, e))
+            raise
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
@@ -113,7 +109,7 @@ class LocalChannel(Channel, RepresentationMixin):
             pid = proc.pid
 
         except Exception as e:
-            logger.warn("Execution of command [%s] failed due to \n %s ", (cmd, e))
+            logger.warn("Execution of command '{}' failed due to \n{}".format(cmd, e))
             raise
 
         return pid, proc

@@ -1,14 +1,14 @@
 import parsl
 import pytest
 from parsl import App
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_threads import fresh_config
 
 
 @pytest.mark.local
 def test_lazy_behavior():
     """Testing lazy errors to work"""
 
-    parsl.clear()
+    config = fresh_config()
     config.lazy_errors = True
     parsl.load(config)
 
@@ -24,6 +24,7 @@ def test_lazy_behavior():
         if items[0].done:
             break
 
+    parsl.clear()
     return
 
 

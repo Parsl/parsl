@@ -1,14 +1,15 @@
 from flask import Flask
 from parsl.monitoring.visualization.models import db
 import argparse
+import os
 
 
 def cli_run():
     """ Instantiates the Monitoring viz server
     """
     parser = argparse.ArgumentParser(description='Parsl visualization tool')
-    parser.add_argument('db_path', type=str,
-                        help='Database path in the format sqlite:///<absolute_path_to_db>')
+    parser.add_argument('db_path', type=str, default="sqlite:///{cwd}/monitoring.db".format(cwd=os.getcwd()),
+                        nargs="?", help='Database path in the format sqlite:///<absolute_path_to_db>')
     parser.add_argument('-p', '--port', type=int, default=8080,
                         help='Port at which the monitoring Viz Server is hosted. Default: 8080')
     parser.add_argument("-d", "--debug", action='store_true',

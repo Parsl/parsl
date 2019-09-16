@@ -5,7 +5,7 @@ import signal
 import subprocess
 import time
 
-from parsl.executors.errors import *
+from parsl.executors.errors import ControllerError
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)

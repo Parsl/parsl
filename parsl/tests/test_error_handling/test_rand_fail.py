@@ -4,12 +4,11 @@ import pytest
 
 import parsl
 from parsl.app.app import App
-from parsl.tests.configs.local_threads import config
-config.retries = 2
+from parsl.tests.configs.local_threads import fresh_config
 
 
-parsl.clear()
-parsl.load(config)
+local_config = fresh_config()
+local_config.retries = 2
 
 
 @App('python')
@@ -110,27 +109,24 @@ def test_deps(numtasks=10):
         fu = sleep_fail(0.2, 0, .4)
         fus.extend([fu])
 
-    """
-    App1   App2  ... AppN
-    |       |        |
-    V       V        V
-    App1   App2  ... AppN
-    """
+    # App1   App2  ... AppN
+    # |       |        |
+    # V       V        V
+    # App1   App2  ... AppN
 
     fus_2 = []
     for fu in fus:
         fu = sleep_fail(0, 0, .8, inputs=[fu])
         fus_2.extend([fu])
 
-    """
-    App1   App2  ... AppN
-      |       |        |
-      V       V        V
-    App1   App2  ... AppN
-       \      |       /
-        \     |      /
-          App_Final
-    """
+    # App1   App2  ... AppN
+    #   |       |        |
+    #   V       V        V
+    # App1   App2  ... AppN
+    #    \      |       /
+    #     \     |      /
+    #       App_Final
+
     fu_final = sleep_fail(1, 0, 0, inputs=fus_2)
 
     try:

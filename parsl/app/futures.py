@@ -1,15 +1,11 @@
 """This module implements DataFutures.
-
-We have two basic types of futures:
-    1. DataFutures which represent data objects
-    2. AppFutures which represent the futures on App/Leaf tasks.
 """
 import os
 import logging
 from concurrent.futures import Future
 
-from parsl.dataflow.futures import AppFuture, _STATE_TO_DESCRIPTION_MAP, FINISHED
-from parsl.app.errors import *
+from parsl.dataflow.futures import _STATE_TO_DESCRIPTION_MAP, FINISHED
+from parsl.app.errors import NotFutureError
 from parsl.data_provider.files import File
 
 logger = logging.getLogger(__name__)
@@ -26,21 +22,21 @@ class DataFuture(Future):
     def parent_callback(self, parent_fu):
         """Callback from executor future to update the parent.
 
+        Updates the future with the result (the File object) or the parent future's
+        exception.
+
         Args:
             - parent_fu (Future): Future returned by the executor along with callback
 
         Returns:
             - None
-
-        Updates the super() with the result() or exception()
         """
-        if parent_fu.done() is True:
-            e = parent_fu._exception
-            if e:
-                super().set_exception(e)
-            else:
-                super().set_result(self.file_obj)
-        return
+
+        e = parent_fu._exception
+        if e:
+            self.set_exception(e)
+        else:
+            self.set_result(self.file_obj)
 
     def __init__(self, fut, file_obj, tid=None):
         """Construct the DataFuture object.
@@ -57,6 +53,7 @@ class DataFuture(Future):
         super().__init__()
         self._tid = tid
         if isinstance(file_obj, str):
+            logger.warning("DataFuture constructed with a string, not a File. This is deprecated.")
             self.file_obj = File(file_obj)
         elif isinstance(file_obj, File):
             self.file_obj = file_obj
@@ -65,7 +62,7 @@ class DataFuture(Future):
         self.parent = fut
 
         if fut is None:
-            logger.debug("Setting result to filepath since no future was passed")
+            logger.debug("Setting result to filepath immediately since no parent future was passed")
             self.set_result(self.file_obj)
 
         else:
@@ -106,12 +103,7 @@ class DataFuture(Future):
 
     def __repr__(self):
 
-        # The DataFuture could be wrapping an AppFuture whose parent is a Future
-        # check to find the top level parent
-        if isinstance(self.parent, AppFuture):
-            parent = self.parent.parent
-        else:
-            parent = self.parent
+        parent = self.parent
 
         if parent:
             with parent._condition:

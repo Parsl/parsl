@@ -28,13 +28,9 @@ Results from running on Midway with IPP executor.
 Latency   |   Min:0.005968570709228516 Max:0.011006593704223633 Average:0.0065019774436950685
 Roundtrip |   Min:0.00716400146484375  Max:0.012288331985473633 Average:0.007741005420684815
 """
-import argparse
-import os
 import time
 
-import parsl
 from parsl.app.app import App
-from parsl.tests.conftest import load_dfk
 
 
 @App("python")
@@ -77,18 +73,6 @@ def test_python_remote_slow(count=2):
     fus = []
     for i in range(0, count):
         fu = python_app_slow(count)
-        fus.extend([fu])
-
-    for fu in fus:
-        print(fu.result())
-
-
-def test_python_remote(count=1):
-    """ Run with no delay.
-    """
-    fus = []
-    for i in range(0, count):
-        fu = python_app_slow(0)
         fus.extend([fu])
 
     for fu in fus:
@@ -145,16 +129,3 @@ def test_bash():
     x = bash_app(stdout="{0}.out".format(fname))
     print("Waiting ....")
     print(x.result())
-
-
-if __name__ == "__main__":
-    config_dir = os.path.join(os.path.dirname(parsl.__file__), 'tests', 'configs')
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--num", default=10,
-                        help="Number of apps to launch")
-    parser.add_argument("-c", "--config", default=os.path.join(config_dir, 'local_threads.py'),
-                        help="Config to run")
-    args = parser.parse_args()
-    load_dfk(args.config)
-
-    test_python(args.num)

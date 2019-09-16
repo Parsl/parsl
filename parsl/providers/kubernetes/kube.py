@@ -4,9 +4,12 @@ from parsl.providers.kubernetes.template import template_string
 
 logger = logging.getLogger(__name__)
 
-from parsl.providers.error import *
+from parsl.providers.error import OptionalModuleMissing
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.utils import RepresentationMixin
+
+import typeguard
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from kubernetes import client, config
@@ -23,11 +26,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Kubernetes namespace to create deployments.
     image : str
         Docker image to use in the deployment.
-    channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
     init_blocks : int
@@ -36,6 +34,22 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Minimum number of blocks to maintain.
     max_blocks : int
         Maximum number of blocks to maintain.
+    max_cpu : float
+        CPU limits of the blocks (pods), in cpu units.
+        This is the cpu "limits" option for resource specification.
+        Check kubernetes docs for more details. Default is 2.
+    max_mem : str
+        Memory limits of the blocks (pods), in Mi or Gi.
+        This is the memory "limits" option for resource specification on kubernetes.
+        Check kubernetes docs for more details. Default is 500Mi.
+    init_cpu : float
+        CPU limits of the blocks (pods), in cpu units.
+        This is the cpu "requests" option for resource specification.
+        Check kubernetes docs for more details. Default is 1.
+    init_mem : str
+        Memory limits of the blocks (pods), in Mi or Gi.
+        This is the memory "requests" option for resource specification on kubernetes.
+        Check kubernetes docs for more details. Default is 250Mi.
     parallelism : float
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
@@ -57,23 +71,26 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         List of tuples describing persistent volumes to be mounted in the pod.
         The tuples consist of (PVC Name, Mount Directory).
     """
-
+    @typeguard.typechecked
     def __init__(self,
-                 image,
-                 namespace='default',
-                 channel=None,
-                 nodes_per_block=1,
-                 init_blocks=4,
-                 min_blocks=0,
-                 max_blocks=10,
-                 parallelism=1,
-                 worker_init="",
-                 pod_name=None,
-                 user_id=None,
-                 group_id=None,
-                 run_as_non_root=False,
-                 secret=None,
-                 persistent_volumes=[]):
+                 image: str,
+                 namespace: str = 'default',
+                 nodes_per_block: int = 1,
+                 init_blocks: int = 4,
+                 min_blocks: int = 0,
+                 max_blocks: int = 10,
+                 max_cpu: float = 2,
+                 max_mem: str = "500Mi",
+                 init_cpu: float = 1,
+                 init_mem: str = "250Mi",
+                 parallelism: float = 1,
+                 worker_init: str = "",
+                 pod_name: Optional[str] = None,
+                 user_id: Optional[str] = None,
+                 group_id: Optional[str] = None,
+                 run_as_non_root: bool = False,
+                 secret: Optional[str] = None,
+                 persistent_volumes: List[Tuple[str, str]] = []) -> None:
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
                                         "Kubernetes provider requires kubernetes module and config.")
@@ -81,11 +98,14 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
 
         self.namespace = namespace
         self.image = image
-        self.channel = channel
         self.nodes_per_block = nodes_per_block
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
+        self.max_cpu = max_cpu
+        self.max_mem = max_mem
+        self.init_cpu = init_cpu
+        self.init_mem = init_mem
         self.parallelism = parallelism
         self.worker_init = worker_init
         self.secret = secret
@@ -98,13 +118,12 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.kube_client = client.CoreV1Api()
 
         # Dictionary that keeps track of jobs, keyed on job_id
-        self.resources = {}
+        self.resources = {}  # type: Dict[str, Dict[str, Any]]
 
-    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl"):
+    def submit(self, cmd_string, tasks_per_node, job_name="parsl"):
         """ Submit a job
         Args:
              - cmd_string  :(String) - Name of the container to initiate
-             - blocksize   :(float) - Number of replicas
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
@@ -132,8 +151,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                          job_name=job_name,
                          cmd_string=formatted_cmd,
                          volumes=self.persistent_volumes)
-        self.resources[pod_name] = {'status': 'RUNNING',
-                                    'pods': blocksize}
+        self.resources[pod_name] = {'status': 'RUNNING'}
 
         return pod_name
 
@@ -217,10 +235,16 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for volume in volumes:
             volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
                                                       name=volume[0]))
+        resources = client.V1ResourceRequirements(limits={'cpu': str(self.max_cpu),
+                                                          'memory': self.max_mem},
+                                                  requests={'cpu': str(self.init_cpu),
+                                                            'memory': self.init_mem}
+                                                  )
         # Configure Pod template container
         container = client.V1Container(
             name=pod_name,
             image=image,
+            resources=resources,
             ports=[client.V1ContainerPort(container_port=port)],
             volume_mounts=volume_mounts,
             command=['/bin/bash'],
@@ -263,10 +287,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     @property
     def scaling_enabled(self):
         return True
-
-    @property
-    def channels_required(self):
-        return False
 
     @property
     def label(self):

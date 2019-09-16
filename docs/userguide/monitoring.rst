@@ -39,6 +39,7 @@ Here's an example configuration that logs monitoring information to a local sqli
       ],
       monitoring=MonitoringHub(
           hub_address=address_by_hostname(),
+          hub_port=55055,
           logging_level=logging.INFO,
           resource_monitoring_interval=10,
       ),
@@ -52,25 +53,26 @@ Here's an example configuration that logs monitoring information to a local sqli
 Visualization
 -------------
 
-Run the `parsl-visualize` utility in the directory with the
-`monitoring.db` sqlite file to launch a web page for the workflow visualization::
+Run the `parsl-visualize` utility::
 
-   $ parsl-visualize sqlite:///<absolute-path-to-db>
+   $ parsl-visualize
 
-For example, if `monitoring.db` is in `/tmp` (as `/tmp/monitoring.db`), run `parsl-visualize` as follows::
+If your monitoring database is not the default of `monitoring.db` in the current working directory,
+you can specify a different database URI on the command line.  For example, if the full path
+to your `monitoring.db` is `/tmp/monitoring.db`, run::
 
    $ parsl-visualize sqlite:////tmp/monitoring.db
 
-This starts a visualization web server on `127.0.0.1:8080` by default. If you are running on a machine with a web browser, you can access viz_server in the browser via `127.0.0.1:8080`. If you are running on the login node of a cluster, to access viz_server in a local machine's browser, you need an ssh tunnel from your local machine to the cluster::
+By default, the visualization web server listens on `127.0.0.1:8080`. If you are running on a machine with a web browser, you can access viz_server in the browser via `127.0.0.1:8080`. If you are running on the login node of a cluster, to access viz_server in a local machine's browser, you can use an ssh tunnel from your local machine to the cluster::
 
    $ ssh -L 50000:127.0.0.1:8080 username@cluster_address
 
 This binds your local machine's port 50000 to the remote cluster's port 8080. This allows you to access viz_server directly on your local machine's browser via `127.0.0.1:50000`. 
 
-.. warning:: Below is an alternative to host the viz_server, which may violate the cluster's security policy. Please check with your cluster admin before doing this.
+.. warning:: Below is an alternative to host the viz_server on a cluster, which may violate the cluster's security policy. Please check with your cluster admin before doing this.
 If the cluster allows you to host a web server on its public IP address with a specific port (i.e., open to Internet via `public_IP:55555`), you can run::
 
-   $ parsl-visualize --listen 0.0.0.0 --port 55555 sqlite:///<absolute-path-to-db>
+   $ parsl-visualize --listen 0.0.0.0 --port 55555
 
 Workflows Page
 ^^^^^^^^^^^^^^

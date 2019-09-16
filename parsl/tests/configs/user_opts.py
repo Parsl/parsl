@@ -3,8 +3,12 @@ Specification of user-specific configuration options.
 
 The fields must be configured separately for each user. To disable any associated configurations, comment
 out the entry.
-"""
 
+User specific overrides that should not go in version control can be set by creating a
+file called local_user_opts.py, which declares a dictionary local_user_opts. Top level
+keys in that dictionary will replace entries in the below user opts file, so it should
+be safe to cut-and-paste entries from this file into that file.
+"""
 from typing import Any, Dict
 
 # PUBLIC_IP = "52.86.208.63" # "128.135.250.229"
@@ -89,6 +93,26 @@ user_opts = {
     # },
     # 'globus': {
     #     'endpoint': 'fixme',
-    #     'path': 'fixme'
+    #     'path': 'fixme',
+    #
+    #     # remote_writeable should specify a directory on a globus endpoint somewhere else,
+    #     # where files can be staged out to via globus during globus staging tests.
+    #     # For example:
+    #     'remote_writeable': 'globus://af7bda53-6d04-11e5-ba46-22000b92c6ec/home/bzc/'
     # }
 }  # type: Dict[str, Any]
+
+# This block attempts to import local_user_opts.py, which
+# can provide local overrides to the version-controlled
+# user_opts.
+# Users can add their own overrides into local_user_opts
+# in local_user_opts.py, which should not exist in a
+# pristine parsl source tree, and which should help avoid
+# accidentally committing secrets and other per-user
+# config into version control.
+try:
+    from .local_user_opts import local_user_opts
+    user_opts.update(local_user_opts)
+
+except ImportError:
+    pass

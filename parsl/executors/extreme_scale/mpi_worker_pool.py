@@ -9,6 +9,7 @@ import platform
 import threading
 import pickle
 import time
+import datetime
 import queue
 import uuid
 import zmq
@@ -98,11 +99,12 @@ class Manager(object):
                                              sys.version_info.minor,
                                              sys.version_info.micro),
                'os': platform.system(),
-               'hname': platform.node(),
+               'hostname': platform.node(),
                'dir': os.getcwd(),
                'prefetch_capacity': 0,
                'worker_count': (self.comm.size - 1),
                'max_capacity': (self.comm.size - 1) + 0,  # (+prefetch)
+               'reg_time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
@@ -487,10 +489,7 @@ if __name__ == "__main__":
     rank = comm.Get_rank()
     print("Starting rank: {}".format(rank))
 
-    try:
-        os.makedirs(args.logdir)
-    except FileExistsError:
-        pass
+    os.makedirs(args.logdir, exist_ok=True)
 
     # set_stream_logger()
     try:

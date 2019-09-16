@@ -48,18 +48,15 @@ class File(object):
         return self.filepath
 
     def __repr__(self):
-        return self.__str__()
+        content = "{0} at 0x{1:x} url={2} scheme={3} netloc={4} path={5} filename={6}".format(
+            self.__class__, id(self), self.url, self.scheme, self.netloc, self.path, self.filename)
+        if hasattr(self, 'local_path'):
+            content += " local_path={0}".format(self.local_path)
+
+        return "<{}>".format(content)
 
     def __fspath__(self):
         return self.filepath
-
-    def is_remote(self):
-        if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            return True
-        elif self.scheme in ['file']:  # TODO: is this enough?
-            return False
-        else:
-            raise Exception('Cannot determine if unknown file scheme {} is remote'.format(self.scheme))
 
     @property
     def filepath(self):
