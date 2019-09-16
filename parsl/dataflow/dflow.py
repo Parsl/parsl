@@ -10,7 +10,6 @@ import inspect
 import threading
 import sys
 import datetime
-
 from getpass import getuser
 from typing import Optional
 from uuid import uuid4
@@ -789,15 +788,21 @@ class DataFlowKernel(object):
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                    if executor.provider.channel.script_dir is None:
-                        executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                        if not executor.provider.channel.isdir(self.run_dir):
-                            parent, child = pathlib.Path(self.run_dir).parts[-2:]
-                            remote_run_dir = os.path.join(parent, child)
-                            executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
-                            executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
-                    executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
+
+                    if hasattr(executor.provider, 'channels'):
+                        logger.debug("Creating script_dir across ad-hoc cluster")
+
+                    else:
+                        if executor.provider.channel.script_dir is None:
+                            executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                            if not executor.provider.channel.isdir(self.run_dir):
+                                parent, child = pathlib.Path(self.run_dir).parts[-2:]
+                                remote_run_dir = os.path.join(parent, child)
+                                executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
+                                executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
+                        executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
+
             self.executors[executor.label] = executor
             executor.start()
         if hasattr(self, 'flowcontrol') and isinstance(self.flowcontrol, FlowControl):
