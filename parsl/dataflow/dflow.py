@@ -202,7 +202,7 @@ class DataFlowKernel(object):
             task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
         task_log_info['task_depends'] = None
         if self.tasks[task_id]['depends'] is not None:
-            task_log_info['task_depends'] = ",".join([str(t._tid) for t in self.tasks[task_id]['depends']])
+            task_log_info['task_depends'] = ",".join([str(t.tid) for t in self.tasks[task_id]['depends']])
         task_log_info['task_elapsed_time'] = None
         if self.tasks[task_id]['time_returned'] is not None:
             task_log_info['task_elapsed_time'] = (self.tasks[task_id]['time_returned'] -
@@ -246,8 +246,6 @@ class DataFlowKernel(object):
              makes this callback
         """
 
-        self.tasks[task_id]['app_fu'].parent_callback(future)
-
         try:
             res = future.result()
             if isinstance(res, RemoteExceptionWrapper):
@@ -269,7 +267,9 @@ class DataFlowKernel(object):
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
                 return
 
-            if self.tasks[task_id]['fail_count'] <= self._config.retries:
+            if self.tasks[task_id]['status'] == States.dep_fail:
+                logger.debug("Task {} failed due to dependency failure so skipping retries".format(task_id))
+            elif self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
 
@@ -300,6 +300,8 @@ class DataFlowKernel(object):
         # pending - in which case, we should consider ourself for relaunch
         if self.tasks[task_id]['status'] == States.pending:
             self.launch_if_ready(task_id)
+
+        self.tasks[task_id]['app_fu'].parent_callback(future)
 
         return
 
@@ -371,14 +373,6 @@ class DataFlowKernel(object):
                         exec_fu = self.launch_task(
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
-                if exec_fu:
-
-                    try:
-                        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-                    except Exception as e:
-                        logger.error("add_done_callback got an exception {} which will be ignored".format(e))
-
-                    self.tasks[task_id]['exec_fu'] = exec_fu
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
@@ -388,12 +382,20 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-                fu = Future()
-                fu.retries_left = 0
-                self.tasks[task_id]['exec_fu'] = fu
-                fu.set_exception(DependencyError(exceptions,
-                                                 task_id,
-                                                 None))
+                exec_fu = Future()
+                exec_fu.retries_left = 0
+                exec_fu.set_exception(DependencyError(exceptions,
+                                                      task_id,
+                                                      None))
+
+            if exec_fu:
+
+                try:
+                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                except Exception as e:
+                    logger.error("add_done_callback got an exception {} which will be ignored".format(e))
+
+                self.tasks[task_id]['exec_fu'] = exec_fu
 
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
@@ -465,17 +467,14 @@ class DataFlowKernel(object):
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            inputs[idx] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         for kwarg, f in kwargs.items():
-            kwargs[kwarg] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
-            newargs[idx] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (newargs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         return tuple(newargs), kwargs, func
 

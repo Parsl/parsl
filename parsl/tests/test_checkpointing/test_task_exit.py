@@ -26,7 +26,6 @@ def slow_double(x, sleep_dur=1):
 
 
 @pytest.mark.local
-@pytest.mark.skip('fails intermittently in pytest')
 def test_at_task_exit(n=2):
     """Test checkpointing at task_exit behavior
     """
@@ -41,7 +40,21 @@ def test_at_task_exit(n=2):
     for i in range(0, n):
         d[i].result()
 
-    with time_limited_open("{}/checkpoint/tasks.pkl".format(dfk.rundir), 'rb', seconds=5) as f:
+    # There are two potential race conditions here which
+    # might be useful to be aware of if debugging this test.
+
+    #  i) .result() returning does not necessarily mean that
+    #     a checkpoint that has been written: it means that the
+    #     AppFuture has had its result written. In the DFK
+    #     implementation at time of writing, .result() returning
+    #     does not indicate that a checkpoint has been written,
+    #     it seems like.
+
+    # ii) time_limited_open has a specific time limit in it.
+    #     While this limit might seem generous at time of writing,
+    #     it should be remembered that this is still a race.
+
+    with time_limited_open("{}/checkpoint/tasks.pkl".format(dfk.run_dir), 'rb', seconds=5) as f:
         tasks = []
         try:
             while f:
