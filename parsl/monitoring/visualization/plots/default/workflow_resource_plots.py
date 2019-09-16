@@ -109,10 +109,10 @@ def worker_efficiency(task, node):
 
         worker_plot = [0] * (end - start + 1)
         total_workers = node['worker_count'].sum()
-        
+
         for i, row in task.iterrows():
             for j in range(int(row['epoch_time_running']), int(row['epoch_time_returned'])):
-                worker_plot[j-start] += 1
+                worker_plot[j - start] += 1
         fig = go.Figure(
             data=[go.Scatter(x=list(range(0, end - start + 1)),
                              y=worker_plot,
@@ -127,7 +127,7 @@ def worker_efficiency(task, node):
                                         title='Time (seconds)'),
                              yaxis=dict(title='Number of workers'),
                              title="Worker efficiency"))
-        return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)        
+        return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
     except Exception as e:
         return "The resource efficiency plot cannot be generated because of exception {}.".format(e)
 
