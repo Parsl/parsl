@@ -27,6 +27,7 @@ class Workflow(db.Model):
 
 class Node(db.Model):
     __tablename__ = NODE
+    id = db.Column('id', db.Integer, nullable=False, primary_key=True, autoincrement=True)
     run_id = db.Column('run_id', db.Text, nullable=False)
     hostname = db.Column('hostname', db.Text, nullable=False)
     cpu_count = db.Column('cpu_count', db.Integer, nullable=False)
@@ -35,9 +36,6 @@ class Node(db.Model):
     worker_count = db.Column('worker_count', db.Integer, nullable=False)
     python_v = db.Column('python_v', db.Text, nullable=False)
     reg_time = db.Column('reg_time', db.DateTime, nullable=False)
-    __table_args__ = (
-        db.PrimaryKeyConstraint('hostname', 'run_id', 'reg_time'),
-    )
 
 
 # TODO: expand to full set of info
