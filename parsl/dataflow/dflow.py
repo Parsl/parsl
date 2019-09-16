@@ -309,8 +309,7 @@ class DataFlowKernel(object):
         """This function is called as a callback when an AppFuture
         is in its final state.
 
-        It will trigger post-app processing such as checkpointing
-        and stageout.
+        It will trigger post-app processing such as checkpointing.
 
         Args:
              task_id (string) : Task id
