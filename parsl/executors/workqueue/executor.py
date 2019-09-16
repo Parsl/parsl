@@ -1,6 +1,7 @@
 import threading
 import multiprocessing
 import logging
+import subprocess
 from concurrent.futures import Future
 
 import os
@@ -117,12 +118,16 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             function_data_loc_remote = function_data_loc.split("/")[-1]
             function_result_loc = item["result_loc"]
             function_result_loc_remote = function_result_loc.split("/")[-1]
+            function_source_loc = item["source_loc"]
+            function_source_loc_remote = function_source_loc.split("/")[-1]
             input_files = item["input_files"]
             output_files = item["output_files"]
             std_files = item["std_files"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
+            full_wrapper_name = workqueue_worker.__file__ + "/../python_package_run"
+            wrapper_name = full_wrappern_name.split("/"[-1]
 
             remapping_string = ""
             std_string = ""
@@ -146,6 +151,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 remapping_string = "-r " + remapping_string
                 remapping_string = remapping_string[:-1]
 
+            # Perform Python module analysis using Work Queue utilities
+            output_json_file = "task_" + str(parsl_id) + "_analysis.json"
+            environment_name = "task_" + str(parsl_id) + "_venv"
+            subprocess.call("./python_package_analyze {} {}".format(source_code_loc_remote, output_json_file), shell=True)
+            subprocess.call("./python_package_create {} {}".format(output_json_file, environment_name) , shell=True)
+
             # Create command string
             logger.debug(launch_cmd)
             command_str = launch_cmd.format(input_file=function_data_loc_remote,
@@ -153,11 +164,13 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                                             remapping_string=remapping_string)
             command_str = std_string + command_str
             logger.debug(command_str)
+            full_command = "./python_package_run " + environment_name + " \"" + command_str + "\""
+            logger.debug(full_command)
 
             # Create WorkQueue task for the command
             logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
             try:
-                t = Task(command_str)
+                t = Task(full_command)
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
                 continue
@@ -169,6 +182,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             # Specify script, and data/result files for task
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
+            t.specify_file(full_wrapper_name, wrapper_name, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_tag(str(parsl_id))
@@ -599,14 +613,20 @@ class WorkQueueExecutor(ParslExecutor):
         # Pickle the result into object to pass into message buffer
         function_data_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_data")
         function_result_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_result")
+        function_source_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_source")
 
         logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
 
+        # Obtain source code and write to file for later analysis
+        source_code = inspect.getsource(func)
+        source_file = open(function_source_file, "w")
+        source_file.write(source_code)
+        source_file.close()
+
         # Obtain function information and put into dictionary
         if self.source:
             # Obtain function information and put into dictionary
-            source_code = inspect.getsource(func)
             name = func.__name__
             function_info = {"source code": source_code,
                              "name": name,
@@ -633,6 +653,7 @@ class WorkQueueExecutor(ParslExecutor):
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
                "result_loc": function_result_file,
+               "source_loc": function_source_file,
                "input_files": input_files,
                "output_files": output_files,
                "std_files": std_files}
