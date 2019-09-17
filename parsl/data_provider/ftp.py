@@ -21,7 +21,6 @@ class FTPSeparateTaskStaging(Staging, RepresentationMixin):
     def stage_in(self, dm, executor, file, parent_fut):
         working_dir = dm.dfk.executors[executor].working_dir
         if working_dir:
-            os.makedirs(working_dir, exist_ok=True)
             file.local_path = os.path.join(working_dir, file.filename)
         else:
             file.local_path = file.filename
