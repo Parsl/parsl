@@ -66,7 +66,7 @@ class Config(RepresentationMixin):
                  retries: int = 0,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
-                 max_idletime: Optional[float] = 120.0,
+                 max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False):
         if executors is None:
