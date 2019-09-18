@@ -128,7 +128,7 @@ def worker_efficiency(task, node):
                              title="Worker efficiency"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
     except Exception as e:
-        return "The resource efficiency plot cannot be generated because of exception {}.".format(e)
+        return "The worker efficiency plot cannot be generated because of exception {}.".format(e)
 
 
 def resource_efficiency(resource, node, label='CPU'):
