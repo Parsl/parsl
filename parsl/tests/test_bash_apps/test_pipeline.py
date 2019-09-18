@@ -67,6 +67,7 @@ def test_increment(depth=5):
             # this test is a bit close to a test of the specific implementation
             # of File
             assert not hasattr(file, 'local_path'), "File on local side has overridden local_path, file: {}".format(repr(file))
+            assert file.filepath == "test{0}.txt".format(key), "Submit side filepath has not been preserved over execution"
 
             data = open(filename, 'r').read().strip()
             assert data == str(
