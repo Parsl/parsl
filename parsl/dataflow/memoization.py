@@ -9,6 +9,24 @@ logger = logging.getLogger(__name__)
 
 @singledispatch
 def id_for_memo(obj):
+    """This should return a byte sequence which identifies the supplied
+    value for memoization purposes: for any two calls of id_for_memo,
+    the byte sequence should be the same when the "same"
+    value is supplied, and different otherwise.
+    "same" is in quotes about because sameness is not as straightforward
+    serialising out the content.
+
+    For example, for dicts,
+      {"a":3, "b":4} == {"b":4, "a":3}
+
+    id_for_memo by default will output a serialization of the content,
+    which should avoid falsely identifying two different values, but will
+    not in some cases correctly identify two values - for example, the
+    two dicts given above.
+
+    New methods should be registered for id_for_memo for types where this
+    is a problem.
+    """
     logger.warning("id_for_memo defaulting for unknown type {}".format(type(obj)))
     # decision:
     # should memoization fail for unknown types? or should it use serialisation based
