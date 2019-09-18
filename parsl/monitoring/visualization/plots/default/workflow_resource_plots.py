@@ -110,7 +110,7 @@ def worker_efficiency(task, node):
         total_workers = node['worker_count'].sum()
 
         for i, row in task.iterrows():
-            for j in range(int(row['epoch_time_running']), int(row['epoch_time_returned'])):
+            for j in range(int(row['epoch_time_running']), int(row['epoch_time_returned']) + 1):
                 worker_plot[j - start] += 1
         fig = go.Figure(
             data=[go.Scatter(x=list(range(0, end - start + 1)),
