@@ -30,6 +30,7 @@ def test_bash_memoization(n=2):
     for i in d:
         assert d[i].exception() is None
 
+
 @App('bash', cache=True)
 def fail_on_presence_kw(outputs=[], foo={}):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
@@ -44,16 +45,15 @@ def test_bash_memoization_keywords(n=2):
         os.remove(temp_filename)
 
     print("Launching: ", n)
-    x = fail_on_presence_kw(outputs=[temp_filename], foo={"a":1, "b":2})
+    x = fail_on_presence_kw(outputs=[temp_filename], foo={"a": 1, "b": 2})
     x.result()
 
     d = {}
     for i in range(0, n):
-        d[i] = fail_on_presence_kw(outputs=[temp_filename], foo={"b":2, "a":1})
+        d[i] = fail_on_presence_kw(outputs=[temp_filename], foo={"b": 2, "a": 1})
 
     for i in d:
         assert d[i].exception() is None
-
 
 
 if __name__ == '__main__':
