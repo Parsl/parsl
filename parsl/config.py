@@ -47,6 +47,8 @@ class Config(RepresentationMixin):
     strategy : str, optional
         Strategy to use for scaling resources according to workflow needs. Can be 'simple' or `None`. If `None`, dynamic
         scaling will be disabled. Default is 'simple'.
+    max_idletime : float, optional
+        The maximum idle time for an executor in the 'simple' strategy. Default is 120.0 seconds.
     usage_tracking : bool, optional
         Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
@@ -64,6 +66,7 @@ class Config(RepresentationMixin):
                  retries: int = 0,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
+                 max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False):
         if executors is None:
@@ -89,6 +92,7 @@ class Config(RepresentationMixin):
         self.retries = retries
         self.run_dir = run_dir
         self.strategy = strategy
+        self.max_idletime = max_idletime
         self.usage_tracking = usage_tracking
         self.monitoring = monitoring
 
