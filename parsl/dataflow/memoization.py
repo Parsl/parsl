@@ -2,8 +2,10 @@ import hashlib
 from functools import singledispatch
 import logging
 from parsl.executors.serialize.serialize import serialize_object
+import types
 
 logger = logging.getLogger(__name__)
+
 
 @singledispatch
 def id_for_memo(obj):
@@ -19,6 +21,7 @@ def id_for_memo(obj):
 @id_for_memo.register(str)
 @id_for_memo.register(int)
 @id_for_memo.register(float)
+@id_for_memo.register(types.FunctionType)
 @id_for_memo.register(type(None))
 def id_for_memo_serialize(obj):
     logger.debug("id_for_memo generic serialization for type {}".format(type(obj)))
@@ -30,7 +33,7 @@ def id_for_memo_list(denormalized_list):
     logger.debug("normalising list for memoization")
     normalized_list = []
     for e in denormalized_list:
-      normalized_list.append(id_for_memo(e))
+        normalized_list.append(id_for_memo(e))
     return serialize_object(normalized_list)[0]
 
 
@@ -42,10 +45,9 @@ def id_for_memo_dict(denormalized_dict):
 
     normalized_list = []
     for k in keys:
-      normalized_list.append(id_for_memo(k))
-      normalized_list.append(id_for_memo(denormalized_dict[k]))
+        normalized_list.append(id_for_memo(k))
+        normalized_list.append(id_for_memo(denormalized_dict[k]))
     return serialize_object(normalized_list)[0]
-
 
 
 class Memoizer(object):
