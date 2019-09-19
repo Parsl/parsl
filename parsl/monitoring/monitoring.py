@@ -276,12 +276,24 @@ class MonitoringHub(RepresentationMixin):
             self.priority_msgs.put(("STOP", 0))
 
     @staticmethod
-    def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, logging_level, sleep_dur):
+    def monitor_wrapper(f,
+                        task_id,
+                        monitoring_hub_url,
+                        run_id,
+                        logging_level,
+                        sleep_dur):
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, logging_level, sleep_dur), name="Monitor-Wrapper-{}".format(task_id))
+            p = Process(target=monitor,
+                        args=(os.getpid(),
+                              task_id,
+                              monitoring_hub_url,
+                              run_id,
+                              logging_level,
+                              sleep_dur), 
+                        name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
                 return f(*args, **kwargs)
