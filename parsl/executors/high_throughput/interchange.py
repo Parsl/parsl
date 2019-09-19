@@ -42,13 +42,13 @@ class ManagerLost(Exception):
     ''' Task lost due to worker loss. Worker is considered lost when multiple heartbeats
     have been missed.
     '''
-    def __init__(self, worker_id, hostname):
-        self.worker_id = worker_id
+    def __init__(self, manager_id, hostname):
+        self.manager_id = manager_id
         self.tstamp = time.time()
         self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of Manager {} on host {}".format(self.worker_id, self.hostname)
+        return "Task failure due to loss of Manager {} on host {}".format(self.manager_id, self.hostname)
 
     def __str__(self):
         return self.__repr__()
