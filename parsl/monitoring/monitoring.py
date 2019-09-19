@@ -135,7 +135,7 @@ class MonitoringHub(RepresentationMixin):
                  workflow_version=None,
                  logging_endpoint='sqlite:///monitoring.db',
                  logdir=None,
-                 logging_level=logging.INFO,
+                 monitoring_debug=False,
                  resource_monitoring_enabled=True,
                  resource_monitoring_interval=30):  # in seconds
         """
@@ -163,8 +163,8 @@ class MonitoringHub(RepresentationMixin):
              Default: 'sqlite:///monitoring.db'
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
-        logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO (20)
+        monitoring_debug : Bool
+             Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
              Set this field to True to enable logging the info of resource usage of each task. Default: True
         resource_monitoring_interval : int
@@ -185,7 +185,7 @@ class MonitoringHub(RepresentationMixin):
 
         self.logging_endpoint = logging_endpoint
         self.logdir = logdir
-        self.logging_level = logging_level
+        self.monitoring_debug = monitoring_debug
 
         self.workflow_name = workflow_name
         self.workflow_version = workflow_version
@@ -203,7 +203,7 @@ class MonitoringHub(RepresentationMixin):
         # Initialize the ZMQ pipe to the Parsl Client
         self.logger = start_file_logger("{}/monitoring_hub.log".format(self.logdir),
                                         name="monitoring_hub",
-                                        level=self.logging_level)
+                                        level=logging.DEBUG if self.monitoring_debug else logging.INFO)
         self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")
@@ -229,7 +229,7 @@ class MonitoringHub(RepresentationMixin):
                                           "client_address": self.client_address,
                                           "client_port": self.dfk_port,
                                           "logdir": self.logdir,
-                                          "logging_level": self.logging_level,
+                                          "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                           "run_id": run_id
                                   },
                                   name="Monitoring-Queue-Process"
@@ -239,7 +239,7 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc = Process(target=dbm_starter,
                                 args=(self.priority_msgs, self.node_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
-                                        "logging_level": self.logging_level,
+                                        "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                         "db_url": self.logging_endpoint,
                                   },
                                 name="Monitoring-DBM-Process"
@@ -276,12 +276,12 @@ class MonitoringHub(RepresentationMixin):
             self.priority_msgs.put(("STOP", 0))
 
     @staticmethod
-    def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur):
+    def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, logging_level, sleep_dur):
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur), name="Monitor-Wrapper-{}".format(task_id))
+            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, logging_level, sleep_dur), name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
                 return f(*args, **kwargs)
@@ -305,7 +305,7 @@ class Hub(object):
                  monitoring_hub_address="127.0.0.1",
                  logdir=".",
                  run_id=None,
-                 logging_level=logging.DEBUG,
+                 logging_level=logging.INFO,
                  atexit_timeout=3    # in seconds
                 ):
         """ Initializes a monitoring configuration class.
@@ -424,7 +424,12 @@ def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, stop_q, *args, 
     hub.start(priority_msgs, node_msgs, resource_msgs, stop_q)
 
 
-def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
+def monitor(pid,
+            task_id,
+            monitoring_hub_url,
+            run_id,
+            logging_level=logging.INFO,
+            sleep_dur=10):
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
@@ -436,7 +441,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
+        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
     logging.debug("start of monitor")
 
     radio = UDPRadio(monitoring_hub_url,
