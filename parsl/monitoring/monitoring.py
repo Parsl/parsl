@@ -292,7 +292,7 @@ class MonitoringHub(RepresentationMixin):
                               monitoring_hub_url,
                               run_id,
                               logging_level,
-                              sleep_dur), 
+                              sleep_dur),
                         name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
