@@ -29,10 +29,12 @@ TASK_REQUEST_TAG = 11
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
+
 class WorkerLost(Exception):
     """Exception raised when a worker is lost
     """
     def __init__(self, worker_id, hostname):
+        import time
         self.worker_id = worker_id
         self.tstamp = time.time()
         self.hostname = hostname
@@ -42,6 +44,7 @@ class WorkerLost(Exception):
 
     def __str__(self):
         return self.__repr__()
+
 
 class Manager(object):
     """ Manager manages task execution by the workers
@@ -279,7 +282,6 @@ class Manager(object):
                     logger.critical("[TASK_PULL_THREAD] Exiting")
                     break
 
-
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -316,7 +318,6 @@ class Manager(object):
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
-
     def worker_watchdog(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -328,7 +329,6 @@ class Manager(object):
 
         logger.debug("[WORKER_WATCHDOG_THREAD] Starting thread")
 
-        last_beat = time.time()
         while not kill_event.is_set():
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
@@ -355,7 +355,6 @@ class Manager(object):
                     self.procs[worker_id] = p
                     logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
                 time.sleep(self.poll_period)
-
 
         logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
 
