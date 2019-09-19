@@ -19,6 +19,7 @@ import psutil
 
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.high_throughput.errors import WorkerLost
 import multiprocessing
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -28,20 +29,6 @@ RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
 HEARTBEAT_CODE = (2 ** 32) - 1
-
-
-class WorkerLost(Exception):
-    """Exception raised when a worker is lost
-    """
-    def __init__(self, worker_id, hostname):
-        self.worker_id = worker_id
-        self.hostname = hostname
-
-    def __repr__(self):
-        return "Task failure due to loss of worker {} on host {}".format(self.worker_id, self.hostname)
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class Manager(object):

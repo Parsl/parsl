@@ -4,6 +4,8 @@ import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.htex_local import fresh_config
 
+from parsl.executors.high_throughput.errors import WorkerLost
+
 
 def local_setup():
     config = fresh_config()
@@ -24,8 +26,6 @@ def kill_worker():
 
 @pytest.mark.local
 def test_htex_worker_failure():
-    # Putting `WorkerLost` here as the exception causes
-    # the test to fail-- I am not sure why
-    with pytest.raises(Exception):
+    with pytest.raises(WorkerLost):
         f = kill_worker()
         f.result()
