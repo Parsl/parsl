@@ -339,7 +339,8 @@ class Manager(object):
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                            logger.info("[WORKER_WATCHDOG_THREAD] Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            result_package = {'task_id': task['task_id'], 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
