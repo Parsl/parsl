@@ -206,13 +206,14 @@ class GlobusStaging(Staging, RepresentationMixin):
 
     def stage_in(self, dm, executor, file, parent_fut):
         globus_provider = _get_globus_provider(dm.dfk, executor)
+        globus_provider._update_local_path(file, executor, dm.dfk)
         stage_in_app = globus_provider._globus_stage_in_app(executor=executor, dfk=dm.dfk)
         app_fut = stage_in_app(outputs=[file], staging_inhibit_output=True, parent_fut=parent_fut)
         return app_fut._outputs[0]
 
     def stage_out(self, dm, executor, file, app_fu):
         globus_provider = _get_globus_provider(dm.dfk, executor)
-        globus_provider._update_stage_out_local_path(file, executor, dm.dfk)
+        globus_provider._update_local_path(file, executor, dm.dfk)
         stage_out_app = globus_provider._globus_stage_out_app(executor=executor, dfk=dm.dfk)
         return stage_out_app(app_fu, inputs=[file])
 
@@ -257,7 +258,7 @@ class GlobusStaging(Staging, RepresentationMixin):
                 'endpoint_path': endpoint_path,
                 'working_dir': working_dir}
 
-    def _update_stage_out_local_path(self, file, executor, dfk):
+    def _update_local_path(self, file, executor, dfk):
         executor_obj = dfk.executors[executor]
         globus_ep = self._get_globus_endpoint(executor_obj)
         file.local_path = os.path.join(globus_ep['working_dir'], file.filename)
@@ -269,8 +270,6 @@ class GlobusStaging(Staging, RepresentationMixin):
 def _globus_stage_in(provider, executor, parent_fut=None, outputs=[], staging_inhibit_output=True):
     globus_ep = provider._get_globus_endpoint(executor)
     file = outputs[0]
-    file.local_path = os.path.join(
-            globus_ep['working_dir'], file.filename)
     dst_path = os.path.join(
             globus_ep['endpoint_path'], file.filename)
 
