@@ -34,9 +34,7 @@ class WorkerLost(Exception):
     """Exception raised when a worker is lost
     """
     def __init__(self, worker_id, hostname):
-        import time
         self.worker_id = worker_id
-        self.tstamp = time.time()
         self.hostname = hostname
 
     def __repr__(self):
