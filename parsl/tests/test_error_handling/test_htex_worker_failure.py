@@ -1,10 +1,7 @@
-import argparse
-
 import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.executors.high_throughput.process_worker_pool import WorkerLost
 from parsl.tests.configs.htex_local import fresh_config
 
 

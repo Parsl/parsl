@@ -387,8 +387,8 @@ class Manager(object):
                                                       args=(self._kill_event,),
                                                       name="Result-Pusher")
         self._worker_watchdog_thread = threading.Thread(target=self.worker_watchdog,
-                                                      args=(self._kill_event,),
-                                                      name="worker-watchdog")
+                                                        args=(self._kill_event,),
+                                                        name="worker-watchdog")
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
         self._worker_watchdog_thread.start()
