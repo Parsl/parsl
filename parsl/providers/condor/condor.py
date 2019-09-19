@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import time
+import typeguard
 
 from parsl.channels import LocalChannel
 from parsl.utils import RepresentationMixin
@@ -11,6 +12,10 @@ from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.error import ScaleOutFailed
 
 logger = logging.getLogger(__name__)
+
+from typing import Dict, List, Optional
+from parsl.channels.base import Channel
+from parsl.launchers.launchers import Launcher
 
 # See http://pages.cs.wisc.edu/~adesmet/status.html
 translate_table = {
@@ -70,24 +75,25 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     cmd_timeout : int
         Timeout for commands made to the scheduler in seconds
     """
+    @typeguard.typechecked
     def __init__(self,
-                 channel=LocalChannel(),
-                 nodes_per_block=1,
-                 cores_per_slot=None,
-                 mem_per_slot=None,
-                 init_blocks=1,
-                 min_blocks=0,
-                 max_blocks=10,
-                 parallelism=1,
-                 environment=None,
-                 project='',
-                 scheduler_options='',
-                 transfer_input_files=[],
-                 walltime="00:10:00",
-                 worker_init='',
-                 launcher=SingleNodeLauncher(),
-                 requirements='',
-                 cmd_timeout=60):
+                 channel: Channel = LocalChannel(),
+                 nodes_per_block: int = 1,
+                 cores_per_slot: Optional[int] = None,
+                 mem_per_slot: Optional[float] = None,
+                 init_blocks: int = 1,
+                 min_blocks: int = 0,
+                 max_blocks: int = 10,
+                 parallelism: float = 1,
+                 environment: Optional[Dict[str, str]] = None,
+                 project: str = '',
+                 scheduler_options: str = '',
+                 transfer_input_files: List[str] = [],
+                 walltime: str = "00:10:00",
+                 worker_init: str = '',
+                 launcher: Launcher = SingleNodeLauncher(),
+                 requirements: str = '',
+                 cmd_timeout: int = 60) -> None:
 
         label = 'condor'
         super().__init__(label,
