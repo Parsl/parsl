@@ -22,21 +22,17 @@ def _roundrobin(items):
     """ Returns items one at a time in an infinite loop
     """
     while True:
-        try:
-            for item in items:
-                yield item
-        except Exception:
-            # Remove the iterator we just exhausted from the cycle.
-            pass
+        for item in items:
+            yield item
 
 
 class AdHocProvider(ExecutionProvider, RepresentationMixin):
     """ Ad-hoc execution provider
 
     This provider is used to provision execution resources over one or more ad hoc nodes
-    that are accessible over a Channel (say, ssh) but otherwise lack a cluster scheduler.
+    that are each accessible over a Channel (say, ssh) but otherwise lack a cluster scheduler.
 
-    Each submit call invoked will go through the list channels in a round-robin fashion
+    Each submit call invoked will go through the list of channels in a round-robin fashion
 
     Parameters
     ----------
@@ -92,7 +88,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
               - script_filename (string) : Name of the submit script
 
         Returns:
-              - True: on success
+              - None: on success
 
         Raises:
               SchedulerMissingArgs : If template is missing args
@@ -111,10 +107,10 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             logger.error("Failed writing to submit script: %s", script_filename)
             raise (ScriptPathError(script_filename, e))
 
-        return True
+        return None
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
-        ''' Submits the command onto the a channel from a round-robin arrangeement of channels
+        ''' Submits the command onto a channel from a round-robin arrangement of channels
 
         Submit returns an ID that corresponds to the task that was just submitted.
 
