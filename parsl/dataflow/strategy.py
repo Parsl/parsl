@@ -173,8 +173,12 @@ class Strategy(object):
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
+            try:
+                status = executor.status()
+            except RuntimeError as e:
+                logger.error("FlowControl strategy failed: {} \nAbandoning this strategy round.".format(e), exc_info=True)
+                continue
 
-            status = executor.status()
             self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these

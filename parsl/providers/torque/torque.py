@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import subprocess
 
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
@@ -64,6 +65,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher`,
 
     """
+
     def __init__(self,
                  channel=LocalChannel(),
                  account=None,
@@ -111,24 +113,42 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(self.resources.keys())
-
         jobs_missing = list(self.resources.keys())
+        job_status_cmd = "qstat {0}".format(job_id_list)
+        retcode = -1
+        stdout = None
+        stderr = None
+        try:
+            retcode, stdout, stderr = self.execute_wait(job_status_cmd)
+        except subprocess.TimeoutExpired as e:
+            message = "Job status command timed out: '{}'".format(job_status_cmd)
+            raise RuntimeError(message) from e
 
-        retcode, stdout, stderr = self.execute_wait("qstat {0}".format(job_id_list))
-        for line in stdout.split('\n'):
-            parts = line.split()
-            if not parts or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
-                continue
-            job_id = parts[0]
-            status = translate_table.get(parts[4], 'UNKNOWN')
-            self.resources[job_id]['status'] = status
-            jobs_missing.remove(job_id)
+        # We first check stdout before parsing the output. In certain conditions qstat command will return a
+        # non-zero exit code, however, stdout contains job id statuses (eg: warnings about historical/completed job statuses).
+        # In such cases we ignore the non-success exit code and extract whatever job status information we can.
+        if stdout is not None:
+            for line in stdout.split('\n'):
+                parts = line.split()
+                if not parts or len(parts) < 5 or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
+                    continue
+                job_id = parts[0]
+                status = translate_table.get(parts[4], 'UNKNOWN')
+                self.resources[job_id]['status'] = status
+                jobs_missing.remove(job_id)
+
+        elif retcode != 0:
+            message = "Job status command '{}' failed with return code {}".format(job_status_cmd, retcode)
+            if stderr is not None:
+                message += "\nstderr: {}".format(stderr.strip())
+            raise RuntimeError(message)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = translate_table['E']
+                logger.info("Missing job status marked as {} for {}".format(translate_table['E'], missing_job))
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         ''' Submits the command onto an Local Resource Manager job.
