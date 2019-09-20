@@ -37,12 +37,31 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
     Parameters
     ----------
 
+    channels : list of Channel ojects
+      Each channel represents a connection to a remote node
+
     worker_init : str
       Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
       Since this provider calls the same worker_init across all nodes in the ad-hoc cluster, it is
       recommended that a single script is made available across nodes such as ~/setup.sh that can
       be invoked.
 
+    cmd_timeout : int
+      Duration for which the provider will wait for a command to be invoked on a remote system.
+      Defaults to 30s
+
+    parallelism : float
+      Determines the ratio of workers to tasks as managed by the strategy component
+
+    init_blocks : int
+      The number of nodes/managers to launch to at the start of the executor.
+      This should be the # of channels specified. Default : 0
+
+    min_blocks : int
+      The minimum number of nodes/managers to maintain. Default: 0
+
+    max_blocks : int
+      The maximum number of nodes/managers that may be provisioned. Default: 0
     """
 
     def __init__(self,
