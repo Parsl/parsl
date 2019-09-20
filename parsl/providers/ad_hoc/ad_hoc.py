@@ -11,6 +11,13 @@ from parsl.utils import RepresentationMixin
 logger = logging.getLogger(__name__)
 
 
+translate_table = {
+    'R': 'RUNNING',
+    'CA': 'CANCELLED',
+    'F': 'FAILED',  # (failed),
+}  # (special exit state
+
+
 def _roundrobin(items):
     """ Returns items one at a time in an infinite loop
     """
@@ -143,7 +150,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             script_path = channel.push_file(script_path, channel.script_dir)
 
         if not isinstance(channel, LocalChannel):
-            logger.debug("Launching in remote mode")
             # Bash would return until the streams are closed. So we redirect to a outs file
             cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
             retcode, stdout, stderr = channel.execute_wait(cmd, self.cmd_timeout)
@@ -151,7 +157,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 if line.startswith("PID:"):
                     remote_pid = line.split("PID:")[1].strip()
                     job_id = remote_pid
-                    logger.info(f"Remote PID at {channel} is {remote_pid}")
             if job_id is None:
                 logger.warning("Channel failed to start remote command/retrieve PID")
         else:
@@ -162,7 +167,9 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 logger.debug("Channel execute failed for: {}, {}".format(channel, e))
                 raise
 
-        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
+        self.resources[job_id] = {'job_id': job_id,
+                                  'status': 'RUNNING',
+                                  'cmd': 'bash {0}'.format(script_path),
                                   'channel': channel,
                                   'remote_pid': remote_pid,
                                   'proc': proc}
@@ -170,16 +177,53 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         return job_id
 
     def status(self, job_ids):
-        logger.info(f"Checking status of {job_ids}")
+        """ Get status of the list of jobs with job_ids
+
+        Parameters
+        ----------
+
+        job_ids : list of strings
+          List of job id strings
+
+        Returns
+        -------
+        list of status strings ['PENDING', 'COMPLETED', 'FAILED']
+        """
         for job_id in job_ids:
-            if job_id not in self.resources:
-                logger.warning(f"Job_id: {job_id} not present in resources table")
-                continue
-        raise Exception("Not implemented")
+            channel = self.resources[job_id]['channel']
+            status_command = "ps --pid {} | grep {}".format(self.resources[job_id]['job_id'],
+                                                            self.resources[job_id]['cmd'].split()[0])
+            retcode, stdout, stderr = channel.execute_wait(status_command)
+            if retcode != 0 and self.resources[job_id]['status'] == 'RUNNING':
+                self.resources[job_id]['status'] == 'FAILED'
+
+        return [self.resources[job_id]['status'] for job_id in job_ids]
 
     def cancel(self, job_ids):
-        logger.info(f"Cancel invoked on {job_ids}")
-        raise Exception("Not Implemented")
+        """ Cancel a list of jobs with job_ids
+
+        Parameters
+        ----------
+
+        job_ids : list of strings
+          List of job id strings
+
+        Returns
+        -------
+        list of confirmation bools: [True, False...]
+        """
+        logger.debug(f"Cancelling jobs: {job_ids}")
+        rets = []
+        for job_id in job_ids:
+            channel = self.resources[job_id]['channel']
+            retcode, stdout, stderr = channel.execute_wait("kill -TERM -{}".format(
+                self.resources[job_id]['job_id']))
+            if retcode == 0:
+                rets.append(True)
+            else:
+                rets.append(False)
+            self.resources[job_id]['status'] == 'COMPLETED'
+        return rets
 
     @property
     def scaling_enabled(self):
