@@ -1,4 +1,4 @@
 include LICENSE
 include parsl/monitoring/visualization/templates/*
 include parsl/monitoring/visualization/static/*
-include parsl/executors/workqueue/python_package_run
+include parsl/executors/workqueue/packaging_tools/*
