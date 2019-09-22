@@ -87,6 +87,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         q.specify_log(wq_master_log)
         q.specify_transactions_log(wq_trans_log)
 
+    environment_table = {}
     wq_tasks = set()
     orig_ppid = os.getppid()
     continue_running = True
@@ -119,16 +120,17 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             function_result_loc = item["result_loc"]
             function_result_loc_remote = function_result_loc.split("/")[-1]
             function_source_loc = item["source_loc"]
-            function_source_loc_remote = function_source_loc.split("/")[-1]
             input_files = item["input_files"]
             output_files = item["output_files"]
             std_files = item["std_files"]
+            function_name = item["function_name"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
-            full_wrapper_name = workqueue_worker.__file__ + "/../python_package_run"
-            wrapper_name = full_wrappern_name.split("/"[-1]
-
+            full_run_name = os.path.abspath(workqueue_worker.__file__ + "/../packaging_tools/python_package_run")
+            run_name = full_run_name.split("/")[-1]
+            python_package_analyze = os.path.abspath(workqueue_worker.__file__ + "/../packaging_tools/python_package_analyze")
+            python_package_create = os.path.abspath(workqueue_worker.__file__ + "/../packaging_tools/python_package_create")
             remapping_string = ""
             std_string = ""
 
@@ -151,11 +153,20 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 remapping_string = "-r " + remapping_string
                 remapping_string = remapping_string[:-1]
 
-            # Perform Python module analysis using Work Queue utilities
-            output_json_file = "task_" + str(parsl_id) + "_analysis.json"
-            environment_name = "task_" + str(parsl_id) + "_venv"
-            subprocess.call("./python_package_analyze {} {}".format(source_code_loc_remote, output_json_file), shell=True)
-            subprocess.call("./python_package_create {} {}".format(output_json_file, environment_name) , shell=True)
+            # Function virtual environment has not been created 
+            if function_name not in environment_table.keys():
+                # Perform Python module analysis using Work Queue utilities
+                output_json_file = "runinfo/task_" + str(parsl_id) + "_analysis.json"
+                environment_name = "task_" + str(parsl_id) + "_venv"
+                environment_path = os.path.abspath(environment_name + ".tar.gz")
+                print("**************************************************************environment_path: {}".format(environment_path))
+                subprocess.call("{} {} {}".format(python_package_analyze, function_source_loc, output_json_file), shell=True)
+                subprocess.call("{} {} {}".format(python_package_create, output_json_file, environment_name), shell=True)
+                environment_table[function_name] = environment_path
+            # Environment for this function has already been created
+            else:
+                environment_path = environment_table[function_name]
+            environment_path_remote = environment_path.split("/")[-1]
 
             # Create command string
             logger.debug(launch_cmd)
@@ -182,7 +193,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             # Specify script, and data/result files for task
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
-            t.specify_file(full_wrapper_name, wrapper_name, WORK_QUEUE_INPUT, cache=False)
+            t.specify_file(full_run_name, run_name, WORK_QUEUE_INPUT, cache=True)
+            t.specify_file(environment_path, environment_path_remote, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_tag(str(parsl_id))
@@ -562,6 +574,7 @@ class WorkQueueExecutor(ParslExecutor):
         input_files = []
         output_files = []
         std_files = []
+        name = func.__name__
 
         # Add input files from the "inputs" keyword argument
         func_inputs = kwargs.get("inputs", [])
@@ -627,7 +640,6 @@ class WorkQueueExecutor(ParslExecutor):
         # Obtain function information and put into dictionary
         if self.source:
             # Obtain function information and put into dictionary
-            name = func.__name__
             function_info = {"source code": source_code,
                              "name": name,
                              "args": args,
@@ -651,6 +663,7 @@ class WorkQueueExecutor(ParslExecutor):
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         msg = {"task_id": task_id,
+               "function_name": name,
                "data_loc": function_data_file,
                "result_loc": function_result_file,
                "source_loc": function_source_file,
