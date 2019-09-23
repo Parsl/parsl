@@ -53,15 +53,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
     parallelism : float
       Determines the ratio of workers to tasks as managed by the strategy component
 
-    init_blocks : int
-      The number of nodes/managers to launch to at the start of the executor.
-      This should be the # of channels specified. Default : 0
-
-    min_blocks : int
-      The minimum number of nodes/managers to maintain. Default: 0
-
-    max_blocks : int
-      The maximum number of nodes/managers that may be provisioned. Default: 0
     """
 
     def __init__(self,
@@ -69,9 +60,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                  worker_init='',
                  cmd_timeout=30,
                  parallelism=1,
-                 init_blocks=0,
-                 min_blocks=0,
-                 max_blocks=10,
                  move_files=None):
 
         self.channels = channels
@@ -81,9 +69,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         self.parallelism = 1
         self.move_files = move_files
         self.launcher = SimpleLauncher()
-        self.init_blocks = init_blocks
-        self.min_blocks = min_blocks
-        self.max_blocks = max_blocks
+        self.init_blocks = self.min_blocks = self.max_blocks = len(channels)
 
         # This will be overridden by the DFK to the rundirs.
         self.script_dir = "."
