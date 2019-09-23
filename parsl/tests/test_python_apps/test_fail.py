@@ -16,13 +16,7 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     s = sleep_dur + random.randint(-sleep_rand_max, sleep_rand_max)
 
     time.sleep(s)
-    x = float(random.randint(0, 100)) / 100
-    if x <= fail_prob:
-        # print("Fail")
-        raise Exception("App failure")
-    else:
-        pass
-        # print("Succeed")
+    raise Exception("App failure")
 
 
 def test_no_deps(numtasks=2):
