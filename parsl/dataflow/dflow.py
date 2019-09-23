@@ -792,7 +792,12 @@ class DataFlowKernel(object):
 
                     if hasattr(executor.provider, 'channels'):
                         logger.debug("Creating script_dir across ad-hoc cluster")
-
+                        counter = 0
+                        for channel in executor.provider.channels:
+                            remote_script_dir = executor.provider.channels[counter].script_dir
+                            assert remote_script_dir, "{} is missing script_dir".format(executor.provider.channels[counter])
+                            executor.provider.channels[counter].makedirs(remote_script_dir, exist_ok=True)
+                            counter += 1
                     else:
                         if executor.provider.channel.script_dir is None:
                             executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
