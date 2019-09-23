@@ -26,7 +26,7 @@ extras_require = {
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure', 'msrestazure'],
-    'workqueue': ['conda_pack', 'stdlib_list'],
+    'workqueue': ['conda', 'conda_pack', 'stdlib_list'],
 }
 extras_require['all'] = sum(extras_require.values(), [])
 
