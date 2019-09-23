@@ -18,9 +18,6 @@ config = Config(
             address=address_by_query(),
             worker_logdir_root="/scratch/midway2/yadunand/parsl_scripts",
             provider=AdHocProvider(
-                init_blocks=2,
-                max_blocks=2,
-                min_blocks=2,
                 worker_init="source /scratch/midway2/yadunand/parsl_env_setup.sh",
                 channels=[SSHChannel(hostname=m,
                                      username="yadunand",
