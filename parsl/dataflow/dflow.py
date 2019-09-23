@@ -202,7 +202,7 @@ class DataFlowKernel(object):
             task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
         task_log_info['task_depends'] = None
         if self.tasks[task_id]['depends'] is not None:
-            task_log_info['task_depends'] = ",".join([str(t._tid) for t in self.tasks[task_id]['depends']])
+            task_log_info['task_depends'] = ",".join([str(t.tid) for t in self.tasks[task_id]['depends']])
         task_log_info['task_elapsed_time'] = None
         if self.tasks[task_id]['time_returned'] is not None:
             task_log_info['task_elapsed_time'] = (self.tasks[task_id]['time_returned'] -
@@ -246,8 +246,6 @@ class DataFlowKernel(object):
              makes this callback
         """
 
-        self.tasks[task_id]['app_fu'].parent_callback(future)
-
         try:
             res = future.result()
             if isinstance(res, RemoteExceptionWrapper):
@@ -269,7 +267,9 @@ class DataFlowKernel(object):
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
                 return
 
-            if self.tasks[task_id]['fail_count'] <= self._config.retries:
+            if self.tasks[task_id]['status'] == States.dep_fail:
+                logger.debug("Task {} failed due to dependency failure so skipping retries".format(task_id))
+            elif self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.debug("Task {} marked for retry".format(task_id))
 
@@ -301,14 +301,15 @@ class DataFlowKernel(object):
         if self.tasks[task_id]['status'] == States.pending:
             self.launch_if_ready(task_id)
 
+        self.tasks[task_id]['app_fu'].parent_callback(future)
+
         return
 
     def handle_app_update(self, task_id, future, memo_cbk=False):
         """This function is called as a callback when an AppFuture
         is in its final state.
 
-        It will trigger post-app processing such as checkpointing
-        and stageout.
+        It will trigger post-app processing such as checkpointing.
 
         Args:
              task_id (string) : Task id
@@ -371,14 +372,6 @@ class DataFlowKernel(object):
                         exec_fu = self.launch_task(
                             task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
 
-                if exec_fu:
-
-                    try:
-                        exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-                    except Exception as e:
-                        logger.error("add_done_callback got an exception {} which will be ignored".format(e))
-
-                    self.tasks[task_id]['exec_fu'] = exec_fu
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
@@ -388,12 +381,20 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-                fu = Future()
-                fu.retries_left = 0
-                self.tasks[task_id]['exec_fu'] = fu
-                fu.set_exception(DependencyError(exceptions,
-                                                 task_id,
-                                                 None))
+                exec_fu = Future()
+                exec_fu.retries_left = 0
+                exec_fu.set_exception(DependencyError(exceptions,
+                                                      task_id,
+                                                      None))
+
+            if exec_fu:
+
+                try:
+                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                except Exception as e:
+                    logger.error("add_done_callback got an exception {} which will be ignored".format(e))
+
+                self.tasks[task_id]['exec_fu'] = exec_fu
 
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
@@ -465,17 +466,14 @@ class DataFlowKernel(object):
 
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
-            inputs[idx] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         for kwarg, f in kwargs.items():
-            kwargs[kwarg] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
-            newargs[idx] = self.data_manager.stage_in(f, executor)
-            func = self.data_manager.replace_task(f, func, executor)
+            (newargs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         return tuple(newargs), kwargs, func
 
@@ -483,28 +481,34 @@ class DataFlowKernel(object):
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         app_fut._outputs = []
-        for f in outputs:
+        for idx, f in enumerate(outputs):
             if isinstance(f, File) and not self.check_staging_inhibited(kwargs):
                 # replace a File with a DataFuture - either completing when the stageout
                 # future completes, or if no stage out future is returned, then when the
                 # app itself completes.
-                logger.debug("Submitting stage out for output file {}".format(f))
-                stageout_fut = self.data_manager.stage_out(f, executor, app_fut)
+
+                # The staging code will get a clean copy which it is allowed to mutate,
+                # while the DataFuture-contained original will not be modified by any staging.
+                f_copy = f.cleancopy()
+                outputs[idx] = f_copy
+
+                logger.debug("Submitting stage out for output file {}".format(repr(f)))
+                stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
-                    logger.debug("Adding a dependency on stageout future for {}".format(f))
+                    logger.debug("Adding a dependency on stageout future for {}".format(repr(f)))
                     app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))
                 else:
-                    logger.debug("No stageout dependency for {}".format(f))
+                    logger.debug("No stageout dependency for {}".format(repr(f)))
                     app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
 
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
                 # in the not-very-tested stageout system?
-                newfunc = self.data_manager.replace_task_stage_out(f, func, executor)
+                newfunc = self.data_manager.replace_task_stage_out(f_copy, func, executor)
                 if newfunc:
                     func = newfunc
             else:
-                logger.debug("Not performing staging for: {}".format(f))
+                logger.debug("Not performing staging for: {}".format(repr(f)))
                 app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
         return func
 

@@ -71,8 +71,7 @@ class DataFuture(Future):
             else:
                 raise NotFutureError("DataFuture can be created only with a FunctionFuture on None")
 
-        logger.debug("Creating DataFuture with parent: %s", self.parent)
-        logger.debug("Filepath: %s", self.filepath)
+        logger.debug("Creating DataFuture with parent: %s and file: %s", self.parent, repr(self.file_obj))
 
     @property
     def tid(self):
@@ -115,11 +114,11 @@ class DataFuture(Future):
                             _STATE_TO_DESCRIPTION_MAP[parent._state],
                             parent._exception.__class__.__name__)
                     else:
-                        return '<%s at %#x state=%s returned %s>' % (
+                        return '<%s at %#x state=%s with file %s>' % (
                             self.__class__.__name__,
                             id(self),
                             _STATE_TO_DESCRIPTION_MAP[parent._state],
-                            self.filepath)
+                            repr(self.file_obj))
                 return '<%s at %#x state=%s>' % (
                     self.__class__.__name__,
                     id(self),
