@@ -153,12 +153,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 remapping_string = "-r " + remapping_string
                 remapping_string = remapping_string[:-1]
 
-            # Function virtual environment has not been created 
+            # Function virtual environment has not been created
             if function_name not in environment_table.keys():
                 # Perform Python module analysis using Work Queue utilities
                 logger.debug("Creating new environment for function {}".format(function_name))
                 output_json_file = "runinfo/task_" + function_name + "_analysis.json"
-                environment_name = function_name +  "_venv"
+                environment_name = function_name + "_venv"
                 environment_path = os.path.abspath("runinfo/" + environment_name + ".tar.gz")
                 subprocess.call("{} {} {}".format(python_package_analyze, function_source_loc, output_json_file), shell=True)
                 subprocess.call("{} {} {}".format(python_package_create, output_json_file, environment_name), shell=True)
