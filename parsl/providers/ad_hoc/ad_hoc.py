@@ -216,7 +216,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         -------
         list of confirmation bools: [True, False...]
         """
-        logger.debug(f"Cancelling jobs: {job_ids}")
+        logger.debug("Cancelling jobs: {}".format(job_ids))
         rets = []
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
