@@ -99,6 +99,13 @@ user_opts = {
     #     # where files can be staged out to via globus during globus staging tests.
     #     # For example:
     #     'remote_writeable': 'globus://af7bda53-6d04-11e5-ba46-22000b92c6ec/home/bzc/'
+    # },
+    # 'adhoc': {
+    #    # This specifies configuration parameters when testing an ad-hoc SSH based cluster
+    #    'username': 'fixme', # username on remote systems
+    #    'remote_hostnames': ['hostname1', 'hostname2'], # addresses of remote systems
+    #    'worker_init': 'init commands',  # worker_init for remote systems
+    #    'script_dir': "/path"  # script directory on remote systems
     # }
 }  # type: Dict[str, Any]
 
