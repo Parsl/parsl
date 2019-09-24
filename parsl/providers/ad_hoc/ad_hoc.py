@@ -167,14 +167,15 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         else:
 
             try:
-                job_id, proc = channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
+                final_cmd = 'bash {0}'.format(script_path)
+                job_id, proc = channel.execute_no_wait(final_cmd, self.cmd_timeout)
             except Exception as e:
                 logger.debug("Channel execute failed for: {}, {}".format(channel, e))
                 raise
 
         self.resources[job_id] = {'job_id': job_id,
                                   'status': 'RUNNING',
-                                  'cmd': 'bash {0}'.format(script_path),
+                                  'cmd': final_cmd,
                                   'channel': channel,
                                   'remote_pid': remote_pid,
                                   'proc': proc}
