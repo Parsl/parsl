@@ -1,5 +1,4 @@
 from parsl.providers import AdHocProvider
-from parsl.launchers import SimpleLauncher
 from parsl.channels import SSHChannel
 from parsl.executors import HighThroughputExecutor
 
@@ -19,8 +18,8 @@ config = Config(
                 parallelism=1,
                 worker_init=user_opts['adhoc']['worker_init'],
                 channels=[SSHChannel(hostname=m,
-                                   username=user_opts['adhoc']['username'],
-                                   script_dir=user_opts['adhoc']['script_dir'],
+                                     username=user_opts['adhoc']['username'],
+                                     script_dir=user_opts['adhoc']['script_dir'],
                 ) for m in user_opts['adhoc']['remote_hostnames']]
             )
         )
