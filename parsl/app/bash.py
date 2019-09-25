@@ -87,15 +87,22 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     returncode = None
     try:
+        print("bash app: launch subprocess")
         proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
+        print("bash app: wait for subprocess")
         proc.wait(timeout=timeout)
         returncode = proc.returncode
+        print("bash app: waited for subprocess, returncode={}".format(returncode))
 
     except subprocess.TimeoutExpired:
+        print("bash app: timeout expired")
         raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout))
 
     except Exception as e:
+        print("bash app: general exception")
         raise pe.AppException("[{}] App caught exception: {}".format(func_name, proc.returncode), e)
+    finally:
+        print("bash app: in finally block")
 
     if returncode != 0:
         raise pe.AppFailure("[{}] App failed with exit code: {}".format(func_name, proc.returncode), proc.returncode)
