@@ -19,6 +19,7 @@ import psutil
 
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.high_throughput.errors import WorkerLost
 import multiprocessing
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -302,6 +303,47 @@ class Manager(object):
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
+    def worker_watchdog(self, kill_event):
+        """ Listens on the pending_result_queue and sends out results via 0mq
+
+        Parameters:
+        -----------
+        kill_event : threading.Event
+              Event to let the thread know when it is time to die.
+        """
+
+        logger.debug("[WORKER_WATCHDOG_THREAD] Starting thread")
+
+        while not kill_event.is_set():
+            for worker_id, p in self.procs.items():
+                if not p.is_alive():
+                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has died".format(worker_id))
+                    try:
+                        task = self._tasks_in_progress.pop(worker_id)
+                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was busy when it died".format(worker_id))
+                        try:
+                            raise WorkerLost(worker_id, platform.node())
+                        except Exception:
+                            logger.info("[WORKER_WATCHDOG_THREAD] Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            result_package = {'task_id': task['task_id'], 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                            pkl_package = pickle.dumps(result_package)
+                            self.pending_result_queue.put(pkl_package)
+                    except KeyError:
+                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was not busy when it died".format(worker_id))
+
+                    p = multiprocessing.Process(target=worker, args=(worker_id,
+                                                                     self.uid,
+                                                                     self.pending_task_queue,
+                                                                     self.pending_result_queue,
+                                                                     self.ready_worker_queue,
+                                                                     self._tasks_in_progress
+                                                                 ), name="HTEX-Worker-{}".format(worker_id))
+                    self.procs[worker_id] = p
+                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
+                time.sleep(self.poll_period)
+
+        logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
+
     def start(self):
         """ Start the worker processes.
 
@@ -309,6 +351,7 @@ class Manager(object):
         """
         start = time.time()
         self._kill_event = threading.Event()
+        self._tasks_in_progress = multiprocessing.Manager().dict()
 
         self.procs = {}
         for worker_id in range(self.worker_count):
@@ -317,6 +360,7 @@ class Manager(object):
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
+                                                             self._tasks_in_progress
                                                          ), name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
@@ -329,8 +373,12 @@ class Manager(object):
         self._result_pusher_thread = threading.Thread(target=self.push_results,
                                                       args=(self._kill_event,),
                                                       name="Result-Pusher")
+        self._worker_watchdog_thread = threading.Thread(target=self.worker_watchdog,
+                                                        args=(self._kill_event,),
+                                                        name="worker-watchdog")
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
+        self._worker_watchdog_thread.start()
 
         logger.info("Loop start")
 
@@ -341,6 +389,7 @@ class Manager(object):
 
         self._task_puller_thread.join()
         self._result_pusher_thread.join()
+        self._worker_watchdog_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
             logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
@@ -394,7 +443,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
+def worker(worker_id, pool_id, task_queue, result_queue, worker_queue, tasks_in_progress):
     """
 
     Put request token into queue
@@ -417,6 +466,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
 
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
+        tasks_in_progress[worker_id] = req
         tid = req['task_id']
         logger.info("Received task {}".format(tid))
 
@@ -429,7 +479,8 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         try:
             result = execute_task(req['buffer'])
             serialized_result = serialize_object(result)
-        except Exception:
+        except Exception as e:
+            logger.info('Caught an exception: {}'.format(e))
             result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'task_id': tid, 'result': serialized_result}
@@ -439,6 +490,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         pkl_package = pickle.dumps(result_package)
 
         result_queue.put(pkl_package)
+        tasks_in_progress.pop(worker_id)
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):

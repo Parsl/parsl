@@ -29,7 +29,6 @@ os:
 
 # command to run tests
 script:
-    - export PARSL_TESTING="true"
     - pip install -r test-requirements.txt
     - flake8 parsl/
     - parsl/tests/lint-inits.sh
