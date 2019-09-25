@@ -73,7 +73,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-        self.roundrobin = _roundrobin(self.channels)
+        self.least_loaded = self._least_loaded()
         logger.debug("AdHoc provider initialized")
 
     def _write_submit_script(self, script_string, script_filename):
@@ -109,6 +109,31 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         return None
 
+    def _least_loaded(self):
+        """ Find channels that are not in use
+
+        Returns
+        -------
+        channel : Channel object
+        None : When there are no more available channels
+        """
+        while True:
+            channel_counts = {channel: 0 for channel in self.channels}
+            for job_id in self.resources:
+                channel = self.resources[job_id]['channel']
+                if self.resources[job_id]['status'] == 'RUNNING':
+                    channel_counts[channel] = channel_counts.get(channel, 0) + 1
+                else:
+                    channel_counts[channel] = channel_counts.get(channel, 0)
+
+            logger.debug("Channel_counts : {}".format(channel_counts))
+            if 0 not in channel_counts.values():
+                yield None
+
+            for channel in channel_counts:
+                if channel_counts[channel] == 0:
+                    yield channel
+
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         ''' Submits the command onto a channel from a round-robin arrangement of channels
 
@@ -135,7 +160,11 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
           Identifier for the job
 
         '''
-        channel = next(self.roundrobin)
+        channel = next(self.least_loaded)
+        if channel is None:
+            logger.warning("All Channels in Ad-Hoc provider are in use")
+            return None
+
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
@@ -149,6 +178,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         job_id = None
         proc = None
         remote_pid = None
+        final_cmd = None
 
         if (self.move_files is None and not isinstance(channel, LocalChannel)) or (self.move_files):
             logger.debug("Pushing start script")
@@ -156,8 +186,8 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         if not isinstance(channel, LocalChannel):
             # Bash would return until the streams are closed. So we redirect to a outs file
-            cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
-            retcode, stdout, stderr = channel.execute_wait(cmd, self.cmd_timeout)
+            final_cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
+            retcode, stdout, stderr = channel.execute_wait(final_cmd, self.cmd_timeout)
             for line in stdout.split('\n'):
                 if line.startswith("PID:"):
                     remote_pid = line.split("PID:")[1].strip()
@@ -165,7 +195,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             if job_id is None:
                 logger.warning("Channel failed to start remote command/retrieve PID")
         else:
-
             try:
                 final_cmd = 'bash {0}'.format(script_path)
                 job_id, proc = channel.execute_no_wait(final_cmd, self.cmd_timeout)
@@ -196,6 +225,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         """
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
+            logger.warning("YADU : Split : {}".format(self.resources[job_id]))
             status_command = "ps --pid {} | grep {}".format(self.resources[job_id]['job_id'],
                                                             self.resources[job_id]['cmd'].split()[0])
             retcode, stdout, stderr = channel.execute_wait(status_command)
