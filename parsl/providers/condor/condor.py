@@ -143,8 +143,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         34524643.0 1
         """
 
-        for line in stdout.strip().split('\n'):
-            parts = line.split()
+        for line in stdout.splitlines():
+            parts = line.strip().split()
             job_id = parts[0]
             status = translate_table.get(parts[1], 'UNKNOWN')
             self.resources[job_id]['status'] = status
