@@ -225,7 +225,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         """
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
-            logger.warning("YADU : Split : {}".format(self.resources[job_id]))
             status_command = "ps --pid {} | grep {}".format(self.resources[job_id]['job_id'],
                                                             self.resources[job_id]['cmd'].split()[0])
             retcode, stdout, stderr = channel.execute_wait(status_command)
