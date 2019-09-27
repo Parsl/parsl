@@ -64,12 +64,10 @@ class DataFuture(Future):
         if fut is None:
             logger.debug("Setting result to filepath immediately since no parent future was passed")
             self.set_result(self.file_obj)
-
+        elif isinstance(fut, Future):
+            self.parent.add_done_callback(self.parent_callback)
         else:
-            if isinstance(fut, Future):
-                self.parent.add_done_callback(self.parent_callback)
-            else:
-                raise NotFutureError("DataFuture can be created only with a FunctionFuture on None")
+            raise NotFutureError("DataFuture parent must be either another Future or None")
 
         logger.debug("Creating DataFuture with parent: %s and file: %s", self.parent, repr(self.file_obj))
 
