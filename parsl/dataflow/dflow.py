@@ -252,7 +252,7 @@ class DataFlowKernel(object):
                 res.reraise()
 
         except Exception as e:
-            logger.exception("Task {} failed".format(task_id))
+            logger.info("Task {} failed".format(task_id))
 
             # We keep the history separately, since the future itself could be
             # tossed.
@@ -260,7 +260,7 @@ class DataFlowKernel(object):
             self.tasks[task_id]['fail_count'] += 1
 
             if not self._config.lazy_errors:
-                logger.debug("Eager fail, skipping retry logic")
+                logger.exception("Eager fail, skipping retry logic")
                 self.tasks[task_id]['status'] = States.failed
                 if self.monitoring:
                     task_log_info = self._create_task_log_info(task_id, 'eager')
@@ -271,11 +271,11 @@ class DataFlowKernel(object):
                 logger.debug("Task {} failed due to dependency failure so skipping retries".format(task_id))
             elif self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
-                logger.debug("Task {} marked for retry".format(task_id))
+                logger.info("Task {} marked for retry".format(task_id))
 
             else:
-                logger.info("Task {} failed after {} retry attempts".format(task_id,
-                                                                            self._config.retries))
+                logger.exception("Task {} failed after {} retry attempts".format(task_id,
+                                                                                 self._config.retries))
                 self.tasks[task_id]['status'] = States.failed
                 self.tasks_failed_count += 1
                 self.tasks[task_id]['time_returned'] = datetime.datetime.now()
