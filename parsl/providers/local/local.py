@@ -248,10 +248,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         return rets
 
     @property
-    def scaling_enabled(self):
-        return True
-
-    @property
     def current_capacity(self):
         return len(self.resources)
 
