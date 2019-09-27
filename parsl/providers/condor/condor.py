@@ -310,10 +310,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         return rets
 
     @property
-    def scaling_enabled(self):
-        return True
-
-    @property
     def current_capacity(self):
         return self
 

@@ -18,8 +18,6 @@ class ExecutionProvider(metaclass=ABCMeta):
           [ ids ]       ------->|  cancel
           [cancel]     <--------|----+
                                 |
-          [True/False] <--------|  scaling_enabled
-                                |
                                 +-------------------
      """
     _cores_per_node = None  # type: Optional[int]
@@ -80,17 +78,6 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         Raises:
              - ExecutionProviderException or its subclasses
-        '''
-
-        pass
-
-    @abstractproperty
-    def scaling_enabled(self) -> bool:
-        ''' The callers of ParslExecutors need to differentiate between Executors
-        and Executors wrapped in a resource provider
-
-        Returns:
-              - Status (Bool)
         '''
 
         pass
