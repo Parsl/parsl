@@ -5,17 +5,10 @@ import time
 from parsl.channels import LocalChannel
 from parsl.launchers import SimpleLauncher
 from parsl.providers.provider_base import ExecutionProvider
-from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
+from parsl.providers.error import ScriptPathError
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
-
-
-translate_table = {
-    'R': 'RUNNING',
-    'CA': 'CANCELLED',
-    'F': 'FAILED',  # (failed),
-}  # (special exit state
 
 
 def _roundrobin(items):
@@ -80,7 +73,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-        self.roundrobin = _roundrobin(self.channels)
+        self.least_loaded = self._least_loaded()
         logger.debug("AdHoc provider initialized")
 
     def _write_submit_script(self, script_string, script_filename):
@@ -88,25 +81,27 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         Load the template string with config values and write the generated submit script to
         a submit script file.
 
-        Args:
-              - template_string (string) : The template string to be used for the writing submit script
-              - script_filename (string) : Name of the submit script
+        Parameters
+        ----------
+        script_string: (string)
+          The template string to be used for the writing submit script
 
-        Returns:
-              - None: on success
+        script_filename: (string)
+          Name of the submit script
 
-        Raises:
-              SchedulerMissingArgs : If template is missing args
-              ScriptPathError : Unable to write submit script out
+        Returns
+        -------
+        None: on success
+
+        Raises
+        ------
+        ScriptPathError
+          Unable to write submit script out
         '''
 
         try:
             with open(script_filename, 'w') as f:
                 f.write(script_string)
-
-        except KeyError as e:
-            logger.error("Missing keys for submit script: %s", e)
-            raise (SchedulerMissingArgs(e.args, self.label))
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
@@ -114,24 +109,62 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         return None
 
+    def _least_loaded(self):
+        """ Find channels that are not in use
+
+        Returns
+        -------
+        channel : Channel object
+        None : When there are no more available channels
+        """
+        while True:
+            channel_counts = {channel: 0 for channel in self.channels}
+            for job_id in self.resources:
+                channel = self.resources[job_id]['channel']
+                if self.resources[job_id]['status'] == 'RUNNING':
+                    channel_counts[channel] = channel_counts.get(channel, 0) + 1
+                else:
+                    channel_counts[channel] = channel_counts.get(channel, 0)
+
+            logger.debug("Channel_counts : {}".format(channel_counts))
+            if 0 not in channel_counts.values():
+                yield None
+
+            for channel in channel_counts:
+                if channel_counts[channel] == 0:
+                    yield channel
+
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         ''' Submits the command onto a channel from a round-robin arrangement of channels
 
         Submit returns an ID that corresponds to the task that was just submitted.
 
-        Args:
-             - command  :(String) Commandline invocation to be made on the remote side.
-             - tasks_per_node (int) : command invocations to be launched per node
+        Parameters
+        ----------
+        command: (String)
+          Commandline invocation to be made on the remote side.
 
-        Kwargs:
-             - job_name (String): Name for job, must be unique
+        tasks_per_node: (int)
+          command invocations to be launched per node
 
-        Returns:
-             - None: At capacity, cannot provision more
-             - job_id: (string) Identifier for the job
+        job_name: (String)
+          Name of the job. Default : parsl.auto
+
+
+        Returns
+        -------
+        None
+          At capacity, cannot provision more
+
+        job_id: (string)
+          Identifier for the job
 
         '''
-        channel = next(self.roundrobin)
+        channel = next(self.least_loaded)
+        if channel is None:
+            logger.warning("All Channels in Ad-Hoc provider are in use")
+            return None
+
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
@@ -145,6 +178,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         job_id = None
         proc = None
         remote_pid = None
+        final_cmd = None
 
         if (self.move_files is None and not isinstance(channel, LocalChannel)) or (self.move_files):
             logger.debug("Pushing start script")
@@ -152,8 +186,8 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         if not isinstance(channel, LocalChannel):
             # Bash would return until the streams are closed. So we redirect to a outs file
-            cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
-            retcode, stdout, stderr = channel.execute_wait(cmd, self.cmd_timeout)
+            final_cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
+            retcode, stdout, stderr = channel.execute_wait(final_cmd, self.cmd_timeout)
             for line in stdout.split('\n'):
                 if line.startswith("PID:"):
                     remote_pid = line.split("PID:")[1].strip()
@@ -161,16 +195,16 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             if job_id is None:
                 logger.warning("Channel failed to start remote command/retrieve PID")
         else:
-
             try:
-                job_id, proc = channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
+                final_cmd = 'bash {0}'.format(script_path)
+                job_id, proc = channel.execute_no_wait(final_cmd, self.cmd_timeout)
             except Exception as e:
                 logger.debug("Channel execute failed for: {}, {}".format(channel, e))
                 raise
 
         self.resources[job_id] = {'job_id': job_id,
                                   'status': 'RUNNING',
-                                  'cmd': 'bash {0}'.format(script_path),
+                                  'cmd': final_cmd,
                                   'channel': channel,
                                   'remote_pid': remote_pid,
                                   'proc': proc}
@@ -182,7 +216,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         Parameters
         ----------
-
         job_ids : list of strings
           List of job id strings
 
@@ -205,7 +238,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         Parameters
         ----------
-
         job_ids : list of strings
           List of job id strings
 
@@ -213,7 +245,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         -------
         list of confirmation bools: [True, False...]
         """
-        logger.debug(f"Cancelling jobs: {job_ids}")
+        logger.debug("Cancelling jobs: {}".format(job_ids))
         rets = []
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
