@@ -252,8 +252,7 @@ class DataFlowKernel(object):
                 res.reraise()
 
         except Exception as e:
-            logger.info("Task {} failed".format(task_id))
-
+            logger.debug("Task {} failed".format(task_id))
             # We keep the history separately, since the future itself could be
             # tossed.
             self.tasks[task_id]['fail_history'].append(str(e))
@@ -268,7 +267,7 @@ class DataFlowKernel(object):
                 return
 
             if self.tasks[task_id]['status'] == States.dep_fail:
-                logger.debug("Task {} failed due to dependency failure so skipping retries".format(task_id))
+                logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
             elif self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.info("Task {} marked for retry".format(task_id))
