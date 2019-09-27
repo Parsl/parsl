@@ -115,11 +115,11 @@ def worker_efficiency(task, node):
         fig = go.Figure(
             data=[go.Scatter(x=list(range(0, end - start + 1)),
                              y=worker_plot,
-                             name='Busy workers',
+                             name='Total busy workers',
                              ),
                   go.Scatter(x=list(range(0, end - start + 1)),
                              y=[total_workers] * (end - start + 1),
-                             name='Total requested workers',
+                             name='Total online workers',
                              )
                  ],
             layout=go.Layout(xaxis=dict(autorange=True,
