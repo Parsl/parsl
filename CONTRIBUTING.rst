@@ -36,10 +36,7 @@ Testing
 =======
 
 Parsl uses ``pytest`` to run most tests. All tests should be placed in
-the ``parsl/tests`` directory. Before running tests usage tracking
-should be disabled using the PARSL_TESTING environment variable::
-
-  $ export PARSL_TESTING="true"
+the ``parsl/tests`` directory.
 
 There are two broad groups of tests: those which must run with a
 specific configuration, and those which should work with any
