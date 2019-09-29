@@ -696,7 +696,7 @@ class DataFlowKernel(object):
         else:
             self.tasks[task_id] = task_def
 
-        # Get the dep count and a list of dependencies for the task
+        # Get the the list of dependencies for the task
         depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
