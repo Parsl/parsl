@@ -189,7 +189,7 @@ class RepresentationMixin(object):
             init = init.__wrapped__
 
         argspec = inspect.getfullargspec(init)
-        if len(argspec.args) > 1:
+        if len(argspec.args) > 1 and argspec.defaults is not None:
             defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
         else:
             defaults = {}
@@ -199,7 +199,10 @@ class RepresentationMixin(object):
                 template = 'class {} uses {} in the constructor, but does not define it as an attribute'
                 raise AttributeError(template.format(self.__class__.__name__, arg))
 
-        args = [getattr(self, a) for a in argspec.args[1:-len(defaults)]]
+        if len(defaults) != 0:
+            args = [getattr(self, a) for a in argspec.args[1:-len(defaults)]]
+        else:
+            args = [getattr(self, a) for a in argspec.args[1:]]
         kwargs = {key: getattr(self, key) for key in defaults}
 
         def assemble_multiline(args, kwargs):
