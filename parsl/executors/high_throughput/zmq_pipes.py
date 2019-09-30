@@ -23,12 +23,30 @@ class CommandClient(object):
 
         """
         self.context = zmq.Context()
-        self.zmq_socket = self.context.socket(zmq.REQ)
-        self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
-                                                        min_port=port_range[0],
-                                                        max_port=port_range[1])
+        self.ip_address = ip_address
+        self.port_range = port_range
+        self.port = None
+        self.port = self.create_socket_and_bind()
 
-    def run(self, message):
+    def create_socket_and_bind(self):
+        """ Creates socket and binds to a port.
+
+        Upon recreating the socket, we bind to the same port.
+
+        Returns:
+            Returns port(int) to which socket was bound
+        """
+        self.zmq_socket = self.context.socket(zmq.REQ)
+        if self.port is None:
+            port = self.zmq_socket.bind_to_random_port("tcp://{}".format(self.ip_address),
+                                                       min_port=self.port_range[0],
+                                                       max_port=self.port_range[1])
+            return port
+        else:
+            self.zmq_socket.bind("tcp://{}:{}".format(self.ip_address, self.port))
+            return self.port
+
+    def run(self, message, max_retries=3):
         """ This function needs to be fast at the same time aware of the possibility of
         ZMQ pipes overflowing.
 
@@ -37,8 +55,21 @@ class CommandClient(object):
         in ZMQ sockets reaching a broken state once there are ~10k tasks in flight.
         This issue can be magnified if each the serialized buffer itself is larger.
         """
-        self.zmq_socket.send_pyobj(message, copy=True)
-        reply = self.zmq_socket.recv_pyobj()
+        try:
+            self.zmq_socket.send_pyobj(message, copy=True)
+            reply = self.zmq_socket.recv_pyobj()
+        except zmq.ZMQError:
+            logger.error("Potential ZMQ REQ-REP deadlock caught")
+            logger.info("Trying to reestablish context")
+            self.context.destroy()
+            self.context = zmq.Context()
+            self.port = self.create_socket_and_bind()
+            if max_retries > 0:
+                return self.run(message, max_retries=(max_retries - 1))
+            else:
+                logger.error("Command channel run reties exhausted. Unable to run command")
+                raise Exception("Command Channel retries exhausted")
+
         return reply
 
     def close(self):
