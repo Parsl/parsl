@@ -40,7 +40,7 @@ Here's an example configuration that logs monitoring information to a local sqli
       monitoring=MonitoringHub(
           hub_address=address_by_hostname(),
           hub_port=55055,
-          logging_level=logging.INFO,
+          monitoring_debug=False,
           resource_monitoring_interval=10,
       ),
       strategy=None
