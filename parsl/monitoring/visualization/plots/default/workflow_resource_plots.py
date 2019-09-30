@@ -93,6 +93,45 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
 
+def worker_efficiency(task, node):
+    try:
+        node['epoch_time'] = (pd.to_datetime(
+            node['reg_time']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        task['epoch_time_start'] = (pd.to_datetime(
+            task['task_time_submitted']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        task['epoch_time_running'] = (pd.to_datetime(
+            task['task_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        task['epoch_time_returned'] = (pd.to_datetime(
+            task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        start = min(task['epoch_time_start'].min(), node['epoch_time'].min())
+        end = task['epoch_time_returned'].max()
+
+        worker_plot = [0] * (end - start + 1)
+        total_workers = node['worker_count'].sum()
+
+        for i, row in task.iterrows():
+            for j in range(int(row['epoch_time_running']), int(row['epoch_time_returned']) + 1):
+                worker_plot[j - start] += 1
+        fig = go.Figure(
+            data=[go.Scatter(x=list(range(0, end - start + 1)),
+                             y=worker_plot,
+                             name='Total busy workers',
+                             ),
+                  go.Scatter(x=list(range(0, end - start + 1)),
+                             y=[total_workers] * (end - start + 1),
+                             name='Total online workers',
+                             )
+                 ],
+            layout=go.Layout(xaxis=dict(autorange=True,
+                                        title='Time (seconds)'),
+                             yaxis=dict(title='Number of workers'),
+                             title="Worker efficiency"))
+        return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
+    except Exception as e:
+        print(e)
+        return "The worker efficiency plot cannot be generated due to missing data."
+
+
 def resource_efficiency(resource, node, label='CPU'):
     try:
         resource['epoch_time'] = (pd.to_datetime(

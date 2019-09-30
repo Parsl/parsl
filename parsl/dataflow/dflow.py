@@ -688,7 +688,7 @@ class DataFlowKernel(object):
         # Transform remote input files to data futures
         args, kwargs, func = self._add_input_deps(executor, args, kwargs, func)
 
-        self._add_output_deps(executor, args, kwargs, app_fu, func)
+        func = self._add_output_deps(executor, args, kwargs, app_fu, func)
 
         task_def.update({
                     'args': args,
