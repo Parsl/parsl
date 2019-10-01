@@ -432,9 +432,11 @@ class DataFlowKernel(object):
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+            wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             executable = self.monitoring.monitor_wrapper(executable, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
+                                                         wrapper_logging_level,
                                                          self.monitoring.resource_monitoring_interval)
 
         with self.submitter_lock:
@@ -682,7 +684,7 @@ class DataFlowKernel(object):
         # Transform remote input files to data futures
         args, kwargs, func = self._add_input_deps(executor, args, kwargs, func)
 
-        self._add_output_deps(executor, args, kwargs, app_fu, func)
+        func = self._add_output_deps(executor, args, kwargs, app_fu, func)
 
         task_def.update({
                     'args': args,
