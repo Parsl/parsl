@@ -26,7 +26,7 @@ class CommandClient(object):
         self.ip_address = ip_address
         self.port_range = port_range
         self.port = None
-        self.port = self.create_socket_and_bind()
+        self.create_socket_and_bind()
 
     def create_socket_and_bind(self):
         """ Creates socket and binds to a port.
