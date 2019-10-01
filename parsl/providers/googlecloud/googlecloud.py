@@ -71,8 +71,6 @@ class GoogleCloudProvider():
           [ ids ]       ------->|  cancel
           [cancel]     <--------|----+
                                 |
-          [True/False] <--------|  scaling_enabled
-                                |
                                 +-------------------
      """
 
@@ -178,15 +176,6 @@ class GoogleCloudProvider():
             except Exception:
                 statuses.append(False)
         return statuses
-
-    @property
-    def scaling_enabled(self):
-        ''' Scaling is enabled
-
-        Returns:
-              - Status (Bool)
-        '''
-        return True
 
     @property
     def current_capacity(self):
