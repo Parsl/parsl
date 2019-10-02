@@ -48,7 +48,7 @@ def test_platform(n=2):
 
         for line in f.readlines():
             if any(skip in line for skip in skip_tags):
-                raise Exception(f"Logline {line} contains a skip tag")
+                raise Exception("Logline {} contains a skip tag".format(line))
     return True
 
 
