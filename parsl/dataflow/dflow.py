@@ -29,7 +29,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
+from parsl.dataflow.states import States, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.utils import get_version
@@ -527,12 +527,9 @@ class DataFlowKernel(object):
         """
         # Check the positional args
         depends = []
-        unfinished_depends = []
 
         def check_dep(d):
             if isinstance(d, Future):
-                if d.tid not in self.tasks or self.tasks[d.tid]['status'] not in FINAL_STATES:
-                    unfinished_depends.extend([d])
                 depends.extend([d])
 
         for dep in args:
@@ -547,8 +544,7 @@ class DataFlowKernel(object):
         for dep in kwargs.get('inputs', []):
             check_dep(dep)
 
-        count = len(unfinished_depends)
-        return count, depends
+        return depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
         """This function should be called only when all the futures we track have been resolved.
@@ -702,8 +698,8 @@ class DataFlowKernel(object):
         else:
             self.tasks[task_id] = task_def
 
-        # Get the dep count and a list of dependencies for the task
-        dep_cnt, depends = self._gather_all_deps(args, kwargs)
+        # Get the list of dependencies for the task
+        depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
