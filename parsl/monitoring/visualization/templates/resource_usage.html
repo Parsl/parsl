@@ -22,6 +22,12 @@
 <br><a href="dag_group_by_states">View workflow DAG -- colors grouped by task states</a>
 <br><a href="/workflow/{{ workflow_details['run_id'] }} ">View workflow task summary</a>
 
+
+<h5>Worker usage</h5>
+<div class="container" style="height: 500px;">
+{{ worker_efficiency|safe }}
+</div>
+
 <h5>CPU usage</h5>
 <div class="container" style="height: 500px;">
 {{ cpu_efficiency|safe }}
