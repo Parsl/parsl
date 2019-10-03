@@ -34,6 +34,7 @@ class CommandClient(object):
         Upon recreating the socket, we bind to the same port.
         """
         self.zmq_socket = self.context.socket(zmq.REQ)
+        self.zmq_socket.setsockopt(zmq.LINGER, 0)
         if self.port is None:
             self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(self.ip_address),
                                                             min_port=self.port_range[0],
@@ -60,6 +61,7 @@ class CommandClient(object):
         except zmq.ZMQError:
             logger.exception("Potential ZMQ REQ-REP deadlock caught")
             logger.info("Trying to reestablish context")
+            self.zmq_socket.close()
             self.context.destroy()
             self.context = zmq.Context()
             self.create_socket_and_bind()
