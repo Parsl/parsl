@@ -60,6 +60,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                      +----update_fut-----+
 
 
+    Each of the workers in each process_worker_pool has access to its local rank through
+    an environmental variable, ``PARSL_WORKER_ID``. The local rank is unique for each process
+    and is an integer in the range from 0 to the number of workers per in the pool minus 1.
+
+
     Parameters
     ----------
 

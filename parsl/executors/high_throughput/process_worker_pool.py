@@ -456,6 +456,9 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue, tasks_in_
                       name="worker_log",
                       level=logging.DEBUG if args.debug else logging.INFO)
 
+    # Store worker ID as an environment variable
+    os.environ['PARSL_WORKER_ID'] = str(worker_id)
+
     # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
     if args.debug:
