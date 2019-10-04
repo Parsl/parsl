@@ -40,5 +40,5 @@ def test_htex():
     worker_info = [get_worker_info() for _ in range(4)]
     worker_ids, worker_size, pool_info = zip(*[r.result() for r in worker_info])
     assert len(set(worker_info)) > 1  # Tasks should run on >1 worker
-    assert set(worker_size) == {4}  # All workers have same pool size
+    assert len(set(worker_size)) == 1  # All workers have same pool size
     assert len(set(pool_info)) == 1  # All from the same pool
