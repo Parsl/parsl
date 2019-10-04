@@ -234,6 +234,7 @@ class MonitoringHub(RepresentationMixin):
                                   },
                                   name="Monitoring-Queue-Process"
         )
+        self.queue_proc.daemon = True
         self.queue_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
@@ -244,6 +245,7 @@ class MonitoringHub(RepresentationMixin):
                                   },
                                 name="Monitoring-DBM-Process"
         )
+        self.dbm_proc.daemon = True
         self.dbm_proc.start()
 
         try:
