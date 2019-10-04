@@ -5,6 +5,7 @@ from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl import python_app
+import pytest
 
 local_config = Config(
     executors=[
@@ -31,8 +32,8 @@ def get_worker_info():
     return int(os.environ['PARSL_WORKER_ID'])
 
 
+@pytest.mark.local
 def test_htex():
-    # Submit several jobs, make sure they get >1 worker id
     worker_ids = [get_worker_info() for _ in range(4)]
     worker_ids = [r.result() for r in worker_ids]
     assert len(set(worker_ids)) > 1
