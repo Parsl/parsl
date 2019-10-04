@@ -29,11 +29,16 @@ def get_worker_info():
     from time import sleep
     import os
     sleep(2)
-    return int(os.environ['PARSL_WORKER_ID'])
+    rank = int(os.environ['PARSL_WORKER_RANK'])
+    size = int(os.environ['PARSL_WORKER_SIZE'])
+    pool_id = int(os.environ['PARSL_WORKER_POOL_ID'])
+    return rank, size, pool_id
 
 
 @pytest.mark.local
 def test_htex():
-    worker_ids = [get_worker_info() for _ in range(4)]
-    worker_ids = [r.result() for r in worker_ids]
-    assert len(set(worker_ids)) > 1
+    worker_info = [get_worker_info() for _ in range(4)]
+    worker_ids, worker_size, pool_info = zip(*[r.result() for r in worker_info])
+    assert len(set(worker_info)) > 1  # Tasks should run on >1 worker
+    assert set(worker_size) == {4}  # All workers have same pool size
+    assert len(set(pool_info)) == 1  # All from the same pool
