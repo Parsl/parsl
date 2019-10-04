@@ -137,13 +137,3 @@ def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEB
     # concurrent.futures
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
-
-
-class NullHandler(logging.Handler):
-    """Setup default logging to /dev/null since this is library."""
-
-    def emit(self, record):
-        pass
-
-
-logging.getLogger('parsl').addHandler(NullHandler())
