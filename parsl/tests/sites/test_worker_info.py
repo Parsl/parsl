@@ -31,7 +31,7 @@ def get_worker_info():
     sleep(2)
     rank = int(os.environ['PARSL_WORKER_RANK'])
     size = int(os.environ['PARSL_WORKER_SIZE'])
-    pool_id = int(os.environ['PARSL_WORKER_POOL_ID'])
+    pool_id = os.environ['PARSL_WORKER_POOL_ID']
     return rank, size, pool_id
 
 
