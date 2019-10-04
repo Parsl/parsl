@@ -52,17 +52,15 @@ class Config(RepresentationMixin):
     usage_tracking : bool, optional
         Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
-
     initialize_logging : bool, optional
         Make DFK optionally not initialize any logging. Log messages
-        will still be passed into the python logging system, but the
-        logging system will not by default perform any further log
-        system configuration. Most noticeably, it will not create a
-        parsl.log logfile.  The use case for this is when parsl is
-        used as a library in a bigger system which wants to configure
-        logging in a way that makes sense for that bigger system as
-        a whole.  In such a situation, parsl should step out of the way
-        and let that system do what it wants.
+        will still be passed into the python logging system under the
+        `parsl` logger name, but the logging system will not by default
+        perform any further log system configuration. Most noticeably,
+        it will not create a parsl.log logfile.  The use case for this
+        is when parsl is used as a library in a bigger system which
+        wants to configure logging in a way that makes sense for that
+        bigger system as a whole.
     """
 
     @typeguard.typechecked
