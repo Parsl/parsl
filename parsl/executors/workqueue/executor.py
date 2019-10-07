@@ -416,14 +416,18 @@ class WorkQueueExecutor(ParslExecutor):
             Optional password file for the work queue project
 
         port: int
-            TCP port for Work Queue workers to connect to 
+            TCP port on Parsl submission machine for Work Queue workers 
+            to connect to. Workers will specify this port number when 
+            trying to connect to Parsl
 
         env: dict{str}
             Dictionary that contains the environmental variables that
             need to be set on the Work Queue worker machine
 
         shared_fs: bool
-            Define if working in a shared file system or not
+            Define if working in a shared file system or not. If Parsl 
+            and the Work Queue workers are on a shared file system, Work 
+            Queue does not need to transfer and rename files for execution
 
         source: bool
             Choose whether to transfer parsl app information as
