@@ -39,6 +39,7 @@ if [ $? -ne 0 ]; then
     echo "Unable to activate Conda environment, exiting"
     exit 4
 fi
+echo About to execute python command
 ${PYTHON_COMMAND_STRING}
 EXITVALUE=$?
 source bin/deactivate &> /dev/null

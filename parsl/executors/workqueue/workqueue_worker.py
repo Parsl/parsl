@@ -14,6 +14,7 @@ def check_file(parsl_file_obj, mapping, file_type_string):
 
 
 if __name__ == "__main__":
+    print("main")
     name = "parsl"
     shared_fs = False
     source = False
@@ -50,6 +51,7 @@ if __name__ == "__main__":
         print(e)
         exit(1)
 
+    print("update names")
     # Get all variables from the user namespace, and add __builtins__
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})

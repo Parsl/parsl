@@ -37,16 +37,18 @@ for module in dependencies:
 req_file.close()
 
 # Create environment and install all necessary modules into the environment
-subprocess.call("conda create -p /tmp/{} -y python={} &> /dev/null; \
-                eval \"$(conda shell.bash hook)\" &> /dev/null; \
-                conda activate /tmp/{} &> /dev/null; \
-                pip install -r /tmp/requirements.txt &> /dev/null; \
-                pip install tblib &> /dev/null; \
-                pip install ipyparallel &> /dev/null; \
-                pip install parsl &> /dev/null; \
-                rm /tmp/requirements.txt &> /dev/null; \
-                conda deactivate &> /dev/null;".format(environment_name, python_version, environment_name, dependency_file), shell=True)
+subprocess.call("conda create -p /tmp/{} -y python={}; \
+                eval \"$(conda shell.bash hook)\"; \
+                conda activate /tmp/{}; \
+                echo Beginning pip install; \
+                pip install parsl; \
+                pip install tblib; \
+                pip install ipyparallel; \
+                pip install -r /tmp/requirements.txt; \
+                echo Finished requirements install; \
+                rm /tmp/requirements.txt; \
+                conda deactivate;".format(environment_name, python_version, environment_name, dependency_file), shell=True)
 
 # Pack the environment
-conda_pack.pack(name=environment_name, output="runinfo/{}.tar.gz".format(environment_name), force=True)
+conda_pack.pack(name=environment_name, output="{}.tar.gz".format(environment_name), force=True)
 exit(0)
