@@ -120,6 +120,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             input_files = item["input_files"]
             output_files = item["output_files"]
             std_files = item["std_files"]
+            cores = item["cores"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
@@ -181,6 +182,10 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
             for item in std_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
+
+            # Specify number of cores needed for task
+            logger.debug("****Number of cores: {}".format(cores))
+            t.specify_cores(cores)
 
             # Submit the task to the WorkQueue object
             logger.debug("Submitting task {} to WorkQueue".format(parsl_id))
@@ -548,6 +553,12 @@ class WorkQueueExecutor(ParslExecutor):
         input_files = []
         output_files = []
         std_files = []
+        cores = 1
+
+        # Receive number of cores from the kwargs, then remove it
+        if kwargs["cores"] is not None:
+            cores = kwargs["cores"]
+            kwargs.pop("cores")
 
         # Add input files from the "inputs" keyword argument
         func_inputs = kwargs.get("inputs", [])
@@ -631,6 +642,7 @@ class WorkQueueExecutor(ParslExecutor):
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         msg = {"task_id": task_id,
+               "cores": cores,
                "data_loc": function_data_file,
                "result_loc": function_result_file,
                "input_files": input_files,
