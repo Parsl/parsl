@@ -29,7 +29,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
+from parsl.dataflow.states import States, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.utils import get_version
@@ -77,7 +77,10 @@ class DataFlowKernel(object):
                     'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
-        parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+
+        if config.initialize_logging:
+            parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         logger.info("Parsl version: {}".format(get_version()))
 
@@ -432,9 +435,11 @@ class DataFlowKernel(object):
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+            wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             executable = self.monitoring.monitor_wrapper(executable, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
+                                                         wrapper_logging_level,
                                                          self.monitoring.resource_monitoring_interval)
 
         with self.submitter_lock:
@@ -525,12 +530,9 @@ class DataFlowKernel(object):
         """
         # Check the positional args
         depends = []
-        unfinished_depends = []
 
         def check_dep(d):
             if isinstance(d, Future):
-                if d.tid not in self.tasks or self.tasks[d.tid]['status'] not in FINAL_STATES:
-                    unfinished_depends.extend([d])
                 depends.extend([d])
 
         for dep in args:
@@ -545,8 +547,7 @@ class DataFlowKernel(object):
         for dep in kwargs.get('inputs', []):
             check_dep(dep)
 
-        count = len(unfinished_depends)
-        return count, depends
+        return depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
         """This function should be called only when all the futures we track have been resolved.
@@ -700,8 +701,8 @@ class DataFlowKernel(object):
         else:
             self.tasks[task_id] = task_def
 
-        # Get the dep count and a list of dependencies for the task
-        dep_cnt, depends = self._gather_all_deps(args, kwargs)
+        # Get the list of dependencies for the task
+        depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
