@@ -4,6 +4,7 @@ import zmq
 import time
 import pickle
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class CommandClient(object):
         self.port_range = port_range
         self.port = None
         self.create_socket_and_bind()
+        self._lock = threading.Lock()
 
     def create_socket_and_bind(self):
         """ Creates socket and binds to a port.
@@ -51,22 +53,24 @@ class CommandClient(object):
         in ZMQ sockets reaching a broken state once there are ~10k tasks in flight.
         This issue can be magnified if each the serialized buffer itself is larger.
         """
-        if max_retries == 0:
+        reply = '__PARSL_ZMQ_PIPES_MAGIC__'
+        with self._lock:
+            for i in range(max_retries):
+                try:
+                    self.zmq_socket.send_pyobj(message, copy=True)
+                    reply = self.zmq_socket.recv_pyobj()
+                except zmq.ZMQError:
+                    logger.exception("Potential ZMQ REQ-REP deadlock caught")
+                    logger.info("Trying to reestablish context")
+                    self.zmq_socket.close()
+                    self.context.destroy()
+                    self.context = zmq.Context()
+                    self.create_socket_and_bind()
+
+        if reply == '__PARSL_ZMQ_PIPES_MAGIC__':
             logger.error("Command channel run retries exhausted. Unable to run command")
             raise Exception("Command Channel retries exhausted")
 
-        try:
-            self.zmq_socket.send_pyobj(message, copy=True)
-            reply = self.zmq_socket.recv_pyobj()
-        except zmq.ZMQError:
-            logger.exception("Potential ZMQ REQ-REP deadlock caught")
-            logger.info("Trying to reestablish context")
-            self.zmq_socket.close()
-            self.context.destroy()
-            self.context = zmq.Context()
-            self.create_socket_and_bind()
-            # Recursive call to retry the command
-            return self.run(message, max_retries=(max_retries - 1))
         return reply
 
     def close(self):
