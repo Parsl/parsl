@@ -241,8 +241,8 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         rets = []
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
-            retcode, stdout, stderr = channel.execute_wait("kill -TERM -{}".format(
-                self.resources[job_id]['job_id']))
+            cmd = "kill -TERM -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job_id]['job_id'])
+            retcode, stdout, stderr = channel.execute_wait(cmd)
             if retcode == 0:
                 rets.append(True)
             else:
