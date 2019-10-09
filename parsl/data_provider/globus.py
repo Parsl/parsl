@@ -98,7 +98,11 @@ class Globus(object):
             task = tc.get_task(task['task_id'])
             # Get the last error Globus event
             events = tc.task_event_list(task['task_id'], num_results=1, filter='is_error:1')
-            event = events.data[0]
+            try:
+                event = next(events)
+            # No error reported,  the transfer is still running
+            except StopIteration:
+                continue
             # Print the error event to stderr and Parsl file log if it was not yet printed
             if event['time'] != last_event_time:
                 last_event_time = event['time']
