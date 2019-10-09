@@ -11,14 +11,6 @@ from parsl.utils import RepresentationMixin
 logger = logging.getLogger(__name__)
 
 
-def _roundrobin(items):
-    """ Returns items one at a time in an infinite loop
-    """
-    while True:
-        for item in items:
-            yield item
-
-
 class AdHocProvider(ExecutionProvider, RepresentationMixin):
     """ Ad-hoc execution provider
 
