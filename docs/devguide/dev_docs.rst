@@ -143,7 +143,7 @@ HighThroughputExecutor
 ExtremeScaleExecutor
 --------------------
 
-.. autoclass:: parsl.executors.HighThroughputExecutor
+.. autoclass:: parsl.executors.ExtremeScaleExecutor
    :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd,
               _start_queue_management_thread, _start_local_queue_process,
               hold_worker, outstanding, connected_workers
