@@ -221,7 +221,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                                                             self.resources[job_id]['cmd'].split()[0])
             retcode, stdout, stderr = channel.execute_wait(status_command)
             if retcode != 0 and self.resources[job_id]['status'] == 'RUNNING':
-                self.resources[job_id]['status'] == 'FAILED'
+                self.resources[job_id]['status'] = 'FAILED'
 
         return [self.resources[job_id]['status'] for job_id in job_ids]
 
@@ -247,7 +247,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 rets.append(True)
             else:
                 rets.append(False)
-            self.resources[job_id]['status'] == 'COMPLETED'
+            self.resources[job_id]['status'] = 'COMPLETED'
         return rets
 
     @property
