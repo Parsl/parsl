@@ -1,4 +1,6 @@
-"""WorkQueueExecutor utilizes the Work Queue distributed framework developed by the Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant, high-throughput system for delegating Parsl tasks to thousands of remote machines
+"""WorkQueueExecutor utilizes the Work Queue distributed framework developed by the
+Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
+high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
 import threading
@@ -54,10 +56,10 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           project_password_file=None,
                           project_name=None):
     """Thread to handle Parsl app submissions to the Work Queue objects.
-    Takes in Parsl functions submitted using submit(), and creates a 
-    Work Queue task with the appropriate specifications, which is then 
-    submitted to Work Queue. After tasks are completed, processes the 
-    exit status and exit code of the task, and sends results to the 
+    Takes in Parsl functions submitted using submit(), and creates a
+    Work Queue task with the appropriate specifications, which is then
+    submitted to Work Queue. After tasks are completed, processes the
+    exit status and exit code of the task, and sends results to the
     Work Queue collector thread.
     """
     logger.debug("Starting WorkQueue Submit/Wait Process")
@@ -328,7 +330,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
                              submit_process=None,
                              executor=None):
     """Processes completed Parsl tasks. If an error arose while the Parsl task
-    was executed, raises the exception on the local machine. 
+    was executed, raises the exception on the local machine.
     """
 
     logger.debug("Starting Collector Thread")
@@ -384,11 +386,11 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
 class WorkQueueExecutor(ParslExecutor):
     """Executor to use Work Queue batch system
 
-    The WorkQueueExecutor system utilizes the Work Queue framework to 
-    efficiently delegate Parsl apps to remote machines in clusters and 
+    The WorkQueueExecutor system utilizes the Work Queue framework to
+    efficiently delegate Parsl apps to remote machines in clusters and
     grids using a fault-tolerant system. Users can run the
     work_queue_worker program on remote machines to connect to the
-    WorkQueueExecutor, and Parsl apps will then be sent out to these 
+    WorkQueueExecutor, and Parsl apps will then be sent out to these
     machines for execution and retrieval.
 
 
@@ -416,8 +418,8 @@ class WorkQueueExecutor(ParslExecutor):
             Optional password file for the work queue project
 
         port: int
-            TCP port on Parsl submission machine for Work Queue workers 
-            to connect to. Workers will specify this port number when 
+            TCP port on Parsl submission machine for Work Queue workers
+            to connect to. Workers will specify this port number when
             trying to connect to Parsl
 
         env: dict{str}
@@ -425,8 +427,8 @@ class WorkQueueExecutor(ParslExecutor):
             need to be set on the Work Queue worker machine
 
         shared_fs: bool
-            Define if working in a shared file system or not. If Parsl 
-            and the Work Queue workers are on a shared file system, Work 
+            Define if working in a shared file system or not. If Parsl
+            and the Work Queue workers are on a shared file system, Work
             Queue does not need to transfer and rename files for execution
 
         source: bool
@@ -588,7 +590,7 @@ class WorkQueueExecutor(ParslExecutor):
 
     def create_new_name(self, file_name):
         """Returns a unique file name for an input file name. If the file name
-        is already unique with respect to the Parsl process, then it returns 
+        is already unique with respect to the Parsl process, then it returns
         the original file name
 
         Parameters
@@ -730,7 +732,7 @@ class WorkQueueExecutor(ParslExecutor):
         pass
 
     def shutdown(self, *args, **kwargs):
-        """Shutdown the executor. Sets flag to cancel the submit process and 
+        """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
         # Set shared variable to 0 to signal shutdown
