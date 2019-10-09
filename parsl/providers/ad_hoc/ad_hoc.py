@@ -17,8 +17,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
     This provider is used to provision execution resources over one or more ad hoc nodes
     that are each accessible over a Channel (say, ssh) but otherwise lack a cluster scheduler.
 
-    Each submit call invoked will go through the list of channels in a round-robin fashion
-
     Parameters
     ----------
 
@@ -127,7 +125,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                     yield channel
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
-        ''' Submits the command onto a channel from a round-robin arrangement of channels
+        ''' Submits the command onto a channel from the list of channels
 
         Submit returns an ID that corresponds to the task that was just submitted.
 
