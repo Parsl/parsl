@@ -10,7 +10,6 @@ import inspect
 import threading
 import sys
 import datetime
-
 from getpass import getuser
 from typing import Optional
 from uuid import uuid4
@@ -29,7 +28,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
+from parsl.dataflow.states import States, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.utils import get_version
@@ -77,7 +76,10 @@ class DataFlowKernel(object):
                     'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
-        parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+
+        if config.initialize_logging:
+            parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
         logger.info("Parsl version: {}".format(get_version()))
 
@@ -526,12 +528,9 @@ class DataFlowKernel(object):
         """
         # Check the positional args
         depends = []
-        unfinished_depends = []
 
         def check_dep(d):
             if isinstance(d, Future):
-                if d.tid not in self.tasks or self.tasks[d.tid]['status'] not in FINAL_STATES:
-                    unfinished_depends.extend([d])
                 depends.extend([d])
 
         for dep in args:
@@ -546,8 +545,7 @@ class DataFlowKernel(object):
         for dep in kwargs.get('inputs', []):
             check_dep(dep)
 
-        count = len(unfinished_depends)
-        return count, depends
+        return depends
 
     def sanitize_and_wrap(self, task_id, args, kwargs):
         """This function should be called only when all the futures we track have been resolved.
@@ -701,8 +699,8 @@ class DataFlowKernel(object):
         else:
             self.tasks[task_id] = task_def
 
-        # Get the dep count and a list of dependencies for the task
-        dep_cnt, depends = self._gather_all_deps(args, kwargs)
+        # Get the list of dependencies for the task
+        depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
@@ -789,6 +787,29 @@ class DataFlowKernel(object):
 
         logger.info("End of summary")
 
+    def _create_remote_dirs_over_channel(self, provider, channel):
+        """ Create script directories across a channel
+
+        Parameters
+        ----------
+        provider: Provider obj
+           Provider for which scritps dirs are being created
+        channel: Channel obk
+           Channel over which the remote dirs are to be created
+        """
+        run_dir = self.run_dir
+        if channel.script_dir is None:
+            channel.script_dir = os.path.join(run_dir, 'submit_scripts')
+
+            # Only create dirs if we aren't on a shared-fs
+            if not channel.isdir(run_dir):
+                parent, child = pathlib.Path(run_dir).parts[-2:]
+                remote_run_dir = os.path.join(parent, child)
+                channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
+                provider.script_dir = os.path.join(run_dir, 'local_submit_scripts')
+
+        channel.makedirs(channel.script_dir, exist_ok=True)
+
     def add_executors(self, executors):
         for executor in executors:
             executor.run_dir = self.run_dir
@@ -797,15 +818,15 @@ class DataFlowKernel(object):
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                    if executor.provider.channel.script_dir is None:
-                        executor.provider.channel.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                        if not executor.provider.channel.isdir(self.run_dir):
-                            parent, child = pathlib.Path(self.run_dir).parts[-2:]
-                            remote_run_dir = os.path.join(parent, child)
-                            executor.provider.channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
-                            executor.provider.script_dir = os.path.join(self.run_dir, 'local_submit_scripts')
-                    executor.provider.channel.makedirs(executor.provider.channel.script_dir, exist_ok=True)
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
+
+                    if hasattr(executor.provider, 'channels'):
+                        logger.debug("Creating script_dir across multiple channels")
+                        for channel in executor.provider.channels:
+                            self._create_remote_dirs_over_channel(executor.provider, channel)
+                    else:
+                        self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
+
             self.executors[executor.label] = executor
             executor.start()
         if hasattr(self, 'flowcontrol') and isinstance(self.flowcontrol, FlowControl):

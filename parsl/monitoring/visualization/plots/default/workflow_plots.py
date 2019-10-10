@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import plotly.graph_objs as go
 import plotly.figure_factory as ff
 from plotly.offline import plot
@@ -49,47 +50,39 @@ def task_gantt_plot(df_task, time_completed=None):
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
 
-def task_per_app_plot(df_task, df_status):
+def task_per_app_plot(task, status):
 
-    def y_axis_setup(array):
-        count = 0
-        items = []
-        for n in array:
-            if n:
-                count += 1
-            elif count > 0:
-                count -= 1
-            items.append(count)
-        return items
-
-    # Fill up dict "apps" like: {app1: [#task1, #task2], app2: [#task4], app3: [#task3]}
-    apps_dict = dict()
-    for i in range(len(df_task)):
-        row = df_task.iloc[i]
-        if row['task_func_name'] in apps_dict:
-            apps_dict[row['task_func_name']].append(row['task_id'])
-        else:
-            apps_dict[row['task_func_name']] = [row['task_id']]
-
-    fig = go.Figure(
-        data=[go.Scatter(x=df_status[df_status['task_id'].isin(tasks)]['timestamp'],
-                         y=y_axis_setup(df_status[df_status['task_id'].isin(
-                             tasks)]['task_status_name'] == 'running'),
-                         name=app)
-              for app, tasks in apps_dict.items()] +
-        [go.Scatter(x=df_status['timestamp'],
-                    y=y_axis_setup(
-            df_status['task_status_name'] == 'running'),
-            name='all')],
-        layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',
-                                    autorange=True,
-                                    title='Time'),
-                         yaxis=dict(tickformat=',d',
-                                    title='Tasks'),
-                         hovermode='closest',
-                         title='Tasks per app'))
-
-    return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
+    try:
+        task['epoch_time_running'] = (pd.to_datetime(
+            task['task_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        task['epoch_time_returned'] = (pd.to_datetime(
+            task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        start = task['epoch_time_running'].min()
+        end = task['epoch_time_returned'].max()
+        tasks_per_app = {}
+        all_tasks = [0] * (end - start + 1)
+        for i, row in task.iterrows():
+            if row['task_func_name'] not in tasks_per_app:
+                tasks_per_app[row['task_func_name']] = [0] * (end - start + 1)
+            for j in range(int(row['epoch_time_running']) + 1, int(row['epoch_time_returned']) + 1):
+                tasks_per_app[row['task_func_name']][j - start] += 1
+                all_tasks[j - start] += 1
+        fig = go.Figure(
+            data=[go.Scatter(x=list(range(0, end - start + 1)),
+                             y=tasks_per_app[app],
+                             name=app,
+                             ) for app in tasks_per_app] +
+                 [go.Scatter(x=list(range(0, end - start + 1)),
+                             y=all_tasks,
+                             name='All',
+                             )],
+            layout=go.Layout(xaxis=dict(autorange=True,
+                                        title='Time (seconds)'),
+                             yaxis=dict(title='Number of tasks'),
+                             title="Tasks per app"))
+        return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
+    except Exception as e:
+        return "The tasks per app plot cannot be generated because of exception {}.".format(e)
 
 
 def total_tasks_plot(df_task, df_status, columns=20):
