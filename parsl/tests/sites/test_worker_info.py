@@ -26,11 +26,9 @@ local_config = Config(
 
 @python_app
 def get_worker_info():
-    from time import sleep
     import os
-    sleep(2)
     rank = int(os.environ['PARSL_WORKER_RANK'])
-    size = int(os.environ['PARSL_WORKER_SIZE'])
+    size = int(os.environ['PARSL_WORKER_COUNT'])
     pool_id = os.environ['PARSL_WORKER_POOL_ID']
     return rank, size, pool_id
 

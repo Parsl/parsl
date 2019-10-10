@@ -460,7 +460,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
-    os.environ['PARSL_WORKER_SIZE'] = str(pool_size)
+    os.environ['PARSL_WORKER_COUNT'] = str(pool_size)
     os.environ['PARSL_WORKER_POOL_ID'] = str(pool_id)
 
     # Sync worker with master
