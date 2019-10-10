@@ -252,6 +252,17 @@ to launch workers on the machine
 .. literalinclude:: ../../parsl/configs/swan_ipp_multinode.py
 
 
+Summit (ORNL)
+-------------
+
+.. image:: https://www.olcf.ornl.gov/wp-content/uploads/2018/06/Summit_Exaop-1500x844.jpg
+
+The following snippet shows an example configuration for executing from the login node on Summit, the leadership class supercomputer hosted at the Oak Ridge National Laboratory.
+The example uses the `LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `JsrunLauncher` to launch workers across the compute nodes.
+
+.. literalinclude:: ../../parsl/configs/summit_local_htex.py
+
+
 CC-IN2P3
 --------
 

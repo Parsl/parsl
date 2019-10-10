@@ -687,10 +687,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         os.remove(self.config['state_file_path'])
 
     @property
-    def scaling_enabled(self):
-        return True
-
-    @property
     def label(self):
         return self._label
 

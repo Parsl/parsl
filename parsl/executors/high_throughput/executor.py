@@ -255,7 +255,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
-        self._scaling_enabled = self.provider.scaling_enabled
+        self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
         if hasattr(self.provider, 'init_blocks'):
             try:
@@ -281,11 +281,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
-        if self.provider:
-            self.initialize_scaling()
-        else:
-            self._scaling_enabled = False
-            logger.debug("Starting HighThroughputExecutor with no provider")
+        self.initialize_scaling()
 
     def _queue_management_worker(self):
         """Listen to the queue for task status messages and handle them.
@@ -560,19 +556,15 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         r = []
         for i in range(blocks):
-            if self.provider:
-                external_block_id = str(len(self.blocks))
-                launch_cmd = self.launch_cmd.format(block_id=external_block_id)
-                internal_block = self.provider.submit(launch_cmd, 1)
-                logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
-                if not internal_block:
-                    raise(ScalingFailed(self.provider.label,
-                                        "Attempts to provision nodes via provider has failed"))
-                r.extend([external_block_id])
-                self.blocks[external_block_id] = internal_block
-            else:
-                logger.error("No execution provider available")
-                r = None
+            external_block_id = str(len(self.blocks))
+            launch_cmd = self.launch_cmd.format(block_id=external_block_id)
+            internal_block = self.provider.submit(launch_cmd, 1)
+            logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
+            if not internal_block:
+                raise(ScalingFailed(self.provider.label,
+                                    "Attempts to provision nodes via provider has failed"))
+            r.extend([external_block_id])
+            self.blocks[external_block_id] = internal_block
         return r
 
     def scale_in(self, blocks=None, block_ids=[]):
@@ -607,17 +599,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         # Now kill via provider
         to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill]
 
-        if self.provider:
-            r = self.provider.cancel(to_kill)
+        r = self.provider.cancel(to_kill)
 
         return r
 
     def status(self):
         """Return status of all blocks."""
 
-        status = []
-        if self.provider:
-            status = self.provider.status(list(self.blocks.values()))
+        status = self.provider.status(list(self.blocks.values()))
 
         return status
 
