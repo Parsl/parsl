@@ -135,7 +135,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         be set to 0 for better load balancing. Default is 0.
 
     suppress_failure : Bool
-        If set, the interchange will suppress failures rather than terminate early. Default: False
+        If set, the interchange will suppress failures rather than terminate early. Default: True
 
     heartbeat_threshold : int
         Seconds since the last message from the counterpart in the communication pair:
@@ -172,7 +172,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
-                 suppress_failure: bool = False,
+                 suppress_failure: bool = True,
                  managed: bool = True,
                  worker_logdir_root: Optional[str] = None):
 

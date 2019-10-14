@@ -202,7 +202,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         logger.debug("Attempting to launch")
         if self.provisioned_blocks >= self.max_blocks:
             template = "Provider {} is currently using {} blocks while max_blocks is {}; no blocks will be added"
-            logger.warn(template.format(self.label, self.provisioned_blocks, self.max_blocks))
+            logger.warning(template.format(self.label, self.provisioned_blocks, self.max_blocks))
             return None
 
         job_name = "parsl.{0}.{1}".format(job_name, time.time())

@@ -164,7 +164,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         """
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
+            logger.warning("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
             return None
 
         scheduler_options = self.scheduler_options
