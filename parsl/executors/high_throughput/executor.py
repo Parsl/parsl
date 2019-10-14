@@ -17,7 +17,7 @@ from ipyparallel.serialize import deserialize_object  # ,serialize_object
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
+from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError, SerializationError
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
@@ -531,9 +531,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self.tasks[task_id] = Future()
 
-        fn_buf = pack_apply_message(func, args, kwargs,
-                                    buffer_threshold=1024 * 1024,
-                                    item_threshold=1024)
+        try:
+            fn_buf = pack_apply_message(func, args, kwargs,
+                                        buffer_threshold=1024 * 1024,
+                                        item_threshold=1024)
+        except TypeError:
+            raise SerializationError(func.__name__)
 
         msg = {"task_id": task_id,
                "buffer": fn_buf}
