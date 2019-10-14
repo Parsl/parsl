@@ -106,7 +106,7 @@ class Globus(object):
             # Print the error event to stderr and Parsl file log if it was not yet printed
             if event['time'] != last_event_time:
                 last_event_time = event['time']
-                logger.warn('Non-critical Globus Transfer error event for globus://{}{}: "{}" at {}. Retrying...'.format(
+                logger.warning('Non-critical Globus Transfer error event for globus://{}{}: "{}" at {}. Retrying...'.format(
                     src_ep, src_path, event['description'], event['time']))
                 logger.debug('Globus Transfer error details: {}'.format(event['details']))
 
