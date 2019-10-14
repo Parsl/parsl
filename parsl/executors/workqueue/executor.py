@@ -564,7 +564,7 @@ class WorkQueueExecutor(ParslExecutor):
 
         # Receive resource specifications from the kwargs, then remove it
         if 'parsl_resource_specification' in kwargs:
-            resources = kwargs["parsl_resource_specification"] 
+            resources = kwargs["parsl_resource_specification"]
             kwargs.pop("parsl_resource_specification")
 
         # Add input files from the "inputs" keyword argument
