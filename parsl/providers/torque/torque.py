@@ -156,7 +156,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         '''
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.label)
+            logger.warning("[%s] at capacity, cannot add more blocks now", self.label)
             return None
 
         # Set job name
