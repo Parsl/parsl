@@ -120,7 +120,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             input_files = item["input_files"]
             output_files = item["output_files"]
             std_files = item["std_files"]
-            cores = item["cores"]
+            resource_specs = item["resources"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
@@ -183,9 +183,16 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             for item in std_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
 
-            # Specify number of cores needed for task
-            logger.debug("****Number of cores: {}".format(cores))
-            t.specify_cores(cores)
+            # Specify resource requirements for the task
+            if "cores" in resource_specs and resource_specs["cores"] is not None:
+                t.specify_cores(resource_specs["cores"])
+                logger.debug("Task {} using {} cores".format(t.id, resource_specs["cores"]))
+            if "disk" in resource_specs and resource_specs["disk"] is not None:
+                t.specify_disk(resource_specs["disk"])
+                logger.debug("Task {} using {} MB disk".format(t.id, resource_specs["disk"]))
+            if "mem" in resource_specs and resource_specs["mem"] is not None:
+                t.specify_memory(resource_specs["mem"])
+                logger.debug("Task {} using {} MB memory".format(t.id, resource_specs["mem"]))
 
             # Submit the task to the WorkQueue object
             logger.debug("Submitting task {} to WorkQueue".format(parsl_id))
@@ -553,12 +560,12 @@ class WorkQueueExecutor(ParslExecutor):
         input_files = []
         output_files = []
         std_files = []
-        cores = 1
+        resources = {}
 
-        # Receive number of cores from the kwargs, then remove it
-        if kwargs["cores"] is not None:
-            cores = kwargs["cores"]
-            kwargs.pop("cores")
+        # Receive resource specifications from the kwargs, then remove it
+        if 'parsl_resource_specification' in kwargs:
+            resources = kwargs["parsl_resource_specification"] 
+            kwargs.pop("parsl_resource_specification")
 
         # Add input files from the "inputs" keyword argument
         func_inputs = kwargs.get("inputs", [])
@@ -642,7 +649,7 @@ class WorkQueueExecutor(ParslExecutor):
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         msg = {"task_id": task_id,
-               "cores": cores,
+               "resources": resources,
                "data_loc": function_data_file,
                "result_loc": function_result_file,
                "input_files": input_files,

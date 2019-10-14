@@ -21,7 +21,7 @@ class AppBase(metaclass=ABCMeta):
 
     """
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False, cores=1):
+    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False, cores=None, disk=None, mem=None):
         """Construct the App object.
 
         Args:
@@ -45,6 +45,8 @@ class AppBase(metaclass=ABCMeta):
         self.status = 'created'
         self.executors = executors
         self.cores = cores
+        self.disk = disk
+        self.mem = mem
         self.cache = cache
         if not (isinstance(executors, list) or isinstance(executors, str)):
             logger.error("App {} specifies invalid executor option, expects string or list".format(
@@ -78,7 +80,7 @@ class AppBase(metaclass=ABCMeta):
         pass
 
 
-def App(apptype, data_flow_kernel=None, walltime=60, cache=False, cores=1, executors='all'):
+def App(apptype, data_flow_kernel=None, walltime=60, cache=False, cores=None, mem=None, disk=None, executors='all'):
     """The App decorator function.
 
     Args:
@@ -116,11 +118,13 @@ def App(apptype, data_flow_kernel=None, walltime=60, cache=False, cores=1, execu
                          walltime=walltime,
                          cache=cache,
                          cores=cores,
+                         mem=mem,
+                         disk=disk,
                          executors=executors)
     return wrapper
 
 
-def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, cores=1, executors='all'):
+def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, cores=None, mem=None, disk=None, executors='all'):
     """Decorator function for making python apps.
 
     Parameters
@@ -149,6 +153,8 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, c
                              walltime=walltime,
                              cache=cache,
                              cores=cores,
+                             mem=mem,
+                             disk=disk,
                              executors=executors)
         return wrapper(func)
     if function is not None:
@@ -156,7 +162,7 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, c
     return decorator
 
 
-def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, cores=1, executors='all'):
+def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, cores=None, mem=None, disk=None, executors='all'):
     """Decorator function for making bash apps.
 
     Parameters
@@ -185,6 +191,8 @@ def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, cor
                            walltime=walltime,
                            cache=cache,
                            cores=cores,
+                           mem=mem,
+                           disk=disk,
                            executors=executors)
         return wrapper(func)
     if function is not None:
