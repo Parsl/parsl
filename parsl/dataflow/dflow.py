@@ -991,7 +991,7 @@ class DataFlowKernel(object):
 
             if count == 0:
                 if self.checkpointed_tasks == 0:
-                    logger.warn("No tasks checkpointed so far in this run. Please ensure caching is enabled")
+                    logger.warning("No tasks checkpointed so far in this run. Please ensure caching is enabled")
                 else:
                     logger.debug("No tasks checkpointed in this pass.")
             else:
