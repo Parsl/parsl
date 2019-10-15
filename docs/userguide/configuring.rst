@@ -208,7 +208,7 @@ Frontera (TACC)
 .. image:: https://fronteraweb.tacc.utexas.edu/media/filer_public/e2/66/e266466f-502e-4bfe-92d6-3634d697ed99/frontera-home.jpg
 
 Deployed in June 2019, Frontera is the 5th most powerful supercomputer in the world. Frontera replaces the NSF Blue Waters system at NCSA
-and is the first deployment in the National Science Foundation's petascale computing program. The configuration below assumes thatthe user is
+and is the first deployment in the National Science Foundation's petascale computing program. The configuration below assumes that the user is
 running on a login node and uses the `SlurmProvider` to interface with the scheduler, and uses the `SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/frontera.py
