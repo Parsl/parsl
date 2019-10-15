@@ -20,5 +20,9 @@ def test_serialization_error():
     lock = threading.Lock()
     x = fail_pickling(lock)
 
-    with pytest.raises(SerializationError):
+    try:
         x.result()
+    except Exception as e:
+        assert isinstance(e, SerializationError)
+    else:
+        raise ValueError
