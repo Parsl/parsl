@@ -14,10 +14,12 @@ config = Config(
             provider=CobaltProvider(
                 queue='YOUR_QUEUE',
                 account='YOUR_ACCOUNT',
-                launcher=AprunLauncher(),
+                launcher=AprunLauncher(overrides="-d 64"),
                 walltime='00:30:00',
                 nodes_per_block=2,
                 init_blocks=1,
+                min_blocks=1,
+                max_blocks=1,
                 # string to prepend to #COBALT blocks in the submit
                 # script to the scheduler eg: '#COBALT -t 50'
                 scheduler_options='',
