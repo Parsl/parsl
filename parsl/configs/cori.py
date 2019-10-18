@@ -14,7 +14,7 @@ config = Config(
             address=address_by_interface('bond0.144'),
             cores_per_worker=2,
             provider=SlurmProvider(
-                'debug',  # Partition / QOS
+                'regular',  # Partition / QOS
                 nodes_per_block=2,
                 init_blocks=1,
                 # string to prepend to #SBATCH blocks in the submit
@@ -25,7 +25,7 @@ config = Config(
                 worker_init='',
                 # We request all hyperthreads on a node.
                 launcher=SrunLauncher(overrides='-c 272'),
-                walltime='00:20:00',
+                walltime='00:10:00',
                 # Slurm scheduler on Cori can be slow at times,
                 # increase the command timeouts
                 cmd_timeout=120,
