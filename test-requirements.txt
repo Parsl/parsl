@@ -8,6 +8,6 @@ coverage
 mock>=1.0.0
 nbsphinx
 sphinx_rtd_theme
-mypy
+mypy==0.730
 sqlalchemy-stubs
 
