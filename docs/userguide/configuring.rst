@@ -178,7 +178,9 @@ Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect re
 `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch
 workers.
 
-.. literalinclude:: ../../parsl/configs/comet_htex_multinode.py
+.. warning:: This config has been tested with Parsl v0.9.0
+
+.. literalinclude:: ../../parsl/configs/comet.py
 
 
 .. _configuring_nersc_cori:
