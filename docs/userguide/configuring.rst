@@ -251,18 +251,6 @@ with the scheduler, and uses the `AprunLauncher` to launch workers.
 .. literalinclude:: ../../parsl/configs/bluewaters_htex.py
 
 
-Swan (Cray)
------------
-
-.. image:: https://www.cray.com/blog/wp-content/uploads/2016/11/XC50-feat-blog.jpg
-
-The following snippet shows an example configuration for executing remotely on Swan, an XC50 machine hosted by the Cray Partner Network.
-The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
-to launch workers on the machine
-
-.. literalinclude:: ../../parsl/configs/swan_ipp_multinode.py
-
-
 Summit (ORNL)
 -------------
 
