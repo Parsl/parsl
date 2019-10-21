@@ -1,5 +1,4 @@
 from parsl.config import Config
-from parsl.channels import SSHChannel
 from parsl.launchers import SrunLauncher
 from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
@@ -12,13 +11,9 @@ config = Config(
             label='Comet_HTEX_multinode',
             address=address_by_query(),
             worker_logdir_root='YOUR_LOGDIR_ON_COMET',
+            max_workers=2,
             provider=SlurmProvider(
                 'debug',
-                channel=SSHChannel(
-                    hostname='comet.sdsc.xsede.org',
-                    username='YOUR_USERNAME',
-                    script_dir='YOUR_SCRIPT_DIR',
-                ),
                 launcher=SrunLauncher(),
                 # string to prepend to #SBATCH blocks in the submit
                 # script to the scheduler
