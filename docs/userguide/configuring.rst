@@ -349,7 +349,7 @@ To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create 
 for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
 configuration follows.
 
-.. literalinclude:: ../../parsl/configs/ad_hoc_htex.py
+.. literalinclude:: ../../parsl/configs/ad_hoc.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
