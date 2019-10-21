@@ -192,7 +192,7 @@ Cori (NERSC)
 
 The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
-.. literalinclude:: ../../parsl/configs/cori_htex_local_multinode.py
+.. literalinclude:: ../../parsl/configs/cori.py
 
 
 Stampede2 (TACC)
@@ -261,7 +261,7 @@ Summit (ORNL)
 The following snippet shows an example configuration for executing from the login node on Summit, the leadership class supercomputer hosted at the Oak Ridge National Laboratory.
 The example uses the `LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `JsrunLauncher` to launch workers across the compute nodes.
 
-.. literalinclude:: ../../parsl/configs/summit_local_htex.py
+.. literalinclude:: ../../parsl/configs/summit.py
 
 
 CC-IN2P3
@@ -273,7 +273,7 @@ The snippet below shows an example configuration for executing from a login node
 The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
 This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
 
-.. literalinclude:: ../../parsl/configs/cc_in2p3_local_single_node.py
+.. literalinclude:: ../../parsl/configs/cc_in2p3.py
 
 Midway (RCC, UChicago)
 ----------------------
@@ -285,7 +285,7 @@ The snippet below shows an example configuration for executing remotely on Midwa
 The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
 with the scheduler, and uses the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/midway_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/midway.py
 
 
 Open Science Grid
@@ -339,7 +339,7 @@ To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create 
 for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
 configuration follows.
 
-.. literalinclude:: ../../parsl/configs/ad_hoc_htex.py
+.. literalinclude:: ../../parsl/configs/ad_hoc.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
