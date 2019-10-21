@@ -178,7 +178,9 @@ Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect re
 `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch
 workers.
 
-.. literalinclude:: ../../parsl/configs/comet_htex_multinode.py
+.. warning:: This config has **NOT** been tested with Parsl v0.9.0
+
+.. literalinclude:: ../../parsl/configs/comet.py
 
 
 .. _configuring_nersc_cori:
@@ -249,18 +251,6 @@ The configuration assumes the user is running on a login node and uses the `Torq
 with the scheduler, and uses the `AprunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/bluewaters_htex.py
-
-
-Swan (Cray)
------------
-
-.. image:: https://www.cray.com/blog/wp-content/uploads/2016/11/XC50-feat-blog.jpg
-
-The following snippet shows an example configuration for executing remotely on Swan, an XC50 machine hosted by the Cray Partner Network.
-The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
-to launch workers on the machine
-
-.. literalinclude:: ../../parsl/configs/swan_ipp_multinode.py
 
 
 Summit (ORNL)
