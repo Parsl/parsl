@@ -202,7 +202,7 @@ Stampede2 (TACC)
 
 The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
 
-.. literalinclude:: ../../parsl/configs/stampede2_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/stampede2.py
 
 Frontera (TACC)
 ---------------
@@ -225,7 +225,7 @@ The following snippet shows an example configuration for executing on Argonne Le
 **Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
 using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/theta_local_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/theta.py
 
 
 Cooley (ALCF)
