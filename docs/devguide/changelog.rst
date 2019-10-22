@@ -70,6 +70,8 @@ New Functionality
 * Several improvements to the Monitoring interface.
 * Configurable port on `parsl.channels.SSHChannel`.
 * `Suppress_failure` is now default to True.
+* `HighThroughputExecutor` is the recommended executor, and `IPyParallelExecutor` is deprecated.
+
 
 Bug Fixes
 ^^^^^^^^^
