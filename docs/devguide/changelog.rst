@@ -69,7 +69,7 @@ New Functionality
 * Several test-suite improvements that have dramatically reduced test duration.
 * Several improvements to the Monitoring interface.
 * Configurable port on `parsl.channels.SSHChannel`.
-* `Suppress_failure` is now default to True.
+* `suppress_failure` is now default to True.
 * `HighThroughputExecutor` is the recommended executor, and `IPyParallelExecutor` is deprecated.
 
 
