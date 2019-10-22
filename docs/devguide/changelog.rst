@@ -68,7 +68,8 @@ New Functionality
 
 * Several test-suite improvements that have dramatically reduced test duration.
 * Several improvements to the Monitoring interface.
-* Configurable port on `parsl.channels.SSHChannel`
+* Configurable port on `parsl.channels.SSHChannel`.
+* `Suppress_failure` is now default to True.
 
 Bug Fixes
 ^^^^^^^^^
