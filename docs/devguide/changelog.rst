@@ -42,6 +42,7 @@ New Functionality
 
 
 * `@python_app` now takes a `walltime` kwarg to limit the task execution time.
+* Redesigned data_provider API with implementations that support transfer using HTTP(s), FTP, Globus and rsync.
 * New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
 * Log levels in Monitoring is now parameterisable:
