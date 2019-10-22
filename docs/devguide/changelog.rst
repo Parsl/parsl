@@ -45,14 +45,14 @@ New Functionality
 * Redesigned data_provider API with implementations that support transfer using HTTP(s), FTP, Globus and rsync.
 * New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
-* Log levels in Monitoring is now parameterisable:
+* The `logging_level=logging.INFO` in `MonitoringHub` is replaced with `monitoring_debug=False`:
 
    .. code-block:: python
 
       monitoring=MonitoringHub(
                    hub_address=address_by_hostname(),
                    hub_port=55055,
-                   logging_level=logging.INFO,
+                   monitoring_debug=True,
                    resource_monitoring_interval=10,
       ),
 
