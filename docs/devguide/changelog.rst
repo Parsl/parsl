@@ -52,7 +52,7 @@ New Functionality
       monitoring=MonitoringHub(
                    hub_address=address_by_hostname(),
                    hub_port=55055,
-                   monitoring_debug=True,
+                   monitoring_debug=False,
                    resource_monitoring_interval=10,
       ),
 
