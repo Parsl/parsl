@@ -10,7 +10,7 @@ Released on October 23rd, 2019
 
 Parsl v0.9.0 includes 199 closed issues and pull requests with contributions (code, tests, reviews and reports) from:
 
-Andrew Litteken @AndrewLitteken, Anna Woodard @annawoodard, Ben Clifford @benc,
+Andrew Litteken @AndrewLitteken, Anna Woodard @annawoodard, Ben Clifford @benclifford,
 Ben Glick @benhg, Daniel S. Katz @danielskatz, Daniel Smith @dgasmith,
 Engin Arslan @earslan58, Geoffrey Lentner @glentner, John Hover @jhover
 Kyle Chard @kylechard, TJ Dasso @tjdasso, Ted Summer @macintoshpie,
