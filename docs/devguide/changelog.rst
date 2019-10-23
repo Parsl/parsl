@@ -21,7 +21,7 @@ Tom Glanzman @TomGlanzman, Levi Naden @LNaden, Matthew Welborn @mattwelborn,
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* Parsl will not do automatic keyword substitution in `@bash_app` in favor of deferring to Python's `format method <https://docs.python.org/3.1/library/stdtypes.html#str.format>`_
+* Parsl will no longer do automatic keyword substitution in `@bash_app` in favor of deferring to Python's `format method <https://docs.python.org/3.1/library/stdtypes.html#str.format>`_
   and newer `f-strings <https://www.python.org/dev/peps/pep-0498/>`_. For example,
 
      .. code-block:: python
@@ -42,7 +42,24 @@ New Functionality
 
 
 * `@python_app` now takes a `walltime` kwarg to limit the task execution time.
-* Redesigned data_provider API with implementations that support transfer using HTTP(s), FTP, Globus and rsync.
+* New file staging API `parsl.data_provider.staging` to support pluggable
+  file staging methods. The methods implemented in 0.8.0 (HTTP(S), FTP and
+  Globus) are still present, along with two new methods which perform HTTP(S)
+  and FTP staging on worker nodes to support non-shared-filesystem executors
+  such as clouds.
+* Behaviour change for storage_access parameter. In 0.8.0, this was used to
+  specify Globus staging configuration. In 0.9.0, if this parameter is
+  specified it must specify all desired staging providers. To keep the same
+  staging providers as in 0.8.0, specify:
+
+    .. code-block:: python
+
+      from parsl.data_provider.data_manager import default_staging
+      storage_access = default_staging + [GlobusStaging(...)]
+
+  `GlobusScheme` in 0.8.0 has been renamed GlobusStaging and moved to a new
+  module, parsl.data_provider.globus
+
 * New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
 * The `logging_level=logging.INFO` in `MonitoringHub` is replaced with `monitoring_debug=False`:
@@ -69,7 +86,7 @@ New Functionality
 * Several test-suite improvements that have dramatically reduced test duration.
 * Several improvements to the Monitoring interface.
 * Configurable port on `parsl.channels.SSHChannel`.
-* `suppress_failure` is now default to True.
+* `suppress_failure` now defaults to True.
 * `HighThroughputExecutor` is the recommended executor, and `IPyParallelExecutor` is deprecated.
 
 
