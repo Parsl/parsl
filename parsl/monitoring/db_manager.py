@@ -396,7 +396,7 @@ class DatabaseManager(object):
                 # self.logger.debug("Database manager receives a message {}".format(x))
             except queue.Empty:
                 self.logger.debug("Database manager has not received any message.")
-                continue
+                break
             else:
                 messages.append(x)
         return messages
