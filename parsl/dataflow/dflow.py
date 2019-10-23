@@ -1048,7 +1048,7 @@ class DataFlowKernel(object):
                 raise BadCheckpoint(reason)
 
             logger.info("Completed loading checkpoint: {0} with {1} tasks".format(checkpoint_file,
-                                                                                 len(memo_lookup_table.keys())))
+                                                                                  len(memo_lookup_table.keys())))
         return memo_lookup_table
 
     def load_checkpoints(self, checkpointDirs):
