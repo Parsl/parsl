@@ -60,6 +60,7 @@ New Functionality
   `GlobusScheme` in 0.8.0 has been renamed GlobusStaging and moved to a new
   module, parsl.data_provider.globus
 
+* `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
 * New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
 * The `logging_level=logging.INFO` in `MonitoringHub` is replaced with `monitoring_debug=False`:
