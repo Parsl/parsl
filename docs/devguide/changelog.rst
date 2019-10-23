@@ -63,6 +63,7 @@ New Functionality
 * `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
 * New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
+* Support for CPU and Memory resource hints to providers `(github) <https://github.com/Parsl/parsl/issues/942>`_.
 * The `logging_level=logging.INFO` in `MonitoringHub` is replaced with `monitoring_debug=False`:
 
    .. code-block:: python
