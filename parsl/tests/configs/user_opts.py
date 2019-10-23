@@ -70,6 +70,26 @@ user_opts = {
     #     # Name of the profile used to identify credentials stored in ~/.aws/config
     #     "profile_name": "parsl",
     # },
+    #
+    # 'azure': {
+    #
+    #   # Specifies a username/password which can be used to log into Azure VMs
+    #   # These must be specified but are not used by parsl to access the VMs.
+    #   'admin_username': 'anyuser',
+    #   'password': 'mypassword1234567!',
+    #
+    #   # Characteristics of the VMs to be started:
+    #   'vm_size': 'Standard_D1',
+    #   'disk_size_gb': '10',
+    #
+    #   # Details of the image to be started on each VM.
+    #   # Values can be found using, for example, the `az` command line tool:
+    #   # az vm image list --publisher Debian
+    #   'publisher': 'Debian',
+    #   'offer': 'debian-10',
+    #   'sku': '10',
+    #   'version': 'latest'
+    # },
     # 'theta': {
     #     'username': ALCF_USERNAME,
     #     "account": ALCF_ALLOCATION,
