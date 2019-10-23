@@ -22,7 +22,7 @@ before_install:
 
 # install parsl with no optional extras
 install:
-    - pip install .
+    - pip install .[testing]
 
 # Os tests
 os:
@@ -30,7 +30,6 @@ os:
 
 # command to run tests
 script:
-    - pip install -r test-requirements.txt
     - flake8 parsl/
     - parsl/tests/lint-inits.sh
 
@@ -61,7 +60,7 @@ script:
     - if [[ "$MPI" == "mpich"   ]]; then mpichversion; fi
     - if [[ "$MPI" == "openmpi" ]]; then ompi_info;    fi
 
-    - pip install .[extreme_scale,monitoring]
+    - pip install .[testing,extreme_scale,monitoring]
 
     - pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
 

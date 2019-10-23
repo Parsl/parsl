@@ -6,6 +6,9 @@ with open('parsl/version.py') as f:
 with open('requirements.txt') as f:
     install_requires = f.readlines()
 
+with open('test-requirements.txt') as f:
+    test_requires = f.readlines()
+
 extras_require = {
     'monitoring' : [
         'sqlalchemy>=1.3.0,!=1.3.4',
@@ -27,6 +30,7 @@ extras_require = {
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure', 'msrestazure'],
     'workqueue': ['work_queue'],
+    'testing': test_requires
 }
 extras_require['all'] = sum(extras_require.values(), [])
 
