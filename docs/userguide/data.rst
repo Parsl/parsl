@@ -105,6 +105,7 @@ Parsl scripts may combine staging of files in and out of apps. For example, the 
         f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
         f.result()
 
+
 Configuration
 ^^^^^^^^^^^^^
 
