@@ -105,7 +105,6 @@ Parsl scripts may combine staging of files in and out of apps. For example, the 
         f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
         f.result()
 
-
 Configuration
 ^^^^^^^^^^^^^
 
@@ -164,3 +163,18 @@ where it will be unattended) by running this command line:
         If authorisation to Globus is necessary, the library will prompt you now.
         Otherwise it will do nothing
         Authorization complete
+
+rsync
+^^^^^
+
+`rsync` can be used to transfer files in the `file:` scheme in configurations where
+workers cannot access the submit side filesystem directly, such as when executing
+on an AWS EC2 instance.
+
+Configuration
+^^^^^^^^^^^^^
+
+rsync must be installed on both the submit and worker side. It can usually be installed
+using the operating system package manager - for example `apt-get install rsync`.
+
+
