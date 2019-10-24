@@ -79,7 +79,6 @@ user_opts = {
     #     # by running >> ip addr show | grep -o 10.236.1.[0-9]*
     #     'public_ip': '10.236.1.193'
     # },
-    # Options below this line are untested ----------------------------------------------------
     # 'beagle': {
     #     'username': 'fixme',
     #     "script_dir": "fixme",
