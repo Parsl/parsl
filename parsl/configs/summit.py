@@ -10,6 +10,8 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='Summit_HTEX',
+            # On Summit ensure that the working dir is writeable from the compute nodes,
+            # for eg. paths below /gpfs/alpine/world-shared/
             working_dir='YOUR_WORKING_DIR_ON_SHARED_FS',
             address=address_by_interface('ib0'),  # This assumes Parsl is running on login node
             worker_port_range=(50000, 55000),
