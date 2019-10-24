@@ -64,6 +64,10 @@ making FTP transfers). Travis does not provide a sufficiently clean
 network and so .travis.yml runs all tests with ``-k "not cleannet"`` to
 disable those tests.
 
+A pytest marker of ``issue363`` can be used to select or deselect tests
+that will fail because of issue 363 when running without a shared file
+system.
+
 Some other markers are available but unused in travis testing; 
 see ``pytest --markers parsl/tests/`` for more details.
 
