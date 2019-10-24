@@ -1,5 +1,6 @@
 import argparse
 import os
+import pytest
 import shutil
 import time
 
@@ -24,6 +25,7 @@ def foo(x, y, z=10, stdout=None):
     """.format(x, y, z=z)
 
 
+@pytest.mark.issue363
 def test_command_format_1():
     """Testing command format for BashApps
     """
@@ -51,6 +53,7 @@ def test_command_format_1():
     return True
 
 
+@pytest.mark.issue363
 def test_parallel_for(n=3):
     """Testing a simple parallel for loop
     """

@@ -63,6 +63,10 @@ def pytest_configure(config):
         'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
+    config.addinivalue_line(
+        'markers',
+        'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
+    )
 
 
 @pytest.fixture(scope='session')

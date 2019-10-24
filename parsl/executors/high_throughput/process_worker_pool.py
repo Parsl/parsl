@@ -333,6 +333,7 @@ class Manager(object):
 
                     p = multiprocessing.Process(target=worker, args=(worker_id,
                                                                      self.uid,
+                                                                     self.worker_count,
                                                                      self.pending_task_queue,
                                                                      self.pending_result_queue,
                                                                      self.ready_worker_queue,
@@ -357,6 +358,7 @@ class Manager(object):
         for worker_id in range(self.worker_count):
             p = multiprocessing.Process(target=worker, args=(worker_id,
                                                              self.uid,
+                                                             self.worker_count,
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
@@ -443,7 +445,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, pool_id, task_queue, result_queue, worker_queue, tasks_in_progress):
+def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress):
     """
 
     Put request token into queue
@@ -455,6 +457,11 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue, tasks_in_
                       worker_id,
                       name="worker_log",
                       level=logging.DEBUG if args.debug else logging.INFO)
+
+    # Store worker ID as an environment variable
+    os.environ['PARSL_WORKER_RANK'] = str(worker_id)
+    os.environ['PARSL_WORKER_COUNT'] = str(pool_size)
+    os.environ['PARSL_WORKER_POOL_ID'] = str(pool_id)
 
     # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
