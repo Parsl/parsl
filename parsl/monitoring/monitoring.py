@@ -147,12 +147,12 @@ class MonitoringHub(RepresentationMixin):
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+             This is overridden when the hub_port option is set. Default: (55050, 56000)
         client_address : str
              The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
         client_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             Defauls: (55050, 56000)
+             Default: (55050, 56000)
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -497,7 +497,7 @@ def monitor(pid,
                 d['psutil_process_disk_write'] = pm.io_counters().write_bytes
                 d['psutil_process_disk_read'] = pm.io_counters().read_bytes
             except Exception:
-                # occassionally pid temp files that hold this information are unvailable to be read so set to zero
+                # occasionally pid temp files that hold this information are unvailable to be read so set to zero
                 logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0
