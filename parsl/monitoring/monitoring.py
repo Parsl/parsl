@@ -3,6 +3,7 @@ import socket
 import pickle
 import logging
 import time
+import typeguard
 import datetime
 import zmq
 
@@ -12,7 +13,7 @@ from parsl.utils import RepresentationMixin
 
 from parsl.monitoring.message_type import MessageType
 
-from typing import Optional
+from typing import Optional, Tuple
 
 try:
     from parsl.monitoring.db_manager import dbm_starter
@@ -122,22 +123,23 @@ class UDPRadio(object):
         return x
 
 
+@typeguard.typechecked
 class MonitoringHub(RepresentationMixin):
     def __init__(self,
-                 hub_address,
-                 hub_port=None,
-                 hub_port_range=(55050, 56000),
+                 hub_address: str,
+                 hub_port: Optional[int] = None,
+                 hub_port_range: Tuple[int, int] = (55050, 56000),
 
-                 client_address="127.0.0.1",
-                 client_port_range=(55000, 56000),
+                 client_address: str = "127.0.0.1",
+                 client_port_range: Tuple[int, int] = (55000, 56000),
 
-                 workflow_name=None,
-                 workflow_version=None,
-                 logging_endpoint='sqlite:///monitoring.db',
-                 logdir=None,
-                 monitoring_debug=False,
-                 resource_monitoring_enabled=True,
-                 resource_monitoring_interval=30):  # in seconds
+                 workflow_name: Optional[str] = None,
+                 workflow_version: Optional[str] = None,
+                 logging_endpoint: str = 'sqlite:///monitoring.db',
+                 logdir: Optional[str] = None,
+                 monitoring_debug: bool = False,
+                 resource_monitoring_enabled: bool = True,
+                 resource_monitoring_interval: int = 30):  # in seconds
         """
         Parameters
         ----------
