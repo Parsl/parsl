@@ -37,6 +37,7 @@ testids = [
 ]
 
 
+@pytest.mark.issue363
 @pytest.mark.parametrize('spec', speclist, ids=testids)
 def test_bad_stdout_specs(spec):
     """Testing bad stdout spec cases
@@ -55,6 +56,7 @@ def test_bad_stdout_specs(spec):
     return
 
 
+@pytest.mark.issue363
 def test_bad_stderr_file():
 
     """ Testing bad stderr file """
@@ -75,6 +77,7 @@ def test_bad_stderr_file():
     return
 
 
+@pytest.mark.issue363
 def test_stdout_truncate():
 
     """ Testing truncation of prior content of stdout """
@@ -94,6 +97,7 @@ def test_stdout_truncate():
     os.system('rm -f ' + out[0] + ' ' + err)
 
 
+@pytest.mark.issue363
 def test_stdout_append():
 
     """ Testing appending to prior content of stdout (default open() mode) """
