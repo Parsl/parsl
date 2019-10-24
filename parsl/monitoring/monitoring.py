@@ -142,7 +142,7 @@ class MonitoringHub(RepresentationMixin):
         Parameters
         ----------
         hub_address : str
-             The ip address at which the workers will be able to reach the Hub. Default: "127.0.0.1"
+             The ip address at which the workers will be able to reach the Hub.
         hub_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
@@ -152,7 +152,7 @@ class MonitoringHub(RepresentationMixin):
              The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
         client_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             Default: (55050, 56000)
+             Default: (55000, 56000)
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -168,7 +168,7 @@ class MonitoringHub(RepresentationMixin):
         resource_monitoring_enabled : boolean
              Set this field to True to enable logging the info of resource usage of each task. Default: True
         resource_monitoring_interval : int
-             The time interval at which the monitoring records the resource usage of each task. Default: 30 seconds
+             The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
         self.logger = None
         self._dfk_channel = None
