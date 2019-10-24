@@ -136,6 +136,7 @@ class MonitoringHub(RepresentationMixin):
                  logging_endpoint='sqlite:///monitoring.db',
                  logdir=None,
                  monitoring_debug=False,
+                 atexit_timeout=3,
                  resource_monitoring_enabled=True,
                  resource_monitoring_interval=30):  # in seconds
         """
@@ -165,6 +166,8 @@ class MonitoringHub(RepresentationMixin):
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         monitoring_debug : Bool
              Enable monitoring debug logging. Default: False
+        atexit_timeout: float
+             The maximum time in second to wait for the Hub to receive all messages. Default: 3 seconds
         resource_monitoring_enabled : boolean
              Set this field to True to enable logging the info of resource usage of each task. Default: True
         resource_monitoring_interval : int
@@ -186,6 +189,7 @@ class MonitoringHub(RepresentationMixin):
         self.logging_endpoint = logging_endpoint
         self.logdir = logdir
         self.monitoring_debug = monitoring_debug
+        self.atexit_timeout = atexit_timeout
 
         self.workflow_name = workflow_name
         self.workflow_version = workflow_version
@@ -230,7 +234,8 @@ class MonitoringHub(RepresentationMixin):
                                           "client_port": self.dfk_port,
                                           "logdir": self.logdir,
                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                          "run_id": run_id
+                                          "run_id": run_id,
+                                          "atexit_timeout": self.atexit_timeout
                                   },
                                   daemon=True,
                                   name="Monitoring-Queue-Process"
@@ -269,9 +274,10 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
             try:
-                msg = self.stop_q.get()
+                msg = self.stop_q.get(timeout=self.atexit_timeout)
                 self.logger.info("Received {} from Hub".format(msg))
             except queue.Empty:
+                self.logger.info("Have not received any STOP message. Exit anyway.")
                 pass
             self.logger.info("Terminating Hub")
             self.queue_proc.terminate()
