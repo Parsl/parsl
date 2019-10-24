@@ -245,6 +245,7 @@ class MonitoringHub(RepresentationMixin):
                                 name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
+        self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
