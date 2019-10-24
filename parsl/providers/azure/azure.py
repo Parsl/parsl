@@ -49,6 +49,17 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     `AZURE_TENANT_ID` (the session key for your azure account), and
     `AZURE_SUBSCRIPTION_ID`.
 
+    The tenant ID is also known as the directory ID here:
+    in https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Properties
+    A tenant ID is a GUID.
+
+    A client ID and secret can be created by following these instructions:
+    https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal
+    A client ID is a GUID.
+
+    The subscription ID can be found here:
+    https://portal.azure.com/#blade/Microsoft_Azure_Billing/SubscriptionsBlade
+
     Parameters
     ----------
     vm_reference : dict
