@@ -44,32 +44,37 @@ class File(object):
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
 
+    def cleancopy(self) -> "File":
+        """Returns a copy of the file containing only the global immutable state,
+           without any mutable site-local local_path information. The returned File
+           object will be as the original object was when it was constructed.
+        """
+        logger.debug("Making clean copy of File object {}".format(repr(self)))
+        return File(self.url)
+
     def __str__(self):
         return self.filepath
 
     def __repr__(self):
+        content = "{0} at 0x{1:x} url={2} scheme={3} netloc={4} path={5} filename={6}".format(
+            self.__class__, id(self), self.url, self.scheme, self.netloc, self.path, self.filename)
         if hasattr(self, 'local_path'):
-            return "<{0} at 0x{1:x} url={2} local_path={3}>".format(self.__class__, id(self), self.url, self.local_path)
-        else:
-            return "<{0} at 0x{1:x} url={2}>".format(self.__class__, id(self), self.url)
+            content += " local_path={0}".format(self.local_path)
+
+        return "<{}>".format(content)
 
     def __fspath__(self):
         return self.filepath
-
-    def is_remote(self):
-        if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            return True
-        elif self.scheme in ['file']:  # TODO: is this enough?
-            return False
-        else:
-            raise Exception('Cannot determine if unknown file scheme {} is remote'.format(self.scheme))
 
     @property
     def filepath(self):
         """Return the resolved filepath on the side where it is called from.
 
         The appropriate filepath will be returned when called from within
-        an app running remotely as well as regular python on the client side.
+        an app running remotely as well as regular python on the submit side.
+
+        Only file: scheme URLs make sense to have a submit-side path, as other
+        URLs are not accessible through POSIX file access.
 
         Args:
             - self
@@ -79,12 +84,10 @@ class File(object):
         if hasattr(self, 'local_path'):
             return self.local_path
 
-        if self.scheme in ['ftp', 'http', 'https', 'globus']:
-            return self.filename
-        elif self.scheme in ['file']:
+        if self.scheme in ['file']:
             return self.path
         else:
-            raise Exception('Cannot return filepath for unknown scheme {}'.format(self.scheme))
+            raise ValueError("No local_path set for {}".format(repr(self)))
 
 
 if __name__ == '__main__':

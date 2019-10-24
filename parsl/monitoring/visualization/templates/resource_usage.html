@@ -23,6 +23,16 @@
 <br><a href="/workflow/{{ workflow_details['run_id'] }} ">View workflow task summary</a>
 
 
+<h5>Worker usage</h5>
+<div class="container" style="height: 500px;">
+{{ worker_efficiency|safe }}
+</div>
+
+<h5>CPU usage</h5>
+<div class="container" style="height: 500px;">
+{{ cpu_efficiency|safe }}
+</div>
+
 <h5>CPU Usage</h5>
 <div class="container">
   <div class="row">
@@ -33,6 +43,11 @@
 {{ user_time_distribution_max_plot|safe }}
     </div>
   </div>
+</div>
+
+<h5>Memory usage</h5>
+<div class="container" style="height: 500px;">
+{{ memory_efficiency|safe }}
 </div>
 
 <h5>Memory Usage</h5>
@@ -47,27 +62,4 @@
   </div>
 </div>
 
-<h5>CPU usage</h5>
-<div class="container">
-  <div class="row">
-    <div class="col-6" style="height: 300px;">
-{{ cpu_percent_time_series|safe }}
-    </div>
-    <div class="col-6" style="height: 300px;">
-{{ user_time_time_series|safe }}
-    </div>
-  </div>
-</div>
-
-<h5>Memory usage</h5>
-<div class="container">
-  <div class="row">
-    <div class="col-6" style="height: 300px;">
-{{ memory_percent_time_series|safe }}
-    </div>
-    <div class="col-6" style="height: 300px;">
-{{ memory_resident_time_series|safe }}
-    </div>
-  </div>
-</div>
 {% endblock %}

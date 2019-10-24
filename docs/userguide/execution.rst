@@ -37,9 +37,9 @@ Parsl currently supports the following executors:
 
 1. `ThreadPoolExecutor`: This executor supports multi-thread execution on local resources.
 
-2. `IPyParallelExecutor`: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
+2. `HighThroughputExecutor`: The HighThroughputExecutor is designed as a replacement for the IPyParallelExecutor. Implementing hierarchical scheduling and batching, the HighThroughputExecutor consistently delivers high throughput task execution on the order of 1000 Nodes
 
-3. `HighThroughputExecutor`: [**Beta**] The HighThroughputExecutor is designed as a replacement for the IPyParallelExecutor. Implementing hierarchical scheduling and batching, the HighThroughputExecutor consistently delivers high throughput task execution on the order of 1000 Nodes.
+3. `IPyParallelExecutor` [**Deprecated**]: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
 
 4. `ExtremeScaleExecutor`: [**Beta**] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>` to scale over 4000+ nodes. This executor is typically used for executing on Supercomputers.
 
@@ -65,6 +65,21 @@ Launchers are responsible for abstracting these different task-launch systems to
 6. `SimpleLauncher`: The launcher default to a single worker launch.
 7. `SingleNodeLauncher`: This launcher launches ``workers_per_node`` count workers on a single node.
 
+Additionally, custom launchers which are aware of more specific environments (for example, to
+launch node processes inside containers with custom environments) can be written as part of the workflow
+configuration. For example, this launcher uses Srun to launch `worker-wrapper`, passing the
+command to be run as parameters to `worker-wrapper`. It is the responsibility of `worker-wrapper`
+to launch the command it is given inside the appropriate environment.
+
+.. code:: python
+
+   class MyShifterSRunLauncher:
+       def __init__(self):
+           self.srun_launcher = SrunLauncher()
+
+       def __call__(self, command, tasks_per_node, nodes_per_block):
+           new_command="worker-wrapper {}".format(command)
+           return self.srun_launcher(new_command, tasks_per_node, nodes_per_block)
 
 Blocks
 ------

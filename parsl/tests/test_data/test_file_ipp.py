@@ -1,4 +1,5 @@
 import os
+import pytest
 
 import parsl
 from parsl.app.app import App
@@ -14,6 +15,8 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     """.format(i=infiles, o=outputs[0])
 
 
+@pytest.mark.usefixtures('setup_data')
+@pytest.mark.issue363
 def test_files():
 
     if os.path.exists('cat_out.txt'):

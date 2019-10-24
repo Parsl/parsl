@@ -1,8 +1,10 @@
 import argparse
+import os
 
 import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
+from parsl.app.futures import DataFuture
 
 from parsl.tests.configs.local_threads import config
 
@@ -10,6 +12,7 @@ from parsl.tests.configs.local_threads import config
 @App('bash')
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     cmd_line = """
+    if ! [ -f {inputs[0]} ] ; then exit 43 ; fi
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
     """.format(inputs=inputs, outputs=outputs)
@@ -26,9 +29,19 @@ def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
     return cmd_line
 
 
+def cleanup_work(depth):
+    for i in range(0, depth):
+        fn = "test{0}.txt".format(i)
+        if os.path.exists(fn):
+            os.remove(fn)
+
+
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """
+
+    cleanup_work(depth)
+
     # Create the first file
     open("test0.txt", 'w').write('0\n')
 
@@ -37,6 +50,7 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
+        assert(isinstance(prev, DataFuture) or isinstance(prev, File))
         output = File("test{0}.txt".format(i))
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
@@ -46,25 +60,39 @@ def test_increment(depth=5):
         [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
+        assert(isinstance(prev, DataFuture))
 
     for key in futs:
         if key > 0:
             fu = futs[key]
-            data = open(fu.result().filepath, 'r').read().strip()
+            file = fu.result()
+            filename = file.filepath
+
+            # this test is a bit close to a test of the specific implementation
+            # of File
+            assert not hasattr(file, 'local_path'), "File on local side has overridden local_path, file: {}".format(repr(file))
+            assert file.filepath == "test{0}.txt".format(key), "Submit side filepath has not been preserved over execution"
+
+            data = open(filename, 'r').read().strip()
             assert data == str(
-                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+                key), "[TEST] incr failed for key: {0} got data: {1} from filename {2}".format(key, data, filename)
+
+    cleanup_work(depth)
 
 
 def test_increment_slow(depth=5, dur=0.5):
     """Test simple pipeline slow (sleep.5) A->B...->N
     """
+
+    cleanup_work(depth)
+
     # Create the first file
     open("test0.txt", 'w').write('0\n')
 
     prev = File("test0.txt")
     # Create the first entry in the dictionary holding the futures
     futs = {}
-    print("**************TYpe : ", type(dur), dur)
+    print("************** Type: ", type(dur), dur)
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
         output = File("test{0}.txt".format(i))
@@ -84,7 +112,9 @@ def test_increment_slow(depth=5, dur=0.5):
             fu = futs[key]
             data = open(fu.result().filepath, 'r').read().strip()
             assert data == str(
-                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+                key), "[TEST] incr failed for key: {0} got: {1}".format(key, data)
+
+    cleanup_work(depth)
 
 
 if __name__ == '__main__':

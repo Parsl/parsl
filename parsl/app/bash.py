@@ -2,16 +2,13 @@ from functools import update_wrapper
 from inspect import signature, Parameter
 
 from parsl.app.errors import wrap_error
-from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
 
 def remote_side_bash_executor(func, *args, **kwargs):
-    """Execute the bash app type function and return the command line string.
-
-    This string is reformatted with the *args, and **kwargs
-    from call time.
+    """Executes the supplied function with *args and **kwargs to get a
+    command-line to run, and then run that command-line using bash.
     """
     import os
     import time
@@ -46,7 +43,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if executable is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e))
         else:
-            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned none - with this exception: {}".format(func_name, e), None)
+            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned None - with this exception: {}".format(func_name, e), None)
 
     except IndexError as e:
         raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e))
@@ -162,9 +159,5 @@ class BashApp(AppBase):
                              fn_hash=self.func_hash,
                              cache=self.cache,
                              **self.kwargs)
-
-        out_futs = [DataFuture(app_fut, o, tid=app_fut.tid)
-                    for o in kwargs.get('outputs', [])]
-        app_fut._outputs = out_futs
 
         return app_fut

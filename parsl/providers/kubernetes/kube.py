@@ -285,9 +285,5 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         logger.debug("Pod deleted. status='{0}'".format(str(api_response.status)))
 
     @property
-    def scaling_enabled(self):
-        return True
-
-    @property
     def label(self):
         return "kubernetes"

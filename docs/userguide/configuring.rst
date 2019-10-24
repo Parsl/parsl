@@ -178,7 +178,9 @@ Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect re
 `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch
 workers.
 
-.. literalinclude:: ../../parsl/configs/comet_htex_multinode.py
+.. warning:: This config has **NOT** been tested with Parsl v0.9.0
+
+.. literalinclude:: ../../parsl/configs/comet.py
 
 
 .. _configuring_nersc_cori:
@@ -190,7 +192,7 @@ Cori (NERSC)
 
 The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
-.. literalinclude:: ../../parsl/configs/cori_htex_local_multinode.py
+.. literalinclude:: ../../parsl/configs/cori.py
 
 
 Stampede2 (TACC)
@@ -200,7 +202,18 @@ Stampede2 (TACC)
 
 The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
 
-.. literalinclude:: ../../parsl/configs/stampede2_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/stampede2.py
+
+Frontera (TACC)
+---------------
+
+.. image:: https://fronteraweb.tacc.utexas.edu/media/filer_public/e2/66/e266466f-502e-4bfe-92d6-3634d697ed99/frontera-home.jpg
+
+Deployed in June 2019, Frontera is the 5th most powerful supercomputer in the world. Frontera replaces the NSF Blue Waters system at NCSA
+and is the first deployment in the National Science Foundation's petascale computing program. The configuration below assumes that the user is
+running on a login node and uses the `SlurmProvider` to interface with the scheduler, and uses the `SrunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/frontera.py
 
 
 Theta (ALCF)
@@ -212,7 +225,7 @@ The following snippet shows an example configuration for executing on Argonne Le
 **Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
 using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/theta_local_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/theta.py
 
 
 Cooley (ALCF)
@@ -240,16 +253,15 @@ with the scheduler, and uses the `AprunLauncher` to launch workers.
 .. literalinclude:: ../../parsl/configs/bluewaters_htex.py
 
 
-Swan (Cray)
------------
+Summit (ORNL)
+-------------
 
-.. image:: https://www.cray.com/blog/wp-content/uploads/2016/11/XC50-feat-blog.jpg
+.. image:: https://www.olcf.ornl.gov/wp-content/uploads/2018/06/Summit_Exaop-1500x844.jpg
 
-The following snippet shows an example configuration for executing remotely on Swan, an XC50 machine hosted by the Cray Partner Network.
-The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
-to launch workers on the machine
+The following snippet shows an example configuration for executing from the login node on Summit, the leadership class supercomputer hosted at the Oak Ridge National Laboratory.
+The example uses the `LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `JsrunLauncher` to launch workers across the compute nodes.
 
-.. literalinclude:: ../../parsl/configs/swan_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/summit.py
 
 
 CC-IN2P3
@@ -261,7 +273,7 @@ The snippet below shows an example configuration for executing from a login node
 The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
 This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
 
-.. literalinclude:: ../../parsl/configs/cc_in2p3_local_single_node.py
+.. literalinclude:: ../../parsl/configs/cc_in2p3.py
 
 Midway (RCC, UChicago)
 ----------------------
@@ -273,7 +285,7 @@ The snippet below shows an example configuration for executing remotely on Midwa
 The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
 with the scheduler, and uses the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/midway_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/midway.py
 
 
 Open Science Grid
@@ -297,12 +309,23 @@ Amazon Web Services
    Please note that **boto3** library is a requirement to use AWS with Parsl.
    This can be installed via ``python3 -m pip install parsl[aws]``
 
-Amazon Web services is a commercial cloud service which allows you to rent a range of computers and other computing services.
+Amazon Web Services is a commercial cloud service which allows you to rent a range of computers and other computing services.
 The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
 re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
 
 .. literalinclude:: ../../parsl/configs/ec2_htex_single_node.py
+
+Kubernetes Clusters
+-------------------
+
+.. image:: https://d1.awsstatic.com/PAC/kuberneteslogo.eabc6359f48c8e30b7a138c18177f3fd39338e05.png
+
+Kubernetes is an open-source system for container management, such as automating deployment and scaling of containers.
+The snippet below shows an example configuration for deploying pods as workers on a Kubernetes cluster.
+The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in `~/.kube/config`.
+
+.. literalinclude:: ../../parsl/configs/kubernetes_htex.py
 
 
 Ad-Hoc Clusters
@@ -316,7 +339,7 @@ To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create 
 for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
 configuration follows.
 
-.. literalinclude:: ../../parsl/configs/ad_hoc_htex.py
+.. literalinclude:: ../../parsl/configs/ad_hoc.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`

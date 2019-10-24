@@ -143,6 +143,7 @@ class Database(object):
 
     class Node(Base):
         __tablename__ = NODE
+        id = Column('id', Integer, nullable=False, primary_key=True, autoincrement=True)
         run_id = Column('run_id', Text, nullable=False)
         hostname = Column('hostname', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
@@ -151,9 +152,6 @@ class Database(object):
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
         reg_time = Column('reg_time', DateTime, nullable=False)
-        __table_args__ = (
-            PrimaryKeyConstraint('hostname', 'run_id', 'reg_time'),
-        )
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -190,9 +188,6 @@ class Database(object):
             PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
         )
 
-    def __del__(self):
-        self.session.close()
-
 
 class DatabaseManager(object):
     def __init__(self,
@@ -204,10 +199,7 @@ class DatabaseManager(object):
                  ):
 
         self.logdir = logdir
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         self.logger = start_file_logger(
             "{}/database_manager.log".format(self.logdir), level=logging_level)
@@ -226,19 +218,22 @@ class DatabaseManager(object):
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                priority_queue, 'priority', self._kill_event,)
+                                                                priority_queue, 'priority', self._kill_event,),
+                                                            name="Monitoring-migrate-priority"
                                                             )
         self._priority_queue_pull_thread.start()
 
         self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                         args=(
-                                                            node_queue, 'node', self._kill_event,)
+                                                            node_queue, 'node', self._kill_event,),
+                                                        name="Monitoring-migrate-node"
                                                         )
         self._node_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                resource_queue, 'resource', self._kill_event,)
+                                                                resource_queue, 'resource', self._kill_event,),
+                                                            name="Monitoring-migrate-resource"
                                                             )
         self._resource_queue_pull_thread.start()
 
@@ -370,7 +365,7 @@ class DatabaseManager(object):
             self.logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
                               .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
             try:
-                x, addr = logs_queue.get(block=False)
+                x, addr = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
@@ -397,9 +392,10 @@ class DatabaseManager(object):
             if time.time() - start >= interval or len(messages) >= threshold:
                 break
             try:
-                x = msg_queue.get(block=False)
+                x = msg_queue.get(timeout=0.1)
                 # self.logger.debug("Database manager receives a message {}".format(x))
             except queue.Empty:
+                self.logger.debug("Database manager has not received any message.")
                 break
             else:
                 messages.append(x)

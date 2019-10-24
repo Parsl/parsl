@@ -101,7 +101,7 @@ def timeout(seconds=None):
     def decorator(func, *args, **kwargs):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            t = threading.Thread(target=func, args=args, kwargs=kwargs)
+            t = threading.Thread(target=func, args=args, kwargs=kwargs, name="Timeout-Decorator")
             t.start()
             result = t.join(seconds)
             if t.is_alive():
@@ -122,8 +122,8 @@ def wait_for_file(path, seconds=10):
 
 @contextmanager
 def time_limited_open(path, mode, seconds=1):
-    wait_for_file(path, seconds)
-
+    with wait_for_file(path, seconds):
+        logger.debug("wait_for_file yielded")
     f = open(path, mode)
     yield f
     f.close()
@@ -179,7 +179,7 @@ class RepresentationMixin(object):
 
         # This test looks for a single layer of wrapping performed by
         # functools.update_wrapper, commonly used in decorators. This will
-        # allow RepresentationMixing to see through a single such decorator
+        # allow RepresentationMixin to see through a single such decorator
         # applied to the __init__ method of a class, and find the underlying
         # arguments. It will not see through multiple layers of such
         # decorators, or cope with other decorators which do not use
@@ -189,7 +189,7 @@ class RepresentationMixin(object):
             init = init.__wrapped__
 
         argspec = inspect.getfullargspec(init)
-        if len(argspec.args) > 1:
+        if len(argspec.args) > 1 and argspec.defaults is not None:
             defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
         else:
             defaults = {}
@@ -199,7 +199,10 @@ class RepresentationMixin(object):
                 template = 'class {} uses {} in the constructor, but does not define it as an attribute'
                 raise AttributeError(template.format(self.__class__.__name__, arg))
 
-        args = [getattr(self, a) for a in argspec.args[1:-len(defaults)]]
+        if len(defaults) != 0:
+            args = [getattr(self, a) for a in argspec.args[1:-len(defaults)]]
+        else:
+            args = [getattr(self, a) for a in argspec.args[1:]]
         kwargs = {key: getattr(self, key) for key in defaults}
 
         def assemble_multiline(args, kwargs):

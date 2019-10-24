@@ -1,3 +1,8 @@
+"""WorkQueueExecutor utilizes the Work Queue distributed framework developed by the
+Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
+high-throughput system for delegating Parsl tasks to thousands of remote machines
+"""
+
 import threading
 import multiprocessing
 import logging
@@ -6,8 +11,8 @@ from concurrent.futures import Future
 import os
 import pickle
 import queue
-
-from ipyparallel.serialize import pack_apply_message, deserialize_object
+import inspect
+from ipyparallel.serialize import pack_apply_message
 
 from parsl.app.errors import AppFailure
 from parsl.app.errors import RemoteExceptionWrapper
@@ -50,6 +55,13 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           project_password=None,
                           project_password_file=None,
                           project_name=None):
+    """Thread to handle Parsl app submissions to the Work Queue objects.
+    Takes in Parsl functions submitted using submit(), and creates a
+    Work Queue task with the appropriate specifications, which is then
+    submitted to Work Queue. After tasks are completed, processes the
+    exit status and exit code of the task, and sends results to the
+    Work Queue collector thread.
+    """
     logger.debug("Starting WorkQueue Submit/Wait Process")
 
     # Enable debugging flags and create logging file
@@ -240,8 +252,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                             elif status == 4:
                                 reason += "problem writing out function result"
                             else:
-                                reason += "unable to process wrapper script failure"
-                            reason += "\nTrace:\n" + t.output
+                                reason += "unable to process wrapper script failure with status = {}".format(status)
+                            reason += "\nTrace:\n" + str(t.output)
                             logger.debug("WorkQueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
                         # WorkQueue system failure
                         else:
@@ -317,6 +329,9 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
                              cancel_value=multiprocessing.Value('i', 1),
                              submit_process=None,
                              executor=None):
+    """Processes completed Parsl tasks. If an error arose while the Parsl task
+    was executed, raises the exception on the local machine.
+    """
 
     logger.debug("Starting Collector Thread")
 
@@ -352,42 +367,82 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         # Successful task
         else:
             result = item["result"]
-            future_update, _ = deserialize_object(result["result"])
+            future_update = result["result"]
             logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
             if result["failure"] is False:
                 future.set_result(future_update)
             else:
-                future.set_exception(RemoteExceptionWrapper(*future_update))
+                future_fail = pickle.loads(future_update)
+                exc = RemoteExceptionWrapper(*future_fail)
+                try:
+                    exc.reraise()
+                except Exception as e:
+                    future.set_exception(e)
 
     logger.debug("Exiting Collector Thread")
     return
 
 
 class WorkQueueExecutor(ParslExecutor):
-    """Executor to use Workqueue batch system
+    """Executor to use Work Queue batch system
+
+    The WorkQueueExecutor system utilizes the Work Queue framework to
+    efficiently delegate Parsl apps to remote machines in clusters and
+    grids using a fault-tolerant system. Users can run the
+    work_queue_worker program on remote machines to connect to the
+    WorkQueueExecutor, and Parsl apps will then be sent out to these
+    machines for execution and retrieval.
+
+
+        Parameters
+        ----------
 
         label: str
-            a human readable label for the executor, unique
-            with respect to other executors.
+            A human readable label for the executor, unique
+            with respect to other Work Queue master programs
+
         working_dir: str
-            the directory location for parsl to run the process
+            Location for Parsl to perform app delegation to the Work
+            Queue system
+
         managed: bool
+            If this executor is managed by the DFK or externally handled
+
         project_name: str
-            workqueue process name
+            Work Queue process name
+
         project_password: str
-            password for the work queue project
+            Optional password for the Work Queue project
+
         project_password_file: str
-            password file for the work queue project
+            Optional password file for the work queue project
+
         port: int
-            port to connect to
+            TCP port on Parsl submission machine for Work Queue workers
+            to connect to. Workers will specify this port number when
+            trying to connect to Parsl
+
         env: dict{str}
-            environmental variables
+            Dictionary that contains the environmental variables that
+            need to be set on the Work Queue worker machine
+
         shared_fs: bool
-            define if working in a shared file system or not
+            Define if working in a shared file system or not. If Parsl
+            and the Work Queue workers are on a shared file system, Work
+            Queue does not need to transfer and rename files for execution
+
+        source: bool
+            Choose whether to transfer parsl app information as
+            source code. (Note: this increases throughput for
+            @python_apps, but the implementation does not include
+            functionality for @bash_apps, and thus source=False
+            must be used for programs utilizing @bash_apps.)
+
         init_command: str
-            command to run before constructed workqueue commnad
+            Command to run before constructed Work Queue command
+
         see_worker_output: bool
-            choose whether to put worker output to standard out
+            Prints worker standard output if true
 
 
     """
@@ -402,6 +457,7 @@ class WorkQueueExecutor(ParslExecutor):
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
+                 source=False,
                  init_command="",
                  full_debug=True,
                  see_worker_output=False):
@@ -428,6 +484,7 @@ class WorkQueueExecutor(ParslExecutor):
         self.registered_files = set()
         self.worker_output = see_worker_output
         self.full = full_debug
+        self.source = source
         self.cancel_value = multiprocessing.Value('i', 1)
 
         # Resolve ambiguity when password and password_file are both specified
@@ -443,10 +500,15 @@ class WorkQueueExecutor(ParslExecutor):
         self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
         if self.shared_fs is True:
             self.launch_cmd += " --shared-fs"
+        if self.source is True:
+            self.launch_cmd += " --source"
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
     def start(self):
+        """Create submit process and collector thread to create, send, and
+        retrieve Parsl tasks within the Work Queue system.
+        """
         self.queue_lock = threading.Lock()
         self.tasks_lock = threading.Lock()
 
@@ -494,6 +556,20 @@ class WorkQueueExecutor(ParslExecutor):
         self.collector_thread.start()
 
     def create_name_tuple(self, parsl_file_obj, in_or_out):
+        """Returns a tuple containing information about an input or output file
+        to a Parsl app. Utilized to specify input and output files for a specific
+        Work Queue task within the system.
+
+        Parameters
+        ---------
+
+        parsl_file_obj : str
+            Name of file specified as input or output file to the Parsl app
+
+        in_or_out : str
+            Specifies whether the file is an input or output file to the Parsl
+            app
+        """
         # Determine new_name
         new_name = parsl_file_obj.filepath
         if parsl_file_obj.filepath not in self.used_names:
@@ -513,6 +589,16 @@ class WorkQueueExecutor(ParslExecutor):
         return (parsl_file_obj.filepath, new_name, file_is_shared, in_or_out)
 
     def create_new_name(self, file_name):
+        """Returns a unique file name for an input file name. If the file name
+        is already unique with respect to the Parsl process, then it returns
+        the original file name
+
+        Parameters
+        ----------
+
+        file_name : str
+            Name of file that needs to be unique
+        """
         new_name = file_name
         index = 0
         while new_name in self.used_names:
@@ -521,11 +607,21 @@ class WorkQueueExecutor(ParslExecutor):
         return new_name
 
     def submit(self, func, *args, **kwargs):
-        """Submit.
+        """Processes the Parsl app by its arguments and submits the function
+        information to the task queue, to be executed using the Work Queue
+        system. The args and kwargs are processed for input and output files to
+        the Parsl app, so that the files are appropriately specified for the Work
+        Queue task.
 
-        We haven't yet decided on what the args to this can be,
-        whether it should just be func, args, kwargs or be the partially evaluated
-        fn
+        Parameters
+        ----------
+
+        func : function
+            Parsl app to be submitted to the Work Queue system
+        args : list
+            Arguments to the Parsl app
+        kwargs : dict
+            Keyword arguments to the Parsl app
         """
         self.task_counter += 1
         task_id = self.task_counter
@@ -588,12 +684,30 @@ class WorkQueueExecutor(ParslExecutor):
         logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
 
-        f = open(function_data_file, "wb")
-        fn_buf = pack_apply_message(func, args, kwargs,
-                                    buffer_threshold=1024 * 1024,
-                                    item_threshold=1024)
-        pickle.dump(fn_buf, f)
-        f.close()
+        # Obtain function information and put into dictionary
+        if self.source:
+            # Obtain function information and put into dictionary
+            source_code = inspect.getsource(func)
+            name = func.__name__
+            function_info = {"source code": source_code,
+                             "name": name,
+                             "args": args,
+                             "kwargs": kwargs}
+
+            # Pack the function data into file
+            f = open(function_data_file, "wb")
+            pickle.dump(function_info, f)
+            f.close()
+        else:
+            # Serialize function information
+            function_info = pack_apply_message(func, args, kwargs,
+                                               buffer_threshold=1024 * 1024,
+                                               item_threshold=1024)
+
+            # Pack the function data into file
+            f = open(function_data_file, "wb")
+            pickle.dump(function_info, f)
+            f.close()
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
@@ -608,29 +722,18 @@ class WorkQueueExecutor(ParslExecutor):
         return fu
 
     def scale_out(self, *args, **kwargs):
-        """Scale out method.
-
-        We should have the scale out method simply take resource object
-        which will have the scaling methods, scale_out itself should be a coroutine, since
-        scaling tasks can be slow.
+        """Scale out method. Not implemented.
         """
         pass
 
     def scale_in(self, count):
-        """Scale in method.
-
-        Cause the executor to reduce the number of blocks by count.
-
-        We should have the scale in method simply take resource object
-        which will have the scaling methods, scale_in itself should be a coroutine, since
-        scaling tasks can be slow.
+        """Scale in method. Not implemented.
         """
         pass
 
     def shutdown(self, *args, **kwargs):
-        """Shutdown the executor.
-
-        This includes all attached resources such as workers and controllers.
+        """Shutdown the executor. Sets flag to cancel the submit process and
+        collector thread, which shuts down the Work Queue system submission.
         """
         # Set shared variable to 0 to signal shutdown
         logger.debug("Setting value to cancel")
@@ -642,10 +745,7 @@ class WorkQueueExecutor(ParslExecutor):
         return True
 
     def scaling_enabled(self):
-        """Specify if scaling is enabled.
-
-        The callers of ParslExecutors need to differentiate between Executors
-        and Executors wrapped in a resource provider
+        """Specify if scaling is enabled. Not enabled in Work Queue.
         """
         return False
 

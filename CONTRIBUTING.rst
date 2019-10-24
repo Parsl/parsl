@@ -35,11 +35,8 @@ style. A concise summary is available `here <http://sphinxcontrib-napoleon.readt
 Testing
 =======
 
-Parsl uses ``pytest`` to run most tests. All tests should be placed
-the ``parsl/tests`` directory. Before running tests usage tracking
-should be disabled using the PARSL_TESTING environment variable::
-
-  $ export PARSL_TESTING="true"
+Parsl uses ``pytest`` to run most tests. All tests should be placed in
+the ``parsl/tests`` directory.
 
 There are two broad groups of tests: those which must run with a
 specific configuration, and those which should work with any
@@ -52,10 +49,10 @@ They are launched by .travis.yaml with a pytest parameter of
 explicitly.
 
 Tests which should with with any configuration live under
-themed directories ``parsl/tests/test*/`` and should named ``test*.py``.
+themed directories ``parsl/tests/test*/`` and should be named ``test*.py``.
 They can be run with any configuration, by specifying ``--config CONFIGPATH``
 where CONFIGPATH is a path to a ``.py`` file exporting a parsl configuration
-object named ``config``. The parsl-specific test fixtures with ensure
+object named ``config``. The parsl-specific test fixtures will ensure
 a suitable DFK is loaded with that configuration for each test.
 
 There is more fine-grained enabling and disabling of tests within the
@@ -66,6 +63,10 @@ or deselect tests which need a very cleen network (for example, for tests
 making FTP transfers). Travis does not provide a sufficiently clean
 network and so .travis.yml runs all tests with ``-k "not cleannet"`` to
 disable those tests.
+
+A pytest marker of ``issue363`` can be used to select or deselect tests
+that will fail because of issue 363 when running without a shared file
+system.
 
 Some other markers are available but unused in travis testing; 
 see ``pytest --markers parsl/tests/`` for more details.

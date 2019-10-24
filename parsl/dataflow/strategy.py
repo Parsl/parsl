@@ -111,7 +111,7 @@ class Strategy(object):
         self.dfk = dfk
         self.config = dfk.config
         self.executors = {}
-        self.max_idletime = 60 * 2  # 2 minutes
+        self.max_idletime = self.dfk.config.max_idletime
 
         for e in self.dfk.config.executors:
             self.executors[e.label] = {'idle_since': None, 'config': e.label}
@@ -181,12 +181,8 @@ class Strategy(object):
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            if isinstance(executor, IPyParallelExecutor):
+            if isinstance(executor, IPyParallelExecutor) or isinstance(executor, HighThroughputExecutor):
                 tasks_per_node = executor.workers_per_node
-            elif isinstance(executor, HighThroughputExecutor):
-                # This is probably wrong calculation, we need this to come from the executor
-                # since we can't know slots ahead of time.
-                tasks_per_node = 1
             elif isinstance(executor, ExtremeScaleExecutor):
                 tasks_per_node = executor.ranks_per_node
 
@@ -274,8 +270,3 @@ class Strategy(object):
             else:
                 # logger.debug("Strategy: Case 3")
                 pass
-
-
-if __name__ == '__main__':
-
-    pass

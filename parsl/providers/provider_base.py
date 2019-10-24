@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
+from typing import Any, List, Optional
 
 
 class ExecutionProvider(metaclass=ABCMeta):
@@ -17,13 +18,13 @@ class ExecutionProvider(metaclass=ABCMeta):
           [ ids ]       ------->|  cancel
           [cancel]     <--------|----+
                                 |
-          [True/False] <--------|  scaling_enabled
-                                |
                                 +-------------------
      """
+    _cores_per_node = None  # type: Optional[int]
+    _mem_per_node = None  # type: Optional[float]
 
     @abstractmethod
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> Any:
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
@@ -47,7 +48,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def status(self, job_ids):
+    def status(self, job_ids: List[Any]) -> List[str]:
         ''' Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
@@ -66,7 +67,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def cancel(self, job_ids):
+    def cancel(self, job_ids: List[Any]) -> List[bool]:
         ''' Cancels the resources identified by the job_ids provided by the user.
 
         Args:
@@ -82,17 +83,42 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractproperty
-    def scaling_enabled(self):
-        ''' The callers of ParslExecutors need to differentiate between Executors
-        and Executors wrapped in a resource provider
-
-        Returns:
-              - Status (Bool)
-        '''
-
-        pass
-
-    @abstractproperty
-    def label(self):
+    def label(self) -> str:
         ''' Provides the label for this provider '''
         pass
+
+    @property
+    def mem_per_node(self) -> Optional[float]:
+        """Real memory to provision per node in GB.
+
+        Providers which set this property should ask for mem_per_node of memory
+        when provisioning resources, and set the corresponding environment
+        variable PARSL_MEMORY_GB before executing submitted commands.
+
+        If this property is set, executors may use it to calculate how many tasks can
+        run concurrently per node. This information is used by dataflow.Strategy to estimate
+        the resources required to run all outstanding tasks.
+        """
+        return self._mem_per_node
+
+    @mem_per_node.setter
+    def mem_per_node(self, value: float) -> None:
+        self._mem_per_node = value
+
+    @property
+    def cores_per_node(self) -> Optional[int]:
+        """Number of cores to provision per node.
+
+        Providers which set this property should ask for cores_per_node cores
+        when provisioning resources, and set the corresponding environment
+        variable PARSL_CORES before executing submitted commands.
+
+        If this property is set, executors may use it to calculate how many tasks can
+        run concurrently per node. This information is used by dataflow.Strategy to estimate
+        the resources required to run all outstanding tasks.
+        """
+        return self._cores_per_node
+
+    @cores_per_node.setter
+    def cores_per_node(self, value: int) -> None:
+        self._cores_per_node = value
