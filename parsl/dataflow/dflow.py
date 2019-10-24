@@ -908,15 +908,6 @@ class DataFlowKernel(object):
 
             self.monitoring.close()
 
-        """
-        if self.logging_server is not None:
-            self.logging_server.terminate()
-            self.logging_server.join()
-
-        if self.web_app is not None:
-            self.web_app.terminate()
-            self.web_app.join()
-        """
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
