@@ -17,7 +17,7 @@ config = Config(
             provider=KubernetesProvider(
                 namespace="default",
 
-                # Docker image url to use for deployment
+                # Docker image url to use for pods
                 image='YOUR_DOCKER_URL',
 
                 # Command to be run upon pod start, such as:
