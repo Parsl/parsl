@@ -315,7 +315,7 @@ The snippet below shows an example configuration for provisioning nodes from the
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
 re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
 
-.. literalinclude:: ../../parsl/configs/ec2_htex_single_node.py
+.. literalinclude:: ../../parsl/configs/ec2.py
 
 Kubernetes Clusters
 -------------------
