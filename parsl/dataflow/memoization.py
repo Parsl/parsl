@@ -1,8 +1,92 @@
 import hashlib
+from functools import singledispatch
 import logging
 from parsl.executors.serialize.serialize import serialize_object
+import types
 
 logger = logging.getLogger(__name__)
+
+# TODO:
+# if we're allowing user-registered id_for_memo calls, then
+# the invocations of id_for_memo in serialisation need to be
+# more resilient to bugs in user code. at the time of writing,
+# an exception thrown in a user registered id_for_memo sometimes
+# seems to hang parsl.
+# (this could be testable with a test-suite provided error
+# throwing test?)
+
+
+@singledispatch
+def id_for_memo(obj, output_ref=False):
+    """This should return a byte sequence which identifies the supplied
+    value for memoization purposes: for any two calls of id_for_memo,
+    the byte sequence should be the same when the "same"
+    value is supplied, and different otherwise.
+    "same" is in quotes about because sameness is not as straightforward
+    serialising out the content.
+
+    For example, for dicts,
+      {"a":3, "b":4} == {"b":4, "a":3}
+
+    id_for_memo by default will output a serialization of the content,
+    which should avoid falsely identifying two different values, but will
+    not in some cases correctly identify two values - for example, the
+    two dicts given above.
+
+    New methods should be registered for id_for_memo for types where this
+    is a problem.
+
+    id_for_memo is invoked with output_ref=True when the parameter is an
+    output reference - a value in the outputs=[] parameter of an app
+    invocation. Checkpoint hashing might be different for such parameters:
+    for example, for an output File, it is necessary to hash the output
+    *filename* because that actually is an input to the task, but meaningless
+    to hash file content (if the file even exists). This is a bit like
+    treating Files differently for stage in and stage out depending on where
+    they appear.
+    """
+    logger.warning("id_for_memo defaulting for unknown type {}".format(type(obj)))
+    # decision:
+    # should memoization fail for unknown types? or should it use serialisation based
+    # types and allow memoization to silently not reflect identity in the case of
+    # unknown complex types?
+    # return serialize_object(obj)[0]
+    raise ValueError("unknown type for memoization: {}".format(type(obj)))
+
+
+@id_for_memo.register(str)
+@id_for_memo.register(int)
+@id_for_memo.register(float)
+@id_for_memo.register(types.FunctionType)  # is this safe? I have seen functions change in ways I don't fully understand
+@id_for_memo.register(type(None))
+def id_for_memo_serialize(obj, output_ref=False):
+    logger.debug("id_for_memo generic serialization for type {}".format(type(obj)))
+    return serialize_object(obj)[0]
+
+
+@id_for_memo.register(list)
+def id_for_memo_list(denormalized_list, output_ref=False):
+    logger.debug("normalising list for memoization")
+    normalized_list = []
+    for e in denormalized_list:
+        normalized_list.append(id_for_memo(e, output_ref=output_ref))
+    return serialize_object(normalized_list)[0]
+
+
+@id_for_memo.register(dict)
+def id_for_memo_dict(denormalized_dict, output_ref=False):
+    """This normalises the values of the dictionary. When output_ref=True,
+    the values are normalised as output refs but the keys are normalized.
+    """
+    logger.debug("normalising dict for memoization")
+
+    keys = sorted(denormalized_dict)
+
+    normalized_list = []
+    for k in keys:
+        normalized_list.append(id_for_memo(k))
+        normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
+    return serialize_object(normalized_list)[0]
 
 
 class Memoizer(object):
@@ -69,11 +153,23 @@ class Memoizer(object):
             - hash (str) : A unique hash string
         """
         # Function name TODO: Add fn body later
-        t = [serialize_object(task['func_name'])[0],
-             serialize_object(task['fn_hash'])[0],
-             serialize_object(task['args'])[0],
-             serialize_object(task['kwargs'])[0],
-             serialize_object(task['env'])[0]]
+
+        # if kwargs contains an outputs parameter, that parameter is removed
+        # and normalised differently - with output_ref set to True.
+        if 'outputs' in task['kwargs']:
+            newkw = task['kwargs'].copy()
+            outputs = task['kwargs']['outputs']
+            del newkw['outputs']
+            kw_id = id_for_memo(newkw) + id_for_memo(outputs, output_ref=True)
+        else:
+            newkw = task['kwargs']
+            kw_id = id_for_memo(newkw)
+
+        t = [id_for_memo(task['func_name']),
+             id_for_memo(task['fn_hash']),
+             id_for_memo(task['args']),
+             kw_id,
+             id_for_memo(task['env'])]
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
@@ -95,19 +191,26 @@ class Memoizer(object):
 
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
         """
+        logger.debug("check_memo start")
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
+            logger.debug("No memoization")
             return False, None
+        logger.debug("Memoization will happen")
 
         hashsum = self.make_hash(task)
+        logger.info("Task {} has hash {}".format(task_id, hashsum))
         present = False
         result = None
         if hashsum in self.memo_lookup_table:
             present = True
             result = self.memo_lookup_table[hashsum]
             logger.info("Task %s using result from cache", task_id)
+        else:
+            logger.info("Task %s had no result in cache", task_id)
 
         task['hashsum'] = hashsum
+
         return present, result
 
     def hash_lookup(self, hashsum):
