@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 local_config = config
 
+
 @App("python", executors=['ec2_single_node'])
 def python_app_2():
     import os
