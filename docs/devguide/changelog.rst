@@ -14,7 +14,7 @@ Andrew Litteken @AndrewLitteken, Anna Woodard @annawoodard, Ben Clifford @bencli
 Ben Glick @benhg, Daniel S. Katz @danielskatz, Daniel Smith @dgasmith,
 Engin Arslan @earslan58, Geoffrey Lentner @glentner, John Hover @jhover
 Kyle Chard @kylechard, TJ Dasso @tjdasso, Ted Summer @macintoshpie,
-Tom Glanzman @TomGlanzman, Levi Naden @LNaden, Matthew Welborn @mattwelborn,
+Tom Glanzman @TomGlanzman, Levi Naden @LNaden, Logan Ward @WardLT, Matthew Welborn @mattwelborn,
 @MatthewBM, Raphael Fialho @rapguit, Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
 
 
@@ -90,7 +90,7 @@ New Functionality
 * Configurable port on `parsl.channels.SSHChannel`.
 * `suppress_failure` now defaults to True.
 * `HighThroughputExecutor` is the recommended executor, and `IPyParallelExecutor` is deprecated.
-
+* `HighThroughputExecutor` will expose worker information via environment variables: `PARSL_WORKER_RANK` and `PARSL_WORKER_COUNT`
 
 Bug Fixes
 ^^^^^^^^^
