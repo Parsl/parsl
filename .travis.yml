@@ -76,7 +76,7 @@ script:
 
     # check that 'all' install target works, even though we aren't doing any further
     # testing of what is installed
-    pip install .[all]
+    - pip install .[all]
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
