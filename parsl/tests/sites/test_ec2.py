@@ -2,19 +2,12 @@ import parsl
 import pytest
 
 from parsl.app.app import App
+from parsl.tests.configs.ec2_single_node import config
 
 import logging
 logger = logging.getLogger(__name__)
 
-
-def local_setup():
-    from parsl.tests.configs.ec2_single_node import config
-    parsl.load(config)
-
-
-def local_teardown():
-    parsl.clear()
-
+local_config = config
 
 @App("python", executors=['ec2_single_node'])
 def python_app_2():
