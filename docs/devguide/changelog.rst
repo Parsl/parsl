@@ -6,7 +6,7 @@ Changelog
 Parsl 0.9.0
 -----------
 
-Released on October 23rd, 2019
+Released on October 25th, 2019
 
 Parsl v0.9.0 includes 199 closed issues and pull requests with contributions (code, tests, reviews and reports) from:
 
