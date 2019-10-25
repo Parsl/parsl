@@ -21,12 +21,14 @@ Reference guide
     parsl.executors.IPyParallelExecutor
     parsl.executors.ipp_controller.Controller
     parsl.executors.HighThroughputExecutor
+    parsl.executors.WorkQueueExecutor
     parsl.executors.ExtremeScaleExecutor
     parsl.executors.swift_t.TurbineExecutor
     parsl.channels.LocalChannel
     parsl.channels.SSHChannel
     parsl.channels.OAuthSSHChannel
     parsl.channels.SSHInteractiveLoginChannel
+    parsl.providers.AdHocProvider
     parsl.providers.AWSProvider
     parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
@@ -34,6 +36,7 @@ Reference guide
     parsl.providers.GridEngineProvider
     parsl.providers.JetstreamProvider
     parsl.providers.LocalProvider
+    parsl.providers.LSFProvider
     parsl.providers.GridEngineProvider
     parsl.providers.SlurmProvider
     parsl.providers.TorqueProvider
@@ -46,6 +49,7 @@ Reference guide
     parsl.launchers.SrunMPILauncher
     parsl.launchers.GnuParallelLauncher
     parsl.launchers.MpiExecLauncher
+    parsl.launchers.JsrunLauncher
     parsl.monitoring.MonitoringHub
 
 .. autosummary::
@@ -66,6 +70,30 @@ Reference guide
     parsl.executors.errors.ControllerError
     parsl.executors.errors.ExecutorError
     parsl.executors.errors.ScalingFailed
+    parsl.executors.errors.InsufficientMPIRanks
+    parsl.executors.errors.DeserializationError
+    parsl.executors.errors.BadMessage
     parsl.executors.exceptions.ExecutorException
     parsl.executors.exceptions.TaskExecException
-
+    parsl.dataflow.error.DataFlowException
+    parsl.dataflow.error.ConfigurationError
+    parsl.dataflow.error.DuplicateTaskError
+    parsl.dataflow.error.MissingFutError
+    parsl.dataflow.error.BadCheckpoint
+    parsl.dataflow.error.DependencyError
+    parsl.launchers.error.BadLauncher
+    parsl.providers.error.ExecutionProviderException
+    parsl.providers.error.OptionalModuleMissing
+    parsl.providers.error.ChannelRequired
+    parsl.providers.error.ScaleOutFailed
+    parsl.providers.error.SchedulerMissingArgs
+    parsl.providers.error.ScriptPathError
+    parsl.channels.errors.ChannelError
+    parsl.channels.errors.BadHostKeyException
+    parsl.channels.errors.BadScriptPath
+    parsl.channels.errors.BadPermsScriptPath
+    parsl.channels.errors.FileExists
+    parsl.channels.errors.AuthException
+    parsl.channels.errors.SSHException
+    parsl.channels.errors.FileCopyException
+    parsl.executors.high_throughput.errors.WorkerLost
