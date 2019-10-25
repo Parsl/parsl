@@ -22,7 +22,7 @@ from parsl.tests.utils import get_rundir
 #       1) create a local `user_opts.py`, or
 #       2) delete the user_opts import below and replace all appearances of `user_opts` with the literal value
 #          (i.e., user_opts['swan']['username'] -> 'your_username')
-from .user_opts import user_opts
+from parsl.tests.configs.user_opts import user_opts
 
 config = Config(
     executors=[

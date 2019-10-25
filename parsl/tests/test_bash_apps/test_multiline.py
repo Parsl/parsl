@@ -1,5 +1,6 @@
 import argparse
 import os
+import pytest
 import shutil
 import time
 
@@ -22,6 +23,7 @@ def multiline(
     """.format(inputs=inputs, outputs=outputs)
 
 
+@pytest.mark.issue363
 def test_multiline():
 
     outdir = os.path.abspath('outputs')
