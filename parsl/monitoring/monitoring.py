@@ -100,11 +100,8 @@ class UDPRadio(object):
             Arbitrary pickle-able object that is to be sent
 
         Returns:
-            # bytes sent,
-         or False if there was a timeout during send,
-         or None if there was an exception during pickling
+            None
         """
-        x = 0
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
                                    int(time.time()),  # epoch timestamp
@@ -115,11 +112,11 @@ class UDPRadio(object):
             return
 
         try:
-            x = self.sock.sendto(buffer, (self.ip, self.port))
+            self.sock.sendto(buffer, (self.ip, self.port))
         except socket.timeout:
             logging.error("Could not send message within timeout limit")
-            return False
-        return x
+            return
+        return
 
 
 class MonitoringHub(RepresentationMixin):
