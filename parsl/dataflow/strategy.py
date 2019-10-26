@@ -270,8 +270,3 @@ class Strategy(object):
             else:
                 # logger.debug("Strategy: Case 3")
                 pass
-
-
-if __name__ == '__main__':
-
-    pass

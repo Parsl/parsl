@@ -2,6 +2,120 @@ Changelog
 =========
 
 
+
+Parsl 0.9.0
+-----------
+
+Released on October 25th, 2019
+
+Parsl v0.9.0 includes 199 closed issues and pull requests with contributions (code, tests, reviews and reports) from:
+
+Andrew Litteken @AndrewLitteken, Anna Woodard @annawoodard, Ben Clifford @benclifford,
+Ben Glick @benhg, Daniel S. Katz @danielskatz, Daniel Smith @dgasmith,
+Engin Arslan @earslan58, Geoffrey Lentner @glentner, John Hover @jhover
+Kyle Chard @kylechard, TJ Dasso @tjdasso, Ted Summer @macintoshpie,
+Tom Glanzman @TomGlanzman, Levi Naden @LNaden, Logan Ward @WardLT, Matthew Welborn @mattwelborn,
+@MatthewBM, Raphael Fialho @rapguit, Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
+
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* Parsl will no longer do automatic keyword substitution in `@bash_app` in favor of deferring to Python's `format method <https://docs.python.org/3.1/library/stdtypes.html#str.format>`_
+  and newer `f-strings <https://www.python.org/dev/peps/pep-0498/>`_. For example,
+
+     .. code-block:: python
+
+        # The following example worked until v0.8.0
+        @bash_app
+        def cat(inputs=[], outputs=[]):
+            return 'cat {inputs[0]} > {outputs[0]}' # <-- Relies on Parsl auto formatting the string
+
+        # Following are two mechanisms that will work going forward from v0.9.0
+        @bash_app
+        def cat(inputs=[], outputs=[]):
+            return 'cat {} > {}'.format(inputs[0], outputs[0]) # <-- Use str.format method
+
+        @bash_app
+        def cat(inputs=[], outputs=[]):
+            return f'cat {inputs[0]} > {outputs[0]}' # <-- OR use f-strings introduced in Python3.6
+
+
+* `@python_app` now takes a `walltime` kwarg to limit the task execution time.
+* New file staging API `parsl.data_provider.staging` to support pluggable
+  file staging methods. The methods implemented in 0.8.0 (HTTP(S), FTP and
+  Globus) are still present, along with two new methods which perform HTTP(S)
+  and FTP staging on worker nodes to support non-shared-filesystem executors
+  such as clouds.
+* Behaviour change for storage_access parameter. In 0.8.0, this was used to
+  specify Globus staging configuration. In 0.9.0, if this parameter is
+  specified it must specify all desired staging providers. To keep the same
+  staging providers as in 0.8.0, specify:
+
+    .. code-block:: python
+
+      from parsl.data_provider.data_manager import default_staging
+      storage_access = default_staging + [GlobusStaging(...)]
+
+  `GlobusScheme` in 0.8.0 has been renamed GlobusStaging and moved to a new
+  module, parsl.data_provider.globus
+
+* `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
+* New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
+* New provider added to support LSF on Summit `parsl.providers.LSFProvider`
+* Support for CPU and Memory resource hints to providers `(github) <https://github.com/Parsl/parsl/issues/942>`_.
+* The `logging_level=logging.INFO` in `MonitoringHub` is replaced with `monitoring_debug=False`:
+
+   .. code-block:: python
+
+      monitoring=MonitoringHub(
+                   hub_address=address_by_hostname(),
+                   hub_port=55055,
+                   monitoring_debug=False,
+                   resource_monitoring_interval=10,
+      ),
+
+* Managers now have a worker watchdog thread to report task failures that crash a worker.
+* Maximum idletime after which idle blocks can be relinquished can now be configured as follows:
+
+    .. code-block:: python
+
+       config=Config(
+                    max_idletime=120.0 ,  # float, unit=seconds
+                    strategy='simple'
+       )
+
+* Several test-suite improvements that have dramatically reduced test duration.
+* Several improvements to the Monitoring interface.
+* Configurable port on `parsl.channels.SSHChannel`.
+* `suppress_failure` now defaults to True.
+* `HighThroughputExecutor` is the recommended executor, and `IPyParallelExecutor` is deprecated.
+* `HighThroughputExecutor` will expose worker information via environment variables: `PARSL_WORKER_RANK` and `PARSL_WORKER_COUNT`
+
+Bug Fixes
+^^^^^^^^^
+
+* ZMQError: Operation cannot be accomplished in current state bug `issue#1146 <https://github.com/Parsl/parsl/issues/1146>`_
+* Fix event loop error with monitoring enabled `issue#532 <https://github.com/Parsl/parsl/issues/532>`_
+* Tasks per app graph appears as a sawtooth, not as rectangles `issue#1032 <https://github.com/Parsl/parsl/issues/1032>`_.
+* Globus status processing failure `issue#1317 <https://github.com/Parsl/parsl/issues/1317>`_.
+* Sporadic globus staging error `issue#1170 <https://github.com/Parsl/parsl/issues/1170>`_.
+* RepresentationMixin breaks on classes with no default parameters `issue#1124 <https://github.com/Parsl/parsl/issues/1124>`_.
+* File `localpath` staging conflict `issue#1197 <https://github.com/Parsl/parsl/issues/1197>`_.
+* Fix IndexError when using CondorProvider with strategy enabled `issue#1298 <https://github.com/Parsl/parsl/issues/1298>`_.
+* Improper dependency error handling causes hang `issue#1285 <https://github.com/Parsl/parsl/issues/1285>`_.
+* Memoization/checkpointing fixes for bash apps `issue#1269 <https://github.com/Parsl/parsl/issues/1269>`_.
+* CPU User Time plot is strangely cumulative `issue#1033 <https://github.com/Parsl/parsl/issues/1033>`_.
+* Issue requesting resources on non-exclusive nodes `issue#1246 <https://github.com/Parsl/parsl/issues/1246>`_.
+* parsl + htex + slurm hangs if slurm command times out, without making further progress `issue#1241 <https://github.com/Parsl/parsl/issues/1241>`_.
+* Fix strategy overallocations `issue#704 <https://github.com/Parsl/parsl/issues/704>`_.
+* max_blocks not respected in SlurmProvider `issue#868 <https://github.com/Parsl/parsl/issues/868>`_.
+* globus staging does not work with a non-default `workdir` `issue#784 <https://github.com/Parsl/parsl/issues/784>`_.
+* Cumulative CPU time loses time when subprocesses end `issue#1108 <https://github.com/Parsl/parsl/issues/1108>`_.
+* Interchange KeyError due to too many heartbeat missed `issue#1128 <https://github.com/Parsl/parsl/issues/1128>`_.
+
+
+
 Parsl 0.8.0
 -----------
 

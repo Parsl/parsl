@@ -242,6 +242,7 @@ class MonitoringHub(RepresentationMixin):
                                 name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
+        self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
@@ -335,7 +336,7 @@ class Hub(object):
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO (20)
+             Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
