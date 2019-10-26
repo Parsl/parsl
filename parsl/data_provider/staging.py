@@ -48,21 +48,59 @@ class Staging:
 
     def stage_in(self, dm: "DataManager", executor: str, file: File, parent_fut: Optional[Future]) -> Optional[DataFuture]:
         """
-        For a given file, either return a DataFuture to substitute
-        for this file, or return None to perform no substitution
+        This call gives the staging provider an opportunity to prepare for
+        stage-in and to launch arbitrary tasks which must complete as part
+        of stage-in.
+
+        This call will be made with a fresh copy of the File that may be
+        modified for the purposes of this particular staging operation,
+        rather than the original application-provided File. This allows
+        staging specific information (primarily localpath) to be set on the
+        File without interfering with other stagings of the same File.
+
+        The call can return a:
+          - DataFuture: the corresponding task input parameter will be
+            replaced by the DataFuture, and the main task will not
+            run until that DataFuture is complete. The DataFuture result
+            should be the file object as passed in.
+          - None: the corresponding task input parameter will be replaced
+            by a suitable automatically generated replacement that container
+            the File fresh copy, or is the fresh copy.
         """
         return None
 
-    def stage_out(self, dm: "DataManager", executor: str, file: File, app_fu) -> Optional[DataFuture]:
+    def stage_out(self, dm: "DataManager", executor: str, file: File, app_fu: Future) -> Optional[Future]:
+        """
+        This call gives the staging provider an opportunity to prepare for
+        stage-out and to launch arbitrary tasks which must complete as
+        part of stage-out.
+
+        Even though it should set up stageout, it will be invoked before
+        the task executes. Any work which needs to happen after the main task
+        should depend on app_fu.
+
+        For a given file, either return a Future which completes when stageout
+        is complete, or return None to indicate that no stageout action need
+        be waited for. When that Future completes, parsl will mark the relevant
+        output DataFuture complete.
+
+        Note the asymmetry here between stage_in and stage_out: this can return
+        any Future, while stage_in must return a DataFuture.
+        """
         return None
 
     def replace_task(self, dm: "DataManager", executor: str, file: File, func: Callable) -> Optional[Callable]:
         """
-        For a file to be staged in, either return a replacement app
+        For a file to be staged in, optionally return a replacement app
         function, which usually should be the original app function wrapped
         in staging code.
         """
         return None
 
     def replace_task_stage_out(self, dm: "DataManager", executor: str, file: File, func: Callable) -> Optional[Callable]:
+        """
+        For a file to be staged out, optionally return a replacement app
+        function, which usually should be the original app function wrapped
+        in staging code.
+        """
         return None
