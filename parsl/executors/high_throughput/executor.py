@@ -60,6 +60,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                      +----update_fut-----+
 
 
+    Each of the workers in each process_worker_pool has access to its local rank through
+    an environmental variable, ``PARSL_WORKER_RANK``. The local rank is unique for each process
+    and is an integer in the range from 0 to the number of workers per in the pool minus 1.
+    The workers also have access to the ID of the worker pool as ``PARSL_WORKER_POOL_ID``
+    and the size of the worker pool as ``PARSL_WORKER_COUNT``.
+
+
     Parameters
     ----------
 
@@ -132,11 +139,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
     heartbeat_threshold : int
         Seconds since the last message from the counterpart in the communication pair:
-        (interchange, manager) after which the counterpart is assumed to be un-available. Default:120s
+        (interchange, manager) after which the counterpart is assumed to be un-available. Default: 120s
 
     heartbeat_period : int
         Number of seconds after which a heartbeat message indicating liveness is sent to the
-        counterpart (interchange, manager). Default:30s
+        counterpart (interchange, manager). Default: 30s
 
     poll_period : int
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
@@ -616,8 +623,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         This is not implemented.
 
         Kwargs:
-            - hub (Bool): Whether the hub should be shutdown, Default:True,
-            - targets (list of ints| 'all'): List of block id's to kill, Default:'all'
+            - hub (Bool): Whether the hub should be shutdown, Default: True,
+            - targets (list of ints| 'all'): List of block id's to kill, Default: 'all'
             - block (Bool): To block for confirmations or not
 
         Raises:

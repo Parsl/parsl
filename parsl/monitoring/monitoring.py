@@ -100,11 +100,8 @@ class UDPRadio(object):
             Arbitrary pickle-able object that is to be sent
 
         Returns:
-            # bytes sent,
-         or False if there was a timeout during send,
-         or None if there was an exception during pickling
+            None
         """
-        x = 0
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
                                    int(time.time()),  # epoch timestamp
@@ -115,11 +112,11 @@ class UDPRadio(object):
             return
 
         try:
-            x = self.sock.sendto(buffer, (self.ip, self.port))
+            self.sock.sendto(buffer, (self.ip, self.port))
         except socket.timeout:
             logging.error("Could not send message within timeout limit")
-            return False
-        return x
+            return
+        return
 
 
 class MonitoringHub(RepresentationMixin):
@@ -245,6 +242,7 @@ class MonitoringHub(RepresentationMixin):
                                 name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
+        self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
@@ -338,7 +336,7 @@ class Hub(object):
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO (20)
+             Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
