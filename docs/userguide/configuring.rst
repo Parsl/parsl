@@ -174,9 +174,8 @@ Comet (SDSC)
 .. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
 The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
-Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the
-`SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch
-workers.
+Center's **Comet** supercomputer. The example is designed to be executed on the login nodes, using the
+`SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
 .. warning:: This config has **NOT** been tested with Parsl v0.9.0
 
@@ -190,7 +189,8 @@ Cori (NERSC)
 
 .. image:: https://6lli539m39y3hpkelqsm3c2fg-wpengine.netdna-ssl.com/wp-content/uploads/2017/08/Cori-NERSC.png
 
-The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
+The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the `HighThroughputExecutor` and connects to Cori's Slurm scheduler.
+It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
 .. literalinclude:: ../../parsl/configs/cori.py
 
@@ -238,7 +238,7 @@ The following snippet shows an example configuration for executing on Argonne Le
 The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler 
 using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/cooley_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/cooley.py
 
 
 Blue Waters (Cray)
@@ -250,7 +250,7 @@ The following snippet shows an example configuration for executing remotely on B
 The configuration assumes the user is running on a login node and uses the `TorqueProvider` to interface
 with the scheduler, and uses the `AprunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/bluewaters_htex.py
+.. literalinclude:: ../../parsl/configs/bluewaters.py
 
 
 Summit (ORNL)
@@ -295,10 +295,11 @@ Open Science Grid
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
 The snippet below shows an example configuration for executing remotely on OSG.
-The configuration uses the `SSHChannel` to connect remotely to OSG, uses the `CondorProvider` to interface
-with the scheduler.
+The configuration uses the `CondorProvider` to interface with the scheduler.
 
-.. literalinclude:: ../../parsl/configs/osg_ipp_multinode.py
+.. note:: This config was last tested with 0.8.0
+
+.. literalinclude:: ../../parsl/configs/osg.py
 
 Amazon Web Services
 -------------------
@@ -314,7 +315,7 @@ The snippet below shows an example configuration for provisioning nodes from the
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
 re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
 
-.. literalinclude:: ../../parsl/configs/ec2_htex_single_node.py
+.. literalinclude:: ../../parsl/configs/ec2.py
 
 Kubernetes Clusters
 -------------------
@@ -325,7 +326,7 @@ Kubernetes is an open-source system for container management, such as automating
 The snippet below shows an example configuration for deploying pods as workers on a Kubernetes cluster.
 The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in `~/.kube/config`.
 
-.. literalinclude:: ../../parsl/configs/kubernetes_htex.py
+.. literalinclude:: ../../parsl/configs/kubernetes.py
 
 
 Ad-Hoc Clusters
