@@ -365,7 +365,7 @@ class DatabaseManager(object):
             self.logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
                               .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
             try:
-                x, addr = logs_queue.get(block=False)
+                x, addr = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
@@ -392,9 +392,10 @@ class DatabaseManager(object):
             if time.time() - start >= interval or len(messages) >= threshold:
                 break
             try:
-                x = msg_queue.get(block=False)
+                x = msg_queue.get(timeout=0.1)
                 # self.logger.debug("Database manager receives a message {}".format(x))
             except queue.Empty:
+                self.logger.debug("Database manager has not received any message.")
                 break
             else:
                 messages.append(x)
@@ -427,7 +428,7 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
         None.
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     global logger
     logger = logging.getLogger(name)
