@@ -143,8 +143,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         34524643.0 1
         """
 
-        for line in stdout.strip().split('\n'):
-            parts = line.split()
+        for line in stdout.splitlines():
+            parts = line.strip().split()
             job_id = parts[0]
             status = translate_table.get(parts[1], 'UNKNOWN')
             self.resources[job_id]['status'] = status
@@ -202,7 +202,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         logger.debug("Attempting to launch")
         if self.provisioned_blocks >= self.max_blocks:
             template = "Provider {} is currently using {} blocks while max_blocks is {}; no blocks will be added"
-            logger.warn(template.format(self.label, self.provisioned_blocks, self.max_blocks))
+            logger.warning(template.format(self.label, self.provisioned_blocks, self.max_blocks))
             return None
 
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
@@ -308,10 +308,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             rets = [False for i in job_ids]
 
         return rets
-
-    @property
-    def scaling_enabled(self):
-        return True
 
     @property
     def current_capacity(self):

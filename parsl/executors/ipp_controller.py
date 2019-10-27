@@ -160,7 +160,7 @@ class Controller(RepresentationMixin):
                 else:
                     logger.error("Controller exited with {0}. May require manual cleanup".format(x))
             except subprocess.TimeoutExpired:
-                logger.warn("Ipcontroller process:{0} cleanup failed. May require manual cleanup".format(self.proc.pid))
+                logger.warning("Ipcontroller process:{0} cleanup failed. May require manual cleanup".format(self.proc.pid))
 
         except Exception as e:
-            logger.warn("Failed to kill the ipcontroller process[{0}]: {1}".format(self.proc.pid, e))
+            logger.warning("Failed to kill the ipcontroller process[{0}]: {1}".format(self.proc.pid, e))
