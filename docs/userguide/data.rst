@@ -3,46 +3,81 @@
 Data management
 ===============
 
-Parsl is designed to enable implementation of dataflow patterns in which data passed between apps manages the flow of execution. Dataflow programming models are popular as they can cleanly express, via implicit parallelism, opportunities for concurrent execution.
+Parsl supports staging of file data between execution locations and at-rest
+locations. This supports two pieces of functionality: execution location
+abstraction, and ordering of execution by data flow.
 
-Parsl aims to abstract not only parallel execution but also execution location, which in turn requires data location abstraction. This is crucial as it allows scripts to execute in different locations without regard for data location. Parsl implements a flexible file abstraction that can be used to reference data irrespective of its location. At present this model supports local files as well as files accessible via FTP, HTTP, HTTPS, and `Globus <https://globus.org>`_.
+Parsl implements a flexible file abstraction that can be used to reference
+data files using an execution-location independent URL. This model supports
+files on the submit side file system (made available to workers using either
+a shared file system or `rsync`), FTP, HTTP(S), and `Globus <https://globus.org>`_.
 
-Files
------
+In a workflow, file handling is split into two pieces: files are named in an
+execution-location independent manner using :py:class:`~parsl.data_provider.files.File`
+objects, and executors are configured to stage those files in to and out of
+execution locations using instances of the :py:class:`~parsl.data_provider.staging.Staging`
+interface.
 
-The :py:class:`~parsl.data_provider.files.File` class abstracts the file access layer. Irrespective of where the script or its apps are executed, Parsl uses this abstraction to access that file. When referencing a Parsl file in an app, Parsl maps the object to the appropriate access path according to the selected URL *scheme*: Local, FTP, HTTP, HTTPS and Globus.
+Using Files in a workflow
+-------------------------
+
+Parsl can stage files in for Apps to use as inputs, and stage files out that
+Apps have produced. These files must be identified before invoking the App
+by creating :py:class:`~parsl.data_provider.files.File` instances naming the
+at-rest location of the file. This can be a path referring to the submit-side
+file system, or more generally a URL.
+
+Input files can be passed as regular arguments, or a list of them may be
+specified in the special `inputs` keyword argument to an app invocation.
+
+Inside an app, the `filepath` attribute of a `File` can be read to determine
+where on the execution-side filesystem the input file has been placed.
+
+Output file objects must also be passed in at app invocation, through the
+outputs parameter. Inside an app, the `filepath` attribute of an output
+`File` provides the path at which the corresponding output file should be
+placed so that the stage-out code can find it after execution.
+
+If the output from an app is to be used as the input to a subsequent app,
+then a DataFuture that represents whether the output file has been created
+must be extracted from the first app's AppFuture, and that must be passed
+instead of the original File object to the second app. This causes app
+executions to be properly ordered, in the same way that passing AppFutures
+to subsequent apps causes execution ordering based on an app returning.
 
 
-Local
-^^^^^
+Staging providers
+-----------------
 
-The ``file`` scheme is used to reference local files.  A file using the local file scheme must specify the absolute file path, for example:
+Each executor can be configured with a list of
+:py:class:`~parsl.data_provider.staging.Staging` instances
+which will be used to stage files in and out of execution
+locations. This list should be supplied as the `storage_access`
+parameter to an executor when it is constructed as part of a
+Parsl configuration.
 
-.. code-block:: python
+Parsl comes with several staging providers, some of which are
+enabled by default: the shared file system provider and the HTTP(S)
+and FTP separate task staging providers.
 
-        File('file://path/filename.txt')
+NoOpFileStaging for Local/Shared File Systems
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The file may then be passed as input or output to an app. The following example executes the ``cat`` command on a local file:
+The NoOpFileStaging provider assumes that files specified either
+with a path or with the ``file`` URL scheme are available both
+on the submit and execution side - for example, when there is a
+shared file system. 
 
-.. code-block:: python
+FTP, HTTP, HTTPS: separate task staging
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    @bash_app
-    def cat(inputs=[], stdout='stdout.txt'):
-         return 'cat %s' % (inputs[0])
+Files named with an ``ftp``, ``http`` or ``https`` URL will be
+staged in using HTTP GET or anonymous FTP executed as a separate
+Parsl task which will complete before the corresponding App
+executes. These providers cannot be used to stage out output files.
 
-    # create a test file
-    open('/tmp/test.txt', 'w').write('Hello\n')
 
-    # create the Parsl file
-    parsl_file = File('file:///tmp/test.txt')
-
-    # call the cat app with the Parsl file
-    cat(inputs=[parsl_file])
-
-FTP, HTTP, HTTPS
-^^^^^^^^^^^^^^^^
-
-File objects with FTP, HTTP, and HTTPS schemes represent remote files on FTP, HTTP and HTTPS servers, respectively.The following example defines a file accessible on a remote FTP server. 
+The following example defines a file accessible on a remote FTP server. 
 
 .. code-block:: python
 
@@ -70,12 +105,29 @@ The following example illustrates how the remote file is implicitly downloaded f
     f = convert(inputs=[inp], outputs=[out])
     f.result()
 
+FTP, HTTP, HTTPS: in-task staging
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These staging providers are intended for use on executors which do not have
+a file system shared between each executor node.
+
+These providers will use the same HTTP GET/anonymous FTP as the separate
+task staging providers described above, but will do so in a wrapper around
+individual app invocations, which guarantees that they will stage files to
+a filesystem visible to the app.
+
+A downside of this is that the staging tasks are less visible to parsl, as
+they are not performed as separate Parsl tasks.
+
 
 Globus
 ^^^^^^
 
-The ``Globus`` scheme is used to reference files that can be accessed using Globus (a guide to using Globus is available `here
-<https://docs.globus.org/how-to/get-started/>`_). A file using the Globus scheme must specify the UUID of the Globus
+The ``Globus`` staging provider is used to transfer files that can be accessed
+using Globus. A guide to using Globus is available `here
+<https://docs.globus.org/how-to/get-started/>`_).
+
+A file using the Globus scheme must specify the UUID of the Globus
 endpoint and a path to the file on the endpoint, for example:
 
 .. code-block:: python
@@ -84,32 +136,14 @@ endpoint and a path to the file on the endpoint, for example:
 
 Note: the Globus endpoint UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page.
 
-When Globus files are passed as inputs or outputs to/from an app, Parsl stage the files to/from the remote executor using Globus. The staging occurs implicitly. That is, Parsl is responsible for transferring the input file from the Globus endpoint to the executor, or transferring the output file from the executor to the Globus endpoint.
-Parsl scripts may combine staging of files in and out of apps. For example, the following script stages a file from a remote Globus endpoint, it then sorts the strings in that file, and stages the sorted output file to another remote endpoint.
+There must also be a Globus endpoint available with access to a
+execute-side shared file system, because Globus file transfers happen
+between two Globus endpoints.
 
-.. code-block:: python
+Globus Configuration
+^^^^^^^^^^^^^^^^^^^^
 
-        @python_app
-        def sort_strings(inputs=[], outputs=[]):
-            with open(inputs[0].filepath, 'r') as u:
-                strs = u.readlines()
-                strs.sort()
-                with open(outputs[0].filepath, 'w') as s:
-                    for e in strs:
-                        s.write(e)
-
-
-        unsorted_file = File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
-        sorted_file = File ('globus://ddb59aef-6d04-11e5-ba46-22000b92c6ec/sorted.txt')
-
-        f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
-        f.result()
-
-
-Configuration
-^^^^^^^^^^^^^
-
-In order to manage where data is staged users may configure the default ``working_dir`` on a remote executor. This is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
+In order to specify where data is staged users must configure the default ``working_dir`` on a remote executor. This is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter. For example:
 
 .. code-block:: python
 
@@ -124,9 +158,10 @@ In order to manage where data is staged users may configure the default ``workin
             ]
         )
 
-When using the Globus scheme Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the ``endpoint_name`` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
+Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the ``endpoint_name`` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
 
-In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus endpoint is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the ``endpoint_path`` (the common root path seen in Globus), and the ``local_path`` (the common root path on the local file system). In most cases ``endpoint_path`` and ``local_path`` are the same.
+In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus endpoint is mounted on a supercomputer, the path seen by Globus is not the same as the filesystem path seen by apps.
+ In this case the configuration can specify a mapping between the ``endpoint_path`` (the common root path seen in Globus), and the ``local_path`` (the common root path on the execute-side local file system). In most cases ``endpoint_path`` and ``local_path`` are the same and so do not need to be specified.
 
 .. code-block:: python
 
@@ -148,8 +183,8 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
             ]
         )
 
-Authorization
-^^^^^^^^^^^^^
+Globus Authorization
+^^^^^^^^^^^^^^^^^^^^
 
 In order to interact with Globus, you must be authorised. The first time that
 you use Globus with Parsl, prompts will take you through an authorization
@@ -170,10 +205,11 @@ rsync
 
 `rsync` can be used to transfer files in the `file:` scheme in configurations where
 workers cannot access the submit side filesystem directly, such as when executing
-on an AWS EC2 instance.
+on an AWS EC2 instance. Instead, the submit side filesystem must be exposed using
+rsync.
 
-Configuration
-^^^^^^^^^^^^^
+rsync Configuration
+^^^^^^^^^^^^^^^^^^^
 
 rsync must be installed on both the submit and worker side. It can usually be installed
 using the operating system package manager - for example `apt-get install rsync`.
@@ -194,8 +230,8 @@ and public IP address of the submitting system.
             )
         )
 
-Authorization
-^^^^^^^^^^^^^
+rsync Authorization
+^^^^^^^^^^^^^^^^^^^
 
 The rsync staging provider delegates all authentication and authorization to the 
 underlying rsync command. This command must be correctly authorized to connect back to 

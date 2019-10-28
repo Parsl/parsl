@@ -73,8 +73,21 @@ In addition to being able to capture exceptions raised by a specific app, Parsl 
 DataFutures
 -----------
 
-While AppFutures represent the execution of an asynchronous app, DataFutures represent the files an app produces. Parsl's dataflow model, in which data is passed from one app to another via files, requires such a construct to enable apps to validate the creation of required files and to subsequently resolve dependencies when input files are created. When invoking an app, Parsl requires that a list of output files be specified (using the outputs keyword argument). A DataFuture for each file is returned by the app when it is executed. Throughout execution of the app Parsl will monitor these files to 1) ensure they are created, and 2) pass them to any dependent apps. DataFutures are accessible through the ``outputs`` attribute of the AppFuture.
-DataFutures are inherited from Python's `concurrent library <https://docs.python.org/3/library/concurrent.futures.html>`_.
+While AppFutures represent the execution of an asynchronous app, DataFutures
+represent the files an app produces.
+
+When invoking an app, Parsl requires that a list of output files be
+specified (as a list of `File` objects passed in with the `outputs`
+keyword argument). A DataFuture for each output file is returned in
+the AppFuture when the app is executed, in the `outputs` attribute.
+
+Each DataFuture will complete when the App has finished executing,
+and the corresponding data file has been staged out.
+
+When a DataFuture is passed as an argument to a subsequent App invocation,
+that subsequent App will not begin execution until the DataFuture is
+completed. The input argument will then be replaced with an appropriate
+File object.
 
 The following code snippet shows how DataFutures are used:
 
