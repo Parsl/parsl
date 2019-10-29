@@ -169,7 +169,7 @@ class MonitoringHub(RepresentationMixin):
              Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
              Set this field to True to enable logging the info of resource usage of each task. Default: True
-        resource_monitoring_interval : int
+        resource_monitoring_interval : float
              The time interval at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
         self.logger = None
