@@ -215,13 +215,12 @@ class MonitoringHub(RepresentationMixin):
                                                               max_port=self.client_port_range[1])
 
         comm_q = Queue(maxsize=10)
-        self.stop_q = Queue(maxsize=10)
         self.priority_msgs = Queue()
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs, self.stop_q),
+                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
@@ -266,13 +265,8 @@ class MonitoringHub(RepresentationMixin):
             self.monitoring_hub_active = False
             self._dfk_channel.close()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
-            try:
-                msg = self.stop_q.get()
-                self.logger.info("Received {} from Hub".format(msg))
-            except queue.Empty:
-                pass
-            self.logger.info("Terminating Hub")
-            self.queue_proc.terminate()
+            self.queue_proc.join()
+            self.logger.debug("Finished waiting for Hub termination")
             self.priority_msgs.put(("STOP", 0))
 
     @staticmethod
@@ -388,7 +382,7 @@ class Hub(object):
                                                            min_port=hub_port_range[0],
                                                            max_port=hub_port_range[1])
 
-    def start(self, priority_msgs, node_msgs, resource_msgs, stop_q):
+    def start(self, priority_msgs, node_msgs, resource_msgs):
 
         while True:
             try:
@@ -427,13 +421,14 @@ class Hub(object):
                 self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
             except socket.timeout:
                 pass
-        stop_q.put("STOP")
+
+        self.logger.info("Hub finished")
 
 
-def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, stop_q, *args, **kwargs):
+def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     hub = Hub(*args, **kwargs)
     comm_q.put((hub.hub_port, hub.ic_port))
-    hub.start(priority_msgs, node_msgs, resource_msgs, stop_q)
+    hub.start(priority_msgs, node_msgs, resource_msgs)
 
 
 def monitor(pid,

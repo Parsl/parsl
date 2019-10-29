@@ -74,6 +74,10 @@ script:
     # This mode is enabled with: --config local
     - pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
+    # check that 'all' install target works, even though we aren't doing any further
+    # testing of what is installed
+    - pip install .[all]
+
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
     # - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
