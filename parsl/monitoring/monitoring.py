@@ -100,11 +100,8 @@ class UDPRadio(object):
             Arbitrary pickle-able object that is to be sent
 
         Returns:
-            # bytes sent,
-         or False if there was a timeout during send,
-         or None if there was an exception during pickling
+            None
         """
-        x = 0
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
                                    int(time.time()),  # epoch timestamp
@@ -115,11 +112,11 @@ class UDPRadio(object):
             return
 
         try:
-            x = self.sock.sendto(buffer, (self.ip, self.port))
+            self.sock.sendto(buffer, (self.ip, self.port))
         except socket.timeout:
             logging.error("Could not send message within timeout limit")
-            return False
-        return x
+            return
+        return
 
 
 class MonitoringHub(RepresentationMixin):
@@ -142,17 +139,17 @@ class MonitoringHub(RepresentationMixin):
         Parameters
         ----------
         hub_address : str
-             The ip address at which the workers will be able to reach the Hub. Default: "127.0.0.1"
+             The ip address at which the workers will be able to reach the Hub.
         hub_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+             This is overridden when the hub_port option is set. Default: (55050, 56000)
         client_address : str
              The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
         client_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             Defauls: (55050, 56000)
+             Default: (55000, 56000)
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -168,7 +165,7 @@ class MonitoringHub(RepresentationMixin):
         resource_monitoring_enabled : boolean
              Set this field to True to enable logging the info of resource usage of each task. Default: True
         resource_monitoring_interval : int
-             The time interval at which the monitoring records the resource usage of each task. Default: 30 seconds
+             The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
         self.logger = None
         self._dfk_channel = None
@@ -216,13 +213,12 @@ class MonitoringHub(RepresentationMixin):
                                                               max_port=self.client_port_range[1])
 
         comm_q = Queue(maxsize=10)
-        self.stop_q = Queue(maxsize=10)
         self.priority_msgs = Queue()
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs, self.stop_q),
+                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
@@ -267,13 +263,8 @@ class MonitoringHub(RepresentationMixin):
             self.monitoring_hub_active = False
             self._dfk_channel.close()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
-            try:
-                msg = self.stop_q.get()
-                self.logger.info("Received {} from Hub".format(msg))
-            except queue.Empty:
-                pass
-            self.logger.info("Terminating Hub")
-            self.queue_proc.terminate()
+            self.queue_proc.join()
+            self.logger.debug("Finished waiting for Hub termination")
             self.priority_msgs.put(("STOP", 0))
 
     @staticmethod
@@ -389,7 +380,7 @@ class Hub(object):
                                                            min_port=hub_port_range[0],
                                                            max_port=hub_port_range[1])
 
-    def start(self, priority_msgs, node_msgs, resource_msgs, stop_q):
+    def start(self, priority_msgs, node_msgs, resource_msgs):
 
         while True:
             try:
@@ -428,13 +419,14 @@ class Hub(object):
                 self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
             except socket.timeout:
                 pass
-        stop_q.put("STOP")
+
+        self.logger.info("Hub finished")
 
 
-def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, stop_q, *args, **kwargs):
+def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     hub = Hub(*args, **kwargs)
     comm_q.put((hub.hub_port, hub.ic_port))
-    hub.start(priority_msgs, node_msgs, resource_msgs, stop_q)
+    hub.start(priority_msgs, node_msgs, resource_msgs)
 
 
 def monitor(pid,
@@ -498,7 +490,7 @@ def monitor(pid,
                 d['psutil_process_disk_write'] = pm.io_counters().write_bytes
                 d['psutil_process_disk_read'] = pm.io_counters().read_bytes
             except Exception:
-                # occassionally pid temp files that hold this information are unvailable to be read so set to zero
+                # occasionally pid temp files that hold this information are unvailable to be read so set to zero
                 logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0
