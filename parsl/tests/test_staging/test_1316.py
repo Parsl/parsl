@@ -116,3 +116,26 @@ def test_1316_local_path_on_execution_side_sp2():
     assert not hasattr(file, 'local_path'), "The local_path on the submit side is not modified"
 
     parsl.clear()
+
+@pytest.mark.local
+def test_1316_local_path_setting_preserves_dependency_sp2():
+    config = Config(executors=[ThreadPoolExecutor(storage_access=[SP2()])])
+
+    file = File("sp2://test")
+
+    parsl.load(config)
+
+    wc_app_future = wait_and_create(outputs=[file])
+    data_future = wc_app_future.outputs[0]
+    
+    p = observe_input_local_path(data_future).result()
+
+    assert wc_app_future.done(), "wait_and_create should finish before observe_input_local_path finishes"
+
+    assert p == "./test1.tmp", "File object on the execution side gets the local_path set by the staging provider"
+
+    assert not hasattr(file, 'local_path'), "The local_path on the submit side is not modified"
+
+    parsl.clear()
+
+
