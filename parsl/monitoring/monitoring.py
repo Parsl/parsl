@@ -139,7 +139,7 @@ class MonitoringHub(RepresentationMixin):
                  logdir: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
-                 resource_monitoring_interval: int = 30):  # in seconds
+                 resource_monitoring_interval: float = 30):  # in seconds
         """
         Parameters
         ----------
