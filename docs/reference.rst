@@ -7,6 +7,10 @@ Reference guide
 
     parsl.set_stream_logger
     parsl.set_file_logger
+    parsl.addresses.address_by_hostname
+    parsl.addresses.address_by_interface
+    parsl.addresses.address_by_query
+    parsl.addresses.address_by_route
     parsl.app.app.python_app
     parsl.app.app.bash_app
     parsl.app.futures.DataFuture
