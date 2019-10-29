@@ -101,11 +101,8 @@ class UDPRadio(object):
             Arbitrary pickle-able object that is to be sent
 
         Returns:
-            # bytes sent,
-         or False if there was a timeout during send,
-         or None if there was an exception during pickling
+            None
         """
-        x = 0
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
                                    int(time.time()),  # epoch timestamp
@@ -116,11 +113,11 @@ class UDPRadio(object):
             return
 
         try:
-            x = self.sock.sendto(buffer, (self.ip, self.port))
+            self.sock.sendto(buffer, (self.ip, self.port))
         except socket.timeout:
             logging.error("Could not send message within timeout limit")
-            return False
-        return x
+            return
+        return
 
 
 @typeguard.typechecked
@@ -144,17 +141,17 @@ class MonitoringHub(RepresentationMixin):
         Parameters
         ----------
         hub_address : str
-             The ip address at which the workers will be able to reach the Hub. Default: "127.0.0.1"
+             The ip address at which the workers will be able to reach the Hub.
         hub_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+             This is overridden when the hub_port option is set. Default: (55050, 56000)
         client_address : str
              The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
         client_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             Defauls: (55050, 56000)
+             Default: (55000, 56000)
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -170,7 +167,7 @@ class MonitoringHub(RepresentationMixin):
         resource_monitoring_enabled : boolean
              Set this field to True to enable logging the info of resource usage of each task. Default: True
         resource_monitoring_interval : float
-             The time interval at which the monitoring records the resource usage of each task. Default: 30 seconds
+             The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
         self.logger = None
         self._dfk_channel = None
@@ -247,6 +244,7 @@ class MonitoringHub(RepresentationMixin):
                                 name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
+        self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
@@ -340,7 +338,7 @@ class Hub(object):
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO (20)
+             Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
@@ -499,7 +497,7 @@ def monitor(pid,
                 d['psutil_process_disk_write'] = pm.io_counters().write_bytes
                 d['psutil_process_disk_read'] = pm.io_counters().read_bytes
             except Exception:
-                # occassionally pid temp files that hold this information are unvailable to be read so set to zero
+                # occasionally pid temp files that hold this information are unvailable to be read so set to zero
                 logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0

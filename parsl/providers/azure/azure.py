@@ -41,13 +41,24 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     """
     A Provider for using Microsoft Azure Resources
 
-    One of 2 methods are required to authenticate: keyfile, or environment
-    variables. If  keyfile is not set, the following environment
+    One of 2 methods are required to authenticate: `key_file`, or environment
+    variables. If `key_file` is not set, the following environment
     variables must be set: `AZURE_CLIENT_ID` (the access key for
     your azure account),
-    `AZURE_CLIENT_SECRET` (the secret key for your azure account), the
+    `AZURE_CLIENT_SECRET` (the secret key for your azure account),
     `AZURE_TENANT_ID` (the session key for your azure account), and
-    AZURE_SUBSCRIPTION_ID.
+    `AZURE_SUBSCRIPTION_ID`.
+
+    The tenant ID is also known as the directory ID here:
+    in https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Properties
+    A tenant ID is a GUID.
+
+    A client ID and secret can be created by following these instructions:
+    https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal
+    A client ID is a GUID.
+
+    The subscription ID can be found here:
+    https://portal.azure.com/#blade/Microsoft_Azure_Billing/SubscriptionsBlade
 
     Parameters
     ----------
@@ -77,14 +88,13 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         String to append to the Userdata script executed in the cloudinit phase of
         instance initialization.
     key_file : str
-        Path to json file that contains 'Azure keys'
+        Path to JSON file that contains 'Azure keys'
         The structure of the key file is as follows:
         {
             "AZURE_CLIENT_ID": (str) azure client id [from account principal],
             "AZURE_CLIENT_SECRET":(str) azure client secret [from account principal],
             "AZURE_TENANT_ID": (str) azure tenant [account] id,
             "AZURE_SUBSCRIPTION_ID": (str) azure subscription id
-
         }
     init_blocks : int
         Number of blocks to provision at the start of the run. Default is 1.
@@ -153,9 +163,9 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             "AZURE_TENANT_ID") is not None and os.getenv("AZURE_SUBSCRIPTION_ID") is not None
 
         if key_file is None and not env_specified:
-            raise ConfigurationError("Must specify either, 'key_file', or\
-                 `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`,\
-                  and `AZURE_TENANT_ID` environment variables.")
+            raise ConfigurationError(("Must specify either: 'key_file', or "
+                                      "`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, "
+                                      "and `AZURE_TENANT_ID` environment variables."))
 
         if key_file is None:
             self.clientid = os.getenv("AZURE_CLIENT_ID")
@@ -187,15 +197,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     def get_credentials(self):
         """
         Authenticate to the Azure API
-
-        One of 2 methods are required to authenticate: keyfile, or environment
-        variables. If  keyfile is not set, the following environment
-        variables must be set: `AZURE_CLIENT_ID` (the access key for
-        your azure account),
-        `AZURE_CLIENT_SECRET` (the secret key for your azure account), the
-        `AZURE_TENANT_ID` (the session key for your azure account), and
-        AZURE_SUBSCRIPTION_ID.
-
         """
         subscription_id = self.subid
         credentials = ServicePrincipalCredentials(
