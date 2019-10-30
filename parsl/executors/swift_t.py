@@ -15,6 +15,7 @@ from ipyparallel.serialize import pack_apply_message, unpack_apply_message
 from ipyparallel.serialize import serialize_object, deserialize_object
 
 from parsl.executors.base import ParslExecutor
+from parsl.executors.status_handling import NoStatusHandlingMixin
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +147,7 @@ def runner(incoming_q, outgoing_q):
     logger.debug("[RUNNER] Terminating")
 
 
-class TurbineExecutor(ParslExecutor):
+class TurbineExecutor(NoStatusHandlingMixin, ParslExecutor):
     """The Turbine executor.
 
     Bypass the Swift/T language and run on top off the Turbine engines
@@ -177,6 +178,7 @@ class TurbineExecutor(ParslExecutor):
         Trying to implement the emews model.
 
         """
+        super().__init__()
         logger.debug("Initializing TurbineExecutor")
         self.label = label
         self.storage_access = storage_access
