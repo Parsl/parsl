@@ -26,8 +26,8 @@ parsl.providers.KubernetesProvider
 
    .. autosummary::
    
-      ~KubernetesProvider.channels_required
+      ~KubernetesProvider.cores_per_node
       ~KubernetesProvider.label
-      ~KubernetesProvider.scaling_enabled
+      ~KubernetesProvider.mem_per_node
    
    
