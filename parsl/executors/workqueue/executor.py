@@ -19,6 +19,7 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
 from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
+from parsl.executors.status_handling import NoStatusHandlingMixin
 from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import workqueue_worker
 
@@ -383,7 +384,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
     return
 
 
-class WorkQueueExecutor(ParslExecutor):
+class WorkQueueExecutor(NoStatusHandlingMixin, ParslExecutor):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
