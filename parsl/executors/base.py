@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from concurrent.futures import Future
+from typing import Any, Callable, Dict, Optional
 
-from typing import Any, Callable, Optional
+from parsl.providers.provider_base import JobStatus
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -85,6 +86,83 @@ class ParslExecutor(metaclass=ABCMeta):
         The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
         """
+        pass
+
+    @abstractmethod
+    def status(self) -> Dict[Any, JobStatus]:
+        """Return the status of all jobs/blocks currently known to this executor.
+
+        :return: a dictionary mapping job ids to status strings
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def status_polling_interval(self) -> int:
+        """Returns the interval, in seconds, at which the status method should be called. The
+        assumption here is that, once initialized, an executor's polling interval is fixed.
+        In practice, at least given the current situation, the executor uses a single task provider
+        and this method is a delegate to the corresponding method in the provider.
+
+        :return: the number of seconds to wait between calls to status() or zero if no polling
+        should be done
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def error_management_enabled(self) -> bool:
+        """Indicates whether worker error management is supported by this executor. Worker error
+        management is done externally to the executor. However, the executor must implement
+        certain methods that allow this to function. The basic idea of worker error management
+        is that an external entity maintains a view of the state of the workers by calling
+        :method:status() which is then processed to detect abnormal conditions. This can be done
+        externally, as well as internally, through :method:handle_errors. If an entity external
+        to the executor detects an abnormal condition, it can notify the executor using
+        :method:set_bad_state_and_fail_all(exception).
+
+        Some of the scaffolding needed for implementing error management inside executors is
+        available in :class:StatusHandlingMixin, which, interested executors, should inherit
+        from.
+        """
+        pass
+
+    @abstractmethod
+    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+                      status: Dict[Any, JobStatus]) -> bool:
+        """This method is called by the error management infrastructure after a status poll. The
+        executor implementing this method is then responsible for detecting abnormal conditions
+        based on the status of submitted jobs. If the executor does not implement any special
+        error handling, this method should return False, in which case a generic error handling
+        scheme will be used.
+        :param error_handler: a reference to the generic error handler calling this method
+        :param status: status of all jobs launched by this executor
+        :return: True if this executor implements custom error handling, or False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def set_bad_state_and_fail_all(self, exception: Exception):
+        """Allows external error handlers to mark this executor as irrecoverably bad and cause
+        all tasks submitted to it now and in the future to fail. The executor is responsible
+        for checking  :method:bad_state_is_set() in the :method:submit() method and raising the
+        appropriate exception, which is available through :method:executor_exception().
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def bad_state_is_set(self) -> bool:
+        """Returns true if this executor is in an irrecoverable error state. If this method
+        returns true, :property:executor_exception should contain an exception indicating the
+        cause.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def executor_exception(self) -> Exception:
+        """Returns an exception that indicates why this executor is in an irrecoverable state."""
         pass
 
     @property
