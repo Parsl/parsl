@@ -6,27 +6,28 @@ from parsl.channels import LocalChannel
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.grid_engine.template import template_string
 from parsl.launchers import SingleNodeLauncher
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
 translate_table = {
-    'qw': 'PENDING',
-    'hqw': 'PENDING',
-    'hrwq': 'PENDING',
-    'r': 'RUNNING',
-    's': 'FAILED',  # obsuspended
-    'ts': 'FAILED',
-    't': 'FAILED',  # Suspended by alarm
-    'eqw': 'FAILED',  # Error states
-    'ehqw': 'FAILED',  # ..
-    'ehrqw': 'FAILED',  # ..
-    'd': 'COMPLETED',
-    'dr': 'COMPLETED',
-    'dt': 'COMPLETED',
-    'drt': 'COMPLETED',
-    'ds': 'COMPLETED',
-    'drs': 'COMPLETES',
+    'qw': JobState.PENDING,
+    'hqw': JobState.PENDING,
+    'hrwq': JobState.PENDING,
+    'r': JobState.RUNNING,
+    's': JobState.FAILED,  # obsuspended
+    'ts': JobState.FAILED,
+    't': JobState.FAILED,  # Suspended by alarm
+    'eqw': JobState.FAILED,  # Error states
+    'ehqw': JobState.FAILED,  # ..
+    'ehrqw': JobState.FAILED,  # ..
+    'd': JobState.COMPLETED,
+    'dr': JobState.COMPLETED,
+    'dt': JobState.COMPLETED,
+    'drt': JobState.COMPLETED,
+    'ds': JobState.COMPLETED,
+    'drs': JobState.COMPLETED,
 }
 
 
@@ -148,7 +149,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                 job_id = line.strip()
                 if not job_id:
                     continue
-                self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
+                self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
                 return job_id
         else:
             print("[WARNING!!] Submission of command to scale_out failed")
@@ -181,7 +182,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
             if parts and parts[0].lower().lower() != 'job-id' \
                     and not parts[0].startswith('----'):
                 job_id = parts[0]
-                status = translate_table.get(parts[4].lower(), 'UNKNOWN')
+                status = translate_table.get(parts[4].lower(), JobState.UNKNOWN)
                 if job_id in self.resources:
                     self.resources[job_id]['status'] = status
                     jobs_missing.remove(job_id)
@@ -189,8 +190,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         # Filling in missing blanks for jobs that might have gone missing
         # we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = 'COMPLETED'
+            #if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def cancel(self, job_ids):
         ''' Cancels the resources identified by the job_ids provided by the user.
@@ -212,9 +213,13 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = "COMPLETED"
+                self.resources[jid]['status'] = JobStatus(JobState.COMPLETED)
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
 
         return rets
+
+    @property
+    def status_polling_interval(self):
+        return 60
