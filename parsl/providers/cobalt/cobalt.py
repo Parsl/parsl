@@ -7,16 +7,17 @@ from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
 from parsl.providers.cobalt.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
 translate_table = {
-    'QUEUED': 'PENDING',
-    'STARTING': 'PENDING',
-    'RUNNING': 'RUNNING',
-    'EXITING': 'COMPLETED',
-    'KILLING': 'COMPLETED'
+    'QUEUED': JobState.PENDING,
+    'STARTING': JobState.PENDING,
+    'RUNNING': JobState.RUNNING,
+    'EXITING': JobState.COMPLETED,
+    'KILLING': JobState.COMPLETED
 }
 
 
@@ -115,16 +116,18 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                 if job_id not in self.resources:
                     continue
 
-                status = translate_table.get(parts[4], 'UNKNOWN')
+                status = translate_table.get(parts[4], JobState.UNKNOWN)
 
-                self.resources[job_id]['status'] = status
+                self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['RUNNING', 'KILLING', 'EXITING']:
-                self.resources[missing_job]['status'] = translate_table['EXITING']
+            # is there a point in this check? Can't a job go from QUEUED to missing between two
+            # successive polls?
+            # if self.resources[missing_job]['status'] in ['RUNNING', 'KILLING', 'EXITING']:
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         """ Submits the command onto an Local Resource Manager job of parallel elements.
@@ -197,7 +200,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         if retcode == 0:
             # We should be getting only one line back
             job_id = stdout.strip()
-            self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
+            self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             logger.error("Submission of command to scale_out failed: {0}".format(stderr))
             raise (ScaleOutFailed(self.__class__, "Request to submit job to local scheduler failed"))
@@ -220,9 +223,15 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['KILLING']  # Setting state to cancelled
+                # ???
+                # self.resources[jid]['status'] = translate_table['KILLING']  # Setting state to cancelled
+                self.resources[jid]['status'] = JobStatus(JobState.COMPLETED)
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
 
         return rets
+
+    @property
+    def status_polling_interval(self):
+        return 60

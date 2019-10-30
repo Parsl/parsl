@@ -6,18 +6,19 @@ from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.pbspro.template import template_string
 from parsl.providers import TorqueProvider
+from parsl.providers.provider_base import JobState, JobStatus
 
 logger = logging.getLogger(__name__)
 
 # From the man pages for qstat for PBS/Torque systems
 translate_table = {
-    'R': 'RUNNING',
-    'C': 'COMPLETED',  # Completed after having run
-    'E': 'COMPLETED',  # Exiting after having run
-    'H': 'HELD',  # Held
-    'Q': 'PENDING',  # Queued, and eligible to run
-    'W': 'PENDING',  # Job is waiting for it's execution time (-a option) to be reached
-    'S': 'HELD'
+    'R': JobState.RUNNING,
+    'C': JobState.COMPLETED,  # Completed after having run
+    'E': JobState.COMPLETED,  # Exiting after having run
+    'H': JobState.HELD,  # Held
+    'Q': JobState.PENDING,  # Queued, and eligible to run
+    'W': JobState.PENDING,  # Job is waiting for it's execution time (-a option) to be reached
+    'S': JobState.HELD
 }  # Suspended
 
 
@@ -161,7 +162,7 @@ class PBSProProvider(TorqueProvider):
             for line in stdout.split('\n'):
                 if line.strip():
                     job_id = line.strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
             if (stdout is not None) and (stderr is not None):
@@ -169,3 +170,7 @@ class PBSProProvider(TorqueProvider):
             logger.error(message)
 
         return job_id
+
+    @property
+    def status_polling_interval(self):
+        return 60
