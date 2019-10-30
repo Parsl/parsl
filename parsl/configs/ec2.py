@@ -6,16 +6,23 @@ from parsl.addresses import address_by_query
 config = Config(
     executors=[
         HighThroughputExecutor(
-            label='ec2_htex_single_node',
+            label='ec2_single_node',
             address=address_by_query(),
             provider=AWSProvider(
-                image_id='YOUR_AMI_ID',
-                region='us-east-1',
+                # Specify your EC2 AMI id
+                'YOUR_AMI_ID',
+                # Specify the AWS region to provision from
+                # eg. us-east-1
+                region='YOUR_AWS_REGION',
+
+                # Specify the name of the key to allow ssh access to nodes
                 key_name='YOUR_KEY_NAME',
-                profile='default',
+                profile="default",
                 state_file='awsproviderstate.json',
                 nodes_per_block=1,
                 init_blocks=1,
+                max_blocks=1,
+                min_blocks=0,
                 walltime='01:00:00',
             ),
         )
