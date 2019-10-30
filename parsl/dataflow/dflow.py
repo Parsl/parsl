@@ -908,15 +908,6 @@ class DataFlowKernel(object):
 
             self.monitoring.close()
 
-        """
-        if self.logging_server is not None:
-            self.logging_server.terminate()
-            self.logging_server.join()
-
-        if self.web_app is not None:
-            self.web_app.terminate()
-            self.web_app.join()
-        """
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
@@ -1047,8 +1038,8 @@ class DataFlowKernel(object):
                 logger.error(reason)
                 raise BadCheckpoint(reason)
 
-            logger.info("Completed loading checkpoint:{0} with {1} tasks".format(checkpoint_file,
-                                                                                 len(memo_lookup_table.keys())))
+            logger.info("Completed loading checkpoint: {0} with {1} tasks".format(checkpoint_file,
+                                                                                  len(memo_lookup_table.keys())))
         return memo_lookup_table
 
     def load_checkpoints(self, checkpointDirs):

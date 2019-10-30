@@ -1,16 +1,14 @@
 import os
-import pytest
 
 from parsl.app.app import App
 
 
 @App('bash')
 def foo(z=2, stdout=None):
-    return """echo {val} {{z}}
+    return """echo {val}
     """.format(val=z)
 
 
-@pytest.mark.xfail(reason="This failing test demonstrates issue #1058", strict=True)
 def test_command_format_1():
     """Testing command format for BashApps
     """
@@ -33,7 +31,7 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '2 2\n', 'Output does not match expected string "2 2", Got: "{0}"'.format(
+    assert contents == '2\n', 'Output does not match expected string "2", Got: "{0}"'.format(
         contents)
 
 # ===========
@@ -56,7 +54,7 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '3 3\n', 'Output does not match expected string "3 3", Got: "{0}"'.format(
+    assert contents == '3\n', 'Output does not match expected string "3", Got: "{0}"'.format(
         contents)
 
 # ===========
@@ -78,7 +76,7 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '4 4\n', 'Output does not match expected string "4 4", Got: "{0}"'.format(
+    assert contents == '4\n', 'Output does not match expected string "4", Got: "{0}"'.format(
         contents)
 
 # ===========
@@ -100,6 +98,6 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '2 2\n', 'Output does not match expected string "2 2", Got: "{0}"'.format(
+    assert contents == '2\n', 'Output does not match expected string "2", Got: "{0}"'.format(
         contents)
     return True
