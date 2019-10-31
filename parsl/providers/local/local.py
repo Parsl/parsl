@@ -109,7 +109,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                     if err:
                         job_dict['err'] += err.decode()
 
-                print("Poll code: %s" % poll_code)
                 if poll_code is None:
                     status = JobStatus(JobState.RUNNING)
                 elif poll_code == 0:
