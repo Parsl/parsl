@@ -6,13 +6,13 @@ import concurrent.futures as cf
 from typing import Any, List, Optional
 
 from parsl.executors.base import ParslExecutor
-from parsl.executors.status_handling import NoStatusHandlingMixin
+from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ThreadPoolExecutor(NoStatusHandlingMixin, ParslExecutor, RepresentationMixin):
+class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     """A thread-based executor.
 
     Parameters

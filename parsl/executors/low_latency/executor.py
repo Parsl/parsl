@@ -14,7 +14,7 @@ from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
 from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
 from parsl.executors.base import ParslExecutor
-from parsl.executors.status_handling import StatusHandlingMixin
+from parsl.executors.status_handling import StatusHandlingExecutor
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -22,7 +22,7 @@ from parsl.providers import LocalProvider
 logger = logging.getLogger(__name__)
 
 
-class LowLatencyExecutor(StatusHandlingMixin, ParslExecutor, RepresentationMixin):
+class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
     """
     TODO: docstring for LowLatencyExecutor
     """
@@ -55,7 +55,6 @@ class LowLatencyExecutor(StatusHandlingMixin, ParslExecutor, RepresentationMixin
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = []
-        self.tasks = {}
         self.workers_per_node = workers_per_node
 
         self._task_counter = 0

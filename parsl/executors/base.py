@@ -167,6 +167,11 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @property
+    @abstractmethod
+    def tasks(self) -> Dict[str, Future]:
+        pass
+
+    @property
     def run_dir(self) -> str:
         """Path to the run directory.
         """
