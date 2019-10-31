@@ -32,7 +32,10 @@ parsl.executors.ExtremeScaleExecutor
 
    .. autosummary::
    
+      ~ExtremeScaleExecutor.connected_managers
       ~ExtremeScaleExecutor.connected_workers
+      ~ExtremeScaleExecutor.hub_address
+      ~ExtremeScaleExecutor.hub_port
       ~ExtremeScaleExecutor.outstanding
       ~ExtremeScaleExecutor.run_dir
       ~ExtremeScaleExecutor.scaling_enabled
