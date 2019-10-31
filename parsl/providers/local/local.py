@@ -100,12 +100,14 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 continue
 
             if job_dict['proc']:
-                out, err = job_dict['proc'].communicate(input=None)
-                if out:
-                    job_dict['out'] += out.decode()
-                if err:
-                    job_dict['err'] += err.decode()
                 poll_code = job_dict['proc'].poll()
+
+                if poll_code is not None:
+                    out, err = job_dict['proc'].communicate(input=None)
+                    if out:
+                        job_dict['out'] += out.decode()
+                    if err:
+                        job_dict['err'] += err.decode()
 
                 print("Poll code: %s" % poll_code)
                 if poll_code is None:
