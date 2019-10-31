@@ -58,14 +58,21 @@ class DataManager(object):
     def optionally_stage_in(self, input, func, executor):
         if isinstance(input, DataFuture):
             file = input.file_obj.cleancopy()
+            # replace the input DataFuture with a new DataFuture which will complete at
+            # the same time as the original one, but will contain the newly
+            # copied file
+            input = DataFuture(input, file, tid=input.tid)
         elif isinstance(input, File):
             file = input.cleancopy()
+            input = file
         else:
             return (input, func)
 
-        task = self.stage_in(file, input, executor)
+        replacement_input = self.stage_in(file, input, executor)
+
         func = self.replace_task(file, func, executor)
-        return (task, func)
+
+        return (replacement_input, func)
 
     def replace_task(self, file: File, func: Callable, executor: str) -> Callable:
         """This will give staging providers the chance to wrap (or replace entirely!) the task function."""

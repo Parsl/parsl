@@ -32,6 +32,8 @@ parsl.executors.IPyParallelExecutor
    .. autosummary::
    
       ~IPyParallelExecutor.connected_workers
+      ~IPyParallelExecutor.hub_address
+      ~IPyParallelExecutor.hub_port
       ~IPyParallelExecutor.outstanding
       ~IPyParallelExecutor.run_dir
       ~IPyParallelExecutor.scaling_enabled
