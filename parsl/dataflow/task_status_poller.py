@@ -1,12 +1,14 @@
 import logging
+import parsl
 import time
-from typing import Dict, Any, Sequence
+from typing import Dict, Any, Sequence, List
 
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.dataflow.job_error_handler import JobErrorHandler
 from parsl.dataflow.strategy import Strategy
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus
+
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +19,8 @@ class PollItem(ExecutorStatus):
         if not executor.provider:
             raise ValueError("Executor with no provider passed to PollItem.__init__()")
         self._interval = executor.provider.status_polling_interval
-        self._last_poll_time = 0
-        self._status = {}
+        self._last_poll_time = 0.0 # type: float
+        self._status = {} # type: Dict[Any, JobStatus]
 
     def _should_poll(self, now: float):
         return now >= self._last_poll_time + self._interval
@@ -43,7 +45,7 @@ class PollItem(ExecutorStatus):
 
 class TaskStatusPoller(object):
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
-        self._poll_items = []
+        self._poll_items = [] # type: List[PollItem]
         self._strategy = Strategy(dfk)
         self._error_handler = JobErrorHandler()
 
