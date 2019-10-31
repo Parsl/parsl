@@ -1,10 +1,13 @@
 import logging
 import threading
 from abc import abstractmethod
+from concurrent.futures import Future
 from typing import List, Any, Dict
 
-from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 
+import parsl
+from parsl.executors.base import ParslExecutor
+from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +18,7 @@ class StatusHandlingMixin(object):
 
     def __init__(self, provider=None):
         super().__init__()
-        self._provider = provider
+        self._provider = provider # type: ExecutionProvider
         # errors can happen during the sumbit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -102,7 +105,7 @@ class StatusHandlingMixin(object):
                       status: Dict[Any, JobStatus]) -> bool:
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
-            init_blocks = self.provider.init_blocks
+            init_blocks = self.provider.init_blocks # type: ignore
         error_handler.simple_error_handler(self, status, init_blocks)
         return True
 
@@ -133,5 +136,6 @@ class NoStatusHandlingMixin(object):
     def status(self):
         return {}
 
-    def handle_errors(self, error_handler: "JobErrorHandler", status: Dict[Any, JobStatus]) -> bool:
+    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+                      status: Dict[Any, JobStatus]) -> bool:
         return False

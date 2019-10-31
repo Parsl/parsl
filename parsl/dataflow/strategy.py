@@ -1,11 +1,11 @@
 import logging
 import time
 import math
-from typing import List
+from typing import Any, Dict, List
 
 from parsl.dataflow.task_status_poller import ExecutorStatus
 from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
-from parsl.providers.provider_base import JobState
+from parsl.providers.provider_base import JobStatus, JobState
 
 logger = logging.getLogger(__name__)
 
@@ -178,8 +178,8 @@ class Strategy(object):
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
 
-            status = exec_status.status
-            # Dict[Any, JobStatus]: job_id -> status
+            _status = exec_status.status # type: Dict[Any, JobStatus]
+            # job_id -> status
             self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these
@@ -194,11 +194,11 @@ class Strategy(object):
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            running = sum([1 for x in status.values() if x.state == JobState.RUNNING])
+            running = sum([1 for x in _status.values() if x.state == JobState.RUNNING])
             # I didn't see any provider setting the status to 'SUBMITTING'
             # submitting = sum([1 for x in status if x == 'SUBMITTING'])
             submitting = 0
-            pending = sum([1 for x in status.values() if x.state == JobState.PENDING])
+            pending = sum([1 for x in _status.values() if x.state == JobState.PENDING])
             active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 

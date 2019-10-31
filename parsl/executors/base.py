@@ -1,9 +1,10 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, List
 
 from parsl.providers.provider_base import JobStatus
 
+import parsl
 
 class ParslExecutor(metaclass=ABCMeta):
     """Define the strict interface for all Executor classes.
