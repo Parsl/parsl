@@ -27,8 +27,9 @@ parsl.providers.SlurmProvider
 
    .. autosummary::
    
+      ~SlurmProvider.cores_per_node
       ~SlurmProvider.current_capacity
       ~SlurmProvider.label
-      ~SlurmProvider.scaling_enabled
+      ~SlurmProvider.mem_per_node
    
    

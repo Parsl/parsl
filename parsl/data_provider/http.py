@@ -50,12 +50,7 @@ class HTTPInTaskStaging(Staging, RepresentationMixin):
         else:
             file.local_path = file.filename
 
-        return file
-# TODO: documentation somewhere that we need to return this file
-# here so that the modified file object is substituted in the
-# rest of the app calls - what can be returned here is, I think,
-# either a DataFuture (in the case of staging apps) or plain
-# File (if no dependency needs to happen)
+        return None
 
     def replace_task(self, dm, executor, file, f):
         working_dir = dm.dfk.executors[executor].working_dir
