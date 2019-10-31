@@ -60,7 +60,6 @@ def id_for_memo(obj, output_ref=False):
 @id_for_memo.register(types.FunctionType)  # is this safe? I have seen functions change in ways I don't fully understand
 @id_for_memo.register(type(None))
 def id_for_memo_serialize(obj, output_ref=False):
-    logger.debug("id_for_memo generic serialization for type {}".format(type(obj)))
     return serialize_object(obj)[0]
 
 
