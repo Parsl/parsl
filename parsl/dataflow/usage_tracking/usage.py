@@ -122,15 +122,12 @@ class UsageTracker (object):
         self.python_version = "{}.{}.{}".format(sys.version_info.major,
                                                 sys.version_info.minor,
                                                 sys.version_info.micro)
-        self.test_mode, self.tracking_enabled = self.check_tracking_enabled()
+        self.tracking_enabled = self.check_tracking_enabled()
         logger.debug("Tracking status: {}".format(self.tracking_enabled))
-        logger.debug("Testing mode   : {}".format(self.test_mode))
         self.initialized = False  # Once first message is sent this will be True
 
     def check_tracking_enabled(self):
         """By default tracking is enabled.
-
-        If Test mode is set via env variable PARSL_TESTING, a test flag is set
 
         Tracking is disabled if :
             1. config["globals"]["usageTracking"] is set to False (Bool)
@@ -138,11 +135,6 @@ class UsageTracker (object):
 
         """
         track = True   # By default we track usage
-        test = False  # By default we are not in testing mode
-
-        testvar = str(os.environ.get("PARSL_TESTING", 'None')).lower()
-        if testvar == 'true':
-            test = True
 
         if not self.config.usage_tracking:
             track = False
@@ -151,7 +143,7 @@ class UsageTracker (object):
         if envvar == "false":
             track = False
 
-        return test, track
+        return track
 
     def construct_start_message(self):
         """Collect preliminary run info at the start of the DFK.
@@ -166,7 +158,9 @@ class UsageTracker (object):
         message = {'uuid': self.uuid,
                    'uname': hashed_username,
                    'hname': hashed_hostname,
-                   'test': self.test_mode,
+                   'test': False,  # this field previously indicated if parsl
+                                   # was being run in test mode, and is
+                                   # retained for protocol compatibility
                    'parsl_v': self.parsl_version,
                    'python_v': self.python_version,
                    'os': platform.system(),
@@ -194,7 +188,7 @@ class UsageTracker (object):
                    'sites': site_count,
                    'c_time': None,
                    'failed': app_fails,
-                   'test': self.test_mode,
+                   'test': False,  # see comment in construct_start_message
                    }
 
         return json.dumps(message)

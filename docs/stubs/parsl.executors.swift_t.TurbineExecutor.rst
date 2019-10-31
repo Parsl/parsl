@@ -29,6 +29,8 @@ parsl.executors.swift\_t.TurbineExecutor
 
    .. autosummary::
    
+      ~TurbineExecutor.hub_address
+      ~TurbineExecutor.hub_port
       ~TurbineExecutor.run_dir
       ~TurbineExecutor.scaling_enabled
    
