@@ -20,7 +20,7 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
 from parsl.executors.high_throughput import interchange
 from parsl.executors.high_throughput import zmq_pipes
-from parsl.executors.status_handling import StatusHandlingMixin
+from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.providers import LocalProvider
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.utils import RepresentationMixin
@@ -31,7 +31,7 @@ BUFFER_THRESHOLD = 1024 * 1024
 ITEM_THRESHOLD = 1024
 
 
-class HighThroughputExecutor(StatusHandlingMixin, ParslExecutor, RepresentationMixin):
+class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
 
     The HighThroughputExecutor system has the following components:
@@ -181,13 +181,11 @@ class HighThroughputExecutor(StatusHandlingMixin, ParslExecutor, RepresentationM
         super().__init__(provider)
         self.label = label
         self.launch_cmd = launch_cmd
-        self.provider = provider
         self.worker_debug = worker_debug
         self.storage_access = storage_access
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
-        self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers

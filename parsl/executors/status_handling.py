@@ -4,7 +4,6 @@ from abc import abstractmethod
 from concurrent.futures import Future
 from typing import List, Any, Dict
 
-
 import parsl
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
@@ -12,11 +11,8 @@ from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 logger = logging.getLogger(__name__)
 
 
-class StatusHandlingMixin(object):
-    tasks = None
-    provider = None
-
-    def __init__(self, provider=None):
+class StatusHandlingExecutor(ParslExecutor):
+    def __init__(self, provider):
         super().__init__()
         self._provider = provider # type: ExecutionProvider
         # errors can happen during the sumbit call to the provider; this is used
@@ -26,6 +22,7 @@ class StatusHandlingMixin(object):
         self._executor_bad_state = threading.Event()
         self._executor_exception = None
         self._generated_job_id_counter = 1
+        self._tasks = {}  # type: Dict[str, Future]
 
     def _make_status_dict(self, job_ids: List[Any], status_list: List[JobStatus]) -> Dict[Any, JobStatus]:
         """Given a list of job ids and a list of corresponding status strings,
@@ -86,8 +83,8 @@ class StatusHandlingMixin(object):
         self._executor_bad_state.set()
         # We set all current tasks to this exception to make sure that
         # this is raised in the main context.
-        for task in self.tasks:
-            self.tasks[task].set_exception(self._executor_exception)
+        for task in self._tasks:
+            self._tasks[task].set_exception(self._executor_exception)
 
     @property
     def bad_state_is_set(self):
@@ -109,10 +106,19 @@ class StatusHandlingMixin(object):
         error_handler.simple_error_handler(self, status, init_blocks)
         return True
 
+    @property
+    def tasks(self) -> Dict[str, Future]:
+        return self._tasks
 
-class NoStatusHandlingMixin(object):
-    def __init__(self, provider=None):
+    @property
+    def provider(self):
+        return self._provider
+
+
+class NoStatusHandlingExecutor(ParslExecutor):
+    def __init__(self):
         super().__init__()
+        self._tasks = {}
 
     @property
     def status_polling_interval(self):
@@ -139,3 +145,11 @@ class NoStatusHandlingMixin(object):
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
                       status: Dict[Any, JobStatus]) -> bool:
         return False
+
+    @property
+    def tasks(self) -> Dict[str, Future]:
+        return self._tasks
+
+    @property
+    def provider(self):
+        return self._provider
