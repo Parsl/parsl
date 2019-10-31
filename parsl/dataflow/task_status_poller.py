@@ -16,9 +16,7 @@ logger = logging.getLogger(__name__)
 class PollItem(ExecutorStatus):
     def __init__(self, executor: ParslExecutor):
         self._executor = executor
-        if not executor.provider:
-            raise ValueError("Executor with no provider passed to PollItem.__init__()")
-        self._interval = executor.provider.status_polling_interval
+        self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0 # type: float
         self._status = {} # type: Dict[Any, JobStatus]
 
@@ -62,8 +60,7 @@ class TaskStatusPoller(object):
 
     def add_executors(self, executors: Sequence[ParslExecutor]):
         for executor in executors:
-            if executor.error_management_enabled and executor.provider \
-                    and executor.status_polling_interval > 0:
+            if executor.error_management_enabled and executor.status_polling_interval > 0:
                 logging.debug("Adding executor {}".format(executor))
                 self._poll_items.append(PollItem(executor))
         self._strategy.add_executors(executors)
