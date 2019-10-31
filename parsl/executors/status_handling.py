@@ -108,7 +108,7 @@ class StatusHandlingMixin(object):
 
 
 class NoStatusHandlingMixin(object):
-    def __init__(self, provider = None):
+    def __init__(self, provider=None):
         super().__init__()
 
     @property
