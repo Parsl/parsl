@@ -5,6 +5,7 @@ import requests
 import socket
 import fcntl
 import struct
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -46,3 +47,30 @@ def address_by_interface(ifname):
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', bytes(ifname[:15], 'utf-8'))
     )[20:24])
+
+
+def get_all_addresses():
+    """ Uses a combination of methods to determine possible addresses.
+
+    Returns:
+         list of addresses as strings
+    """
+    net_interfaces = psutil.net_if_addrs()
+
+    s_addresses = []
+    for interface in net_interfaces:
+        try:
+            s_addresses.append(address_by_interface(interface))
+        except Exception:
+            pass
+
+    s_addresses = set(s_addresses)
+
+    try:
+        s_addresses.add(address_by_route())
+        s_addresses.add(address_by_query())
+        s_addresses.add(address_by_hostname())
+    except Exception:
+        pass
+
+    return s_addresses
