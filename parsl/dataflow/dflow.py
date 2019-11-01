@@ -13,7 +13,7 @@ from concurrent.futures import Future
 from functools import partial
 from getpass import getuser
 from socket import gethostname
-from typing import Optional, List
+from typing import Optional
 from uuid import uuid4
 
 import typeguard

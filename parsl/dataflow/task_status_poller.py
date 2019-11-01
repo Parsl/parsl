@@ -1,7 +1,8 @@
 import logging
-import parsl
+import parsl  # noqa F401 (used in string type annotation)
 import time
-from typing import Dict, Any, Sequence, List
+from typing import Dict, Any, Sequence
+from typing import List  # noqa F401 (used in type annotation)
 
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.dataflow.job_error_handler import JobErrorHandler
@@ -17,8 +18,8 @@ class PollItem(ExecutorStatus):
     def __init__(self, executor: ParslExecutor):
         self._executor = executor
         self._interval = executor.status_polling_interval
-        self._last_poll_time = 0.0 # type: float
-        self._status = {} # type: Dict[Any, JobStatus]
+        self._last_poll_time = 0.0  # type: float
+        self._status = {}  # type: Dict[Any, JobStatus]
 
     def _should_poll(self, now: float):
         return now >= self._last_poll_time + self._interval
@@ -43,7 +44,7 @@ class PollItem(ExecutorStatus):
 
 class TaskStatusPoller(object):
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
-        self._poll_items = [] # type: List[PollItem]
+        self._poll_items = []  # type: List[PollItem]
         self._strategy = Strategy(dfk)
         self._error_handler = JobErrorHandler()
 

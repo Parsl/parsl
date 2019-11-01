@@ -5,7 +5,6 @@ import concurrent.futures as cf
 
 from typing import Any, List, Optional
 
-from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 

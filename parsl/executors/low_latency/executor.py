@@ -13,7 +13,6 @@ from ipyparallel.serialize import deserialize_object  # ,serialize_object
 from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
 from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
-from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import StatusHandlingExecutor
 
 from parsl.utils import RepresentationMixin

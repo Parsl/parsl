@@ -17,7 +17,6 @@ from ipyparallel.serialize import pack_apply_message
 from parsl.app.errors import AppFailure
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
-from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.error import OptionalModuleMissing

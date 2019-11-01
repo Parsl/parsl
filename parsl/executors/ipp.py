@@ -5,7 +5,6 @@ import uuid
 
 from ipyparallel import Client
 
-from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.ipp_controller import Controller
 from parsl.executors.status_handling import StatusHandlingExecutor

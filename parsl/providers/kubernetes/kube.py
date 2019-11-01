@@ -9,7 +9,8 @@ from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.utils import RepresentationMixin
 
 import typeguard
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict  # noqa F401 (used in type annotation)
+from typing import List, Optional, Tuple
 
 try:
     from kubernetes import client, config

@@ -14,7 +14,6 @@ import multiprocessing as mp
 from ipyparallel.serialize import pack_apply_message, unpack_apply_message
 from ipyparallel.serialize import serialize_object, deserialize_object
 
-from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 
 logger = logging.getLogger(__name__)
