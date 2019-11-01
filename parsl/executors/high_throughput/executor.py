@@ -1,6 +1,3 @@
-"""HighThroughputExecutor builds on the Swift/T EMEWS architecture to use MPI for fast task distribution
-"""
-
 from concurrent.futures import Future
 import typeguard
 import logging
