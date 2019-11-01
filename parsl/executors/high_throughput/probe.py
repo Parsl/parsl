@@ -1,10 +1,12 @@
 import zmq
 import argparse
 import uuid
+import time
+import logging
 from parsl.addresses import get_all_addresses
 from zmq.utils.monitor import recv_monitor_message
-import time
-HEARTBEAT_CODE = (2 ** 32) - 1
+
+logger = logging.getLogger(__name__)
 
 
 def probe_addresses(addresses, task_port, timeout=2):
@@ -27,16 +29,14 @@ def probe_addresses(addresses, task_port, timeout=2):
     addr_map = {}
     for addr in addresses:
         socket = context.socket(zmq.DEALER)
-        # socket.setsockopt(zmq.LINGER, 0)
-        url = f"tcp://{addr}:{task_port}"
-        print("Trying url: ", url)
+        socket.setsockopt(zmq.LINGER, 0)
+        url = "tcp://{}:{}".format(addr, task_port)
+        logger.debug("Trying to connect back on {}".format(url))
         socket.connect(url)
         addr_map[addr] = {'sock': socket,
                           'mon_sock': socket.get_monitor_socket(events=zmq.EVENT_CONNECTED)}
 
     start_t = time.time()
-
-    print(addr_map)
 
     first_connected = None
     while time.time() < start_t + timeout:
@@ -44,13 +44,12 @@ def probe_addresses(addresses, task_port, timeout=2):
             try:
                 recv_monitor_message(addr_map[addr]['mon_sock'], zmq.NOBLOCK)
                 first_connected = addr
-                print("Connected :", addr)
+                logger.info("Connected to interchange on {}".format(first_connected))
                 break
             except zmq.Again:
                 pass
-            # Wait for 2ms
-            # print("Sleeping...")
             time.sleep(0.01)
+
     for addr in addr_map:
         addr_map[addr]['sock'].close()
 
@@ -76,6 +75,7 @@ class TestWorker(object):
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
         """
+        HEARTBEAT_CODE = (2 ** 32) - 1
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
         print("Return from heartbeat: {}".format(r))
