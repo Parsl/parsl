@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Dict, Any
 
-import parsl
+import parsl  # noqa F401
 
 
 class ExecutorStatus(metaclass=ABCMeta):

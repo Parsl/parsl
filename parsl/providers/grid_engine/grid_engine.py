@@ -190,7 +190,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         # Filling in missing blanks for jobs that might have gone missing
         # we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            #if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+            # if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
             self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def cancel(self, job_ids):

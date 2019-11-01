@@ -4,7 +4,7 @@ from abc import abstractmethod
 from concurrent.futures import Future
 from typing import List, Any, Dict
 
-import parsl
+import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class StatusHandlingExecutor(ParslExecutor):
     def __init__(self, provider):
         super().__init__()
-        self._provider = provider # type: ExecutionProvider
+        self._provider = provider  # type: ExecutionProvider
         # errors can happen during the sumbit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -102,7 +102,7 @@ class StatusHandlingExecutor(ParslExecutor):
                       status: Dict[Any, JobStatus]) -> bool:
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
-            init_blocks = self.provider.init_blocks # type: ignore
+            init_blocks = self.provider.init_blocks  # type: ignore
         error_handler.simple_error_handler(self, status, init_blocks)
         return True
 
