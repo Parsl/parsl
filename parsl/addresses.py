@@ -62,15 +62,17 @@ def get_all_addresses():
         try:
             s_addresses.append(address_by_interface(interface))
         except Exception:
+            logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
             pass
 
     s_addresses = set(s_addresses)
 
     try:
+        s_addresses.add(address_by_hostname())
         s_addresses.add(address_by_route())
         s_addresses.add(address_by_query())
-        s_addresses.add(address_by_hostname())
     except Exception:
+        logger.exception("Ignoring one or more address finder method failure")
         pass
 
     return s_addresses
