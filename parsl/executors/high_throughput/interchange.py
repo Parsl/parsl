@@ -556,8 +556,6 @@ def cli_run():
                         help="Client address")
     parser.add_argument("--client_ports",
                         help="client ports as a triple of outgoing,incoming,command")
-    parser.add_argument("--worker_ports",
-                        help="worker port tuple")
     parser.add_argument("--worker_port_range",
                         help="Worker port range as a tuple")
     parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
