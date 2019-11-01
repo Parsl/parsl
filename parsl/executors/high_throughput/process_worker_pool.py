@@ -20,6 +20,7 @@ import psutil
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
+from parsl.executors.high_throughput.probe import probe_addresses
 import multiprocessing
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -48,8 +49,9 @@ class Manager(object):
 
     """
     def __init__(self,
-                 task_q_url="tcp://127.0.0.1:50097",
-                 result_q_url="tcp://127.0.0.1:50098",
+                 addresses="127.0.0.1",
+                 task_port="50097",
+                 result_port="50098",
                  cores_per_worker=1,
                  mem_per_worker=None,
                  max_workers=float('inf'),
@@ -106,6 +108,20 @@ class Manager(object):
         """
 
         logger.info("Manager started")
+
+        try:
+            ix_address = probe_addresses(addresses.split(','), task_port)
+            if not ix_address:
+                logger.error("Unable to connect back on any addresses:{}".format(addresses))
+                exit(5)
+            else:
+                logger.info("Connection to Interchange successful on {}".format(ix_address))
+                task_q_url = "tcp://{}:{}".format(ix_address, task_port)
+                result_q_url = "tcp://{}:{}".format(ix_address, result_port)
+                logger.info("Task url : {}".format(task_q_url))
+                logger.info("Result url : {}".format(result_q_url))
+        except Exception:
+            logger.exception("Caught exception while trying to determine viable address to interchange")
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
@@ -555,6 +571,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
+    parser.add_argument("-a", "--addresses", default='',
+                        help="Comma separated list of addresses at which the interchange could be reached")
     parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
                         help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
@@ -565,8 +583,8 @@ if __name__ == "__main__":
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-m", "--mem_per_worker", default=0,
                         help="GB of memory assigned to each worker process. Default=0, no assignment")
-    parser.add_argument("-t", "--task_url", required=True,
-                        help="REQUIRED: ZMQ url for receiving tasks")
+    parser.add_argument("-t", "--task_port", required=True,
+                        help="REQUIRED: Task port for receiving tasks from the interchange")
     parser.add_argument("--max_workers", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
     parser.add_argument("-p", "--prefetch_capacity", default=0,
@@ -577,8 +595,8 @@ if __name__ == "__main__":
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
     parser.add_argument("--poll", default=10,
                         help="Poll period used in milliseconds")
-    parser.add_argument("-r", "--result_url", required=True,
-                        help="REQUIRED: ZMQ url for posting results")
+    parser.add_argument("-r", "--result_port", required=True,
+                        help="REQUIRED: Result port for posting results to the interchange")
 
     args = parser.parse_args()
 
@@ -596,14 +614,16 @@ if __name__ == "__main__":
         logger.info("Block ID: {}".format(args.block_id))
         logger.info("cores_per_worker: {}".format(args.cores_per_worker))
         logger.info("mem_per_worker: {}".format(args.mem_per_worker))
-        logger.info("task_url: {}".format(args.task_url))
-        logger.info("result_url: {}".format(args.result_url))
+        logger.info("task_port: {}".format(args.task_port))
+        logger.info("result_port: {}".format(args.result_port))
+        logger.info("addresses: {}".format(args.addresses))
         logger.info("max_workers: {}".format(args.max_workers))
         logger.info("poll_period: {}".format(args.poll))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
 
-        manager = Manager(task_q_url=args.task_url,
-                          result_q_url=args.result_url,
+        manager = Manager(task_port=args.task_port,
+                          result_port=args.result_port,
+                          addresses=args.addresses,
                           uid=args.uid,
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
