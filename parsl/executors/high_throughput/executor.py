@@ -1,6 +1,3 @@
-"""HighThroughputExecutor builds on the Swift/T EMEWS architecture to use MPI for fast task distribution
-"""
-
 import logging
 import math
 import pickle
