@@ -5,12 +5,10 @@ import math
 import pickle
 import queue
 import threading
-from concurrent.futures import Future
 from multiprocessing import Process, Queue
 from typing import Dict  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union, Any
 
-import typeguard
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 
