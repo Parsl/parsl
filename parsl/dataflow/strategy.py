@@ -3,7 +3,7 @@ import time
 import math
 from typing import Any, Dict, List  # noqa F401 (used in type annotation comments)
 
-from parsl.dataflow.task_status_poller import ExecutorStatus
+from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
 from parsl.providers.provider_base import JobStatus  # noqa F401 (used in type annotation comments)
 from parsl.providers.provider_base import JobState
