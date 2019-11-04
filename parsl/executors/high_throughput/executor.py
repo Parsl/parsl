@@ -708,6 +708,5 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self._shutdown_interchange()
         if self.interchange_address == "localhost":
             self.queue_proc.terminate()
-        self.queue_proc.terminate()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
         return True
