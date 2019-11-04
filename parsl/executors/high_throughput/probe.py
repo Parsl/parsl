@@ -69,7 +69,7 @@ class TestWorker(object):
 
         address = probe_addresses(addresses, port)
         print("Viable address :", address)
-        self.task_incoming.connect(f"tcp://{address}:{port}")
+        self.task_incoming.connect("tcp://{}:{}".format(address, port))
         print("Here")
 
     def heartbeat(self):
