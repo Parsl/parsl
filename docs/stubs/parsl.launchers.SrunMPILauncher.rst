@@ -9,6 +9,12 @@ parsl.launchers.SrunMPILauncher
    .. automethod:: __init__
 
    
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SrunMPILauncher.__init__
+   
    
 
    

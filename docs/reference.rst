@@ -20,6 +20,13 @@ Reference guide
     parsl.data_provider.data_manager.DataManager
     parsl.data_provider.data_manager.Staging
     parsl.data_provider.files.File
+    parsl.data_provider.ftp.FTPSeparateTaskStaging
+    parsl.data_provider.ftp.FTPInTaskStaging
+    parsl.data_provider.file_noop.NoOpFileStaging
+    parsl.data_provider.globus.GlobusStaging
+    parsl.data_provider.http.HTTPSeparateTaskStaging
+    parsl.data_provider.http.HTTPInTaskStaging
+    parsl.data_provider.rsync.RSyncStaging
     parsl.executors.base.ParslExecutor
     parsl.executors.ThreadPoolExecutor
     parsl.executors.IPyParallelExecutor
