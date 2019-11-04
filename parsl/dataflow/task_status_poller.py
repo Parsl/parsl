@@ -26,7 +26,7 @@ class PollItem(ExecutorStatus):
 
     def poll(self, now: float):
         if self._should_poll(now):
-            logging.debug("Polling {}".format(self._executor))
+            logger.debug("Polling {}".format(self._executor))
             self._status = self._executor.status()
             self._last_poll_time = now
 
