@@ -149,9 +149,9 @@ class Strategy(object):
 
         root_logger = logging.getLogger()
 
-        for hndlr in root_logger.handlers:
-            if hndlr not in self.prior_loghandlers:
-                hndlr.setLevel(logging.ERROR)
+        for handler in root_logger.handlers:
+            if handler not in self.prior_loghandlers:
+                handler.setLevel(logging.ERROR)
 
         self.logger_flag = True
 
