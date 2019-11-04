@@ -60,7 +60,7 @@ class StatusHandlingExecutor(ParslExecutor):
         as failed and report it in status()
         """
         if job_id is None:
-            job_id = "block-{}".format(self._generated_job_id_counter)
+            job_id = "failed-block-{}".format(self._generated_job_id_counter)
             self._generated_job_id_counter += 1
         self._simulated_status[job_id] = JobStatus(JobState.FAILED, message)
 
