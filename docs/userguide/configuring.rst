@@ -105,6 +105,8 @@ In addition, examples for some specific configurations follow.
 +--------------------------+----------------------+------------------------------------+
 | `ExtremeScaleExecutor`   | >1000, <=8000 [*]_   |  >minutes                          |
 +--------------------------+----------------------+------------------------------------+
+| `WorkQueueExecutor`      | <=20000 [*]_         |  10s+                              |
++--------------------------+----------------------+------------------------------------+
 
 
 .. [*] We assume that each node has 32 workers. If there are fewer workers launched
@@ -112,6 +114,9 @@ In addition, examples for some specific configurations follow.
 
 .. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale at which
        we've tested the `ExtremeScaleExecutor`.
+
+.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and 
+       20000 CPU cores.
 
 .. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
              as the recommended replacement.
@@ -201,6 +206,16 @@ Stampede2 (TACC)
 The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
 
 .. literalinclude:: ../../parsl/configs/stampede2_htex_multinode.py
+
+
+WorkQueue (CCL ND)
+------------------
+
+.. image::
+
+The following snippet shows an example configuration for using
+
+.. literalinclude::
 
 
 Theta (ALCF)
