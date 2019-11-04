@@ -93,8 +93,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         An address to connect to the main Parsl process which is reachable from the network in which
         workers will be running. This can be either a hostname as returned by `hostname` or an
         IP address. Most login nodes on clusters have several network interfaces available, only
-        some of which can be reached from the compute nodes.  Some trial and error might be
-        necessary to identify what addresses are reachable from compute nodes.
+        some of which can be reached from the compute nodes.
+        By default, the executor will attempt to enumerate and connect through all possible addresses.
+        Setting an address here overrides the default behavior.
+        default=None
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -156,7 +158,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
-                 address: str = "127.0.0.1",
+                 address: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
@@ -189,7 +191,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
-        self.all_addresses = ','.join(get_all_addresses())
+        self.address = address
+        if self.address:
+            self.all_addresses = address
+        else:
+            self.all_addresses = ','.join(get_all_addresses())
 
         mem_slots = max_workers
         cpu_slots = max_workers
@@ -207,7 +213,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             self.workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
-        self.address = address
         self.hub_address = None  # set to the correct hub address in dfk
         self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
