@@ -211,11 +211,11 @@ The following snippet shows an example configuration for accessing TACC's **Stam
 WorkQueue (CCL ND)
 ------------------
 
-.. image::
+.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
 
-The following snippet shows an example configuration for using
+The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large. This examples uses the `WorkQueueExecutor` to schedule tasks locally, and assumes that Work Queue workers have been externally connected to the master using the `work_queue_worker` or `condor_submit_workers` command line utilities from CCTools. For more information the process of submitting tasks and workers to Work Queue, please refer to the `CCTools Work Queue documentation <https://cctools.readthedocs.io/en/latest/work_queue/>`.
 
-.. literalinclude::
+.. literalinclude::  ../../parsl/configs/wqex_local.py
 
 
 Theta (ALCF)
