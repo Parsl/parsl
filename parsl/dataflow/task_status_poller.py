@@ -61,7 +61,7 @@ class TaskStatusPoller(object):
 
     def add_executors(self, executors: Sequence[ParslExecutor]):
         for executor in executors:
-            if executor.error_management_enabled and executor.status_polling_interval > 0:
+            if executor.status_polling_interval > 0:
                 logging.debug("Adding executor {}".format(executor))
                 self._poll_items.append(PollItem(executor))
         self._strategy.add_executors(executors)

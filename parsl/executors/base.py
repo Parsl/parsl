@@ -120,7 +120,6 @@ class ParslExecutor(metaclass=ABCMeta):
 
         Status Handling Methods
         -----------------------
-        :method:status_polling_interval
         :method:handle_errors
         :method:set_bad_state_and_fail_all
 
