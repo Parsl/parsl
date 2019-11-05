@@ -112,8 +112,7 @@ class Manager(object):
         try:
             ix_address = probe_addresses(addresses.split(','), task_port)
             if not ix_address:
-                logger.error("Unable to connect back on any addresses:{}".format(addresses))
-                exit(5)
+                raise Exception("No viable address found")
             else:
                 logger.info("Connection to Interchange successful on {}".format(ix_address))
                 task_q_url = "tcp://{}:{}".format(ix_address, task_port)
@@ -122,6 +121,8 @@ class Manager(object):
                 logger.info("Result url : {}".format(result_q_url))
         except Exception:
             logger.exception("Caught exception while trying to determine viable address to interchange")
+            print("Failed to find a viable address to connect to interchange. Exiting")
+            exit(5)
 
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
