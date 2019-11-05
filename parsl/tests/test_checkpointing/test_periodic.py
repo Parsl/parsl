@@ -60,8 +60,8 @@ def test_periodic(n=4):
 
     with open("{}/parsl.log".format(dfk.run_dir), 'r') as f:
         log_lines = f.readlines()
-        expected_msg = "]  Done checkpointing".format(n)
-        expected_msg2 = "]  No tasks checkpointed in this pass".format(n)
+        expected_msg = "]  Done checkpointing"
+        expected_msg2 = "]  No tasks checkpointed in this pass"
 
         lines = [line for line in log_lines if expected_msg in line or expected_msg2 in line]
         assert len(lines) >= 3, "Insufficient checkpoint lines in logfile"
