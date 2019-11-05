@@ -89,7 +89,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  init_blocks: int = 1,
                  min_blocks: int = 0,
                  max_blocks: int = 10,
-                 parallelism: int = 1,
+                 parallelism: float = 1,
                  walltime: str = "00:10:00",
                  scheduler_options: str = '',
                  worker_init: str = '',
