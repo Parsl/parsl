@@ -387,21 +387,31 @@ class Manager(object):
         # TODO : Add mechanism in this loop to stop the worker pool
         # This might need a multiprocessing event to signal back.
         self._kill_event.wait()
-        logger.critical("[MAIN] Received kill event, terminating worker processes")
+        logger.critical("[MAIN] Received kill event - beginning shutdown sequence")
 
+        logger.critical("[MAIN] shutdown: joining _task_puller_thread")
         self._task_puller_thread.join()
+        logger.critical("[MAIN] shutdown: joining _result_pusher_thread")
         self._result_pusher_thread.join()
+        logger.critical("[MAIN] shutdown: joining _worker_watchdog_thread")
         self._worker_watchdog_thread.join()
+        logger.critical("[MAIN] shutdown: terminating worker processes")
         for proc_id in self.procs:
-            self.procs[proc_id].terminate()
             logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
                                                               self.procs[proc_id].is_alive()))
+            self.procs[proc_id].terminate()
+            logger.critical("Joining worker {}:{}".format(self.procs[proc_id],
+                                                              self.procs[proc_id].is_alive()))
             self.procs[proc_id].join()
-            logger.debug("Worker:{} joined successfully".format(self.procs[proc_id]))
+            logger.critical("Worker:{} joined successfully".format(self.procs[proc_id]))
 
+        logger.critical("[MAIN] shutdown: closing task_incoming")
         self.task_incoming.close()
+        logger.critical("[MAIN] shutdown: closing result_outgoing")
         self.result_outgoing.close()
+        logger.critical("[MAIN] shutdown: terminating context")
         self.context.term()
+        logger.critical("[MAIN] shutdown: shutdown sequence complete")
         delta = time.time() - start
         logger.info("process_worker_pool ran for {} seconds".format(delta))
         return
