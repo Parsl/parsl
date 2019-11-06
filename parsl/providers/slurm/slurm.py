@@ -47,7 +47,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     cores_per_node : int
         Specify the number of cores to provision per node. If set to None, executors
         will assume all cores on the node are available for computation. Default is None.
-    mem_per_node : float
+    mem_per_node : int
         Specify the real memory to provision per node in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
     min_blocks : int
@@ -105,7 +105,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         self.partition = partition
         self.cores_per_node = cores_per_node
-        self.mem_per_node = mem_per_node
+        self.mem_per_node = int(mem_per_node)
         self.exclusive = exclusive
         self.move_files = move_files
         self.scheduler_options = scheduler_options + '\n'
