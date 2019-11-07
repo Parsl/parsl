@@ -84,7 +84,7 @@ class StatusHandlingExecutor(ParslExecutor):
         # We set all current tasks to this exception to make sure that
         # this is raised in the main context.
         for task in self._tasks:
-            self._tasks[task].set_exception(self._executor_exception)
+            self._tasks[task].set_exception(Exception(str(self._executor_exception)))
 
     @property
     def bad_state_is_set(self):
