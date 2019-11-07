@@ -352,14 +352,14 @@ The following snippet shows an example configuration for using the Work Queue di
 
 .. literalinclude::  ../../parsl/configs/wqex_local.py
 
-To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment:
+To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment (instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`):
 
 .. codeblock:: bash
     $ conda create -y --name <environment> python=<version>
     $ conda activate <environment>
     $ conda install -y -c conda-forge cctools
 
-This creates a conda environment on your machine with all the necessary tools needed to utilize Work Queue with the Parsl library. 
+This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library. 
 
 
 Further help
