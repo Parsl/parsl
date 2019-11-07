@@ -208,16 +208,6 @@ The following snippet shows an example configuration for accessing TACC's **Stam
 .. literalinclude:: ../../parsl/configs/stampede2_htex_multinode.py
 
 
-WorkQueue (CCL ND)
-------------------
-
-.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
-
-The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large. This examples uses the `WorkQueueExecutor` to schedule tasks locally, and assumes that Work Queue workers have been externally connected to the master using the `work_queue_worker` or `condor_submit_workers` command line utilities from CCTools. For more information the process of submitting tasks and workers to Work Queue, please refer to the `CCTools Work Queue documentation <https://cctools.readthedocs.io/en/latest/work_queue/>`.
-
-.. literalinclude::  ../../parsl/configs/wqex_local.py
-
-
 Theta (ALCF)
 ------------
 
@@ -353,6 +343,23 @@ configuration follows.
    `here <https://github.com/Parsl/parsl/issues/941>`_.
 
 
+WorkQueue (CCL ND)
+------------------
+
+.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
+
+The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large. This examples uses the `WorkQueueExecutor` to schedule tasks locally, and assumes that Work Queue workers have been externally connected to the master using the `work_queue_worker` or `condor_submit_workers` command line utilities from CCTools. For more information the process of submitting tasks and workers to Work Queue, please refer to the `CCTools Work Queue documentation <https://cctools.readthedocs.io/en/latest/work_queue/>`.
+
+.. literalinclude::  ../../parsl/configs/wqex_local.py
+
+To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment:
+
+.. codeblock:: bash
+    $ conda create -y --name <environment> python=<version>
+    $ conda activate <environment>
+    $ conda install -y -c conda-forge cctools
+
+This creates a conda environment on your machine with all the necessary tools needed to utilize Work Queue with the Parsl library. 
 
 
 Further help
