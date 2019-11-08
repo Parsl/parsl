@@ -5,7 +5,7 @@ from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
-from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_efficiency
+from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_efficiency, worker_efficiency
 
 dummy = True
 
@@ -164,4 +164,5 @@ def workflow_resources(workflow_id):
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='max'),
                            cpu_efficiency=resource_efficiency(df_resources, df_node, label='CPU'),
                            memory_efficiency=resource_efficiency(df_resources, df_node, label='mem'),
+                           worker_efficiency=worker_efficiency(df_task, df_node),
                            )

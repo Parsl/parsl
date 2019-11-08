@@ -2,9 +2,14 @@ import os
 import math
 import time
 import logging
+import typeguard
+
+from typing import Optional
 
 from parsl.channels import LocalChannel
+from parsl.channels.base import Channel
 from parsl.launchers import SingleNodeLauncher
+from parsl.launchers.launchers import Launcher
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
@@ -47,7 +52,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     cores_per_node : int
         Specify the number of cores to provision per node. If set to None, executors
         will assume all cores on the node are available for computation. Default is None.
-    mem_per_node : float
+    mem_per_node : int
         Specify the real memory to provision per node in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
     min_blocks : int
@@ -74,23 +79,24 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
      move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
+    @typeguard.typechecked
     def __init__(self,
-                 partition,
-                 channel=LocalChannel(),
-                 nodes_per_block=1,
-                 cores_per_node=None,
-                 mem_per_node=None,
-                 init_blocks=1,
-                 min_blocks=0,
-                 max_blocks=10,
-                 parallelism=1,
-                 walltime="00:10:00",
-                 scheduler_options='',
-                 worker_init='',
-                 cmd_timeout=10,
-                 exclusive=True,
-                 move_files=True,
-                 launcher=SingleNodeLauncher()):
+                 partition: str,
+                 channel: Channel = LocalChannel(),
+                 nodes_per_block: int = 1,
+                 cores_per_node: Optional[int] = None,
+                 mem_per_node: Optional[int] = None,
+                 init_blocks: int = 1,
+                 min_blocks: int = 0,
+                 max_blocks: int = 10,
+                 parallelism: float = 1,
+                 walltime: str = "00:10:00",
+                 scheduler_options: str = '',
+                 worker_init: str = '',
+                 cmd_timeout: int = 10,
+                 exclusive: bool = True,
+                 move_files: bool = True,
+                 launcher: Launcher = SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
                          channel,
@@ -164,7 +170,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         """
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
+            logger.warning("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
             return None
 
         scheduler_options = self.scheduler_options

@@ -467,7 +467,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             spot_options = {}
 
         if total_instances > self.max_nodes:
-            logger.warn("Exceeded instance limit ({}). Cannot continue\n".format(self.max_nodes))
+            logger.warning("Exceeded instance limit ({}). Cannot continue\n".format(self.max_nodes))
             return [None]
         try:
             tag_spec = [{"ResourceType": "instance", "Tags": [{'Key': 'Name', 'Value': job_name}]}]
@@ -520,7 +520,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             term = self.client.terminate_instances(InstanceIds=[instance])
             logger.info("Shut down 1 instance (id:{})".format(instance))
         else:
-            logger.warn("No Instances to shut down.\n")
+            logger.warning("No Instances to shut down.\n")
             return -1
         self.get_instance_state()
         return term
@@ -685,10 +685,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             raise e
         self.show_summary()
         os.remove(self.config['state_file_path'])
-
-    @property
-    def scaling_enabled(self):
-        return True
 
     @property
     def label(self):

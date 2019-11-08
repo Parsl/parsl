@@ -3,6 +3,7 @@ import socket
 import pickle
 import logging
 import time
+import typeguard
 import datetime
 import zmq
 
@@ -12,7 +13,7 @@ from parsl.utils import RepresentationMixin
 
 from parsl.monitoring.message_type import MessageType
 
-from typing import Optional
+from typing import Optional, Tuple
 
 try:
     from parsl.monitoring.db_manager import dbm_starter
@@ -100,11 +101,8 @@ class UDPRadio(object):
             Arbitrary pickle-able object that is to be sent
 
         Returns:
-            # bytes sent,
-         or False if there was a timeout during send,
-         or None if there was an exception during pickling
+            None
         """
-        x = 0
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
                                    int(time.time()),  # epoch timestamp
@@ -115,44 +113,45 @@ class UDPRadio(object):
             return
 
         try:
-            x = self.sock.sendto(buffer, (self.ip, self.port))
+            self.sock.sendto(buffer, (self.ip, self.port))
         except socket.timeout:
             logging.error("Could not send message within timeout limit")
-            return False
-        return x
+            return
+        return
 
 
+@typeguard.typechecked
 class MonitoringHub(RepresentationMixin):
     def __init__(self,
-                 hub_address,
-                 hub_port=None,
-                 hub_port_range=(55050, 56000),
+                 hub_address: str,
+                 hub_port: Optional[int] = None,
+                 hub_port_range: Tuple[int, int] = (55050, 56000),
 
-                 client_address="127.0.0.1",
-                 client_port_range=(55000, 56000),
+                 client_address: str = "127.0.0.1",
+                 client_port_range: Tuple[int, int] = (55000, 56000),
 
-                 workflow_name=None,
-                 workflow_version=None,
-                 logging_endpoint='sqlite:///monitoring.db',
-                 logdir=None,
-                 logging_level=logging.INFO,
-                 resource_monitoring_enabled=True,
-                 resource_monitoring_interval=30):  # in seconds
+                 workflow_name: Optional[str] = None,
+                 workflow_version: Optional[str] = None,
+                 logging_endpoint: str = 'sqlite:///monitoring.db',
+                 logdir: Optional[str] = None,
+                 monitoring_debug: bool = False,
+                 resource_monitoring_enabled: bool = True,
+                 resource_monitoring_interval: float = 30):  # in seconds
         """
         Parameters
         ----------
         hub_address : str
-             The ip address at which the workers will be able to reach the Hub. Default: "127.0.0.1"
+             The ip address at which the workers will be able to reach the Hub.
         hub_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+             This is overridden when the hub_port option is set. Default: (55050, 56000)
         client_address : str
              The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
         client_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             Defauls: (55050, 56000)
+             Default: (55000, 56000)
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -163,12 +162,12 @@ class MonitoringHub(RepresentationMixin):
              Default: 'sqlite:///monitoring.db'
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
-        logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO (20)
+        monitoring_debug : Bool
+             Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
              Set this field to True to enable logging the info of resource usage of each task. Default: True
-        resource_monitoring_interval : int
-             The time interval at which the monitoring records the resource usage of each task. Default: 30 seconds
+        resource_monitoring_interval : float
+             The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
         self.logger = None
         self._dfk_channel = None
@@ -185,7 +184,7 @@ class MonitoringHub(RepresentationMixin):
 
         self.logging_endpoint = logging_endpoint
         self.logdir = logdir
-        self.logging_level = logging_level
+        self.monitoring_debug = monitoring_debug
 
         self.workflow_name = workflow_name
         self.workflow_version = workflow_version
@@ -203,7 +202,7 @@ class MonitoringHub(RepresentationMixin):
         # Initialize the ZMQ pipe to the Parsl Client
         self.logger = start_file_logger("{}/monitoring_hub.log".format(self.logdir),
                                         name="monitoring_hub",
-                                        level=self.logging_level)
+                                        level=logging.DEBUG if self.monitoring_debug else logging.INFO)
         self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")
@@ -216,20 +215,19 @@ class MonitoringHub(RepresentationMixin):
                                                               max_port=self.client_port_range[1])
 
         comm_q = Queue(maxsize=10)
-        self.stop_q = Queue(maxsize=10)
         self.priority_msgs = Queue()
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs, self.stop_q),
+                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
                                           "client_address": self.client_address,
                                           "client_port": self.dfk_port,
                                           "logdir": self.logdir,
-                                          "logging_level": self.logging_level,
+                                          "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                           "run_id": run_id
                                   },
                                   name="Monitoring-Queue-Process"
@@ -239,12 +237,13 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc = Process(target=dbm_starter,
                                 args=(self.priority_msgs, self.node_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
-                                        "logging_level": self.logging_level,
+                                        "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                         "db_url": self.logging_endpoint,
                                   },
                                 name="Monitoring-DBM-Process"
         )
         self.dbm_proc.start()
+        self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
@@ -266,22 +265,29 @@ class MonitoringHub(RepresentationMixin):
             self.monitoring_hub_active = False
             self._dfk_channel.close()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
-            try:
-                msg = self.stop_q.get()
-                self.logger.info("Received {} from Hub".format(msg))
-            except queue.Empty:
-                pass
-            self.logger.info("Terminating Hub")
-            self.queue_proc.terminate()
+            self.queue_proc.join()
+            self.logger.debug("Finished waiting for Hub termination")
             self.priority_msgs.put(("STOP", 0))
 
     @staticmethod
-    def monitor_wrapper(f, task_id, monitoring_hub_url, run_id, sleep_dur):
+    def monitor_wrapper(f,
+                        task_id,
+                        monitoring_hub_url,
+                        run_id,
+                        logging_level,
+                        sleep_dur):
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            p = Process(target=monitor, args=(os.getpid(), task_id, monitoring_hub_url, run_id, sleep_dur), name="Monitor-Wrapper-{}".format(task_id))
+            p = Process(target=monitor,
+                        args=(os.getpid(),
+                              task_id,
+                              monitoring_hub_url,
+                              run_id,
+                              logging_level,
+                              sleep_dur),
+                        name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
                 return f(*args, **kwargs)
@@ -305,7 +311,7 @@ class Hub(object):
                  monitoring_hub_address="127.0.0.1",
                  logdir=".",
                  run_id=None,
-                 logging_level=logging.DEBUG,
+                 logging_level=logging.INFO,
                  atexit_timeout=3    # in seconds
                 ):
         """ Initializes a monitoring configuration class.
@@ -326,7 +332,7 @@ class Hub(object):
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO (20)
+             Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
 
@@ -376,7 +382,7 @@ class Hub(object):
                                                            min_port=hub_port_range[0],
                                                            max_port=hub_port_range[1])
 
-    def start(self, priority_msgs, node_msgs, resource_msgs, stop_q):
+    def start(self, priority_msgs, node_msgs, resource_msgs):
 
         while True:
             try:
@@ -415,16 +421,22 @@ class Hub(object):
                 self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
             except socket.timeout:
                 pass
-        stop_q.put("STOP")
+
+        self.logger.info("Hub finished")
 
 
-def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, stop_q, *args, **kwargs):
+def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     hub = Hub(*args, **kwargs)
     comm_q.put((hub.hub_port, hub.ic_port))
-    hub.start(priority_msgs, node_msgs, resource_msgs, stop_q)
+    hub.start(priority_msgs, node_msgs, resource_msgs)
 
 
-def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
+def monitor(pid,
+            task_id,
+            monitoring_hub_url,
+            run_id,
+            logging_level=logging.INFO,
+            sleep_dur=10):
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
@@ -436,7 +448,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
+        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
     logging.debug("start of monitor")
 
     radio = UDPRadio(monitoring_hub_url,
@@ -480,7 +492,7 @@ def monitor(pid, task_id, monitoring_hub_url, run_id, sleep_dur=10):
                 d['psutil_process_disk_write'] = pm.io_counters().write_bytes
                 d['psutil_process_disk_read'] = pm.io_counters().read_bytes
             except Exception:
-                # occassionally pid temp files that hold this information are unvailable to be read so set to zero
+                # occasionally pid temp files that hold this information are unvailable to be read so set to zero
                 logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
                 d['psutil_process_disk_write'] = 0
                 d['psutil_process_disk_read'] = 0

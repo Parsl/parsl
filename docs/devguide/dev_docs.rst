@@ -129,6 +129,8 @@ ThreadPoolExecutor
 IPyParallelExecutor
 -------------------
 
+.. warning:: Deprecated as of `v0.9.0`
+
 .. autoclass:: parsl.executors.ipp.IPyParallelExecutor
    :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd
 
@@ -140,10 +142,17 @@ HighThroughputExecutor
               _start_queue_management_thread, _start_local_queue_process,
               hold_worker, outstanding, connected_workers
 
+WorkQueueExecutor
+----------------------
+
+.. autoclass:: parsl.executors.WorkQueueExecutor
+   :members:  __init__, start, submit, scale_out, scale_in,
+              shutdown, scaling_enabled, run_dir, create_new_name, create_name_tuple
+
 ExtremeScaleExecutor
 --------------------
 
-.. autoclass:: parsl.executors.HighThroughputExecutor
+.. autoclass:: parsl.executors.ExtremeScaleExecutor
    :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd,
               _start_queue_management_thread, _start_local_queue_process,
               hold_worker, outstanding, connected_workers

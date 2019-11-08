@@ -47,9 +47,20 @@ class Config(RepresentationMixin):
     strategy : str, optional
         Strategy to use for scaling resources according to workflow needs. Can be 'simple' or `None`. If `None`, dynamic
         scaling will be disabled. Default is 'simple'.
+    max_idletime : float, optional
+        The maximum idle time for an executor in the 'simple' strategy. Default is 120.0 seconds.
     usage_tracking : bool, optional
         Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
+    initialize_logging : bool, optional
+        Make DFK optionally not initialize any logging. Log messages
+        will still be passed into the python logging system under the
+        `parsl` logger name, but the logging system will not by default
+        perform any further log system configuration. Most noticeably,
+        it will not create a parsl.log logfile.  The use case for this
+        is when parsl is used as a library in a bigger system which
+        wants to configure logging in a way that makes sense for that
+        bigger system as a whole.
     """
 
     @typeguard.typechecked
@@ -64,8 +75,10 @@ class Config(RepresentationMixin):
                  retries: int = 0,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
+                 max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
-                 usage_tracking: bool = False):
+                 usage_tracking: bool = False,
+                 initialize_logging: bool = True):
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
@@ -89,7 +102,9 @@ class Config(RepresentationMixin):
         self.retries = retries
         self.run_dir = run_dir
         self.strategy = strategy
+        self.max_idletime = max_idletime
         self.usage_tracking = usage_tracking
+        self.initialize_logging = initialize_logging
         self.monitoring = monitoring
 
     @property
