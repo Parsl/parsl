@@ -12,7 +12,7 @@ Sufficient capabilities to use Parsl in many common situations already exist.  T
 it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold, with the release
 in which they were added marked for releases since 0.3.0. Help in providing any of the yet-to-be-developed capabilities is welcome.
 
-The upcoming release is Parsl-0.8.0 and features in preparation are documented via Github
+The upcoming release is Parsl v0.9.0 and features in preparation are documented via Github
 `issues <https://github.com/Parsl/parsl/issues>`_ and `milestones <https://github.com/Parsl/parsl/milestone/7>`_.
 
 
@@ -41,7 +41,7 @@ Data management
 * **Input/output staging models that support transparent movement of data from source to a location on which it is accessible for compute. This includes staging to/from the client (script execution location) and worker node (v0.6.0)**.
 * Support for creation of a sandbox and execution within the sandbox.
 * Multi-site support including transparent movement between sites.
-* Support for systems without a shared file system (point-to-point staging).
+* **Support for systems without a shared file system (point-to-point staging). (Partial support in v0.9.0)**
 * Support for data caching at multiple levels and across sites.
 
 .. todo::
@@ -75,14 +75,14 @@ Resource provisioning and execution
     * **PBS/Torque**
     * **AWS**
     * **GoogleCloud**
-    * Azure
+    * **Azure**
     * **Nova/OpenStack/Jetstream (partial support)**
     * **Kubernetes (v0.6.0)**
 * **Support for launcher mechanisms**
     * **srun**
-    * **aprun (Complete support 0.6.0)**    
-    * Various MPI launch mechanisms (Mpiexec, mpirun..)
-* Support for remote execution using **SSH** and OAuth-based authentication (SSH execution support added in 0.3.0)
+    * **aprun (Complete support 0.6.0)**
+    * **Various MPI launch mechanisms (Mpiexec, mpirun..)**
+* **Support for remote execution using SSH (from v0.3.0)and OAuth-based authentication (from v0.9.0)**
 * **Utilizing multiple sites for a single script’s execution (v0.4.0)**
 * Cloud-hosted site configuration repository that stores configurations for resource authentication, data staging, and job submission endpoints
 * **IPP workers to support multiple threads of execution per node. (v0.7.0 adds support via replacement executors)**
@@ -97,7 +97,7 @@ Visualization, debugging, fault tolerance
 
 * **Support for exception handling**.
 * **Interface for accessing real-time state (v0.6.0)**.
-* Visualization library that enables users to introspect graph, task, and data dependencies, as well as observe state of executed/executing tasks
+* **Visualization library that enables users to introspect graph, task, and data dependencies, as well as observe state of executed/executing tasks (from v0.9.0)**
 * Integration of visualization into jupyter
 * Support for visualizing dead/dying parts of the task graph and retrying with updates to the task.
 * **Retry model to selectively re-execute only the failed branches of a workflow graph**

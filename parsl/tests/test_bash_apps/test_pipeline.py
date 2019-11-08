@@ -4,6 +4,7 @@ import os
 import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
+from parsl.app.futures import DataFuture
 
 from parsl.tests.configs.local_threads import config
 
@@ -11,6 +12,7 @@ from parsl.tests.configs.local_threads import config
 @App('bash')
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     cmd_line = """
+    if ! [ -f {inputs[0]} ] ; then exit 43 ; fi
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}
     """.format(inputs=inputs, outputs=outputs)
@@ -48,6 +50,7 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
+        assert(isinstance(prev, DataFuture) or isinstance(prev, File))
         output = File("test{0}.txt".format(i))
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
@@ -57,6 +60,7 @@ def test_increment(depth=5):
         [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
+        assert(isinstance(prev, DataFuture))
 
     for key in futs:
         if key > 0:
@@ -66,7 +70,8 @@ def test_increment(depth=5):
 
             # this test is a bit close to a test of the specific implementation
             # of File
-            assert not hasattr(file, 'local_path'), "File on local side has overridden local_path, file: {}".format(repr(file))
+            assert file.local_path is None, "File on local side has overridden local_path, file: {}".format(repr(file))
+            assert file.filepath == "test{0}.txt".format(key), "Submit side filepath has not been preserved over execution"
 
             data = open(filename, 'r').read().strip()
             assert data == str(

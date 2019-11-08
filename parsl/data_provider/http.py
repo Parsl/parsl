@@ -21,6 +21,12 @@ class HTTPSeparateTaskStaging(Staging, RepresentationMixin):
 
     def stage_in(self, dm, executor, file, parent_fut):
         working_dir = dm.dfk.executors[executor].working_dir
+
+        if working_dir:
+            file.local_path = os.path.join(working_dir, file.filename)
+        else:
+            file.local_path = file.filename
+
         stage_in_app = _http_stage_in_app(dm, executor=executor)
         app_fut = stage_in_app(working_dir, outputs=[file], staging_inhibit_output=True, parent_fut=parent_fut)
         return app_fut._outputs[0]
@@ -36,6 +42,16 @@ class HTTPInTaskStaging(Staging, RepresentationMixin):
         logger.debug("HTTPInTaskStaging checking file {}".format(repr(file)))
         return file.scheme == 'http' or file.scheme == 'https'
 
+    def stage_in(self, dm, executor, file, parent_fut):
+        working_dir = dm.dfk.executors[executor].working_dir
+
+        if working_dir:
+            file.local_path = os.path.join(working_dir, file.filename)
+        else:
+            file.local_path = file.filename
+
+        return None
+
     def replace_task(self, dm, executor, file, f):
         working_dir = dm.dfk.executors[executor].working_dir
         return in_task_transfer_wrapper(f, file, working_dir)
@@ -46,9 +62,6 @@ def in_task_transfer_wrapper(func, file, working_dir):
         import requests
         if working_dir:
             os.makedirs(working_dir, exist_ok=True)
-            file.local_path = os.path.join(working_dir, file.filename)
-        else:
-            file.local_path = file.filename
         resp = requests.get(file.url, stream=True)
         with open(file.local_path, 'wb') as f:
             for chunk in resp.iter_content(chunk_size=1024):
@@ -64,9 +77,6 @@ def _http_stage_in(working_dir, parent_fut=None, outputs=[], staging_inhibit_out
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
-        file.local_path = os.path.join(working_dir, file.filename)
-    else:
-        file.local_path = file.filename
     resp = requests.get(file.url, stream=True)
     with open(file.local_path, 'wb') as f:
         for chunk in resp.iter_content(chunk_size=1024):

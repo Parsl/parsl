@@ -40,8 +40,9 @@ parsl.providers.AWSProvider
 
    .. autosummary::
    
+      ~AWSProvider.cores_per_node
       ~AWSProvider.current_capacity
       ~AWSProvider.label
-      ~AWSProvider.scaling_enabled
+      ~AWSProvider.mem_per_node
    
    

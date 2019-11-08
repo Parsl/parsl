@@ -20,8 +20,11 @@ def run_checkpointed(checkpoints):
         x = cached_rand(i)
         items.append(x)
 
+    # wait for all of the results
+    results = [i.result() for i in items]
+
     dfk.cleanup()
-    return [i.result() for i in items], dfk.run_dir
+    return results, dfk.run_dir
 
 
 def run_race(sleep_dur):
@@ -58,7 +61,6 @@ def test_slower_apps():
 
 
 @pytest.mark.local
-@pytest.mark.skip('fails due to likely race in checkpointing; see issue #681')
 def test_checkpoint_availability():
     import os
 

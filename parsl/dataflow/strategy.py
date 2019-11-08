@@ -111,7 +111,7 @@ class Strategy(object):
         self.dfk = dfk
         self.config = dfk.config
         self.executors = {}
-        self.max_idletime = 60 * 2  # 2 minutes
+        self.max_idletime = self.dfk.config.max_idletime
 
         for e in self.dfk.config.executors:
             self.executors[e.label] = {'idle_since': None, 'config': e.label}
@@ -270,8 +270,3 @@ class Strategy(object):
             else:
                 # logger.debug("Strategy: Case 3")
                 pass
-
-
-if __name__ == '__main__':
-
-    pass

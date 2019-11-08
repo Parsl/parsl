@@ -148,7 +148,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         """
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("LSF provider '{}' is at capacity (no more blocks will be added)".format(self.label))
+            logger.warning("LSF provider '{}' is at capacity (no more blocks will be added)".format(self.label))
             return None
 
         job_name = "{0}.{1}".format(job_name, time.time())

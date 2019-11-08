@@ -1,29 +1,27 @@
-from parsl.providers import LocalProvider
+from parsl.providers import AdHocProvider
 from parsl.channels import SSHChannel
 from parsl.executors import HighThroughputExecutor
 
 from parsl.config import Config
 
-username = "yadunand"
-remotes = ['midway2-login1.rcc.uchicago.edu', 'midway2-login2.rcc.uchicago.edu']
+from parsl.tests.configs.user_opts import user_opts
 
 config = Config(
     executors=[
         HighThroughputExecutor(
-            label='remote_htex_{}'.format(m),
-            cores_per_worker=4,
+            label='remote_htex',
+            cores_per_worker=1,
             worker_debug=False,
-            address="128.135.112.73",
-            provider=LocalProvider(
-                init_blocks=1,
-                nodes_per_block=1,
-                parallelism=0.5,
-                worker_init="source /scratch/midway2/yadunand/parsl_env_setup.sh",
-                channel=SSHChannel(hostname=m,
-                                   username=username,
-                                   script_dir="/scratch/midway2/{}/parsl_tests/".format(username)
-                )
+            address=user_opts['public_ip'],
+            provider=AdHocProvider(
+                move_files=False,
+                parallelism=1,
+                worker_init=user_opts['adhoc']['worker_init'],
+                channels=[SSHChannel(hostname=m,
+                                     username=user_opts['adhoc']['username'],
+                                     script_dir=user_opts['adhoc']['script_dir'],
+                ) for m in user_opts['adhoc']['remote_hostnames']]
             )
-        ) for m in remotes
+        )
     ],
 )

@@ -31,6 +31,5 @@ parsl.providers.GoogleCloudProvider
    .. autosummary::
    
       ~GoogleCloudProvider.current_capacity
-      ~GoogleCloudProvider.scaling_enabled
    
    
