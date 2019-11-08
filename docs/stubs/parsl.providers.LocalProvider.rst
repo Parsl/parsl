@@ -26,8 +26,9 @@ parsl.providers.LocalProvider
 
    .. autosummary::
    
+      ~LocalProvider.cores_per_node
       ~LocalProvider.current_capacity
       ~LocalProvider.label
-      ~LocalProvider.scaling_enabled
+      ~LocalProvider.mem_per_node
    
    

@@ -145,8 +145,9 @@ class BashApp(AppBase):
                    App_fut
 
         """
-        # Update kwargs in the app definition with ones passed in at calltime
-        self.kwargs.update(kwargs)
+        invocation_kwargs = {}
+        invocation_kwargs.update(self.kwargs)
+        invocation_kwargs.update(kwargs)
 
         if self.data_flow_kernel is None:
             dfk = DataFlowKernelLoader.dfk()
@@ -158,6 +159,6 @@ class BashApp(AppBase):
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
-                             **self.kwargs)
+                             **invocation_kwargs)
 
         return app_fut

@@ -32,7 +32,10 @@ parsl.executors.HighThroughputExecutor
 
    .. autosummary::
    
+      ~HighThroughputExecutor.connected_managers
       ~HighThroughputExecutor.connected_workers
+      ~HighThroughputExecutor.hub_address
+      ~HighThroughputExecutor.hub_port
       ~HighThroughputExecutor.outstanding
       ~HighThroughputExecutor.run_dir
       ~HighThroughputExecutor.scaling_enabled

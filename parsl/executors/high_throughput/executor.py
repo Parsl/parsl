@@ -1,6 +1,3 @@
-"""HighThroughputExecutor builds on the Swift/T EMEWS architecture to use MPI for fast task distribution
-"""
-
 from concurrent.futures import Future
 import typeguard
 import logging
@@ -21,6 +18,7 @@ from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationErr
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
+from parsl.addresses import get_all_addresses
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -95,8 +93,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         An address to connect to the main Parsl process which is reachable from the network in which
         workers will be running. This can be either a hostname as returned by `hostname` or an
         IP address. Most login nodes on clusters have several network interfaces available, only
-        some of which can be reached from the compute nodes.  Some trial and error might be
-        necessary to identify what addresses are reachable from compute nodes.
+        some of which can be reached from the compute nodes.
+        By default, the executor will attempt to enumerate and connect through all possible addresses.
+        Setting an address here overrides the default behavior.
+        default=None
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -158,7 +158,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
-                 address: str = "127.0.0.1",
+                 address: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
@@ -191,6 +191,11 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
+        self.address = address
+        if self.address:
+            self.all_addresses = address
+        else:
+            self.all_addresses = ','.join(get_all_addresses())
 
         mem_slots = max_workers
         cpu_slots = max_workers
@@ -208,7 +213,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             self.workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
-        self.address = address
         self.hub_address = None  # set to the correct hub address in dfk
         self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
@@ -223,12 +227,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
+                               "-a {addresses} "
                                "-p {prefetch_capacity} "
                                "-c {cores_per_worker} "
                                "-m {mem_per_worker} "
                                "--poll {poll_period} "
-                               "--task_url={task_url} "
-                               "--result_url={result_url} "
+                               "--task_port={task_port} "
+                               "--result_port={result_port} "
                                "--logdir={logdir} "
                                "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
@@ -249,8 +254,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
-                                       task_url=self.worker_task_url,
-                                       result_url=self.worker_result_url,
+                                       addresses=self.all_addresses,
+                                       task_port=self.worker_task_port,
+                                       result_port=self.worker_result_port,
                                        cores_per_worker=self.cores_per_worker,
                                        mem_per_worker=self.mem_per_worker,
                                        max_workers=max_workers,
@@ -435,13 +441,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         )
         self.queue_proc.start()
         try:
-            (worker_task_port, worker_result_port) = comm_q.get(block=True, timeout=120)
+            (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
         except queue.Empty:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
-
-        self.worker_task_url = "tcp://{}:{}".format(self.address, worker_task_port)
-        self.worker_result_url = "tcp://{}:{}".format(self.address, worker_result_port)
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
