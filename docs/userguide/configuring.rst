@@ -356,7 +356,7 @@ configuration follows.
    `here <https://github.com/Parsl/parsl/issues/941>`_.
 
 
-WorkQueue (CCL ND)
+Work Queue (CCL ND)
 ------------------
 
 .. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
