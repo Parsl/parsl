@@ -84,8 +84,6 @@ Reference guide
     parsl.executors.errors.InsufficientMPIRanks
     parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
-    parsl.executors.exceptions.ExecutorException
-    parsl.executors.exceptions.TaskExecException
     parsl.dataflow.error.DataFlowException
     parsl.dataflow.error.ConfigurationError
     parsl.dataflow.error.DuplicateTaskError
