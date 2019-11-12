@@ -302,7 +302,25 @@ class DataFlowKernel(object):
         if self.tasks[task_id]['status'] == States.pending:
             self.launch_if_ready(task_id)
 
-        self.tasks[task_id]['app_fu'].parent_callback(future)
+        with self.tasks[task_id]['app_fu']._update_lock:
+
+            if not future.done():
+                raise ValueError("done callback called, despite future not reporting itself as done")
+
+            try:
+                res = future.result()
+                if isinstance(res, RemoteExceptionWrapper):
+                    res.reraise()
+                self.tasks[task_id]['app_fu'].set_result(future.result())
+
+            except Exception as e:
+                if future.retries_left > 0:
+                    # ignore this exception, because assume some later
+                    # parent executor, started external to this class,
+                    # will provide the answer
+                    pass
+                else:
+                    self.tasks[task_id]['app_fu'].set_exception(e)
 
         return
 
