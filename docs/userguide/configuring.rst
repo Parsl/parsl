@@ -105,6 +105,8 @@ In addition, examples for some specific configurations follow.
 +--------------------------+----------------------+------------------------------------+
 | `ExtremeScaleExecutor`   | >1000, <=8000 [*]_   |  >minutes                          |
 +--------------------------+----------------------+------------------------------------+
+| `WorkQueueExecutor`      | <=20000 [*]_         |  10s+                              |
++--------------------------+----------------------+------------------------------------+
 
 
 .. [*] We assume that each node has 32 workers. If there are fewer workers launched
@@ -112,6 +114,9 @@ In addition, examples for some specific configurations follow.
 
 .. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale at which
        we've tested the `ExtremeScaleExecutor`.
+
+.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and 
+       20000 CPU cores.
 
 .. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
              as the recommended replacement.
@@ -351,6 +356,23 @@ configuration follows.
    `here <https://github.com/Parsl/parsl/issues/941>`_.
 
 
+Work Queue (CCL ND)
+------------------
+
+.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
+
+The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large. This examples uses the `WorkQueueExecutor` to schedule tasks locally, and assumes that Work Queue workers have been externally connected to the master using the `work_queue_worker` or `condor_submit_workers` command line utilities from CCTools. For more information the process of submitting tasks and workers to Work Queue, please refer to the `CCTools Work Queue documentation <https://cctools.readthedocs.io/en/latest/work_queue/>`.
+
+.. literalinclude::  ../../parsl/configs/wqex_local.py
+
+To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment (instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`):
+
+.. codeblock:: bash
+    $ conda create -y --name <environment> python=<version>
+    $ conda activate <environment>
+    $ conda install -y -c conda-forge cctools
+
+This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library. 
 
 
 Further help
