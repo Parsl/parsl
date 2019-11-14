@@ -51,6 +51,8 @@ class LocalChannel(Channel, RepresentationMixin):
         Raises:
         None.
         '''
+        logger.debug("execute_wait: cmd = {}".format(cmd))
+        logger.debug("done with execute_wait hack sleep")
         retcode = -1
         stdout = None
         stderr = None
@@ -58,23 +60,38 @@ class LocalChannel(Channel, RepresentationMixin):
         current_env = copy.deepcopy(self._envs)
         current_env.update(envs)
 
-        try:
+        stdout_fn = "BENC.stdout"
+        stderr_fn = "BENC.stderr"
+        with open(stderr_fn,"wb") as stderr_f:
+         with open(stdout_fn,"wb") as stdout_f:
+          try:
+            logger.debug("execute_wait: launching")
             proc = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=stdout_f,
+                stderr=stderr_f,
                 cwd=self.userhome,
                 env=current_env,
-                shell=True
+                shell=True,
+                preexec_fn=os.setpgrp
             )
+            logger.debug("execute_wait: launched / waiting")
             proc.wait(timeout=walltime)
-            stdout = proc.stdout.read()
-            stderr = proc.stderr.read()
+            logger.debug("execute_wait: waited / reading stdout")
             retcode = proc.returncode
 
-        except Exception as e:
+          except Exception as e:
             logger.warning("Execution of command '{}' failed due to \n{}".format(cmd, e))
             raise
+
+        with open(stderr_fn,"rb") as stderr_f:
+         with open(stdout_fn,"rb") as stdout_f:
+          stdout = stdout_f.read()
+          logger.debug("execute_wait: read stdout / reading stderr")
+          logger.debug("stdout was {}".format(stdout))
+          stderr = stderr_f.read()
+          logger.debug("execute_wait: read stderr")
+          logger.debug("stderr was {}".format(stderr))
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 

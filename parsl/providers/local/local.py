@@ -109,7 +109,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
             elif self.resources[job_id]['remote_pid']:
 
-                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" ',
+                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" ',
                                                                     self.cmd_timeout)
                 for line in stdout.split('\n'):
                     if line.startswith("STATUS:"):
@@ -195,24 +195,16 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             logger.debug("Pushing start script")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        if not isinstance(self.channel, LocalChannel):
-            logger.debug("Launching in remote mode")
-            # Bash would return until the streams are closed. So we redirect to a outs file
-            cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
-            retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
-            for line in stdout.split('\n'):
-                if line.startswith("PID:"):
-                    remote_pid = line.split("PID:")[1].strip()
-                    job_id = remote_pid
-            if job_id is None:
-                logger.warning("Channel failed to start remote command/retrieve PID")
-        else:
-
-            try:
-                job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
-            except Exception as e:
-                logger.debug("Channel execute failed for: {}, {}".format(self.channel, e))
-                raise
+        logger.debug("Launching in (permanent) remote mode")
+        # Bash would return until the streams are closed. So we redirect to a outs file
+        cmd = 'bash {0} > {0}.out 2> {0}.out & \n echo "PID:$!" '.format(script_path)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+        for line in stdout.split('\n'):
+            if line.startswith("PID:"):
+                remote_pid = line.split("PID:")[1].strip()
+                job_id = remote_pid
+        if job_id is None:
+            logger.warning("Channel failed to start remote command/retrieve PID")
 
         self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
                                   'remote_pid': remote_pid,
@@ -238,7 +230,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 self.resources[job]['status'] = 'CANCELLED'
 
             elif self.resources[job]['remote_pid']:
-                cmd = "kill -- -$(ps -o pgid={} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
+                cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
                 retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
                 if retcode != 0:
                     logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
