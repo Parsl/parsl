@@ -719,16 +719,16 @@ class DataFlowKernel(object):
 
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(args, kwargs)
-        self.tasks[task_id]['depends'] = depends
+        task_def['depends'] = depends
 
         logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
                                                                                task_def['func_name'],
                                                                                [fu.tid for fu in depends]))
 
-        self.tasks[task_id]['task_launch_lock'] = threading.Lock()
+        task_def['task_launch_lock'] = threading.Lock()
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
-        self.tasks[task_id]['status'] = States.pending
+        task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
