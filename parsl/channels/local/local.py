@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 
 from parsl.channels.base import Channel
 from parsl.channels.errors import FileCopyException
@@ -60,8 +61,9 @@ class LocalChannel(Channel, RepresentationMixin):
         current_env = copy.deepcopy(self._envs)
         current_env.update(envs)
 
-        stdout_fn = "BENC.stdout"
-        stderr_fn = "BENC.stderr"
+        fileid = str(time.time())
+        stdout_fn = "parsl.localchannel.{}.stdout".format(fileid)
+        stderr_fn = "parsl.localchannel.{}.stderr".format(fileid)
         with open(stderr_fn,"wb") as stderr_f:
          with open(stdout_fn,"wb") as stdout_f:
           try:
