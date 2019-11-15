@@ -105,11 +105,11 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 elif poll_code != 0:
                     self.resources[job_id]['status'] = 'FAILED'
                 else:
-                    logger.error("Internal consistency error: unexpected case in local provider state machine")
+                    logger.error("Internal consistency error: unexpected case in local provider state machine: unknown status")
 
             elif self.resources[job_id]['remote_pid']:
 
-                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" ',
+                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(self.resources[job_id]['remote_pid']),
                                                                     self.cmd_timeout)
                 for line in stdout.split('\n'):
                     if line.startswith("STATUS:"):
@@ -118,6 +118,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                             self.resources[job_id]['status'] = 'RUNNING'
                         else:
                             self.resources[job_id]['status'] = 'FAILED'
+            else:
+                logger.error("Internal consistency error: unexpected case in local provider state machine: job does not have local proc or remote_pid")
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
