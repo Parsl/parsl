@@ -1,6 +1,5 @@
 import logging
 import os
-import signal
 import time
 
 from parsl.channels import LocalChannel
@@ -78,32 +77,15 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
 
-            if self.resources[job_id]['proc']:
-
-                poll_code = self.resources[job_id]['proc'].poll()
-                if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
-                    continue
-
-                if poll_code is None:
-                    self.resources[job_id]['status'] = 'RUNNING'
-                elif poll_code == 0:
-                    self.resources[job_id]['status'] = 'COMPLETED'
-                elif poll_code != 0:
-                    self.resources[job_id]['status'] = 'FAILED'
-                else:
-                    logger.error("Internal consistency error: unexpected case in local provider state machine")
-
-            elif self.resources[job_id]['remote_pid']:
-
-                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
-                    self.resources[job_id]['remote_pid']), self.cmd_timeout)
-                for line in stdout.split('\n'):
-                    if line.startswith("STATUS:"):
-                        status = line.split("STATUS:")[1].strip()
-                        if status == "0":
-                            self.resources[job_id]['status'] = 'RUNNING'
-                        else:
-                            self.resources[job_id]['status'] = 'FAILED'
+            retcode, stdout, stderr = self.channel.execute_wait('ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
+                self.resources[job_id]['remote_pid']), self.cmd_timeout)
+            for line in stdout.split('\n'):
+                if line.startswith("STATUS:"):
+                    status = line.split("STATUS:")[1].strip()
+                    if status == "0":
+                        self.resources[job_id]['status'] = 'RUNNING'
+                    else:
+                        self.resources[job_id]['status'] = 'FAILED'
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
@@ -175,34 +157,24 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self._write_submit_script(wrap_command, script_path)
 
         job_id = None
-        proc = None
         remote_pid = None
         if (self.move_files is None and not isinstance(self.channel, LocalChannel)) or (self.move_files):
             logger.debug("Pushing start script")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        if not isinstance(self.channel, LocalChannel):
-            logger.debug("Launching in remote mode")
-            # Bash would return until the streams are closed. So we redirect to a outs file
-            cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
-            retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
-            for line in stdout.split('\n'):
-                if line.startswith("PID:"):
-                    remote_pid = line.split("PID:")[1].strip()
-                    job_id = remote_pid
-            if job_id is None:
-                logger.warning("Channel failed to start remote command/retrieve PID")
-        else:
-
-            try:
-                job_id, proc = self.channel.execute_no_wait('bash {0}'.format(script_path), self.cmd_timeout)
-            except Exception as e:
-                logger.debug("Channel execute failed for: {}, {}".format(self.channel, e))
-                raise
+        logger.debug("Launching in remote mode")
+        # Bash would return until the streams are closed. So we redirect to a outs file
+        cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
+        retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+        for line in stdout.split('\n'):
+            if line.startswith("PID:"):
+                remote_pid = line.split("PID:")[1].strip()
+                job_id = remote_pid
+        if job_id is None:
+            logger.warning("Channel failed to start remote command/retrieve PID")
 
         self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
-                                  'remote_pid': remote_pid,
-                                  'proc': proc}
+                                  'remote_pid': remote_pid}
 
         return job_id
 
@@ -217,18 +189,11 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         '''
         for job in job_ids:
             logger.debug("Terminating job/proc_id: {0}".format(job))
-            # Here we are assuming that for local, the job_ids are the process id's
-            if self.resources[job]['proc']:
-                proc = self.resources[job]['proc']
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                self.resources[job]['status'] = 'CANCELLED'
-
-            elif self.resources[job]['remote_pid']:
-                cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
-                retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
-                if retcode != 0:
-                    logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
-                                                                                             self.label))
+            cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
+            retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+            if retcode != 0:
+                logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
+                                                                                         self.label))
 
         rets = [True for i in job_ids]
         return rets
