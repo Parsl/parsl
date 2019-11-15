@@ -64,6 +64,11 @@ class LocalChannel(Channel, RepresentationMixin):
         fileid = str(time.time())
         stdout_fn = "parsl.localchannel.{}.stdout".format(fileid)
         stderr_fn = "parsl.localchannel.{}.stderr".format(fileid)
+
+        if self.script_dir:
+            stdout_fn = os.path.join(self.script_dir, stdout_fn)
+            stderr_fn = os.path.join(self.script_dir, stderr_fn)
+
         with open(stderr_fn,"wb") as stderr_f:
          with open(stdout_fn,"wb") as stdout_f:
           try:
@@ -94,6 +99,9 @@ class LocalChannel(Channel, RepresentationMixin):
           stderr = stderr_f.read()
           logger.debug("execute_wait: read stderr")
           logger.debug("stderr was {}".format(stderr))
+
+        os.remove(stderr_fn)
+        os.remove(stdout_fn)
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
