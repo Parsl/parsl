@@ -109,7 +109,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
             elif self.resources[job_id]['remote_pid']:
 
-                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" ',
+                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" '.format(self.resources[job_id]['remote_pid']),
                                                                     self.cmd_timeout)
                 for line in stdout.split('\n'):
                     if line.startswith("STATUS:"):
