@@ -24,7 +24,7 @@ class SimpleLauncher(Launcher):
         - task_block (string) : bash evaluated string.
 
         """
-        return command
+        return "echo SIMPLE LAUNCHER STDOUT ; echo SIMPLE LAUNCHER STDERR >&2; {}".format(command)
 
 
 class SingleNodeLauncher(Launcher):
