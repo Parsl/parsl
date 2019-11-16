@@ -238,7 +238,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 self.resources[job]['status'] = 'CANCELLED'
 
             elif self.resources[job]['remote_pid']:
-                cmd = "kill -- -$(ps -o pgid={} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
+                cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
                 retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
                 if retcode != 0:
                     logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
