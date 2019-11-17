@@ -31,6 +31,5 @@ parsl.providers.PBSProProvider
       ~PBSProProvider.current_capacity
       ~PBSProProvider.label
       ~PBSProProvider.mem_per_node
-      ~PBSProProvider.scaling_enabled
    
    

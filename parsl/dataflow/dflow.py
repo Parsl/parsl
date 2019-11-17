@@ -302,7 +302,25 @@ class DataFlowKernel(object):
         if self.tasks[task_id]['status'] == States.pending:
             self.launch_if_ready(task_id)
 
-        self.tasks[task_id]['app_fu'].parent_callback(future)
+        with self.tasks[task_id]['app_fu']._update_lock:
+
+            if not future.done():
+                raise ValueError("done callback called, despite future not reporting itself as done")
+
+            try:
+                res = future.result()
+                if isinstance(res, RemoteExceptionWrapper):
+                    res.reraise()
+                self.tasks[task_id]['app_fu'].set_result(future.result())
+
+            except Exception as e:
+                if future.retries_left > 0:
+                    # ignore this exception, because assume some later
+                    # parent executor, started external to this class,
+                    # will provide the answer
+                    pass
+                else:
+                    self.tasks[task_id]['app_fu'].set_exception(e)
 
         return
 
@@ -908,15 +926,6 @@ class DataFlowKernel(object):
 
             self.monitoring.close()
 
-        """
-        if self.logging_server is not None:
-            self.logging_server.terminate()
-            self.logging_server.join()
-
-        if self.web_app is not None:
-            self.web_app.terminate()
-            self.web_app.join()
-        """
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks=None):
@@ -1047,8 +1056,8 @@ class DataFlowKernel(object):
                 logger.error(reason)
                 raise BadCheckpoint(reason)
 
-            logger.info("Completed loading checkpoint:{0} with {1} tasks".format(checkpoint_file,
-                                                                                 len(memo_lookup_table.keys())))
+            logger.info("Completed loading checkpoint: {0} with {1} tasks".format(checkpoint_file,
+                                                                                  len(memo_lookup_table.keys())))
         return memo_lookup_table
 
     def load_checkpoints(self, checkpointDirs):
