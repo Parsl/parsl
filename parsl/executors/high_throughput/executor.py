@@ -8,8 +8,8 @@ from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple, Union
 import math
 
-from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
-from ipyparallel.serialize import deserialize_object  # ,serialize_object
+from ipyparallel.serialize import pack_apply_message
+from ipyparallel.serialize import deserialize_object
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
@@ -334,7 +334,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         while not self._executor_bad_state.is_set():
             try:
                 msgs = self.incoming_q.get(timeout=1)
-                # logger.debug("[MTHREAD] get has returned {}".format(len(msgs)))
 
             except queue.Empty:
                 logger.debug("[MTHREAD] queue empty")
@@ -481,7 +480,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     @property
     def outstanding(self):
         outstanding_c = self.command_client.run("OUTSTANDING_C")
-        # logger.debug("Got outstanding count: {}".format(outstanding_c))
         return outstanding_c
 
     @property
@@ -635,8 +633,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
-        # self.outgoing_q.close()
-        # self.incoming_q.close()
         self.queue_proc.terminate()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
         return True
