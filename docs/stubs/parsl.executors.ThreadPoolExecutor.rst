@@ -28,6 +28,8 @@ parsl.executors.ThreadPoolExecutor
 
    .. autosummary::
    
+      ~ThreadPoolExecutor.hub_address
+      ~ThreadPoolExecutor.hub_port
       ~ThreadPoolExecutor.run_dir
       ~ThreadPoolExecutor.scaling_enabled
    

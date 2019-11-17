@@ -13,6 +13,7 @@ parsl.dataflow.dflow.DataFlowKernelLoader
 
    .. autosummary::
    
+      ~DataFlowKernelLoader.__init__
       ~DataFlowKernelLoader.clear
       ~DataFlowKernelLoader.dfk
       ~DataFlowKernelLoader.load
