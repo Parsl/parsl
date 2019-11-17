@@ -83,7 +83,7 @@ def test_parallel_for(n=3):
     print("Duration : {0}s".format(time.time() - start))
     stdout_file_count = len(
         [item for item in os.listdir(outdir) if item.endswith('.out')])
-    assert stdout_file_count == n, "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
+    assert stdout_file_count == n, "Only {0}/{1} files in '{2}' ".format(len(os.listdir('outputs/')),
                                                                          n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
