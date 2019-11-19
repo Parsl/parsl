@@ -14,7 +14,7 @@ import multiprocessing as mp
 from ipyparallel.serialize import pack_apply_message, unpack_apply_message
 from ipyparallel.serialize import serialize_object, deserialize_object
 
-from parsl.executors.base import ParslExecutor
+from parsl.executors.status_handling import NoStatusHandlingExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ def runner(incoming_q, outgoing_q):
     logger.debug("[RUNNER] Terminating")
 
 
-class TurbineExecutor(ParslExecutor):
+class TurbineExecutor(NoStatusHandlingExecutor):
     """The Turbine executor.
 
     Bypass the Swift/T language and run on top off the Turbine engines
@@ -177,6 +177,7 @@ class TurbineExecutor(ParslExecutor):
         Trying to implement the emews model.
 
         """
+        super().__init__()
         logger.debug("Initializing TurbineExecutor")
         self.label = label
         self.storage_access = storage_access
@@ -196,7 +197,6 @@ class TurbineExecutor(ParslExecutor):
         self.worker = mp.Process(target=runner, args=(self.outgoing_q, self.incoming_q))
         self.worker.start()
         logger.debug("Created worker : %s", self.worker)
-        self.tasks = {}
         self._scaling_enabled = False
 
     def _queue_management_worker(self):

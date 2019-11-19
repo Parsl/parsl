@@ -219,7 +219,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                                                             self.resources[job_id]['cmd'].split()[0])
             retcode, stdout, stderr = channel.execute_wait(status_command)
             if retcode != 0 and not self.resources[job_id]['status'].terminal:
-                self.resources[job_id]['status'] = JobState.FAILED
+                self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
 
         return [self.resources[job_id]['status'] for job_id in job_ids]
 
@@ -245,7 +245,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 rets.append(True)
             else:
                 rets.append(False)
-            self.resources[job_id]['status'] = JobState.COMPLETED
+            self.resources[job_id]['status'] = JobStatus(JobState.COMPLETED)
         return rets
 
     @property
@@ -255,3 +255,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
     @property
     def label(self):
         return self._label
+
+    @property
+    def status_polling_interval(self):
+        return 10

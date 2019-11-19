@@ -828,7 +828,7 @@ class DataFlowKernel(object):
 
             self.executors[executor.label] = executor
             executor.start()
-        self.flowcontrol.strategy.add_executors(executors)
+        self.flowcontrol.add_executors(executors)
 
     def atexit_cleanup(self):
         if not self.cleanup_called:

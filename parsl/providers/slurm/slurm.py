@@ -6,7 +6,7 @@ import logging
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
-from parsl.providers.provider_base import JobState
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
@@ -138,14 +138,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
                 status = translate_table.get(parts[4], JobState.UNKNOWN)
-                self.resources[job_id]['status'] = status
+                self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            # if self.resources[missing_job]['status'] in [JobState.PENDING, JobState.RUNNING]:
-            self.resources[missing_job]['status'] = JobState.COMPLETED
+            # if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         """Submit the command as a slurm job.
@@ -217,7 +217,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             for line in stdout.split('\n'):
                 if line.startswith("Submitted batch job"):
                     job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': JobState.PENDING}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             print("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
@@ -238,7 +238,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = JobState.CANCELLED  # Setting state to cancelled
+                self.resources[jid]['status'] = JobStatus(JobState.CANCELED)  # Setting state to cancelled
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
@@ -246,8 +246,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         return rets
 
     def _test_add_resource(self, job_id):
-        self.resources.extend([{'job_id': job_id, 'status': JobState.PENDING, 'size': 1}])
+        self.resources.extend([{'job_id': job_id, 'status': JobStatus(JobState.PENDING), 'size': 1}])
         return True
+
+    @property
+    def status_polling_interval(self):
+        return 60
 
 
 if __name__ == "__main__":

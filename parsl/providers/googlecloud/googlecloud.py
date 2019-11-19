@@ -2,7 +2,7 @@ import atexit
 import logging
 import os
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.provider_base import JobState
+from parsl.providers.provider_base import JobState, JobStatus
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ class GoogleCloudProvider():
 
         instance, name = self.create_instance(command=wrapped_cmd)
         self.provisioned_blocks += 1
-        self.resources[name] = {"job_id": name, "status": translate_table[instance['status']]}
+        self.resources[name] = {"job_id": name, "status": JobStatus(translate_table[instance['status']])}
         return name
 
     def status(self, job_ids):
@@ -152,7 +152,7 @@ class GoogleCloudProvider():
         statuses = []
         for job_id in job_ids:
             instance = self.client.instances().get(instance=job_id, project=self.project_id, zone=self.zone).execute()
-            self.resources[job_id]['status'] = translate_table[instance['status']]
+            self.resources[job_id]['status'] = JobStatus(translate_table[instance['status']])
             statuses.append(translate_table[instance['status']])
         return statuses
 
@@ -251,3 +251,7 @@ class GoogleCloudProvider():
         zone = self.zone
 
         return compute.instances().delete(project=project, zone=zone, instance=name).execute()
+
+    @property
+    def status_polling_interval(self):
+        return 60

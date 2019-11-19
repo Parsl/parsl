@@ -6,7 +6,7 @@ from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.lsf.template import template_string
-from parsl.providers.provider_base import JobState
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
@@ -121,15 +121,15 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             parts = line.split()
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
-                status = translate_table.get(parts[2], JobState.UNKNOWN)
-                self.resources[job_id]['status'] = status
+                state = translate_table.get(parts[2], JobState.UNKNOWN)
+                self.resources[job_id]['status'] = JobStatus(state)
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            # if self.resources[missing_job]['status'] in [JobState.PENDING, JobState.RUNNING]:
-            self.resources[missing_job]['status'] = JobState.COMPLETED
+            # if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         """Submit the command as an LSF job.
@@ -191,7 +191,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             for line in stdout.split('\n'):
                 if line.lower().startswith("job") and "is submitted to" in line.lower():
                     job_id = line.split()[1].strip('<>')
-                    self.resources[job_id] = {'job_id': job_id, 'status': JobState.PENDING}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             logger.warning("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
@@ -218,3 +218,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             rets = [False for i in job_ids]
 
         return rets
+
+    @property
+    def status_polling_interval(self):
+        return 60

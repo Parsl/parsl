@@ -6,7 +6,8 @@ import time
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
-from parsl.providers.provider_base import ExecutionProvider, JobState
+from parsl.providers.provider_base import ExecutionProvider, JobStatus, \
+    JobState
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -90,20 +91,33 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         '''
 
         logger.debug("Checking status of: {0}".format(job_ids))
+        result = []
         for job_id in self.resources:
+            job_dict = self.resources[job_id]
+            status = job_dict['status']
+            if status is not None and status.terminal:
+                result.append(status)
+                continue
 
-            if self.resources[job_id]['proc']:
+            if job_dict['proc']:
+                poll_code = job_dict['proc'].poll()
 
-                poll_code = self.resources[job_id]['proc'].poll()
-                if self.resources[job_id]['status'] in [JobState.COMPLETED, JobState.FAILED]:
-                    continue
+                if poll_code is not None:
+                    out, err = job_dict['proc'].communicate(input=None)
+                    if out:
+                        job_dict['out'] += out.decode()
+                    if err:
+                        job_dict['err'] += err.decode()
 
                 if poll_code is None:
-                    self.resources[job_id]['status'] = JobState.RUNNING
+                    status = JobStatus(JobState.RUNNING)
                 elif poll_code == 0:
-                    self.resources[job_id]['status'] = JobState.COMPLETED
+                    status = JobStatus(JobState.COMPLETED)
                 elif poll_code != 0:
-                    self.resources[job_id]['status'] = JobState.FAILED
+                    # TODO: add error message
+                    status = JobStatus(JobState.FAILED,
+                                       message="({}) {} {}".format(poll_code, job_dict['out'],
+                                                                   job_dict['err']))
                 else:
                     logger.error("Internal consistency error: unexpected case in local provider state machine")
 
@@ -113,13 +127,17 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                                                                     self.cmd_timeout)
                 for line in stdout.split('\n'):
                     if line.startswith("STATUS:"):
-                        status = line.split("STATUS:")[1].strip()
-                        if status == "0":
-                            self.resources[job_id]['status'] = JobState.RUNNING
+                        status_str = line.split("STATUS:")[1].strip()
+                        if status_str == "0":
+                            status = JobStatus(JobState.RUNNING)
                         else:
-                            self.resources[job_id]['status'] = JobState.FAILED
+                            # TODO: add error message
+                            status = JobStatus(JobState.FAILED)
 
-        return [self.resources[jid]['status'] for jid in job_ids]
+            self.resources[job_id]['status'] = status
+            result.append(status)
+
+        return result
 
     def _write_submit_script(self, script_string, script_filename):
         '''
@@ -177,7 +195,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
              - job_id: (string) Identifier for the job
 
         '''
-
         job_name = "{0}.{1}".format(job_name, time.time())
 
         # Set script path
@@ -214,9 +231,11 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 logger.debug("Channel execute failed for: {}, {}".format(self.channel, e))
                 raise
 
-        self.resources[job_id] = {'job_id': job_id, 'status': JobState.RUNNING,
+        self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.RUNNING),
                                   'remote_pid': remote_pid,
-                                  'proc': proc}
+                                  'proc': proc,
+                                  'out': '',
+                                  'err': ''}
 
         return job_id
 
@@ -235,7 +254,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             if self.resources[job]['proc']:
                 proc = self.resources[job]['proc']
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                self.resources[job]['status'] = JobState.CANCELLED
+                self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
 
             elif self.resources[job]['remote_pid']:
                 cmd = "kill -- -$(ps -o pgid={} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
@@ -254,6 +273,10 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     @property
     def label(self):
         return self._label
+
+    @property
+    def status_polling_interval(self):
+        return 5
 
 
 if __name__ == "__main__":

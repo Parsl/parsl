@@ -6,7 +6,7 @@ from string import Template
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.aws.template import template_string
-from parsl.providers.provider_base import ExecutionProvider, JobState
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
@@ -558,7 +558,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             for i in r['Instances']:
                 instance_id = i['InstanceId']
                 instance_state = translate_table.get(i['State']['Name'], JobState.UNKNOWN)
-                self.resources[instance_id]['status'] = instance_state
+                self.resources[instance_id]['status'] = JobStatus(instance_state)
                 all_states.extend([instance_state])
 
         return all_states
@@ -600,7 +600,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.resources[instance.instance_id] = {
             "job_id": instance.instance_id,
             "instance": instance,
-            "status": state
+            "status": JobStatus(state)
         }
 
         return instance.instance_id
@@ -632,7 +632,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.debug("Removed the instances: {0}".format(job_ids))
 
         for job_id in job_ids:
-            self.resources[job_id]["status"] = JobState.COMPLETED
+            self.resources[job_id]["status"] = JobStatus(JobState.COMPLETED)
 
         for job_id in job_ids:
             self.instances.remove(job_id)
@@ -697,3 +697,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def goodbye(self):
         self.teardown()
+
+    @property
+    def status_polling_interval(self):
+        return 60

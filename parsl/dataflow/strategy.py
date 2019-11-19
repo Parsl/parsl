@@ -1,8 +1,11 @@
 import logging
 import time
 import math
+from typing import Any, Dict, List  # noqa F401 (used in type annotation comments)
 
+from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
+from parsl.providers.provider_base import JobStatus  # noqa F401 (used in type annotation comments)
 from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
@@ -128,7 +131,7 @@ class Strategy(object):
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
 
-    def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_noop(self, status: List[ExecutorStatus], tasks, *args, kind=None, **kwargs):
         """Do nothing.
 
         Args:
@@ -152,7 +155,7 @@ class Strategy(object):
 
         self.logger_flag = True
 
-    def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_simple(self, status: List[ExecutorStatus], tasks, *args, kind=None, **kwargs):
         """Peek at the DFK and the executors specified.
 
         We assume here that tasks are not held in a runnable
@@ -167,14 +170,17 @@ class Strategy(object):
             - kind (Not used)
         """
 
-        for label, executor in self.dfk.executors.items():
+        for exec_status in status:
+            executor = exec_status.executor
+            label = executor.label
             if not executor.scaling_enabled:
                 continue
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
 
-            status = executor.status()
+            _status = exec_status.status  # type: Dict[Any, JobStatus]
+            # job_id -> status
             self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these
@@ -189,11 +195,11 @@ class Strategy(object):
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            running = sum([1 for x in status if x == JobState.RUNNING])
+            running = sum([1 for x in _status.values() if x.state == JobState.RUNNING])
             # I didn't see any provider setting the status to 'SUBMITTING'
             # submitting = sum([1 for x in status if x == 'SUBMITTING'])
             submitting = 0
-            pending = sum([1 for x in status if x == JobState.PENDING])
+            pending = sum([1 for x in _status.values() if x.state == JobState.PENDING])
             active_blocks = running + submitting + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 

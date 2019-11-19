@@ -6,17 +6,18 @@ import pickle
 import queue
 import threading
 from multiprocessing import Process, Queue
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict  # noqa F401 (used in type annotation)
+from typing import List, Optional, Tuple, Union, Any
 
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
-from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
 from parsl.executors.high_throughput import interchange
 from parsl.executors.high_throughput import zmq_pipes
+from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.providers import LocalProvider
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.utils import RepresentationMixin
@@ -27,7 +28,7 @@ BUFFER_THRESHOLD = 1024 * 1024
 ITEM_THRESHOLD = 1024
 
 
-class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
+class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
 
     The HighThroughputExecutor system has the following components:
@@ -174,15 +175,14 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         logger.debug("Initializing HighThroughputExecutor")
 
+        super().__init__(provider)
         self.label = label
         self.launch_cmd = launch_cmd
-        self.provider = provider
         self.worker_debug = worker_debug
         self.storage_access = storage_access
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
-        self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
@@ -260,6 +260,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        # TODO: why is this a provider property?
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
@@ -276,8 +277,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self.is_alive = True
 
-        self._executor_bad_state = threading.Event()
-        self._executor_exception = None
         self._queue_management_thread = None
         self._start_queue_management_thread()
         self._start_local_queue_process()
@@ -321,7 +320,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         logger.debug("[MTHREAD] queue management worker starting")
 
-        while not self._executor_bad_state.is_set():
+        while not self.bad_state_is_set:
             try:
                 msgs = self.incoming_q.get(timeout=1)
                 # logger.debug("[MTHREAD] get has returned {}".format(len(msgs)))
@@ -358,14 +357,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
                         if tid == -1 and 'exception' in msg:
                             logger.warning("Executor shutting down due to exception from interchange")
-                            self._executor_exception, _ = deserialize_object(msg['exception'])
-                            logger.exception("Exception: {}".format(self._executor_exception))
-                            # Set bad state to prevent new tasks from being submitted
-                            self._executor_bad_state.set()
-                            # We set all current tasks to this exception to make sure that
-                            # this is raised in the main context.
-                            for task in self.tasks:
-                                self.tasks[task].set_exception(self._executor_exception)
+                            exception, _ = deserialize_object(msg['exception'])
+                            self.set_bad_state_and_fail_all(exception)
                             break
 
                         task_fut = self.tasks[tid]
@@ -520,8 +513,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Returns:
               Future
         """
-        if self._executor_bad_state.is_set():
-            raise self._executor_exception
+        if self.bad_state_is_set:
+            raise self.executor_exception
 
         self._task_counter += 1
         task_id = self._task_counter
@@ -557,18 +550,27 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
+        if not self.provider:
+            raise (ScalingFailed("No execution provider available"))
         r = []
         for i in range(blocks):
             external_block_id = str(len(self.blocks))
-            launch_cmd = self.launch_cmd.format(block_id=external_block_id)
-            internal_block = self.provider.submit(launch_cmd, 1)
-            logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
-            if not internal_block:
-                raise(ScalingFailed(self.provider.label,
-                                    "Attempts to provision nodes via provider has failed"))
-            r.extend([external_block_id])
-            self.blocks[external_block_id] = internal_block
+            try:
+                self.blocks[external_block_id] = self._launch_block(external_block_id)
+                r.append(external_block_id)
+            except Exception as ex:
+                self._fail_job_async(external_block_id,
+                                     "Failed to start block {}: {}".format(external_block_id, ex))
         return r
+
+    def _launch_block(self, external_block_id: str) -> Any:
+        launch_cmd = self.launch_cmd.format(block_id=external_block_id)
+        internal_block = self.provider.submit(launch_cmd, 1)
+        logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
+        if not internal_block:
+            raise(ScalingFailed(self.provider.label,
+                                "Attempts to provision nodes via provider has failed"))
+        return internal_block
 
     def scale_in(self, blocks=None, block_ids=[]):
         """Scale in the number of active blocks by specified amount.
@@ -606,12 +608,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         return r
 
-    def status(self):
-        """Return status of all blocks."""
-
-        status = self.provider.status(list(self.blocks.values()))
-
-        return status
+    def _get_job_ids(self) -> List[Any]:
+        return list(self.blocks.values())
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.

@@ -13,7 +13,7 @@ from ipyparallel.serialize import deserialize_object  # ,serialize_object
 from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
 from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
-from parsl.executors.base import ParslExecutor
+from parsl.executors.status_handling import StatusHandlingExecutor
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -21,7 +21,7 @@ from parsl.providers import LocalProvider
 logger = logging.getLogger(__name__)
 
 
-class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
+class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
     """
     TODO: docstring for LowLatencyExecutor
     """
@@ -42,6 +42,8 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                  managed=True
                  ):
         logger.debug("Initializing LowLatencyExecutor")
+
+        super().__init__(provider)
         self.label = label
         self.launch_cmd = launch_cmd
         self.provider = provider
@@ -52,7 +54,6 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = []
-        self.tasks = {}
         self.workers_per_node = workers_per_node
 
         self._task_counter = 0
@@ -156,7 +157,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         """ TODO: docstring """
         logger.debug("[MTHREAD] queue management worker starting")
 
-        while True:
+        while not self.bad_state_is_set:
             task_id, buf = self.incoming_q.get()  # TODO: why does this hang?
             msg = deserialize_object(buf)[0]
             # TODO: handle exceptions
@@ -191,6 +192,9 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
 
     def submit(self, func, *args, **kwargs):
         """ TODO: docstring """
+        if self.bad_state_is_set:
+            raise self.executor_exception
+
         self._task_counter += 1
         task_id = self._task_counter
 
@@ -228,13 +232,16 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         r = []
         for i in range(blocks):
             if self.provider:
-                block = self.provider.submit(
-                    self.launch_cmd, self.workers_per_node)
-                logger.debug("Launched block {}:{}".format(i, block))
-                if not block:
-                    raise(ScalingFailed(self.provider.label,
-                                        "Attempts to provision nodes via provider has failed"))
-                self.blocks.extend([block])
+                try:
+                    block = self.provider.submit(
+                        self.launch_cmd, self.workers_per_node)
+                    logger.debug("Launched block {}:{}".format(i, block))
+                    # TODO: use exceptions for this
+                    if not block:
+                        self._fail_job_async(None, "Failed to launch block")
+                    self.blocks.extend([block])
+                except Exception as ex:
+                    self._fail_job_async(None, "Failed to launch block: {}".format(ex))
             else:
                 logger.error("No execution provider available")
                 r = None
@@ -255,14 +262,8 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
             r = self.provider.cancel(to_kill)
         return r
 
-    def status(self):
-        """Return status of all blocks."""
-
-        status = []
-        if self.provider:
-            status = self.provider.status(self.blocks)
-
-        return status
+    def _get_job_ids(self):
+        return self.blocks
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.

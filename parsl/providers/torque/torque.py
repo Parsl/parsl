@@ -4,7 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
-from parsl.providers.provider_base import JobState
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.providers.torque.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.utils import RepresentationMixin
@@ -121,15 +121,15 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             if not parts or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
                 continue
             job_id = parts[0]
-            status = translate_table.get(parts[4], JobState.UNKNOWN)
-            self.resources[job_id]['status'] = status
+            state = translate_table.get(parts[4], JobState.UNKNOWN)
+            self.resources[job_id]['status'] = JobStatus(state)
             jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            # if self.resources[missing_job]['status'] in [JobState.PENDING, JobState.RUNNING]:
-            self.resources[missing_job]['status'] = JobState.COMPLETED
+            # if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         ''' Submits the command onto an Local Resource Manager job.
@@ -206,7 +206,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             for line in stdout.split('\n'):
                 if line.strip():
                     job_id = line.strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': JobState.PENDING}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
             if (stdout is not None) and (stderr is not None):
@@ -230,12 +230,16 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = JobState.COMPLETED  # Setting state to exiting
+                self.resources[jid]['status'] = JobStatus(JobState.COMPLETED)  # Setting state to exiting
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
 
         return rets
+
+    @property
+    def status_polling_interval(self):
+        return 60
 
 
 if __name__ == "__main__":

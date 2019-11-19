@@ -6,7 +6,7 @@ from parsl.channels import LocalChannel
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.grid_engine.template import template_string
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.provider_base import JobState
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,6 @@ translate_table = {
     'dt': JobState.COMPLETED,
     'drt': JobState.COMPLETED,
     'ds': JobState.COMPLETED,
-    # benc: should this be COMPLETED? probably... COMPLETES isn't used anywhere else in the parsl codebase
     'drs': JobState.COMPLETED,
 }
 
@@ -150,7 +149,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                 job_id = line.strip()
                 if not job_id:
                     continue
-                self.resources[job_id] = {'job_id': job_id, 'status': JobState.PENDING}
+                self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
                 return job_id
         else:
             print("[WARNING!!] Submission of command to scale_out failed")
@@ -191,8 +190,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         # Filling in missing blanks for jobs that might have gone missing
         # we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            # if self.resources[missing_job]['status'] in [JobState.PENDING, JobState.RUNNING]:
-            self.resources[missing_job]['status'] = JobState.COMPLETED
+            # if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def cancel(self, job_ids):
         ''' Cancels the resources identified by the job_ids provided by the user.
@@ -214,9 +213,13 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = JobState.COMPLETED
+                self.resources[jid]['status'] = JobStatus(JobState.COMPLETED)
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
 
         return rets
+
+    @property
+    def status_polling_interval(self):
+        return 60

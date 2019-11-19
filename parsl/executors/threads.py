@@ -5,13 +5,13 @@ import concurrent.futures as cf
 
 from typing import Any, List, Optional
 
-from parsl.executors.base import ParslExecutor
+from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
+class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     """A thread-based executor.
 
     Parameters
@@ -31,6 +31,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
     def __init__(self, label: str = 'threads', max_threads: int = 2,
                  thread_name_prefix: str = '', storage_access: List[Any] = None,
                  working_dir: Optional[str] = None, managed: bool = True):
+        super().__init__()
         self.label = label
         self._scaling_enabled = False
         self.max_threads = max_threads

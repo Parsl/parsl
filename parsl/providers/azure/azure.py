@@ -6,7 +6,7 @@ from string import Template
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.azure.template import template_string
-from parsl.providers.provider_base import ExecutionProvider, JobState
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
@@ -261,7 +261,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             self.resources[vm_info.id] = {
                 "job_id": vm_info.id,
                 "instance": vm_info,
-                "status": JobState.PENDING
+                "status": JobStatus(JobState.PENDING)
             }
 
             vm_info.storage_profile.data_disks.append({
@@ -317,10 +317,10 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                 vm = self.compute_client.virtual_machines.get(
                     self.group_name, job_id, expand='instanceView')
                 status = vm.instance_view.statuses[1].display_status
-                statuses.append(translate_table.get(status, JobState.UNKNOWN))
+                statuses.append(JobStatus(translate_table.get(status, JobState.UNKNOWN)))
             # This only happens when it is in ProvisionState/Pending
             except IndexError:
-                statuses.append(JobState.PENDING)
+                statuses.append(JobStatus(JobState.PENDING))
         return statuses
 
     def cancel(self, job_ids):
@@ -486,3 +486,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             })
         data_disk = async_disk_creation.result()
         return data_disk, name
+
+    @property
+    def status_polling_interval(self):
+        return 60

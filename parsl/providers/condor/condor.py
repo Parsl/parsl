@@ -5,7 +5,7 @@ import time
 import typeguard
 
 from parsl.channels import LocalChannel
-from parsl.providers.provider_base import JobState
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
@@ -147,8 +147,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         for line in stdout.splitlines():
             parts = line.strip().split()
             job_id = parts[0]
-            status = translate_table.get(parts[1], JobState.UNKNOWN)
-            self.resources[job_id]['status'] = status
+            state = translate_table.get(parts[1], JobState.UNKNOWN)
+            self.resources[job_id]['status'] = JobStatus(state)
 
     def status(self, job_ids):
         """Get the status of a list of jobs identified by their ids.
@@ -303,7 +303,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = JobState.CANCELLED
+                self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
@@ -316,8 +316,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
     def _add_resource(self, job_id):
         for jid in job_id:
-            self.resources[jid] = {'status': JobState.PENDING, 'size': 1}
+            self.resources[jid] = {'status': JobStatus(JobState.PENDING), 'size': 1}
         return True
+
+    @property
+    def status_polling_interval(self):
+        return 60
 
 
 if __name__ == "__main__":
