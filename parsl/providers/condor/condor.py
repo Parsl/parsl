@@ -5,6 +5,7 @@ import time
 import typeguard
 
 from parsl.channels import LocalChannel
+from parsl.providers.provider_base import JobState
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
@@ -19,12 +20,12 @@ from parsl.launchers.launchers import Launcher
 
 # See http://pages.cs.wisc.edu/~adesmet/status.html
 translate_table = {
-    '1': 'PENDING',
-    '2': 'RUNNING',
-    '3': 'CANCELLED',
-    '4': 'COMPLETED',
-    '5': 'FAILED',
-    '6': 'FAILED',
+    '1': JobState.PENDING,
+    '2': JobState.RUNNING,
+    '3': JobState.CANCELLED,
+    '4': JobState.COMPLETED,
+    '5': JobState.FAILED,
+    '6': JobState.FAILED,
 }
 
 
@@ -146,7 +147,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         for line in stdout.splitlines():
             parts = line.strip().split()
             job_id = parts[0]
-            status = translate_table.get(parts[1], 'UNKNOWN')
+            status = translate_table.get(parts[1], JobState.UNKNOWN)
             self.resources[job_id]['status'] = status
 
     def status(self, job_ids):
@@ -302,7 +303,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = 'CANCELLED'
+                self.resources[jid]['status'] = JobState.CANCELLED
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
@@ -315,7 +316,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
     def _add_resource(self, job_id):
         for jid in job_id:
-            self.resources[jid] = {'status': 'PENDING', 'size': 1}
+            self.resources[jid] = {'status': JobState.PENDING, 'size': 1}
         return True
 
 

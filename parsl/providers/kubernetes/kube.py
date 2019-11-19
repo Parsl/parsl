@@ -5,7 +5,7 @@ from parsl.providers.kubernetes.template import template_string
 logger = logging.getLogger(__name__)
 
 from parsl.providers.error import OptionalModuleMissing
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState
 from parsl.utils import RepresentationMixin
 
 import typeguard
@@ -151,7 +151,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                          job_name=job_name,
                          cmd_string=formatted_cmd,
                          volumes=self.persistent_volumes)
-        self.resources[pod_name] = {'status': 'RUNNING'}
+        self.resources[pod_name] = {'status': JobState.RUNNING}
 
         return pod_name
 
@@ -168,7 +168,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         """
         self._status()
         # This is a hack
-        return ['RUNNING' for jid in job_ids]
+        return [JobState.RUNNING for jid in job_ids]
 
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
@@ -182,7 +182,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             # Here we are assuming that for local, the job_ids are the process id's
             self._delete_pod(job)
 
-            self.resources[job]['status'] = 'CANCELLED'
+            self.resources[job]['status'] = JobState.CANCELLED
             del self.resources[job]
         rets = [True for i in job_ids]
 

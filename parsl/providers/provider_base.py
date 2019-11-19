@@ -1,5 +1,25 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
+from enum import Enum
 from typing import Any, List, Optional
+
+
+class JobState(bytes, Enum):
+    """Defines a set of states that a job can be in"""
+
+    def __new__(cls, value, terminal):
+        obj = bytes.__new__(cls, [value])
+        obj._value_ = value
+        obj.terminal = terminal
+        return obj
+
+    UNKNOWN = (0, False)
+    PENDING = (1, False)
+    RUNNING = (2, False)
+    CANCELLED = (3, True)
+    COMPLETED = (4, True)
+    FAILED = (5, True)
+    TIMEOUT = (6, True)
+    HELD = (7, False)
 
 
 class ExecutionProvider(metaclass=ABCMeta):

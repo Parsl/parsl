@@ -2,6 +2,7 @@ import atexit
 import logging
 import os
 from parsl.launchers import SingleNodeLauncher
+from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
 
@@ -14,16 +15,16 @@ else:
     _google_enabled = True
 
 translate_table = {
-    'PENDING': 'PENDING',
-    'PROVISIONING': 'PENDING',
-    "STAGING": "PENDING",
-    'RUNNING': 'RUNNING',
-    'DONE': 'COMPLETED',
-    'STOPPING': 'COMPLETED',
-    'STOPPED': 'COMPLETED',
-    'TERMINATED': 'COMPLETED',
-    'SUSPENDING': 'COMPLETED',
-    'SUSPENDED': 'COMPLETED',
+    'PENDING': JobState.PENDING,
+    'PROVISIONING': JobState.PENDING,
+    "STAGING": JobState.PENDING,
+    'RUNNING': JobState.RUNNING,
+    'DONE': JobState.COMPLETED,
+    'STOPPING': JobState.COMPLETED,
+    'STOPPED': JobState.COMPLETED,
+    'TERMINATED': JobState.COMPLETED,
+    'SUSPENDING': JobState.COMPLETED,
+    'SUSPENDED': JobState.COMPLETED,
 }
 
 

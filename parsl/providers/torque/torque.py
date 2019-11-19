@@ -4,6 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
+from parsl.providers.provider_base import JobState
 from parsl.providers.torque.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.utils import RepresentationMixin
@@ -12,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 # From the man pages for qstat for PBS/Torque systems
 translate_table = {
-    'R': 'RUNNING',
-    'C': 'COMPLETED',  # Completed after having run
-    'E': 'COMPLETED',  # Exiting after having run
-    'H': 'HELD',  # Held
-    'Q': 'PENDING',  # Queued, and eligible to run
-    'W': 'PENDING',  # Job is waiting for it's execution time (-a option) to be reached
-    'S': 'HELD'
+    'R': JobState.RUNNING,
+    'C': JobState.COMPLETED,  # Completed after having run
+    'E': JobState.COMPLETED,  # Exiting after having run
+    'H': JobState.HELD,  # Held
+    'Q': JobState.PENDING,  # Queued, and eligible to run
+    'W': JobState.PENDING,  # Job is waiting for it's execution time (-a option) to be reached
+    'S': JobState.HELD
 }  # Suspended
 
 
@@ -120,14 +121,14 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             if not parts or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
                 continue
             job_id = parts[0]
-            status = translate_table.get(parts[4], 'UNKNOWN')
+            status = translate_table.get(parts[4], JobState.UNKNOWN)
             self.resources[job_id]['status'] = status
             jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
+            if self.resources[missing_job]['status'] in [JobState.PENDING, JobState.RUNNING]:
                 self.resources[missing_job]['status'] = translate_table['E']
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
@@ -205,7 +206,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             for line in stdout.split('\n'):
                 if line.strip():
                     job_id = line.strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobState.PENDING}
         else:
             message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
             if (stdout is not None) and (stderr is not None):
@@ -229,7 +230,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['E']  # Setting state to exiting
+                self.resources[jid]['status'] = JobState.COMPLETED  # Setting state to exiting
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]

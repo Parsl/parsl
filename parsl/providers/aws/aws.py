@@ -6,7 +6,7 @@ from string import Template
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.aws.template import template_string
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState
 from parsl.providers.error import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
@@ -23,12 +23,12 @@ else:
     _boto_enabled = True
 
 translate_table = {
-    'pending': 'PENDING',
-    'running': 'RUNNING',
-    'terminated': 'COMPLETED',
-    'shutting-down': 'COMPLETED',  # (configuring),
-    'stopping': 'COMPLETED',  # We shouldn't really see this state
-    'stopped': 'COMPLETED',  # We shouldn't really see this state
+    'pending': JobState.PENDING,
+    'running': JobState.RUNNING,
+    'terminated': JobState.COMPLETED,
+    'shutting-down': JobState.COMPLETED,  # (configuring),
+    'stopping': JobState.COMPLETED,  # We shouldn't really see this state
+    'stopped': JobState.COMPLETED,  # We shouldn't really see this state
 }
 
 
@@ -557,7 +557,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         for r in status['Reservations']:
             for i in r['Instances']:
                 instance_id = i['InstanceId']
-                instance_state = translate_table.get(i['State']['Name'], 'UNKNOWN')
+                instance_state = translate_table.get(i['State']['Name'], JobState.UNKNOWN)
                 self.resources[instance_id]['status'] = instance_state
                 all_states.extend([instance_state])
 
@@ -595,7 +595,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("Started instance_id: {0}".format(instance.instance_id))
 
-        state = translate_table.get(instance.state['Name'], "PENDING")
+        state = translate_table.get(instance.state['Name'], JobState.PENDING)
 
         self.resources[instance.instance_id] = {
             "job_id": instance.instance_id,
@@ -632,7 +632,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.debug("Removed the instances: {0}".format(job_ids))
 
         for job_id in job_ids:
-            self.resources[job_id]["status"] = "COMPLETED"
+            self.resources[job_id]["status"] = JobState.COMPLETED
 
         for job_id in job_ids:
             self.instances.remove(job_id)
