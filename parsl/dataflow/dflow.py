@@ -26,7 +26,7 @@ from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, \
     DuplicateTaskError
-from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
+from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -154,8 +154,13 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        self.data_manager = DataManager(self)
+        # the flow control keeps track of executors and provider task states;
+        # must be set before executors are added since add_executors calls
+        # flowcontrol.add_executors.
+        self.flowcontrol = FlowControl(self)
+
         self.executors = {}
+        self.data_manager = DataManager(self)
         data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='data_manager')
         self.add_executors(config.executors + [data_manager_executor])
 
@@ -167,13 +172,6 @@ class DataFlowKernel(object):
             except Exception:
                 logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60), name="Checkpoint")
-
-        # if we use the functionality of dynamically adding executors
-        # all executors should be managed.
-        if any([x.managed for x in config.executors]):
-            self.flowcontrol = FlowControl(self)
-        else:
-            self.flowcontrol = FlowNoControl(self)
 
         self.task_count = 0
         self.tasks = {}
@@ -830,8 +828,7 @@ class DataFlowKernel(object):
 
             self.executors[executor.label] = executor
             executor.start()
-        if hasattr(self, 'flowcontrol') and isinstance(self.flowcontrol, FlowControl):
-            self.flowcontrol.strategy.add_executors(executors)
+        self.flowcontrol.strategy.add_executors(executors)
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
