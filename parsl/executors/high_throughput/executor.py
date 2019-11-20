@@ -1,26 +1,25 @@
 from concurrent.futures import Future
 import typeguard
 import logging
-import threading
-import queue
+import math
 import pickle
+import queue
+import threading
 from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple, Union
-import math
 
-from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
+from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.executors.high_throughput import zmq_pipes
-from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
-from parsl.executors.base import ParslExecutor
-from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
-
-from parsl.utils import RepresentationMixin
+from parsl.executors.base import ParslExecutor
+from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
+from parsl.executors.high_throughput import interchange
+from parsl.executors.high_throughput import zmq_pipes
 from parsl.providers import LocalProvider
+from parsl.providers.provider_base import ExecutionProvider
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

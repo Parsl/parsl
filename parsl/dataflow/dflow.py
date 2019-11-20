@@ -1,21 +1,22 @@
 import atexit
+import datetime
+import inspect
 import itertools
 import logging
 import os
 import pathlib
 import pickle
 import random
-import typeguard
-import inspect
-import threading
 import sys
-import datetime
-from getpass import getuser
-from typing import Optional
-from uuid import uuid4
-from socket import gethostname
+import threading
 from concurrent.futures import Future
 from functools import partial
+from getpass import getuser
+from socket import gethostname
+from typing import Optional
+from uuid import uuid4
+
+import typeguard
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
@@ -23,7 +24,8 @@ from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, DuplicateTaskError
+from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, \
+    DuplicateTaskError
 from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -31,9 +33,8 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.utils import get_version
-
 from parsl.monitoring.message_type import MessageType
+from parsl.utils import get_version
 
 logger = logging.getLogger(__name__)
 

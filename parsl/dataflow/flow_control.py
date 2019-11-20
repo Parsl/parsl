@@ -1,6 +1,6 @@
+import logging
 import sys
 import threading
-import logging
 import time
 
 from parsl.dataflow.strategy import Strategy
