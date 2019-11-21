@@ -11,20 +11,6 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
-translate_table = {
-    'PD': 'PENDING',
-    'R': 'RUNNING',
-    'CA': 'CANCELLED',
-    'CF': 'PENDING',  # (configuring),
-    'CG': 'RUNNING',  # (completing),
-    'CD': 'COMPLETED',
-    'F': 'FAILED',
-    'TO': 'TIMEOUT',
-    'NF': 'FAILED',  # (node failure),
-    'RV': 'FAILED',  # (revoked) and
-    'SE': 'FAILED'
-}  # (special exit state
-
 
 class LocalProvider(ExecutionProvider, RepresentationMixin):
     """ Local Execution Provider
