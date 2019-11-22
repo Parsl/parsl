@@ -80,11 +80,14 @@ script:
 
     # check that documentation stubs are up to date, as they are compiled from
     # python code but stored in version control rather than generated as part
-    # of doc build
+    # of doc build. prereqs for this will have been installed because of above
+    # pip install .[all] step
     - cd docs
     - rm -rfv stubs
-    - sphinx-autogen reference.rst
     - sphinx-autogen reference.rst userguide/*rst devguide/*rst
+
+    # this will both display any diffs in log output, and fail if there is any diff
+    - git diff --exit-code
 
 
     # run simple worker test. this is unlikely to scale due to
