@@ -107,7 +107,7 @@ class GoogleCloudProvider():
         self.provisioned_blocks = 0
         atexit.register(self.bye)
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.gcs"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot.
 

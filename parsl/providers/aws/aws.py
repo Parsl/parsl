@@ -563,7 +563,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         return all_states
 
-    def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.auto"):
+    def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.aws"):
         """Submit the command onto a freshly instantiated AWS EC2 instance.
 
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -583,7 +583,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             If at capacity, None will be returned. Otherwise, the job identifier will be returned.
         """
 
-        job_name = "parsl.auto.{0}".format(time.time())
+        job_name = "parsl.aws.{0}".format(time.time())
         wrapped_cmd = self.launcher(command,
                                     tasks_per_node,
                                     self.nodes_per_block)
