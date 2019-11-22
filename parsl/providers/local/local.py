@@ -95,8 +95,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
             elif self.resources[job_id]['remote_pid']:
 
-                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" '.format(self.resources[job_id]['remote_pid']),
-                                                                    self.cmd_timeout)
+                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
+                    self.resources[job_id]['remote_pid']), self.cmd_timeout)
                 for line in stdout.split('\n'):
                     if line.startswith("STATUS:"):
                         status = line.split("STATUS:")[1].strip()
@@ -184,7 +184,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         if not isinstance(self.channel, LocalChannel):
             logger.debug("Launching in remote mode")
             # Bash would return until the streams are closed. So we redirect to a outs file
-            cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
+            cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
             retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
             for line in stdout.split('\n'):
                 if line.startswith("PID:"):
