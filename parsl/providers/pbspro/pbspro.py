@@ -9,17 +9,6 @@ from parsl.providers import TorqueProvider
 
 logger = logging.getLogger(__name__)
 
-# From the man pages for qstat for PBS/Torque systems
-translate_table = {
-    'R': 'RUNNING',
-    'C': 'COMPLETED',  # Completed after having run
-    'E': 'COMPLETED',  # Exiting after having run
-    'H': 'HELD',  # Held
-    'Q': 'PENDING',  # Queued, and eligible to run
-    'W': 'PENDING',  # Job is waiting for it's execution time (-a option) to be reached
-    'S': 'HELD'
-}  # Suspended
-
 
 class PBSProProvider(TorqueProvider):
     """PBS Pro Execution Provider
