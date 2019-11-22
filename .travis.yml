@@ -85,10 +85,9 @@ script:
     - cd docs
     - rm -rfv stubs
     - sphinx-autogen reference.rst userguide/*rst devguide/*rst
-
     # this will both display any diffs in log output, and fail if there is any diff
     - git diff --exit-code
-
+    - cd ..
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
