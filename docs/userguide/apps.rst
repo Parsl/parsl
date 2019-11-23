@@ -1,17 +1,17 @@
 Apps
 ====
 
-In Parsl an "app" is a piece of code that can be asynchronously executed on an execution resource.
-An execution resource in this context is any target system such as a laptop, cluster, cloud, or even supercomputer. Execution on these resources can be performed by a pool of `threads <https://en.wikipedia.org/wiki/Thread_(computing)>`_, `processes <https://en.wikipedia.org/wiki/Process_(computing)>`_, or remote workers.
+A Parsl **app** is a piece of code that can be asynchronously executed on an execution resource.
+An **execution resource** in this context is any target system such as a laptop, cluster, cloud, or even supercomputer. Execution on these resources can be performed by a pool of `threads <https://en.wikipedia.org/wiki/Thread_(computing)>`_, `processes <https://en.wikipedia.org/wiki/Process_(computing)>`_, or remote workers.
 
-Parsl apps are defined by annotating Python functions with an app decorator. Currently two types of apps can be defined: Python, with the corresponding ``@python_app`` decorator, and Bash, with the corresponding ``@bash_app`` decorator. Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts.
+Parsl apps are defined by annotating Python functions with an app decorator. Currently two types of apps can be defined: Python, with the ``@python_app`` decorator, and Bash, with the ``@bash_app`` decorator. Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts.
 
 Python Apps
 -----------
 
-The following code snippet shows a Python function ``double(x: int)``, used to double the input value. This function is defined as a Parsl app using the ``@python_app`` decorator.
+The following code snippet shows a Python function ``double(x: int)``, used to double the input value. This function is defined as a Parsl app by using the ``@python_app`` decorator.
 
-Python apps are *pure* Python functions. As these functions are executed asynchronously, and potentially remotely, it is important to note that they must explicitly import any required modules and act only on defined input arguments (i.e., they cannot include variables used elsewhere in the script).
+A Parsl Python app is a *pure* Python function. As it is executed asynchronously, and potentially remotely, it must explicitly import any required modules and act only on defined input arguments (i.e., it cannot include variables used outside the function).
 
 .. code-block:: python
 
@@ -21,7 +21,7 @@ Python apps are *pure* Python functions. As these functions are executed asynchr
 
        double(x)
 
-Python apps may also act upon files. In order to make Parsl aware of these files they must be defined using the ``inputs`` or ``outputs`` keyword arguments. The following code snippet illustrates how the contents of one file can be copied to another.
+A Parsl Python app may also act upon files. In order to make Parsl aware of these files, they must be specified by using the ``inputs`` and/or ``outputs`` keyword arguments, as in following code snippet, which copies the contents of one file (`in.txt`) to another (`out.txt`).
 
 .. code-block:: python
 
