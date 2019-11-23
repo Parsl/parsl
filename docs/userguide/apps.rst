@@ -89,7 +89,7 @@ This string is a Bash command and will be executed as such.
        
 Unlike a Python app, a Bash app cannot return Python objects.
 Instead, it communicates with other functions by passing files.
-The decorated ``@bash_app`` function provides the same ``inputs`` and ``outputs`` keyword arguments for managing input and output files.
+A decorated ``@bash_app`` function provides the ``inputs`` and ``outputs`` keyword arguments for managing input and output files.
 It also includes, as described below, keyword arguments for capturing the STDOUT and STDERR streams and recording
 them in files that are managed by Parsl.
 
@@ -129,10 +129,11 @@ to the decorated function. The string that is returned is formatted by the Pytho
 Returns
 ^^^^^^^
 
-A Bash app, like a Python app, returns an AppFuture. 
-However the value returned inside the AppFuture has no real meaning.
+A Bash app, like a Python app, returns an AppFuture, which the programmer can use to determine when the
+app has completed (e.g., via `future.result()` as in the preceding code fragment).
+A Bash app can only return results via files specified via ``outputs``, ``stderr``, or ``stdout``  the value returned inside the AppFuture has no real meaning.
 
-If a bash app exits with unix exit code 0, then the AppFuture will complete. If a bash app
+If the Bash app exits with Unix exit code 0, then the AppFuture will complete. If the Bash app
 exits with any other code, this will be treated as a failure, and the AppFuture will instead
 contain an AppFailure exception. The Unix exit code can be accessed through the
 `exitcode` attribute of that AppFailure.
