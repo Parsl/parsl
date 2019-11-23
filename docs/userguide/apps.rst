@@ -89,8 +89,8 @@ This string is a Bash command and will be executed as such.
        
 Unlike a Python app, a Bash app cannot return Python objects.
 Instead, it communicates with other functions by passing files.
-The decorated ``@bash_app`` function provides the same inputs and outputs keyword arguments to manage input and output files.
-It also includes keyword arguments for capturing the STDOUT and STDERR streams and recording
+The decorated ``@bash_app`` function provides the same ``inputs`` and ``outputs`` keyword arguments for managing input and output files.
+It also includes, as described below, keyword arguments for capturing the STDOUT and STDERR streams and recording
 them in files that are managed by Parsl.
 
 
