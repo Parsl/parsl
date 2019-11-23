@@ -46,7 +46,7 @@ It then makes four calls to the `app_double` app and one call to the `app_sum` a
 these execute concurrently, synchronized  by `mapped_result` variable.
 The following figure shows the resulting task graph. 
 
-.. image:: ../images/map_reduce.png
+.. image:: ../images/MapReduce.png
 
 A call to a Parsl app results in the creation of one or more `futures <https://en.wikipedia.org/wiki/Futures_and_promises>`_,
 representations of values that are to be computed in the future.
