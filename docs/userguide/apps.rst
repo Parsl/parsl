@@ -104,7 +104,7 @@ The following limitations apply to Bash apps:
 Special Keywords
 ^^^^^^^^^^^^^^^^
 
-In addition to the ``inputs``, ``outputs``, and ``walltime'' argument keywords described above, a Bash app can take the following keywords:
+In addition to the ``inputs``, ``outputs``, and ``walltime`` argument keywords described above, a Bash app can take the following keywords:
 
 4. stdout: (string or `parsl.AUTO_LOGNAME`) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory.
 5. stderr: (string or `parsl.AUTO_LOGNAME`) The path to a file to which standard error should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory.
