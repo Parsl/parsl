@@ -17,8 +17,6 @@ That is, the graph is not computed in advance and is only complete when the scri
 Apps that have all their dependencies met are slated for execution (in parallel).
 
 The following example demonstrates how Parsl can be used to specify a MapReduce computation.
-The program first defines two apps, ``app_double`` and ``app_sum``. 
-The 
 
 .. code-block:: python
 
@@ -50,6 +48,9 @@ The
 
     print(total.result())
 
+The program first defines two apps, `app_double` and `app_sum`,
+It then makes four calls to the `app_double` app and one call to the `app_sum` app;
+these execute concurrently, synchronized  by `mapped_result` variable.
 The following figure shows the resulting task graph. 
 
-![MapReduce task graph with 4 values](https://octodex.github.com/images/yaktocat.png)
+.. image:: ../images/map_reduce.png
