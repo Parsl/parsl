@@ -2,16 +2,17 @@ Apps
 ====
 
 A Parsl **app** is a piece of code that can be asynchronously executed on an execution resource.
-An **execution resource** in this context is any target system such as a laptop, cluster, cloud, or even supercomputer. Execution on these resources can be performed by a pool of `threads <https://en.wikipedia.org/wiki/Thread_(computing)>`_, `processes <https://en.wikipedia.org/wiki/Process_(computing)>`_, or remote workers.
+(An **execution resource** in this context is any target system such as a laptop, cluster, cloud, or even supercomputer. Execution on these resources can be performed by a pool of `threads <https://en.wikipedia.org/wiki/Thread_(computing)>`_, `processes <https://en.wikipedia.org/wiki/Process_(computing)>`_, or remote workers.)
 
-Parsl apps are defined by annotating Python functions with an app decorator. Currently two types of apps can be defined: Python, with the ``@python_app`` decorator, and Bash, with the ``@bash_app`` decorator. Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts.
+A Parsl app is defined by annotating a Python function with an app decorator. 
+Currently two types of apps can be defined: a **Python app**, with the ``@python_app`` decorator, and a **Bash app**, with the ``@bash_app`` decorator. 
+Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts.
 
 Python Apps
 -----------
 
-The following code snippet shows a Python function ``double(x: int)``, used to double the input value. This function is defined as a Parsl Python app by using the ``@python_app`` decorator.
-
-A Parsl Python app is a *pure* Python function. As it is executed asynchronously, and potentially remotely, it must explicitly import any required modules and act only on defined input arguments (i.e., it cannot include variables used outside the function).
+The following code snippet shows a Python function ``double(x: int)``, used to double the value provided as input. 
+The ``@python_app`` decorator defines the function as a Parsl Python app.  
 
 .. code-block:: python
 
@@ -19,11 +20,40 @@ A Parsl Python app is a *pure* Python function. As it is executed asynchronously
        def double(x):
              return x * 2
 
-       double(x)
+       double(42)
 
-This Python app acts directly on the input argument `x`, which 
-may be a Python object (hopefully, an integer) or a DataFuture (see :ref:`label-futures`) returned by another app. 
-In the latter case, Parsl will wait until the future is resolved before executing the app.
+As a Parsl Python app is executed asynchronously, and potentially remotely, it must explicitly import any required modules and cannot refer to variables used outside the function. 
+Thus while the following code fragment is valid Python, it is not valid Parsl, as the `bad_double()` function requires the model `random` and refers to the external variable `factor`.
+
+.. code-block:: python
+
+       import random
+       factor = 5
+
+       @python_app
+       def bad_double(x):
+             return x * random.random() * factor
+
+       print(bad_double(42))
+       
+The following alternative formulation is valid Parsl.
+
+.. code-block:: python
+
+       import random
+       factor = 5
+
+       @python_app
+       def good_double(x, f):
+             import random
+             return x * random.random() * f
+
+       print(good_double(42, factor))
+
+An input argument 
+may be a Python object or a DataFuture (see :ref:`label-futures`) returned by another app. 
+In the latter case, Parsl will wait until the future is resolved before executing the app,
+as we discuss in more detail in :ref:`label-futures`.
 
 A Python app may also act upon files. In order to make Parsl aware of these files, they must be specified by using the ``inputs`` and/or ``outputs`` keyword arguments, as in following code snippet, which copies the contents of one file (`in.txt`) to another (`out.txt`).
 
@@ -39,7 +69,7 @@ A Python app may also act upon files. In order to make Parsl aware of these file
 Limitations
 ^^^^^^^^^^^
 
-There are limitations on what Python functions can be converted to apps:
+There are limitations on the Python functions that can be converted to apps:
 
 1. Functions should act only on defined input arguments. That is, they should not use script-level or global variables.
 2. Functions must explicitly import any required modules.
@@ -86,9 +116,11 @@ This string is a Bash command and will be executed as such.
        # echo_hello() when called will execute the string it returns, creating an std.out file with
        # the contents "Hello World!"
        echo_hello()
-       
+
+The string thus executed by a Bash app can be arbitrarily long. 
+
 Unlike a Python app, a Bash app cannot return Python objects.
-Instead, it communicates with other functions by passing files.
+Instead, it communicates with other functions by creating files.
 A decorated ``@bash_app`` function provides the ``inputs`` and ``outputs`` keyword arguments for managing input and output files.
 It also includes, as described below, keyword arguments for capturing the STDOUT and STDERR streams and recording
 them in files that are managed by Parsl.
@@ -110,7 +142,7 @@ In addition to the ``inputs``, ``outputs``, and ``walltime`` argument keywords d
 5. stderr: (string or `parsl.AUTO_LOGNAME`) The path to a file to which standard error should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory.
 6. label: (string) If the app is invoked with `stdout=parsl.AUTO_LOGNAME` or `stderr=parsl.AUTO_LOGNAME`, append `label` to the log name.
 
-A Bash app allows for the composition of the string to execute on the command-line from the arguments passed
+A Bash app can construct the string to execute on the command-line from arguments passed
 to the decorated function. The string that is returned is formatted by the Python string `format <https://docs.python.org/3.4/library/functions.html#format>`_  (`PEP 3101 <https://www.python.org/dev/peps/pep-3101/>`_).
 
 .. code-block:: python
