@@ -84,7 +84,7 @@ A common approach to executing Parsl apps in parallel is via loops. The followin
     # Wait for all apps to finish and collect the results
     outputs = [r.result() for r in rand_nums]
 
-In the preceding example, the execution of differnet tasks is coordinated by passing Python objects from producers to consumers. In other cases, it can be convenient to pass data in files, as in the following reformulation. Here, a set of files, each with a random number, is created by the `generate` app. These files are then concatenated into a single file, which is subsequently used to compute the sum of all numbers. 
+In the preceding example, the execution of different tasks is coordinated by passing Python objects from producers to consumers. In other cases, it can be convenient to pass data in files, as in the following reformulation. Here, a set of files, each with a random number, is created by the `generate` app. These files are then concatenated into a single file, which is subsequently used to compute the sum of all numbers. 
 
 .. code-block:: python
 
