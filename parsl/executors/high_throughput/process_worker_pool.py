@@ -21,6 +21,7 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
+from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue
 import multiprocessing
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
@@ -164,9 +165,9 @@ class Manager(object):
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
-        self.pending_task_queue = multiprocessing.Queue()
-        self.pending_result_queue = multiprocessing.Queue()
-        self.ready_worker_queue = multiprocessing.Queue()
+        self.pending_task_queue = MacSafeQueue()    # multiprocessing.Queue()
+        self.pending_result_queue = MacSafeQueue()  # multiprocessing.Queue()
+        self.ready_worker_queue = MacSafeQueue()    # multiprocessing.Queue()
 
         self.max_queue_size = self.prefetch_capacity + self.worker_count
 
