@@ -38,30 +38,3 @@ class MacSafeQueue(multiprocessing.queues.Queue):
 
     def empty(self):
         return not self._counter.value
-
-
-def consumer(in_q, out_q, delay=0):
-    import time
-    while True:
-        print("In loop")
-        x = in_q.get()
-        time.sleep(delay)
-        out_q.put(x)
-        if x == 'STOP':
-            break
-
-
-if __name__ == "__main__":
-
-    task_q = MacSafeQueue()
-    result_q = MacSafeQueue()
-
-    p = multiprocessing.Process(target=consumer, args=(task_q, result_q,))
-    p.start()
-    for i in range(10):
-        print(f"Putting {i}")
-        task_q.put(i)
-        x = result_q.get()
-        print(f"Got {x}")
-    task_q.put('STOP')
-    p.terminate()
