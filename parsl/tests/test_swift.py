@@ -2,8 +2,6 @@ import pytest
 
 import parsl
 
-parsl.set_stream_logger()
-
 from parsl.executors.swift_t import TurbineExecutor
 
 
@@ -59,6 +57,8 @@ def test_except():
 
 
 if __name__ == "__main__":
+    parsl.set_stream_logger()
+
 
     # test_simple()
     # test_slow()
