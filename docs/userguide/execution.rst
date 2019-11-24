@@ -3,7 +3,7 @@ Execution
 
 Contemporary computing environments may include a wide range of computational platforms or **execution providers**, from laptops and PCs to various clusters, supercomputers, and cloud computing platforms. Different execution providers may require or allow for the use of different **execution models**, such as threads (for efficient parallel execution on a multicore processor), processes, and pilot jobs for running many small tasks on a large parallel system. 
 
-Parsl is designed to abstract these lov-level details so that an identical Parsl program can run unchanged on different platforms or across multiple platforms. 
+Parsl is designed to abstract these low-level details so that an identical Parsl program can run unchanged on different platforms or across multiple platforms. 
 To this end, Parsl uses a configuration file to specify which execution provider(s) and the execution model(s) to use.
 Parsl provides a high level abstraction, called a *block*, for providing a uniform description of a resource configuration irrespective of the specific execution provider.
 
@@ -41,7 +41,7 @@ Parsl currently supports the following executors:
 
 1. `ThreadPoolExecutor`: This executor supports multi-thread execution on local resources.
 
-2. `HighThroughputExecutor`: This executor is designed as a replacement for the IPyParallelExecutor. It uses hierarchical scheduling and batching to deliver high throughput task execution on up to 1000 Nodes.
+2. `HighThroughputExecutor`: This executor is designed as a replacement for the IPyParallelExecutor. It uses hierarchical scheduling and batching to deliver high throughput task execution on up to 4000 Nodes.
 
 3. `WorkQueueExecutor`: This executor integrates `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ as an execution backend. Work Queue scales to tens of thousands of cores and implements reliable execution of tasks with dynamic resource sizing.
 
