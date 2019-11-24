@@ -57,7 +57,7 @@ Futures thus establish dependencies.
 In the example, each call to the `app_double` app returns a future, `x`; the resulting four futures are stored
 in the list `mapped_results`; this list is provided as input to the `app_sum` app, which therefore cannot execute until all four values are available; and finally, the `app_sum` app computes the sum of the doubled values.
 
-As the figure shows, a set of tasks and their dependencies form a  `directed acyclic graphs <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_.
+As the figure shows, a set of tasks and their dependencies form a  `directed acyclic graph <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_.
 Indeed, Parsl can be viewed as a notation and a set of mechanisms for defining and executing such graphs.
 Note, however, that such graphs are never explicitly expressed in Parsl, and that  
 the dependency graph is built dynamically and updated as the Parsl script executes. 
