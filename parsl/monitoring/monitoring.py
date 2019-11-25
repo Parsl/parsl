@@ -375,11 +375,13 @@ class Hub(object):
 
         self._context = zmq.Context()
         self.dfk_channel = self._context.socket(zmq.DEALER)
+        self.dfk_channel.setsockopt(zmq.LINGER, 0)
         self.dfk_channel.set_hwm(0)
         self.dfk_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
         self.dfk_channel.connect("tcp://{}:{}".format(client_address, client_port))
 
         self.ic_channel = self._context.socket(zmq.DEALER)
+        self.ic_channel.setsockopt(zmq.LINGER, 0)
         self.ic_channel.set_hwm(0)
         self.ic_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
         self.logger.debug("hub_address: {}. hub_port_range {}".format(hub_address, hub_port_range))
