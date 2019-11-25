@@ -223,7 +223,10 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['KILLING']  # Setting state to cancelled
+                # ???
+                # self.resources[jid]['status'] = translate_table['KILLING']  # Setting state to cancelled
+                self.resources[jid]['status'] = JobState.COMPLETED
+
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]

@@ -128,8 +128,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in [JobState.PENDING, JobState.RUNNING]:
-                self.resources[missing_job]['status'] = translate_table['E']
+            # if self.resources[missing_job]['status'] in [JobState.PENDING, JobState.RUNNING]:
+            self.resources[missing_job]['status'] = JobState.COMPLETED
 
     def submit(self, command, tasks_per_node, job_name="parsl.auto"):
         ''' Submits the command onto an Local Resource Manager job.

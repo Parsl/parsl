@@ -218,7 +218,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             status_command = "ps --pid {} | grep {}".format(self.resources[job_id]['job_id'],
                                                             self.resources[job_id]['cmd'].split()[0])
             retcode, stdout, stderr = channel.execute_wait(status_command)
-            if retcode != 0 and self.resources[job_id]['status'] == JobState.RUNNING:
+            if retcode != 0 and not self.resources[job_id]['status'].terminal:
                 self.resources[job_id]['status'] = JobState.FAILED
 
         return [self.resources[job_id]['status'] for job_id in job_ids]
