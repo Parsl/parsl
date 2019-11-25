@@ -22,6 +22,10 @@ class Channel(metaclass=ABCMeta):
                                 |
                                 +-------------------
 
+
+    Channels should ensure that each launched command runs in a new process
+    group, so that providers (such as AdHocProvider and LocalProvider) which
+    terminate long running commands using process groups can do so.
     """
 
     @abstractmethod
