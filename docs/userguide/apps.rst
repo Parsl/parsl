@@ -143,7 +143,7 @@ In addition to the ``inputs``, ``outputs``, and ``walltime`` argument keywords d
 6. label: (string) If the app is invoked with `stdout=parsl.AUTO_LOGNAME` or `stderr=parsl.AUTO_LOGNAME`, append `label` to the log name.
 
 A Bash app can construct the string to execute on the command-line from arguments passed
-to the decorated function. The string that is returned is formatted by the Python string `format <https://docs.python.org/3.4/library/functions.html#format>`_  (`PEP 3101 <https://www.python.org/dev/peps/pep-3101/>`_).
+to the decorated function.
 
 .. code-block:: python
 
