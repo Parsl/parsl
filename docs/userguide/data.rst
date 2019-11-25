@@ -124,7 +124,7 @@ In order to manage where data is staged users may configure the default ``workin
             ]
         )
 
-When using the Globus scheme Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the ``endpoint_name`` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
+When using the Globus scheme Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the ``endpoint_uuid`` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
 
 In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus endpoint is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the ``endpoint_path`` (the common root path seen in Globus), and the ``local_path`` (the common root path on the local file system). In most cases ``endpoint_path`` and ``local_path`` are the same.
 
