@@ -18,7 +18,6 @@ from ipyparallel.serialize import serialize_object
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.monitoring.message_type import MessageType
-# from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as queue
 
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
