@@ -105,6 +105,8 @@ In addition, examples for some specific configurations follow.
 +--------------------------+----------------------+------------------------------------+
 | `ExtremeScaleExecutor`   | >1000, <=8000 [*]_   |  >minutes                          |
 +--------------------------+----------------------+------------------------------------+
+| `WorkQueueExecutor`      | <=20000 [*]_         |  10s+                              |
++--------------------------+----------------------+------------------------------------+
 
 
 .. [*] We assume that each node has 32 workers. If there are fewer workers launched
@@ -112,6 +114,9 @@ In addition, examples for some specific configurations follow.
 
 .. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale at which
        we've tested the `ExtremeScaleExecutor`.
+
+.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and 
+       20000 CPU cores.
 
 .. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
              as the recommended replacement.
@@ -174,11 +179,12 @@ Comet (SDSC)
 .. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
 
 The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
-Center's **Comet** supercomputer. The example uses an `SSHChannel` to connect remotely to Comet, the
-`SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch
-workers.
+Center's **Comet** supercomputer. The example is designed to be executed on the login nodes, using the
+`SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/comet_htex_multinode.py
+.. warning:: This config has **NOT** been tested with Parsl v0.9.0
+
+.. literalinclude:: ../../parsl/configs/comet.py
 
 
 .. _configuring_nersc_cori:
@@ -188,9 +194,10 @@ Cori (NERSC)
 
 .. image:: https://6lli539m39y3hpkelqsm3c2fg-wpengine.netdna-ssl.com/wp-content/uploads/2017/08/Cori-NERSC.png
 
-The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the IPythonParallel executor and connects to Cori's Slurm scheduler. It uses a remote SSH channel that allows the IPythonParallel controller to be hosted on the script's submission machine (e.g., a PC).  It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
+The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the `HighThroughputExecutor` and connects to Cori's Slurm scheduler.
+It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
-.. literalinclude:: ../../parsl/configs/cori_htex_local_multinode.py
+.. literalinclude:: ../../parsl/configs/cori.py
 
 
 Stampede2 (TACC)
@@ -200,7 +207,18 @@ Stampede2 (TACC)
 
 The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
 
-.. literalinclude:: ../../parsl/configs/stampede2_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/stampede2.py
+
+Frontera (TACC)
+---------------
+
+.. image:: https://fronteraweb.tacc.utexas.edu/media/filer_public/e2/66/e266466f-502e-4bfe-92d6-3634d697ed99/frontera-home.jpg
+
+Deployed in June 2019, Frontera is the 5th most powerful supercomputer in the world. Frontera replaces the NSF Blue Waters system at NCSA
+and is the first deployment in the National Science Foundation's petascale computing program. The configuration below assumes that the user is
+running on a login node and uses the `SlurmProvider` to interface with the scheduler, and uses the `SrunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/frontera.py
 
 
 Theta (ALCF)
@@ -212,7 +230,7 @@ The following snippet shows an example configuration for executing on Argonne Le
 **Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
 using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/theta_local_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/theta.py
 
 
 Cooley (ALCF)
@@ -225,7 +243,7 @@ The following snippet shows an example configuration for executing on Argonne Le
 The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler 
 using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude:: ../../parsl/configs/cooley_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/cooley.py
 
 
 Blue Waters (Cray)
@@ -237,19 +255,7 @@ The following snippet shows an example configuration for executing remotely on B
 The configuration assumes the user is running on a login node and uses the `TorqueProvider` to interface
 with the scheduler, and uses the `AprunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/bluewaters_htex.py
-
-
-Swan (Cray)
------------
-
-.. image:: https://www.cray.com/blog/wp-content/uploads/2016/11/XC50-feat-blog.jpg
-
-The following snippet shows an example configuration for executing remotely on Swan, an XC50 machine hosted by the Cray Partner Network.
-The example uses an `SSHChannel` to connect remotely Swan, uses the `TorqueProvider` to interface with the scheduler and the `AprunLauncher`
-to launch workers on the machine
-
-.. literalinclude:: ../../parsl/configs/swan_ipp_multinode.py
+.. literalinclude:: ../../parsl/configs/bluewaters.py
 
 
 Summit (ORNL)
@@ -260,7 +266,7 @@ Summit (ORNL)
 The following snippet shows an example configuration for executing from the login node on Summit, the leadership class supercomputer hosted at the Oak Ridge National Laboratory.
 The example uses the `LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `JsrunLauncher` to launch workers across the compute nodes.
 
-.. literalinclude:: ../../parsl/configs/summit_local_htex.py
+.. literalinclude:: ../../parsl/configs/summit.py
 
 
 CC-IN2P3
@@ -272,7 +278,7 @@ The snippet below shows an example configuration for executing from a login node
 The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
 This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
 
-.. literalinclude:: ../../parsl/configs/cc_in2p3_local_single_node.py
+.. literalinclude:: ../../parsl/configs/cc_in2p3.py
 
 Midway (RCC, UChicago)
 ----------------------
@@ -284,7 +290,7 @@ The snippet below shows an example configuration for executing remotely on Midwa
 The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
 with the scheduler, and uses the `SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/midway_htex_multinode.py
+.. literalinclude:: ../../parsl/configs/midway.py
 
 
 Open Science Grid
@@ -294,10 +300,11 @@ Open Science Grid
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
 The snippet below shows an example configuration for executing remotely on OSG.
-The configuration uses the `SSHChannel` to connect remotely to OSG, uses the `CondorProvider` to interface
-with the scheduler.
+The configuration uses the `CondorProvider` to interface with the scheduler.
 
-.. literalinclude:: ../../parsl/configs/osg_ipp_multinode.py
+.. note:: This config was last tested with 0.8.0
+
+.. literalinclude:: ../../parsl/configs/osg.py
 
 Amazon Web Services
 -------------------
@@ -313,7 +320,7 @@ The snippet below shows an example configuration for provisioning nodes from the
 The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
 re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
 
-.. literalinclude:: ../../parsl/configs/ec2_htex_single_node.py
+.. literalinclude:: ../../parsl/configs/ec2.py
 
 Kubernetes Clusters
 -------------------
@@ -324,7 +331,7 @@ Kubernetes is an open-source system for container management, such as automating
 The snippet below shows an example configuration for deploying pods as workers on a Kubernetes cluster.
 The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in `~/.kube/config`.
 
-.. literalinclude:: ../../parsl/configs/kubernetes_htex.py
+.. literalinclude:: ../../parsl/configs/kubernetes.py
 
 
 Ad-Hoc Clusters
@@ -338,7 +345,7 @@ To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create 
 for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
 configuration follows.
 
-.. literalinclude:: ../../parsl/configs/ad_hoc_htex.py
+.. literalinclude:: ../../parsl/configs/ad_hoc.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
@@ -349,6 +356,23 @@ configuration follows.
    `here <https://github.com/Parsl/parsl/issues/941>`_.
 
 
+Work Queue (CCL ND)
+------------------
+
+.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
+
+The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large. This examples uses the `WorkQueueExecutor` to schedule tasks locally, and assumes that Work Queue workers have been externally connected to the master using the `work_queue_worker` or `condor_submit_workers` command line utilities from CCTools. For more information the process of submitting tasks and workers to Work Queue, please refer to the `CCTools Work Queue documentation <https://cctools.readthedocs.io/en/latest/work_queue/>`.
+
+.. literalinclude::  ../../parsl/configs/wqex_local.py
+
+To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment (instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`):
+
+.. codeblock:: bash
+    $ conda create -y --name <environment> python=<version>
+    $ conda activate <environment>
+    $ conda install -y -c conda-forge cctools
+
+This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library. 
 
 
 Further help

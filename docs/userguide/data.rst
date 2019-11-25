@@ -124,7 +124,7 @@ In order to manage where data is staged users may configure the default ``workin
             ]
         )
 
-When using the Globus scheme Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the ``endpoint_name`` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
+When using the Globus scheme Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the ``endpoint_uuid`` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
 
 In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus endpoint is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the ``endpoint_path`` (the common root path seen in Globus), and the ``local_path`` (the common root path on the local file system). In most cases ``endpoint_path`` and ``local_path`` are the same.
 
@@ -164,3 +164,82 @@ where it will be unattended) by running this command line:
         If authorisation to Globus is necessary, the library will prompt you now.
         Otherwise it will do nothing
         Authorization complete
+
+rsync
+^^^^^
+
+`rsync` can be used to transfer files in the `file:` scheme in configurations where
+workers cannot access the submit side filesystem directly, such as when executing
+on an AWS EC2 instance.
+
+Configuration
+^^^^^^^^^^^^^
+
+rsync must be installed on both the submit and worker side. It can usually be installed
+using the operating system package manager - for example `apt-get install rsync`.
+
+The parameter to RSyncStaging should describe the prefix to be passed to each rsync
+command to connect from workers to the submit side host. This will often be the username
+and public IP address of the submitting system.
+
+.. code-block:: python
+
+        from parsl.data_provider.rsync import RSyncStaging
+
+        config = Config(
+            executors=[
+                HighThroughputExecutor(
+                    storage_access=[HTTPInTaskStaging(), FTPInTaskStaging(), RSyncStaging("benc@" + public_ip)],
+                    ...
+            )
+        )
+
+Authorization
+^^^^^^^^^^^^^
+
+The rsync staging provider delegates all authentication and authorization to the 
+underlying rsync command. This command must be correctly authorized to connect back to 
+the submitting system. The form of this authorization will depend on the systems in 
+question.
+
+This example installs an ssh key from the submit side filesystem and turns off host key 
+checking, in the worker_init initialization of an EC2 instance. The ssh key must have 
+sufficient privileges to run rsync over ssh on the submitting system.
+
+.. code-block:: python
+
+        with open("rsync-callback-ssh", "r") as f:
+            private_key = f.read()
+
+        ssh_init = """
+        mkdir .ssh
+        chmod go-rwx .ssh
+
+        cat > .ssh/id_rsa <<EOF
+        {private_key}
+        EOF
+
+        cat > .ssh/config <<EOF
+        Host *
+          StrictHostKeyChecking no
+        EOF
+
+        chmod go-rwx .ssh/id_rsa
+        chmod go-rwx .ssh/config
+
+        """.format(private_key=private_key)
+
+        config = Config(
+            executors=[
+                HighThroughputExecutor(
+                    storage_access=[HTTPInTaskStaging(), FTPInTaskStaging(), RSyncStaging("benc@" + public_ip)],
+                    provider=AWSProvider(
+                    ...
+                    worker_init = ssh_init
+                    ...
+                    )
+
+            )
+        )
+
+

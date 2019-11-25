@@ -27,8 +27,9 @@ parsl.providers.TorqueProvider
 
    .. autosummary::
    
+      ~TorqueProvider.cores_per_node
       ~TorqueProvider.current_capacity
       ~TorqueProvider.label
-      ~TorqueProvider.scaling_enabled
+      ~TorqueProvider.mem_per_node
    
    

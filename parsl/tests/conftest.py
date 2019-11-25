@@ -63,6 +63,10 @@ def pytest_configure(config):
         'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
+    config.addinivalue_line(
+        'markers',
+        'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
+    )
 
 
 @pytest.fixture(scope='session')
@@ -225,14 +229,14 @@ def apply_masks(request, pytestconfig):
     and configs which are not `local` are skipped if the `local` decorator is applied.
     """
     config = pytestconfig.getoption('config')[0]
-    m = request.node.get_marker('whitelist')
+    m = request.node.get_closest_marker('whitelist')
     if m is not None:
         if os.path.abspath(config) not in chain.from_iterable([glob(x) for x in m.args]):
             if 'reason' not in m.kwargs:
                 pytest.skip("config '{}' not in whitelist".format(config))
             else:
                 pytest.skip(m.kwargs['reason'])
-    m = request.node.get_marker('blacklist')
+    m = request.node.get_closest_marker('blacklist')
     if m is not None:
         if os.path.abspath(config) in chain.from_iterable([glob(x) for x in m.args]):
             if 'reason' not in m.kwargs:
@@ -264,7 +268,7 @@ def setup_data():
 
 
 def pytest_make_collect_report(collector):
-    call = runner.CallInfo(lambda: list(collector.collect()), 'collect')
+    call = runner.CallInfo.from_call(lambda: list(collector.collect()), 'collect')
     longrepr = None
     if not call.excinfo:
         outcome = "passed"

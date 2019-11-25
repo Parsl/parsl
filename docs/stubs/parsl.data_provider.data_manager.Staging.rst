@@ -13,6 +13,7 @@ parsl.data\_provider.data\_manager.Staging
 
    .. autosummary::
    
+      ~Staging.__init__
       ~Staging.can_stage_in
       ~Staging.can_stage_out
       ~Staging.replace_task
