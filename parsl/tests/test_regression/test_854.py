@@ -6,7 +6,6 @@ import random
 
 
 def consumer(in_q, out_q, delay=0):
-    import time
     while True:
         x = in_q.get()
         time.sleep(delay)
@@ -55,7 +54,7 @@ def test_mac_safe_queue_size():
     p = multiprocessing.Process(target=consumer, args=(task_q, result_q,))
     p.start()
     task_q.put('STOP')
-    time.sleep(0.1)
+    p.join()
     assert result_q.empty() is False, "Result queue should not be empty"
     qlen = result_q.qsize()
     assert qlen == x + 1, "Result queue should be {} instead got {}".format(x + 1, qlen)
