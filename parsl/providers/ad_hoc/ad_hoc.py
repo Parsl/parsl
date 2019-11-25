@@ -4,7 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SimpleLauncher
-from parsl.providers.provider_base import ExecutionProvider, JobState
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import ScriptPathError
 from parsl.utils import RepresentationMixin
 
@@ -111,7 +111,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             channel_counts = {channel: 0 for channel in self.channels}
             for job_id in self.resources:
                 channel = self.resources[job_id]['channel']
-                if self.resources[job_id]['status'] == JobState.RUNNING:
+                if self.resources[job_id]['status'].state == JobState.RUNNING:
                     channel_counts[channel] = channel_counts.get(channel, 0) + 1
                 else:
                     channel_counts[channel] = channel_counts.get(channel, 0)
@@ -193,7 +193,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 raise
 
         self.resources[job_id] = {'job_id': job_id,
-                                  'status': JobState.RUNNING,
+                                  'status': JobStatus(JobState.RUNNING),
                                   'cmd': final_cmd,
                                   'channel': channel,
                                   'remote_pid': remote_pid,

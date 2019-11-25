@@ -22,6 +22,24 @@ class JobState(bytes, Enum):
     HELD = (7, False)
 
 
+class JobStatus(object):
+    """Encapsulates a job state together with other details, presently a (error) message"""
+
+    def __init__(self, state: JobState, message: str = None):
+        self.state = state
+        self.message = message
+
+    @property
+    def terminal(self):
+        return self.state.terminal
+
+    def __repr__(self):
+        if self.message is not None:
+            return "{} ({})".format(self.state, self.message)
+        else:
+            return "{}".format(self.state)
+
+
 class ExecutionProvider(metaclass=ABCMeta):
     """ Define the strict interface for all Execution Providers
 
@@ -68,7 +86,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def status(self, job_ids: List[Any]) -> List[str]:
+    def status(self, job_ids: List[Any]) -> List[JobStatus]:
         ''' Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
