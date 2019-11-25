@@ -65,7 +65,8 @@ class LocalChannel(Channel, RepresentationMixin):
                 stderr=subprocess.PIPE,
                 cwd=self.userhome,
                 env=current_env,
-                shell=True
+                shell=True,
+                preexec_fn=os.setpgrp
             )
             proc.wait(timeout=walltime)
             stdout = proc.stdout.read()
