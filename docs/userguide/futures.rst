@@ -60,7 +60,7 @@ the addition executes only when the two `sleep_double()` function calls complete
       doubled_x1 = sleep_double(10)
       doubled_x2 = sleep_double(5)
 
-      # The result() function will block until the two app calls have completed
+      # The result() function will block until each of the corresponding app calls have completed
       print(doubled_x1.result() + doubled_x2.result())
 
 2. An AppFuture's ``done()`` function can be used to check the status of an app, *without blocking*.
