@@ -51,7 +51,7 @@ The following alternative formulation is valid Parsl.
        print(good_double(42, factor))
 
 An input argument 
-may be a Python object or a DataFuture (see :ref:`label-futures`) returned by another app. 
+may be a Python object or any `Future` (see :ref:`label-futures`) returned by another app.
 In the latter case, Parsl will wait until the future is resolved before executing the app,
 as we discuss in more detail in :ref:`label-futures`.
 
