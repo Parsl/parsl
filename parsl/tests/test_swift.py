@@ -59,7 +59,6 @@ def test_except():
 if __name__ == "__main__":
     parsl.set_stream_logger()
 
-
     # test_simple()
     # test_slow()
     test_except()
