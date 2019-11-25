@@ -136,6 +136,7 @@ class FlowControl(object):
                  triggered the callback
         """
         self._wake_up_time = time.time() + self.interval
+        # noinspection PyBroadException
         try:
             self.callback(tasks=self._event_buffer, kind=kind)
         except Exception:

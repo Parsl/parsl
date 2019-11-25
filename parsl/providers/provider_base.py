@@ -7,6 +7,7 @@ class JobState(bytes, Enum):
     """Defines a set of states that a job can be in"""
 
     def __new__(cls, value, terminal):
+        # noinspection PyArgumentList
         obj = bytes.__new__(cls, [value])
         obj._value_ = value
         obj.terminal = terminal
