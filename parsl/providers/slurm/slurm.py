@@ -238,7 +238,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = JobStatus(JobState.CANCELED)  # Setting state to cancelled
+                self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)  # Setting state to cancelled
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
