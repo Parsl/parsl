@@ -535,7 +535,7 @@ def monitor(pid,
             first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
- 
+
         try:
             msg = command_q.get(block=False)
             if msg == "Finished":
