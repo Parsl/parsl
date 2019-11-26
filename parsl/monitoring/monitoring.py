@@ -32,7 +32,7 @@ def start_file_logger(filename, name='monitoring', level=logging.DEBUG, format_s
     filename: string
         Name of the file to write logs to. Required.
     name: string
-        Logger name. Default="parsl.executors.interchange"
+        Logger name.
     level: logging.LEVEL
         Set the logging level. Default=logging.DEBUG
         - format_string (string): Set the format string
