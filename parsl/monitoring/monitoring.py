@@ -296,6 +296,10 @@ class MonitoringHub(RepresentationMixin):
                 command_q.put("Finished")
                 p.join()
                 return res
+            except:
+                command_q.put("Finished")
+                p.join()
+                raise
             finally:
                 # There's a chance of zombification if the workers are killed by some signals
                 p.terminate()
@@ -531,7 +535,7 @@ def monitor(pid,
             first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
-
+ 
         try:
             msg = command_q.get(block=False)
             if msg == "Finished":
