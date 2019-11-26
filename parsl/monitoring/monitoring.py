@@ -296,7 +296,7 @@ class MonitoringHub(RepresentationMixin):
                 command_q.put("Finished")
                 p.join()
                 return res
-            except:
+            except Exception:
                 command_q.put("Finished")
                 p.join()
                 raise
