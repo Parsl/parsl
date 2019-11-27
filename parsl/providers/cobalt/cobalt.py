@@ -126,7 +126,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['RUNNING', 'KILLING', 'EXITING']:
                 self.resources[missing_job]['status'] = translate_table['EXITING']
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.cobalt"):
         """ Submits the command onto an Local Resource Manager job of parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
