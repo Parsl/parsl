@@ -3,17 +3,17 @@
 Composing a workflow
 ====================
 
-Workflows in Parsl are created implicitly based on the passing of control or data between apps. The flexibility of this model allows for the implementation of a wide range of workflow patterns from sequential through to complex nested, parallel workflows. 
+Workflows in Parsl are created implicitly based on the passing of control or data between apps. The flexibility of this model allows for the implementation of a wide range of workflow patterns, from sequential to complex nested, parallel workflows. 
 
-Parsl is also designed to address broad execution requirements from workflows that run a large number of very small tasks to those that run few long running tasks. In each case, Parsl can be configured to optimize deployment towards performance or fault tolerance.
+Parsl is also designed to address broad execution requirements, from workflows that run many small tasks to those that run few long running tasks. In each case, Parsl can be configured to optimize deployment towards performance or fault tolerance.
 
-Below we illustrate a range of workflow patterns, however it is important to note that this set of examples is by no means comprehensive.
+Below we illustrate a range of workflow patterns. It is important to note that this set of examples is by no means comprehensive.
 
 
-Procedural workflows
+Sequential workflows
 --------------------
 
-Simple sequential or procedural workflows can be created by passing an AppFuture from one task to another. The following example shows one such workflow which first generates a random number and then writes it to a file. Note that this example demonstrates the use of both Python and Bash apps.
+Simple sequential workflows can be created by passing an AppFuture from one task to another. For example, in the following program the `generate` app (a Python app) generates a random number that is consumed by the `save` app (a Bash app), which writes it to a file. Because `save` cannot execute until it receives the `message` produced by `generate`, the two apps execute in sequence.
 
 .. code-block:: python
 
@@ -40,7 +40,7 @@ Simple sequential or procedural workflows can be created by passing an AppFuture
 Parallel workflows
 ------------------
 
-Parallel execution occurs automatically in Parsl, respecting dependencies among app executions. The following example shows how a single app can be used with and without dependencies to demonstrate parallel execution.
+Parallel execution occurs automatically in Parsl, respecting dependencies among app executions. In the following example, three instances of the `wait_sleep_double` app are created. The first two execute concurrently, as they have no dependencies; the third must wait until the first two complete and thus futures `doubled_x` and `doubled_y` have values. Note that this sequencing occurs even though `wait_sleep_double` does not in fact use its second and third arguments.
 
 .. code-block:: python
 
@@ -55,7 +55,7 @@ Parallel execution occurs automatically in Parsl, respecting dependencies among 
       doubled_x = wait_sleep_double(10, None, None)
       doubled_y = wait_sleep_double(10, None, None)
 
-      # The third depends on the first two:
+      # The third app depends on the first two:
       #    doubled_x   doubled_y     (2 s)
       #           \     /
       #           doublex_z          (2 s)
@@ -67,7 +67,7 @@ Parallel execution occurs automatically in Parsl, respecting dependencies among 
 Parallel workflows with loops
 -----------------------------
 
-One of the most common ways that Parsl apps are executed in parallel is via loops. The following example shows how a simple loop can be used to create many random numbers in parallel.
+A common approach to executing Parsl apps in parallel is via loops. The following example uses a simple loop to create many random numbers in parallel.
 
 .. code-block:: python
 
@@ -75,21 +75,16 @@ One of the most common ways that Parsl apps are executed in parallel is via loop
     def generate(limit):
         from random import randint
         """Generate a random integer and return it"""
-        return randint(1,limit)
+        return randint(1, limit)
 
     rand_nums = []
     for i in range(1,5):
         rand_nums.append(generate(i))
 
     # Wait for all apps to finish and collect the results
-    outputs = [i.result() for i in rand_nums]
+    outputs = [r.result() for r in rand_nums]
 
-
-
-Parallel dataflows
-------------------
-
-Parallel dataflows can be developed by passing data between apps. In the following example a set of files, each with a random number, is created by the generate app. These files are then concatenated into a single file, which is subsequently used to compute the sum of all numbers. 
+In the preceding example, the execution of different tasks is coordinated by passing Python objects from producers to consumers. In other cases, it can be convenient to pass data in files, as in the following reformulation. Here, a set of files, each with a random number, is created by the `generate` app. These files are then concatenated into a single file, which is subsequently used to compute the sum of all numbers. 
 
 .. code-block:: python
 
