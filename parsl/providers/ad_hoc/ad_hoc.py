@@ -124,7 +124,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 if channel_counts[channel] == 0:
                     yield channel
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.adhoc"):
         ''' Submits the command onto a channel from the list of channels
 
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -138,7 +138,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
           command invocations to be launched per node
 
         job_name: (String)
-          Name of the job. Default : parsl.auto
+          Name of the job. Default : parsl.adhoc
 
 
         Returns

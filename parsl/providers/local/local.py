@@ -138,7 +138,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return True
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.localprovider"):
         ''' Submits the command onto an Local Resource Manager job.
         Submit returns an ID that corresponds to the task that was just submitted.
 

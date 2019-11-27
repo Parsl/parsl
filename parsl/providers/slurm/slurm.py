@@ -152,7 +152,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
                 self.resources[missing_job]['status'] = 'COMPLETED'
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.slurm"):
         """Submit the command as a slurm job.
 
         Parameters
