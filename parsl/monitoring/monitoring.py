@@ -292,14 +292,11 @@ class MonitoringHub(RepresentationMixin):
                         name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
-                res = f(*args, **kwargs)
-                command_q.put("Finished")
-                p.join()
-                return res
-            except Exception:
-                command_q.put("Finished")
-                p.join()
-                raise
+                try:
+                    return f(*args, **kwargs)
+                finally:
+                    command_q.put("Finished")
+                    p.join()
             finally:
                 # There's a chance of zombification if the workers are killed by some signals
                 p.terminate()
