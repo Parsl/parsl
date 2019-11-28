@@ -125,10 +125,10 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                  parallelism=1,
                  worker_init='',
                  location='westus',
-                 group_name='parsl.auto',
+                 group_name='parsl.group',
                  key_name=None,
                  key_file=None,
-                 vnet_name="parsl.auto",
+                 vnet_name="parsl.vnet",
                  linger=False,
                  launcher=SingleNodeLauncher()):
         if not _api_enabled:
@@ -208,7 +208,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     def submit(self,
                command='sleep 1',
                tasks_per_node=1,
-               job_name="parsl.auto"):
+               job_name="parsl.azure"):
         """
         Submit the command onto a freshly instantiated Azure VM
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -244,7 +244,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                                                   self.vm_reference)
 
         # Uniqueness strategy from AWS provider
-        job_name = "{0}-parsl-auto".format(str(time.time()).replace(".", ""))
+        job_name = "{0}-parsl-azure".format(str(time.time()).replace(".", ""))
 
         async_vm_creation = self.compute_client.\
             virtual_machines.create_or_update(

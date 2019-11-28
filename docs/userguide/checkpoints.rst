@@ -7,8 +7,8 @@ Large scale workflows are prone to errors due to node failures, application or e
 Parsl's checkpointing model provides workflow resilience and fault tolerance.
 
 .. note::
-   Checkpointing is *only* possible for apps which have AppCaching enabled.
-   If AppCaching is disabled in the config ``Config.app_cache``, checkpointing will
+   Checkpointing is *only* possible for apps which have app caching enabled.
+   If app caching is disabled in the config ``Config.app_cache``, checkpointing will
    **not** work.
 
 Parsl follows an incremental checkpointing model, where each checkpoint file contains

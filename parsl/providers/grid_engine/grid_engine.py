@@ -108,7 +108,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                                                   self.nodes_per_block)
         return job_config
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.sge"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
