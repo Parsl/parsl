@@ -8,8 +8,6 @@ import parsl
 from parsl.app.app import App
 from parsl.tests.configs.local_ipp import config
 
-parsl.set_stream_logger()
-
 
 @App('python')
 def double(x):
@@ -105,6 +103,8 @@ def demonstrate_custom_exception():
 
 
 if __name__ == '__main__':
+    parsl.set_stream_logger()
+
     parsl.clear()
     parsl.load(config)
 
