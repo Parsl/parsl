@@ -62,5 +62,5 @@ config = Config(
                     hub_port=55055,
                     monitoring_debug=False,
                     resource_monitoring_interval=1,
-                )
     )
+)
