@@ -546,31 +546,6 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-         - name (string) : Set the logger name.
-         - level (logging.LEVEL) : Set to logging.DEBUG by default.
-         - format_string (sting) : Set to None by default.
-
-    Returns:
-         - None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
-        # format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
