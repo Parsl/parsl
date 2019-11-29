@@ -43,7 +43,8 @@ class SingleNodeLauncher(Launcher):
         """
         task_blocks = tasks_per_node * nodes_per_block
 
-        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+        x = '''set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={1}
 
@@ -83,7 +84,8 @@ class GnuParallelLauncher(Launcher):
         """
         task_blocks = tasks_per_node * nodes_per_block
 
-        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+        x = '''set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
@@ -139,7 +141,8 @@ class MpiExecLauncher(Launcher):
         """
         task_blocks = tasks_per_node * nodes_per_block
 
-        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+        x = '''set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
@@ -186,7 +189,8 @@ class MpiRunLauncher(Launcher):
         """
         task_blocks = tasks_per_node * nodes_per_block
 
-        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+        x = '''set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
@@ -225,7 +229,8 @@ class SrunLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        x = '''export CORES=$SLURM_CPUS_ON_NODE
+        x = '''set -e
+export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
 echo "Found cores : $CORES"
@@ -271,7 +276,8 @@ class SrunMPILauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        x = '''export CORES=$SLURM_CPUS_ON_NODE
+        x = '''set -e
+export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
 echo "Found cores : $CORES"
@@ -338,7 +344,7 @@ class AprunLauncher(Launcher):
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block
-        x = '''
+        x = '''set -e
 WORKERCOUNT={1}
 
 cat << APRUN_EOF > cmd_$JOBNAME.sh
@@ -382,7 +388,7 @@ class JsrunLauncher(Launcher):
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block
-        x = '''
+        x = '''set -e
 WORKERCOUNT={1}
 
 cat << JSRUN_EOF > cmd_$JOBNAME.sh
