@@ -230,7 +230,8 @@ class MonitoringHub(RepresentationMixin):
                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                           "run_id": run_id
                                   },
-                                  name="Monitoring-Queue-Process"
+                                  name="Monitoring-Queue-Process",
+                                  daemon=True,
         )
         self.queue_proc.start()
 
@@ -240,7 +241,8 @@ class MonitoringHub(RepresentationMixin):
                                         "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                         "db_url": self.logging_endpoint,
                                   },
-                                name="Monitoring-DBM-Process"
+                                name="Monitoring-DBM-Process",
+                                daemon=True,
         )
         self.dbm_proc.start()
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
@@ -268,6 +270,7 @@ class MonitoringHub(RepresentationMixin):
             self.queue_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
             self.priority_msgs.put(("STOP", 0))
+            self.dbm_proc.join()
 
     @staticmethod
     def monitor_wrapper(f,
