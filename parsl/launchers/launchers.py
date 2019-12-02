@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional
 import logging
 
 from parsl.utils import RepresentationMixin
@@ -37,7 +36,7 @@ class WrappedLauncher(Launcher):
     As an example, the wrapped launcher can be used to launch a command
     inside a docker contain by prepending the proper docker invocation"""
 
-    def __init__(self, prepend: Optional[str]=None):
+    def __init__(self, prepend: str):
         """
         Args:
              prepend (str): Command to use before the launcher (e.g., ``time``)
@@ -51,7 +50,7 @@ class WrappedLauncher(Launcher):
         if nodes_per_block > 1:
             logger.warning('WrappedLauncher ignores the number of nodes per block. '
                            'You may be getting fewer workers than expected')
-        return f"{self.prepend or ''} {command}"
+        return "{0} {1}".format(self.prepend, command)
 
 
 class SingleNodeLauncher(Launcher):
