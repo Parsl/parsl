@@ -17,7 +17,7 @@ those timing parameters control.
 
 # imports for monitoring:
 # import logging
-# from parsl.monitoring import MonitoringHub
+from parsl.monitoring import MonitoringHub
 
 import os
 
@@ -57,10 +57,11 @@ config = Config(
     ],
     strategy='simple',
     app_cache=True, checkpoint_mode='task_exit',
-    retries=2)
-#   monitoring=MonitoringHub(
-#                    hub_address="localhost",
-#                    hub_port=55055,
-#                    logging_level=logging.INFO,
-#                    resource_monitoring_interval=1,
-#                ),
+    retries=2,
+    monitoring=MonitoringHub(
+                   hub_address="localhost",
+                   hub_port=55055,
+                   monitoring_debug=False,
+                   resource_monitoring_interval=1,
+    ),
+)
