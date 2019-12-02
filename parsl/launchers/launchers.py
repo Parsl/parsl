@@ -1,6 +1,10 @@
 from abc import ABCMeta, abstractmethod
+from typing import Optional
+import logging
 
 from parsl.utils import RepresentationMixin
+
+logger = logging.getLogger(__name__)
 
 
 class Launcher(RepresentationMixin, metaclass=ABCMeta):
@@ -25,6 +29,29 @@ class SimpleLauncher(Launcher):
 
         """
         return command
+
+
+class WrappedLauncher(Launcher):
+    """Wraps the command by prepending commands before a user's command
+
+    As an example, the wrapped launcher can be used to launch a command
+    inside a docker contain by prepending the proper docker invocation"""
+
+    def __init__(self, prepend: Optional[str]=None):
+        """
+        Args:
+             prepend (str): Command to use before the launcher (e.g., ``time``)
+        """
+        self.prepend = prepend
+
+    def __call__(self, command, tasks_per_node, nodes_per_block):
+        if tasks_per_node > 1:
+            logger.warning('WrappedLauncher ignores the number of tasks per node. '
+                           'You may be getting fewer workers than expected')
+        if nodes_per_block > 1:
+            logger.warning('WrappedLauncher ignores the number of nodes per block. '
+                           'You may be getting fewer workers than expected')
+        return f"{self.prepend or ''} {command}"
 
 
 class SingleNodeLauncher(Launcher):
