@@ -454,6 +454,7 @@ def monitor(pid,
 
     import logging
     import time
+    import queue
     from multiprocessing import Queue
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
@@ -538,7 +539,7 @@ def monitor(pid,
             if msg == "Finished":
                 logging.info("Received task finished message. Ending the monitoring loop now.")
                 break
-        except Queue.empty:
+        except queue.Empty:
             logging.debug("Have not received any message.")
 
         logging.debug("sleeping")
