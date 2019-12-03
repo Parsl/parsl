@@ -233,6 +233,8 @@ echo "Found nodes : $NODES"
 WORKERCOUNT={1}
 
 cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
+echo inside parsl srun cmd_ script
+echo hostname $(hostname)
 {0}
 SLURM_EOF
 chmod a+x cmd_$SLURM_JOB_NAME.sh
