@@ -75,6 +75,9 @@ class Database(object):
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
 
+    def rollback(self):
+        self.session.rollback()
+
     def _generate_mappings(self, table, columns=None, messages=[]):
         mappings = []
         for msg in messages:
@@ -380,10 +383,18 @@ class DatabaseManager(object):
                     self.pending_node_queue.put(x[-1])
 
     def _update(self, table, columns, messages):
-        self.db.update(table=table, columns=columns, messages=messages)
+        try:
+            self.db.update(table=table, columns=columns, messages=messages)
+        except Exception:
+            self.db.rollback()
+            self.logger.exception("Got exception when trying to update Table {}".format(table))
 
     def _insert(self, table, messages):
-        self.db.insert(table=table, messages=messages)
+        try:
+            self.db.insert(table=table, messages=messages)
+        except Exception:
+            self.db.rollback()
+            self.logger.exception("Got exception when trying to insert to Table {}".format(table))
 
     def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
         messages = []
