@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+print("process worker pool starting: start of imports")
 import argparse
 import logging
 import os
@@ -26,6 +27,7 @@ import multiprocessing
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
 
+print("process worker pool starting: end of imports")
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
 
@@ -568,7 +570,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
 
 
 if __name__ == "__main__":
-
+    print("process worker pool starting: start of main")
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
