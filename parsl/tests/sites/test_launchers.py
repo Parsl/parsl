@@ -9,5 +9,3 @@ def test_wrapped_launcher(caplog):
     w('test', 2, 2)
     assert 'tasks per node' in caplog.text
     assert 'nodes per block' in caplog.text
-
-
