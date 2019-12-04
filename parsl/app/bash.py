@@ -62,11 +62,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if stdfspec is None:
             return None
 
-        try:
-            fname, mode = get_std_fname_mode(fdname, stdfspec)
-        except pe.BadStdStreamFile:
-            raise
-
+        fname, mode = get_std_fname_mode(fdname, stdfspec)
         try:
             if os.path.dirname(fname):
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
