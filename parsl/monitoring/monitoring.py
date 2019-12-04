@@ -215,12 +215,13 @@ class MonitoringHub(RepresentationMixin):
                                                               max_port=self.client_port_range[1])
 
         comm_q = Queue(maxsize=10)
+        self.exception_q = Queue(maxsize=10)
         self.priority_msgs = Queue()
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
+                                  args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
@@ -235,7 +236,7 @@ class MonitoringHub(RepresentationMixin):
         self.queue_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
-                                args=(self.priority_msgs, self.node_msgs, self.resource_msgs,),
+                                args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                         "db_url": self.logging_endpoint,
@@ -261,6 +262,18 @@ class MonitoringHub(RepresentationMixin):
     def close(self):
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
+        try:
+            self.exception_q.get(block=False)
+            self.logger.info("Either Hub or DBM got exception. Closing MonitoringHub.")
+            if self._dfk_channel and self.monitoring_hub_active:
+                self.monitoring_hub_active = False
+                self._dfk_channel.close()
+                self.queue_proc.terminate()
+                self.dbm_proc.terminate()
+                self.queue_proc.join()
+                self.dbm_proc.join()
+        except queue.Empty:
+            pass
         if self._dfk_channel and self.monitoring_hub_active:
             self.monitoring_hub_active = False
             self._dfk_channel.close()
@@ -433,10 +446,17 @@ class Hub(object):
         self.logger.info("Hub finished")
 
 
-def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     hub = Hub(*args, **kwargs)
     comm_q.put((hub.hub_port, hub.ic_port))
-    hub.start(priority_msgs, node_msgs, resource_msgs)
+    hub.logger.info("Starting Hub in Hub starter")
+    try:
+        hub.start(priority_msgs, node_msgs, resource_msgs)
+    except Exception:
+        hub.logger.exception("hub.start exception")
+        exception_q.put("Hub got exception")
+
+    hub.logger.info("End of hub starter")
 
 
 def monitor(pid,
