@@ -70,7 +70,7 @@ class FlowControl(object):
     from a duplicate logger being added by the thread.
     """
 
-    def __init__(self, dfk, *args, threshold=20, interval=5):
+    def __init__(self, dfk, *args, threshold=20, interval=180):
         """Initialize the flowcontrol object.
 
         We start the timer thread here
