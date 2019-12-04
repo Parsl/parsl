@@ -107,10 +107,9 @@ def get_std_fname_mode(fdname, stdfspec):
     elif isinstance(stdfspec, tuple):
         if len(stdfspec) != 2:
             raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
-        else:
-            fname, mode = stdfspec
-            if not isinstance(fname, str) or not isinstance(mode, str):
-                raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+        fname, mode = stdfspec
+        if not isinstance(fname, str) or not isinstance(mode, str):
+            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
     else:
         raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
     return fname, mode
