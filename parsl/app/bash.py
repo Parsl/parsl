@@ -16,6 +16,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     import logging
     import parsl.app.errors as pe
     from parsl import set_file_logger
+    from parsl.utils import get_std_fname_mode
 
     logbase = "/tmp"
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
@@ -60,15 +61,11 @@ def remote_side_bash_executor(func, *args, **kwargs):
         stdfspec = kwargs.get(fdname)  # spec is str name or tuple (name, mode)
         if stdfspec is None:
             return None
-        elif isinstance(stdfspec, str):
-            fname = stdfspec
-            mode = 'a+'
-        elif isinstance(stdfspec, tuple):
-            if len(stdfspec) != 2:
-                raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
-            fname, mode = stdfspec
-        else:
-            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+
+        try:
+            fname, mode = get_std_fname_mode(fdname, stdfspec)
+        except pe.BadStdStreamFile:
+            raise
 
         try:
             if os.path.dirname(fname):

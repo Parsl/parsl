@@ -31,7 +31,7 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.utils import get_version
+from parsl.utils import get_version, get_std_fname_mode
 
 from parsl.monitoring.message_type import MessageType
 
@@ -197,8 +197,20 @@ class DataFlowKernel(object):
         task_log_info['task_inputs'] = str(self.tasks[task_id]['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(self.tasks[task_id]['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
-        task_log_info['task_stdout'] = self.tasks[task_id]['kwargs'].get('stdout', None)
-        task_log_info['task_stderr'] = self.tasks[task_id]['kwargs'].get('stderr', None)
+        stdout_spec = self.tasks[task_id]['kwargs'].get('stdout', None)
+        stderr_spec = self.tasks[task_id]['kwargs'].get('stderr', None)
+        try:
+            stdout_name, stdout_mode = get_std_fname_mode('stdout', stdout_spec)
+        except Exception as e:
+            stdout_name, stdout_mode = str(e), None
+        try:
+            stderr_name, stderr_mode = get_std_fname_mode('stderr', stderr_spec)
+        except Exception as e:
+            stderr_name, stderr_mode = str(e), None
+        stdout_spec = ";".join((stdout_name, stdout_mode)) if stdout_mode else stdout_name
+        stderr_spec = ";".join((stderr_name, stderr_mode)) if stderr_mode else stderr_name
+        task_log_info['task_stdout'] = stdout_spec
+        task_log_info['task_stderr'] = stderr_spec
         task_log_info['task_fail_history'] = None
         if self.tasks[task_id]['fail_history'] is not None:
             task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
