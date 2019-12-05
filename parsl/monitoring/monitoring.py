@@ -273,17 +273,15 @@ class MonitoringHub(RepresentationMixin):
         if self._dfk_channel and self.monitoring_hub_active:
             self.monitoring_hub_active = False
             self._dfk_channel.close()
-            if exception_msg:
-                self.logger.info("Either Hub or DBM got exception. Cleaning up all monitoring processes.")
+            if exception_msg is not None:
+                self.logger.info("Either Hub or DBM got exception. Terminating all monitoring processes.")
                 self.queue_proc.terminate()
                 self.dbm_proc.terminate()
-                self.queue_proc.join()
-                self.dbm_proc.join()
-                return
             self.logger.info("Waiting for Hub to receive all messages and terminate")
             self.queue_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
-            self.priority_msgs.put(("STOP", 0))
+            if exception_msg is None:
+                self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
 
     @staticmethod
