@@ -459,4 +459,3 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
         exception_q.put("DBM got exception")
 
     dbm.logger.info("End of dbm_starter")
-        
