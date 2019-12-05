@@ -166,7 +166,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.condor"):
         """Submits the command onto an Local Resource Manager job.
 
         example file with the complex case of multiple submits per job:

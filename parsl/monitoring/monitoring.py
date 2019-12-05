@@ -32,7 +32,7 @@ def start_file_logger(filename, name='monitoring', level=logging.DEBUG, format_s
     filename: string
         Name of the file to write logs to. Required.
     name: string
-        Logger name. Default="parsl.executors.interchange"
+        Logger name.
     level: logging.LEVEL
         Set the logging level. Default=logging.DEBUG
         - format_string (string): Set the format string
@@ -280,17 +280,23 @@ class MonitoringHub(RepresentationMixin):
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
+            command_q = Queue(maxsize=10)
             p = Process(target=monitor,
                         args=(os.getpid(),
                               task_id,
                               monitoring_hub_url,
                               run_id,
+                              command_q,
                               logging_level,
                               sleep_dur),
                         name="Monitor-Wrapper-{}".format(task_id))
             p.start()
             try:
-                return f(*args, **kwargs)
+                try:
+                    return f(*args, **kwargs)
+                finally:
+                    command_q.put("Finished")
+                    p.join()
             finally:
                 # There's a chance of zombification if the workers are killed by some signals
                 p.terminate()
@@ -437,6 +443,7 @@ def monitor(pid,
             task_id,
             monitoring_hub_url,
             run_id,
+            command_q,
             logging_level=logging.INFO,
             sleep_dur=10):
     """Internal
@@ -447,6 +454,7 @@ def monitor(pid,
 
     import logging
     import time
+    import queue
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
@@ -524,6 +532,14 @@ def monitor(pid,
             first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
+
+        try:
+            msg = command_q.get(block=False)
+            if msg == "Finished":
+                logging.info("Received task finished message. Ending the monitoring loop now.")
+                break
+        except queue.Empty:
+            logging.debug("Have not received any message.")
 
         logging.debug("sleeping")
         time.sleep(sleep_dur)
