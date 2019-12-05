@@ -231,7 +231,8 @@ class MonitoringHub(RepresentationMixin):
                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                           "run_id": run_id
                                   },
-                                  name="Monitoring-Queue-Process"
+                                  name="Monitoring-Queue-Process",
+                                  daemon=True,
         )
         self.queue_proc.start()
 
@@ -241,7 +242,8 @@ class MonitoringHub(RepresentationMixin):
                                         "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                         "db_url": self.logging_endpoint,
                                   },
-                                name="Monitoring-DBM-Process"
+                                name="Monitoring-DBM-Process",
+                                daemon=True,
         )
         self.dbm_proc.start()
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
@@ -262,25 +264,27 @@ class MonitoringHub(RepresentationMixin):
     def close(self):
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
+        exception_msg = None
         try:
-            self.exception_q.get(block=False)
-            self.logger.info("Either Hub or DBM got exception. Closing MonitoringHub.")
-            if self._dfk_channel and self.monitoring_hub_active:
-                self.monitoring_hub_active = False
-                self._dfk_channel.close()
-                self.queue_proc.terminate()
-                self.dbm_proc.terminate()
-                self.queue_proc.join()
-                self.dbm_proc.join()
+            exception_msg = self.exception_q.get(block=False)
+            self.logger.info("Either Hub or DBM process got exception.")
         except queue.Empty:
             pass
         if self._dfk_channel and self.monitoring_hub_active:
             self.monitoring_hub_active = False
             self._dfk_channel.close()
+            if exception_msg:
+                self.logger.info("Either Hub or DBM got exception. Cleaning up all monitoring processes.")
+                self.queue_proc.terminate()
+                self.dbm_proc.terminate()
+                self.queue_proc.join()
+                self.dbm_proc.join()
+                return
             self.logger.info("Waiting for Hub to receive all messages and terminate")
             self.queue_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
             self.priority_msgs.put(("STOP", 0))
+            self.dbm_proc.join()
 
     @staticmethod
     def monitor_wrapper(f,
