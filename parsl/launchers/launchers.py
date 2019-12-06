@@ -1,6 +1,9 @@
 from abc import ABCMeta, abstractmethod
+import logging
 
 from parsl.utils import RepresentationMixin
+
+logger = logging.getLogger(__name__)
 
 
 class Launcher(RepresentationMixin, metaclass=ABCMeta):
@@ -27,6 +30,29 @@ class SimpleLauncher(Launcher):
         return command
 
 
+class WrappedLauncher(Launcher):
+    """Wraps the command by prepending commands before a user's command
+
+    As an example, the wrapped launcher can be used to launch a command
+    inside a docker contain by prepending the proper docker invocation"""
+
+    def __init__(self, prepend: str):
+        """
+        Args:
+             prepend (str): Command to use before the launcher (e.g., ``time``)
+        """
+        self.prepend = prepend
+
+    def __call__(self, command, tasks_per_node, nodes_per_block):
+        if tasks_per_node > 1:
+            logger.warning('WrappedLauncher ignores the number of tasks per node. '
+                           'You may be getting fewer workers than expected')
+        if nodes_per_block > 1:
+            logger.warning('WrappedLauncher ignores the number of nodes per block. '
+                           'You may be getting fewer workers than expected')
+        return "{0} {1}".format(self.prepend, command)
+
+
 class SingleNodeLauncher(Launcher):
     """ Worker launcher that wraps the user's command with the framework to
     launch multiple command invocations in parallel. This wrapper sets the
@@ -43,7 +69,8 @@ class SingleNodeLauncher(Launcher):
         """
         task_blocks = tasks_per_node * nodes_per_block
 
-        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+        x = '''set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={1}
 
@@ -83,7 +110,8 @@ class GnuParallelLauncher(Launcher):
         """
         task_blocks = tasks_per_node * nodes_per_block
 
-        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+        x = '''set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
@@ -139,7 +167,8 @@ class MpiExecLauncher(Launcher):
         """
         task_blocks = tasks_per_node * nodes_per_block
 
-        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+        x = '''set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
@@ -186,7 +215,8 @@ class MpiRunLauncher(Launcher):
         """
         task_blocks = tasks_per_node * nodes_per_block
 
-        x = '''export CORES=$(getconf _NPROCESSORS_ONLN)
+        x = '''set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
@@ -225,7 +255,8 @@ class SrunLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        x = '''export CORES=$SLURM_CPUS_ON_NODE
+        x = '''set -e
+export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
 echo "Found cores : $CORES"
@@ -271,7 +302,8 @@ class SrunMPILauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        x = '''export CORES=$SLURM_CPUS_ON_NODE
+        x = '''set -e
+export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
 echo "Found cores : $CORES"
@@ -338,7 +370,7 @@ class AprunLauncher(Launcher):
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block
-        x = '''
+        x = '''set -e
 WORKERCOUNT={1}
 
 cat << APRUN_EOF > cmd_$JOBNAME.sh
@@ -382,7 +414,7 @@ class JsrunLauncher(Launcher):
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block
-        x = '''
+        x = '''set -e
 WORKERCOUNT={1}
 
 cat << JSRUN_EOF > cmd_$JOBNAME.sh
