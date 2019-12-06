@@ -75,6 +75,9 @@ class Database(object):
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
 
+    def rollback(self):
+        self.session.rollback()
+
     def _generate_mappings(self, table, columns=None, messages=[]):
         mappings = []
         for msg in messages:
@@ -380,10 +383,24 @@ class DatabaseManager(object):
                     self.pending_node_queue.put(x[-1])
 
     def _update(self, table, columns, messages):
-        self.db.update(table=table, columns=columns, messages=messages)
+        try:
+            self.db.update(table=table, columns=columns, messages=messages)
+        except Exception:
+            self.logger.exception("Got exception when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                self.logger.exception("Rollback failed")
 
     def _insert(self, table, messages):
-        self.db.insert(table=table, messages=messages)
+        try:
+            self.db.insert(table=table, messages=messages)
+        except Exception:
+            self.logger.exception("Got exception when trying to insert to Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                self.logger.exception("Rollback failed")
 
     def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
         messages = []
@@ -417,7 +434,7 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
     filename: string
         Name of the file to write logs to. Required.
     name: string
-        Logger name. Default="parsl.executors.interchange"
+        Logger name.
     level: logging.LEVEL
         Set the logging level. Default=logging.DEBUG
         - format_string (string): Set the format string
