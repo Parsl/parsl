@@ -124,7 +124,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 if channel_counts[channel] == 0:
                     yield channel
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.adhoc"):
         ''' Submits the command onto a channel from the list of channels
 
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -138,7 +138,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
           command invocations to be launched per node
 
         job_name: (String)
-          Name of the job. Default : parsl.auto
+          Name of the job. Default : parsl.adhoc
 
 
         Returns
@@ -176,7 +176,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         if not isinstance(channel, LocalChannel):
             # Bash would return until the streams are closed. So we redirect to a outs file
-            final_cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
+            final_cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
             retcode, stdout, stderr = channel.execute_wait(final_cmd, self.cmd_timeout)
             for line in stdout.split('\n'):
                 if line.startswith("PID:"):

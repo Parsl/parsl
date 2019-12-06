@@ -39,7 +39,7 @@ def probe_addresses(addresses, task_port, timeout=2):
     start_t = time.time()
 
     first_connected = None
-    while time.time() < start_t + timeout:
+    while time.time() < start_t + timeout and not first_connected:
         for addr in addr_map:
             try:
                 recv_monitor_message(addr_map[addr]['mon_sock'], zmq.NOBLOCK)

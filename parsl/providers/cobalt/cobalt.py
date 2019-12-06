@@ -123,10 +123,9 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['RUNNING', 'KILLING', 'EXITING']:
-                self.resources[missing_job]['status'] = translate_table['EXITING']
+            self.resources[missing_job]['status'] = translate_table['EXITING']
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.cobalt"):
         """ Submits the command onto an Local Resource Manager job of parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 

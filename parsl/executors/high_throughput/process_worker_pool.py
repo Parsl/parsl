@@ -16,12 +16,16 @@ import zmq
 import math
 import json
 import psutil
+import multiprocessing
 
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
-import multiprocessing
+if platform.system() == 'Darwin':
+    from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
+else:
+    from multiprocessing import Queue as mpQueue
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
@@ -164,9 +168,9 @@ class Manager(object):
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
-        self.pending_task_queue = multiprocessing.Queue()
-        self.pending_result_queue = multiprocessing.Queue()
-        self.ready_worker_queue = multiprocessing.Queue()
+        self.pending_task_queue = mpQueue()
+        self.pending_result_queue = mpQueue()
+        self.ready_worker_queue = mpQueue()
 
         self.max_queue_size = self.prefetch_capacity + self.worker_count
 
@@ -536,31 +540,6 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-         - name (string) : Set the logger name.
-         - level (logging.LEVEL) : Set to logging.DEBUG by default.
-         - format_string (sting) : Set to None by default.
-
-    Returns:
-         - None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
-        # format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)

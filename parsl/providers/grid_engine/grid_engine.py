@@ -108,7 +108,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                                                   self.nodes_per_block)
         return job_config
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.sge"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
@@ -189,8 +189,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         # Filling in missing blanks for jobs that might have gone missing
         # we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = 'COMPLETED'
+            self.resources[missing_job]['status'] = 'COMPLETED'
 
     def cancel(self, job_ids):
         ''' Cancels the resources identified by the job_ids provided by the user.
