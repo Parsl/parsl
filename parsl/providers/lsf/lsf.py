@@ -127,8 +127,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = 'COMPLETED'
+            self.resources[missing_job]['status'] = 'COMPLETED'
 
     def submit(self, command, tasks_per_node, job_name="parsl.lsf"):
         """Submit the command as an LSF job.
