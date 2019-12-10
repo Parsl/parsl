@@ -264,23 +264,25 @@ class MonitoringHub(RepresentationMixin):
     def close(self):
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
-        exception_msg = None
-        try:
-            exception_msg = self.exception_q.get(block=False)
-            self.logger.info("Either Hub or DBM process got exception.")
-        except queue.Empty:
-            pass
+        exception_msgs = []
+        while True:
+            try:
+                exception_msgs.append(self.exception_q.get(block=False))
+                self.logger.info("Either Hub or DBM process got exception.")
+            except queue.Empty:
+                break
         if self._dfk_channel and self.monitoring_hub_active:
             self.monitoring_hub_active = False
             self._dfk_channel.close()
-            if exception_msg is not None:
-                self.logger.info("Either Hub or DBM got exception. Terminating all monitoring processes.")
+            if exception_msgs:
+                for exception_msg in exception_msgs:
+                    self.logger.info("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
                 self.queue_proc.terminate()
                 self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
             self.queue_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
-            if exception_msg is None:
+            if len(exception_msgs) == 0:
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
 
@@ -454,9 +456,9 @@ def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *a
     hub.logger.info("Starting Hub in Hub starter")
     try:
         hub.start(priority_msgs, node_msgs, resource_msgs)
-    except Exception:
+    except Exception as e:
         hub.logger.exception("hub.start exception")
-        exception_q.put("Hub got exception")
+        exception_q.put(('Hub', e))
 
     hub.logger.info("End of hub starter")
 

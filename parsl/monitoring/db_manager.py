@@ -471,8 +471,8 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
     dbm.logger.info("Starting dbm in dbm starter")
     try:
         dbm.start(priority_msgs, node_msgs, resource_msgs)
-    except Exception:
+    except Exception as e:
         dbm.logger.exception("dbm.start exception")
-        exception_q.put("DBM got exception")
+        exception_q.put(("DBM", e))
 
     dbm.logger.info("End of dbm_starter")
