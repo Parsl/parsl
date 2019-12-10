@@ -260,7 +260,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
     def status(self) -> List[JobStatus]:
         """Return status of all blocks."""
 
-        status = []
+        status = []  # type: List[JobStatus]
         if self.provider:
             status = self.provider.status(self.blocks)
 
