@@ -1,5 +1,44 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
+from enum import Enum
 from typing import Any, List, Optional
+
+
+class JobState(bytes, Enum):
+    """Defines a set of states that a job can be in"""
+
+    def __new__(cls, value, terminal):
+        # noinspection PyArgumentList
+        obj = bytes.__new__(cls, [value])
+        obj._value_ = value
+        obj.terminal = terminal
+        return obj
+
+    UNKNOWN = (0, False)
+    PENDING = (1, False)
+    RUNNING = (2, False)
+    CANCELLED = (3, True)
+    COMPLETED = (4, True)
+    FAILED = (5, True)
+    TIMEOUT = (6, True)
+    HELD = (7, False)
+
+
+class JobStatus(object):
+    """Encapsulates a job state together with other details, presently a (error) message"""
+
+    def __init__(self, state: JobState, message: str=None):
+        self.state = state
+        self.message = message
+
+    @property
+    def terminal(self):
+        return self.state.terminal
+
+    def __repr__(self):
+        if self.message is not None:
+            return "{} ({})".format(self.state, self.message)
+        else:
+            return "{}".format(self.state)
 
 
 class ExecutionProvider(metaclass=ABCMeta):
@@ -48,7 +87,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def status(self, job_ids: List[Any]) -> List[str]:
+    def status(self, job_ids: List[Any]) -> List[JobStatus]:
         ''' Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
