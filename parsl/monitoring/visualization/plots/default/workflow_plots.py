@@ -176,12 +176,14 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
     node_traces = []
 
     if group_by_apps:
-        groups_list = {app: i for i, app in enumerate(
+        groups_list = {app: (i, None) for i, app in enumerate(
             df_tasks['task_func_name'].unique())}
     else:
-        groups_list = {'Pending': (0, 'gray'), "Running": (1, 'blue'), 'Completed': (2, 'green')}
+        groups_list = {'Pending': (0, 'gray'), "Running": (1, 'blue'), 'Completed': (2, 'green'), 'Unknown': (3, 'red')}
 
-    for k, _ in groups_list.items():
+    node_traces = [...] * len(groups_list)
+
+    for k, (index, color) in groups_list.items():
         node_trace = go.Scatter(
             x=[],
             y=[],
@@ -197,16 +199,16 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
             name=k,          # legend app_name here
             marker=dict(
                 showscale=False,
-                # color='rgb(200,0,0)',
+                color=color,
                 size=11,
                 line=dict(width=1, color='rgb(0,0,0)')))
-        node_traces.append(node_trace)
+        node_traces[index]=node_trace
 
     for node in node_positions:
         x, y = node_positions[node]
         if group_by_apps:
             name = dic['task_func_name'][node]
-            index = groups_list[name]
+            index, color = groups_list[name]
         else:
             if dic['task_time_returned'][node] is not None:
                 name = 'Completed'
@@ -214,8 +216,9 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
                 name = "Running"
             elif dic['task_time_submitted'][node] is not None:
                 name = "Pending"
+            else:
+                name = "Unknown"
             index, color = groups_list[name]
-            node_traces[index]['marker']['color'] = color
         node_traces[index]['x'] += tuple([x])
         node_traces[index]['y'] += tuple([y])
         node_traces[index]['text'] += tuple(
