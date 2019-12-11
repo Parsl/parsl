@@ -517,7 +517,6 @@ class WorkQueueExecutor(ParslExecutor):
         # Initialize scaling for the provider
         self.initialize_scaling()
 
-
     def create_name_tuple(self, parsl_file_obj, in_or_out):
         # Determine new_name
         new_name = parsl_file_obj.filepath
@@ -656,11 +655,11 @@ class WorkQueueExecutor(ParslExecutor):
         Scales the workers to the appropriate nodes with provider
         """
 
-        # Format launch command for the Provider 
+        # Format launch command for the Provider
         launch_command = self.worker_command.format(hostname=socket.gethostname(), port=self.port)
         self.worker_command = launch_command
         logger.debug("Launch command: {}".format(self.worker_command))
-        
+
         # Start scaling out
         self._scaling_enabled = True
         logger.debug("Starting WorkQueueExecutor with provider: %s", self.provider)
@@ -669,7 +668,7 @@ class WorkQueueExecutor(ParslExecutor):
                 self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
                 logger.debug("Scaling out failed: {}".format(e))
-                raise e 
+                raise e
 
     def scale_out(self, blocks=1):
         """Scale out method.
@@ -689,7 +688,6 @@ class WorkQueueExecutor(ParslExecutor):
                     self.blocks[external_block] = internal_block
         else:
             logger.error("No execution provider available to scale")
-
 
     def scale_in(self, count):
         """Scale in method.
