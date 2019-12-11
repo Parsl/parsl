@@ -1,7 +1,7 @@
 Quickstart
 ==========
 
-To try Parsl now (without installing any code) experiment with our `hosted tutorial notebooks <https://mybinder.org/v2/gh/Parsl/parsl-tutorial/master>`_.
+To try Parsl now (without installing any code), experiment with our `hosted tutorial notebooks <https://mybinder.org/v2/gh/Parsl/parsl-tutorial/master>`_.
 
 
 Installation
