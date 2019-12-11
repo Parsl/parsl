@@ -9,6 +9,7 @@ import logging
 from concurrent.futures import Future
 
 import os
+import socket
 import pickle
 import queue
 import inspect
@@ -20,6 +21,7 @@ from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.error import OptionalModuleMissing
+from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import workqueue_worker
 
 try:
@@ -462,6 +464,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
     def __init__(self,
                  label="WorkQueueExecutor",
+                 provider=None,
                  working_dir=".",
                  managed=True,
                  project_name=None,
@@ -479,9 +482,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
         self.label = label
+        self.provider = provider
         self.managed = managed
         self.task_queue = multiprocessing.Queue()
         self.collector_queue = multiprocessing.Queue()
+        self.tasks = {}
+        self.blocks = {}
         self.port = port
         self.task_counter = -1
         self.scaling_enabled = False
@@ -499,6 +505,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.full = full_debug
         self.source = source
         self.cancel_value = multiprocessing.Value('i', 1)
+        self.worker_command = ("work_queue_worker {hostname} {port}")
 
         # Resolve ambiguity when password and password_file are both specified
         if self.project_password is not None and self.project_password_file is not None:
@@ -567,6 +574,10 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Begin both processes
         self.submit_process.start()
         self.collector_thread.start()
+
+        # Initialize scaling for the provider
+        self.initialize_scaling()
+
 
     def create_name_tuple(self, parsl_file_obj, in_or_out):
         """Returns a tuple containing information about an input or output file
@@ -734,15 +745,59 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         return fu
 
-    def scale_out(self, *args, **kwargs):
-        """Scale out method. Not implemented.
+    def initialize_scaling(self):
+        """ Compose the launch command and call scale out
+
+        Scales the workers to the appropriate nodes with provider
         """
-        pass
+
+        # Format launch command for the Provider
+        launch_command = self.worker_command.format(hostname=socket.gethostname(), port=self.port)
+        self.worker_command = launch_command
+        logger.debug("Launch command: {}".format(self.worker_command))
+
+        # Start scaling out
+        self._scaling_enabled = True
+        logger.debug("Starting WorkQueueExecutor with provider: %s", self.provider)
+        if hasattr(self.provider, 'init_blocks'):
+            try:
+                self.scale_out(blocks=self.provider.init_blocks)
+            except Exception as e:
+                logger.debug("Scaling out failed: {}".format(e))
+                raise e
+
+    def scale_out(self, blocks=1):
+        """Scale out method.
+
+        We should have the scale out method simply take resource object
+        which will have the scaling methods, scale_out itself should be a coroutine, since
+        scaling tasks can be slow.
+        """
+        if self.provider:
+            for i in range(blocks):
+                external_block = str(len(self.blocks))
+                internal_block = self.provider.submit(self.worker_command, 1)
+                # Failed to create block with provider
+                if not internal_block:
+                    raise(ScalingFailed(self.provider.label, "Attempts to create nodes using the provider has failed"))
+                else:
+                    self.blocks[external_block] = internal_block
+        else:
+            logger.error("No execution provider available to scale")
+
 
     def scale_in(self, count):
         """Scale in method. Not implemented.
         """
-        pass
+        # Obtain list of blocks to kill
+        to_kill = list(self.blocks.keys())[:count]
+        kill_ids = [self.blocks[block] for block in to_kill]
+
+        # Cancel the blocks provisioned
+        if self.provider:
+            self.provider.cancel(kill_ids)
+        else:
+            logger.error("No execution provider available to scale")
 
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
@@ -752,6 +807,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         logger.debug("Setting value to cancel")
         self.cancel_value.value = 0
 
+        # Remove the workers that are still going
+        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
+        if self.provider:
+            self.provider.cancel(kill_ids)
+
         self.submit_process.join()
         self.collector_thread.join()
 
@@ -760,7 +820,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
     def scaling_enabled(self):
         """Specify if scaling is enabled. Not enabled in Work Queue.
         """
-        return False
+        return self._scaling_enabled
 
     def run_dir(self, value=None):
         """Path to the run directory.
