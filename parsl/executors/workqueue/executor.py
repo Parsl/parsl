@@ -578,7 +578,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Initialize scaling for the provider
         self.initialize_scaling()
 
-
     def create_name_tuple(self, parsl_file_obj, in_or_out):
         """Returns a tuple containing information about an input or output file
         to a Parsl app. Utilized to specify input and output files for a specific
@@ -784,7 +783,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                     self.blocks[external_block] = internal_block
         else:
             logger.error("No execution provider available to scale")
-
 
     def scale_in(self, count):
         """Scale in method. Not implemented.
