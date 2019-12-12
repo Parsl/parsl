@@ -194,7 +194,7 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
                 color=color,
                 size=11,
                 line=dict(width=1, color='rgb(0,0,0)')))
-        node_traces[index]=node_trace
+        node_traces[index] = node_trace
 
     for node in node_positions:
         x, y = node_positions[node]
