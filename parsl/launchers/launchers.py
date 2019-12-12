@@ -90,7 +90,7 @@ FAILONANY() {{
             RET=1
             break
         fi
-    done    
+    done
 }}
 
 FAILONALL() {{
