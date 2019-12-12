@@ -165,7 +165,6 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
     G.add_edges_from(edges)
 
     node_positions = nx.nx_pydot.pydot_layout(G, prog='dot')
-    node_traces = []
 
     if group_by_apps:
         groups_list = {app: (i, None) for i, app in enumerate(
