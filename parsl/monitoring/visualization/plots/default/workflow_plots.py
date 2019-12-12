@@ -208,7 +208,7 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
                 name = "Pending"
             else:
                 name = "Unknown"
-        index, color = groups_list[name]
+        index, _ = groups_list[name]
         node_traces[index]['x'] += tuple([x])
         node_traces[index]['y'] += tuple([y])
         node_traces[index]['text'] += tuple(
