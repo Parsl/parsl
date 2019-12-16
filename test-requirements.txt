@@ -4,7 +4,7 @@ pytest>=4.6,<5
 pytest-cov
 pytest-xdist==1.26.1
 pytest-random-order
-coverage
+coverage==4.5.4
 mock>=1.0.0
 nbsphinx
 sphinx_rtd_theme
