@@ -2,6 +2,14 @@ import parsl
 from parsl.app.app import App
 from parsl.data_provider.files import File
 
+import pytest
+
+# This config is for the local test which will adding an executor.
+# Most tests in this file should be non-local and use the configuration
+# specificed with --config, not this one.
+from parsl.tests.configs.htex_local import config
+local_config = config
+
 
 @App('python')
 def sort_strings(inputs=[], outputs=[]):
@@ -86,6 +94,7 @@ def sort_strings_additional_executor(inputs=[], outputs=[]):
                 s.write(e)
 
 
+@pytest.mark.local
 def test_implicit_staging_https_additional_executor():
     """Test implicit staging for an ftp file
 
