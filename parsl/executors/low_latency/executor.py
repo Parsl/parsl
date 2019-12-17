@@ -6,6 +6,7 @@ import logging
 import threading
 import queue
 from multiprocessing import Process, Queue
+from typing import List
 
 from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
 from ipyparallel.serialize import deserialize_object  # ,serialize_object
@@ -14,6 +15,7 @@ from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
 from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
 from parsl.executors.base import ParslExecutor
+from parsl.providers.provider_base import JobStatus
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -255,10 +257,10 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
             r = self.provider.cancel(to_kill)
         return r
 
-    def status(self):
+    def status(self) -> List[JobStatus]:
         """Return status of all blocks."""
 
-        status = []
+        status = []  # type: List[JobStatus]
         if self.provider:
             status = self.provider.status(self.blocks)
 
