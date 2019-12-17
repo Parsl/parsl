@@ -3,7 +3,7 @@ import time
 import math
 
 from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
-
+from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
 
@@ -189,8 +189,8 @@ class Strategy(object):
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            running = sum([1 for x in status if x == 'RUNNING'])
-            pending = sum([1 for x in status if x == 'PENDING'])
+            running = sum([1 for x in status if x.state == JobState.RUNNING])
+            pending = sum([1 for x in status if x.state == JobState.PENDING])
             active_blocks = running + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
