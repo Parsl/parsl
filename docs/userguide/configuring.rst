@@ -246,7 +246,7 @@ using the `CobaltProvider`. This configuration assumes that the script is being 
 .. literalinclude:: ../../parsl/configs/cooley.py
 
 
-Blue Waters (Cray)
+Blue Waters (NCSA)
 -------------
 
 .. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png

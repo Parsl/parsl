@@ -5,25 +5,11 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
-
-translate_table = {
-    'PD': 'PENDING',
-    'R': 'RUNNING',
-    'CA': 'CANCELLED',
-    'CF': 'PENDING',  # (configuring),
-    'CG': 'RUNNING',  # (completing),
-    'CD': 'COMPLETED',
-    'F': 'FAILED',
-    'TO': 'TIMEOUT',
-    'NF': 'FAILED',  # (node failure),
-    'RV': 'FAILED',  # (revoked) and
-    'SE': 'FAILED'
-}  # (special exit state
 
 
 class LocalProvider(ExecutionProvider, RepresentationMixin):
@@ -91,33 +77,32 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
-
             if self.resources[job_id]['proc']:
 
                 poll_code = self.resources[job_id]['proc'].poll()
-                if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
+                if self.resources[job_id]['status'].terminal:
                     continue
 
                 if poll_code is None:
-                    self.resources[job_id]['status'] = 'RUNNING'
+                    self.resources[job_id]['status'] = JobStatus(JobState.RUNNING)
                 elif poll_code == 0:
-                    self.resources[job_id]['status'] = 'COMPLETED'
+                    self.resources[job_id]['status'] = JobStatus(JobState.COMPLETED)
                 elif poll_code != 0:
-                    self.resources[job_id]['status'] = 'FAILED'
+                    self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
                 else:
                     logger.error("Internal consistency error: unexpected case in local provider state machine")
 
             elif self.resources[job_id]['remote_pid']:
 
-                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} &> /dev/null; echo "STATUS:$?" '.format(self.resources[job_id]['remote_pid']),
-                                                                    self.cmd_timeout)
+                retcode, stdout, stderr = self.channel.execute_wait('ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
+                    self.resources[job_id]['remote_pid']), self.cmd_timeout)
                 for line in stdout.split('\n'):
                     if line.startswith("STATUS:"):
                         status = line.split("STATUS:")[1].strip()
                         if status == "0":
-                            self.resources[job_id]['status'] = 'RUNNING'
+                            self.resources[job_id]['status'] = JobStatus(JobState.RUNNING)
                         else:
-                            self.resources[job_id]['status'] = 'FAILED'
+                            self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
@@ -152,7 +137,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return True
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.localprovider"):
         ''' Submits the command onto an Local Resource Manager job.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -198,7 +183,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         if not isinstance(self.channel, LocalChannel):
             logger.debug("Launching in remote mode")
             # Bash would return until the streams are closed. So we redirect to a outs file
-            cmd = 'bash {0} &> {0}.out & \n echo "PID:$!" '.format(script_path)
+            cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
             retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
             for line in stdout.split('\n'):
                 if line.startswith("PID:"):
@@ -214,7 +199,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 logger.debug("Channel execute failed for: {}, {}".format(self.channel, e))
                 raise
 
-        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
+        self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.RUNNING),
                                   'remote_pid': remote_pid,
                                   'proc': proc}
 
@@ -235,7 +220,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             if self.resources[job]['proc']:
                 proc = self.resources[job]['proc']
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                self.resources[job]['status'] = 'CANCELLED'
+                self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
 
             elif self.resources[job]['remote_pid']:
                 cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
