@@ -211,7 +211,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         Returns
         -------
-        list of status strings ['PENDING', 'COMPLETED', 'FAILED']
+        list of JobStatus objects
         """
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
