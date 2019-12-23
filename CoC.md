@@ -24,7 +24,7 @@ our community.
 
 We pledge to help the entire community follow the code of conduct, and to not remain silent when we see violations
 of the code of conduct. We will take action when members of our community violate this code such as contacting
-**EMAIL_ADDRESS_NEEDED_HERE** (all emails sent to this address will be treated with the strictest confidence)
+<a href="mailto:parsl-coc@googlegroups.com">parsl-coc@googlegroups.com</a> (all emails sent to this address will be treated with the strictest confidence)
 or talking privately with the person.
 
 ## Our Standards
@@ -76,7 +76,7 @@ further defined and clarified by project maintainers.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by contacting the project team at **EMAIL_ADDRESS_NEEDED_HERE**. All
+reported by contacting the project team at <a href="mailto:parsl-coc@googlegroups.com">parsl-coc@googlegroups.com</a>. All
 complaints will be reviewed and investigated and will result in a response that
 is deemed necessary and appropriate to the circumstances. The project team is
 obligated to maintain confidentiality with regard to the reporter of an incident.
