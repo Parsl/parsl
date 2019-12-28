@@ -27,7 +27,7 @@ def dumpstacks(sig, frame):
         for thread_id, frame in tf.items():
             s += '\n\nThread: %s (%d)' % (thread_names[thread_id], thread_id)
             s += ''.join(traceback.format_stack(frame))
-    except Exception as ex:
+    except Exception:
         s = traceback.format_exc()
     with open(os.getenv('HOME') + '/parsl_stack_dump.txt', 'w') as f:
         f.write(s)
