@@ -5,7 +5,9 @@ import shutil
 import subprocess
 from glob import glob
 from itertools import chain
-import threading, sys, traceback
+import sys
+import threading
+import traceback
 
 import pytest
 import _pytest.runner as runner
@@ -16,6 +18,7 @@ from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger('parsl')
 
+
 def dumpstacks(sig, frame):
     s = ''
     try:
@@ -24,14 +27,16 @@ def dumpstacks(sig, frame):
         for thread_id, frame in tf.items():
             s += '\n\nThread: %s (%d)' % (thread_names[thread_id], thread_id)
             s += ''.join(traceback.format_stack(frame))
-    except:
+    except Exception as ex:
         s = traceback.format_exc()
     with open(os.getenv('HOME') + '/parsl_stack_dump.txt', 'w') as f:
         f.write(s)
     print(s)
 
+
 import signal
 signal.signal(signal.SIGUSR1, dumpstacks)
+
 
 def pytest_addoption(parser):
     """Add parsl-specific command-line options to pytest.
