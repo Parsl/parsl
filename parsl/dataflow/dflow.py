@@ -10,6 +10,7 @@ import inspect
 import threading
 import sys
 import datetime
+import weakref
 from getpass import getuser
 from typing import Optional
 from uuid import uuid4
@@ -325,8 +326,10 @@ class DataFlowKernel(object):
                 res = future.result()
                 if isinstance(res, RemoteExceptionWrapper):
                     res.reraise()
-                self.tasks[task_id]['app_fu'].set_result(future.result())
 
+                self.tasks[task_id]['app_fu'].set_result(future.result())
+                self.tasks[task_id]['app_fu'] = weakref.ref(self.tasks[task_id]['app_fu'])
+                self.tasks[task_id]['depends'] = None
             except Exception as e:
                 if future.retries_left > 0:
                     # ignore this exception, because assume some later
