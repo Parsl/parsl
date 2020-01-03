@@ -73,6 +73,11 @@ Requirements
 
 Parsl is supported in Python 3.5+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
 
+Code of Conduct
+============
+
+Parsl seeks to foster an open and welcoming environment - Please see the <a href="https://github.com/Parsl/parsl/blob/master/CoC.md">Parsl Code of Conduct</a> for more details.
+
 Contributing
 ============
 
