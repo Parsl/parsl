@@ -706,7 +706,6 @@ class DataFlowKernel(object):
                     'checkpoint': False,
                     'fail_count': 0,
                     'fail_history': [],
-                    'env': None,
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
