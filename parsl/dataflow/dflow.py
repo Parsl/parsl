@@ -703,7 +703,7 @@ class DataFlowKernel(object):
                     'memoize': cache,
                     'callback': None,
                     'exec_fu': None,
-                    'checkpoint': None,
+                    'checkpoint': False,
                     'fail_count': 0,
                     'fail_history': [],
                     'status': States.unsched,
