@@ -701,7 +701,6 @@ class DataFlowKernel(object):
                     'func_name': func.__name__,
                     'fn_hash': fn_hash,
                     'memoize': cache,
-                    'callback': None,
                     'exec_fu': None,
                     'checkpoint': None,
                     'fail_count': 0,
