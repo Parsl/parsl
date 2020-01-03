@@ -180,7 +180,7 @@ class DataFlowKernel(object):
 
         atexit.register(self.atexit_cleanup)
 
-    def _create_task_log_info(self, task_id, fail_mode=None):
+    def _create_task_log_info(self, task_id, fail_mode):
         """
         Create the dictionary that will be included in the log.
         """
@@ -223,8 +223,7 @@ class DataFlowKernel(object):
         if self.tasks[task_id]['time_returned'] is not None:
             task_log_info['task_elapsed_time'] = (self.tasks[task_id]['time_returned'] -
                                                   self.tasks[task_id]['time_submitted']).total_seconds()
-        if fail_mode is not None:
-            task_log_info['task_fail_mode'] = fail_mode
+        task_log_info['task_fail_mode'] = fail_mode
         return task_log_info
 
     def _count_deps(self, depends):
