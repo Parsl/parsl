@@ -4,7 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
 from parsl.utils import RepresentationMixin
 
@@ -83,9 +83,9 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 if line.startswith("STATUS:"):
                     status = line.split("STATUS:")[1].strip()
                     if status == "0":
-                        self.resources[job_id]['status'] = 'RUNNING'
+                        self.resources[job_id]['status'] = JobStatus(JobState.RUNNING)
                     else:
-                        self.resources[job_id]['status'] = 'FAILED'
+                        self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
@@ -173,7 +173,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         if job_id is None:
             logger.warning("Channel failed to start remote command/retrieve PID")
 
-        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
+        self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.RUNNING),
                                   'remote_pid': remote_pid}
 
         return job_id
