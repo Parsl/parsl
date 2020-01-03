@@ -6,7 +6,7 @@ from string import Template
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.azure.template import template_string
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
@@ -29,11 +29,11 @@ else:
     _api_enabled = True
 
 translate_table = {
-    'VM pending': 'PENDING',
-    'VM running': 'RUNNING',
-    'VM deallocated': 'COMPLETED',
-    'VM stopping': 'COMPLETED',  # We shouldn't really see this state
-    'VM stopped': 'COMPLETED',  # We shouldn't really see this state
+    'VM pending': JobState.PENDING,
+    'VM running': JobState.RUNNING,
+    'VM deallocated': JobState.COMPLETED,
+    'VM stopping': JobState.COMPLETED,  # We shouldn't really see this state
+    'VM stopped': JobState.COMPLETED,  # We shouldn't really see this state
 }
 
 
@@ -261,7 +261,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             self.resources[vm_info.id] = {
                 "job_id": vm_info.id,
                 "instance": vm_info,
-                "status": "PENDING"
+                "status": JobStatus(JobState.PENDING)
             }
 
             vm_info.storage_profile.data_disks.append({
@@ -317,10 +317,10 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                 vm = self.compute_client.virtual_machines.get(
                     self.group_name, job_id, expand='instanceView')
                 status = vm.instance_view.statuses[1].display_status
-                statuses.append(translate_table.get(status, "UNKNOWN"))
+                statuses.append(JobStatus(translate_table.get(status, JobState.UNKNOWN)))
             # This only happens when it is in ProvisionState/Pending
             except IndexError:
-                statuses.append("PENDING")
+                statuses.append(JobStatus(JobState.PENDING))
         return statuses
 
     def cancel(self, job_ids):
