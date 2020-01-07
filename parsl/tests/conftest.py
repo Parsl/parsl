@@ -5,6 +5,7 @@ import shutil
 import subprocess
 from glob import glob
 from itertools import chain
+import signal
 import sys
 import threading
 import traceback
@@ -34,8 +35,8 @@ def dumpstacks(sig, frame):
     print(s)
 
 
-import signal
-signal.signal(signal.SIGUSR1, dumpstacks)
+def pytest_sessionstart(session):
+    signal.signal(signal.SIGUSR1, dumpstacks)
 
 
 def pytest_addoption(parser):
