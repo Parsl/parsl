@@ -4,6 +4,7 @@ import math
 
 from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
 from parsl.launchers import SimpleLauncher
+from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
@@ -188,7 +189,8 @@ class Strategy(object):
                 tasks_per_node = executor.ranks_per_node
 
             # Determine the number of nodes per block
-            if hasattr(executor.provider, 'launcher') and isinstance(executor.provider.launcher, SimpleLauncher):
+            if isinstance(executor.provider, ClusterProvider) \
+                    and isinstance(executor.provider.launcher, SimpleLauncher):
                 # Parsl only launches one worker. That one worker can access >1 compute node
                 nodes_per_block = 1
             else:
