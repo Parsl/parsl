@@ -6,7 +6,7 @@ from typing import List
 
 from ipyparallel import Client
 from parsl.providers import LocalProvider
-from parsl.providers.provider_base import JobStatus
+from parsl.providers.provider_base import JobStatus, JobState
 from parsl.utils import RepresentationMixin
 
 from parsl.executors.base import ParslExecutor
@@ -257,7 +257,7 @@ sleep infinity
         status = dict(zip(self.engines, self.provider.status(self.engines)))
 
         # This works for blocks=0
-        to_kill = [engine for engine in status if status[engine] == "RUNNING"][:blocks]
+        to_kill = [engine for engine in status if status[engine].state == JobState.RUNNING][:blocks]
 
         if self.provider:
             r = self.provider.cancel(to_kill)

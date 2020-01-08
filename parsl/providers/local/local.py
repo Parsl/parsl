@@ -5,7 +5,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
 from parsl.utils import RepresentationMixin
 
@@ -77,19 +77,18 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
-
             if self.resources[job_id]['proc']:
 
                 poll_code = self.resources[job_id]['proc'].poll()
-                if self.resources[job_id]['status'] in ['COMPLETED', 'FAILED']:
+                if self.resources[job_id]['status'].terminal:
                     continue
 
                 if poll_code is None:
-                    self.resources[job_id]['status'] = 'RUNNING'
+                    self.resources[job_id]['status'] = JobStatus(JobState.RUNNING)
                 elif poll_code == 0:
-                    self.resources[job_id]['status'] = 'COMPLETED'
+                    self.resources[job_id]['status'] = JobStatus(JobState.COMPLETED)
                 elif poll_code != 0:
-                    self.resources[job_id]['status'] = 'FAILED'
+                    self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
                 else:
                     logger.error("Internal consistency error: unexpected case in local provider state machine")
 
@@ -101,9 +100,9 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                     if line.startswith("STATUS:"):
                         status = line.split("STATUS:")[1].strip()
                         if status == "0":
-                            self.resources[job_id]['status'] = 'RUNNING'
+                            self.resources[job_id]['status'] = JobStatus(JobState.RUNNING)
                         else:
-                            self.resources[job_id]['status'] = 'FAILED'
+                            self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
@@ -200,7 +199,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 logger.debug("Channel execute failed for: {}, {}".format(self.channel, e))
                 raise
 
-        self.resources[job_id] = {'job_id': job_id, 'status': 'RUNNING',
+        self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.RUNNING),
                                   'remote_pid': remote_pid,
                                   'proc': proc}
 
@@ -221,7 +220,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             if self.resources[job]['proc']:
                 proc = self.resources[job]['proc']
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                self.resources[job]['status'] = 'CANCELLED'
+                self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
 
             elif self.resources[job]['remote_pid']:
                 cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
