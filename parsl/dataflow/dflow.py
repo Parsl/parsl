@@ -991,6 +991,7 @@ class DataFlowKernel(object):
             with open(checkpoint_tasks, 'ab') as f:
                 for task_id in checkpoint_queue:
                     if not self.tasks[task_id]['checkpoint'] and \
+                       self.tasks[task_id]['app_fu'] is not None and \
                        self.tasks[task_id]['app_fu'].done() and \
                        self.tasks[task_id]['app_fu'].exception() is None:
                         hashsum = self.tasks[task_id]['hashsum']
