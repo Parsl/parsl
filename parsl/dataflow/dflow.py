@@ -257,7 +257,7 @@ class DataFlowKernel(object):
         structure.
 
         Args:
-             task_id (string) : Task id which is a uuid string
+             task_id (string) : Task idwhich is a uuid string
              future (Future) : The future object corresponding to the task which
              makes this callback
         """
@@ -328,8 +328,8 @@ class DataFlowKernel(object):
 
                 self.tasks[task_id]['app_fu'].set_result(future.result())
                 # self.tasks[task_id]['app_fu'] = weakref.ref(self.tasks[task_id]['app_fu'])
-                self.tasks[task_id]['app_fu'] = None
-                self.tasks[task_id]['depends'] = None
+                # self.tasks[task_id]['app_fu'] = None
+                # self.tasks[task_id]['depends'] = None
             except Exception as e:
                 if future.retries_left > 0:
                     # ignore this exception, because assume some later
@@ -370,6 +370,9 @@ class DataFlowKernel(object):
             if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
+        # Wipe app_fu references only after memoizer update
+        self.tasks[task_id]['app_fu'] = None
+        self.tasks[task_id]['depends'] = None
         return
 
     @staticmethod
