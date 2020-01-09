@@ -372,7 +372,7 @@ class DataFlowKernel(object):
 
         # Wipe app_fu references only after memoizer update
         self.tasks[task_id]['app_fu'] = None
-        self.tasks[task_id]['depends'] = None
+        self.tasks[task_id]['depends'] = []
         return
 
     @staticmethod
