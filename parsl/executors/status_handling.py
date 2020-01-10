@@ -40,7 +40,7 @@ class StatusHandlingExecutor(ParslExecutor):
 
     @abstractmethod
     def _get_job_ids(self) -> List[Any]:
-        raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement"
+        raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
                                   "_get_job_ids()")
 
     def status(self) -> Dict[Any, JobStatus]:
