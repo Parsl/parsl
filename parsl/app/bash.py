@@ -16,6 +16,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     import logging
     import parsl.app.errors as pe
     from parsl import set_file_logger
+    from parsl.utils import get_std_fname_mode
 
     logbase = "/tmp"
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
@@ -60,16 +61,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
         stdfspec = kwargs.get(fdname)  # spec is str name or tuple (name, mode)
         if stdfspec is None:
             return None
-        elif isinstance(stdfspec, str):
-            fname = stdfspec
-            mode = 'a+'
-        elif isinstance(stdfspec, tuple):
-            if len(stdfspec) != 2:
-                raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
-            fname, mode = stdfspec
-        else:
-            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
 
+        fname, mode = get_std_fname_mode(fdname, stdfspec)
         try:
             if os.path.dirname(fname):
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
@@ -119,8 +112,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
-        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, cache=cache)
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all'):
+        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache)
         self.kwargs = {}
 
         # We duplicate the extraction of parameter defaults

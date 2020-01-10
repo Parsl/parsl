@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from concurrent.futures import Future
+from typing import Any, Callable, Dict, Optional
 
-from typing import Any, Callable, Optional
+from parsl.providers.provider_base import JobStatus
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -85,6 +86,45 @@ class ParslExecutor(metaclass=ABCMeta):
         The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
         """
+        pass
+
+    @abstractmethod
+    def status(self) -> Dict[Any, JobStatus]:
+        """Return the status of all jobs/blocks currently known to this executor.
+
+        :return: a dictionary mapping job ids to status strings
+        """
+        pass
+
+    @abstractmethod
+    def set_bad_state_and_fail_all(self, exception: Exception):
+        """Allows external error handlers to mark this executor as irrecoverably bad and cause
+        all tasks submitted to it now and in the future to fail. The executor is responsible
+        for checking  :method:bad_state_is_set() in the :method:submit() method and raising the
+        appropriate exception, which is available through :method:executor_exception().
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def bad_state_is_set(self) -> bool:
+        """Returns true if this executor is in an irrecoverable error state. If this method
+        returns true, :property:executor_exception should contain an exception indicating the
+        cause.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def executor_exception(self) -> Exception:
+        """Returns an exception that indicates why this executor is in an irrecoverable state."""
+        pass
+
+    @property
+    @abstractmethod
+    def tasks(self) -> Dict[str, Future]:
+        """Contains a dictionary mapping task IDs to the corresponding Future objects for all
+        tasks that have been submitted to this executor."""
         pass
 
     @property

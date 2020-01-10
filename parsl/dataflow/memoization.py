@@ -72,8 +72,7 @@ class Memoizer(object):
         t = [serialize_object(task['func_name'])[0],
              serialize_object(task['fn_hash'])[0],
              serialize_object(task['args'])[0],
-             serialize_object(task['kwargs'])[0],
-             serialize_object(task['env'])[0]]
+             serialize_object(task['kwargs'])[0]]
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum

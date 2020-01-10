@@ -11,23 +11,24 @@ from parsl.channels.base import Channel
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.launchers import Launcher
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
 translate_table = {
-    'PD': 'PENDING',
-    'R': 'RUNNING',
-    'CA': 'CANCELLED',
-    'CF': 'PENDING',  # (configuring),
-    'CG': 'RUNNING',  # (completing),
-    'CD': 'COMPLETED',
-    'F': 'FAILED',  # (failed),
-    'TO': 'TIMEOUT',  # (timeout),
-    'NF': 'FAILED',  # (node failure),
-    'RV': 'FAILED',  # (revoked) and
-    'SE': 'FAILED'
+    'PD': JobState.PENDING,
+    'R': JobState.RUNNING,
+    'CA': JobState.CANCELLED,
+    'CF': JobState.PENDING,  # (configuring),
+    'CG': JobState.RUNNING,  # (completing),
+    'CD': JobState.COMPLETED,
+    'F': JobState.FAILED,  # (failed),
+    'TO': JobState.TIMEOUT,  # (timeout),
+    'NF': JobState.FAILED,  # (node failure),
+    'RV': JobState.FAILED,  # (revoked) and
+    'SE': JobState.FAILED
 }  # (special exit state
 
 
@@ -41,7 +42,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     Parameters
     ----------
     partition : str
-        Slurm partition to request blocks from.
+        Slurm partition to request blocks from. If none, no partition slurm directive will be specified.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
@@ -81,7 +82,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-                 partition: str,
+                 partition: Optional[str],
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
@@ -117,6 +118,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
+        if partition:
+            self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
         self.worker_init = worker_init + '\n'
 
     def _status(self):
@@ -142,15 +145,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             parts = line.split()
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
-                status = translate_table.get(parts[4], 'UNKNOWN')
-                self.resources[job_id]['status'] = status
+                status = translate_table.get(parts[4], JobState.UNKNOWN)
+                self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = 'COMPLETED'
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.slurm"):
         """Submit the command as a slurm job.
@@ -197,7 +199,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config["walltime"] = wtime_to_minutes(self.walltime)
         job_config["scheduler_options"] = scheduler_options
         job_config["worker_init"] = worker_init
-        job_config["partition"] = self.partition
         job_config["user_script"] = command
 
         # Wrap the command
@@ -222,7 +223,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             for line in stdout.split('\n'):
                 if line.startswith("Submitted batch job"):
                     job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             print("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
@@ -243,7 +244,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['CA']  # Setting state to cancelled
+                self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)  # Setting state to cancelled
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
@@ -251,7 +252,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         return rets
 
     def _test_add_resource(self, job_id):
-        self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])
+        self.resources.extend([{'job_id': job_id, 'status': JobStatus(JobState.PENDING), 'size': 1}])
         return True
 
 
