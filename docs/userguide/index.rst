@@ -13,6 +13,7 @@ User guide
    exceptions
    app_caching
    checkpoints
+   garbage_collection
    configuring
    modularizing
    monitoring

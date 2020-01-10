@@ -58,6 +58,10 @@ Parsl provides four checkpointing modes:
 
 In all cases the checkpoint file is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 
+.. Note:: Checkpoint modes `periodic`, `dfk_exit`, and `manual` will interfere with garbage collection.
+          Please refer to :ref:`garbage_collection` for more details.
+
+
 Creating a checkpoint
 ^^^^^^^^^^^^^^^^^^^^^
 
