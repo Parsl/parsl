@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
@@ -103,13 +104,16 @@ def worker_efficiency(task, node):
             task['task_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
             task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
-        start = min(task['epoch_time_start'].min(), node['epoch_time'].min())
-        end = task['epoch_time_returned'].max()
+        start = int(min(task['epoch_time_start'].min(), node['epoch_time'].min()))
+        end = int(task['epoch_time_returned'].max())
 
         worker_plot = [0] * (end - start + 1)
         total_workers = node['worker_count'].sum()
 
         for i, row in task.iterrows():
+            if math.isnan(row['epoch_time_running']):
+                # skip tasks with no running start time.
+                continue
             for j in range(int(row['epoch_time_running']), int(row['epoch_time_returned']) + 1):
                 worker_plot[j - start] += 1
         fig = go.Figure(
