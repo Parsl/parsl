@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
@@ -53,11 +54,14 @@ def task_per_app_plot(task, status):
             task['task_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
             task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
-        start = task['epoch_time_running'].min()
-        end = task['epoch_time_returned'].max()
+        start = int(task['epoch_time_running'].min())
+        end = int(task['epoch_time_returned'].max())
         tasks_per_app = {}
         all_tasks = [0] * (end - start + 1)
         for i, row in task.iterrows():
+            if math.isnan(row['epoch_time_running']):
+                # Skip rows with no running start time.
+                continue
             if row['task_func_name'] not in tasks_per_app:
                 tasks_per_app[row['task_func_name']] = [0] * (end - start + 1)
             for j in range(int(row['epoch_time_running']) + 1, int(row['epoch_time_returned']) + 1):
