@@ -76,7 +76,7 @@ Parsl is supported in Python 3.5+. Requirements can be found `here <requirements
 Code of Conduct
 ============
 
-Parsl seeks to foster an open and welcoming environment - Please see the <a href="https://github.com/Parsl/parsl/blob/master/CoC.md">Parsl Code of Conduct</a> for more details.
+Parsl seeks to foster an open and welcoming environment - Please see the `Parsl Code of Conduct <https://github.com/Parsl/parsl/blob/master/CoC.md>`_ for more details.
 
 Contributing
 ============
