@@ -3,10 +3,8 @@ import logging
 import os
 import shlex
 import subprocess
-import threading
 import time
 from contextlib import contextmanager
-from functools import wraps
 
 import parsl
 from parsl.version import VERSION
@@ -113,20 +111,6 @@ def get_std_fname_mode(fdname, stdfspec):
     else:
         raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
     return fname, mode
-
-
-def timeout(seconds=None):
-    def decorator(func, *args, **kwargs):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            t = threading.Thread(target=func, args=args, kwargs=kwargs, name="Timeout-Decorator")
-            t.start()
-            result = t.join(seconds)
-            if t.is_alive():
-                raise RuntimeError('timed out in {}'.format(func))
-            return result
-        return wrapper
-    return decorator
 
 
 @contextmanager
