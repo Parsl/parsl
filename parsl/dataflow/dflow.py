@@ -370,8 +370,10 @@ class DataFlowKernel(object):
             if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
-        # Wipe app_fu references only after memoizer update
-        self.tasks[task_id]['app_fu'] = None
+        # If checkpointing is turned on, wiping app_fu is left to the checkpointing code
+        # else we wipe it here.
+        if self.checkpoint_mode is None:
+            self.tasks[task_id]['app_fu'] = None
         self.tasks[task_id]['depends'] = []
         return
 
@@ -1016,6 +1018,7 @@ class DataFlowKernel(object):
                         count += 1
                         self.tasks[task_id]['checkpoint'] = True
                         logger.debug("Task {} checkpointed".format(task_id))
+                        self.tasks[task_id]['app_fu'] = None
 
             self.checkpointed_tasks += count
 
