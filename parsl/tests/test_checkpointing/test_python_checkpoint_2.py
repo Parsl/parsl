@@ -17,8 +17,8 @@ def slow_double(x, sleep_dur=1):
     time.sleep(sleep_dur)
     return x * 2
 
-
-@pytest.mark.local
+# @pytest.mark.local
+@pytest.mark.skip
 def test_loading_checkpoint(n=2):
     """Load memoization table from previous checkpoint
     """
