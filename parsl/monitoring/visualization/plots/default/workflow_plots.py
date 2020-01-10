@@ -21,10 +21,14 @@ def task_gantt_plot(df_task, time_completed=None):
             time_returned = datetime.datetime.now()
             if time_completed is not None:
                 time_returned = time_completed
+        if task['task_time_submitted'] is not None:
+            time_submitted = task['task_time_submitted']
+        else:
+            time_submitted = time_returned
         if task['task_time_running'] is None:
-            time_running = task['task_time_submitted']
+            time_running = time_submitted
         description = "Task ID: {}, app: {}".format(task['task_id'], task['task_func_name'])
-        dic1 = dict(Task=description, Start=task['task_time_submitted'],
+        dic1 = dict(Task=description, Start=time_submitted,
                     Finish=time_running, Resource="Pending")
         dic2 = dict(Task=description, Start=time_running,
                     Finish=time_returned, Resource="Running")
