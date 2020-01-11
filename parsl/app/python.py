@@ -64,8 +64,11 @@ class PythonApp(AppBase):
 
         walltime = self.kwargs.get('walltime')
         if walltime is not None:
-            self.func = timeout(self.func, walltime)
-        app_fut = dfk.submit(self.func, *args,
+            func = timeout(self.func, walltime)
+        else:
+            func = self.func
+
+        app_fut = dfk.submit(func, *args,
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
