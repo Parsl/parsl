@@ -39,11 +39,11 @@ class StatusHandlingExecutor(ParslExecutor):
         self._provider = provider
 
     @abstractmethod
-    def _get_job_ids(self) -> List[Any]:
+    def _get_job_ids(self) -> List[object]:
         raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
                                   "_get_job_ids()")
 
-    def status(self) -> Dict[Any, JobStatus]:
+    def status(self) -> Dict[object, JobStatus]:
         """Return status of all blocks."""
 
         if self._provider:
