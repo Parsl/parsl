@@ -10,4 +10,4 @@ nbsphinx
 sphinx_rtd_theme
 mypy
 sqlalchemy-stubs
-
+Sphinx==2.2.0
