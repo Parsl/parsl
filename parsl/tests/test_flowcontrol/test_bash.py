@@ -1,9 +1,8 @@
 import parsl
-from parsl.app.app import bash_app
 from parsl.tests.configs.local_ipp import config
 
 
-@bash_app
+@parsl.bash_app
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 

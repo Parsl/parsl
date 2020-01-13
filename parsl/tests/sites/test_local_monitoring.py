@@ -1,7 +1,7 @@
 import pytest
 import parsl
 
-from parsl.app.app import python_app, bash_app
+from parsl.app.app import python_app
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ def python_app_1():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@bash_app
+@parsl.bash_app
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 15'
 

@@ -1,6 +1,7 @@
 import pytest
 
-from parsl.app.app import bash_app, python_app
+import parsl
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads_ipp import config
 
 import logging
@@ -28,7 +29,7 @@ def python_app_1():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@bash_app
+@parsl.bash_app
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 
