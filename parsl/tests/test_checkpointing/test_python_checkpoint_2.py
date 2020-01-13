@@ -14,6 +14,7 @@ def test_loading_checkpoint(n=2):
     """
 
     rundir, results = test_initial_checkpoint_write()
+    parsl.dfk.shutdown()
 
     local_config = fresh_config()
     local_config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
