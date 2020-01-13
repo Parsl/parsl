@@ -2,25 +2,43 @@ import argparse
 import os
 import pytest
 import parsl
+from parsl import python_app
 
-from parsl.tests.test_checkpointing.test_python_checkpoint_1 import test_initial_checkpoint_write
-from parsl.tests.test_checkpointing.test_python_checkpoint_1 import launch_n_random
+from parsl.tests.configs.local_threads import config
 from parsl.tests.configs.local_threads_checkpoint import fresh_config
 
+local_config = config
 
-@pytest.mark.skip
+
+@python_app(cache=True)
+def random_app(i):
+    import random
+    return random.randint(i, 100000)
+
+
+def launch_n_random(n=2):
+    """1. Launch a few apps and write the checkpoint once a few have completed
+    """
+
+    d = [random_app(i) for i in range(0, n)]
+    return [i.result() for i in d]
+
+
+@pytest.mark.local
 def test_loading_checkpoint(n=2):
     """Load memoization table from previous checkpoint
     """
 
-    rundir, results = test_initial_checkpoint_write()
+    results = launch_n_random(n)
+    rundir = parsl.dfk().run_dir
+    parsl.dfk().cleanup()
+    parsl.clear()
 
     local_config = fresh_config()
     local_config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
     parsl.load(local_config)
 
     relaunched = launch_n_random(n)
-
     assert len(relaunched) == len(results) == n, "Expected all results to have n items"
 
     for i in range(n):
