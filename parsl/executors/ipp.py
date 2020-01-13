@@ -2,22 +2,20 @@ import logging
 import os
 import pathlib
 import uuid
-from typing import List
 
 from ipyparallel import Client
-from parsl.providers import LocalProvider
-from parsl.providers.provider_base import JobStatus, JobState
-from parsl.utils import RepresentationMixin
-
-from parsl.executors.base import ParslExecutor
+from parsl.providers.provider_base import JobState
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.ipp_controller import Controller
+from parsl.executors.status_handling import StatusHandlingExecutor
+from parsl.providers import LocalProvider
+from parsl.utils import RepresentationMixin
 from parsl.utils import wait_for_file
 
 logger = logging.getLogger(__name__)
 
 
-class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
+class IPyParallelExecutor(StatusHandlingExecutor, RepresentationMixin):
     """The IPython Parallel executor.
 
     This executor uses IPythonParallel's pilot execution system to manage multiple processes
@@ -77,7 +75,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                  engine_debug_level=None,
                  workers_per_node=1,
                  managed=True):
-        self.provider = provider
+
+        StatusHandlingExecutor.__init__(self, provider)
         self.label = label
         self.working_dir = working_dir
         self.controller = controller
@@ -267,15 +266,8 @@ sleep infinity
 
         return r
 
-    def status(self) -> List[JobStatus]:
-        """Returns the status of the executor via probing the execution providers."""
-        if self.provider:
-            status = self.provider.status(self.engines)
-
-        else:
-            status = []
-
-        return status
+    def _get_job_ids(self):
+        return self.engines
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.
