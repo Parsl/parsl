@@ -1,7 +1,7 @@
 import pytest
 import parsl
 
-from parsl.app.app import App
+from parsl.app.app import python_app, bash_app
 
 import logging
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ def local_teardown():
     parsl.clear()
 
 
-@App("python", executors=['threads'])
+@python_app(executors=['threads'])
 def python_app_2():
     import os
     import threading
@@ -25,7 +25,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", executors=['threads'])
+@python_app(executors=['threads'])
 def python_app_1():
     import os
     import threading
@@ -34,7 +34,7 @@ def python_app_1():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("bash")
+@bash_app
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 15'
 

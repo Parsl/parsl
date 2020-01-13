@@ -5,11 +5,11 @@ import pytest
 
 import parsl
 import parsl.app.errors as perror
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash')
+@bash_app
 def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
     return 'echo "{0}"; echo "{0}" >&2'.format(msg)
 
