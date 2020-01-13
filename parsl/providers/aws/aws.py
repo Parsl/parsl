@@ -6,7 +6,7 @@ from string import Template
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.aws.template import template_string
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
@@ -23,12 +23,12 @@ else:
     _boto_enabled = True
 
 translate_table = {
-    'pending': 'PENDING',
-    'running': 'RUNNING',
-    'terminated': 'COMPLETED',
-    'shutting-down': 'COMPLETED',  # (configuring),
-    'stopping': 'COMPLETED',  # We shouldn't really see this state
-    'stopped': 'COMPLETED',  # We shouldn't really see this state
+    'pending': JobState.PENDING,
+    'running': JobState.RUNNING,
+    'terminated': JobState.COMPLETED,
+    'shutting-down': JobState.COMPLETED,  # (configuring),
+    'stopping': JobState.COMPLETED,  # We shouldn't really see this state
+    'stopped': JobState.COMPLETED,  # We shouldn't really see this state
 }
 
 
@@ -557,13 +557,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         for r in status['Reservations']:
             for i in r['Instances']:
                 instance_id = i['InstanceId']
-                instance_state = translate_table.get(i['State']['Name'], 'UNKNOWN')
-                self.resources[instance_id]['status'] = instance_state
+                instance_state = translate_table.get(i['State']['Name'], JobState.UNKNOWN)
+                self.resources[instance_id]['status'] = JobStatus(instance_state)
                 all_states.extend([instance_state])
 
         return all_states
 
-    def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.auto"):
+    def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.aws"):
         """Submit the command onto a freshly instantiated AWS EC2 instance.
 
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -583,7 +583,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             If at capacity, None will be returned. Otherwise, the job identifier will be returned.
         """
 
-        job_name = "parsl.auto.{0}".format(time.time())
+        job_name = "parsl.aws.{0}".format(time.time())
         wrapped_cmd = self.launcher(command,
                                     tasks_per_node,
                                     self.nodes_per_block)
@@ -595,12 +595,12 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("Started instance_id: {0}".format(instance.instance_id))
 
-        state = translate_table.get(instance.state['Name'], "PENDING")
+        state = translate_table.get(instance.state['Name'], JobState.PENDING)
 
         self.resources[instance.instance_id] = {
             "job_id": instance.instance_id,
             "instance": instance,
-            "status": state
+            "status": JobStatus(state)
         }
 
         return instance.instance_id
@@ -632,7 +632,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.debug("Removed the instances: {0}".format(job_ids))
 
         for job_id in job_ids:
-            self.resources[job_id]["status"] = "COMPLETED"
+            self.resources[job_id]["status"] = JobStatus(JobState.COMPLETED)
 
         for job_id in job_ids:
             self.instances.remove(job_id)

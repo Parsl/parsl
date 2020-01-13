@@ -15,6 +15,8 @@ import fcntl
 import struct
 import psutil
 
+from typing import Set
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,7 +75,7 @@ def address_by_interface(ifname: str) -> str:
     )[20:24])
 
 
-def get_all_addresses():
+def get_all_addresses() -> Set[str]:
     """ Uses a combination of methods to determine possible addresses.
 
     Returns:
@@ -81,15 +83,13 @@ def get_all_addresses():
     """
     net_interfaces = psutil.net_if_addrs()
 
-    s_addresses = []
+    s_addresses = set()
     for interface in net_interfaces:
         try:
-            s_addresses.append(address_by_interface(interface))
+            s_addresses.add(address_by_interface(interface))
         except Exception:
             logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
             pass
-
-    s_addresses = set(s_addresses)
 
     try:
         s_addresses.add(address_by_hostname())

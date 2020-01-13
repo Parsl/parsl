@@ -4,7 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SimpleLauncher
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobStatus, JobState
 from parsl.providers.error import ScriptPathError
 from parsl.utils import RepresentationMixin
 
@@ -111,7 +111,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             channel_counts = {channel: 0 for channel in self.channels}
             for job_id in self.resources:
                 channel = self.resources[job_id]['channel']
-                if self.resources[job_id]['status'] == 'RUNNING':
+                if self.resources[job_id]['status'] == JobStatus(JobState.RUNNING):
                     channel_counts[channel] = channel_counts.get(channel, 0) + 1
                 else:
                     channel_counts[channel] = channel_counts.get(channel, 0)
@@ -124,7 +124,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 if channel_counts[channel] == 0:
                     yield channel
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.adhoc"):
         ''' Submits the command onto a channel from the list of channels
 
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -138,7 +138,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
           command invocations to be launched per node
 
         job_name: (String)
-          Name of the job. Default : parsl.auto
+          Name of the job. Default : parsl.adhoc
 
 
         Returns
@@ -193,7 +193,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 raise
 
         self.resources[job_id] = {'job_id': job_id,
-                                  'status': 'RUNNING',
+                                  'status': JobStatus(JobState.RUNNING),
                                   'cmd': final_cmd,
                                   'channel': channel,
                                   'remote_pid': remote_pid,
@@ -211,15 +211,15 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         Returns
         -------
-        list of status strings ['PENDING', 'COMPLETED', 'FAILED']
+        list of JobStatus objects
         """
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
             status_command = "ps --pid {} | grep {}".format(self.resources[job_id]['job_id'],
                                                             self.resources[job_id]['cmd'].split()[0])
             retcode, stdout, stderr = channel.execute_wait(status_command)
-            if retcode != 0 and self.resources[job_id]['status'] == 'RUNNING':
-                self.resources[job_id]['status'] = 'FAILED'
+            if retcode != 0 and self.resources[job_id]['status'].state == JobState.RUNNING:
+                self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
 
         return [self.resources[job_id]['status'] for job_id in job_ids]
 
@@ -245,7 +245,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 rets.append(True)
             else:
                 rets.append(False)
-            self.resources[job_id]['status'] = 'COMPLETED'
+            self.resources[job_id]['status'] = JobStatus(JobState.COMPLETED)
         return rets
 
     @property

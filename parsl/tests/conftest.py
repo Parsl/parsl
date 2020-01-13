@@ -5,6 +5,10 @@ import shutil
 import subprocess
 from glob import glob
 from itertools import chain
+import signal
+import sys
+import threading
+import traceback
 
 import pytest
 import _pytest.runner as runner
@@ -14,6 +18,25 @@ from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger('parsl')
+
+
+def dumpstacks(sig, frame):
+    s = ''
+    try:
+        thread_names = {thread.ident: thread.name for thread in threading.enumerate()}
+        tf = sys._current_frames()
+        for thread_id, frame in tf.items():
+            s += '\n\nThread: %s (%d)' % (thread_names[thread_id], thread_id)
+            s += ''.join(traceback.format_stack(frame))
+    except Exception:
+        s = traceback.format_exc()
+    with open(os.getenv('HOME') + '/parsl_stack_dump.txt', 'w') as f:
+        f.write(s)
+    print(s)
+
+
+def pytest_sessionstart(session):
+    signal.signal(signal.SIGUSR1, dumpstacks)
 
 
 def pytest_addoption(parser):
@@ -229,14 +252,14 @@ def apply_masks(request, pytestconfig):
     and configs which are not `local` are skipped if the `local` decorator is applied.
     """
     config = pytestconfig.getoption('config')[0]
-    m = request.node.get_marker('whitelist')
+    m = request.node.get_closest_marker('whitelist')
     if m is not None:
         if os.path.abspath(config) not in chain.from_iterable([glob(x) for x in m.args]):
             if 'reason' not in m.kwargs:
                 pytest.skip("config '{}' not in whitelist".format(config))
             else:
                 pytest.skip(m.kwargs['reason'])
-    m = request.node.get_marker('blacklist')
+    m = request.node.get_closest_marker('blacklist')
     if m is not None:
         if os.path.abspath(config) in chain.from_iterable([glob(x) for x in m.args]):
             if 'reason' not in m.kwargs:
@@ -268,7 +291,7 @@ def setup_data():
 
 
 def pytest_make_collect_report(collector):
-    call = runner.CallInfo(lambda: list(collector.collect()), 'collect')
+    call = runner.CallInfo.from_call(lambda: list(collector.collect()), 'collect')
     longrepr = None
     if not call.excinfo:
         outcome = "passed"

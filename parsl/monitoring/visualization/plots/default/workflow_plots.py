@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
@@ -13,14 +14,6 @@ def task_gantt_plot(df_task, time_completed=None):
 
     df_task = df_task.sort_values(by=['task_time_submitted'], ascending=False)
 
-    # df_task['task_time_submitted'] = pd.to_datetime(df_task['task_time_submitted'], unit='s')
-    # df_task['task_time_returned'] = pd.to_datetime(df_task['task_time_returned'], unit='s')
-
-    # df_task = df_task.rename(index=str, columns={"task_id": "Task",
-    #                                             "task_time_submitted": "Start",
-    #                                             "task_time_returned": "Finish",
-    #                                             })
-    # parsl_tasks = df_task.to_dict('records')
     parsl_tasks = []
     for i, task in df_task.iterrows():
         time_running, time_returned = task['task_time_running'], task['task_time_returned']
@@ -28,10 +21,14 @@ def task_gantt_plot(df_task, time_completed=None):
             time_returned = datetime.datetime.now()
             if time_completed is not None:
                 time_returned = time_completed
+        if task['task_time_submitted'] is not None:
+            time_submitted = task['task_time_submitted']
+        else:
+            time_submitted = time_returned
         if task['task_time_running'] is None:
-            time_running = task['task_time_submitted']
+            time_running = time_submitted
         description = "Task ID: {}, app: {}".format(task['task_id'], task['task_func_name'])
-        dic1 = dict(Task=description, Start=task['task_time_submitted'],
+        dic1 = dict(Task=description, Start=time_submitted,
                     Finish=time_running, Resource="Pending")
         dic2 = dict(Task=description, Start=time_running,
                     Finish=time_returned, Resource="Running")
@@ -57,11 +54,14 @@ def task_per_app_plot(task, status):
             task['task_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
             task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
-        start = task['epoch_time_running'].min()
-        end = task['epoch_time_returned'].max()
+        start = int(task['epoch_time_running'].min())
+        end = int(task['epoch_time_returned'].max())
         tasks_per_app = {}
         all_tasks = [0] * (end - start + 1)
         for i, row in task.iterrows():
+            if math.isnan(row['epoch_time_running']):
+                # Skip rows with no running start time.
+                continue
             if row['task_func_name'] not in tasks_per_app:
                 tasks_per_app[row['task_func_name']] = [0] * (end - start + 1)
             for j in range(int(row['epoch_time_running']) + 1, int(row['epoch_time_returned']) + 1):
@@ -173,15 +173,16 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
     G.add_edges_from(edges)
 
     node_positions = nx.nx_pydot.pydot_layout(G, prog='dot')
-    node_traces = []
 
     if group_by_apps:
-        groups_list = {app: i for i, app in enumerate(
+        groups_list = {app: (i, None) for i, app in enumerate(
             df_tasks['task_func_name'].unique())}
     else:
-        groups_list = {'Pending': (0, 'gray'), "Running": (1, 'blue'), 'Completed': (2, 'green')}
+        groups_list = {'Pending': (0, 'gray'), "Running": (1, 'blue'), 'Completed': (2, 'green'), 'Unknown': (3, 'red')}
 
-    for k, _ in groups_list.items():
+    node_traces = [...] * len(groups_list)
+
+    for k, (index, color) in groups_list.items():
         node_trace = go.Scatter(
             x=[],
             y=[],
@@ -197,16 +198,15 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
             name=k,          # legend app_name here
             marker=dict(
                 showscale=False,
-                # color='rgb(200,0,0)',
+                color=color,
                 size=11,
                 line=dict(width=1, color='rgb(0,0,0)')))
-        node_traces.append(node_trace)
+        node_traces[index] = node_trace
 
     for node in node_positions:
         x, y = node_positions[node]
         if group_by_apps:
             name = dic['task_func_name'][node]
-            index = groups_list[name]
         else:
             if dic['task_time_returned'][node] is not None:
                 name = 'Completed'
@@ -214,8 +214,9 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
                 name = "Running"
             elif dic['task_time_submitted'][node] is not None:
                 name = "Pending"
-            index, color = groups_list[name]
-            node_traces[index]['marker']['color'] = color
+            else:
+                name = "Unknown"
+        index, _ = groups_list[name]
         node_traces[index]['x'] += tuple([x])
         node_traces[index]['y'] += tuple([y])
         node_traces[index]['text'] += tuple(
