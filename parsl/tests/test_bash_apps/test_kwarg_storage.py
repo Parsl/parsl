@@ -1,9 +1,9 @@
 import os
 
-from parsl.app.app import App
+from parsl.app.app import bash_app
 
 
-@App('bash')
+@bash_app
 def foo(z=2, stdout=None):
     return """echo {val}
     """.format(val=z)

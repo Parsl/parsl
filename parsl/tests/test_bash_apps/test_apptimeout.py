@@ -1,12 +1,12 @@
 import parsl
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 from parsl.app.errors import AppTimeout
 
 
-@App('bash')
+@bash_app
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out', walltime=0.5):
     return """echo "sleeping";
     sleep 1 """
