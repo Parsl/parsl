@@ -257,7 +257,7 @@ class DataFlowKernel(object):
         structure.
 
         Args:
-             task_id (string) : Task idwhich is a uuid string
+             task_id (string) : Task id which is a uuid string
              future (Future) : The future object corresponding to the task which
              makes this callback
         """
