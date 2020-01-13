@@ -1,9 +1,9 @@
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.data_provider.files import File
 
 
-@App('python')
+@python_app
 def sort_strings(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
@@ -30,7 +30,7 @@ def test_implicit_staging_https():
     f.result()
 
 
-@App('python')
+@python_app
 def sort_strings_kw(x=None, outputs=[]):
     with open(x.filepath, 'r') as u:
         strs = u.readlines()
@@ -53,7 +53,7 @@ def test_implicit_staging_https_kwargs():
     f.result()
 
 
-@App('python')
+@python_app
 def sort_strings_arg(x, outputs=[]):
     with open(x.filepath, 'r') as u:
         strs = u.readlines()
@@ -76,7 +76,7 @@ def test_implicit_staging_https_args():
     f.result()
 
 
-@App('python', executors=['other'])
+@python_app(executors=['other'])
 def sort_strings_additional_executor(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()

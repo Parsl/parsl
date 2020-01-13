@@ -5,12 +5,12 @@ import shutil
 import time
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash')
+@bash_app
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     res = ""
     for i in inputs:
@@ -19,7 +19,7 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     return res
 
 
-@App('bash')
+@bash_app
 def foo(x, y, z=10, stdout=None):
     return """echo {0} {1} {z}
     """.format(x, y, z=z)

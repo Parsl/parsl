@@ -1,4 +1,4 @@
-from parsl import App, DataFlowKernel
+from parsl import python_app, DataFlowKernel
 import time
 import argparse
 
@@ -13,7 +13,7 @@ def run_checkpointed(n=2, mode="task_exit", sleep_dur=0):
     config["globals"]["checkpointMode"] = mode
     dfk = DataFlowKernel(config=config)
 
-    @App('python', dfk, cache=True)
+    @python_app(data_flow_kernel=dfk, cache=True)
     def cached_rand(x, sleep_dur=0):
         import random
         import time

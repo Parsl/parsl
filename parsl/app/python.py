@@ -35,11 +35,10 @@ def timeout(f, seconds):
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all'):
         super().__init__(
             wrap_error(func),
             data_flow_kernel=data_flow_kernel,
-            walltime=walltime,
             executors=executors,
             cache=cache
         )
@@ -64,8 +63,11 @@ class PythonApp(AppBase):
 
         walltime = self.kwargs.get('walltime')
         if walltime is not None:
-            self.func = timeout(self.func, walltime)
-        app_fut = dfk.submit(self.func, *args,
+            func = timeout(self.func, walltime)
+        else:
+            func = self.func
+
+        app_fut = dfk.submit(func, *args,
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,

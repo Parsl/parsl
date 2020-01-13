@@ -1,9 +1,9 @@
 import pytest
 
-from parsl import App, File
+from parsl import python_app, File
 
 
-@App('python')
+@python_app
 def convert(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as inp:
         content = inp.read()

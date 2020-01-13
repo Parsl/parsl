@@ -6,12 +6,12 @@ import time
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app, python_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
-@App('python')
+@python_app
 def double(x):
     import time
     time.sleep(1)
@@ -27,7 +27,7 @@ def test_1():
     x.result()
 
 
-@App('python')
+@python_app
 def sleep_double(x):
     import time
     time.sleep(0.2)
@@ -44,7 +44,7 @@ def test_2():
     print(doubled_x.result())
 
 
-@App('python')
+@python_app
 def wait_sleep_double(x, fu_1, fu_2):
     import time
     time.sleep(0.2)
@@ -77,7 +77,7 @@ def test_3():
     assert delta < 5, "Took too much time"
 
 
-@App('python')
+@python_app
 def bad_divide(x):
     return 6 / x
 
@@ -95,7 +95,7 @@ def test_4():
         print("Oops! Something really bad happened")
 
 
-@App('bash')
+@bash_app
 def echo(message, outputs=[]):
     return 'echo {0} &> {outputs[0]}'.format(message, outputs=outputs)
 
@@ -103,7 +103,7 @@ def echo(message, outputs=[]):
 # the first file in its outputs[] kwargs
 
 
-@App('bash')
+@bash_app
 def cat(inputs=[], outputs=[], stdout='cat.out', stderr='cat.err'):
     return 'cat {inputs[0]} > {outputs[0]}'.format(inputs=inputs, outputs=outputs)
 
