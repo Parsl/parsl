@@ -8,6 +8,7 @@ from parsl.tests.configs.local_threads import config
 
 
 def local_setup():
+    parsl.clear()
     global dfk
     dfk = parsl.load(config)
 
