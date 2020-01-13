@@ -1,50 +1,30 @@
 import argparse
 import os
-import time
-
 import pytest
-
 import parsl
-from parsl.app.app import App
-import parsl.tests.test_checkpointing.test_python_checkpoint_1 as test1
-from parsl.tests.configs.local_threads import config
+
+from parsl.tests.test_checkpointing.test_python_checkpoint_1 import test_initial_checkpoint_write
+from parsl.tests.test_checkpointing.test_python_checkpoint_1 import launch_n_random
 from parsl.tests.configs.local_threads_checkpoint import fresh_config
 
 
-@App('python', cache=True)
-def slow_double(x, sleep_dur=1):
-    import time
-    time.sleep(sleep_dur)
-    return x * 2
-
-# @pytest.mark.local
-@pytest.mark.skip
+@pytest.mark.local
 def test_loading_checkpoint(n=2):
     """Load memoization table from previous checkpoint
     """
 
-    parsl.load(config)
-    rundir = test1.test_initial_checkpoint_write()
-    parsl.clear()
+    rundir, results = test_initial_checkpoint_write()
 
     local_config = fresh_config()
     local_config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
     parsl.load(local_config)
 
-    d = {}
+    relaunched = launch_n_random(n)
 
-    start = time.time()
-    print("Launching : ", n)
-    for i in range(0, n):
-        d[i] = slow_double(i)
-    print("Done launching")
+    assert len(relaunched) == len(results) == n, "Expected all results to have n items"
 
-    for i in range(0, n):
-        d[i].result()
-    print("Done sleeping")
-
-    delta = time.time() - start
-    assert delta < 1, "Took longer than a second ({}), assuming restore from checkpoint failed".format(delta)
+    for i in range(n):
+        assert relaunched[i] == results[i], "Expected relaunched to contain cached results from first run"
     parsl.clear()
 
 
