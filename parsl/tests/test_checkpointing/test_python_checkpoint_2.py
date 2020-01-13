@@ -8,7 +8,7 @@ from parsl.tests.test_checkpointing.test_python_checkpoint_1 import launch_n_ran
 from parsl.tests.configs.local_threads_checkpoint import fresh_config
 
 
-@pytest.mark.local
+@pytest.mark.skip
 def test_loading_checkpoint(n=2):
     """Load memoization table from previous checkpoint
     """
