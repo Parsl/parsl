@@ -1,21 +1,21 @@
 import argparse
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('python')
+@python_app
 def app_double(x):
     return x * 2
 
 
-@App('python')
+@python_app
 def app_sum(inputs=[]):
     return sum(inputs)
 
 
-@App('python')
+@python_app
 def slow_app_double(x, sleep_dur=0.05):
     import time
     time.sleep(sleep_dur)

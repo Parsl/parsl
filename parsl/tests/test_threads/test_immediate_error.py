@@ -1,6 +1,6 @@
 import parsl
 import pytest
-from parsl import App
+from parsl import python_app
 from parsl.tests.configs.local_threads import config
 
 
@@ -13,7 +13,7 @@ def test_non_lazy_behavior():
     config.lazy_errors = False
     parsl.load(config)
 
-    @App('python')
+    @python_app
     def divide(a, b):
         return a / b
 

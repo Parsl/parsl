@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
@@ -13,49 +13,49 @@ pytestmark = pytest.mark.skip('not asserting anything')
 local_config = config
 
 
-@App('python')
+@python_app
 def multiply_rand(x):
     return x * random.randint(1, 10)
 
 
-@App('python')
+@python_app
 def square_sum(x, y):
     return (x + y) ** 2
 
 
-@App('python')
+@python_app
 def double_sum(x, y):
     return 2 * (x + y)
 
 
-@App('python')
+@python_app
 def subtract(x, y):
     return y - x
 
 
-@App('python')
+@python_app
 def add_two(x):
     return x + 2
 
 
-@App('python')
+@python_app
 def rand():
     x = random.randint(1, 100)
     return x
 
 
-@App('python')
+@python_app
 def square(x):
     z = x ** 2
     return z
 
 
-@App('python')
+@python_app
 def cubed(x):
     return x ** 3
 
 
-@App('python')
+@python_app
 def sleep_cubed(x):
     if x < 5:
         time.sleep(7)
@@ -64,29 +64,29 @@ def sleep_cubed(x):
         return x ** 3
 
 
-@App('python')
+@python_app
 def increment(x):
     return x + 1
 
 
-@App('python')
+@python_app
 def slow_increment(x, dur=1):
     import time
     time.sleep(dur)
     return x + 1
 
 
-@App('python')
+@python_app
 def join(inputs=[]):
     return sum(inputs)
 
 
-@App('python')
+@python_app
 def join_three(x, y, z):
     return x + y + z
 
 
-@App('python')
+@python_app
 def sleep_square(x):
     if x > 5:
         return x ** 2
@@ -95,7 +95,7 @@ def sleep_square(x):
         return x ** 2
 
 
-@App('python')
+@python_app
 def sum_results(x=[]):
     total = 0
     for r in x:
@@ -103,17 +103,17 @@ def sum_results(x=[]):
     return total
 
 
-@App('python')
+@python_app
 def add(x, y):
     return x + y
 
 
-@App('python')
+@python_app
 def sum_list(x=[]):
     return sum(x)
 
 
-@App('python')
+@python_app
 def sum_lists(x=[], y=[], z=[]):
     total = 0
     for i in range(len(x)):
@@ -125,7 +125,7 @@ def sum_lists(x=[], y=[], z=[]):
     return total
 
 
-@App('python')
+@python_app
 def sum_elements(x=[], y=[], z=[]):
     total = 0
     for i in range(len(x)):
@@ -138,12 +138,12 @@ def sum_elements(x=[], y=[], z=[]):
     return total
 
 
-@App('python')
+@python_app
 def simple_sum_elements(x, y, z):
     return x + y + z
 
 
-@App('python')
+@python_app
 def eval_number(x):
     if x > 5:
         print("Larger than 5")
@@ -153,17 +153,17 @@ def eval_number(x):
         return return_zero().result()
 
 
-@App('python')
+@python_app
 def return_one():
     return 1
 
 
-@App('python')
+@python_app
 def return_zero():
     return 0
 
 
-@App('python')
+@python_app
 def xor_split():
     """Test XOR split. Do A if x else B
     """
@@ -177,7 +177,7 @@ def xor_split():
         return 1
 
 
-@App('python')
+@python_app
 def arb_rand():
     x = random.randint(2, 10)
     print(x)
@@ -185,7 +185,7 @@ def arb_rand():
     return arb_square(x).result()
 
 
-@App('python')
+@python_app
 def arb_square(x):
     y = x ** 2
     if y > 25:
@@ -194,7 +194,7 @@ def arb_square(x):
         return arb_cubed(x).result()
 
 
-@App('python')
+@python_app
 def arb_cubed(x):
     y = x ** 3
     return arb_square(y).result()

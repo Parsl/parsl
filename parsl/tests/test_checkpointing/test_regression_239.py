@@ -2,7 +2,7 @@ import pickle
 
 import pytest
 
-from parsl import App, DataFlowKernel
+from parsl import python_app, DataFlowKernel
 from parsl.utils import time_limited_open
 
 
@@ -15,12 +15,12 @@ def run_checkpointed(n=2, mode="task_exit"):
     config["globals"]["checkpointMode"] = mode
     dfk = DataFlowKernel(config=config)
 
-    @App('python', dfk, cache=True)
+    @python_app(data_flow_kernel=dfk, cache=True)
     def cached_rand(x):
         import random
         return random.randint(0, 10000)
 
-    @App('python', dfk, cache=True)
+    @python_app(data_flow_kernel=dfk, cache=True)
     def cached_failing(x):
         5 / 0
         return 1
