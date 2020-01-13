@@ -19,7 +19,6 @@ def random_app(i):
 def launch_n_random(n=2):
     """1. Launch a few apps and write the checkpoint once a few have completed
     """
-
     d = [random_app(i) for i in range(0, n)]
     return [i.result() for i in d]
 
@@ -28,7 +27,6 @@ def launch_n_random(n=2):
 def test_loading_checkpoint(n=2):
     """Load memoization table from previous checkpoint
     """
-
     results = launch_n_random(n)
     rundir = parsl.dfk().run_dir
     parsl.dfk().cleanup()
