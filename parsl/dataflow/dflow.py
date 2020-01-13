@@ -510,7 +510,8 @@ class DataFlowKernel(object):
             - kwargs (Dict) : Kwargs to app function
         """
 
-        # Return if the task is _*_stage_in
+        # Return if the task is a data management task, rather than doing
+        # data managament on it.
         if executor == 'data_manager':
             return args, kwargs, func
 
