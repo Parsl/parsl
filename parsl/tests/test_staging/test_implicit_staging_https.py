@@ -7,8 +7,8 @@ import pytest
 # This config is for the local test which will adding an executor.
 # Most tests in this file should be non-local and use the configuration
 # specificed with --config, not this one.
-from parsl.tests.configs.htex_local import config
-local_config = config
+from parsl.tests.configs.htex_local import fresh_config
+local_config = fresh_config()
 
 
 @App('python')
