@@ -25,6 +25,7 @@ def launch_n_random(n=2):
 def test_loading_checkpoint(n=2):
     """Load memoization table from previous checkpoint
     """
+    config.checkpoint_mode = 'task_exit'
     parsl.load(config)
     results = launch_n_random(n)
     rundir = parsl.dfk().run_dir
