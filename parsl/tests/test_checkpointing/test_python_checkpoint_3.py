@@ -3,7 +3,7 @@ import os
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
@@ -16,7 +16,7 @@ def local_teardown():
     parsl.clear()
 
 
-@App('python')
+@python_app
 def slow_double(x, sleep_dur=1, cache=True):
     import time
     time.sleep(sleep_dur)

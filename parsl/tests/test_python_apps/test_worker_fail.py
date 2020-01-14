@@ -2,11 +2,11 @@ import argparse
 import time
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('python')
+@python_app
 def import_echo(x, string, sleep=0, stdout=None):
     import time
     time.sleep(sleep)

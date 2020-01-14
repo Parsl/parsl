@@ -1,6 +1,6 @@
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.data_provider.files import File
 
 from parsl.tests.configs.local_threads_http_in_task import config
@@ -9,7 +9,7 @@ from parsl.tests.configs.local_threads_http_in_task import config
 local_config = config
 
 
-@App('python')
+@python_app
 def sort_strings(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
