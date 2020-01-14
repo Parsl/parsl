@@ -1,12 +1,12 @@
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_ipp import config
 
 local_config = config
 
 
-@App('python')
+@python_app
 def slow_double(x, dur=0.1):
     import time
     time.sleep(dur)

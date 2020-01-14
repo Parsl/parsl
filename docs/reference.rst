@@ -74,7 +74,6 @@ Reference guide
     parsl.app.errors.BadStdStreamFile
     parsl.app.errors.BashAppNoReturn
     parsl.app.errors.DependencyError
-    parsl.app.errors.InvalidAppTypeError
     parsl.app.errors.MissingOutputs
     parsl.app.errors.NotFutureError
     parsl.app.errors.ParslError
