@@ -7,8 +7,6 @@ from parsl import python_app
 from parsl.tests.configs.local_threads import config
 from parsl.tests.configs.local_threads_checkpoint import fresh_config
 
-local_config = config
-
 
 @python_app(cache=True)
 def random_app(i):
@@ -27,6 +25,7 @@ def launch_n_random(n=2):
 def test_loading_checkpoint(n=2):
     """Load memoization table from previous checkpoint
     """
+    parsl.load(config)
     results = launch_n_random(n)
     rundir = parsl.dfk().run_dir
     parsl.dfk().cleanup()
