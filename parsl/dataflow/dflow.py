@@ -326,9 +326,6 @@ class DataFlowKernel(object):
                     res.reraise()
 
                 self.tasks[task_id]['app_fu'].set_result(future.result())
-                # self.tasks[task_id]['app_fu'] = weakref.ref(self.tasks[task_id]['app_fu'])
-                # self.tasks[task_id]['app_fu'] = None
-                # self.tasks[task_id]['depends'] = None
             except Exception as e:
                 if future.retries_left > 0:
                     # ignore this exception, because assume some later
@@ -994,6 +991,7 @@ class DataFlowKernel(object):
                        self.tasks[task_id]['app_fu'].done() and \
                        self.tasks[task_id]['app_fu'].exception() is None:
                         hashsum = self.tasks[task_id]['hashsum']
+                        self.tasks[task_id]['app_fu'] = None
                         if not hashsum:
                             continue
                         t = {'hash': hashsum,
@@ -1015,7 +1013,6 @@ class DataFlowKernel(object):
                         count += 1
                         self.tasks[task_id]['checkpoint'] = True
                         logger.debug("Task {} checkpointed".format(task_id))
-                        self.tasks[task_id]['app_fu'] = None
 
             self.checkpointed_tasks += count
 
