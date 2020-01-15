@@ -1,6 +1,7 @@
 import parsl
 import gc
 import pprint
+import time
 pp = pprint.PrettyPrinter(indent=4)
 
 from parsl.app.app import python_app
@@ -27,6 +28,7 @@ def test_garbage_collect():
     x.result()
     # We need to force a checkpoint step here to make sure checkpointing went through.
     parsl.dfk().checkpoint()
+    time.sleep(0.1)
 
     refs = gc.get_referrers(x)
     assert len(refs) == 1, "Expected only 1 live reference from main context got : {}, {}".format(len(refs),
