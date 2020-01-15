@@ -17,6 +17,11 @@ def test_python_walltime():
         f.result()
 
 
+def test_python_longer_walltime_at_invocation():
+    f = my_app(walltime=6)
+    f.result()
+
+
 def test_python_bad_decorator_args():
 
     with pytest.raises(TypeError):

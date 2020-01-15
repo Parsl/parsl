@@ -1,8 +1,8 @@
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 
 
-@App('python')
+@python_app
 def platform_name():
     return platform.platform()
 
@@ -21,7 +21,7 @@ def test_name_error(n=2):
         assert False, "Raise the wrong Error"
 
 
-@App('python')
+@python_app
 def bad_import():
     import non_existent
     return non_existent.foo()

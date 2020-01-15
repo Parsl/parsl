@@ -3,19 +3,19 @@ import os
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.midway_ipp_multicore import config
 
 
 local_config = config
 
 
-@App('bash')
+@bash_app
 def mpi_hello(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
     pass
 
 
-@App('bash')
+@bash_app
 def mpi_test(ranks, inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
     return """module load amber/16+cuda-8.0
     mpirun -n 6 mpi_hello

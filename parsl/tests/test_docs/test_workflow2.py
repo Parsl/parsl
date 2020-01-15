@@ -2,14 +2,14 @@ import time
 
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
 local_config = config
 
 
-@App('python')
+@python_app
 def wait_sleep_double(x, fu_1, fu_2):
     import time
     time.sleep(2)   # Sleep for 2 seconds

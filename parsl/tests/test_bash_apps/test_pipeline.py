@@ -2,14 +2,14 @@ import argparse
 import os
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.data_provider.files import File
 from parsl.app.futures import DataFuture
 
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash')
+@bash_app
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     cmd_line = """
     if ! [ -f {inputs[0]} ] ; then exit 43 ; fi
@@ -19,7 +19,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def slow_increment(dur, inputs=[], outputs=[], stdout=None, stderr=None):
     cmd_line = """
     x=$(cat {inputs[0]})

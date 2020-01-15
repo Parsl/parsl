@@ -1,15 +1,15 @@
-from parsl.app.app import App
+from parsl.app.app import bash_app, python_app
 from parsl.data_provider.files import File
 
 import os
 
 
-@App('bash')
+@bash_app
 def echo(message, outputs=[]):
     return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
 
 
-@App('python')
+@python_app
 def cat(inputs=[]):
     with open(inputs[0].filepath) as f:
         return f.readlines()

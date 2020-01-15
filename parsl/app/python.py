@@ -55,13 +55,16 @@ class PythonApp(AppBase):
                    App_fut
 
         """
+        invocation_kwargs = {}
+        invocation_kwargs.update(self.kwargs)
+        invocation_kwargs.update(kwargs)
 
         if self.data_flow_kernel is None:
             dfk = DataFlowKernelLoader.dfk()
         else:
             dfk = self.data_flow_kernel
 
-        walltime = self.kwargs.get('walltime')
+        walltime = invocation_kwargs.get('walltime')
         if walltime is not None:
             func = timeout(self.func, walltime)
         else:

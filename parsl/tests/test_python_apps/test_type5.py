@@ -2,25 +2,25 @@ import argparse
 import random
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('python')
+@python_app
 def map_one(x, dur):
     import time
     time.sleep(dur)
     return x * 2
 
 
-@App('python')
+@python_app
 def map_two(x, dur):
     import time
     time.sleep(dur)
     return x * 5
 
 
-@App('python')
+@python_app
 def add_two(x, y, dur):
     import time
     time.sleep(dur)

@@ -1,7 +1,7 @@
 import os
 import parsl
 
-from parsl.app.app import App
+from parsl.app.app import bash_app, python_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
@@ -9,14 +9,14 @@ from parsl.tests.configs.local_threads import config
 # parsl.set_stream_logger()
 
 
-@App('python')
+@python_app
 def generate(limit):
     from random import randint
     """Generate a random integer and return it"""
     return randint(1, limit)
 
 
-@App('bash')
+@bash_app
 def save(message, outputs=[]):
     return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
 
