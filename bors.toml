@@ -1,0 +1,9 @@
+status = [
+  "continuous-integration/travis-ci/push",
+]
+
+use_squash_merge = true
+
+# Uncomment this to use a two hour timeout.
+# The default is one hour.
+#timeout_sec = 7200
