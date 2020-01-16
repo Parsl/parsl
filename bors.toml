@@ -3,6 +3,7 @@ status = [
 ]
 
 use_squash_merge = true
+required_approvals = true
 
 # Uncomment this to use a two hour timeout.
 # The default is one hour.
