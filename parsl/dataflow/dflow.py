@@ -368,10 +368,17 @@ class DataFlowKernel(object):
 
         # If checkpointing is turned on, wiping app_fu is left to the checkpointing code
         # else we wipe it here.
-        if self.checkpoint_mode is None:
-            self.tasks[task_id]['app_fu'] = None
         self.tasks[task_id]['depends'] = []
+        if self.checkpoint_mode is None:
+            self.wipe_task(task_id)
+            # self.tasks[task_id]['app_fu'] = None
         return
+
+    def wipe_task(self, task_id):
+        """ Remove task with task_id from the internal tasks table
+        """
+        logger.warning("Wiping {}".format(task_id))
+        del self.tasks[task_id]
 
     @staticmethod
     def check_staging_inhibited(kwargs):
@@ -991,7 +998,8 @@ class DataFlowKernel(object):
                        self.tasks[task_id]['app_fu'].done() and \
                        self.tasks[task_id]['app_fu'].exception() is None:
                         hashsum = self.tasks[task_id]['hashsum']
-                        self.tasks[task_id]['app_fu'] = None
+                        self.wipe_task(task_id)
+                        # self.tasks[task_id]['app_fu'] = None
                         if not hashsum:
                             continue
                         t = {'hash': hashsum,
