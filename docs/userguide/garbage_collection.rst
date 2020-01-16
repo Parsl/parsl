@@ -16,7 +16,7 @@ storing `AppFutures` in an active context. For eq:
 
    # Since the AppFuture returned is not stored in a variable
    # the task will be garbage collected.
-   print(double(5).result)
+   print(double(5).result())
 
    y = double(6)
    print(y.result())
