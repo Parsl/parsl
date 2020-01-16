@@ -1,6 +1,7 @@
 import pytest
 
 from parsl.app.app import python_app
+from parsl.tests.conftest import permit_severe_log
 
 
 @python_app
@@ -9,6 +10,7 @@ def always_fail():
 
 
 def test_simple():
-    with pytest.raises(ValueError):
-        fut = always_fail()
-        fut.result()
+    with permit_severe_log():
+        with pytest.raises(ValueError):
+            fut = always_fail()
+            fut.result()

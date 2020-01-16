@@ -9,6 +9,7 @@ import parsl
 from parsl.app.app import bash_app, python_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
+from parsl.tests.conftest import permit_severe_log
 
 
 @python_app
@@ -84,15 +85,16 @@ def bad_divide(x):
 
 def test_4():
 
-    doubled_x = bad_divide(0)
+    with permit_severe_log():
+        doubled_x = bad_divide(0)
 
-    try:
-        doubled_x.result()
+        try:
+            doubled_x.result()
 
-    except ZeroDivisionError:
-        print("Oops! You tried to divide by 0 ")
-    except Exception:
-        print("Oops! Something really bad happened")
+        except ZeroDivisionError:
+            print("Oops! You tried to divide by 0 ")
+        except Exception:
+            print("Oops! Something really bad happened")
 
 
 @bash_app

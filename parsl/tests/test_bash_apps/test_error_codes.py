@@ -2,6 +2,8 @@ import argparse
 import os
 
 import pytest
+from parsl.tests.conftest import permit_severe_log
+
 
 import parsl
 from parsl.app.app import bash_app
@@ -106,12 +108,14 @@ def test_div_0(test_fn=div_0):
 @pytest.mark.issue363
 def test_bash_misuse(test_fn=bash_misuse):
     err_code = test_matrix[test_fn]['exit_code']
-    f = test_fn()
-    try:
-        f.result()
-    except pe.AppFailure as e:
-        print("Caught expected AppFailure", e)
-        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
+    with permit_severe_log():
+
+        f = test_fn()
+        try:
+            f.result()
+        except pe.AppFailure as e:
+            print("Caught expected AppFailure", e)
+            assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
                                                                                       e.exitcode)
     os.remove('std.err')
@@ -120,13 +124,14 @@ def test_bash_misuse(test_fn=bash_misuse):
 
 @pytest.mark.issue363
 def test_command_not_found(test_fn=command_not_found):
-    err_code = test_matrix[test_fn]['exit_code']
-    f = test_fn()
-    try:
-        f.result()
-    except pe.AppFailure as e:
-        print("Caught exception", e)
-        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
+    with permit_severe_log():
+        err_code = test_matrix[test_fn]['exit_code']
+        f = test_fn()
+        try:
+            f.result()
+        except pe.AppFailure as e:
+            print("Caught exception", e)
+            assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
                                                                                       e.exitcode)
 

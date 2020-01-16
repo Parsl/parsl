@@ -7,7 +7,7 @@ import parsl
 import parsl.app.errors as perror
 from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
-
+from parsl.tests.conftest import permit_severe_log
 
 @bash_app
 def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
@@ -43,15 +43,16 @@ def test_bad_stdout_specs(spec):
     """Testing bad stdout spec cases
     """
 
-    fn = echo_to_streams("Hello world", stdout=spec, stderr='t.err')
+    with permit_severe_log():
+        fn = echo_to_streams("Hello world", stdout=spec, stderr='t.err')
 
-    try:
-        fn.result()
-    except Exception as e:
-        assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
-    else:
-        assert False, "Did not raise expected exception BadStdStreamFile"
+        try:
+            fn.result()
+        except Exception as e:
+            assert isinstance(
+                e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
+        else:
+            assert False, "Did not raise expected exception BadStdStreamFile"
 
     return
 
@@ -64,15 +65,16 @@ def test_bad_stderr_file():
     out = "t2.out"
     err = "/bad/dir/t2.err"
 
-    fn = echo_to_streams("Hello world", stdout=out, stderr=err)
+    with permit_severe_log():
+        fn = echo_to_streams("Hello world", stdout=out, stderr=err)
 
-    try:
-        fn.result()
-    except Exception as e:
-        assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
-    else:
-        assert False, "Did not raise expected exception BadStdStreamFile"
+        try:
+            fn.result()
+        except Exception as e:
+            assert isinstance(
+                e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
+        else:
+            assert False, "Did not raise expected exception BadStdStreamFile"
 
     return
 

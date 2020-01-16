@@ -2,6 +2,7 @@ import pytest
 
 import parsl
 from parsl.app.errors import AppTimeout
+from parsl.tests.conftest import permit_severe_log
 
 
 @parsl.python_app
@@ -12,9 +13,10 @@ def my_app(walltime=1):
 
 
 def test_python_walltime():
-    f = my_app()
-    with pytest.raises(AppTimeout):
-        f.result()
+    with permit_severe_log():
+        f = my_app()
+        with pytest.raises(AppTimeout):
+            f.result()
 
 
 def test_python_longer_walltime_at_invocation():
