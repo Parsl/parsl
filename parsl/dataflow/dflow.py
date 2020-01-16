@@ -324,8 +324,8 @@ class DataFlowKernel(object):
                 res = future.result()
                 if isinstance(res, RemoteExceptionWrapper):
                     res.reraise()
-                self.tasks[task_id]['app_fu'].set_result(future.result())
 
+                self.tasks[task_id]['app_fu'].set_result(future.result())
             except Exception as e:
                 if future.retries_left > 0:
                     # ignore this exception, because assume some later
@@ -366,6 +366,11 @@ class DataFlowKernel(object):
             if self.checkpoint_mode == 'task_exit':
                 self.checkpoint(tasks=[task_id])
 
+        # If checkpointing is turned on, wiping app_fu is left to the checkpointing code
+        # else we wipe it here.
+        if self.checkpoint_mode is None:
+            self.tasks[task_id]['app_fu'] = None
+        self.tasks[task_id]['depends'] = []
         return
 
     @staticmethod
@@ -766,7 +771,7 @@ class DataFlowKernel(object):
 
         self.launch_if_ready(task_id)
 
-        return task_def['app_fu']
+        return app_fu
 
     # it might also be interesting to assert that all DFK
     # tasks are in a "final" state (3,4,5) when the DFK
@@ -982,9 +987,11 @@ class DataFlowKernel(object):
             with open(checkpoint_tasks, 'ab') as f:
                 for task_id in checkpoint_queue:
                     if not self.tasks[task_id]['checkpoint'] and \
+                       self.tasks[task_id]['app_fu'] is not None and \
                        self.tasks[task_id]['app_fu'].done() and \
                        self.tasks[task_id]['app_fu'].exception() is None:
                         hashsum = self.tasks[task_id]['hashsum']
+                        self.tasks[task_id]['app_fu'] = None
                         if not hashsum:
                             continue
                         t = {'hash': hashsum,
