@@ -399,28 +399,30 @@ class DataFlowKernel(object):
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
-        if self._count_deps(self.tasks[task_id]['depends']) == 0:
+        # after launching the task, self.tasks[task_id] is no longer guaranteed to exist (because it can complete fast as part of the submission - eg memoization)
+        task_record = self.tasks[task_id]
+        if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
             new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
-                                                                  self.tasks[task_id]['args'],
-                                                                  self.tasks[task_id]['kwargs'])
-            self.tasks[task_id]['args'] = new_args
-            self.tasks[task_id]['kwargs'] = kwargs
+                                                                  task_record['args'],
+                                                                  task_record['kwargs'])
+            task_record['args'] = new_args
+            task_record['kwargs'] = kwargs
             if not exceptions:
                 # There are no dependency errors
                 exec_fu = None
                 # Acquire a lock, retest the state, launch
-                with self.tasks[task_id]['task_launch_lock']:
-                    if self.tasks[task_id]['status'] == States.pending:
+                with task_record['task_launch_lock']:
+                    if task_record['status'] == States.pending:
                         exec_fu = self.launch_task(
-                            task_id, self.tasks[task_id]['func'], *new_args, **kwargs)
+                            task_id, task_record['func'], *new_args, **kwargs)
 
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
-                self.tasks[task_id]['status'] = States.dep_fail
+                task_record['status'] = States.dep_fail
                 if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
@@ -438,7 +440,7 @@ class DataFlowKernel(object):
                 except Exception as e:
                     logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
-                self.tasks[task_id]['exec_fu'] = exec_fu
+                task_record['exec_fu'] = exec_fu
 
     def launch_task(self, task_id, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
