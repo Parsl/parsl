@@ -6,7 +6,7 @@ from parsl.tests.logfixtures import permit_severe_log
 
 @pytest.mark.local
 def test_lazy_behavior():
-    """Testing lazy errors to work"""
+    """Testing that lazy errors work"""
 
     config = fresh_config()
     config.lazy_errors = True
@@ -16,16 +16,11 @@ def test_lazy_behavior():
     def divide(a, b):
         return a / b
 
-    items = []
-
     with permit_severe_log():
-        for i in range(0, 1):
-            items.append(divide(10, i))
+        future = divide(10, 0)
 
-        while True:
-            raise ValueError("BENC: items[0].done = {}".format(items[0].done))
-            if items[0].done():
-                break
+        while not future.done():
+            pass
 
     parsl.clear()
     return
