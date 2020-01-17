@@ -30,7 +30,7 @@ def test_future_fail_dependency():
 
     assert not parsl_fut.done()
 
-    plain_fut.set_result(ValueError("Plain failure"))
+    plain_fut.set_exception(ValueError("Plain failure"))
 
     # TODO: be tighter on the returned exception: it should be a dependency failure exception
     assert parsl_fut.exception() is not None
