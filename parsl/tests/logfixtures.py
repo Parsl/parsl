@@ -28,7 +28,7 @@ def prohibit_severe_logs_test():
     if got_bad_log is not None:
         old = got_bad_log
         got_bad_log = None
-        raise ValueError("Unexpected severe log message: {}".format(old))
+        raise RuntimeError("Unexpected severe log message: {}".format(old))
 
 
 @contextlib.contextmanager
