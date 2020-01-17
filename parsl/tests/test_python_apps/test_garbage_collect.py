@@ -21,7 +21,8 @@ def test_garbage_collect():
     x.result()
     parsl.dfk().checkpoint()
 
-    assert parsl.dfk().tasks[x.tid]['app_fu'] is None, "Tasks should have app_fu ref wiped after task completion"
+    #    assert parsl.dfk().tasks[x.tid]['app_fu'] is None, "Tasks should have app_fu ref wiped after task completion"
+    assert x.tid not in parsl.dfk().tasks, "Task record should be wiped after task completion"
 
 
 if __name__ == '__main__':
