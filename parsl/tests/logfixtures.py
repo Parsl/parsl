@@ -28,7 +28,7 @@ def prohibit_severe_logs_test():
     if got_bad_log is not None:
         old = got_bad_log
         got_bad_log = None
-        raise ValueError("Test logged at a severe log level: {}".format(old))
+        raise ValueError("Unexpected severe log message: {}".format(old))
 
 
 @contextlib.contextmanager
@@ -44,4 +44,4 @@ class ParslTestLogHandler(logging.Handler):
     def emit(self, record):
         global got_bad_log
         if record.levelno >= 40 and not allow_bad_log:
-            got_bad_log = "Levelno {}  Levelname {}   Record {}".format(record.levelno, record.levelname, record)
+            got_bad_log = "{}: {}".format(record.levelname, record.message)
