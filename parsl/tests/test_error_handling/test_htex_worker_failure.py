@@ -6,6 +6,8 @@ from parsl.tests.configs.htex_local import fresh_config
 
 from parsl.executors.high_throughput.errors import WorkerLost
 
+from parsl.tests.logfixtures import permit_severe_log
+
 
 def local_setup():
     config = fresh_config()
@@ -26,6 +28,8 @@ def kill_worker():
 
 @pytest.mark.local
 def test_htex_worker_failure():
-    with pytest.raises(WorkerLost):
-        f = kill_worker()
-        f.result()
+
+    with permit_severe_log():    
+        with pytest.raises(WorkerLost):
+            f = kill_worker()
+            f.result()
