@@ -1,4 +1,5 @@
 import parsl
+from parsl.dataflow.error import DependencyError
 from concurrent.futures import Future
 
 
@@ -32,5 +33,4 @@ def test_future_fail_dependency():
 
     plain_fut.set_exception(ValueError("Plain failure"))
 
-    # TODO: be tighter on the returned exception: it should be a dependency failure exception
-    assert parsl_fut.exception() is not None
+    assert isinstance(parsl_fut.exception(), DependencyError)
