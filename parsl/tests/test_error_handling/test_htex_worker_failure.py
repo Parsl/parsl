@@ -29,7 +29,7 @@ def kill_worker():
 @pytest.mark.local
 def test_htex_worker_failure():
 
-    with permit_severe_log():    
+    with permit_severe_log():
         with pytest.raises(WorkerLost):
             f = kill_worker()
             f.result()

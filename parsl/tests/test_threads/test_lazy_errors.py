@@ -4,6 +4,7 @@ from parsl import python_app
 from parsl.tests.configs.local_threads import fresh_config
 from parsl.tests.logfixtures import permit_severe_log
 
+
 @pytest.mark.local
 def test_lazy_behavior():
     """Testing that lazy errors work"""
