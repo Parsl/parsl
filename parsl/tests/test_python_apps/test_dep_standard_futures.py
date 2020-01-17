@@ -1,9 +1,11 @@
 import parsl
 from concurrent.futures import Future
 
+
 @parsl.python_app
 def copy_app(v):
     return v
+
 
 def test_future_result_dependency():
 
@@ -19,6 +21,7 @@ def test_future_result_dependency():
 
     assert parsl_fut.result() == message
 
+
 def test_future_fail_dependency():
 
     plain_fut = Future()
@@ -31,5 +34,3 @@ def test_future_fail_dependency():
 
     # TODO: be tighter on the returned exception: it should be a dependency failure exception
     assert parsl_fut.exception() is not None
-
-
