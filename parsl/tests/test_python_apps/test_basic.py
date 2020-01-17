@@ -7,8 +7,7 @@ import pytest
 import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.local_ipp import config
-from parsl.tests.conftest import permit_severe_log
-
+from parsl.tests.logfixtures import permit_severe_log
 
 
 @python_app

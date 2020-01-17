@@ -1,6 +1,6 @@
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.conftest import permit_severe_log
+from parsl.tests.logfixtures import permit_severe_log
 
 
 

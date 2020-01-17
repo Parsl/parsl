@@ -2,7 +2,7 @@ import pytest
 
 import parsl
 from parsl.app.errors import AppTimeout
-from parsl.tests.conftest import permit_severe_log
+from parsl.tests.logfixtures import permit_severe_log
 
 
 @parsl.python_app

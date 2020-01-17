@@ -7,7 +7,8 @@ import parsl
 import parsl.app.errors as perror
 from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
-from parsl.tests.conftest import permit_severe_log
+from parsl.tests.logfixtures import permit_severe_log
+
 
 @bash_app
 def echo_to_streams(msg, stderr='std.err', stdout='std.out'):

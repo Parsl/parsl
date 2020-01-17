@@ -2,7 +2,7 @@ from parsl import python_app
 from parsl.dataflow.error import DependencyError
 
 from parsl.dataflow.states import States
-from parsl.tests.conftest import permit_severe_log
+from parsl.tests.logfixtures import permit_severe_log
 
 
 @python_app

@@ -2,7 +2,7 @@ import argparse
 import os
 
 import pytest
-from parsl.tests.conftest import permit_severe_log
+from parsl.tests.logfixtures import permit_severe_log
 
 
 import parsl
@@ -116,8 +116,8 @@ def test_bash_misuse(test_fn=bash_misuse):
         except pe.AppFailure as e:
             print("Caught expected AppFailure", e)
             assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                      err_code,
-                                                                                      e.exitcode)
+                                                                                          err_code,
+                                                                                          e.exitcode)
     os.remove('std.err')
     os.remove('std.out')
 
@@ -132,8 +132,8 @@ def test_command_not_found(test_fn=command_not_found):
         except pe.AppFailure as e:
             print("Caught exception", e)
             assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                      err_code,
-                                                                                      e.exitcode)
+                                                                                          err_code,
+                                                                                          e.exitcode)
 
     os.remove('std.err')
     os.remove('std.out')

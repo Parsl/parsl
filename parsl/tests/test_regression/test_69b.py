@@ -9,7 +9,7 @@ import parsl
 from parsl.app.app import bash_app, python_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
-from parsl.tests.conftest import permit_severe_log
+from parsl.tests.logfixtures import permit_severe_log
 
 
 @python_app
