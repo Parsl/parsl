@@ -400,7 +400,11 @@ class DataFlowKernel(object):
         or callback.
         """
         # after launching the task, self.tasks[task_id] is no longer guaranteed to exist (because it can complete fast as part of the submission - eg memoization)
-        task_record = self.tasks[task_id]
+        task_record = self.tasks.get(task_id)
+        if task_record is None:
+            # assume this task has already been processed to completion
+            logger.info("Task {} has no task record. Assuming it has already been processed to completion.".format(task_id))
+            return
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
@@ -617,8 +621,7 @@ class DataFlowKernel(object):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
-                        dep_failures.extend([e])
+                    dep_failures.extend([e])
             else:
                 new_args.extend([dep])
 
@@ -629,8 +632,7 @@ class DataFlowKernel(object):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
-                        dep_failures.extend([e])
+                    dep_failures.extend([e])
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
@@ -640,8 +642,7 @@ class DataFlowKernel(object):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
-                            dep_failures.extend([e])
+                        dep_failures.extend([e])
 
                 else:
                     new_inputs.extend([dep])
