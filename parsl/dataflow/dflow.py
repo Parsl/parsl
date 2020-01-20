@@ -400,7 +400,9 @@ class DataFlowKernel(object):
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
-        # after launching the task, self.tasks[task_id] is no longer guaranteed to exist (because it can complete fast as part of the submission - eg memoization)
+        # after launching the task, self.tasks[task_id] is no longer
+        # guaranteed to exist (because it can complete fast as part of the
+        # submission - eg memoization)
         task_record = self.tasks.get(task_id)
         if task_record is None:
             # assume this task has already been processed to completion
