@@ -3,7 +3,6 @@ import os
 import random
 import signal
 import subprocess
-import time
 
 from parsl.executors.errors import ControllerError
 from parsl.utils import RepresentationMixin
@@ -150,10 +149,12 @@ class Controller(RepresentationMixin):
         try:
             pgid = os.getpgid(self.proc.pid)
             os.killpg(pgid, signal.SIGTERM)
-            time.sleep(0.2)
-            os.killpg(pgid, signal.SIGKILL)
             try:
-                self.proc.wait(timeout=1)
+                try:
+                    self.proc.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    os.killpg(pgid, signal.SIGKILL)
+                    self.proc.wait(timeout=1)
                 x = self.proc.returncode
                 if x == 0:
                     logger.debug("Controller exited with {0}".format(x))
