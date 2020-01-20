@@ -1117,6 +1117,7 @@ class DataFlowKernelLoader(object):
     @classmethod
     def clear(cls):
         """Clear the active DataFlowKernel so that a new one can be loaded."""
+        logger.info("Clearing default DFK")
         cls._dfk = None
 
     @classmethod
