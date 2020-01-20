@@ -24,6 +24,10 @@ def prohibit_severe_logs_session():
 @pytest.fixture(autouse=True)
 def prohibit_severe_logs_test():
     global got_bad_log
+    if got_bad_log is not None:
+        old = got_bad_log
+        got_bad_log = None
+        raise RuntimeError("Previously executed test code left an unexpected severe log message: {}".format(old))
     yield
     if got_bad_log is not None:
         old = got_bad_log

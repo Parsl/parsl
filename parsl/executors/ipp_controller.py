@@ -148,11 +148,13 @@ class Controller(RepresentationMixin):
 
         try:
             pgid = os.getpgid(self.proc.pid)
+            logger.info("Killing ipcontroller process group {} found from pid {}".format(pgid, self.proc.pid))
             os.killpg(pgid, signal.SIGTERM)
             try:
                 try:
                     self.proc.wait(timeout=30)
                 except subprocess.TimeoutExpired:
+                    logger.warning("ipcontroller process did not respond to SIGTERM in time. Using SIGKILL")
                     os.killpg(pgid, signal.SIGKILL)
                     self.proc.wait(timeout=30)
                 x = self.proc.returncode
