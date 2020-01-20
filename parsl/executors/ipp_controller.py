@@ -151,10 +151,10 @@ class Controller(RepresentationMixin):
             os.killpg(pgid, signal.SIGTERM)
             try:
                 try:
-                    self.proc.wait(timeout=1)
+                    self.proc.wait(timeout=30)
                 except subprocess.TimeoutExpired:
                     os.killpg(pgid, signal.SIGKILL)
-                    self.proc.wait(timeout=1)
+                    self.proc.wait(timeout=30)
                 x = self.proc.returncode
                 if x == 0:
                     logger.debug("Controller exited with {0}".format(x))
