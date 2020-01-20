@@ -18,10 +18,13 @@ def test_lazy_behavior():
         return a / b
 
     with permit_severe_log():
-        future = divide(10, 0)
+        futures = []
+        for i in range(0, 10):
+            futures.append(divide(10, 0))
 
-        while not future.done():
-            pass
+        for f in futures:
+            assert isinstance(f.exception(), ZeroDivisionError)
+            assert f.done()
 
     parsl.clear()
     return
