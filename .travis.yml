@@ -82,7 +82,7 @@ script:
 
     # these tests run with specific configs loaded within the tests themselves.
     # This mode is enabled with: --config local
-    - pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
+    - pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order --log-cli-level=INFO
 
     # check that 'all' install target works, even though we aren't doing any further
     # testing of what is installed
