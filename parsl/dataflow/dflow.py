@@ -28,7 +28,7 @@ from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States, FINAL_FAILURE_STATES
+from parsl.dataflow.states import States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.utils import get_version, get_std_fname_mode
@@ -218,7 +218,8 @@ class DataFlowKernel(object):
             task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
         task_log_info['task_depends'] = None
         if self.tasks[task_id]['depends'] is not None:
-            task_log_info['task_depends'] = ",".join([str(t.tid) for t in self.tasks[task_id]['depends']])
+            task_log_info['task_depends'] = ",".join([str(t.tid) for t in self.tasks[task_id]['depends']
+                                                      if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
         task_log_info['task_elapsed_time'] = None
         if self.tasks[task_id]['time_returned'] is not None:
             task_log_info['task_elapsed_time'] = (self.tasks[task_id]['time_returned'] -
@@ -608,8 +609,7 @@ class DataFlowKernel(object):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
-                        dep_failures.extend([e])
+                    dep_failures.extend([e])
             else:
                 new_args.extend([dep])
 
@@ -620,8 +620,7 @@ class DataFlowKernel(object):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
-                        dep_failures.extend([e])
+                    dep_failures.extend([e])
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
@@ -631,8 +630,7 @@ class DataFlowKernel(object):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        if self.tasks[dep.tid]['status'] in FINAL_FAILURE_STATES:
-                            dep_failures.extend([e])
+                        dep_failures.extend([e])
 
                 else:
                     new_inputs.extend([dep])
@@ -737,9 +735,15 @@ class DataFlowKernel(object):
         depends = self._gather_all_deps(args, kwargs)
         self.tasks[task_id]['depends'] = depends
 
-        logger.info("Task {} submitted for App {}, waiting on tasks {}".format(task_id,
-                                                                               task_def['func_name'],
-                                                                               [fu.tid for fu in depends]))
+        depend_descs = []
+        for d in depends:
+            if isinstance(d, AppFuture) or isinstance(d, DataFuture):
+                depend_descs.append("task {}".format(d.tid))
+            else:
+                depend_descs.append(repr(d))
+        logger.info("Task {} submitted for App {}, waiting on {}".format(task_id,
+                                                                         task_def['func_name'],
+                                                                         ", ".join(depend_descs)))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
 
