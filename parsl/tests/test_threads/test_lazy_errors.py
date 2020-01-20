@@ -16,10 +16,13 @@ def test_lazy_behavior():
     def divide(a, b):
         return a / b
 
-    future = divide(10, 0)
+    futures = []
+    for i in range(0, 10):
+        futures.append(divide(10, 0))
 
-    while not future.done():
-        pass
+    for f in futures:
+        assert isinstance(f.exception(), ZeroDivisionError)
+        assert f.done()
 
     parsl.clear()
     return
