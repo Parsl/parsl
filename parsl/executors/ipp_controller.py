@@ -96,6 +96,8 @@ class Controller(RepresentationMixin):
                     '--HubFactory.task={0},{1}'.format(self.task_client, self.task_engine)
                 ]
             logger.debug("Starting ipcontroller with '{}'".format(' '.join([str(x) for x in opts])))
+            if getattr(self, "proc", None) is not None:
+                raise RuntimeError("Attempting a second start of IPP controller - will lose process state from earlier")
             self.proc = subprocess.Popen(opts, stdout=stdout, stderr=stderr, preexec_fn=os.setsid)
         except FileNotFoundError:
             msg = "Could not find ipcontroller. Please make sure that ipyparallel is installed and available in your env"
