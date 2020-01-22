@@ -1,4 +1,4 @@
-from parsl import App
+from parsl import python_app
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.config import Config
 from parsl.executors import ThreadPoolExecutor
@@ -25,13 +25,13 @@ def local_teardown():
     parsl.clear()
 
 
-@App('python')
+@python_app
 def sleeper(dur=25):
     import time
     time.sleep(dur)
 
 
-@App('python')
+@python_app
 def cpu_stress(dur=30):
     import time
     s = 0

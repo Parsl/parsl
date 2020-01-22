@@ -2,12 +2,12 @@ import os
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash')
+@bash_app
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
     return """echo {i}
@@ -30,7 +30,7 @@ def test_files():
     print(d_x, type(d_x))
 
 
-@App('bash')
+@bash_app
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
     return """

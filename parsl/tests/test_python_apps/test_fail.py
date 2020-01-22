@@ -1,14 +1,14 @@
 import argparse
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
 local_config = config
 
 
-@App('python')
+@python_app
 def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     import time
     import random

@@ -1,7 +1,7 @@
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app, python_app
 
 
 def local_setup():
@@ -13,7 +13,7 @@ def local_teardown():
     parsl.clear()
 
 
-@App("python")
+@python_app
 def python_app_slow(duration):
     import platform
     import time
@@ -45,7 +45,7 @@ def test_python_remote_slow(count=20):
         print(fu.result())
 
 
-@App("bash")
+@bash_app
 def bash_mpi_app(stdout=None, stderr=None):
     return """ls -thor
 mpi_hello

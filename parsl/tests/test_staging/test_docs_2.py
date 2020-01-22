@@ -1,11 +1,11 @@
 import pytest
-from parsl import App, File
+from parsl import bash_app, File
 from parsl.configs.local_threads import config
 
 local_config = config
 
 
-@App('bash')
+@bash_app
 def cat(inputs=[], stdout='stdout.txt'):
     return 'cat %s' % (inputs[0])
 

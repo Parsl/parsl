@@ -5,7 +5,7 @@ import threading
 import queue
 import pickle
 from multiprocessing import Process, Queue
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 import math
 
 from ipyparallel.serialize import pack_apply_message
@@ -602,7 +602,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         return r
 
-    def _get_job_ids(self) -> List[Any]:
+    def _get_job_ids(self) -> List[object]:
         return list(self.blocks.values())
 
     def shutdown(self, hub=True, targets='all', block=False):
