@@ -6,11 +6,11 @@ import time
 
 import parsl
 from parsl import File
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash')
+@bash_app
 def multiline(
         inputs=[],
         outputs=[],
