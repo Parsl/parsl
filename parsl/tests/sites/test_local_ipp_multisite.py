@@ -1,13 +1,13 @@
 import pytest
 
-from parsl.app.app import App, bash_app
+from parsl.app.app import bash_app, python_app
 from parsl.tests.configs.local_ipp_multisite import config
 
 
 local_config = config
 
 
-@App("python", executors=['local_ipp_2'])
+@python_app(executors=['local_ipp_2'])
 def python_app_2():
     import os
     import threading
@@ -16,7 +16,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", executors=['local_ipp_1'])
+@python_app(executors=['local_ipp_1'])
 def python_app_1():
     import os
     import threading
