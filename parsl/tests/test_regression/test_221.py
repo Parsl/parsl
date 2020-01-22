@@ -1,14 +1,12 @@
 import pytest
 
-import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_ipp import config
 
-parsl.clear()
-dfk = parsl.load(config)
+local_config = config
 
 
-@App('python')
+@python_app
 def slow_double(x, dur=0.1):
     import time
     time.sleep(dur)
@@ -31,8 +29,6 @@ def test_cleanup_behavior_221():
     for i in round_1:
         f = slow_double(i)
         round_2.append(f)
-
-    dfk.cleanup()
 
 
 if __name__ == "__main__":

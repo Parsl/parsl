@@ -1,16 +1,15 @@
 ''' Testing bash apps
 '''
 import parsl
-from parsl import App, DataFlowKernel
+from parsl import DataFlowKernel, python_app
 
 import time
 import argparse
 
 from parsl.tests.configs.local_ipp import config
-dfk = DataFlowKernel(config=config)
 
 
-@App('python', dfk)
+@python_app
 def increment(x):
     return x + 1
 
@@ -23,7 +22,6 @@ def test_stress(count=1000):
         x[i] = increment(i)
     end = time.time()
     print("Launched {0} tasks in {1} s".format(count, end - start))
-    dfk.cleanup()
 
 
 if __name__ == '__main__':
@@ -37,5 +35,7 @@ if __name__ == '__main__':
 
     if args.debug:
         parsl.set_stream_logger()
+
+    dfk = DataFlowKernel(config=config)
 
     test_stress(count=int(args.count))

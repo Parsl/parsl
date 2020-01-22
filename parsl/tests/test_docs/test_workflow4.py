@@ -1,24 +1,24 @@
 import os
 import parsl
 
-from parsl.app.app import App
+from parsl.app.app import bash_app, python_app
 from parsl.tests.configs.local_threads import config
-
+from parsl.data_provider.files import File
 
 # parsl.set_stream_logger()
 
 
-@App('bash')
+@bash_app
 def generate(outputs=[]):
     return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {o}".format(o=outputs[0])
 
 
-@App('bash')
+@bash_app
 def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
     return "cat {0} >> {1}".format(" ".join(map(lambda x: x.filepath, inputs)), outputs[0])
 
 
-@App('python')
+@python_app
 def total(inputs=[]):
     total = 0
     with open(inputs[0].filepath, 'r') as f:
@@ -39,11 +39,11 @@ def test_parallel_dataflow():
     for i in range(5):
         if os.path.exists('random-%s.txt' % i):
             os.remove('random-%s.txt' % i)
-        output_files.append(generate(outputs=['random-%s.txt' % i]))
+        output_files.append(generate(outputs=[File('random-%s.txt' % i)]))
 
     # concatenate the files into a single file
     cc = concat(inputs=[i.outputs[0]
-                        for i in output_files], outputs=["all.txt"])
+                        for i in output_files], outputs=[File("all.txt")])
 
     # calculate the average of the random numbers
     totals = total(inputs=[cc.outputs[0]])

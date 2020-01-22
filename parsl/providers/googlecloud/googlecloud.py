@@ -2,6 +2,7 @@ import atexit
 import logging
 import os
 from parsl.launchers import SingleNodeLauncher
+from parsl.providers.provider_base import JobState, JobStatus
 
 logger = logging.getLogger(__name__)
 
@@ -14,16 +15,16 @@ else:
     _google_enabled = True
 
 translate_table = {
-    'PENDING': 'PENDING',
-    'PROVISIONING': 'PENDING',
-    "STAGING": "PENDING",
-    'RUNNING': 'RUNNING',
-    'DONE': 'COMPLETED',
-    'STOPPING': 'COMPLETED',
-    'STOPPED': 'COMPLETED',
-    'TERMINATED': 'COMPLETED',
-    'SUSPENDING': 'COMPLETED',
-    'SUSPENDED': 'COMPLETED',
+    'PENDING': JobState.PENDING,
+    'PROVISIONING': JobState.PENDING,
+    "STAGING": JobState.PENDING,
+    'RUNNING': JobState.RUNNING,
+    'DONE': JobState.COMPLETED,
+    'STOPPING': JobState.COMPLETED,
+    'STOPPED': JobState.COMPLETED,
+    'TERMINATED': JobState.COMPLETED,
+    'SUSPENDING': JobState.COMPLETED,
+    'SUSPENDED': JobState.COMPLETED,
 }
 
 
@@ -71,8 +72,6 @@ class GoogleCloudProvider():
           [ ids ]       ------->|  cancel
           [cancel]     <--------|----+
                                 |
-          [True/False] <--------|  scaling_enabled
-                                |
                                 +-------------------
      """
 
@@ -109,13 +108,12 @@ class GoogleCloudProvider():
         self.provisioned_blocks = 0
         atexit.register(self.bye)
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.gcs"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot.
 
         Args :
              - command (str) : The bash command string to be executed.
-             - blocksize (int) : Blocksize to be requested
              - tasks_per_node (int) : command invocations to be launched per node
 
         KWargs:
@@ -133,7 +131,7 @@ class GoogleCloudProvider():
 
         instance, name = self.create_instance(command=wrapped_cmd)
         self.provisioned_blocks += 1
-        self.resources[name] = {"job_id": name, "status": translate_table[instance['status']]}
+        self.resources[name] = {"job_id": name, "status": JobStatus(translate_table[instance['status']])}
         return name
 
     def status(self, job_ids):
@@ -144,8 +142,7 @@ class GoogleCloudProvider():
              - job_ids (list) : A list of job identifiers
 
         Returns:
-             - A list of status from ['PENDING', 'RUNNING', 'CANCELLED', 'COMPLETED',
-               'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
+             - A list of JobStatus objects corresponding to each job_id in the job_ids list.
 
         Raises:
              - ExecutionProviderException or its subclasses
@@ -154,7 +151,7 @@ class GoogleCloudProvider():
         statuses = []
         for job_id in job_ids:
             instance = self.client.instances().get(instance=job_id, project=self.project_id, zone=self.zone).execute()
-            self.resources[job_id]['status'] = translate_table[instance['status']]
+            self.resources[job_id]['status'] = JobStatus(translate_table[instance['status']])
             statuses.append(translate_table[instance['status']])
         return statuses
 
@@ -179,15 +176,6 @@ class GoogleCloudProvider():
             except Exception:
                 statuses.append(False)
         return statuses
-
-    @property
-    def scaling_enabled(self):
-        ''' Scaling is enabled
-
-        Returns:
-              - Status (Bool)
-        '''
-        return True
 
     @property
     def current_capacity(self):

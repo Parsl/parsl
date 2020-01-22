@@ -8,8 +8,6 @@ from inspect import getsource
 from hashlib import md5
 from inspect import signature
 
-from parsl.app.errors import InvalidAppTypeError
-
 logger = logging.getLogger(__name__)
 
 
@@ -21,7 +19,7 @@ class AppBase(metaclass=ABCMeta):
 
     """
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, executors='all', cache=False):
+    def __init__(self, func, data_flow_kernel=None, executors='all', cache=False):
         """Construct the App object.
 
         Args:
@@ -31,7 +29,6 @@ class AppBase(metaclass=ABCMeta):
              - data_flow_kernel (DataFlowKernel): The :class:`~parsl.dataflow.dflow.DataFlowKernel` responsible for
                managing this app. This can be omitted only
                after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
-             - walltime (int) : Walltime in seconds for the app execution.
              - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
              - cache (Bool) : Enable caching of this app ?
 
@@ -53,7 +50,7 @@ class AppBase(metaclass=ABCMeta):
             try:
                 self.fn_source = getsource(func)
             except OSError:
-                logger.debug("Unable to get source code for AppCaching. Recommend creating module")
+                logger.warning("Unable to get source code for app caching. Recommend creating module")
                 self.fn_source = func.__name__
 
             self.func_hash = md5(self.fn_source.encode('utf-8')).hexdigest()
@@ -77,48 +74,7 @@ class AppBase(metaclass=ABCMeta):
         pass
 
 
-def App(apptype, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
-    """The App decorator function.
-
-    Args:
-        - apptype (string) : Apptype can be bash|python
-
-    Kwargs:
-        - data_flow_kernel (DataFlowKernel): The :class:`~parsl.dataflow.dflow.DataFlowKernel` responsible for
-          managing this app. This can be omitted only
-          after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
-        - walltime (int) : Walltime for app in seconds,
-             default=60
-        - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
-        - cache (Bool) : Enable caching of the app call
-             default=False
-
-    Returns:
-         A PythonApp or BashApp object, which when called runs the apps through the executor.
-    """
-
-    from parsl.app.python import PythonApp
-    from parsl.app.bash import BashApp
-
-    logger.warning("The 'App' decorator will be deprecated in Parsl 0.8. Please use 'python_app' or 'bash_app' instead.")
-
-    if apptype == 'python':
-        app_class = PythonApp
-    elif apptype == 'bash':
-        app_class = BashApp
-    else:
-        raise InvalidAppTypeError("Invalid apptype requested {}; must be 'python' or 'bash'".format(apptype))
-
-    def wrapper(f):
-        return app_class(f,
-                         data_flow_kernel=data_flow_kernel,
-                         walltime=walltime,
-                         cache=cache,
-                         executors=executors)
-    return wrapper
-
-
-def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+def python_app(function=None, data_flow_kernel=None, cache=False, executors='all'):
     """Decorator function for making python apps.
 
     Parameters
@@ -131,8 +87,6 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, e
     data_flow_kernel : DataFlowKernel
         The :class:`~parsl.dataflow.dflow.DataFlowKernel` responsible for managing this app. This can
         be omitted only after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`. Default is None.
-    walltime : int
-        Walltime for app in seconds. Default is 60.
     executors : string or list
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
@@ -144,7 +98,6 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, e
         def wrapper(f):
             return PythonApp(f,
                              data_flow_kernel=data_flow_kernel,
-                             walltime=walltime,
                              cache=cache,
                              executors=executors)
         return wrapper(func)
@@ -153,7 +106,7 @@ def python_app(function=None, data_flow_kernel=None, walltime=60, cache=False, e
     return decorator
 
 
-def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
+def bash_app(function=None, data_flow_kernel=None, cache=False, executors='all'):
     """Decorator function for making bash apps.
 
     Parameters
@@ -179,7 +132,6 @@ def bash_app(function=None, data_flow_kernel=None, walltime=60, cache=False, exe
         def wrapper(f):
             return BashApp(f,
                            data_flow_kernel=data_flow_kernel,
-                           walltime=walltime,
                            cache=cache,
                            executors=executors)
         return wrapper(func)

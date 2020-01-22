@@ -13,7 +13,7 @@ def test_error_1():
     try:
         connect_and_list("bad.url.gov", "ubuntu")
     except Exception as e:
-        assert type(e) == SSHException, "Excpected SSException, got :{0}".format(e)
+        assert type(e) == SSHException, "Expected SSException, got: {0}".format(e)
 
 
 def test_error_2():
@@ -22,7 +22,7 @@ def test_error_2():
     except SSHException:
         print("Caught the right exception")
     else:
-        raise Exception("Expected SSException, got :{0}".format(e))
+        raise Exception("Expected SSException, got: {0}".format(e))
 
 
 def test_error_3():
@@ -33,7 +33,7 @@ def test_error_3():
     except BadHostKeyException as e:
         print("Caught exception BadHostKeyException: ", e)
     else:
-        assert False, "Expected SSException, got :{0}".format(e)
+        assert False, "Expected SSException, got: {0}".format(e)
 
 
 if __name__ == "__main__":

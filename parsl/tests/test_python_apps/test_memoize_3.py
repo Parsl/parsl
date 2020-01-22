@@ -3,14 +3,13 @@ import argparse
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads_no_cache import config
 
-parsl.clear()
-parsl.load(config)
+local_config = config
 
 
-@App('python')
+@python_app
 def random_uuid(x):
     import uuid
     return str(uuid.uuid4())

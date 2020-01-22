@@ -1,11 +1,11 @@
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.data_provider.files import File
 
 
-@App('python')
+@python_app
 def sort_strings(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
@@ -34,6 +34,8 @@ def test_implicit_staging_ftp():
 if __name__ == "__main__":
 
     import argparse
+
+    parsl.load()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',

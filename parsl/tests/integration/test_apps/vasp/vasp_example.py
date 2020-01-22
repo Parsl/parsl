@@ -25,7 +25,7 @@ We will be working on Stampede 2. we haven't put our code in a repo (though we s
 
 """
 
-from parsl import App, DataFlowKernel, ThreadPoolExecutor
+from parsl import bash_app, python_app, DataFlowKernel, ThreadPoolExecutor
 import os
 import shutil
 import random
@@ -56,7 +56,7 @@ def create_dirs(cwd):
             f.write("{0} test data\n".format(rel_dir))
 
 
-@App('python', dfk)
+@python_app(data_flow_kernel=dfk)
 def ls(pwd, outputs=[]):
     import os
     items = os.listdir(pwd)
@@ -67,7 +67,7 @@ def ls(pwd, outputs=[]):
     return items
 
 
-@App('bash', dfk)
+@bash_app(data_flow_kernel=dfk)
 def catter(dir, outputs=[], stdout=None, stderr=None):
     pass
 

@@ -1,7 +1,9 @@
 Where to start
 --------------
 
-We welcome contributions of any type (e.g., bug fixes, new features, reporting issues, documentation, etc).  If you're looking for a good place to get started you might like to peruse our current Git issues (those marked with `help wanted <https://github.com/Parsl/parsl/labels/help%20wanted>`_ are a good place to start).  
+We welcome contributions of any type (e.g., bug fixes, new features, reporting issues, documentation, etc).  If you're looking for a good place to get started you might like to peruse our current Git issues (those marked with `help wanted <https://github.com/Parsl/parsl/labels/help%20wanted>`_ are a good place to start).
+
+Please be aware of `Parsl's Code of Conduct<https://github.com/Parsl/parsl/blob/master/CoC.md>`_. 
 
 Coding conventions
 ------------------
@@ -35,39 +37,40 @@ style. A concise summary is available `here <http://sphinxcontrib-napoleon.readt
 Testing
 =======
 
-Parsl uses ``pytest`` to run most tests. All tests should be placed
-the ``parsl/tests`` directory. Before running tests usage tracking
-should be disabled using the PARSL_TESTING environment variable::
-
-  $ export PARSL_TESTING="true"
+Parsl uses ``pytest`` to run most tests. All tests should be placed in
+the ``parsl/tests`` directory.
 
 There are two broad groups of tests: those which must run with a
 specific configuration, and those which should work with any
-reasonable configuration.
+configuration.
 
 Tests which run with a specific configuration live under the
-``parsl/tests/sites`` and ``parsl/tests/integration`` directory.
-They are launched by .travis.yaml with a pytest parameter of
+``parsl/tests/sites`` and ``parsl/tests/integration`` directories.
+They can be launched with a pytest parameter of
 ``--config local`` and each test file should initialise a DFK
 explicitly.
 
-Tests which should with with any configuration live under
-themed directories ``parsl/tests/test*/`` and should named ``test*.py``.
+Tests which should run with with any configuration live under
+themed directories ``parsl/tests/test*/`` and should be named ``test*.py``.
 They can be run with any configuration, by specifying ``--config CONFIGPATH``
 where CONFIGPATH is a path to a ``.py`` file exporting a parsl configuration
-object named ``config``. The parsl-specific test fixtures with ensure
+object named ``config``. The parsl-specific test fixtures will ensure
 a suitable DFK is loaded with that configuration for each test.
 
 There is more fine-grained enabling and disabling of tests within the
 above categories:
 
 A pytest marker of ``cleannet`` (for clean network) can be used to select
-or deselect tests which need a very cleen network (for example, for tests
+or deselect tests which need a very clean network (for example, for tests
 making FTP transfers). Travis does not provide a sufficiently clean
 network and so .travis.yml runs all tests with ``-k "not cleannet"`` to
 disable those tests.
 
-Some other markers are available but unused in travis testing; 
+A pytest marker of ``issue363`` can be used to select or deselect tests
+that will fail because of issue 363 when running without a shared file
+system.
+
+Some other markers are available but unused in Travis testing; 
 see ``pytest --markers parsl/tests/`` for more details.
 
 A specific test in a specific file can be run like this:::

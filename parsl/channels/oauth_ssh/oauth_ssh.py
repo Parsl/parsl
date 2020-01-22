@@ -44,7 +44,7 @@ class OAuthSSHChannel(SSHChannel):
         self.hostname = hostname
         self.username = username
         self.script_dir = script_dir
-
+        self.port = port
         self.envs = {}
         if envs is not None:
             self.envs = envs

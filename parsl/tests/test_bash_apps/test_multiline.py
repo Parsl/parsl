@@ -1,14 +1,15 @@
 import argparse
 import os
+import pytest
 import shutil
 import time
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash')
+@bash_app
 def multiline(
         inputs=[],
         outputs=[],
@@ -22,6 +23,7 @@ def multiline(
     """.format(inputs=inputs, outputs=outputs)
 
 
+@pytest.mark.issue363
 def test_multiline():
 
     outdir = os.path.abspath('outputs')

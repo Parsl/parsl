@@ -2,20 +2,17 @@ import pytest
 
 import parsl
 
-from parsl.app.app import App
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_threads import fresh_config
 
-config.executors[0].tasks_per_block = 4
-config.executors[0].init_blocks = 0
-config.executors[0].min_blocks = 0
-config.executors[0].max_blocks = 10
-config.executors[0].parallelism = 0
-
-parsl.clear()
-parsl.load(config)
+local_config = fresh_config()
+local_config.executors[0].tasks_per_block = 4
+local_config.executors[0].init_blocks = 0
+local_config.executors[0].min_blocks = 0
+local_config.executors[0].max_blocks = 10
+local_config.executors[0].parallelism = 0
 
 
-@App("python")
+@parsl.python_app
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())

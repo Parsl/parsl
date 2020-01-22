@@ -6,19 +6,9 @@ from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.pbspro.template import template_string
 from parsl.providers import TorqueProvider
+from parsl.providers.provider_base import JobState, JobStatus
 
 logger = logging.getLogger(__name__)
-
-# From the man pages for qstat for PBS/Torque systems
-translate_table = {
-    'R': 'RUNNING',
-    'C': 'COMPLETED',  # Completed after having run
-    'E': 'COMPLETED',  # Exiting after having run
-    'H': 'HELD',  # Held
-    'Q': 'PENDING',  # Queued, and eligible to run
-    'W': 'PENDING',  # Job is waiting for it's execution time (-a option) to be reached
-    'S': 'HELD'
-}  # Suspended
 
 
 class PBSProProvider(TorqueProvider):
@@ -96,15 +86,13 @@ class PBSProProvider(TorqueProvider):
         self._label = 'pbspro'
         self.cpus_per_node = cpus_per_node
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl"):
-        """Submits the command job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl"):
+        """Submits the command job.
 
         Parameters
         ----------
         command : str
             Command to be executed on the remote side.
-        blocksize : int
-            Not implemented.
         tasks_per_node : int
             Command invocations to be launched per node.
         job_name : str
@@ -119,7 +107,7 @@ class PBSProProvider(TorqueProvider):
         """
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.label)
+            logger.warning("[%s] at capacity, cannot add more blocks now", self.label)
             return None
 
         job_name = "{0}.{1}".format(job_name, time.time())
@@ -163,7 +151,7 @@ class PBSProProvider(TorqueProvider):
             for line in stdout.split('\n'):
                 if line.strip():
                     job_id = line.strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
             if (stdout is not None) and (stderr is not None):

@@ -489,10 +489,7 @@ if __name__ == "__main__":
     rank = comm.Get_rank()
     print("Starting rank: {}".format(rank))
 
-    try:
-        os.makedirs(args.logdir)
-    except FileExistsError:
-        pass
+    os.makedirs(args.logdir, exist_ok=True)
 
     # set_stream_logger()
     try:

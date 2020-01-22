@@ -2,24 +2,21 @@ import time
 
 import pytest
 
-import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app, python_app
 from parsl.tests.configs.local_threads import config
 
 
-parsl.set_stream_logger()
-parsl.clear()
-parsl.load(config)
+local_config = config
 
 
-@App('python')
+@python_app
 def sleep_python(x):
     import time
     time.sleep(x)
     return x
 
 
-@App('bash')
+@bash_app
 def sleep_bash(x):
     return 'sleep {0}'
 

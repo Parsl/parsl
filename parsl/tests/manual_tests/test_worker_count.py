@@ -11,16 +11,16 @@ EXPECTED_WORKERS = math.floor(CORES / CORES_PER_WORKER)
 
 
 # from parsl.tests.configs.htex_local import config
-from htex_local import config
+from parsl.tests.manual_tests.htex_local import config
 config.executors[0].cores_per_worker = CORES_PER_WORKER
 config.executors[0].provider.init_blocks = 1
 
 # from htex_midway import config
 # from htex_swan import config
 
+local_config = config
 
 from parsl.app.app import python_app  # , bash_app
-parsl.load(config)
 
 
 @python_app
@@ -44,8 +44,8 @@ def test_worker(n=2, sleep=0):
     print("Got workers : {}".format(worker_ids))
     assert len(manager_ids) == 1, "Expected only 1 manager id, got ids : {}".format(
         manager_ids)
-    assert len(worker_ids) == EXPECTED_WORKERS, "Exptected {} workers, instead got {}".format(EXPECTED_WORKERS,
-                                                                                              len(worker_ids))
+    assert len(worker_ids) == EXPECTED_WORKERS, "Expected {} workers, instead got {}".format(EXPECTED_WORKERS,
+                                                                                             len(worker_ids))
 
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
@@ -64,5 +64,7 @@ if __name__ == '__main__':
 
     if args.debug:
         parsl.set_stream_logger()
+
+    parsl.load(local_config)
 
     x = test_worker(n=int(args.count), sleep=float(args.sleep))

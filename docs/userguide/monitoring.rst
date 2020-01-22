@@ -16,6 +16,8 @@ that query this database to create a web-based dashboard for the workflow.
 Monitoring configuration
 ------------------------
 
+Parsl monitoring is only supported with the `HighThroughputExecutor`.
+
 Here's an example configuration that logs monitoring information to a local sqlite database:
 
 .. code-block:: python
@@ -39,7 +41,8 @@ Here's an example configuration that logs monitoring information to a local sqli
       ],
       monitoring=MonitoringHub(
           hub_address=address_by_hostname(),
-          logging_level=logging.INFO,
+          hub_port=55055,
+          monitoring_debug=False,
           resource_monitoring_interval=10,
       ),
       strategy=None
@@ -52,13 +55,13 @@ Here's an example configuration that logs monitoring information to a local sqli
 Visualization
 -------------
 
-Run the `parsl-visualize` utility:
+Run the `parsl-visualize` utility::
 
    $ parsl-visualize
 
 If your monitoring database is not the default of `monitoring.db` in the current working directory,
 you can specify a different database URI on the command line.  For example, if the full path
-to your `monitoring.db` is `/tmp/monitoring.db`, run:
+to your `monitoring.db` is `/tmp/monitoring.db`, run::
 
    $ parsl-visualize sqlite:////tmp/monitoring.db
 

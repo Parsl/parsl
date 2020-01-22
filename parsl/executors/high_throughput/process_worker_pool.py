@@ -16,10 +16,16 @@ import zmq
 import math
 import json
 import psutil
+import multiprocessing
 
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
-import multiprocessing
+from parsl.executors.high_throughput.errors import WorkerLost
+from parsl.executors.high_throughput.probe import probe_addresses
+if platform.system() == 'Darwin':
+    from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
+else:
+    from multiprocessing import Queue as mpQueue
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
@@ -47,8 +53,9 @@ class Manager(object):
 
     """
     def __init__(self,
-                 task_q_url="tcp://127.0.0.1:50097",
-                 result_q_url="tcp://127.0.0.1:50098",
+                 addresses="127.0.0.1",
+                 task_port="50097",
+                 result_port="50098",
                  cores_per_worker=1,
                  mem_per_worker=None,
                  max_workers=float('inf'),
@@ -106,6 +113,21 @@ class Manager(object):
 
         logger.info("Manager started")
 
+        try:
+            ix_address = probe_addresses(addresses.split(','), task_port)
+            if not ix_address:
+                raise Exception("No viable address found")
+            else:
+                logger.info("Connection to Interchange successful on {}".format(ix_address))
+                task_q_url = "tcp://{}:{}".format(ix_address, task_port)
+                result_q_url = "tcp://{}:{}".format(ix_address, result_port)
+                logger.info("Task url : {}".format(task_q_url))
+                logger.info("Result url : {}".format(result_q_url))
+        except Exception:
+            logger.exception("Caught exception while trying to determine viable address to interchange")
+            print("Failed to find a viable address to connect to interchange. Exiting")
+            exit(5)
+
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
@@ -123,8 +145,15 @@ class Manager(object):
         self.uid = uid
         self.block_id = block_id
 
-        cores_on_node = multiprocessing.cpu_count()
-        available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
+        if os.environ.get('PARSL_CORES'):
+            cores_on_node = int(os.environ['PARSL_CORES'])
+        else:
+            cores_on_node = multiprocessing.cpu_count()
+
+        if os.environ.get('PARSL_MEMORY_GB'):
+            available_mem_on_node = float(os.environ['PARSL_MEMORY_GB'])
+        else:
+            available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
 
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
@@ -139,9 +168,9 @@ class Manager(object):
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
-        self.pending_task_queue = multiprocessing.Queue()
-        self.pending_result_queue = multiprocessing.Queue()
-        self.ready_worker_queue = multiprocessing.Queue()
+        self.pending_task_queue = mpQueue()
+        self.pending_result_queue = mpQueue()
+        self.ready_worker_queue = mpQueue()
 
         self.max_queue_size = self.prefetch_capacity + self.worker_count
 
@@ -295,6 +324,48 @@ class Manager(object):
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
+    def worker_watchdog(self, kill_event):
+        """ Listens on the pending_result_queue and sends out results via 0mq
+
+        Parameters:
+        -----------
+        kill_event : threading.Event
+              Event to let the thread know when it is time to die.
+        """
+
+        logger.debug("[WORKER_WATCHDOG_THREAD] Starting thread")
+
+        while not kill_event.is_set():
+            for worker_id, p in self.procs.items():
+                if not p.is_alive():
+                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has died".format(worker_id))
+                    try:
+                        task = self._tasks_in_progress.pop(worker_id)
+                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was busy when it died".format(worker_id))
+                        try:
+                            raise WorkerLost(worker_id, platform.node())
+                        except Exception:
+                            logger.info("[WORKER_WATCHDOG_THREAD] Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            result_package = {'task_id': task['task_id'], 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                            pkl_package = pickle.dumps(result_package)
+                            self.pending_result_queue.put(pkl_package)
+                    except KeyError:
+                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was not busy when it died".format(worker_id))
+
+                    p = multiprocessing.Process(target=worker, args=(worker_id,
+                                                                     self.uid,
+                                                                     self.worker_count,
+                                                                     self.pending_task_queue,
+                                                                     self.pending_result_queue,
+                                                                     self.ready_worker_queue,
+                                                                     self._tasks_in_progress
+                                                                 ), name="HTEX-Worker-{}".format(worker_id))
+                    self.procs[worker_id] = p
+                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
+                time.sleep(self.poll_period)
+
+        logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
+
     def start(self):
         """ Start the worker processes.
 
@@ -302,26 +373,35 @@ class Manager(object):
         """
         start = time.time()
         self._kill_event = threading.Event()
+        self._tasks_in_progress = multiprocessing.Manager().dict()
 
         self.procs = {}
         for worker_id in range(self.worker_count):
             p = multiprocessing.Process(target=worker, args=(worker_id,
                                                              self.uid,
+                                                             self.worker_count,
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
-                                                         ))
+                                                             self._tasks_in_progress
+                                                         ), name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
 
         logger.debug("Manager synced with workers")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
-                                                    args=(self._kill_event,))
+                                                    args=(self._kill_event,),
+                                                    name="Task-Puller")
         self._result_pusher_thread = threading.Thread(target=self.push_results,
-                                                      args=(self._kill_event,))
+                                                      args=(self._kill_event,),
+                                                      name="Result-Pusher")
+        self._worker_watchdog_thread = threading.Thread(target=self.worker_watchdog,
+                                                        args=(self._kill_event,),
+                                                        name="worker-watchdog")
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
+        self._worker_watchdog_thread.start()
 
         logger.info("Loop start")
 
@@ -332,6 +412,7 @@ class Manager(object):
 
         self._task_puller_thread.join()
         self._result_pusher_thread.join()
+        self._worker_watchdog_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
             logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
@@ -385,7 +466,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
+def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress):
     """
 
     Put request token into queue
@@ -393,10 +474,15 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
     Pop request from queue
     Put result into result_queue
     """
-    start_file_logger('{}/{}/worker_{}.log'.format(args.logdir, pool_id, worker_id),
+    start_file_logger('{}/block-{}/{}/worker_{}.log'.format(args.logdir, args.block_id, pool_id, worker_id),
                       worker_id,
                       name="worker_log",
                       level=logging.DEBUG if args.debug else logging.INFO)
+
+    # Store worker ID as an environment variable
+    os.environ['PARSL_WORKER_RANK'] = str(worker_id)
+    os.environ['PARSL_WORKER_COUNT'] = str(pool_size)
+    os.environ['PARSL_WORKER_POOL_ID'] = str(pool_id)
 
     # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
@@ -408,6 +494,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
 
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
+        tasks_in_progress[worker_id] = req
         tid = req['task_id']
         logger.info("Received task {}".format(tid))
 
@@ -420,7 +507,8 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         try:
             result = execute_task(req['buffer'])
             serialized_result = serialize_object(result)
-        except Exception:
+        except Exception as e:
+            logger.info('Caught an exception: {}'.format(e))
             result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'task_id': tid, 'result': serialized_result}
@@ -430,6 +518,7 @@ def worker(worker_id, pool_id, task_queue, result_queue, worker_queue):
         pkl_package = pickle.dumps(result_package)
 
         result_queue.put(pkl_package)
+        tasks_in_progress.pop(worker_id)
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -457,36 +546,13 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-         - name (string) : Set the logger name.
-         - level (logging.LEVEL) : Set to logging.DEBUG by default.
-         - format_string (sting) : Set to None by default.
-
-    Returns:
-         - None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
-        # format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
+    parser.add_argument("-a", "--addresses", default='',
+                        help="Comma separated list of addresses at which the interchange could be reached")
     parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
                         help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
@@ -497,8 +563,8 @@ if __name__ == "__main__":
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-m", "--mem_per_worker", default=0,
                         help="GB of memory assigned to each worker process. Default=0, no assignment")
-    parser.add_argument("-t", "--task_url", required=True,
-                        help="REQUIRED: ZMQ url for receiving tasks")
+    parser.add_argument("-t", "--task_port", required=True,
+                        help="REQUIRED: Task port for receiving tasks from the interchange")
     parser.add_argument("--max_workers", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
     parser.add_argument("-p", "--prefetch_capacity", default=0,
@@ -509,18 +575,15 @@ if __name__ == "__main__":
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
     parser.add_argument("--poll", default=10,
                         help="Poll period used in milliseconds")
-    parser.add_argument("-r", "--result_url", required=True,
-                        help="REQUIRED: ZMQ url for posting results")
+    parser.add_argument("-r", "--result_port", required=True,
+                        help="REQUIRED: Result port for posting results to the interchange")
 
     args = parser.parse_args()
 
-    try:
-        os.makedirs(os.path.join(args.logdir, args.uid))
-    except FileExistsError:
-        pass
+    os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
     try:
-        start_file_logger('{}/{}/manager.log'.format(args.logdir, args.uid),
+        start_file_logger('{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
@@ -531,14 +594,16 @@ if __name__ == "__main__":
         logger.info("Block ID: {}".format(args.block_id))
         logger.info("cores_per_worker: {}".format(args.cores_per_worker))
         logger.info("mem_per_worker: {}".format(args.mem_per_worker))
-        logger.info("task_url: {}".format(args.task_url))
-        logger.info("result_url: {}".format(args.result_url))
+        logger.info("task_port: {}".format(args.task_port))
+        logger.info("result_port: {}".format(args.result_port))
+        logger.info("addresses: {}".format(args.addresses))
         logger.info("max_workers: {}".format(args.max_workers))
         logger.info("poll_period: {}".format(args.poll))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
 
-        manager = Manager(task_q_url=args.task_url,
-                          result_q_url=args.result_url,
+        manager = Manager(task_port=args.task_port,
+                          result_port=args.result_port,
+                          addresses=args.addresses,
                           uid=args.uid,
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),

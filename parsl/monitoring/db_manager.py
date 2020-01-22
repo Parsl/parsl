@@ -75,6 +75,9 @@ class Database(object):
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
 
+    def rollback(self):
+        self.session.rollback()
+
     def _generate_mappings(self, table, columns=None, messages=[]):
         mappings = []
         for msg in messages:
@@ -143,6 +146,7 @@ class Database(object):
 
     class Node(Base):
         __tablename__ = NODE
+        id = Column('id', Integer, nullable=False, primary_key=True, autoincrement=True)
         run_id = Column('run_id', Text, nullable=False)
         hostname = Column('hostname', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
@@ -151,9 +155,6 @@ class Database(object):
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
         reg_time = Column('reg_time', DateTime, nullable=False)
-        __table_args__ = (
-            PrimaryKeyConstraint('hostname', 'run_id', 'reg_time'),
-        )
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -190,9 +191,6 @@ class Database(object):
             PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
         )
 
-    def __del__(self):
-        self.session.close()
-
 
 class DatabaseManager(object):
     def __init__(self,
@@ -204,10 +202,7 @@ class DatabaseManager(object):
                  ):
 
         self.logdir = logdir
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         self.logger = start_file_logger(
             "{}/database_manager.log".format(self.logdir), level=logging_level)
@@ -226,19 +221,22 @@ class DatabaseManager(object):
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                priority_queue, 'priority', self._kill_event,)
+                                                                priority_queue, 'priority', self._kill_event,),
+                                                            name="Monitoring-migrate-priority"
                                                             )
         self._priority_queue_pull_thread.start()
 
         self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                         args=(
-                                                            node_queue, 'node', self._kill_event,)
+                                                            node_queue, 'node', self._kill_event,),
+                                                        name="Monitoring-migrate-node"
                                                         )
         self._node_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                resource_queue, 'resource', self._kill_event,)
+                                                                resource_queue, 'resource', self._kill_event,),
+                                                            name="Monitoring-migrate-resource"
                                                             )
         self._resource_queue_pull_thread.start()
 
@@ -370,7 +368,7 @@ class DatabaseManager(object):
             self.logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
                               .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
             try:
-                x, addr = logs_queue.get(block=False)
+                x, addr = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
@@ -385,10 +383,24 @@ class DatabaseManager(object):
                     self.pending_node_queue.put(x[-1])
 
     def _update(self, table, columns, messages):
-        self.db.update(table=table, columns=columns, messages=messages)
+        try:
+            self.db.update(table=table, columns=columns, messages=messages)
+        except Exception:
+            self.logger.exception("Got exception when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                self.logger.exception("Rollback failed")
 
     def _insert(self, table, messages):
-        self.db.insert(table=table, messages=messages)
+        try:
+            self.db.insert(table=table, messages=messages)
+        except Exception:
+            self.logger.exception("Got exception when trying to insert to Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                self.logger.exception("Rollback failed")
 
     def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
         messages = []
@@ -397,9 +409,10 @@ class DatabaseManager(object):
             if time.time() - start >= interval or len(messages) >= threshold:
                 break
             try:
-                x = msg_queue.get(block=False)
+                x = msg_queue.get(timeout=0.1)
                 # self.logger.debug("Database manager receives a message {}".format(x))
             except queue.Empty:
+                self.logger.debug("Database manager has not received any message.")
                 break
             else:
                 messages.append(x)
@@ -421,7 +434,7 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
     filename: string
         Name of the file to write logs to. Required.
     name: string
-        Logger name. Default="parsl.executors.interchange"
+        Logger name.
     level: logging.LEVEL
         Set the logging level. Default=logging.DEBUG
         - format_string (string): Set the format string
@@ -432,7 +445,7 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
         None.
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     global logger
     logger = logging.getLogger(name)

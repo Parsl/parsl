@@ -1,14 +1,11 @@
 import argparse
-import time
-
-import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('python', cache=True)
+@python_app(cache=True)
 def random_uuid(x, cache=True):
     import uuid
     return str(uuid.uuid4())
@@ -26,32 +23,6 @@ def test_python_memoization(n=2):
         assert foo.result() == x.result(), "Memoized results were not used"
 
 
-@App('bash', cache=True)
-def slow_echo_to_file(msg, outputs=[], stderr='std.err', stdout='std.out'):
-    return 'sleep 1; echo {0} > {outputs[0]}'
-
-
-@pytest.mark.skip('fails intermittently depending on machine load')
-def test_bash_memoization(n=2):
-    """Testing bash memoization
-    """
-
-    print("Launching : ", n)
-    x = slow_echo_to_file("hello world", outputs=['h1.out'])
-    x.result()
-
-    start = time.time()
-    d = {}
-    for i in range(0, n):
-        d[i] = slow_echo_to_file("hello world", outputs=['h1.out'])
-
-    print("Waiting for results from round1")
-    [d[i].result() for i in d]
-    end = time.time()
-    delta = end - start
-    assert delta < 0.1, "Memoized results were not used"
-
-
 if __name__ == '__main__':
     parsl.clear()
     parsl.load(config)
@@ -67,4 +38,3 @@ if __name__ == '__main__':
         parsl.set_stream_logger()
 
     x = test_python_memoization(n=4)
-    x = test_bash_memoization(n=4)

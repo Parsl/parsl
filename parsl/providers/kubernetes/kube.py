@@ -5,7 +5,7 @@ from parsl.providers.kubernetes.template import template_string
 logger = logging.getLogger(__name__)
 
 from parsl.providers.error import OptionalModuleMissing
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.utils import RepresentationMixin
 
 import typeguard
@@ -34,6 +34,22 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Minimum number of blocks to maintain.
     max_blocks : int
         Maximum number of blocks to maintain.
+    max_cpu : float
+        CPU limits of the blocks (pods), in cpu units.
+        This is the cpu "limits" option for resource specification.
+        Check kubernetes docs for more details. Default is 2.
+    max_mem : str
+        Memory limits of the blocks (pods), in Mi or Gi.
+        This is the memory "limits" option for resource specification on kubernetes.
+        Check kubernetes docs for more details. Default is 500Mi.
+    init_cpu : float
+        CPU limits of the blocks (pods), in cpu units.
+        This is the cpu "requests" option for resource specification.
+        Check kubernetes docs for more details. Default is 1.
+    init_mem : str
+        Memory limits of the blocks (pods), in Mi or Gi.
+        This is the memory "requests" option for resource specification on kubernetes.
+        Check kubernetes docs for more details. Default is 250Mi.
     parallelism : float
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
@@ -63,6 +79,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  init_blocks: int = 4,
                  min_blocks: int = 0,
                  max_blocks: int = 10,
+                 max_cpu: float = 2,
+                 max_mem: str = "500Mi",
+                 init_cpu: float = 1,
+                 init_mem: str = "250Mi",
                  parallelism: float = 1,
                  worker_init: str = "",
                  pod_name: Optional[str] = None,
@@ -82,6 +102,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
+        self.max_cpu = max_cpu
+        self.max_mem = max_mem
+        self.init_cpu = init_cpu
+        self.init_mem = init_mem
         self.parallelism = parallelism
         self.worker_init = worker_init
         self.secret = secret
@@ -96,11 +120,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}  # type: Dict[str, Dict[str, Any]]
 
-    def submit(self, cmd_string, blocksize, tasks_per_node, job_name="parsl"):
+    def submit(self, cmd_string, tasks_per_node, job_name="parsl"):
         """ Submit a job
         Args:
              - cmd_string  :(String) - Name of the container to initiate
-             - blocksize   :(float) - Number of replicas
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
@@ -128,8 +151,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                          job_name=job_name,
                          cmd_string=formatted_cmd,
                          volumes=self.persistent_volumes)
-        self.resources[pod_name] = {'status': 'RUNNING',
-                                    'pods': blocksize}
+        self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
 
         return pod_name
 
@@ -139,14 +161,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Args:
              - job_ids (list) : A list of job identifiers
         Returns:
-             - A list of status from ['PENDING', 'RUNNING', 'CANCELLED', 'COMPLETED',
-               'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
+             - A list of JobStatus objects corresponding to each job_id in the job_ids list.
         Raises:
              - ExecutionProviderExceptions or its subclasses
         """
         self._status()
         # This is a hack
-        return ['RUNNING' for jid in job_ids]
+        return [JobStatus(JobState.RUNNING) for jid in job_ids]
 
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
@@ -160,7 +181,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             # Here we are assuming that for local, the job_ids are the process id's
             self._delete_pod(job)
 
-            self.resources[job]['status'] = 'CANCELLED'
+            self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
             del self.resources[job]
         rets = [True for i in job_ids]
 
@@ -213,10 +234,16 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for volume in volumes:
             volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
                                                       name=volume[0]))
+        resources = client.V1ResourceRequirements(limits={'cpu': str(self.max_cpu),
+                                                          'memory': self.max_mem},
+                                                  requests={'cpu': str(self.init_cpu),
+                                                            'memory': self.init_mem}
+                                                  )
         # Configure Pod template container
         container = client.V1Container(
             name=pod_name,
             image=image,
+            resources=resources,
             ports=[client.V1ContainerPort(container_port=port)],
             volume_mounts=volume_mounts,
             command=['/bin/bash'],
@@ -255,10 +282,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                               namespace=self.namespace,
                                                               body=client.V1DeleteOptions())
         logger.debug("Pod deleted. status='{0}'".format(str(api_response.status)))
-
-    @property
-    def scaling_enabled(self):
-        return True
 
     @property
     def label(self):

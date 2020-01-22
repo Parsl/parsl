@@ -4,6 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.providers.torque.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.utils import RepresentationMixin
@@ -12,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 # From the man pages for qstat for PBS/Torque systems
 translate_table = {
-    'R': 'RUNNING',
-    'C': 'COMPLETED',  # Completed after having run
-    'E': 'COMPLETED',  # Exiting after having run
-    'H': 'HELD',  # Held
-    'Q': 'PENDING',  # Queued, and eligible to run
-    'W': 'PENDING',  # Job is waiting for it's execution time (-a option) to be reached
-    'S': 'HELD'
+    'R': JobState.RUNNING,
+    'C': JobState.COMPLETED,  # Completed after having run
+    'E': JobState.COMPLETED,  # Exiting after having run
+    'H': JobState.HELD,  # Held
+    'Q': JobState.PENDING,  # Queued, and eligible to run
+    'W': JobState.PENDING,  # Job is waiting for it's execution time (-a option) to be reached
+    'S': JobState.HELD
 }  # Suspended
 
 
@@ -114,24 +115,23 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = super().execute_wait("qstat {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("qstat {0}".format(job_id_list))
         for line in stdout.split('\n'):
             parts = line.split()
             if not parts or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
                 continue
             job_id = parts[0]
-            status = translate_table.get(parts[4], 'UNKNOWN')
-            self.resources[job_id]['status'] = status
+            state = translate_table.get(parts[4], JobState.UNKNOWN)
+            self.resources[job_id]['status'] = JobStatus(state)
             jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = translate_table['E']
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        ''' Submits the command onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl.torque"):
+        ''' Submits the command onto an Local Resource Manager job.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
@@ -140,11 +140,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
              A single node is provisioned
 
         If tasks_per_node >  1 :
-             tasks_per_node * blocksize number of nodes are provisioned.
+             tasks_per_node number of nodes are provisioned.
 
         Args:
              - command  :(String) Commandline invocation to be made on the remote side.
-             - blocksize   :(float)
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
@@ -157,13 +156,8 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         '''
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.label)
+            logger.warning("[%s] at capacity, cannot add more blocks now", self.label)
             return None
-
-        # Note: Fix this later to avoid confusing behavior.
-        # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.nodes_per_block:
-            blocksize = self.nodes_per_block
 
         # Set job name
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
@@ -172,7 +166,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        logger.debug("Requesting blocksize:%s nodes_per_block:%s tasks_per_node:%s", blocksize, self.nodes_per_block,
+        logger.debug("Requesting nodes_per_block:%s tasks_per_node:%s", self.nodes_per_block,
                      tasks_per_node)
 
         job_config = {}
@@ -204,14 +198,14 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             submit_options = '{0} -A {1}'.format(submit_options, self.account)
 
         launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(launch_cmd)
+        retcode, stdout, stderr = self.execute_wait(launch_cmd)
 
         job_id = None
         if retcode == 0:
             for line in stdout.split('\n'):
                 if line.strip():
                     job_id = line.strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
             if (stdout is not None) and (stderr is not None):
@@ -231,11 +225,11 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("qdel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("qdel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['E']  # Setting state to exiting
+                self.resources[jid]['status'] = JobStatus(JobState.COMPLETED)  # Setting state to exiting
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]

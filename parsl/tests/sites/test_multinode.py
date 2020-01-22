@@ -1,18 +1,19 @@
-import argparse
-
 import pytest
 
 import parsl
-from parsl.app.app import App
-from parsl.tests.configs.cori_ipp_multinode import config
-from parsl.tests.conftest import load_dfk
-
-parsl.clear()
-parsl.load(config)
-parsl.set_stream_logger()
+from parsl.app.app import python_app
 
 
-@App("python")
+def local_setup():
+    from parsl.tests.configs.cori_ipp_multinode import config
+    parsl.load(config)
+
+
+def local_teardown():
+    parsl.clear()
+
+
+@python_app
 def python_app_slow(duration):
     import platform
     import time
@@ -42,14 +43,3 @@ def test_python_remote_slow(count=20):
 
     for fu in fus:
         print(fu.result())
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", default='local',
-                        help="Path to configuration file to run")
-    args = parser.parse_args()
-
-    load_dfk(args.config)
-    test_python_remote()
-    test_python_remote_slow()

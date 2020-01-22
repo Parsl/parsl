@@ -2,8 +2,10 @@ import logging
 import os
 import re
 import time
+import typeguard
 
 from parsl.channels import LocalChannel
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
@@ -12,14 +14,18 @@ from parsl.providers.error import ScaleOutFailed
 
 logger = logging.getLogger(__name__)
 
+from typing import Dict, List, Optional
+from parsl.channels.base import Channel
+from parsl.launchers.launchers import Launcher
+
 # See http://pages.cs.wisc.edu/~adesmet/status.html
 translate_table = {
-    '1': 'PENDING',
-    '2': 'RUNNING',
-    '3': 'CANCELLED',
-    '4': 'COMPLETED',
-    '5': 'FAILED',
-    '6': 'FAILED',
+    '1': JobState.PENDING,
+    '2': JobState.RUNNING,
+    '3': JobState.CANCELLED,
+    '4': JobState.COMPLETED,
+    '5': JobState.FAILED,
+    '6': JobState.FAILED,
 }
 
 
@@ -35,6 +41,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
+    cores_per_slot : int
+        Specify the number of cores to provision per slot. If set to None, executors
+        will assume all cores on the node are available for computation. Default is None.
+    mem_per_slot : float
+        Specify the real memory to provision per slot in GB. If set to None, no
+        explicit request to the scheduler will be made. Default is None.
     init_blocks : int
         Number of blocks to provision at time of initialization
     min_blocks : int
@@ -64,22 +76,25 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     cmd_timeout : int
         Timeout for commands made to the scheduler in seconds
     """
+    @typeguard.typechecked
     def __init__(self,
-                 channel=LocalChannel(),
-                 nodes_per_block=1,
-                 init_blocks=1,
-                 min_blocks=0,
-                 max_blocks=10,
-                 parallelism=1,
-                 environment=None,
-                 project='',
-                 scheduler_options='',
-                 transfer_input_files=[],
-                 walltime="00:10:00",
-                 worker_init='',
-                 launcher=SingleNodeLauncher(),
-                 requirements='',
-                 cmd_timeout=60):
+                 channel: Channel = LocalChannel(),
+                 nodes_per_block: int = 1,
+                 cores_per_slot: Optional[int] = None,
+                 mem_per_slot: Optional[float] = None,
+                 init_blocks: int = 1,
+                 min_blocks: int = 0,
+                 max_blocks: int = 10,
+                 parallelism: float = 1,
+                 environment: Optional[Dict[str, str]] = None,
+                 project: str = '',
+                 scheduler_options: str = '',
+                 transfer_input_files: List[str] = [],
+                 walltime: str = "00:10:00",
+                 worker_init: str = '',
+                 launcher: Launcher = SingleNodeLauncher(),
+                 requirements: str = '',
+                 cmd_timeout: int = 60) -> None:
 
         label = 'condor'
         super().__init__(label,
@@ -93,6 +108,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                          launcher,
                          cmd_timeout=cmd_timeout)
         self.provisioned_blocks = 0
+        self.cores_per_slot = cores_per_slot
+        self.mem_per_slot = mem_per_slot
+
+        # To Parsl, Condor slots should be treated equivalently to nodes
+        self.cores_per_node = cores_per_slot
+        self.mem_per_node = mem_per_slot
 
         self.environment = environment if environment is not None else {}
         for key, value in self.environment.items():
@@ -104,8 +125,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                 pass
 
         self.project = project
-        self.scheduler_options = scheduler_options
-        self.worker_init = worker_init
+        self.scheduler_options = scheduler_options + '\n'
+        self.worker_init = worker_init + '\n'
         self.requirements = requirements
         self.transfer_input_files = transfer_input_files
 
@@ -114,7 +135,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         job_id_list = ' '.join(self.resources.keys())
         cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
         """
         Example output:
 
@@ -123,11 +144,11 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         34524643.0 1
         """
 
-        for line in stdout.strip().split('\n'):
-            parts = line.split()
+        for line in stdout.splitlines():
+            parts = line.strip().split()
             job_id = parts[0]
-            status = translate_table.get(parts[1], 'UNKNOWN')
-            self.resources[job_id]['status'] = status
+            state = translate_table.get(parts[1], JobState.UNKNOWN)
+            self.resources[job_id]['status'] = JobStatus(state)
 
     def status(self, job_ids):
         """Get the status of a list of jobs identified by their ids.
@@ -146,8 +167,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        """Submits the command onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl.condor"):
+        """Submits the command onto an Local Resource Manager job.
 
         example file with the complex case of multiple submits per job:
             Universe =vanilla
@@ -169,8 +190,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         ----------
         command : str
             Command to execute
-        blocksize : int
-            Number of blocks to request.
         job_name : str
             Job name prefix.
         tasks_per_node : int
@@ -181,17 +200,22 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             None if at capacity and cannot provision more; otherwise the identifier for the job.
         """
 
-        logger.debug("Attempting to launch with blocksize: {}".format(blocksize))
+        logger.debug("Attempting to launch")
         if self.provisioned_blocks >= self.max_blocks:
             template = "Provider {} is currently using {} blocks while max_blocks is {}; no blocks will be added"
-            logger.warn(template.format(self.label, self.provisioned_blocks, self.max_blocks))
+            logger.warning(template.format(self.label, self.provisioned_blocks, self.max_blocks))
             return None
 
-        # Note: Fix this later to avoid confusing behavior.
-        # We should always allocate blocks in integer counts of node_granularity
-        blocksize = max(self.nodes_per_block, blocksize)
-
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
+
+        scheduler_options = self.scheduler_options
+        worker_init = self.worker_init
+        if self.mem_per_slot is not None:
+            scheduler_options += 'RequestMemory = {}\n'.format(self.mem_per_slot * 1024)
+            worker_init += 'export PARSL_MEMORY_GB={}\n'.format(self.mem_per_slot)
+        if self.cores_per_slot is not None:
+            scheduler_options += 'RequestCpus = {}\n'.format(self.cores_per_slot)
+            worker_init += 'export PARSL_CORES={}\n'.format(self.cores_per_slot)
 
         script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
@@ -205,8 +229,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["project"] = self.project
         job_config["nodes"] = self.nodes_per_block
-        job_config["scheduler_options"] = self.scheduler_options
-        job_config["worker_init"] = self.worker_init
+        job_config["scheduler_options"] = scheduler_options
+        job_config["worker_init"] = worker_init
         job_config["user_script"] = command
         job_config["tasks_per_node"] = tasks_per_node
         job_config["requirements"] = self.requirements
@@ -232,7 +256,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         cmd = "condor_submit {0}".format(channel_script_path)
         try:
-            retcode, stdout, stderr = super().execute_wait(cmd)
+            retcode, stdout, stderr = self.execute_wait(cmd)
         except Exception as e:
             raise ScaleOutFailed(self.label, str(e))
 
@@ -275,11 +299,11 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         job_id_list = ' '.join(job_ids)
         cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = 'CANCELLED'
+                self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
@@ -287,16 +311,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         return rets
 
     @property
-    def scaling_enabled(self):
-        return True
-
-    @property
     def current_capacity(self):
         return self
 
     def _add_resource(self, job_id):
         for jid in job_id:
-            self.resources[jid] = {'status': 'PENDING', 'size': 1}
+            self.resources[jid] = {'status': JobStatus(JobState.PENDING), 'size': 1}
         return True
 
 

@@ -42,13 +42,13 @@ class ManagerLost(Exception):
     ''' Task lost due to worker loss. Worker is considered lost when multiple heartbeats
     have been missed.
     '''
-    def __init__(self, worker_id, hostname):
-        self.worker_id = worker_id
+    def __init__(self, manager_id, hostname):
+        self.manager_id = manager_id
         self.tstamp = time.time()
         self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of Manager {} on host {}".format(self.worker_id, self.hostname)
+        return "Task failure due to loss of Manager {} on host {}".format(self.manager_id, self.hostname)
 
     def __str__(self):
         return self.__repr__()
@@ -141,10 +141,7 @@ class Interchange(object):
 
         """
         self.logdir = logdir
-        try:
-            os.makedirs(self.logdir)
-        except FileExistsError:
-            pass
+        os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
         logger.debug("Initializing Interchange process")
@@ -346,11 +343,13 @@ class Interchange(object):
 
         self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
-                                                    args=(self._kill_event,))
+                                                    args=(self._kill_event,),
+                                                    name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                args=(self._kill_event,))
+                                                args=(self._kill_event,),
+                                                name="Interchange-Command")
         self._command_thread.start()
 
         poller = zmq.Poller()
@@ -381,7 +380,7 @@ class Interchange(object):
                         msg['reg_time'] = datetime.datetime.strptime(msg['reg_time'], "%Y-%m-%d %H:%M:%S")
                         reg_flag = True
                     except Exception:
-                        logger.warning("[MAIN] Got Exception reading registration message from manager:{}".format(
+                        logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
                             manager), exc_info=True)
                         logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
 
@@ -404,7 +403,7 @@ class Interchange(object):
 
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
-                            logger.warn("[MAIN] Manager {} has incompatible version info with the interchange".format(manager))
+                            logger.warning("[MAIN] Manager {} has incompatible version info with the interchange".format(manager))
 
                             if self.suppress_failure is False:
                                 logger.debug("Setting kill event")

@@ -1,15 +1,14 @@
 [flake8]
-# D203: 1 blank line required before class docstring
 # E124: closing bracket does not match visual indentation
 # E126: continuation line over-indented for hanging indent
-# F405: name may be undefined, or defined from star imports: module
 # This one is bad. Sometimes ordering matters, conditional imports
 # setting env vars necessary etc.
 # E402: module level import not at top of file
 # E129: Visual indent to not match indent as next line, counter eg here:
 # https://github.com/PyCQA/pycodestyle/issues/386
-# W504: Raised by flake8 even when it is followed
-ignore = D203, E124, E126, F405, E402, E129, W504
+# W504: line break after binary operator
+#       (Raised by flake8 even when it is followed)
+ignore = E124, E126, E402, E129, W504
 max-line-length = 160
 exclude = parsl/executors/serialize/, test_import_fail.py
 # E741 disallows ambiguous single letter names which look like numbers

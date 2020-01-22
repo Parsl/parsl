@@ -5,24 +5,22 @@ import time
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_ipp import config
 
-parsl.set_stream_logger()
 
-
-@App('python')
+@python_app
 def double(x):
     return x * 2
 
 
-@App('python')
+@python_app
 def echo(x, string, stdout=None):
     print(string)
     return x * 5
 
 
-@App('python')
+@python_app
 def import_echo(x, string, stdout=None):
     import time
     time.sleep(0)
@@ -30,7 +28,7 @@ def import_echo(x, string, stdout=None):
     return x * 5
 
 
-@App('python')
+@python_app
 def custom_exception():
     from globus_sdk import GlobusError
     raise GlobusError('foobar')
@@ -91,7 +89,6 @@ def test_stdout():
     print("[TEST STATUS] test_stdout [SUCCESS]")
 
 
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_custom_exception():
     from globus_sdk import GlobusError
 
@@ -106,6 +103,8 @@ def demonstrate_custom_exception():
 
 
 if __name__ == '__main__':
+    parsl.set_stream_logger()
+
     parsl.clear()
     parsl.load(config)
 

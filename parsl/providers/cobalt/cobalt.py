@@ -7,16 +7,17 @@ from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
 from parsl.providers.cobalt.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
 translate_table = {
-    'QUEUED': 'PENDING',
-    'STARTING': 'PENDING',
-    'RUNNING': 'RUNNING',
-    'EXITING': 'COMPLETED',
-    'KILLING': 'COMPLETED'
+    'QUEUED': JobState.PENDING,
+    'STARTING': JobState.PENDING,
+    'RUNNING': JobState.RUNNING,
+    'EXITING': JobState.COMPLETED,
+    'KILLING': JobState.COMPLETED
 }
 
 
@@ -98,7 +99,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = super().execute_wait("qstat -u $USER")
+        retcode, stdout, stderr = self.execute_wait("qstat -u $USER")
 
         # Execute_wait failed. Do no update.
         if retcode != 0:
@@ -115,19 +116,18 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                 if job_id not in self.resources:
                     continue
 
-                status = translate_table.get(parts[4], 'UNKNOWN')
+                status = translate_table.get(parts[4], JobState.UNKNOWN)
 
-                self.resources[job_id]['status'] = status
+                self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['RUNNING', 'KILLING', 'EXITING']:
-                self.resources[missing_job]['status'] = translate_table['EXITING']
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
-        """ Submits the command onto an Local Resource Manager job of blocksize parallel elements.
+    def submit(self, command, tasks_per_node, job_name="parsl.cobalt"):
+        """ Submits the command onto an Local Resource Manager job of parallel elements.
         Submit returns an ID that corresponds to the task that was just submitted.
 
         If tasks_per_node <  1 : ! This is illegal. tasks_per_node should be integer
@@ -136,11 +136,10 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
              A single node is provisioned
 
         If tasks_per_node >  1 :
-             tasks_per_node * blocksize number of nodes are provisioned.
+             tasks_per_node number of nodes are provisioned.
 
         Args:
              - command  :(String) Commandline invocation to be made on the remote side.
-             - blocksize   :(float)
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
@@ -153,13 +152,8 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         """
 
         if self.provisioned_blocks >= self.max_blocks:
-            logger.warn("[%s] at capacity, cannot add more blocks now", self.label)
+            logger.warning("[%s] at capacity, cannot add more blocks now", self.label)
             return None
-
-        # Note: Fix this later to avoid confusing behavior.
-        # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.nodes_per_block:
-            blocksize = self.nodes_per_block
 
         account_opt = '-A {}'.format(self.account) if self.account is not None else ''
 
@@ -172,8 +166,8 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
 
-        logger.debug("Requesting blocksize:%s nodes_per_block:%s tasks_per_node:%s",
-                     blocksize, self.nodes_per_block, tasks_per_node)
+        logger.debug("Requesting nodes_per_block:%s tasks_per_node:%s",
+                     self.nodes_per_block, tasks_per_node)
 
         # Wrap the command
         job_config["user_script"] = self.launcher(command, tasks_per_node, self.nodes_per_block)
@@ -189,7 +183,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
             self.nodes_per_block, queue_opt, wtime_to_minutes(self.walltime), account_opt, channel_script_path)
         logger.debug("Executing {}".format(command))
 
-        retcode, stdout, stderr = super().execute_wait(command)
+        retcode, stdout, stderr = self.execute_wait(command)
 
         # TODO : FIX this block
         if retcode != 0:
@@ -203,7 +197,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         if retcode == 0:
             # We should be getting only one line back
             job_id = stdout.strip()
-            self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
+            self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             logger.error("Submission of command to scale_out failed: {0}".format(stderr))
             raise (ScaleOutFailed(self.__class__, "Request to submit job to local scheduler failed"))
@@ -222,11 +216,13 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         """
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("qdel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("qdel {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['KILLING']  # Setting state to cancelled
+                # ???
+                # self.resources[jid]['status'] = translate_table['KILLING']  # Setting state to cancelled
+                self.resources[jid]['status'] = JobStatus(JobState.COMPLETED)
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]

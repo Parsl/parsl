@@ -6,27 +6,28 @@ from parsl.channels import LocalChannel
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.grid_engine.template import template_string
 from parsl.launchers import SingleNodeLauncher
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
 translate_table = {
-    'qw': 'PENDING',
-    'hqw': 'PENDING',
-    'hrwq': 'PENDING',
-    'r': 'RUNNING',
-    's': 'FAILED',  # obsuspended
-    'ts': 'FAILED',
-    't': 'FAILED',  # Suspended by alarm
-    'eqw': 'FAILED',  # Error states
-    'ehqw': 'FAILED',  # ..
-    'ehrqw': 'FAILED',  # ..
-    'd': 'COMPLETED',
-    'dr': 'COMPLETED',
-    'dt': 'COMPLETED',
-    'drt': 'COMPLETED',
-    'ds': 'COMPLETED',
-    'drs': 'COMPLETES',
+    'qw': JobState.PENDING,
+    'hqw': JobState.PENDING,
+    'hrwq': JobState.PENDING,
+    'r': JobState.RUNNING,
+    's': JobState.FAILED,  # obsuspended
+    'ts': JobState.FAILED,
+    't': JobState.FAILED,  # Suspended by alarm
+    'eqw': JobState.FAILED,  # Error states
+    'ehqw': JobState.FAILED,  # ..
+    'ehrqw': JobState.FAILED,  # ..
+    'd': JobState.COMPLETED,
+    'dr': JobState.COMPLETED,
+    'dt': JobState.COMPLETED,
+    'drt': JobState.COMPLETED,
+    'ds': JobState.COMPLETED,
+    'drs': JobState.COMPLETED,
 }
 
 
@@ -108,14 +109,13 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                                                   self.nodes_per_block)
         return job_config
 
-    def submit(self, command, blocksize, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.sge"):
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as IPP engine
         or even Swift-T engines).
 
         Args :
              - command (str) : The bash command string to be executed.
-             - blocksize (int) : Blocksize to be requested
              - tasks_per_node (int) : command invocations to be launched per node
 
         KWargs:
@@ -127,11 +127,6 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         Raises:
              - ExecutionProviderException or its subclasses
         '''
-
-        # Note: Fix this later to avoid confusing behavior.
-        # We should always allocate blocks in integer counts of node_granularity
-        if blocksize < self.nodes_per_block:
-            blocksize = self.nodes_per_block
 
         # Set job name
         job_name = "{0}.{1}".format(job_name, time.time())
@@ -147,14 +142,14 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
         cmd = "qsub -terse {0}".format(channel_script_path)
-        retcode, stdout, stderr = super().execute_wait(cmd, 10)
+        retcode, stdout, stderr = self.execute_wait(cmd, 10)
 
         if retcode == 0:
             for line in stdout.split('\n'):
                 job_id = line.strip()
                 if not job_id:
                     continue
-                self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING', 'blocksize': blocksize}
+                self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
                 return job_id
         else:
             print("[WARNING!!] Submission of command to scale_out failed")
@@ -165,8 +160,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         returned from the submit request.
 
         Returns:
-             - A list of status from ['PENDING', 'RUNNING', 'CANCELLED', 'COMPLETED',
-               'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
+             - A list of JobStatus objects corresponding to each job_id in the job_ids list.
 
         Raises:
              - ExecutionProviderException or its subclasses
@@ -175,7 +169,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         cmd = "qstat"
 
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
@@ -187,7 +181,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
             if parts and parts[0].lower().lower() != 'job-id' \
                     and not parts[0].startswith('----'):
                 job_id = parts[0]
-                status = translate_table.get(parts[4].lower(), 'UNKNOWN')
+                status = translate_table.get(parts[4].lower(), JobState.UNKNOWN)
                 if job_id in self.resources:
                     self.resources[job_id]['status'] = status
                     jobs_missing.remove(job_id)
@@ -195,8 +189,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         # Filling in missing blanks for jobs that might have gone missing
         # we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = 'COMPLETED'
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def cancel(self, job_ids):
         ''' Cancels the resources identified by the job_ids provided by the user.
@@ -213,12 +206,12 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         job_id_list = ' '.join(job_ids)
         cmd = "qdel {}".format(job_id_list)
-        retcode, stdout, stderr = super().execute_wait(cmd, 3)
+        retcode, stdout, stderr = self.execute_wait(cmd, 3)
 
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = "COMPLETED"
+                self.resources[jid]['status'] = JobStatus(JobState.COMPLETED)
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]

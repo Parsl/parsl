@@ -6,13 +6,14 @@ import shutil
 import time
 
 import pytest
+
+import parsl
 from parsl.providers import LocalProvider
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.config import Config
-from parsl.dataflow.dflow import DataFlowKernel
 from parsl.executors.ipp import IPyParallelExecutor
 
-config = Config(
+local_config = Config(
     executors=[
         IPyParallelExecutor(
             label='pool_app1',
@@ -26,16 +27,15 @@ config = Config(
         )
     ]
 )
-dfk = DataFlowKernel(config=config)
 
 
-@App('python', dfk, executors=['pool_app1'], cache=True)
+@python_app(executors=['pool_app1'], cache=True)
 def app_1(data):
     import app1
     return app1.predict(data)
 
 
-@App('python', dfk, executors=['pool_app2'], cache=True)
+@python_app(executors=['pool_app2'], cache=True)
 def app_2(data):
     import app2
     return app2.predict(data)
@@ -106,5 +106,7 @@ if __name__ == '__main__':
 
     # if args.debug:
     #    parsl.set_stream_logger()
+
+    parsl.load(local_config)
 
     x = test_simple(int(args.count))

@@ -2,16 +2,13 @@ from functools import update_wrapper
 from inspect import signature, Parameter
 
 from parsl.app.errors import wrap_error
-from parsl.app.futures import DataFuture
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
 
 def remote_side_bash_executor(func, *args, **kwargs):
-    """Execute the bash app type function and return the command line string.
-
-    This string is reformatted with the *args, and **kwargs
-    from call time.
+    """Executes the supplied function with *args and **kwargs to get a
+    command-line to run, and then run that command-line using bash.
     """
     import os
     import time
@@ -19,6 +16,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     import logging
     import parsl.app.errors as pe
     from parsl import set_file_logger
+    from parsl.utils import get_std_fname_mode
 
     logbase = "/tmp"
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
@@ -46,7 +44,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if executable is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e))
         else:
-            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned none - with this exception: {}".format(func_name, e), None)
+            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned None - with this exception: {}".format(func_name, e), None)
 
     except IndexError as e:
         raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e))
@@ -63,16 +61,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
         stdfspec = kwargs.get(fdname)  # spec is str name or tuple (name, mode)
         if stdfspec is None:
             return None
-        elif isinstance(stdfspec, str):
-            fname = stdfspec
-            mode = 'a+'
-        elif isinstance(stdfspec, tuple):
-            if len(stdfspec) != 2:
-                raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
-            fname, mode = stdfspec
-        else:
-            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
 
+        fname, mode = get_std_fname_mode(fdname, stdfspec)
         try:
             if os.path.dirname(fname):
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
@@ -98,7 +88,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout))
 
     except Exception as e:
-        raise pe.AppException("[{}] App caught exception: {}".format(func_name, proc.returncode), e)
+        raise pe.AppException("[{}] App caught exception with returncode: {}".format(func_name, returncode), e)
 
     if returncode != 0:
         raise pe.AppFailure("[{}] App failed with exit code: {}".format(func_name, proc.returncode), proc.returncode)
@@ -122,8 +112,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, walltime=60, cache=False, executors='all'):
-        super().__init__(func, data_flow_kernel=data_flow_kernel, walltime=60, executors=executors, cache=cache)
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all'):
+        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache)
         self.kwargs = {}
 
         # We duplicate the extraction of parameter defaults
@@ -145,14 +135,12 @@ class BashApp(AppBase):
              - Arbitrary
 
         Returns:
-             If outputs=[...] was a kwarg then:
-                   App_fut, [Data_Futures...]
-             else:
                    App_fut
 
         """
-        # Update kwargs in the app definition with ones passed in at calltime
-        self.kwargs.update(kwargs)
+        invocation_kwargs = {}
+        invocation_kwargs.update(self.kwargs)
+        invocation_kwargs.update(kwargs)
 
         if self.data_flow_kernel is None:
             dfk = DataFlowKernelLoader.dfk()
@@ -164,10 +152,6 @@ class BashApp(AppBase):
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
-                             **self.kwargs)
-
-        out_futs = [DataFuture(app_fut, o, tid=app_fut.tid)
-                    for o in kwargs.get('outputs', [])]
-        app_fut._outputs = out_futs
+                             **invocation_kwargs)
 
         return app_fut

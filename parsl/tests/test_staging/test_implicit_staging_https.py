@@ -1,15 +1,17 @@
+import parsl
+from parsl.app.app import python_app
+from parsl.data_provider.files import File
+
 import pytest
 
-import parsl
-from parsl.app.app import App
-from parsl.data_provider.files import File
-from parsl.tests.configs.local_threads import config
-
-parsl.clear()
-parsl.load(config)
+# This config is for the local test which will adding an executor.
+# Most tests in this file should be non-local and use the configuration
+# specificed with --config, not this one.
+from parsl.tests.configs.htex_local import fresh_config
+local_config = fresh_config()
 
 
-@App('python')
+@python_app
 def sort_strings(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
@@ -19,7 +21,6 @@ def sort_strings(inputs=[], outputs=[]):
                 s.write(e)
 
 
-@pytest.mark.local
 def test_implicit_staging_https():
     """Test implicit staging for an ftp file
 
@@ -37,7 +38,7 @@ def test_implicit_staging_https():
     f.result()
 
 
-@App('python')
+@python_app
 def sort_strings_kw(x=None, outputs=[]):
     with open(x.filepath, 'r') as u:
         strs = u.readlines()
@@ -47,7 +48,6 @@ def sort_strings_kw(x=None, outputs=[]):
                 s.write(e)
 
 
-@pytest.mark.local
 def test_implicit_staging_https_kwargs():
 
     # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
@@ -61,7 +61,7 @@ def test_implicit_staging_https_kwargs():
     f.result()
 
 
-@App('python')
+@python_app
 def sort_strings_arg(x, outputs=[]):
     with open(x.filepath, 'r') as u:
         strs = u.readlines()
@@ -71,7 +71,6 @@ def sort_strings_arg(x, outputs=[]):
                 s.write(e)
 
 
-@pytest.mark.local
 def test_implicit_staging_https_args():
 
     # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
@@ -85,7 +84,7 @@ def test_implicit_staging_https_args():
     f.result()
 
 
-@App('python', executors=['other'])
+@python_app(executors=['other'])
 def sort_strings_additional_executor(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
@@ -118,6 +117,8 @@ def test_implicit_staging_https_additional_executor():
 
 
 if __name__ == "__main__":
+
+    parsl.load()
 
     import argparse
 

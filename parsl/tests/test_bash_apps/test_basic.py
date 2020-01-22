@@ -1,15 +1,16 @@
 import argparse
 import os
+import pytest
 import shutil
 import time
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash')
+@bash_app
 def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     res = ""
     for i in inputs:
@@ -18,12 +19,13 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     return res
 
 
-@App('bash')
+@bash_app
 def foo(x, y, z=10, stdout=None):
     return """echo {0} {1} {z}
     """.format(x, y, z=z)
 
 
+@pytest.mark.issue363
 def test_command_format_1():
     """Testing command format for BashApps
     """
@@ -51,6 +53,7 @@ def test_command_format_1():
     return True
 
 
+@pytest.mark.issue363
 def test_parallel_for(n=3):
     """Testing a simple parallel for loop
     """
@@ -79,7 +82,7 @@ def test_parallel_for(n=3):
     print("Duration : {0}s".format(time.time() - start))
     stdout_file_count = len(
         [item for item in os.listdir(outdir) if item.endswith('.out')])
-    assert stdout_file_count == n, "Only {0}/{1} files in '{1}' ".format(len(os.listdir('outputs/')),
+    assert stdout_file_count == n, "Only {0}/{1} files in '{2}' ".format(len(os.listdir('outputs/')),
                                                                          n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d

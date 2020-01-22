@@ -18,6 +18,7 @@ parsl.executors.IPyParallelExecutor
       ~IPyParallelExecutor.compose_launch_cmd
       ~IPyParallelExecutor.scale_in
       ~IPyParallelExecutor.scale_out
+      ~IPyParallelExecutor.set_bad_state_and_fail_all
       ~IPyParallelExecutor.shutdown
       ~IPyParallelExecutor.start
       ~IPyParallelExecutor.status
@@ -31,9 +32,15 @@ parsl.executors.IPyParallelExecutor
 
    .. autosummary::
    
+      ~IPyParallelExecutor.bad_state_is_set
       ~IPyParallelExecutor.connected_workers
+      ~IPyParallelExecutor.executor_exception
+      ~IPyParallelExecutor.hub_address
+      ~IPyParallelExecutor.hub_port
       ~IPyParallelExecutor.outstanding
+      ~IPyParallelExecutor.provider
       ~IPyParallelExecutor.run_dir
       ~IPyParallelExecutor.scaling_enabled
+      ~IPyParallelExecutor.tasks
    
    

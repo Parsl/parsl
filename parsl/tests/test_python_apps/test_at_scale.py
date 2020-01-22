@@ -4,14 +4,14 @@ import time
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
-parsl.clear()
-parsl.load(config)
+
+local_config = config
 
 
-@App('python')
+@python_app
 def double(x):
     return x * 2
 

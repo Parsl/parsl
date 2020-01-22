@@ -1,15 +1,14 @@
 import pytest
 
 import parsl
-from parsl.app.app import App
 
 from parsl.tests.configs.midway_ipp import config
 
-parsl.clear()
-parsl.load(config)
+
+local_config = config
 
 
-@App("python")
+@parsl.python_app
 def python_app():
     import os
     import time

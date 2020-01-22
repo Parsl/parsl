@@ -4,19 +4,18 @@ import pathlib
 import uuid
 
 from ipyparallel import Client
-from parsl.providers import LocalProvider
-from parsl.utils import RepresentationMixin
-
-from parsl.dataflow.error import ConfigurationError
-from parsl.executors.base import ParslExecutor
+from parsl.providers.provider_base import JobState
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.ipp_controller import Controller
+from parsl.executors.status_handling import StatusHandlingExecutor
+from parsl.providers import LocalProvider
+from parsl.utils import RepresentationMixin
 from parsl.utils import wait_for_file
 
 logger = logging.getLogger(__name__)
 
 
-class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
+class IPyParallelExecutor(StatusHandlingExecutor, RepresentationMixin):
     """The IPython Parallel executor.
 
     This executor uses IPythonParallel's pilot execution system to manage multiple processes
@@ -48,8 +47,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         Directory where engine logs and configuration files will be stored.
     working_dir : str
         Directory where input data should be staged to.
-    storage_access : list of :class:`~parsl.data_provider.scheme.Scheme`
-        Specifications for accessing data this executor remotely. Multiple `Scheme`s are not yet supported.
+    storage_access : list of :class:`~parsl.data_provider.staging.Staging`
+        Specifications for accessing data this executor remotely.
     managed : bool
         If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
         this is managed by the user.
@@ -76,7 +75,8 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
                  engine_debug_level=None,
                  workers_per_node=1,
                  managed=True):
-        self.provider = provider
+
+        StatusHandlingExecutor.__init__(self, provider)
         self.label = label
         self.working_dir = working_dir
         self.controller = controller
@@ -84,9 +84,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.container_image = container_image
         self.engine_dir = engine_dir
         self.workers_per_node = workers_per_node
-        self.storage_access = storage_access if storage_access is not None else []
-        if len(self.storage_access) > 1:
-            raise ConfigurationError('Multiple storage access schemes are not yet supported')
+        self.storage_access = storage_access
         self.managed = managed
 
         self.debug_option = ""
@@ -119,7 +117,7 @@ class IPyParallelExecutor(ParslExecutor, RepresentationMixin):
         self.launch_cmd = command_composer(self.engine_file, self.engine_dir, self.container_image)
         self.engines = []
 
-        self._scaling_enabled = self.provider.scaling_enabled
+        self._scaling_enabled = True
         logger.debug("Starting IPyParallelExecutor with provider:\n%s", self.provider)
         if hasattr(self.provider, 'init_blocks'):
             try:
@@ -238,7 +236,7 @@ sleep infinity
         r = []
         for i in range(blocks):
             if self.provider:
-                block = self.provider.submit(self.launch_cmd, 1, self.workers_per_node)
+                block = self.provider.submit(self.launch_cmd, self.workers_per_node)
                 logger.debug("Launched block {}:{}".format(i, block))
                 if not block:
                     raise(ScalingFailed(self.provider.label,
@@ -258,7 +256,7 @@ sleep infinity
         status = dict(zip(self.engines, self.provider.status(self.engines)))
 
         # This works for blocks=0
-        to_kill = [engine for engine in status if status[engine] == "RUNNING"][:blocks]
+        to_kill = [engine for engine in status if status[engine].state == JobState.RUNNING][:blocks]
 
         if self.provider:
             r = self.provider.cancel(to_kill)
@@ -268,15 +266,8 @@ sleep infinity
 
         return r
 
-    def status(self):
-        """Returns the status of the executor via probing the execution providers."""
-        if self.provider:
-            status = self.provider.status(self.engines)
-
-        else:
-            status = []
-
-        return status
+    def _get_job_ids(self):
+        return self.engines
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.

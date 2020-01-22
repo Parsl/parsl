@@ -3,7 +3,7 @@ import time
 import math
 
 from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
-
+from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class Strategy(object):
         self.dfk = dfk
         self.config = dfk.config
         self.executors = {}
-        self.max_idletime = 60 * 2  # 2 minutes
+        self.max_idletime = self.dfk.config.max_idletime
 
         for e in self.dfk.config.executors:
             self.executors[e.label] = {'idle_since': None, 'config': e.label}
@@ -181,30 +181,25 @@ class Strategy(object):
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            if isinstance(executor, IPyParallelExecutor):
+            if isinstance(executor, IPyParallelExecutor) or isinstance(executor, HighThroughputExecutor):
                 tasks_per_node = executor.workers_per_node
-            elif isinstance(executor, HighThroughputExecutor):
-                # This is probably wrong calculation, we need this to come from the executor
-                # since we can't know slots ahead of time.
-                tasks_per_node = 1
             elif isinstance(executor, ExtremeScaleExecutor):
                 tasks_per_node = executor.ranks_per_node
 
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            running = sum([1 for x in status if x == 'RUNNING'])
-            submitting = sum([1 for x in status if x == 'SUBMITTING'])
-            pending = sum([1 for x in status if x == 'PENDING'])
-            active_blocks = running + submitting + pending
+            running = sum([1 for x in status.values() if x.state == JobState.RUNNING])
+            pending = sum([1 for x in status.values() if x.state == JobState.PENDING])
+            active_blocks = running + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
             if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, submitting, pending, executor.connected_workers))
+                logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
+                    label, active_tasks, running, pending, executor.connected_workers))
             else:
-                logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
-                    label, active_tasks, running, submitting, pending))
+                logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
+                    label, active_tasks, running, pending))
 
             # reset kill timer if executor has active tasks
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
@@ -274,8 +269,3 @@ class Strategy(object):
             else:
                 # logger.debug("Strategy: Case 3")
                 pass
-
-
-if __name__ == '__main__':
-
-    pass
