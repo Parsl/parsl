@@ -3,7 +3,7 @@ import time
 import math
 
 from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
-
+from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
 
@@ -189,18 +189,17 @@ class Strategy(object):
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            running = sum([1 for x in status if x == 'RUNNING'])
-            submitting = sum([1 for x in status if x == 'SUBMITTING'])
-            pending = sum([1 for x in status if x == 'PENDING'])
-            active_blocks = running + submitting + pending
+            running = sum([1 for x in status.values() if x.state == JobState.RUNNING])
+            pending = sum([1 for x in status.values() if x.state == JobState.PENDING])
+            active_blocks = running + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
             if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, submitting, pending, executor.connected_workers))
+                logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
+                    label, active_tasks, running, pending, executor.connected_workers))
             else:
-                logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
-                    label, active_tasks, running, submitting, pending))
+                logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
+                    label, active_tasks, running, pending))
 
             # reset kill timer if executor has active tasks
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:

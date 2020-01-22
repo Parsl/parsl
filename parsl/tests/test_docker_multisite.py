@@ -9,7 +9,7 @@ import pytest
 
 import parsl
 from parsl.providers import LocalProvider
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.config import Config
 from parsl.executors.ipp import IPyParallelExecutor
 
@@ -29,13 +29,13 @@ local_config = Config(
 )
 
 
-@App('python', executors=['pool_app1'], cache=True)
+@python_app(executors=['pool_app1'], cache=True)
 def app_1(data):
     import app1
     return app1.predict(data)
 
 
-@App('python', executors=['pool_app2'], cache=True)
+@python_app(executors=['pool_app2'], cache=True)
 def app_2(data):
     import app2
     return app2.predict(data)

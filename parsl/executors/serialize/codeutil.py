@@ -15,10 +15,7 @@ Reference: A. Tremols, P Cogolo, "Python Cookbook," p 302-305
 
 import sys
 import types
-try:
-    import copyreg  # Py 3
-except ImportError:
-    import copy_reg as copyreg  # Py 2
+import copyreg
 
 
 def code_ctor(*args):
@@ -32,6 +29,8 @@ def reduce_code(co):
             co.co_lnotab, co.co_freevars, co.co_cellvars]
     if sys.version_info[0] >= 3:
         args.insert(1, co.co_kwonlyargcount)
+    if sys.version_info > (3, 8):
+        args.insert(1, co.co_posonlyargcount)
     return code_ctor, tuple(args)
 
 

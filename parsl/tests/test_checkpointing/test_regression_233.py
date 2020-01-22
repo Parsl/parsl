@@ -1,6 +1,6 @@
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.dataflow.dflow import DataFlowKernel
 
 
@@ -10,7 +10,7 @@ def run_checkpointed(checkpoints):
     config.checkpoint_files = checkpoints
     dfk = DataFlowKernel(config=config)
 
-    @App('python', dfk, cache=True)
+    @python_app(data_flow_kernel=dfk, cache=True)
     def cached_rand(x):
         import random
         return random.randint(0, 10000)
@@ -32,7 +32,7 @@ def run_race(sleep_dur):
     from parsl.tests.configs.local_threads_checkpoint_dfk_exit import config
     dfk = DataFlowKernel(config=config)
 
-    @App('python', dfk, cache=True)
+    @python_app(data_flow_kernel=dfk, cache=True)
     def cached_rand(x, sleep_dur=0):
         import random
         import time

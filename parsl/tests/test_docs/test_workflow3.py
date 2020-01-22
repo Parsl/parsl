@@ -1,10 +1,10 @@
 import parsl
 
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('python')
+@python_app
 def generate(limit):
     from random import randint
     """Generate a random integer and return it"""
