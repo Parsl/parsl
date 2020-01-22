@@ -53,7 +53,7 @@ class DataFuture(Future):
         super().__init__()
         self._tid = tid
         if isinstance(file_obj, str):
-            raise ValueError("DataFuture constructed with a string, not a File. This is deprecated.")
+            raise ValueError("DataFuture constructed with a string, not a File. This is no longer supported.")
         elif isinstance(file_obj, File):
             self.file_obj = file_obj
         else:
