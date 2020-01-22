@@ -1,7 +1,7 @@
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 
 
 def local_setup():
@@ -13,7 +13,7 @@ def local_teardown():
     parsl.clear()
 
 
-@App("python")
+@python_app
 def python_app_slow(duration):
     import platform
     import time

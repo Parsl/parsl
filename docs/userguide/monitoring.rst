@@ -16,6 +16,8 @@ that query this database to create a web-based dashboard for the workflow.
 Monitoring configuration
 ------------------------
 
+Parsl monitoring is only supported with the `HighThroughputExecutor`.
+
 Here's an example configuration that logs monitoring information to a local sqlite database:
 
 .. code-block:: python

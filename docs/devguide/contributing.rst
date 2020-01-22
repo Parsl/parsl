@@ -3,6 +3,8 @@ Contributing
 
 Parsl is an open source project that welcomes contributions from the community.
 
+First, please be aware of `Parsl's Code of Conduct<https://github.com/Parsl/parsl/blob/master/CoC.md>`_.
+
 Contributions may take many forms from reporting issues, requesting new features
 commenting on existing issues, fixing bugs, or developing new features.
 
