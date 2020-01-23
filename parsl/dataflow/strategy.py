@@ -1,7 +1,9 @@
 import logging
 import time
 import math
+from typing import List
 
+from parsl.dataflow.task_status_poller import ExecutorStatus
 from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
 from parsl.providers.provider_base import JobState
 
@@ -128,7 +130,7 @@ class Strategy(object):
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
 
-    def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_noop(self, status: List[ExecutorStatus], tasks, *args, kind=None, **kwargs):
         """Do nothing.
 
         Args:
@@ -152,7 +154,7 @@ class Strategy(object):
 
         self.logger_flag = True
 
-    def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_simple(self, status_list: List[ExecutorStatus], tasks, *args, kind=None, **kwargs):
         """Peek at the DFK and the executors specified.
 
         We assume here that tasks are not held in a runnable
@@ -167,14 +169,17 @@ class Strategy(object):
             - kind (Not used)
         """
 
-        for label, executor in self.dfk.executors.items():
+        for exec_status in status_list:
+            executor = exec_status.executor
+            label = executor.label
             if not executor.scaling_enabled:
                 continue
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
 
-            status = executor.status()
+            status = exec_status.status
+            # Dict[object, JobStatus]: job_id -> status
             self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these
