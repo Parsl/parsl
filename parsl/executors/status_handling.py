@@ -17,7 +17,7 @@ class StatusHandlingExecutor(ParslExecutor):
         self._provider = provider
         self._executor_bad_state = threading.Event()
         self._executor_exception = None
-        self._tasks = {}  # type: Dict[str, Future]
+        self._tasks = {}  # type: Dict[object, Future]
 
     def _make_status_dict(self, job_ids: List[Any], status_list: List[JobStatus]) -> Dict[Any, JobStatus]:
         """Given a list of job ids and a list of corresponding status strings,
@@ -73,7 +73,7 @@ class StatusHandlingExecutor(ParslExecutor):
         return self._executor_exception
 
     @property
-    def tasks(self) -> Dict[str, Future]:
+    def tasks(self) -> Dict[object, Future]:
         return self._tasks
 
     @property
@@ -101,7 +101,7 @@ class NoStatusHandlingExecutor(ParslExecutor):
         return {}
 
     @property
-    def tasks(self) -> Dict[str, Future]:
+    def tasks(self) -> Dict[object, Future]:
         return self._tasks
 
     @property
