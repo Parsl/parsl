@@ -84,7 +84,7 @@ class StatusHandlingExecutor(ParslExecutor):
 class NoStatusHandlingExecutor(ParslExecutor):
     def __init__(self):
         super().__init__()
-        self._tasks = {}
+        self._tasks = {}  # type: Dict[object, Future]
 
     @property
     def bad_state_is_set(self):
