@@ -217,3 +217,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
             rets = [False for i in job_ids]
 
         return rets
+
+    @property
+    def status_polling_interval(self):
+        return 60
