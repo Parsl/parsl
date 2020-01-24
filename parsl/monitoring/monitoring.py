@@ -458,7 +458,7 @@ def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *a
         hub.start(priority_msgs, node_msgs, resource_msgs)
     except Exception as e:
         hub.logger.exception("hub.start exception")
-        exception_q.put(('Hub', e))
+        exception_q.put(('Hub', str(e)))
 
     hub.logger.info("End of hub starter")
 
