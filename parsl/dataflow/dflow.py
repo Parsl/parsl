@@ -1029,7 +1029,7 @@ class DataFlowKernel(object):
                         # mode behave like a incremental log.
                         pickle.dump(t, f)
                         count += 1
-                        self.tasks[task_id]['checkpoint'] = True
+                        # self.tasks[task_id]['checkpoint'] = True
                         logger.debug("Task {} checkpointed".format(task_id))
 
             self.checkpointed_tasks += count
