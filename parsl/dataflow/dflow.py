@@ -369,10 +369,8 @@ class DataFlowKernel(object):
 
         # If checkpointing is turned on, wiping app_fu is left to the checkpointing code
         # else we wipe it here.
-        self.tasks[task_id]['depends'] = []
         if self.checkpoint_mode is None:
             self.wipe_task(task_id)
-            # self.tasks[task_id]['app_fu'] = None
         return
 
     def wipe_task(self, task_id):
