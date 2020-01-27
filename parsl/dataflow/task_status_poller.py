@@ -16,7 +16,7 @@ class PollItem(ExecutorStatus):
         self._executor = executor
         self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0
-        self._status: Dict[object, JobStatus] = {}
+        self._status = {}  # type: Dict[object, JobStatus]
 
     def _should_poll(self, now: float):
         return now >= self._last_poll_time + self._interval
