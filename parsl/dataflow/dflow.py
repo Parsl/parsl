@@ -377,7 +377,8 @@ class DataFlowKernel(object):
         """ Remove task with task_id from the internal tasks table
         """
         logger.warning("Wiping {}".format(task_id))
-        del self.tasks[task_id]
+        # del self.tasks[task_id]
+        self.tasks.pop(task_id, None)
 
     @staticmethod
     def check_staging_inhibited(kwargs):
@@ -984,7 +985,7 @@ class DataFlowKernel(object):
             if tasks:
                 checkpoint_queue = tasks
             else:
-                checkpoint_queue = self.tasks
+                checkpoint_queue = list(self.tasks.keys())
 
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
             checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
