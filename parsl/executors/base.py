@@ -1,8 +1,11 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
+# for type checking:
+from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers.provider_base import JobStatus
+
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -32,6 +35,17 @@ class ParslExecutor(metaclass=ABCMeta):
               @typeguard the constructor, you'll have to use List[Any] here.
     """
 
+    # mypy doesn't actually check that the below are defined by
+    # concrete subclasses - see  github.com/python/mypy/issues/4426
+    # and maybe PEP-544 Protocols
+
+    label: str
+    provider: ExecutionProvider
+    managed: bool
+    outstanding: Any  # what is this? used by strategy
+    working_dir: Optional[str]
+    storage_access: Optional[List[Any]]
+
     @abstractmethod
     def start(self) -> None:
         """Start the executor.
@@ -43,6 +57,26 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def submit(self, func: Callable, *args: Any, **kwargs: Any) -> Future:
         """Submit.
+
+        We haven't yet decided on what the args to this can be,
+        whether it should just be func, args, kwargs or be the partially evaluated
+        fn
+
+        BENC: based on how ipp uses this, this follows the semantics of async_apply from ipyparallel.
+        Based on how the thread executor works, its:
+
+            https://docs.python.org/3/library/concurrent.futures.html
+            Schedules the callable, fn, to be executed as fn(*args **kwargs) and returns a Future object representing the execution of the callable.
+
+        These are consistent
+
+        The value returned must be some kind of future that I'm a bit vague on the
+        strict requirements for:
+
+             it must be possible to assign a retries_left member slot to that object.
+             it's referred to as exec_fu - but it's whatever the underlying executor returns (ipp, thread pools, whatever) which has some Future-like behaviour
+                  - so is it always the case that we can add retries_left? (I guess the python model permits that but it's a bit type-ugly)
+
 
         The value returned must be a Future, with the further requirements that
         it must be possible to assign a retries_left member slot to that object.
@@ -110,7 +144,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_bad_state_and_fail_all(self, exception: Exception):
+    def set_bad_state_and_fail_all(self, exception: Exception) -> None:
         """Allows external error handlers to mark this executor as irrecoverably bad and cause
         all tasks submitted to it now and in the future to fail. The executor is responsible
         for checking  :method:bad_state_is_set() in the :method:submit() method and raising the

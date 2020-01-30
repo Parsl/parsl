@@ -2,16 +2,21 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from enum import Enum
 from typing import Any, List, Optional
 
+# for typechecking:
+from typing import Any, Dict, List, Optional
+from parsl.channels.base import Channel
 
-class JobState(bytes, Enum):
+
+# mypy can't typecheck the master version of JobState
+# I hope that this behaves the same.
+# The __repr__ is different at least - with master
+# version: >>> JobState.RUNNING
+# <JobState.RUNNING: 2>
+# with this version:
+# <JobState.RUNNING: (2, False)>
+
+class JobState(Enum):
     """Defines a set of states that a job can be in"""
-
-    def __new__(cls, value, terminal):
-        # noinspection PyArgumentList
-        obj = bytes.__new__(cls, [value])
-        obj._value_ = value
-        obj.terminal = terminal
-        return obj
 
     UNKNOWN = (0, False)
     PENDING = (1, False)
@@ -22,19 +27,29 @@ class JobState(bytes, Enum):
     TIMEOUT = (6, True)
     HELD = (7, False)
 
+    @property
+    def terminal(self) -> bool:
+        (_, state) = self.value
+        return state
+
 
 class JobStatus(object):
     """Encapsulates a job state together with other details, presently a (error) message"""
 
-    def __init__(self, state: JobState, message: str = None):
+    # mypy as I have configured it requires an explicit optional here.
+    # there was a change in PEP484 that makes this behaviour itself different between
+    # different typecheckers: https://github.com/python/peps/pull/689
+    # previously = None implied Optional on the type, but there has been some pressure
+    # against that - see https://github.com/python/typing/issues/275
+    def __init__(self, state: JobState, message: Optional[str] = None):
         self.state = state
         self.message = message
 
     @property
-    def terminal(self):
+    def terminal(self) -> bool:
         return self.state.terminal
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.message is not None:
             return "{} ({})".format(self.state, self.message)
         else:
@@ -61,6 +76,15 @@ class ExecutionProvider(metaclass=ABCMeta):
      """
     _cores_per_node = None  # type: Optional[int]
     _mem_per_node = None  # type: Optional[float]
+
+    min_blocks: int
+    max_blocks: int
+    init_blocks: int
+    nodes_per_block: int
+    script_dir: Optional[str]
+    parallelism: float #TODO not sure about this one?
+    resources: Dict[Any, Any] # I think the contents of this are provider-specific?    
+
 
     @abstractmethod
     def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> Any:
@@ -124,6 +148,7 @@ class ExecutionProvider(metaclass=ABCMeta):
     def label(self) -> str:
         ''' Provides the label for this provider '''
         pass
+
 
     @property
     def mem_per_node(self) -> Optional[float]:
