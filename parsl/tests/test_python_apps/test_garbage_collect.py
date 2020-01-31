@@ -24,6 +24,8 @@ def test_garbage_collect():
         # cases like manual/periodic where checkpointing may be deferred.
         parsl.dfk().checkpoint()
 
+    time.sleep(0.2) # Give enough time for task wipes to work
+    
     #    assert parsl.dfk().tasks[x.tid]['app_fu'] is None, "Tasks should have app_fu ref wiped after task completion"
     assert x.tid not in parsl.dfk().tasks, "Task record should be wiped after task completion"
 
