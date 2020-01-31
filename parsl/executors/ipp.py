@@ -243,9 +243,9 @@ sleep infinity
                                         "Attempts to provision nodes via provider has failed"))
                 self.engines.extend([block])
                 r.extend([block])
-        else:
-            logger.error("No execution provider available")
-            r = None
+            else:
+                logger.error("No execution provider available at scale_out")
+                r = None
 
         return r
 
@@ -261,7 +261,7 @@ sleep infinity
         if self.provider:
             r = self.provider.cancel(to_kill)
         else:
-            logger.error("No execution provider available")
+            logger.error("No execution provider available at scale_in")
             r = None
 
         return r
