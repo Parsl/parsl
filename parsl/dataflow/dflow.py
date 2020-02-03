@@ -185,8 +185,8 @@ class DataFlowKernel(object):
         Create the dictionary that will be included in the log.
         """
 
-        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'checkpoint', 'fail_count',
-                           'status', 'id', 'time_submitted', 'time_returned', 'executor']
+        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'fail_count', 'status',
+                           'id', 'time_submitted', 'time_returned', 'executor']
 
         task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
@@ -376,7 +376,6 @@ class DataFlowKernel(object):
     def wipe_task(self, task_id):
         """ Remove task with task_id from the internal tasks table
         """
-        logger.warning("Wiping {}".format(task_id))
         del self.tasks[task_id]
 
     @staticmethod
@@ -717,7 +716,6 @@ class DataFlowKernel(object):
                     'fn_hash': fn_hash,
                     'memoize': cache,
                     'exec_fu': None,
-                    'checkpoint': False,
                     'fail_count': 0,
                     'fail_history': [],
                     'status': States.unsched,
@@ -1029,7 +1027,6 @@ class DataFlowKernel(object):
                         # mode behave like a incremental log.
                         pickle.dump(t, f)
                         count += 1
-                        # self.tasks[task_id]['checkpoint'] = True
                         logger.debug("Task {} checkpointed".format(task_id))
 
             self.checkpointed_tasks += count
