@@ -6,7 +6,7 @@ from parsl.tests.configs.local_threads import fresh_config
 
 @pytest.mark.local
 def test_lazy_behavior():
-    """Testing lazy errors to work"""
+    """Testing that lazy errors work"""
 
     config = fresh_config()
     config.lazy_errors = True
@@ -16,13 +16,13 @@ def test_lazy_behavior():
     def divide(a, b):
         return a / b
 
-    items = []
-    for i in range(0, 1):
-        items.append(divide(10, i))
+    futures = []
+    for i in range(0, 10):
+        futures.append(divide(10, 0))
 
-    while True:
-        if items[0].done:
-            break
+    for f in futures:
+        assert isinstance(f.exception(), ZeroDivisionError)
+        assert f.done()
 
     parsl.clear()
     return

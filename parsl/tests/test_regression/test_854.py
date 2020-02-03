@@ -45,7 +45,7 @@ def test_mac_safe_queue_size():
     task_q = MacSafeQueue()
     result_q = MacSafeQueue()
 
-    x = random.randint(0, 100)
+    x = random.randint(1, 100)
 
     [task_q.put(i) for i in range(x)]
     assert task_q.empty() is False, "Task queue should not be empty"
