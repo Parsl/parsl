@@ -5,22 +5,22 @@ import time
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_ipp import config
 
 
-@App('python')
+@python_app
 def double(x):
     return x * 2
 
 
-@App('python')
+@python_app
 def echo(x, string, stdout=None):
     print(string)
     return x * 5
 
 
-@App('python')
+@python_app
 def import_echo(x, string, stdout=None):
     import time
     time.sleep(0)
@@ -28,7 +28,7 @@ def import_echo(x, string, stdout=None):
     return x * 5
 
 
-@App('python')
+@python_app
 def custom_exception():
     from globus_sdk import GlobusError
     raise GlobusError('foobar')

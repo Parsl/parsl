@@ -2,11 +2,11 @@ import argparse
 import os
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash', cache=True)
+@bash_app(cache=True)
 def fail_on_presence(outputs=[]):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
 

@@ -39,9 +39,14 @@ def address_by_query() -> str:
        internet-facing address is not reachable from workers.
     """
     logger.debug("Finding address by querying remote service")
-    addr = requests.get('https://api.ipify.org').text
-    logger.debug("Address found: {}".format(addr))
-    return addr
+    response = requests.get('https://api.ipify.org')
+
+    if response.status_code == 200:
+        addr = response.text
+        logger.debug("Address found: {}".format(addr))
+        return addr
+    else:
+        raise RuntimeError("Remote service returned unexpected HTTP status code {}".format(response.status_code))
 
 
 def address_by_hostname() -> str:
@@ -91,12 +96,11 @@ def get_all_addresses() -> Set[str]:
             logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
             pass
 
-    try:
-        s_addresses.add(address_by_hostname())
-        s_addresses.add(address_by_route())
-        s_addresses.add(address_by_query())
-    except Exception:
-        logger.exception("Ignoring one or more address finder method failure")
-        pass
+    resolution_functions = [address_by_hostname, address_by_route, address_by_query]
+    for f in resolution_functions:
+        try:
+            s_addresses.add(f())
+        except Exception:
+            logger.exception("Ignoring an address finder exception")
 
     return s_addresses
