@@ -5,6 +5,10 @@ import shutil
 import subprocess
 from glob import glob
 from itertools import chain
+import signal
+import sys
+import threading
+import traceback
 
 import pytest
 import _pytest.runner as runner
@@ -14,6 +18,25 @@ from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger('parsl')
+
+
+def dumpstacks(sig, frame):
+    s = ''
+    try:
+        thread_names = {thread.ident: thread.name for thread in threading.enumerate()}
+        tf = sys._current_frames()
+        for thread_id, frame in tf.items():
+            s += '\n\nThread: %s (%d)' % (thread_names[thread_id], thread_id)
+            s += ''.join(traceback.format_stack(frame))
+    except Exception:
+        s = traceback.format_exc()
+    with open(os.getenv('HOME') + '/parsl_stack_dump.txt', 'w') as f:
+        f.write(s)
+    print(s)
+
+
+def pytest_sessionstart(session):
+    signal.signal(signal.SIGUSR1, dumpstacks)
 
 
 def pytest_addoption(parser):

@@ -22,6 +22,8 @@ except Exception as e:
 else:
     _db_manager_excepts = None
 
+logger = logging.getLogger(__name__)
+
 
 def start_file_logger(filename, name='monitoring', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
@@ -200,9 +202,7 @@ class MonitoringHub(RepresentationMixin):
         os.makedirs(self.logdir, exist_ok=True)
 
         # Initialize the ZMQ pipe to the Parsl Client
-        self.logger = start_file_logger("{}/monitoring_hub.log".format(self.logdir),
-                                        name="monitoring_hub",
-                                        level=logging.DEBUG if self.monitoring_debug else logging.INFO)
+        self.logger = logger
         self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")

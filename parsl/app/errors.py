@@ -24,10 +24,6 @@ class NotFutureError(ParslError):
     """
 
 
-class InvalidAppTypeError(ParslError):
-    """An invalid app type was requested from the @App decorator."""
-
-
 class AppException(ParslError):
     """An error raised during execution of an app.
 

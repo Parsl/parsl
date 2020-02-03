@@ -1,14 +1,14 @@
 import argparse
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
 def test_python_memoization(n=2):
     """Testing python memoization when func bodies differ
     """
-    @App('python')
+    @python_app
     def random_uuid(x):
         import uuid
         return str(uuid.uuid4())
@@ -16,7 +16,7 @@ def test_python_memoization(n=2):
     x = random_uuid(0)
     print(x.result())
 
-    @App('python')
+    @python_app
     def random_uuid(x):
         import uuid
         print("hi")

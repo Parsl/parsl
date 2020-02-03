@@ -1,11 +1,11 @@
 import argparse
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('python', cache=True)
+@python_app(cache=True)
 def random_uuid(x, cache=True):
     import uuid
     return str(uuid.uuid4())
