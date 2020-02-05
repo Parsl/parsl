@@ -6,7 +6,6 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_ipp import config
 
 
 @python_app
@@ -100,27 +99,3 @@ def test_custom_exception():
 def demonstrate_custom_exception():
     x = custom_exception()
     print(x.result())
-
-
-if __name__ == '__main__':
-    parsl.set_stream_logger()
-
-    parsl.clear()
-    parsl.load(config)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    # demonstrate_custom_exception()
-    x = test_simple(int(args.count))
-    # x = test_imports()
-    # x = test_parallel_for()
-    # x = test_parallel_for(int(args.count))
-    # x = test_stdout()
