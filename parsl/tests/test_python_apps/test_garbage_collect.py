@@ -1,4 +1,6 @@
 import parsl
+import time
+
 from parsl.app.app import python_app
 
 
@@ -19,9 +21,13 @@ def test_garbage_collect():
         assert parsl.dfk().tasks[x.tid]['app_fu'] == x, "Tasks table should have app_fu ref before done"
 
     x.result()
-    parsl.dfk().checkpoint()
+    if parsl.dfk().checkpoint_mode is not None:
+        # We explicit call checkpoint if checkpoint_mode is enabled covering
+        # cases like manual/periodic where checkpointing may be deferred.
+        parsl.dfk().checkpoint()
 
-    assert parsl.dfk().tasks[x.tid]['app_fu'] is None, "Tasks should have app_fu ref wiped after task completion"
+    time.sleep(0.2)  # Give enough time for task wipes to work
+    assert x.tid not in parsl.dfk().tasks, "Task record should be wiped after task completion"
 
 
 if __name__ == '__main__':
