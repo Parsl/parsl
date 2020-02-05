@@ -1,6 +1,3 @@
-import argparse
-
-import parsl
 from parsl.app.app import python_app
 
 

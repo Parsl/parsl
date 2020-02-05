@@ -1,10 +1,8 @@
-import argparse
 import os
 import time
 
 import pytest
 
-import parsl
 from parsl.app.app import python_app
 
 
