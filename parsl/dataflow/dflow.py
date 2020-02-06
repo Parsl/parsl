@@ -650,7 +650,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, *args, executors='all', fn_hash=None, cache=False, **kwargs):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, app_kwargs):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -665,20 +665,23 @@ class DataFlowKernel(object):
 
         Args:
             - func : A function object
-            - *args : Args to the function
 
         KWargs :
+            - app_args : Args to the function
             - executors (list or string) : List of executors this call could go to.
                     Default='all'
             - fn_hash (Str) : Hash of the function and inputs
                     Default=None
             - cache (Bool) : To enable memoization or not
-            - kwargs (dict) : Rest of the kwargs to the fn passed as dict.
+            - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
                (AppFuture) [DataFutures,]
 
         """
+
+        kwargs = app_kwargs # BENC TODO: rename all kwargs occurences to app_kwargs in this function - but this assignemnt is a quick way to make that substition for testing
+        args = app_args # "
 
         if self.cleanup_called:
             raise ValueError("Cannot submit to a DFK that has been cleaned up")
