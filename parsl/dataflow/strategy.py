@@ -385,6 +385,15 @@ class Strategy(object):
                 logger.debug("Requesting single slot")
                 if active_blocks < max_blocks:
                     executor.scale_out(1)
+
+            # Case 4
+            # More slots than tasks
+            elif active_slots > 0 and active_slots > active_tasks:
+                logger.warning("YADU: More slots than tasks")
+                if isinstance(executor, HighThroughputExecutor):
+                    blocks = {}
+                    executor.scale_in(1, force=False)
+                    logger.debug("[STRATEGY] CASE:4 Block slots:{}".format(blocks.keys()))
             # Case 3
             # tasks ~ slots
             else:
