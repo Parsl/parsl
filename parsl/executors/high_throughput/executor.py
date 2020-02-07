@@ -566,7 +566,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             self.blocks[external_block_id] = internal_block
         return r
 
-    def scale_in(self, blocks=None, block_ids=[]):
+    def scale_in(self, blocks=None, block_ids=[], force=True):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -579,6 +579,11 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         blocks : int
              Number of blocks to terminate and scale_in by
 
+        force : Bool
+             Used along with blocks to indicate whether blocks should be terminated by force.
+             When force = True, we will kill blocks regardless of the blocks being busy
+             When force = False, we will kill only idle blocks
+
         block_ids : list
              List of specific block ids to terminate. Optional
 
@@ -589,14 +594,27 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         if block_ids:
             block_ids_to_kill = block_ids
         else:
-            block_ids_to_kill = list(self.blocks.keys())[:blocks]
+            managers = self.connected_managers
+            blks = {}
+            for i in managers:
+                blks[i['block_id']] = blks.get(i['block_id'], 0) + i['tasks']
+            sorted_blks = sorted(blks.items(), key=lambda item: item[1])
+            logger.warning("YADU: sorted_block : {}".format(sorted_blks))
+            if force is True:
+                block_ids_to_kill = [x[0] for x in sorted_blks[:blocks]]
+            else:
+                block_ids_to_kill = [x[0] for x in sorted_blks[:blocks] if x[1] == 0]
+                logger.warning("Selecting block ids to kill since they are idle : {}".format(
+                    block_ids_to_kill))
 
+        logger.warning("CUrrent blocks : {}".format(self.blocks))
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
 
         # Now kill via provider
-        to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill]
+        # Potential issue with multiple threads trying to remove the same blocks
+        to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill if bid in self.blocks]
 
         r = self.provider.cancel(to_kill)
 
