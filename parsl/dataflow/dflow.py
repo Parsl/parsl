@@ -172,7 +172,8 @@ class DataFlowKernel(object):
         if any([x.managed for x in config.executors]):
             self.flowcontrol = FlowControl(self)
         else:
-            self.flowcontrol = FlowNoControl(self)
+            # YADU : Reset interval to default once done with testing
+            self.flowcontrol = FlowNoControl(self, interval=1)
 
         self.task_count = 0
         self.tasks = {}
