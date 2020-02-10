@@ -95,6 +95,7 @@ class DataFlowKernel(object):
         self.run_id = str(uuid4())
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
+        self.tasks_dep_fail_count = 0
 
         self.monitoring = config.monitoring
         # hub address and port for interchange to connect
@@ -430,6 +431,8 @@ class DataFlowKernel(object):
                     "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
                 task_record['status'] = States.dep_fail
+                self.tasks_dep_fail_count += 1
+
                 if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
@@ -808,13 +811,13 @@ class DataFlowKernel(object):
         # Fetch from counters since tasks get wiped
         keytasks[States.done] = self.tasks_completed_count
         keytasks[States.failed] = self.tasks_failed_count
+        keytasks[States.dep_fail] = self.tasks_dep_fail_count
 
         for state in States:
             if keytasks[state]:
                 logger.info("Tasks in state {}: {}".format(str(state), keytasks[state]))
 
-        # Avoid double counting from dep_failed tasks which are also failed tasks
-        total_summarized = sum(keytasks.values()) - keytasks[States.dep_fail]
+        total_summarized = sum(keytasks.values())
         if total_summarized != self.task_count:
             logger.error("Task count summarisation was inconsistent: summarised {} tasks, but task counters registered {} tasks".format(
                 total_summarized, self.task_count))
