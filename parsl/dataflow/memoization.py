@@ -146,21 +146,39 @@ class Memoizer(object):
         """
         # Function name TODO: Add fn body later
 
+        t = []
+
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
-        if 'outputs' in task['kwargs']:
-            newkw = task['kwargs'].copy()
-            outputs = task['kwargs']['outputs']
-            del newkw['outputs']
-            kw_id = id_for_memo(newkw) + id_for_memo(outputs, output_ref=True)
-        else:
-            newkw = task['kwargs']
-            kw_id = id_for_memo(newkw)
+        filtered_kw = task['kwargs'].copy()
 
-        t = [id_for_memo(task['func_name']),
-             id_for_memo(task['fn_hash']),
-             id_for_memo(task['args']),
-             kw_id]
+        # handle special kwargs: outputs and non-checkpointed kwargs
+ 
+        # previously ignore list came from kwargs but I'm changing that to be on the
+        # decorator: task['kwargs'][ignore_checkpoint_name]:
+        # so how can I get at decorator state? I guess it needs to be passed in along
+        # with how cache is passed in to dfk.submit and stored in the task record?
+
+        # TODO: across this whole patch, ignore_for_checkpointing needs to be called ignore_for_memoization I think - because it applies to memoization, rather than only for checkpointing
+
+        ignore_list = task['ignore_for_checkpointing']
+
+        logger.debug("Ignoring these kwargs for checkpointing: {}".format(ignore_list))
+        for k in ignore_list:
+            logger.debug("Ignoring kwarg {}".format(k))
+            del filtered_kw[k]
+
+        if 'outputs' in task['kwargs']:
+            outputs = task['kwargs']['outputs']
+            del filtered_kw['outputs']
+            t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
+
+        t = t + [id_for_memo(filtered_kw)]
+
+        t = t + [id_for_memo(task['func_name']),
+                 id_for_memo(task['fn_hash']),
+                 id_for_memo(task['args'])]
+
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
