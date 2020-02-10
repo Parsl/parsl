@@ -656,7 +656,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, *args, executors='all', fn_hash=None, cache=False, **kwargs):
+    def submit(self, func, *args, executors='all', fn_hash=None, cache=False, ignore_for_checkpointing=[], **kwargs):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -679,6 +679,7 @@ class DataFlowKernel(object):
             - fn_hash (Str) : Hash of the function and inputs
                     Default=None
             - cache (Bool) : To enable memoization or not
+            - ignore_for_checkpointing (list) : List of kwargs to be ignored for memoization/checkpointing
             - kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
@@ -724,6 +725,7 @@ class DataFlowKernel(object):
                     'exec_fu': None,
                     'fail_count': 0,
                     'fail_history': [],
+                    'ignore_for_checkpointing': ignore_for_checkpointing,
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
