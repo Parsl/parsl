@@ -14,7 +14,7 @@ def id_for_memo(obj, output_ref=False):
     the byte sequence should be the same when the "same" value is supplied,
     and different otherwise.
 
-    "same" is in quotes about because sameness is not as straightforward
+    "same" is in quotes about because sameness is not as straightforward as
     serialising out the content.
 
     For example, for two dicts x, y:
@@ -30,12 +30,11 @@ def id_for_memo(obj, output_ref=False):
     output reference (a value in the outputs=[] parameter of an app
     invocation).
 
-    Memo hashing might be different for such parameters:
-    for example, for an output File, it is necessary to hash the output
-    *filename* because that actually is an input to the task, but meaningless
-    to hash file content (if the file even exists). This is similar to
-    treating Files differently for stage in and stage out depending on where
-    they appear.
+    Memo hashing might be different for such parameters: for example, a
+    user might choose to hash input File content so that changing the
+    content of an input file invalidates memoization. This does not make
+    sense to do for output files: there is no meaningful content stored
+    where an output filename points at memoization time.
     """
     logger.error("id_for_memo attempted on unknown type {}".format(type(obj)))
     raise ValueError("unknown type for memoization: {}".format(type(obj)))
