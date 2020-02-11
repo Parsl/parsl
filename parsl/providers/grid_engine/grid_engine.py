@@ -7,7 +7,7 @@ from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.grid_engine.template import template_string
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.provider_base import JobState, JobStatus
-from parsl.utils import RepresentationMixin, wtime_to_minutes
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         job_config = {}
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["nodes"] = self.nodes_per_block
-        job_config["walltime"] = wtime_to_minutes(self.walltime)
+        job_config["walltime"] = self.walltime
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
