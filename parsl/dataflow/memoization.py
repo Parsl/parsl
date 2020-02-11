@@ -183,15 +183,13 @@ class Memoizer(object):
 
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
         """
-        logger.debug("check_memo start")
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
-            logger.debug("No memoization")
+            logger.debug("Memoization will not happen")
             return False, None
-        logger.debug("Memoization will happen")
 
         hashsum = self.make_hash(task)
-        logger.info("Task {} has hash {}".format(task_id, hashsum))
+        logger.debug("Task {} has memoization hash {}".format(task_id, hashsum))
         present = False
         result = None
         if hashsum in self.memo_lookup_table:
