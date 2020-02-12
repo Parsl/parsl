@@ -1,5 +1,6 @@
 from parsl.executors.base import ParslExecutor
 
+
 class IPyParallelExecutor(ParslExecutor):
     """This stub exists to issue a more helpful warning about the IPyParallel
     executor being removed from parsl some time afer v0.9.
