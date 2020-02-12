@@ -4,12 +4,14 @@ from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_query
 from parsl.config import Config
 
+from typing import Any, Dict
+
 user_opts = {'adhoc':
              {'username': 'YOUR_USERNAME',
               'script_dir': 'YOUR_SCRIPT_DIR',
               'remote_hostnames': ['REMOTE_HOST_URL_1', 'REMOTE_HOST_URL_2']
              }
-}
+}  # type: Dict[str, Dict[str, Any]]
 
 config = Config(
     executors=[
