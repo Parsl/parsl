@@ -3,7 +3,7 @@ from parsl.executors.base import ParslExecutor
 
 class IPyParallelExecutor(ParslExecutor):
     """This stub exists to issue a more helpful warning about the IPyParallel
-    executor being removed from parsl some time afer v0.9.
+    executor being removed from parsl some time after v0.9.
 
     It can eventually be removed entirely - perhaps after v0.10
     """
