@@ -184,7 +184,7 @@ class Memoizer(object):
         """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
-            logger.debug("Memoization will not happen")
+            logger.debug("Task {} will not be memoized".format(task_id))
             return False, None
 
         hashsum = self.make_hash(task)
