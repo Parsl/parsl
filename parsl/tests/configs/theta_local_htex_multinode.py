@@ -1,10 +1,8 @@
+from parsl.config import Config
 from parsl.providers import CobaltProvider
 from parsl.launchers import AprunLauncher
-
-from parsl.config import Config
-from parsl.executors.ipp import IPyParallelExecutor
-from parsl.executors.ipp_controller import Controller
-from parsl.tests.utils import get_rundir
+from parsl.executors import HighThroughputExecutor
+from parsl.addresses import address_by_hostname
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either
@@ -15,25 +13,28 @@ from .user_opts import user_opts
 
 config = Config(
     executors=[
-        IPyParallelExecutor(
-            label='theta_local_ipp_multinode',
-            workers_per_node=1,
+        HighThroughputExecutor(
+            label='theta_local_htex_multinode',
+            max_workers=4,
+            address=address_by_hostname(),
             provider=CobaltProvider(
                 queue="debug-flat-quad",
-                launcher=AprunLauncher(),
-                walltime="00:30:00",
+                account=user_opts['theta']['account'],
+                launcher=AprunLauncher(overrides="-d 64"),
+                walltime='00:30:00',
                 nodes_per_block=2,
                 init_blocks=1,
+                min_blocks=1,
                 max_blocks=1,
+                # string to prepend to #COBALT blocks in the submit
+                # script to the scheduler eg: '#COBALT -t 50'
                 scheduler_options=user_opts['theta']['scheduler_options'],
+
+                # Command to be run before starting a worker, such as:
+                # 'module load Anaconda; source activate parsl_env'.
                 worker_init=user_opts['theta']['worker_init'],
-                account=user_opts['theta']['account'],
-                cmd_timeout=60
+                cmd_timeout=120,
             ),
-            controller=Controller(public_ip=user_opts['public_ip'])
         )
-
     ],
-    run_dir=get_rundir(),
-
 )
