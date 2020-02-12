@@ -2,7 +2,7 @@ import pytest
 
 import parsl
 
-from parsl.tests.configs.midway_ipp import config
+from parsl.tests.configs.midway_htex import config
 
 
 local_config = config
