@@ -1,10 +1,8 @@
+from parsl.config import Config
 from parsl.channels import SSHChannel
 from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
-
-from parsl.config import Config
-from parsl.executors.ipp import IPyParallelExecutor
-from parsl.executors.ipp_controller import Controller
+from parsl.executors import HighThroughputExecutor
 from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
@@ -16,8 +14,8 @@ from .user_opts import user_opts
 
 config = Config(
     executors=[
-        IPyParallelExecutor(
-            label='midway_ipp_multinode',
+        HighThroughputExecutor(
+            label='midway_htex_multinode',
             provider=SlurmProvider(
                 'westmere',
                 channel=SSHChannel(
@@ -33,7 +31,6 @@ config = Config(
                 max_blocks=1,
                 nodes_per_block=2,
             ),
-            controller=Controller(public_ip=user_opts['public_ip']),
         )
 
     ],
