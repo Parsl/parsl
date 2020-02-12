@@ -11,8 +11,7 @@ from parsl.channels import SSHChannel
 from parsl.launchers import AprunLauncher
 from parsl.providers import TorqueProvider
 from parsl.config import Config
-from parsl.executors.ipp import IPyParallelExecutor
-from parsl.executors.ipp_controller import Controller
+from parsl.executors import HighThroughputExecutor
 from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
@@ -24,8 +23,8 @@ from .user_opts import user_opts
 
 config = Config(
     executors=[
-        IPyParallelExecutor(
-            label='swan_ipp',
+        HighThroughputExecutor(
+            label='swan_htex',
             provider=TorqueProvider(
                 channel=SSHChannel(
                     hostname='swan.cray.com',
@@ -39,9 +38,7 @@ config = Config(
                 scheduler_options=user_opts['swan']['scheduler_options'],
                 worker_init=user_opts['swan']['worker_init'],
             ),
-            controller=Controller(public_ip=user_opts['public_ip']),
         )
-
     ],
     run_dir=get_rundir()
 )
