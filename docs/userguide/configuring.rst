@@ -236,8 +236,6 @@ using the `CobaltProvider`. This configuration assumes that the script is being 
 Cooley (ALCF)
 -------------
 
-.. image:: https://today.anl.gov/wp-content/uploads/sites/44/2015/06/Cray-Cooley.jpg
-
 The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's 
 **Cooley** analysis and visualization system.
 The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler 
