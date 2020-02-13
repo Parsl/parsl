@@ -1,6 +1,7 @@
 import parsl
 import pytest
 from parsl.tests.configs.local_threads import fresh_config
+from parsl.tests.logfixtures import permit_severe_log
 
 
 @parsl.python_app
@@ -19,7 +20,9 @@ def test_summary(caplog):
     parsl.load(fresh_config())
 
     succeed().result()
-    fail().exception()
+
+    with permit_severe_log():
+        fail().exception()
 
     parsl.dfk().cleanup()
     parsl.clear()
