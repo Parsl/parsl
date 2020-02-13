@@ -1,13 +1,13 @@
 from parsl.app.app import python_app
 
 
-@python_app(cache=True, ignore_for_checkpointing=[])
+@python_app(cache=True, ignore_for_cache=[])
 def random_uuid(x):
     import uuid
     return str(uuid.uuid4())
 
 
-@python_app(cache=True, ignore_for_checkpointing=['x'])
+@python_app(cache=True, ignore_for_cache=['x'])
 def random_uuid_def(x):
     import uuid
     return str(uuid.uuid4())

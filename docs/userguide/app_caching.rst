@@ -51,11 +51,11 @@ Ignoring some arguments
 Some app invocation inputs can be ignored for the purposes of determining if
 two invocations are the same. This can be useful when generating log file
 names automatically based on time or run information. The names of keyword
-arguments to ignore can be specified as an ``ignore_for_checkpointing``
+arguments to ignore can be specified as an ``ignore_for_cache``
 parameter to the decorator:
 .. code-block:: python
 
-   @bash_app(cache=True, ignore_for_checkpointing=['stdout'])
+   @bash_app(cache=True, ignore_for_cache=['stdout'])
    def hello (msg, stdout=None):
        return 'echo {}'.format(msg)
 

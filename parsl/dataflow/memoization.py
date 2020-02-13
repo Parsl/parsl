@@ -150,11 +150,11 @@ class Memoizer(object):
 
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
-        # kwargs listed in ignore_for_checkpointing will also be removed
+        # kwargs listed in ignore_for_cache will also be removed
 
         filtered_kw = task['kwargs'].copy()
 
-        ignore_list = task['ignore_for_checkpointing']
+        ignore_list = task['ignore_for_cache']
 
         logger.debug("Ignoring these kwargs for checkpointing: {}".format(ignore_list))
         for k in ignore_list:

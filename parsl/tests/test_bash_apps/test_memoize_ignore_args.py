@@ -4,7 +4,7 @@ import parsl
 from parsl.app.app import bash_app
 
 
-@bash_app(cache=True, ignore_for_checkpointing=['x'])
+@bash_app(cache=True, ignore_for_cache=['x'])
 def test_app(x):
     if x != 0:
         raise RuntimeError("App was executed when it should not have been")
@@ -16,7 +16,7 @@ def test_memo_same_at_definition():
     test_app(x=1).result()  # this should be memoized, and will raise a RuntimeError if actually executed
 
 
-@bash_app(cache=True, ignore_for_checkpointing=['stdout'])
+@bash_app(cache=True, ignore_for_cache=['stdout'])
 def test_no_checkpoint_stdout(stdout=None):
     return "echo X"
 
