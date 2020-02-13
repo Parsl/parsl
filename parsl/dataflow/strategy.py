@@ -2,7 +2,7 @@ import logging
 import time
 import math
 
-from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
+from parsl.executors import HighThroughputExecutor, ExtremeScaleExecutor
 from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
@@ -181,7 +181,7 @@ class Strategy(object):
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            if isinstance(executor, IPyParallelExecutor) or isinstance(executor, HighThroughputExecutor):
+            if isinstance(executor, HighThroughputExecutor):
                 tasks_per_node = executor.workers_per_node
             elif isinstance(executor, ExtremeScaleExecutor):
                 tasks_per_node = executor.ranks_per_node
@@ -189,8 +189,8 @@ class Strategy(object):
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            running = sum([1 for x in status if x.state == JobState.RUNNING])
-            pending = sum([1 for x in status if x.state == JobState.PENDING])
+            running = sum([1 for x in status.values() if x.state == JobState.RUNNING])
+            pending = sum([1 for x in status.values() if x.state == JobState.PENDING])
             active_blocks = running + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 

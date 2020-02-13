@@ -2,11 +2,11 @@ import argparse
 import os
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('bash', cache=True)
+@bash_app(cache=True)
 def fail_on_presence(outputs=[]):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
 
@@ -26,6 +26,31 @@ def test_bash_memoization(n=2):
     d = {}
     for i in range(0, n):
         d[i] = fail_on_presence(outputs=[temp_filename])
+
+    for i in d:
+        assert d[i].exception() is None
+
+
+@bash_app(cache=True)
+def fail_on_presence_kw(outputs=[], foo={}):
+    return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
+
+
+def test_bash_memoization_keywords(n=2):
+    """Testing bash memoization
+    """
+    temp_filename = "test.memoization.tmp"
+
+    if os.path.exists(temp_filename):
+        os.remove(temp_filename)
+
+    print("Launching: ", n)
+    x = fail_on_presence_kw(outputs=[temp_filename], foo={"a": 1, "b": 2})
+    x.result()
+
+    d = {}
+    for i in range(0, n):
+        d[i] = fail_on_presence_kw(outputs=[temp_filename], foo={"b": 2, "a": 1})
 
     for i in d:
         assert d[i].exception() is None

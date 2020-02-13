@@ -76,8 +76,6 @@ Exceptions
 
 .. autoclass:: parsl.app.errors.NotFutureError
 
-.. autoclass:: parsl.app.errors.InvalidAppTypeError
-
 .. autoclass:: parsl.app.errors.AppException
 
 .. autoclass:: parsl.app.errors.AppBadFormatting
@@ -125,14 +123,6 @@ ThreadPoolExecutor
 
 .. autoclass:: parsl.executors.threads.ThreadPoolExecutor
    :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled
-
-IPyParallelExecutor
--------------------
-
-.. warning:: Deprecated as of `v0.9.0`
-
-.. autoclass:: parsl.executors.ipp.IPyParallelExecutor
-   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd
 
 HighThroughputExecutor
 ----------------------
