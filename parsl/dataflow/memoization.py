@@ -150,16 +150,9 @@ class Memoizer(object):
 
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
+        # kwargs listed in ignore_for_checkpointing will also be removed
+
         filtered_kw = task['kwargs'].copy()
-
-        # handle special kwargs: outputs and non-checkpointed kwargs
- 
-        # previously ignore list came from kwargs but I'm changing that to be on the
-        # decorator: task['kwargs'][ignore_checkpoint_name]:
-        # so how can I get at decorator state? I guess it needs to be passed in along
-        # with how cache is passed in to dfk.submit and stored in the task record?
-
-        # TODO: across this whole patch, ignore_for_checkpointing needs to be called ignore_for_memoization I think - because it applies to memoization, rather than only for checkpointing
 
         ignore_list = task['ignore_for_checkpointing']
 

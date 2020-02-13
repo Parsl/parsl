@@ -1,6 +1,3 @@
-import argparse
-
-import parsl
 from parsl.app.app import python_app
 
 
@@ -24,6 +21,7 @@ def test_memo_different():
     y = random_uuid(x=1).result()
 
     assert x != y, "Memoized results were used incorrectly"
+
 
 def test_memo_same_at_definition():
     x = random_uuid_def(x=0).result()
