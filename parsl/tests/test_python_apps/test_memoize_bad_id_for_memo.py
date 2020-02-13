@@ -1,6 +1,7 @@
 import pytest
 from parsl import python_app
 from parsl.dataflow.memoization import id_for_memo
+from parsl.tests.logfixtures import permit_severe_log
 
 
 # this class should not have a memoizer registered for it
@@ -31,8 +32,9 @@ def noop_app(x, cache=True):
 def test_python_unmemoizable():
     """Testing behaviour when an unmemoizable parameter is used
     """
-    with pytest.raises(ValueError):
-        noop_app(Unmemoizable())
+    with permit_severe_log():
+        with pytest.raises(ValueError):
+            noop_app(Unmemoizable())
 
 
 def test_python_failing_memoizer():
