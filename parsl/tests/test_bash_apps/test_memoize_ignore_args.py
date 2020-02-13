@@ -25,7 +25,9 @@ def test_memo_stdout():
 
     # this should run and create a file named after path_x
     path_x = "test.memo.stdout.x"
-    assert not os.path.exists(path_x)
+    if os.path.exists(path_x):
+        os.remove(path_x)
+
     test_no_checkpoint_stdout(stdout=path_x).result()
     assert os.path.exists(path_x)
 
