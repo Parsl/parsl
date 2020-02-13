@@ -15,10 +15,6 @@ import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.tests.utils import get_rundir
 
-# this import doesn't bring in any needed symbols but it does mean
-# that the fixtures declared in logfixtures come into effect.
-# import parsl.tests.logfixtures
-
 pytest_plugins = [
     "parsl.tests.logfixtures"
 ]
