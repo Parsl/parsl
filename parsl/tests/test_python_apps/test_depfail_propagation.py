@@ -1,7 +1,6 @@
 from parsl import python_app
 from parsl.dataflow.error import DependencyError
 
-from parsl.dataflow.states import States
 
 @python_app
 def fails():
