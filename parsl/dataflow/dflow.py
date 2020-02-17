@@ -437,6 +437,7 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
+                self.tasks[task_id]['retries_left'] = 0
                 exec_fu = Future()
                 exec_fu.set_exception(DependencyError(exceptions,
                                                       task_id,
