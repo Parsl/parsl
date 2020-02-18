@@ -2,68 +2,64 @@
 import os
 import sys
 import json
+import argparse
 from stdlib_list import stdlib_list
 
+libraries = stdlib_list(".".join(sys.version.split()[0].split(".")[:2]))
 
-def usage(exit_code):
-    print("Usage: python_package_analyze [options] <python-script> <json-output-file>")
-    print("where options are:")
-    print(" -h, --help\tShow this help screen")
-    exit(exit_code)
+def find_imports(source):
+    dependencies = []
+    for line in source.readlines():
+        words = line.split()
+        isList = False
+        isFrom = False
+        # Iterate through each word in the line
+        for i in range(0, len(words)):
+            # Signals that you are importing a module
+            if words[i] == "from" or words[i] == "import":
+                if words[i] == "from":
+                    isFrom = True
+                i += 1
+                name = words[i]
+                if name[-1] == ",":
+                    name = name[:-1]
+                    isList = True
+                if name not in libraries:
+                    dependencies.append(name)
+            # Iterate through multiple imports if multiple listed on one line
+            while isList:
+                i += 1
+                nane = words[i]
+                if name[-1] == ",":
+                    name = name[:-1]
+                else:
+                    isList = False
+                if name not in libraries:
+                    dependencies.append(name)
+            if isFrom:
+                break
+    return dependencies
 
+def export_env(source):
+    python_info = {}
+    python_info["python"] = sys.version.split()[0]
+    python_info["modules"] = find_imports(source)
+    return python_info
 
-# Parse command line arguments
-if len(sys.argv) > 1 and (sys.argv[1] == "-h" or sys.argv[1] == "--help"):
-    usage(0)
-if len(sys.argv) != 3:
-    usage(1)
-python_script = sys.argv[1]
-json_output_file = sys.argv[2]
-if not os.path.exists(python_script):
-    print("Python script does not exist")
-    exit(2)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Determine the environment required by Python code.')
+    parser.add_argument('source',
+        help='Analyze the given Python source code, or - for stdin.')
+    parser.add_argument('out',
+        help='Path to write the JSON description, or - for stdout.')
+    args = parser.parse_args()
 
-# Find Python version and obtain list of standard library modules 
-version = ".".join(sys.version.split()[0].split(".")[:2])
-libraries = stdlib_list(version)
+    source = sys.stdin
+    out = sys.stdout
+    if args.source != '-':
+        source = open(args.source, 'r')
+    if args.out != '-':
+        out = open(args.out, 'w')
 
-# Parse the Python script for all import statements
-dependencies = []
-source = open(python_script, "r")
-for line in source.readlines():
-    words = line.split()
-    isList = False
-    isFrom = False
-    # Iterate through each word in the line
-    for i in range(0, len(words)):
-        # Signals that you are importing a module
-        if words[i] == "from" or words[i] == "import":
-            if words[i] == "from":
-                isFrom = True
-            i += 1
-            name = words[i]
-            if name[-1] == ",":
-                name = name[:-1]
-                isList = True
-            if name not in libraries:
-                dependencies.append(name)
-        # Iterate through multiple imports if multiple listed on one line
-        while isList:
-            i += 1
-            nane = words[i]
-            if name[-1] == ",":
-                name = name[:-1]
-            else:
-                isList = False
-            if name not in libraries:
-                dependencies.append(name)
-        if isFrom:
-            break
-
-# Put the JSON data into a file
-python_info = {}
-python_info["python"] = sys.version.split()[0]
-python_info["modules"] = dependencies
-output = open(json_output_file, "w")
-json.dump(python_info, output)
-exit(0)
+    json.dump(export_env(source), out, indent=4)
