@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+import subprocess
+import conda_pack
+
+
+def usage(exit_code):
+    print("Usage: python_package_create [options] <dependency-file> <environment-name>")
+    print("where options are:")
+    print(" -h, --help\tShow this help screen")
+    exit(exit_code)
+
+
+# Parse command line arguments
+if len(sys.argv) > 1 and (sys.argv[1] == "-h" or sys.argv[1] == "--help"):
+    usage(0)
+if len(sys.argv) != 3:
+    usage(1)
+dependency_file = sys.argv[1]
+environment_name = sys.argv[2]
+if not os.path.exists(dependency_file):
+    print("JSON dependency file does not exist")
+    exit(2)
+else:
+    dependency_fp = open(dependency_file, "r")
+
+# Extract python environment data from JSON file and create requirements file"
+package_data = json.load(dependency_fp)
+python_version = package_data["python"]
+dependencies = package_data["modules"]
+req_file = open("/tmp/requirements.txt", "w")
+for module in dependencies:
+    module_string = module + "\n"
+    req_file.write(module_string)
+req_file.close()
+
+# Create environment and install all necessary modules into the environment
+subprocess.call("conda create -p /tmp/{} -y python={} &> /dev/null; \
+                eval \"$(conda shell.bash hook)\" &> /dev/null; \
+                conda activate /tmp/{} &> /dev/null; \
+                pip install -r /tmp/requirements.txt &> /dev/null; \
+                pip install tblib &> /dev/null; \
+                rm /tmp/requirements.txt &> /dev/null; \
+                conda deactivate &> /dev/null;".format(environment_name, python_version, environment_name, dependency_file), shell=True)
+
+# Pack the environment
+conda_pack.pack(name=environment_name, output="{}.tar.gz".format(environment_name), force=True)
+exit(0)

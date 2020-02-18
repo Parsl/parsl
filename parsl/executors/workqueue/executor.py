@@ -7,7 +7,8 @@ import threading
 import multiprocessing
 import logging
 from concurrent.futures import Future
-
+import tempfile
+import subprocess
 import os
 import pickle
 import queue
@@ -41,6 +42,13 @@ else:
     _work_queue_enabled = True
 
 logger = logging.getLogger(__name__)
+
+package_analyze_script = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "python_package_analyze")
+package_create_script = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "python_package_create")
+package_run_script = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "python_package_run")
 
 
 class WorkqueueTaskFailure(AppException):
@@ -158,6 +166,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             output_files = item["output_files"]
             std_files = item["std_files"]
             category = item["category"]
+            env_pkg = item["env_pkg"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
@@ -184,11 +193,18 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 remapping_string = "-r " + remapping_string
                 remapping_string = remapping_string[:-1]
 
+            pkg_pfx = ""
+            if env_pkg is not None:
+                pkg_pfx = "./{} {} ".format(
+                    os.path.basename(package_run_script),
+                    os.path.basename(env_pkg))
+
             # Create command string
             logger.debug(launch_cmd)
             command_str = launch_cmd.format(input_file=function_data_loc_remote,
                                             output_file=function_result_loc_remote,
-                                            remapping_string=remapping_string)
+                                            remapping_string=remapping_string,
+                                            pkg_pfx=pkg_pfx)
             command_str = std_string + command_str
             logger.debug(command_str)
 
@@ -210,6 +226,13 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     t.specify_environment_variable(var, env[var])
 
             # Specify script, and data/result files for task
+            if env_pkg is not None:
+                t.specify_file(package_run_script,
+                    os.path.basename(package_run_script), WORK_QUEUE_INPUT,
+                    cache=True)
+                t.specify_file(env_pkg + '.tar.gz',
+                    os.path.basename(env_pkg) + '.tar.gz',
+                    WORK_QUEUE_INPUT, cache=True)
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
@@ -436,6 +459,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             must be used for programs utilizing @bash_apps.)
             Default is False.
 
+        pack: bool
+            Use conda-pack to prepare a self-contained Python evironment for
+            each task. This greatly increases task latency, but does not
+            require a common environment or shared FS on execution nodes.
+
         autolabel: bool
             Use the Resource Monitor to automatically determine resource
             labels based on observed task behavior.
@@ -474,6 +502,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  shared_fs=False,
                  storage_access=None,
                  source=False,
+                 pack=False,
                  autolabel=False,
                  autolabel_window=1,
                  autocategory=False,
@@ -505,6 +534,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.worker_output = see_worker_output
         self.full = full_debug
         self.source = source
+        self.pack = pack
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
@@ -520,7 +550,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 self.project_password_file = None
 
         # Build foundations of the launch command
-        self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
+        self.launch_cmd = ("{pkg_pfx}python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
         if self.shared_fs is True:
             self.launch_cmd += " --shared-fs"
         if self.init_command != "":
@@ -710,12 +740,28 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         self._serialize_function(function_data_file, func, args, kwargs)
 
+        env_pkg = None
+        if self.pack:
+            source_code = inspect.getsource(func)
+            (fd, env_pkg) = tempfile.mkstemp(dir='.')
+            os.close(fd)
+            with tempfile.NamedTemporaryFile(mode='w') as f:
+                with tempfile.NamedTemporaryFile() as g:
+                    f.write(source_code)
+                    f.flush()
+                    os.fsync(f.fileno())
+                    subprocess.check_call( [package_analyze_script,
+                        f.name, g.name])
+                    subprocess.check_call([package_create_script,
+                        g.name, os.path.basename(env_pkg)])
+
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
                "category": category,
+               "env_pkg": env_pkg,
                "result_loc": function_result_file,
                "input_files": input_files,
                "output_files": output_files,
