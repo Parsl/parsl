@@ -230,8 +230,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 t.specify_file(package_run_script,
                     os.path.basename(package_run_script), WORK_QUEUE_INPUT,
                     cache=True)
-                t.specify_file(env_pkg + '.tar.gz',
-                    os.path.basename(env_pkg) + '.tar.gz',
+                t.specify_file(env_pkg, os.path.basename(env_pkg),
                     WORK_QUEUE_INPUT, cache=True)
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
@@ -745,7 +744,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         env_pkg = None
         if self.pack:
             source_code = inspect.getsource(func)
-            env_pkg = tempfile.mkdtemp(dir=self.package_dir)
+            (fd, env_pkg) = tempfile.mkstemp(dir=self.package_dir,
+                    suffix=".tar.gz", prefix="conda-pack_")
+            os.close(fd)
             with tempfile.NamedTemporaryFile(mode='w') as f:
                 with tempfile.NamedTemporaryFile() as g:
                     f.write(source_code)

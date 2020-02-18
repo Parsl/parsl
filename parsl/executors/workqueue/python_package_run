@@ -1,10 +1,12 @@
-#!/bin/sh
+#!/bin/bash
+
+set -e
 
 usage() {
     echo "Usage: python_package_analyze [options] <environment-name> <python-command-string>"
     echo "where options are:"
     echo -e " -h, --help\tShow this help screen"
-    exit $1
+    exit "$1"
 }
 
 # Parse command line arguments
@@ -14,32 +16,18 @@ fi
 if [ $# -lt 2 ]; then
     usage 1
 fi
-ENVIRONMENT_NAME=$1
-PYTHON_COMMAND_STRING=${@:2}
 
-# Unpack the packed environment
-if [ ! -f "${ENVIRONMENT_NAME}.tar.gz" ]; then
-    echo "Environment tarball does not exist, exiting"
-    exit 2
-fi    
-tar xzf ${ENVIRONMENT_NAME}.tar.gz
-if [ $? -ne 0 ]; then
-    echo "Unable to successfully unpack tarball, exiting"
-    exit 3
-fi
+unset ENVDIR
+function cleanup {
+    rm -rf "$ENVDIR"
+}
+trap cleanup EXIT
+ENVDIR="$(mktemp -d)"
 
-# Activate conda environment, run the task, deactivate
-source bin/activate &> /dev/null
-if [ $? -ne 0 ]; then
-    echo "Unable to activate Conda environment, exiting"
-    exit 4
-fi
-conda-unpack &> /dev/null
-if [ $? -ne 0 ]; then
-    echo "Unable to activate Conda environment, exiting"
-    exit 4
-fi
-${PYTHON_COMMAND_STRING}
-EXITVALUE=$?
-source bin/deactivate &> /dev/null
-exit $EXITVALUE 
+tar -xaf "$1" -C "$ENVDIR"
+
+set +e
+source "$ENVDIR/bin/activate" || exit 1
+conda-unpack || exit 1
+
+"${@:2}"

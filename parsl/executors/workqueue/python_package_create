@@ -2,49 +2,47 @@
 import json
 import os
 import sys
+import tempfile
+import argparse
 import subprocess
+
 import conda_pack
 
+devnull = open(os.devnull, 'w')
 
-def usage(exit_code):
-    print("Usage: python_package_create [options] <dependency-file> <environment-name>")
-    print("where options are:")
-    print(" -h, --help\tShow this help screen")
-    exit(exit_code)
+def pack_env(spec, out):
+    package_data = json.load(spec)
+    python_version = package_data["python"]
+    dependencies = package_data["modules"]
 
+    with tempfile.TemporaryDirectory() as env_dir:
+        with tempfile.NamedTemporaryFile(mode='w') as req_file:
+            for module in dependencies:
+                req_file.write(module + "\n")
+            req_file.flush()
+            os.fsync(req_file.fileno())
 
-# Parse command line arguments
-if len(sys.argv) > 1 and (sys.argv[1] == "-h" or sys.argv[1] == "--help"):
-    usage(0)
-if len(sys.argv) != 3:
-    usage(1)
-dependency_file = sys.argv[1]
-environment_name = sys.argv[2]
-if not os.path.exists(dependency_file):
-    print("JSON dependency file does not exist")
-    exit(2)
-else:
-    dependency_fp = open(dependency_file, "r")
+            # ought to make sure no shell metacharacters are in the names...
+            subprocess.check_call("""eval "$(conda shell.bash hook)" &&
+                conda create -p "{}" -y "python={}" &&
+                conda activate "{}" &&
+                pip install -r "{}" &&
+                pip install tblib""".format(
+                    env_dir, python_version, env_dir, req_file.name),
+                shell=True, stdout=devnull, stderr=devnull)
+        conda_pack.pack(prefix=env_dir, output=out, force=True)
 
-# Extract python environment data from JSON file and create requirements file"
-package_data = json.load(dependency_fp)
-python_version = package_data["python"]
-dependencies = package_data["modules"]
-req_file = open("/tmp/requirements.txt", "w")
-for module in dependencies:
-    module_string = module + "\n"
-    req_file.write(module_string)
-req_file.close()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Create a packed environment from a spec.')
+    parser.add_argument('spec',
+        help='Read in a spec file, or - for stdin.')
+    parser.add_argument('out',
+        help='Write output from conda-pack to the given file.')
+    args = parser.parse_args()
 
-# Create environment and install all necessary modules into the environment
-subprocess.call("conda create -p {} -y python={} &> /dev/null; \
-                eval \"$(conda shell.bash hook)\" &> /dev/null; \
-                conda activate {} &> /dev/null; \
-                pip install -r /tmp/requirements.txt &> /dev/null; \
-                pip install tblib &> /dev/null; \
-                rm /tmp/requirements.txt &> /dev/null; \
-                conda deactivate &> /dev/null;".format(environment_name, python_version, environment_name, dependency_file), shell=True)
+    spec = sys.stdin
+    if args.spec != '-':
+        spec = open(args.spec, 'r')
 
-# Pack the environment
-conda_pack.pack(prefix=environment_name, output="{}.tar.gz".format(environment_name), force=True)
-exit(0)
+    pack_env(spec, args.out)
