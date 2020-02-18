@@ -565,10 +565,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         # Create directories for data and results
         self.function_data_dir = os.path.join(self.run_dir, "function_data")
+        self.package_dir = os.path.join(self.run_dir, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
         os.mkdir(self.function_data_dir)
         os.mkdir(self.wq_log_dir)
+        os.mkdir(self.package_dir)
 
         logger.debug("Starting WorkQueueExectutor")
 
@@ -743,8 +745,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         env_pkg = None
         if self.pack:
             source_code = inspect.getsource(func)
-            (fd, env_pkg) = tempfile.mkstemp(dir='.')
-            os.close(fd)
+            env_pkg = tempfile.mkdtemp(dir=self.package_dir)
             with tempfile.NamedTemporaryFile(mode='w') as f:
                 with tempfile.NamedTemporaryFile() as g:
                     f.write(source_code)
@@ -753,7 +754,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                     subprocess.check_call( [package_analyze_script,
                         f.name, g.name])
                     subprocess.check_call([package_create_script,
-                        g.name, os.path.basename(env_pkg)])
+                        g.name, env_pkg])
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))

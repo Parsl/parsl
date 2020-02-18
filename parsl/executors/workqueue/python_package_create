@@ -37,14 +37,14 @@ for module in dependencies:
 req_file.close()
 
 # Create environment and install all necessary modules into the environment
-subprocess.call("conda create -p /tmp/{} -y python={} &> /dev/null; \
+subprocess.call("conda create -p {} -y python={} &> /dev/null; \
                 eval \"$(conda shell.bash hook)\" &> /dev/null; \
-                conda activate /tmp/{} &> /dev/null; \
+                conda activate {} &> /dev/null; \
                 pip install -r /tmp/requirements.txt &> /dev/null; \
                 pip install tblib &> /dev/null; \
                 rm /tmp/requirements.txt &> /dev/null; \
                 conda deactivate &> /dev/null;".format(environment_name, python_version, environment_name, dependency_file), shell=True)
 
 # Pack the environment
-conda_pack.pack(name=environment_name, output="{}.tar.gz".format(environment_name), force=True)
+conda_pack.pack(prefix=environment_name, output="{}.tar.gz".format(environment_name), force=True)
 exit(0)
