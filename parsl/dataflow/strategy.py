@@ -155,7 +155,7 @@ class Strategy(object):
 
         self.logger_flag = True
 
-    def _strategy_simple(self, status_list: List[ExecutorStatus], tasks, *args, kind=None, **kwargs):
+    def _strategy_simple(self, status_list, tasks, *args, kind=None, **kwargs):
         """Peek at the DFK and the executors specified.
 
         We assume here that tasks are not held in a runnable
