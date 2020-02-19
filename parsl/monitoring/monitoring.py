@@ -2,6 +2,7 @@ import os
 import socket
 import pickle
 import logging
+import multiprocessing
 import time
 import typeguard
 import datetime
@@ -282,7 +283,13 @@ class MonitoringHub(RepresentationMixin):
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
+            logger.debug("wrapped: 1. start of wrapped")
+
+            # because multiprocessing forks by default which is potentially troublesome and I am investigating if a spawn is better?
+            logger.debug("wrapped: 1.5 got multiprocessing context")
+
             command_q = Queue(maxsize=10)
+            logger.debug("wrapped: 2. created queue")
             p = Process(target=monitor,
                         args=(os.getpid(),
                               task_id,
@@ -292,17 +299,28 @@ class MonitoringHub(RepresentationMixin):
                               logging_level,
                               sleep_dur),
                         name="Monitor-Wrapper-{}".format(task_id))
+            logger.debug("wrapped: 3. created monitor process, pid {}".format(p.pid))
             p.start()
+            logger.debug("wrapped: 4. started monitor process, pid {}".format(p.pid))
             try:
                 try:
-                    return f(*args, **kwargs)
+                    logger.debug("wrapped: 5. invoking wrapped function")
+                    r = f(*args, **kwargs)
+                    logger.debug("wrapped: 6. back from wrapped function ok")
+                    return r
                 finally:
+                    logger.debug("wrapped: 7 putting finished on cmd q")
                     command_q.put("Finished")
+                    logger.debug("wrapped: 8 done putting finished on cmd q")
                     p.join()
+                    logger.debug("wrapped: 9 done joining with monitor process")
             finally:
+                logger.debug("wrapped: 10 in 2nd finally")
                 # There's a chance of zombification if the workers are killed by some signals
                 p.terminate()
+                logger.debug("wrapped: 11 done terminating monitor")
                 p.join()
+                logger.debug("wrapped: 12 done joining monitor again")
         return wrapped
 
 
@@ -446,7 +464,7 @@ def monitor(pid,
             monitoring_hub_url,
             run_id,
             command_q,
-            logging_level=logging.INFO,
+            logging_level=logging.DEBUG,
             sleep_dur=10):
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
@@ -545,3 +563,4 @@ def monitor(pid,
 
         logging.debug("sleeping")
         time.sleep(sleep_dur)
+    logging.debug("very end of monitor")

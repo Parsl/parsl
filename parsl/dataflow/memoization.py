@@ -248,9 +248,14 @@ class Memoizer(object):
         if not self.memoize or not task['memoize']:
             return
 
+        if 'hashsum' not in task:
+            logger.error("Attempt to update memo for task {} with no hashsum".format(task_id))
+            return
+
         if task['hashsum'] in self.memo_lookup_table:
             logger.info('Updating app cache entry with latest %s:%s call' %
                         (task['func_name'], task_id))
             self.memo_lookup_table[task['hashsum']] = r
         else:
+            logger.debug("Storing original memo for task {}".format(task_id))
             self.memo_lookup_table[task['hashsum']] = r
