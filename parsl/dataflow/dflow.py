@@ -756,9 +756,15 @@ class DataFlowKernel(object):
                 depend_descs.append("task {}".format(d.tid))
             else:
                 depend_descs.append(repr(d))
-        logger.info("Task {} submitted for App {}, waiting on {}".format(task_id,
-                                                                         task_def['func_name'],
-                                                                         ", ".join(depend_descs)))
+
+        if depend_descs != []:
+            waiting_message = "waiting on {}".format(", ".join(depend_descs))
+        else:
+            waiting_message = "not waiting on any dependency"
+
+        logger.info("Task {} submitted for App {}, {}".format(task_id,
+                                                              task_def['func_name'],
+                                                              waiting_message))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
 

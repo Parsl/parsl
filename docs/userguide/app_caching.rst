@@ -24,6 +24,26 @@ App caching can be particularly useful when developing interactive workflows suc
 using a Jupyter notebook. In this case, cells containing apps are often re-executed
 during development. Using app caching will ensure that only modified apps are re-executed.
 
+
+Inputs
+^^^^^^
+
+Two app invocations are treated as the same by the caching mechanism if their
+inputs are the same. This sameness is determined by hashing the inputs, and
+comparing hashes.
+
+This only makes sense for some datatypes.
+
+By default parsl knows how to compute sensible hashes for basic data types:
+str, int, float, None, as well as more some more complex types:
+functions, and dicts and lists containing hashable types.
+
+Attempting to cache apps invoked with other, unknown, types will lead to an
+exception at invocation.
+
+Mechanisms to hash new types can be registered by a workflow by using the
+parsl.dataflow.memoization.id_for_memo single dispatch function.
+
 Caveats
 ^^^^^^^
 

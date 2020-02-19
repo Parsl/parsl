@@ -1,8 +1,84 @@
 import hashlib
+from functools import singledispatch
 import logging
 from parsl.executors.serialize.serialize import serialize_object
+import types
 
 logger = logging.getLogger(__name__)
+
+
+@singledispatch
+def id_for_memo(obj, output_ref=False):
+    """This should return a byte sequence which identifies the supplied
+    value for memoization purposes: for any two calls of id_for_memo,
+    the byte sequence should be the same when the "same" value is supplied,
+    and different otherwise.
+
+    "same" is in quotes about because sameness is not as straightforward as
+    serialising out the content.
+
+    For example, for two dicts x, y:
+
+      x = {"a":3, "b":4}
+      y = {"b":4, "a":3}
+
+    then: x == y, but their serialization is not equal, and some other
+    functions on x and y are not equal: list(x.keys()) != list(y.keys())
+
+
+    id_for_memo is invoked with output_ref=True when the parameter is an
+    output reference (a value in the outputs=[] parameter of an app
+    invocation).
+
+    Memo hashing might be different for such parameters: for example, a
+    user might choose to hash input File content so that changing the
+    content of an input file invalidates memoization. This does not make
+    sense to do for output files: there is no meaningful content stored
+    where an output filename points at memoization time.
+    """
+    logger.error("id_for_memo attempted on unknown type {}".format(type(obj)))
+    raise ValueError("unknown type for memoization: {}".format(type(obj)))
+
+
+@id_for_memo.register(str)
+@id_for_memo.register(int)
+@id_for_memo.register(float)
+@id_for_memo.register(types.FunctionType)
+@id_for_memo.register(type(None))
+def id_for_memo_serialize(obj, output_ref=False):
+    return serialize_object(obj)[0]
+
+
+@id_for_memo.register(list)
+def id_for_memo_list(denormalized_list, output_ref=False):
+    if type(denormalized_list) != list:
+        raise ValueError("id_for_memo_list cannot work on subclasses of list")
+
+    normalized_list = []
+
+    for e in denormalized_list:
+        normalized_list.append(id_for_memo(e, output_ref=output_ref))
+
+    return serialize_object(normalized_list)[0]
+
+
+@id_for_memo.register(dict)
+def id_for_memo_dict(denormalized_dict, output_ref=False):
+    """This normalises the keys and values of the supplied dictionary.
+
+    When output_ref=True, the values are normalised as output refs, but
+    the keys are not.
+    """
+    if type(denormalized_dict) != dict:
+        raise ValueError("id_for_memo_dict cannot work on subclasses of dict")
+
+    keys = sorted(denormalized_dict)
+
+    normalized_list = []
+    for k in keys:
+        normalized_list.append(id_for_memo(k))
+        normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
+    return serialize_object(normalized_list)[0]
 
 
 class Memoizer(object):
@@ -69,10 +145,22 @@ class Memoizer(object):
             - hash (str) : A unique hash string
         """
         # Function name TODO: Add fn body later
-        t = [serialize_object(task['func_name'])[0],
-             serialize_object(task['fn_hash'])[0],
-             serialize_object(task['args'])[0],
-             serialize_object(task['kwargs'])[0]]
+
+        # if kwargs contains an outputs parameter, that parameter is removed
+        # and normalised differently - with output_ref set to True.
+        if 'outputs' in task['kwargs']:
+            newkw = task['kwargs'].copy()
+            outputs = task['kwargs']['outputs']
+            del newkw['outputs']
+            kw_id = id_for_memo(newkw) + id_for_memo(outputs, output_ref=True)
+        else:
+            newkw = task['kwargs']
+            kw_id = id_for_memo(newkw)
+
+        t = [id_for_memo(task['func_name']),
+             id_for_memo(task['fn_hash']),
+             id_for_memo(task['args']),
+             kw_id]
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
@@ -96,17 +184,22 @@ class Memoizer(object):
         """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
+            logger.debug("Task {} will not be memoized".format(task_id))
             return False, None
 
         hashsum = self.make_hash(task)
+        logger.debug("Task {} has memoization hash {}".format(task_id, hashsum))
         present = False
         result = None
         if hashsum in self.memo_lookup_table:
             present = True
             result = self.memo_lookup_table[hashsum]
             logger.info("Task %s using result from cache", task_id)
+        else:
+            logger.info("Task %s had no result in cache", task_id)
 
         task['hashsum'] = hashsum
+
         return present, result
 
     def hash_lookup(self, hashsum):
