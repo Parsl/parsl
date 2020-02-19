@@ -256,7 +256,9 @@ class MonitoringHub(RepresentationMixin):
 
     def send(self, mtype, message):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
-        return self._dfk_channel.send_pyobj((mtype, message))
+        r = self._dfk_channel.send_pyobj((mtype, message))
+        self.logger.debug("Sent message {}, {}".format(mtype, message))
+        return r
 
     def close(self):
         if self.logger:
