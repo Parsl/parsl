@@ -41,7 +41,7 @@ class PollItem(ExecutorStatus):
 
 class TaskStatusPoller(object):
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
-        self._poll_items: List[PollItem] = []
+        self._poll_items = []  # type: List[PollItem]
         self._strategy = Strategy(dfk)
 
     def poll(self, tasks=None, kind=None):
