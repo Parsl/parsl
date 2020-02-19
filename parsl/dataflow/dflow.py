@@ -360,8 +360,6 @@ class DataFlowKernel(object):
         if not self.tasks[task_id]['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        # Update the memoizer with the new result if this is not a
-        # result from a memo lookup and the task has reached a terminal state.
         self.memoizer.update_memo(task_id, self.tasks[task_id], future)
 
         if self.checkpoint_mode == 'task_exit':
