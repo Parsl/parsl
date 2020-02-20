@@ -216,12 +216,13 @@ class MonitoringHub(RepresentationMixin):
                                                               max_port=self.client_port_range[1])
 
         comm_q = Queue(maxsize=10)
+        self.exception_q = Queue(maxsize=10)
         self.priority_msgs = Queue()
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
         self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
+                                  args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "hub_port_range": self.hub_port_range,
@@ -231,17 +232,19 @@ class MonitoringHub(RepresentationMixin):
                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                           "run_id": run_id
                                   },
-                                  name="Monitoring-Queue-Process"
+                                  name="Monitoring-Queue-Process",
+                                  daemon=True,
         )
         self.queue_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
-                                args=(self.priority_msgs, self.node_msgs, self.resource_msgs,),
+                                args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                         "db_url": self.logging_endpoint,
                                   },
-                                name="Monitoring-DBM-Process"
+                                name="Monitoring-DBM-Process",
+                                daemon=True,
         )
         self.dbm_proc.start()
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
@@ -264,13 +267,27 @@ class MonitoringHub(RepresentationMixin):
     def close(self):
         if self.logger:
             self.logger.info("Terminating Monitoring Hub")
+        exception_msgs = []
+        while True:
+            try:
+                exception_msgs.append(self.exception_q.get(block=False))
+                self.logger.info("Either Hub or DBM process got exception.")
+            except queue.Empty:
+                break
         if self._dfk_channel and self.monitoring_hub_active:
             self.monitoring_hub_active = False
             self._dfk_channel.close()
+            if exception_msgs:
+                for exception_msg in exception_msgs:
+                    self.logger.info("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
+                self.queue_proc.terminate()
+                self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
             self.queue_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
-            self.priority_msgs.put(("STOP", 0))
+            if len(exception_msgs) == 0:
+                self.priority_msgs.put(("STOP", 0))
+            self.dbm_proc.join()
 
     @staticmethod
     def monitor_wrapper(f,
@@ -453,10 +470,17 @@ class Hub(object):
         self.logger.info("Hub finished")
 
 
-def hub_starter(comm_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     hub = Hub(*args, **kwargs)
     comm_q.put((hub.hub_port, hub.ic_port))
-    hub.start(priority_msgs, node_msgs, resource_msgs)
+    hub.logger.info("Starting Hub in Hub starter")
+    try:
+        hub.start(priority_msgs, node_msgs, resource_msgs)
+    except Exception as e:
+        hub.logger.exception("hub.start exception")
+        exception_q.put(('Hub', str(e)))
+
+    hub.logger.info("End of hub starter")
 
 
 def monitor(pid,
