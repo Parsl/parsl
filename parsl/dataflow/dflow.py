@@ -878,7 +878,10 @@ class DataFlowKernel(object):
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
+            logger.info("DFK cleanup because python process is exiting")
             self.cleanup()
+        else:
+            logger.info("python process is exiting, but DFK has already been cleaned up")
 
     def wait_for_current_tasks(self):
         """Waits for all tasks in the task list to be completed, by waiting for their
