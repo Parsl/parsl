@@ -287,14 +287,15 @@ class DataFlowKernel(object):
                 return
 
             if self.tasks[task_id]['status'] == States.dep_fail:
-                logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
+                logger.error("Task {} failed due to dependency failure so skipping retries".format(task_id))
             elif self.tasks[task_id]['fail_count'] <= self._config.retries:
                 self.tasks[task_id]['status'] = States.pending
                 logger.info("Task {} marked for retry".format(task_id))
 
             else:
-                logger.exception("Task {} failed after {} retry attempts".format(task_id,
-                                                                                 self._config.retries))
+                logger.error("Task {} failed after {} retry attempts. Last exception was: {}".format(task_id,
+                                                                                                     self._config.retries,
+                                                                                                     e))
                 self.tasks[task_id]['status'] = States.failed
                 self.tasks_failed_count += 1
                 self.tasks[task_id]['time_returned'] = datetime.datetime.now()
