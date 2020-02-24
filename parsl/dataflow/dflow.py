@@ -1,5 +1,4 @@
 import atexit
-import itertools
 import logging
 import os
 import pathlib
@@ -81,6 +80,10 @@ class DataFlowKernel(object):
             parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
 
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
+
+        if sys.version_info < (3, 6):
+            logger.warning("Support for python versions < 3.6 is deprecated and will be removed after parsl 0.10")
+
         logger.info("Parsl version: {}".format(get_version()))
 
         self.checkpoint_lock = threading.Lock()
@@ -92,6 +95,7 @@ class DataFlowKernel(object):
         self.run_id = str(uuid4())
         self.tasks_completed_count = 0
         self.tasks_failed_count = 0
+        self.tasks_dep_fail_count = 0
 
         self.monitoring = config.monitoring
         # hub address and port for interchange to connect
@@ -338,7 +342,7 @@ class DataFlowKernel(object):
 
         return
 
-    def handle_app_update(self, task_id, future, memo_cbk=False):
+    def handle_app_update(self, task_id, future):
         """This function is called as a callback when an AppFuture
         is in its final state.
 
@@ -349,9 +353,6 @@ class DataFlowKernel(object):
              future (Future) : The relevant app future (which should be
                  consistent with the task structure 'app_fu' entry
 
-        KWargs:
-             memo_cbk(Bool) : Indicates that the call is coming from a memo update,
-             that does not require additional memo updates.
         """
 
         if not self.tasks[task_id]['app_fu'].done():
@@ -359,13 +360,10 @@ class DataFlowKernel(object):
         if not self.tasks[task_id]['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        if not memo_cbk:
-            # Update the memoizer with the new result if this is not a
-            # result from a memo lookup and the task has reached a terminal state.
-            self.memoizer.update_memo(task_id, self.tasks[task_id], future)
+        self.memoizer.update_memo(task_id, self.tasks[task_id], future)
 
-            if self.checkpoint_mode == 'task_exit':
-                self.checkpoint(tasks=[task_id])
+        if self.checkpoint_mode == 'task_exit':
+            self.checkpoint(tasks=[task_id])
 
         # If checkpointing is turned on, wiping app_fu is left to the checkpointing code
         # else we wipe it here.
@@ -427,6 +425,8 @@ class DataFlowKernel(object):
                     "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
                 task_record['status'] = States.dep_fail
+                self.tasks_dep_fail_count += 1
+
                 if self.monitoring is not None:
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
@@ -752,9 +752,15 @@ class DataFlowKernel(object):
                 depend_descs.append("task {}".format(d.tid))
             else:
                 depend_descs.append(repr(d))
-        logger.info("Task {} submitted for App {}, waiting on {}".format(task_id,
-                                                                         task_def['func_name'],
-                                                                         ", ".join(depend_descs)))
+
+        if depend_descs != []:
+            waiting_message = "waiting on {}".format(", ".join(depend_descs))
+        else:
+            waiting_message = "not waiting on any dependency"
+
+        logger.info("Task {} submitted for App {}, {}".format(task_id,
+                                                              task_def['func_name'],
+                                                              waiting_message))
 
         self.tasks[task_id]['task_launch_lock'] = threading.Lock()
 
@@ -798,42 +804,23 @@ class DataFlowKernel(object):
     def log_task_states(self):
         logger.info("Summary of tasks in DFK:")
 
-        total_summarised = 0
+        keytasks = {state: 0 for state in States}
 
-        keytasks = []
         for tid in self.tasks:
-            keytasks.append((self.tasks[tid]['status'], tid))
+            keytasks[self.tasks[tid]['status']] += 1
+        # Fetch from counters since tasks get wiped
+        keytasks[States.done] = self.tasks_completed_count
+        keytasks[States.failed] = self.tasks_failed_count
+        keytasks[States.dep_fail] = self.tasks_dep_fail_count
 
-        def first(t):
-            return t[0]
+        for state in States:
+            if keytasks[state]:
+                logger.info("Tasks in state {}: {}".format(str(state), keytasks[state]))
 
-        sorted_keytasks = sorted(keytasks, key=first)
-
-        grouped_sorted_keytasks = itertools.groupby(sorted_keytasks, key=first)
-
-        # caution: g is an iterator that also advances the
-        # grouped_sorted_tasks iterator, so looping over
-        # both grouped_sorted_keytasks and g can only be done
-        # in certain patterns
-
-        for k, g in grouped_sorted_keytasks:
-
-            ts = []
-
-            for t in g:
-                tid = t[1]
-                ts.append(str(tid))
-                total_summarised = total_summarised + 1
-
-            tids_string = ", ".join(ts)
-
-            logger.info("Tasks in state {}: {}".format(str(k), tids_string))
-
-        total_in_tasks = len(self.tasks)
-        if total_summarised != total_in_tasks:
-            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but tasks list contains {} tasks".format(
-                total_summarised, total_in_tasks))
-
+        total_summarized = sum(keytasks.values())
+        if total_summarized != self.task_count:
+            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but task counters registered {} tasks".format(
+                total_summarized, self.task_count))
         logger.info("End of summary")
 
     def _create_remote_dirs_over_channel(self, provider, channel):

@@ -45,11 +45,9 @@ Parsl currently supports the following executors:
 
 3. `WorkQueueExecutor`: This executor integrates `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ as an execution backend. Work Queue scales to tens of thousands of cores and implements reliable execution of tasks with dynamic resource sizing.
 
-4. `IPyParallelExecutor` [**Deprecated**]: This executor supports both local and remote execution using a pilot job model. The IPythonParallel controller is deployed locally and IPythonParallel engines are deployed to execution nodes. IPythonParallel then manages the execution of tasks on connected engines.
+4. `ExtremeScaleExecutor`: [**Beta**] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>` to scale to 4000+ nodes. This executor is typically used for executing on supercomputers.
 
-5. `ExtremeScaleExecutor`: [**Beta**] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>` to scale to 4000+ nodes. This executor is typically used for executing on supercomputers.
-
-6. `Swift/TurbineExecutor`: [**Deprecated**] This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
+5. `Swift/TurbineExecutor`: [**Deprecated**] This executor uses the extreme-scale `Turbine <http://swift-lang.org/Swift-T/index.php>`_ model to enable distributed task execution across an MPI environment. This executor is typically used on supercomputers.
 
 These executors cover a broad range of execution requirements. As with other Parsl components, there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
 
@@ -203,7 +201,7 @@ For example:
 Configuration
 ^^^^^^^^^^^^^
 
-The example below shows how elasticity and parallelism can be configured. Here, a local IPythonParallel
+The example below shows how elasticity and parallelism can be configured. Here, a local HighThroughputExecutor
 environment is used with a minimum of 1 block and a maximum of 2 blocks, where each block may host
 up to 2 tasks. Parallelism of 0.5 means that when more than 2 * the total task capacity are queued a new
 block will be requested (up to 2 possible blocks). An example :class:`~parsl.config.Config` is:
@@ -212,12 +210,12 @@ block will be requested (up to 2 possible blocks). An example :class:`~parsl.con
 
     from parsl.config import Config
     from libsubmit.providers.local.local import Local
-    from parsl.executors.ipp import IPyParallelExecutor
+    from parsl.executors import HighThroughputExecutor
 
     config = Config(
         executors=[
-            IPyParallelExecutor(
-                label='local_ipp',
+            HighThroughputExecutor(
+                label='local_htex',
                 workers_per_node=2,
                 provider=Local(
                     min_blocks=1,
