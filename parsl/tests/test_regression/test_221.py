@@ -1,7 +1,7 @@
 import pytest
 
 from parsl.app.app import python_app
-from parsl.tests.configs.local_ipp import config
+from parsl.tests.configs.htex_local import config
 
 local_config = config
 
