@@ -1,5 +1,4 @@
 import parsl
-from parsl.tests.configs.local_ipp import config
 
 
 @parsl.bash_app
@@ -16,9 +15,3 @@ def test_bash():
     x = bash_app(stdout="{0}.out".format(fname))
     print("Waiting ....")
     print(x.result())
-
-
-if __name__ == "__main__":
-    parsl.clear()
-    parsl.load(config)
-    test_bash()
