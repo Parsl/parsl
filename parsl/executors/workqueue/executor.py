@@ -747,12 +747,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             (fd, env_pkg) = tempfile.mkstemp(dir=self.package_dir,
                     suffix=".tar.gz", prefix="conda-pack_")
             os.close(fd)
-            with tempfile.NamedTemporaryFile(mode='w') as f:
-                with tempfile.NamedTemporaryFile() as g:
+            with tempfile.NamedTemporaryFile(suffix='.py') as f:
+                with tempfile.NamedTemporaryFile(suffix='.yaml') as g:
                     f.write(source_code)
                     f.flush()
                     os.fsync(f.fileno())
-                    subprocess.check_call( [package_analyze_script,
+                    subprocess.check_call([package_analyze_script,
                         f.name, g.name])
                     subprocess.check_call([package_create_script,
                         g.name, env_pkg])

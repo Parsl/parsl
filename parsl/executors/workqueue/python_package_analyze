@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import os
+import re
 import sys
 import json
 import argparse
+import subprocess
 from stdlib_list import stdlib_list
 
 libraries = stdlib_list(".".join(sys.version.split()[0].split(".")[:2]))
@@ -41,10 +43,30 @@ def find_imports(source):
     return dependencies
 
 def export_env(source):
-    python_info = {}
-    python_info["python"] = sys.version.split()[0]
-    python_info["modules"] = find_imports(source)
-    return python_info
+    imports = set(find_imports(source) + ['python', 'pip'])
+    env = json.loads(
+        subprocess.check_output(['conda', 'env', 'export', '--json']))
+    full_deps = env.pop('dependencies', [])
+    deps = []
+    pip = []
+    for a in full_deps:
+        if isinstance(a, dict):
+            for b in a['pip']:
+                for pkg in imports:
+                    if b.startswith(pkg + '='):
+                        pip.append(b)
+        else:
+            for pkg in imports:
+                if a.startswith(pkg + '='):
+                    deps.append(a)
+
+    deps.sort()
+    pip.sort()
+    if pip:
+        deps.append({'pip': pip})
+    if deps:
+        env['dependencies'] = deps
+    return env
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -62,4 +84,5 @@ if __name__ == '__main__':
     if args.out != '-':
         out = open(args.out, 'w')
 
-    json.dump(export_env(source), out, indent=4)
+    json.dump(export_env(source), out, indent=4, sort_keys=True)
+    out.write('\n')
