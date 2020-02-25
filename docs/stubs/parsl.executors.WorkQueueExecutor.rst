@@ -39,6 +39,7 @@ parsl.executors.WorkQueueExecutor
       ~WorkQueueExecutor.hub_address
       ~WorkQueueExecutor.hub_port
       ~WorkQueueExecutor.provider
+      ~WorkQueueExecutor.status_polling_interval
       ~WorkQueueExecutor.tasks
    
    

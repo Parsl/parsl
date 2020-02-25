@@ -31,5 +31,6 @@ parsl.providers.SlurmProvider
       ~SlurmProvider.current_capacity
       ~SlurmProvider.label
       ~SlurmProvider.mem_per_node
+      ~SlurmProvider.status_polling_interval
    
    
