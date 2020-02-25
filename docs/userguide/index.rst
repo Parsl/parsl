@@ -16,5 +16,4 @@ User guide
    configuring
    modularizing
    monitoring
-   containers
    usage_tracking
