@@ -29,5 +29,6 @@ parsl.providers.KubernetesProvider
       ~KubernetesProvider.cores_per_node
       ~KubernetesProvider.label
       ~KubernetesProvider.mem_per_node
+      ~KubernetesProvider.status_polling_interval
    
    

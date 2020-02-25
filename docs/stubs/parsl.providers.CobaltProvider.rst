@@ -31,5 +31,6 @@ parsl.providers.CobaltProvider
       ~CobaltProvider.current_capacity
       ~CobaltProvider.label
       ~CobaltProvider.mem_per_node
+      ~CobaltProvider.status_polling_interval
    
    
