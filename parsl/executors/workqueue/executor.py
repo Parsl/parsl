@@ -8,6 +8,7 @@ import multiprocessing
 import logging
 from concurrent.futures import Future
 import tempfile
+import hashlib
 import subprocess
 import os
 import pickle
@@ -50,6 +51,29 @@ package_create_script = os.path.join(
 package_run_script = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "python_package_run")
 
+def _prepare_package(source_code):
+    pkg_dir = os.path.join(tempfile.gettempdir(),
+            "python_package-{}".format(os.geteuid()))
+    os.makedirs(pkg_dir, exist_ok=True)
+    with tempfile.NamedTemporaryFile(suffix='.py', mode='w') as src, \
+            tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
+        src.write(source_code)
+        src.flush()
+        os.fsync(src.fileno())
+        subprocess.check_call([package_analyze_script, src.name, spec.name])
+        with open(spec.name, mode='rb') as f:
+            pkg = os.path.join(pkg_dir,
+                "pack-{}.tar.gz".format(hashlib.sha256(f.read()).hexdigest()))
+        if os.access(pkg, os.R_OK):
+            return pkg
+        (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp',
+                suffix='.tar.gz')
+        os.close(fd)
+        with open(os.devnull, 'w') as devnull:
+            subprocess.check_call([package_create_script, spec.name, tarball],
+                stdout=devnull)
+        os.rename(tarball, pkg)
+        return pkg
 
 class WorkqueueTaskFailure(AppException):
     """A failure executing a task in workqueue
@@ -741,21 +765,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         self._serialize_function(function_data_file, func, args, kwargs)
 
-        env_pkg = None
         if self.pack:
             source_code = inspect.getsource(func)
-            (fd, env_pkg) = tempfile.mkstemp(dir=self.package_dir,
-                    suffix=".tar.gz", prefix="conda-pack_")
-            os.close(fd)
-            with tempfile.NamedTemporaryFile(suffix='.py') as f:
-                with tempfile.NamedTemporaryFile(suffix='.yaml') as g:
-                    f.write(source_code)
-                    f.flush()
-                    os.fsync(f.fileno())
-                    subprocess.check_call([package_analyze_script,
-                        f.name, g.name])
-                    subprocess.check_call([package_create_script,
-                        g.name, env_pkg])
+            env_pkg = _prepare_package(source_code)
+        else:
+            env_pkg = None
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
