@@ -650,7 +650,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, app_kwargs):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, app_kwargs={}):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -680,9 +680,6 @@ class DataFlowKernel(object):
 
         """
 
-        kwargs = app_kwargs # BENC TODO: rename all kwargs occurences to app_kwargs in this function - but this assignemnt is a quick way to make that substition for testing
-        args = app_args # "
-
         if self.cleanup_called:
             raise ValueError("Cannot submit to a DFK that has been cleaned up")
 
@@ -698,19 +695,19 @@ class DataFlowKernel(object):
 
         # The below uses func.__name__ before it has been wrapped by any staging code.
 
-        label = kwargs.get('label')
+        label = app_kwargs.get('label')
         for kw in ['stdout', 'stderr']:
-            if kw in kwargs:
-                if kwargs[kw] == parsl.AUTO_LOGNAME:
-                    kwargs[kw] = os.path.join(
-                            self.run_dir,
-                            'task_logs',
-                            str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
-                            'task_{}_{}{}.{}'.format(
-                                str(task_id).zfill(4),
-                                func.__name__,
-                                '' if label is None else '_{}'.format(label),
-                                kw)
+            if kw in app_kwargs:
+                if app_kwargs[kw] == parsl.AUTO_LOGNAME:
+                    app_kwargs[kw] = os.path.join(
+                                self.run_dir,
+                                'task_logs',
+                                str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
+                                'task_{}_{}{}.{}'.format(
+                                    str(task_id).zfill(4),
+                                    func.__name__,
+                                    '' if label is None else '_{}'.format(label),
+                                    kw)
                     )
 
         task_def = {'depends': None,
@@ -729,14 +726,14 @@ class DataFlowKernel(object):
         app_fu = AppFuture(task_def)
 
         # Transform remote input files to data futures
-        args, kwargs, func = self._add_input_deps(executor, args, kwargs, func)
+        app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
-        func = self._add_output_deps(executor, args, kwargs, app_fu, func)
+        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
 
         task_def.update({
-                    'args': args,
+                    'args': app_args,
                     'func': func,
-                    'kwargs': kwargs,
+                    'kwargs': app_kwargs,
                     'app_fu': app_fu})
 
         if task_id in self.tasks:
@@ -746,7 +743,7 @@ class DataFlowKernel(object):
             self.tasks[task_id] = task_def
 
         # Get the list of dependencies for the task
-        depends = self._gather_all_deps(args, kwargs)
+        depends = self._gather_all_deps(app_args, app_kwargs)
         self.tasks[task_id]['depends'] = depends
 
         depend_descs = []
