@@ -43,7 +43,6 @@ def id_for_memo(obj, output_ref=False):
 @id_for_memo.register(str)
 @id_for_memo.register(int)
 @id_for_memo.register(float)
-@id_for_memo.register(types.FunctionType)
 @id_for_memo.register(type(None))
 def id_for_memo_serialize(obj, output_ref=False):
     return serialize_object(obj)[0]
@@ -79,6 +78,15 @@ def id_for_memo_dict(denormalized_dict, output_ref=False):
         normalized_list.append(id_for_memo(k))
         normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
     return serialize_object(normalized_list)[0]
+
+
+@id_for_memo.register(types.FunctionType)
+def id_for_memo_func(f, output_ref=False):
+    """This will extract some, but deliberately not all, details from the function.
+    The intention is to allow the function to be modified in source file without
+    causing memoization invalidation.
+    """
+    return ["types.FunctionType", f.__name__, f.__module__]
 
 
 class Memoizer(object):
