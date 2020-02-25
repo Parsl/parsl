@@ -486,3 +486,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             })
         data_disk = async_disk_creation.result()
         return data_disk, name
+
+    @property
+    def status_polling_interval(self):
+        return 60
