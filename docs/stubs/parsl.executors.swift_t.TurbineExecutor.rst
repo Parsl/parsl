@@ -38,6 +38,7 @@ parsl.executors.swift\_t.TurbineExecutor
       ~TurbineExecutor.provider
       ~TurbineExecutor.run_dir
       ~TurbineExecutor.scaling_enabled
+      ~TurbineExecutor.status_polling_interval
       ~TurbineExecutor.tasks
    
    

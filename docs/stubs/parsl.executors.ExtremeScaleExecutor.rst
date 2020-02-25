@@ -43,6 +43,7 @@ parsl.executors.ExtremeScaleExecutor
       ~ExtremeScaleExecutor.provider
       ~ExtremeScaleExecutor.run_dir
       ~ExtremeScaleExecutor.scaling_enabled
+      ~ExtremeScaleExecutor.status_polling_interval
       ~ExtremeScaleExecutor.tasks
    
    
