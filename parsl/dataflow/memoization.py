@@ -176,7 +176,6 @@ class Memoizer(object):
         t = t + [id_for_memo(filtered_kw)]
 
         t = t + [id_for_memo(task['func_name']),
-                 id_for_memo(task['fn_hash']),
                  id_for_memo(task['args'])]
 
         x = b''.join(t)
