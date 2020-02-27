@@ -122,7 +122,7 @@ class BashApp(AppBase):
         sig = signature(func)
 
         for s in sig.parameters:
-            if sig.parameters[s].default != Parameter.empty:
+            if sig.parameters[s].default is not Parameter.empty:
                 self.kwargs[s] = sig.parameters[s].default
 
     def __call__(self, *args, **kwargs):
