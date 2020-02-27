@@ -171,13 +171,15 @@ class Memoizer(object):
         if 'outputs' in task['kwargs']:
             outputs = task['kwargs']['outputs']
             del filtered_kw['outputs']
-            t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
+            t = t + [b'outputs', id_for_memo(outputs, output_ref=True)]   # TODO: use append?
 
-        t = t + [id_for_memo(filtered_kw)]
+        t = t + [b'filtered_kw', id_for_memo(filtered_kw)]
 
-        t = t + [id_for_memo(task['func_name']),
+        t = t + [b'func_name', id_for_memo(task['func_name']),
+                 b'args',
                  id_for_memo(task['args'])]
 
+        logger.debug("Raw data to pass into checkpoint hash: {}".format(t))
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
