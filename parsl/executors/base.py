@@ -96,6 +96,19 @@ class ParslExecutor(metaclass=ABCMeta):
         """
         pass
 
+    @property
+    @abstractmethod
+    def status_polling_interval(self) -> int:
+        """Returns the interval, in seconds, at which the status method should be called. The
+        assumption here is that, once initialized, an executor's polling interval is fixed.
+        In practice, at least given the current situation, the executor uses a single task provider
+        and this method is a delegate to the corresponding method in the provider.
+
+        :return: the number of seconds to wait between calls to status() or zero if no polling
+        should be done
+        """
+        pass
+
     @abstractmethod
     def set_bad_state_and_fail_all(self, exception: Exception):
         """Allows external error handlers to mark this executor as irrecoverably bad and cause
