@@ -31,5 +31,6 @@ parsl.providers.PBSProProvider
       ~PBSProProvider.current_capacity
       ~PBSProProvider.label
       ~PBSProProvider.mem_per_node
+      ~PBSProProvider.status_polling_interval
    
    
