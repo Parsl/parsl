@@ -122,7 +122,7 @@ class BashApp(AppBase):
         sig = signature(func)
 
         for s in sig.parameters:
-            if sig.parameters[s].default != Parameter.empty:
+            if sig.parameters[s].default is not Parameter.empty:
                 self.kwargs[s] = sig.parameters[s].default
 
     def __call__(self, *args, **kwargs):
@@ -148,11 +148,11 @@ class BashApp(AppBase):
             dfk = self.data_flow_kernel
 
         app_fut = dfk.submit(wrap_error(update_wrapper(remote_side_bash_executor, self.func)),
-                             self.func, *args,
+                             app_args=(self.func, *args),
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
-                             **invocation_kwargs)
+                             app_kwargs=invocation_kwargs)
 
         return app_fut

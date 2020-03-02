@@ -71,11 +71,11 @@ class PythonApp(AppBase):
         else:
             func = self.func
 
-        app_fut = dfk.submit(func, *args,
+        app_fut = dfk.submit(func, app_args=args,
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
-                             **kwargs)
+                             app_kwargs=kwargs)
 
         return app_fut
