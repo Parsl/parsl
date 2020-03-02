@@ -133,6 +133,7 @@ class Database(object):
             'task_time_returned', DateTime, nullable=True)
         task_elapsed_time = Column('task_elapsed_time', Float, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
+        task_hashsum = Column('task_hashsum', Text, nullable=False)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
