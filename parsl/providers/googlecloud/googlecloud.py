@@ -250,3 +250,7 @@ class GoogleCloudProvider():
         zone = self.zone
 
         return compute.instances().delete(project=project, zone=zone, instance=name).execute()
+
+    @property
+    def status_polling_interval(self):
+        return 60
