@@ -697,3 +697,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def goodbye(self):
         self.teardown()
+
+    @property
+    def status_polling_interval(self):
+        return 60
