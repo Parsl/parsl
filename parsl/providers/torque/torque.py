@@ -124,7 +124,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             job_id = parts[0]  # likely truncated
             for long_job_id in job_ids:
                 if long_job_id.startswith(job_id):
-                    logger.debug(f'coersed jobid {job_id} -> {long_job_id}')
+                    logger.debug('coerced job_id %s -> %s', job_id, long_job_id)
                     job_id = long_job_id
                     break
             state = translate_table.get(parts[4], JobState.UNKNOWN)
