@@ -187,7 +187,7 @@ class DataFlowKernel(object):
         Create the dictionary that will be included in the log.
         """
 
-        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'fail_count', 'status',
+        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
                            'id', 'time_submitted', 'time_returned', 'executor']
 
         task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
@@ -713,6 +713,7 @@ class DataFlowKernel(object):
                     'func_name': func.__name__,
                     'fn_hash': fn_hash,
                     'memoize': cache,
+                    'hashsum': None,
                     'exec_fu': None,
                     'fail_count': 0,
                     'fail_history': [],
