@@ -31,5 +31,6 @@ parsl.providers.GoogleCloudProvider
    .. autosummary::
    
       ~GoogleCloudProvider.current_capacity
+      ~GoogleCloudProvider.status_polling_interval
    
    

@@ -159,3 +159,7 @@ class PBSProProvider(TorqueProvider):
             logger.error(message)
 
         return job_id
+
+    @property
+    def status_polling_interval(self):
+        return 60
