@@ -21,4 +21,10 @@ parsl.providers.JetstreamProvider
 
    
    
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~JetstreamProvider.status_polling_interval
+   
    

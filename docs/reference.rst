@@ -29,8 +29,6 @@ Reference guide
     parsl.data_provider.rsync.RSyncStaging
     parsl.executors.base.ParslExecutor
     parsl.executors.ThreadPoolExecutor
-    parsl.executors.IPyParallelExecutor
-    parsl.executors.ipp_controller.Controller
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.ExtremeScaleExecutor

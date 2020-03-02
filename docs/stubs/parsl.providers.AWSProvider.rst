@@ -44,5 +44,6 @@ parsl.providers.AWSProvider
       ~AWSProvider.current_capacity
       ~AWSProvider.label
       ~AWSProvider.mem_per_node
+      ~AWSProvider.status_polling_interval
    
    
