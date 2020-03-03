@@ -133,6 +133,7 @@ class Database(object):
             'task_time_returned', DateTime, nullable=True)
         task_elapsed_time = Column('task_elapsed_time', Float, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
+        task_hashsum = Column('task_hashsum', Text, nullable=False)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
@@ -222,21 +223,24 @@ class DatabaseManager(object):
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
                                                                 priority_queue, 'priority', self._kill_event,),
-                                                            name="Monitoring-migrate-priority"
+                                                            name="Monitoring-migrate-priority",
+                                                            daemon=True,
                                                             )
         self._priority_queue_pull_thread.start()
 
         self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                         args=(
                                                             node_queue, 'node', self._kill_event,),
-                                                        name="Monitoring-migrate-node"
+                                                        name="Monitoring-migrate-node",
+                                                        daemon=True,
                                                         )
         self._node_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
                                                                 resource_queue, 'resource', self._kill_event,),
-                                                            name="Monitoring-migrate-resource"
+                                                            name="Monitoring-migrate-resource",
+                                                            daemon=True,
                                                             )
         self._resource_queue_pull_thread.start()
 
@@ -458,11 +462,18 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
     return logger
 
 
-def dbm_starter(priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
     dbm = DatabaseManager(*args, **kwargs)
-    dbm.start(priority_msgs, node_msgs, resource_msgs)
+    dbm.logger.info("Starting dbm in dbm starter")
+    try:
+        dbm.start(priority_msgs, node_msgs, resource_msgs)
+    except Exception as e:
+        dbm.logger.exception("dbm.start exception")
+        exception_q.put(("DBM", str(e)))
+
+    dbm.logger.info("End of dbm_starter")

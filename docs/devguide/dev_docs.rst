@@ -124,14 +124,6 @@ ThreadPoolExecutor
 .. autoclass:: parsl.executors.threads.ThreadPoolExecutor
    :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled
 
-IPyParallelExecutor
--------------------
-
-.. warning:: Deprecated as of `v0.9.0`
-
-.. autoclass:: parsl.executors.ipp.IPyParallelExecutor
-   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd
-
 HighThroughputExecutor
 ----------------------
 
@@ -418,13 +410,6 @@ FlowControl
 
 .. autoclass:: parsl.dataflow.flow_control.FlowControl
    :members:
-
-FlowNoControl
--------------
-
-.. autoclass:: parsl.dataflow.flow_control.FlowNoControl
-   :members:
-   :special-members:
 
 
 Timer

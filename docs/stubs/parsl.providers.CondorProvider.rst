@@ -31,5 +31,6 @@ parsl.providers.CondorProvider
       ~CondorProvider.current_capacity
       ~CondorProvider.label
       ~CondorProvider.mem_per_node
+      ~CondorProvider.status_polling_interval
    
    

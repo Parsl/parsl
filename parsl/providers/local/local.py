@@ -206,6 +206,10 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     def label(self):
         return self._label
 
+    @property
+    def status_polling_interval(self):
+        return 5
+
 
 if __name__ == "__main__":
 
