@@ -138,6 +138,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         # Execute_wait failed. Do no update
         if retcode != 0:
+            logger.warning("squeue failed with non-zero exit code {} - see https://github.com/Parsl/parsl/issues/1588".format(retcode))
             return
 
         jobs_missing = list(self.resources.keys())
