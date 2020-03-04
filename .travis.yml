@@ -79,8 +79,8 @@ script:
     # database manager log file or monitoring hub log file. It would be better if
     # the tests themselves failed immediately when there was a monitoring error, but
     # in the absence of that, this is a dirty way to check.
-    - ! grep  ERROR runinfo*/*/database_manager.log
-    - ! grep  ERROR runinfo*/*/hub.log
+    - bash -c '! grep ERROR runinfo*/*/database_manager.log'
+    - bash -c '! grep ERROR runinfo*/*/hub.log'
 
     # check that 'all' install target works, even though we aren't doing any further
     # testing of what is installed
