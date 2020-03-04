@@ -147,12 +147,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
                 status = translate_table.get(parts[4], JobState.UNKNOWN)
+                logger.debug("Updating job {} with slurm status {} to parsl status {}".format(job_id, parts[4], status))
                 self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
+            logger.debug("Updating missing job {} to completed tatus".format(job_id))
             self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.slurm"):
