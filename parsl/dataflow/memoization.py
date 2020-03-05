@@ -146,21 +146,32 @@ class Memoizer(object):
         """
         # Function name TODO: Add fn body later
 
+        t = []
+
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
-        if 'outputs' in task['kwargs']:
-            newkw = task['kwargs'].copy()
-            outputs = task['kwargs']['outputs']
-            del newkw['outputs']
-            kw_id = id_for_memo(newkw) + id_for_memo(outputs, output_ref=True)
-        else:
-            newkw = task['kwargs']
-            kw_id = id_for_memo(newkw)
+        # kwargs listed in ignore_for_cache will also be removed
 
-        t = [id_for_memo(task['func_name']),
-             id_for_memo(task['fn_hash']),
-             id_for_memo(task['args']),
-             kw_id]
+        filtered_kw = task['kwargs'].copy()
+
+        ignore_list = task['ignore_for_cache']
+
+        logger.debug("Ignoring these kwargs for checkpointing: {}".format(ignore_list))
+        for k in ignore_list:
+            logger.debug("Ignoring kwarg {}".format(k))
+            del filtered_kw[k]
+
+        if 'outputs' in task['kwargs']:
+            outputs = task['kwargs']['outputs']
+            del filtered_kw['outputs']
+            t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
+
+        t = t + [id_for_memo(filtered_kw)]
+
+        t = t + [id_for_memo(task['func_name']),
+                 id_for_memo(task['fn_hash']),
+                 id_for_memo(task['args'])]
+
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
