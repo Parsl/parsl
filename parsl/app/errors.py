@@ -115,27 +115,6 @@ class BadStdStreamFile(ParslError):
         return self.__repr__()
 
 
-class DependencyError(ParslError):
-    """Error raised at the end of app execution due to missing output files.
-
-    Contains:
-    reason(string)
-    outputs(List of strings/files..)
-    """
-
-    def __init__(self, dependent_exceptions, reason, outputs):
-        super().__init__(reason)
-        self.dependent_exceptions = dependent_exceptions
-        self.reason = reason
-        self.outputs = outputs
-
-    def __repr__(self):
-        return "Missing Outputs: {0}, Reason:{1}".format(self.outputs, self.reason)
-
-    def __str__(self):
-        return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
-
-
 class RemoteExceptionWrapper:
     def __init__(self, e_type, e_value, traceback):
 
