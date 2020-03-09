@@ -167,5 +167,5 @@ A Bash app can only return results via files specified via ``outputs``, ``stderr
 
 If the Bash app exits with Unix exit code 0, then the AppFuture will complete. If the Bash app
 exits with any other code, this will be treated as a failure, and the AppFuture will instead
-contain an AppFailure exception. The Unix exit code can be accessed through the
-`exitcode` attribute of that AppFailure.
+contain an BashExitFailure exception. The Unix exit code can be accessed through the
+`exitcode` attribute of that BashExitFailure.

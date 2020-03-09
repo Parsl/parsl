@@ -80,7 +80,7 @@ Exceptions
 
 .. autoclass:: parsl.app.errors.AppBadFormatting
 
-.. autoclass:: parsl.app.errors.AppFailure
+.. autoclass:: parsl.app.errors.BashExitFailure
 
 .. autoclass:: parsl.app.errors.MissingOutputs
 
