@@ -39,7 +39,7 @@ class ShutdownRequest(Exception):
 
 
 class ManagerLost(Exception):
-    ''' Task lost due to worker loss. Worker is considered lost when multiple heartbeats
+    ''' Task lost due to manager loss. Manager is considered lost when multiple heartbeats
     have been missed.
     '''
     def __init__(self, manager_id, hostname):
@@ -48,7 +48,7 @@ class ManagerLost(Exception):
         self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of Manager {} on host {}".format(self.manager_id, self.hostname)
+        return "Task failure due to loss of manager {} on host {}".format(self.manager_id.decode(), self.hostname)
 
     def __str__(self):
         return self.__repr__()
