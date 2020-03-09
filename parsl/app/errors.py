@@ -43,13 +43,11 @@ class AppFailure(AppException):
     Contains:
     reason(string)
     exitcode(int)
-    retries(int/None)
     """
 
-    def __init__(self, reason, exitcode, retries=None):
+    def __init__(self, reason, exitcode):
         self.reason = reason
         self.exitcode = exitcode
-        self.retries = retries
 
 
 class AppTimeout(AppException):
