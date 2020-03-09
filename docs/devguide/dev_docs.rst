@@ -411,13 +411,6 @@ FlowControl
 .. autoclass:: parsl.dataflow.flow_control.FlowControl
    :members:
 
-FlowNoControl
--------------
-
-.. autoclass:: parsl.dataflow.flow_control.FlowNoControl
-   :members:
-   :special-members:
-
 
 Timer
 -----

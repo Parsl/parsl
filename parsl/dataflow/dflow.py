@@ -119,11 +119,13 @@ class DataFlowKernel(object):
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py', 'typeguard.py']
+                parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
                     break
+            else:
+                self.workflow_name = "unnamed"
 
         self.workflow_version = str(self.time_began.replace(microsecond=0))
         if self.monitoring is not None and self.monitoring.workflow_version is not None:
@@ -187,7 +189,7 @@ class DataFlowKernel(object):
         Create the dictionary that will be included in the log.
         """
 
-        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'fail_count', 'status',
+        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
                            'id', 'time_submitted', 'time_returned', 'executor']
 
         task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
@@ -202,19 +204,17 @@ class DataFlowKernel(object):
         stdout_spec = self.tasks[task_id]['kwargs'].get('stdout', None)
         stderr_spec = self.tasks[task_id]['kwargs'].get('stderr', None)
         try:
-            stdout_name, stdout_mode = get_std_fname_mode('stdout', stdout_spec)
+            stdout_name, _ = get_std_fname_mode('stdout', stdout_spec)
         except Exception as e:
             logger.warning("Incorrect stdout format {} for Task {}".format(stdout_spec, task_id))
-            stdout_name, stdout_mode = str(e), None
+            stdout_name = str(e)
         try:
-            stderr_name, stderr_mode = get_std_fname_mode('stderr', stderr_spec)
+            stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
         except Exception as e:
             logger.warning("Incorrect stderr format {} for Task {}".format(stderr_spec, task_id))
-            stderr_name, stderr_mode = str(e), None
-        stdout_spec = ";".join((stdout_name, stdout_mode)) if stdout_mode else stdout_name
-        stderr_spec = ";".join((stderr_name, stderr_mode)) if stderr_mode else stderr_name
-        task_log_info['task_stdout'] = stdout_spec
-        task_log_info['task_stderr'] = stderr_spec
+            stderr_name = str(e)
+        task_log_info['task_stdout'] = stdout_name
+        task_log_info['task_stderr'] = stderr_name
         task_log_info['task_fail_history'] = None
         if self.tasks[task_id]['fail_history'] is not None:
             task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
@@ -330,7 +330,7 @@ class DataFlowKernel(object):
 
                 self.tasks[task_id]['app_fu'].set_result(future.result())
             except Exception as e:
-                if future.retries_left > 0:
+                if self.tasks[task_id]['retries_left'] > 0:
                     # ignore this exception, because assume some later
                     # parent executor, started external to this class,
                     # will provide the answer
@@ -429,8 +429,8 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
+                self.tasks[task_id]['retries_left'] = 0
                 exec_fu = Future()
-                exec_fu.retries_left = 0
                 exec_fu.set_exception(DependencyError(exceptions,
                                                       task_id,
                                                       None))
@@ -494,7 +494,7 @@ class DataFlowKernel(object):
             task_log_info = self._create_task_log_info(task_id, 'lazy')
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-        exec_fu.retries_left = self._config.retries - \
+        self.tasks[task_id]['retries_left'] = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
@@ -648,7 +648,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, app_kwargs={}):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=[], app_kwargs={}):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -671,6 +671,7 @@ class DataFlowKernel(object):
             - fn_hash (Str) : Hash of the function and inputs
                     Default=None
             - cache (Bool) : To enable memoization or not
+            - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
@@ -713,9 +714,11 @@ class DataFlowKernel(object):
                     'func_name': func.__name__,
                     'fn_hash': fn_hash,
                     'memoize': cache,
+                    'hashsum': None,
                     'exec_fu': None,
                     'fail_count': 0,
                     'fail_history': [],
+                    'ignore_for_cache': ignore_for_cache,
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,

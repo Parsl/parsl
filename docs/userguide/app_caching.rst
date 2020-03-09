@@ -44,6 +44,22 @@ exception at invocation.
 Mechanisms to hash new types can be registered by a workflow by using the
 parsl.dataflow.memoization.id_for_memo single dispatch function.
 
+
+Ignoring some arguments
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Some app invocation inputs can be ignored for the purposes of determining if
+two invocations are the same. This can be useful when generating log file
+names automatically based on time or run information. The names of keyword
+arguments to ignore can be specified as an ``ignore_for_cache``
+parameter to the decorator:
+.. code-block:: python
+
+   @bash_app(cache=True, ignore_for_cache=['stdout'])
+   def hello (msg, stdout=None):
+       return 'echo {}'.format(msg)
+
+
 Caveats
 ^^^^^^^
 
