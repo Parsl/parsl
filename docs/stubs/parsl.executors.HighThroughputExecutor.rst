@@ -43,6 +43,7 @@ parsl.executors.HighThroughputExecutor
       ~HighThroughputExecutor.provider
       ~HighThroughputExecutor.run_dir
       ~HighThroughputExecutor.scaling_enabled
+      ~HighThroughputExecutor.status_polling_interval
       ~HighThroughputExecutor.tasks
    
    
