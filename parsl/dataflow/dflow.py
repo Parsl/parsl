@@ -879,13 +879,16 @@ class DataFlowKernel(object):
         """
 
         logger.info("Waiting for all remaining tasks to complete")
-        for task_id in self.tasks:
+        for task_id in list(self.tasks):
             # .exception() is a less exception throwing way of
             # waiting for completion than .result()
-            fut = self.tasks[task_id]['app_fu']
-            if not fut.done():
-                logger.debug("Waiting for task {} to complete".format(task_id))
-                fut.exception()
+            if task_id not in self.tasks:
+                logger.debug("Task {} no longer in task list".format(task_id))
+            else:
+                fut = self.tasks[task_id]['app_fu']
+                if not fut.done():
+                    logger.debug("Waiting for task {} to complete".format(task_id))
+                    fut.exception()
         logger.info("All remaining tasks completed")
 
     def cleanup(self):
