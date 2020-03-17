@@ -820,7 +820,7 @@ class DataFlowKernel(object):
 
         total_summarized = sum(keytasks.values())
         if total_summarized != self.task_count:
-            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but task counters registered {} tasks".format(
+            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but task counter registered {} tasks".format(
                 total_summarized, self.task_count))
         logger.info("End of summary")
 
