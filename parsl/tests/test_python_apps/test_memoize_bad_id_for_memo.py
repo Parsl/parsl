@@ -37,15 +37,17 @@ def sleep(t):
 def test_python_unmemoizable():
     """Testing behaviour when an unmemoizable parameter is used
     """
+    fut = noop_app(Unmemoizable())
     with pytest.raises(ValueError):
-        noop_app(Unmemoizable())
+        fut.result()
 
 
 def test_python_failing_memoizer():
     """Testing behaviour when id_for_memo raises an exception
     """
+    fut = noop_app(FailingMemoizable())
     with pytest.raises(FailingMemoizerTestError):
-        noop_app(FailingMemoizable())
+        fut.result()
 
 
 def test_python_unmemoizable_after_dep():
