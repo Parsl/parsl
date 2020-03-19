@@ -47,6 +47,9 @@ setup(
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
                'parsl/executors/workqueue/workqueue_worker.py',
+               'parsl/executors/workqueue/python_package_analyze',
+               'parsl/executors/workqueue/python_package_run',
+               'parsl/executors/workqueue/python_package_create',
     ],
 
     extras_require=extras_require,
