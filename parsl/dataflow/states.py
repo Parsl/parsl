@@ -7,15 +7,16 @@ class States(IntEnum):
     pending = 0
     runnable = 1
     running = 2
-    done = 3
+    exec_done = 3
     failed = 4
     dep_fail = 5
     retry = 6
     launched = 7
+    memo_done = 8
 
 
 # states from which we will never move to another state
-FINAL_STATES = [States.done, States.failed, States.dep_fail]
+FINAL_STATES = [States.exec_done, States.memo_done, States.failed, States.dep_fail]
 
 # states which are final and which indicate a failure. This must
 # be a subset of FINAL_STATES

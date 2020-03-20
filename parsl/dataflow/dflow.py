@@ -94,6 +94,7 @@ class DataFlowKernel(object):
         # Monitoring
         self.run_id = str(uuid4())
         self.tasks_completed_count = 0
+        self.tasks_memo_completed_count = 0
         self.tasks_failed_count = 0
         self.tasks_dep_fail_count = 0
 
@@ -203,6 +204,8 @@ class DataFlowKernel(object):
         task_log_info['task_status_name'] = self.tasks[task_id]['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
         task_log_info['tasks_completed_count'] = self.tasks_completed_count
+        task_log_info['tasks_memo_completed_count'] = self.tasks_memo_completed_count
+        task_log_info['from_memo'] = self.tasks[task_id]['from_memo']
         task_log_info['task_inputs'] = str(self.tasks[task_id]['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(self.tasks[task_id]['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = self.tasks[task_id]['kwargs'].get('stdin', None)
@@ -304,10 +307,15 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['time_returned'] = datetime.datetime.now()
 
         else:
-            self.tasks[task_id]['status'] = States.done
-            self.tasks_completed_count += 1
+            if self.tasks[task_id]['from_memo']:
+                self.tasks[task_id]['status'] = States.memo_done
+                self.tasks_memo_completed_count += 1
+                logger.info("Task {} completed by memoization".format(task_id))
+            else:
+                self.tasks[task_id]['status'] = States.exec_done
+                self.tasks_completed_count += 1
+                logger.info("Task {} completed by execution".format(task_id))
 
-            logger.info("Task {} completed".format(task_id))
             self.tasks[task_id]['time_returned'] = datetime.datetime.now()
 
         if self.tasks[task_id]['app_fu'].stdout is not None:
@@ -476,8 +484,10 @@ class DataFlowKernel(object):
         hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if hit:
             logger.info("Reusing cached result for task {}".format(task_id))
+            self.tasks[task_id]['from_memo'] = True
             return memo_fu
 
+        self.tasks[task_id]['from_memo'] = False
         executor_label = self.tasks[task_id]["executor"]
         try:
             executor = self.executors[executor_label]
@@ -724,6 +734,7 @@ class DataFlowKernel(object):
                     'exec_fu': None,
                     'fail_count': 0,
                     'fail_history': [],
+                    'from_memo': None,
                     'ignore_for_checkpointing': ignore_for_checkpointing,
                     'status': States.unsched,
                     'id': task_id,
@@ -816,7 +827,8 @@ class DataFlowKernel(object):
         for tid in self.tasks:
             keytasks[self.tasks[tid]['status']] += 1
         # Fetch from counters since tasks get wiped
-        keytasks[States.done] = self.tasks_completed_count
+        keytasks[States.exec_done] = self.tasks_completed_count
+        keytasks[States.memo_done] = self.tasks_memo_completed_count
         keytasks[States.failed] = self.tasks_failed_count
         keytasks[States.dep_fail] = self.tasks_dep_fail_count
 
