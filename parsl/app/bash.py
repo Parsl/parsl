@@ -18,7 +18,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     from parsl import set_file_logger
     from parsl.utils import get_std_fname_mode
 
-    logbase = "."
+    logbase = "/tmp"
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     # make this name unique per invocation so that each invocation can
