@@ -432,8 +432,7 @@ class DataFlowKernel(object):
                 self.tasks[task_id]['retries_left'] = 0
                 exec_fu = Future()
                 exec_fu.set_exception(DependencyError(exceptions,
-                                                      task_id,
-                                                      None))
+                                                      task_id))
 
             if exec_fu:
 
