@@ -84,9 +84,9 @@ Exceptions
 
 .. autoclass:: parsl.app.errors.MissingOutputs
 
-.. autoclass:: parsl.app.errors.DependencyError
-
 .. autoclass:: parsl.dataflow.error.DataFlowException
+
+.. autoclass:: parsl.dataflow.error.DependencyError
 
 .. autoclass:: parsl.dataflow.error.DuplicateTaskError
 
