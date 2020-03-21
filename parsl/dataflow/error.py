@@ -16,13 +16,6 @@ class DuplicateTaskError(DataFlowException):
     """
 
 
-class MissingFutError(DataFlowException):
-    """Raised when a particular future is not found within the dataflowkernel's datastructures.
-
-    Deprecated.
-    """
-
-
 class BadCheckpoint(DataFlowException):
     """Error raised at the end of app execution due to missing output files.
 
