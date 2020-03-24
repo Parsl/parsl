@@ -77,10 +77,10 @@ class LocalChannel(Channel, RepresentationMixin):
             logger.warning("Execution of command '{}' failed due to \n{}".format(cmd, e))
             raise
 
-        return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
+        return retcode, stdout.decode("utf-8"), stderr.decode("utf-8")
 
     def execute_no_wait(self, cmd, walltime, envs={}):
-        ''' Synchronously execute a commandline string on the shell.
+        """ Synchronously execute a commandline string on the shell.
 
         Args:
             - cmd (string) : Commandline string to execute
@@ -93,15 +93,15 @@ class LocalChannel(Channel, RepresentationMixin):
 
         Raises:
          None.
-        '''
+        """
         current_env = copy.deepcopy(self._envs)
         current_env.update(envs)
 
         try:
             proc = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
                 cwd=self.userhome,
                 env=current_env,
                 shell=True,
