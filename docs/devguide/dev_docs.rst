@@ -90,8 +90,6 @@ Exceptions
 
 .. autoclass:: parsl.dataflow.error.DuplicateTaskError
 
-.. autoclass:: parsl.dataflow.error.MissingFutError
-
 DataFlowKernel
 ==============
 
