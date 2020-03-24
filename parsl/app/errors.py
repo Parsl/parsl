@@ -89,9 +89,6 @@ class MissingOutputs(ParslError):
     def __repr__(self):
         return "Missing Outputs: {0}, Reason:{1}".format(self.outputs, self.reason)
 
-    def __str__(self):
-        return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
-
 
 class BadStdStreamFile(ParslError):
     """Error raised due to bad filepaths specified for STDOUT/ STDERR.
