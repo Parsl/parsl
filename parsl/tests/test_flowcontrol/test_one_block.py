@@ -31,10 +31,6 @@ class OneShotLocalProvider(LocalProvider):
         self.recorded_submits += 1
         return super().submit(*args, **kwargs)
 
-    def status(self, *args, **kwargs):
-        logger.info("Status check delay")
-        return super().status(*args, **kwargs)
-
     status_polling_interval = 600
 
 
