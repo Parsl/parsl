@@ -28,6 +28,11 @@ def get_foo_x(a, b=bar, c=None):
     return b.x
 
 
+@bash_app
+def get_foo_x_bash(a, b=bar, c=None):
+    return "echo {}".format(b.x)
+
+
 data = pd.DataFrame({'x': [None, 2, [3]]})
 
 

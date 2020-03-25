@@ -111,6 +111,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         '''
 
+        job_ids = list(self.resources.keys())
         job_id_list = ' '.join(self.resources.keys())
 
         jobs_missing = list(self.resources.keys())
@@ -120,7 +121,12 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             parts = line.split()
             if not parts or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
                 continue
-            job_id = parts[0]
+            job_id = parts[0]  # likely truncated
+            for long_job_id in job_ids:
+                if long_job_id.startswith(job_id):
+                    logger.debug('coerced job_id %s -> %s', job_id, long_job_id)
+                    job_id = long_job_id
+                    break
             state = translate_table.get(parts[4], JobState.UNKNOWN)
             self.resources[job_id]['status'] = JobStatus(state)
             jobs_missing.remove(job_id)
@@ -235,6 +241,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
             rets = [False for i in job_ids]
 
         return rets
+
+    @property
+    def status_polling_interval(self):
+        return 60
 
 
 if __name__ == "__main__":

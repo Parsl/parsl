@@ -43,9 +43,6 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def submit(self, func: Callable, *args: Any, **kwargs: Any) -> Future:
         """Submit.
-
-        The value returned must be a Future, with the further requirements that
-        it must be possible to assign a retries_left member slot to that object.
         """
         pass
 
@@ -93,6 +90,19 @@ class ParslExecutor(metaclass=ABCMeta):
         """Return the status of all jobs/blocks currently known to this executor.
 
         :return: a dictionary mapping job ids to status strings
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def status_polling_interval(self) -> int:
+        """Returns the interval, in seconds, at which the status method should be called. The
+        assumption here is that, once initialized, an executor's polling interval is fixed.
+        In practice, at least given the current situation, the executor uses a single task provider
+        and this method is a delegate to the corresponding method in the provider.
+
+        :return: the number of seconds to wait between calls to status() or zero if no polling
+        should be done
         """
         pass
 

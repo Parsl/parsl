@@ -36,6 +36,7 @@ parsl.executors.base.ParslExecutor
       ~ParslExecutor.hub_port
       ~ParslExecutor.run_dir
       ~ParslExecutor.scaling_enabled
+      ~ParslExecutor.status_polling_interval
       ~ParslExecutor.tasks
    
    

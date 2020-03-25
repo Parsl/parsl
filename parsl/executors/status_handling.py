@@ -38,6 +38,13 @@ class StatusHandlingExecutor(ParslExecutor):
     def _set_provider(self, provider: ExecutionProvider):
         self._provider = provider
 
+    @property
+    def status_polling_interval(self):
+        if self._provider is None:
+            return 0
+        else:
+            return self._provider.status_polling_interval
+
     @abstractmethod
     def _get_job_ids(self) -> List[object]:
         raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
@@ -85,6 +92,10 @@ class NoStatusHandlingExecutor(ParslExecutor):
     def __init__(self):
         super().__init__()
         self._tasks = {}  # type: Dict[object, Future]
+
+    @property
+    def status_polling_interval(self):
+        return -1
 
     @property
     def bad_state_is_set(self):

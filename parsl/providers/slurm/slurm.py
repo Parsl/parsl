@@ -255,6 +255,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.resources.extend([{'job_id': job_id, 'status': JobStatus(JobState.PENDING), 'size': 1}])
         return True
 
+    @property
+    def status_polling_interval(self):
+        return 60
+
 
 if __name__ == "__main__":
 
