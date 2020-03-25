@@ -119,11 +119,13 @@ class DataFlowKernel(object):
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py', 'typeguard.py']
+                parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
                     break
+            else:
+                self.workflow_name = "unnamed"
 
         self.workflow_version = str(self.time_began.replace(microsecond=0))
         if self.monitoring is not None and self.monitoring.workflow_version is not None:
@@ -328,7 +330,7 @@ class DataFlowKernel(object):
 
                 self.tasks[task_id]['app_fu'].set_result(future.result())
             except Exception as e:
-                if future.retries_left > 0:
+                if self.tasks[task_id]['retries_left'] > 0:
                     # ignore this exception, because assume some later
                     # parent executor, started external to this class,
                     # will provide the answer
@@ -427,11 +429,10 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
+                self.tasks[task_id]['retries_left'] = 0
                 exec_fu = Future()
-                exec_fu.retries_left = 0
                 exec_fu.set_exception(DependencyError(exceptions,
-                                                      task_id,
-                                                      None))
+                                                      task_id))
 
             if exec_fu:
 
@@ -492,7 +493,7 @@ class DataFlowKernel(object):
             task_log_info = self._create_task_log_info(task_id, 'lazy')
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-        exec_fu.retries_left = self._config.retries - \
+        self.tasks[task_id]['retries_left'] = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
@@ -646,7 +647,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, app_kwargs={}):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=[], app_kwargs={}):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -669,6 +670,7 @@ class DataFlowKernel(object):
             - fn_hash (Str) : Hash of the function and inputs
                     Default=None
             - cache (Bool) : To enable memoization or not
+            - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
@@ -715,6 +717,7 @@ class DataFlowKernel(object):
                     'exec_fu': None,
                     'fail_count': 0,
                     'fail_history': [],
+                    'ignore_for_cache': ignore_for_cache,
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
@@ -875,13 +878,16 @@ class DataFlowKernel(object):
         """
 
         logger.info("Waiting for all remaining tasks to complete")
-        for task_id in self.tasks:
+        for task_id in list(self.tasks):
             # .exception() is a less exception throwing way of
             # waiting for completion than .result()
-            fut = self.tasks[task_id]['app_fu']
-            if not fut.done():
-                logger.debug("Waiting for task {} to complete".format(task_id))
-                fut.exception()
+            if task_id not in self.tasks:
+                logger.debug("Task {} no longer in task list".format(task_id))
+            else:
+                fut = self.tasks[task_id]['app_fu']
+                if not fut.done():
+                    logger.debug("Waiting for task {} to complete".format(task_id))
+                    fut.exception()
         logger.info("All remaining tasks completed")
 
     def cleanup(self):
