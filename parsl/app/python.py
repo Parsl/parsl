@@ -35,12 +35,13 @@ def timeout(f, seconds):
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all'):
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=[]):
         super().__init__(
             wrap_error(func),
             data_flow_kernel=data_flow_kernel,
             executors=executors,
-            cache=cache
+            cache=cache,
+            ignore_for_cache=ignore_for_cache
         )
 
     def __call__(self, *args, **kwargs):
@@ -70,10 +71,11 @@ class PythonApp(AppBase):
         else:
             func = self.func
 
-        app_fut = dfk.submit(func, *args,
+        app_fut = dfk.submit(func, app_args=args,
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
-                             **kwargs)
+                             ignore_for_cache=self.ignore_for_cache,
+                             app_kwargs=kwargs)
 
         return app_fut

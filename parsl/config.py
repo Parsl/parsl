@@ -20,7 +20,7 @@ class Config(RepresentationMixin):
     ----------
     executors : list of ParslExecutor, optional
         List of executor instances to use. Possible executors include :class:`~parsl.executors.threads.ThreadPoolExecutor`,
-        :class:`~parsl.executors.ipp.IPyParallelExecutor`, or :class:`~parsl.executors.swift_t.TurbineExecutor`. Default
+        or :class:`~parsl.executors.swift_t.TurbineExecutor`. Default
         is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
     app_cache : bool, optional
         Enable app caching. Default is True.

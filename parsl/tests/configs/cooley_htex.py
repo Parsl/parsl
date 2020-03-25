@@ -1,11 +1,10 @@
-# Untested
-
-from parsl.providers import CobaltProvider
-from parsl.launchers import SingleNodeLauncher
+# UNTESTED
 
 from parsl.config import Config
-from parsl.executors.ipp import IPyParallelExecutor
-from parsl.executors.ipp_controller import Controller
+from parsl.executors import HighThroughputExecutor
+from parsl.addresses import address_by_hostname
+from parsl.launchers import MpiRunLauncher
+from parsl.providers import CobaltProvider
 from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
@@ -17,23 +16,25 @@ from .user_opts import user_opts
 
 config = Config(
     executors=[
-        IPyParallelExecutor(
-            label='cooley_local_single_node',
-            workers_per_node=1,
+        HighThroughputExecutor(
+            label="cooley_htex",
+            worker_debug=False,
+            cores_per_worker=1,
+            address=address_by_hostname(),
             provider=CobaltProvider(
-                launcher=SingleNodeLauncher(),
-                nodes_per_block=1,
-                init_blocks=1,
-                max_blocks=1,
-                walltime="00:05:00",
+                queue='debug',
+                account=user_opts['cooley']['account'],
+                launcher=MpiRunLauncher(),  # UNTESTED COMPONENT
                 scheduler_options=user_opts['cooley']['scheduler_options'],
                 worker_init=user_opts['cooley']['worker_init'],
-                queue='debug',
-                account=user_opts['cooley']['account']
+                init_blocks=1,
+                max_blocks=1,
+                min_blocks=1,
+                nodes_per_block=4,
+                cmd_timeout=60,
+                walltime='00:10:00',
             ),
-            controller=Controller(public_ip="10.230.100.210")
         )
-
     ],
     run_dir=get_rundir(),
 )
