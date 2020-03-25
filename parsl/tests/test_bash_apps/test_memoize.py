@@ -47,13 +47,15 @@ def test_bash_memoization_keywords(n=2):
     if os.path.exists(temp_filename):
         os.remove(temp_filename)
 
+    temp_file = File(temp_filename)
+
     print("Launching: ", n)
-    x = fail_on_presence_kw(outputs=[temp_filename], foo={"a": 1, "b": 2})
+    x = fail_on_presence_kw(outputs=[temp_file], foo={"a": 1, "b": 2})
     x.result()
 
     d = {}
     for i in range(0, n):
-        d[i] = fail_on_presence_kw(outputs=[temp_filename], foo={"b": 2, "a": 1})
+        d[i] = fail_on_presence_kw(outputs=[temp_file], foo={"b": 2, "a": 1})
 
     for i in d:
         assert d[i].exception() is None
