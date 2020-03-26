@@ -12,9 +12,6 @@ class Channel(metaclass=ABCMeta):
           cmd, wtime    ------->|  execute_wait
           (ec, stdout, stderr)<-|---+
                                 |
-          cmd, wtime    ------->|  execute_no_wait
-          (ec, stdout, stderr)<-|---+
-                                |
           src, dst_dir  ------->|  push_file
              dst_path  <--------|----+
                                 |
@@ -57,22 +54,6 @@ class Channel(metaclass=ABCMeta):
 
         Returns:
             - Channel script dir
-        '''
-        pass
-
-    @abstractmethod
-    def execute_no_wait(self, cmd, walltime, envs={}, *args, **kwargs):
-        ''' Execute asynchronousely without waiting for exitcode
-
-        Args:
-            - cmd (string): Command string to execute over the channel
-            - walltime (int) : Timeout in seconds
-
-        KWargs:
-            - envs (dict) : Environment variables to push to the remote side
-
-        Returns:
-            - the type of return value is channel specific
         '''
         pass
 
