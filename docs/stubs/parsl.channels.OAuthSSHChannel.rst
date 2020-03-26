@@ -16,7 +16,6 @@ parsl.channels.OAuthSSHChannel
       ~OAuthSSHChannel.__init__
       ~OAuthSSHChannel.abspath
       ~OAuthSSHChannel.close
-      ~OAuthSSHChannel.execute_no_wait
       ~OAuthSSHChannel.execute_wait
       ~OAuthSSHChannel.isdir
       ~OAuthSSHChannel.makedirs
