@@ -133,11 +133,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
         job_id_list = ','.join(self.resources.keys())
         cmd = "squeue --job {0}".format(job_id_list)
-
+        logger.debug("Executing sqeueue")
         retcode, stdout, stderr = self.execute_wait(cmd)
+        logger.debug("sqeueue returned")
 
         # Execute_wait failed. Do no update
         if retcode != 0:
+            logger.warning("squeue failed with non-zero exit code {} - see https://github.com/Parsl/parsl/issues/1588".format(retcode))
             return
 
         jobs_missing = list(self.resources.keys())
@@ -146,12 +148,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
                 status = translate_table.get(parts[4], JobState.UNKNOWN)
+                logger.debug("Updating job {} with slurm status {} to parsl status {}".format(job_id, parts[4], status))
                 self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
+            logger.debug("Updating missing job {} to completed status".format(missing_job))
             self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.slurm"):
