@@ -43,9 +43,6 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def submit(self, func: Callable, *args: Any, **kwargs: Any) -> Future:
         """Submit.
-
-        The value returned must be a Future, with the further requirements that
-        it must be possible to assign a retries_left member slot to that object.
         """
         pass
 
