@@ -83,7 +83,6 @@ Reference guide
     parsl.dataflow.error.DataFlowException
     parsl.dataflow.error.ConfigurationError
     parsl.dataflow.error.DuplicateTaskError
-    parsl.dataflow.error.MissingFutError
     parsl.dataflow.error.BadCheckpoint
     parsl.dataflow.error.DependencyError
     parsl.launchers.error.BadLauncher

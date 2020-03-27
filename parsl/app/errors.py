@@ -43,13 +43,11 @@ class AppFailure(AppException):
     Contains:
     reason(string)
     exitcode(int)
-    retries(int/None)
     """
 
-    def __init__(self, reason, exitcode, retries=None):
+    def __init__(self, reason, exitcode):
         self.reason = reason
         self.exitcode = exitcode
-        self.retries = retries
 
 
 class AppTimeout(AppException):
@@ -62,15 +60,11 @@ class BashAppNoReturn(AppException):
 
     Contains:
     reason(string)
-    exitcode(int)
-    retries(int/None)
     """
 
-    def __init__(self, reason, exitcode=-21, retries=None):
+    def __init__(self, reason):
         super().__init__(reason)
         self.reason = reason
-        self.exitcode = exitcode
-        self.retries = retries
 
 
 class MissingOutputs(ParslError):
@@ -88,9 +82,6 @@ class MissingOutputs(ParslError):
 
     def __repr__(self):
         return "Missing Outputs: {0}, Reason:{1}".format(self.outputs, self.reason)
-
-    def __str__(self):
-        return "Reason:{0} Missing:{1}".format(self.reason, self.outputs)
 
 
 class BadStdStreamFile(ParslError):
