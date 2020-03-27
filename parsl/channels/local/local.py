@@ -79,42 +79,6 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
-    def execute_no_wait(self, cmd, walltime, envs={}):
-        ''' Synchronously execute a commandline string on the shell.
-
-        Args:
-            - cmd (string) : Commandline string to execute
-            - walltime (int) : walltime in seconds, this is not really used now.
-
-        Returns a tuple containing:
-
-           - pid : process id
-           - proc : a subprocess.Popen object
-
-        Raises:
-         None.
-        '''
-        current_env = copy.deepcopy(self._envs)
-        current_env.update(envs)
-
-        try:
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=self.userhome,
-                env=current_env,
-                shell=True,
-                preexec_fn=os.setpgrp
-            )
-            pid = proc.pid
-
-        except Exception as e:
-            logger.warning("Execution of command '{}' failed due to \n{}".format(cmd, e))
-            raise
-
-        return pid, proc
-
     def push_file(self, source, dest_dir):
         ''' If the source files dirpath is the same as dest_dir, a copy
         is not necessary, and nothing is done. Else a copy is made.
