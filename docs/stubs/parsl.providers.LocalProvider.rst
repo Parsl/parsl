@@ -30,5 +30,6 @@ parsl.providers.LocalProvider
       ~LocalProvider.current_capacity
       ~LocalProvider.label
       ~LocalProvider.mem_per_node
+      ~LocalProvider.status_polling_interval
    
    

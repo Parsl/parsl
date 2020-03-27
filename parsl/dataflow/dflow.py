@@ -23,7 +23,7 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, DuplicateTaskError
-from parsl.dataflow.flow_control import FlowControl, FlowNoControl, Timer
+from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -119,11 +119,13 @@ class DataFlowKernel(object):
         else:
             for frame in inspect.stack():
                 fname = os.path.basename(str(frame.filename))
-                parsl_file_names = ['dflow.py', 'typeguard.py']
+                parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
                     break
+            else:
+                self.workflow_name = "unnamed"
 
         self.workflow_version = str(self.time_began.replace(microsecond=0))
         if self.monitoring is not None and self.monitoring.workflow_version is not None:
@@ -157,8 +159,13 @@ class DataFlowKernel(object):
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
-        self.data_manager = DataManager(self)
+        # the flow control keeps track of executors and provider task states;
+        # must be set before executors are added since add_executors calls
+        # flowcontrol.add_executors.
+        self.flowcontrol = FlowControl(self)
+
         self.executors = {}
+        self.data_manager = DataManager(self)
         data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='data_manager')
         self.add_executors(config.executors + [data_manager_executor])
 
@@ -171,13 +178,6 @@ class DataFlowKernel(object):
                 logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60), name="Checkpoint")
 
-        # if we use the functionality of dynamically adding executors
-        # all executors should be managed.
-        if any([x.managed for x in config.executors]):
-            self.flowcontrol = FlowControl(self)
-        else:
-            self.flowcontrol = FlowNoControl(self)
-
         self.task_count = 0
         self.tasks = {}
         self.submitter_lock = threading.Lock()
@@ -189,7 +189,7 @@ class DataFlowKernel(object):
         Create the dictionary that will be included in the log.
         """
 
-        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'fail_count', 'status',
+        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
                            'id', 'time_submitted', 'time_returned', 'executor']
 
         task_log_info = {"task_" + k: self.tasks[task_id][k] for k in info_to_monitor}
@@ -204,19 +204,17 @@ class DataFlowKernel(object):
         stdout_spec = self.tasks[task_id]['kwargs'].get('stdout', None)
         stderr_spec = self.tasks[task_id]['kwargs'].get('stderr', None)
         try:
-            stdout_name, stdout_mode = get_std_fname_mode('stdout', stdout_spec)
+            stdout_name, _ = get_std_fname_mode('stdout', stdout_spec)
         except Exception as e:
             logger.warning("Incorrect stdout format {} for Task {}".format(stdout_spec, task_id))
-            stdout_name, stdout_mode = str(e), None
+            stdout_name = str(e)
         try:
-            stderr_name, stderr_mode = get_std_fname_mode('stderr', stderr_spec)
+            stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
         except Exception as e:
             logger.warning("Incorrect stderr format {} for Task {}".format(stderr_spec, task_id))
-            stderr_name, stderr_mode = str(e), None
-        stdout_spec = ";".join((stdout_name, stdout_mode)) if stdout_mode else stdout_name
-        stderr_spec = ";".join((stderr_name, stderr_mode)) if stderr_mode else stderr_name
-        task_log_info['task_stdout'] = stdout_spec
-        task_log_info['task_stderr'] = stderr_spec
+            stderr_name = str(e)
+        task_log_info['task_stdout'] = stdout_name
+        task_log_info['task_stderr'] = stderr_name
         task_log_info['task_fail_history'] = None
         if self.tasks[task_id]['fail_history'] is not None:
             task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
@@ -332,7 +330,7 @@ class DataFlowKernel(object):
 
                 self.tasks[task_id]['app_fu'].set_result(future.result())
             except Exception as e:
-                if future.retries_left > 0:
+                if self.tasks[task_id]['retries_left'] > 0:
                     # ignore this exception, because assume some later
                     # parent executor, started external to this class,
                     # will provide the answer
@@ -431,11 +429,10 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_id, 'lazy')
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
+                self.tasks[task_id]['retries_left'] = 0
                 exec_fu = Future()
-                exec_fu.retries_left = 0
                 exec_fu.set_exception(DependencyError(exceptions,
-                                                      task_id,
-                                                      None))
+                                                      task_id))
 
             if exec_fu:
 
@@ -496,7 +493,7 @@ class DataFlowKernel(object):
             task_log_info = self._create_task_log_info(task_id, 'lazy')
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-        exec_fu.retries_left = self._config.retries - \
+        self.tasks[task_id]['retries_left'] = self._config.retries - \
             self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
@@ -650,7 +647,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, *args, executors='all', fn_hash=None, cache=False, **kwargs):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=[], app_kwargs={}):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -665,15 +662,16 @@ class DataFlowKernel(object):
 
         Args:
             - func : A function object
-            - *args : Args to the function
 
         KWargs :
+            - app_args : Args to the function
             - executors (list or string) : List of executors this call could go to.
                     Default='all'
             - fn_hash (Str) : Hash of the function and inputs
                     Default=None
             - cache (Bool) : To enable memoization or not
-            - kwargs (dict) : Rest of the kwargs to the fn passed as dict.
+            - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
+            - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
                (AppFuture) [DataFutures,]
@@ -695,19 +693,19 @@ class DataFlowKernel(object):
 
         # The below uses func.__name__ before it has been wrapped by any staging code.
 
-        label = kwargs.get('label')
+        label = app_kwargs.get('label')
         for kw in ['stdout', 'stderr']:
-            if kw in kwargs:
-                if kwargs[kw] == parsl.AUTO_LOGNAME:
-                    kwargs[kw] = os.path.join(
-                            self.run_dir,
-                            'task_logs',
-                            str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
-                            'task_{}_{}{}.{}'.format(
-                                str(task_id).zfill(4),
-                                func.__name__,
-                                '' if label is None else '_{}'.format(label),
-                                kw)
+            if kw in app_kwargs:
+                if app_kwargs[kw] == parsl.AUTO_LOGNAME:
+                    app_kwargs[kw] = os.path.join(
+                                self.run_dir,
+                                'task_logs',
+                                str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
+                                'task_{}_{}{}.{}'.format(
+                                    str(task_id).zfill(4),
+                                    func.__name__,
+                                    '' if label is None else '_{}'.format(label),
+                                    kw)
                     )
 
         task_def = {'depends': None,
@@ -715,9 +713,11 @@ class DataFlowKernel(object):
                     'func_name': func.__name__,
                     'fn_hash': fn_hash,
                     'memoize': cache,
+                    'hashsum': None,
                     'exec_fu': None,
                     'fail_count': 0,
                     'fail_history': [],
+                    'ignore_for_cache': ignore_for_cache,
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
@@ -726,14 +726,14 @@ class DataFlowKernel(object):
         app_fu = AppFuture(task_def)
 
         # Transform remote input files to data futures
-        args, kwargs, func = self._add_input_deps(executor, args, kwargs, func)
+        app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
-        func = self._add_output_deps(executor, args, kwargs, app_fu, func)
+        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
 
         task_def.update({
-                    'args': args,
+                    'args': app_args,
                     'func': func,
-                    'kwargs': kwargs,
+                    'kwargs': app_kwargs,
                     'app_fu': app_fu})
 
         if task_id in self.tasks:
@@ -743,7 +743,7 @@ class DataFlowKernel(object):
             self.tasks[task_id] = task_def
 
         # Get the list of dependencies for the task
-        depends = self._gather_all_deps(args, kwargs)
+        depends = self._gather_all_deps(app_args, app_kwargs)
         self.tasks[task_id]['depends'] = depends
 
         depend_descs = []
@@ -865,8 +865,7 @@ class DataFlowKernel(object):
 
             self.executors[executor.label] = executor
             executor.start()
-        if hasattr(self, 'flowcontrol') and isinstance(self.flowcontrol, FlowControl):
-            self.flowcontrol.strategy.add_executors(executors)
+        self.flowcontrol.add_executors(executors)
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
@@ -879,13 +878,16 @@ class DataFlowKernel(object):
         """
 
         logger.info("Waiting for all remaining tasks to complete")
-        for task_id in self.tasks:
+        for task_id in list(self.tasks):
             # .exception() is a less exception throwing way of
             # waiting for completion than .result()
-            fut = self.tasks[task_id]['app_fu']
-            if not fut.done():
-                logger.debug("Waiting for task {} to complete".format(task_id))
-                fut.exception()
+            if task_id not in self.tasks:
+                logger.debug("Task {} no longer in task list".format(task_id))
+            else:
+                fut = self.tasks[task_id]['app_fu']
+                if not fut.done():
+                    logger.debug("Waiting for task {} to complete".format(task_id))
+                    fut.exception()
         logger.info("All remaining tasks completed")
 
     def cleanup(self):
