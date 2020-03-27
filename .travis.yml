@@ -73,7 +73,7 @@ script:
 
     # these tests run with specific configs loaded within the tests themselves.
     # This mode is enabled with: --config local
-    - pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order --log-cli-level=INFO
+    - pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
     # check that documentation stubs are up to date, as they are compiled from
     # python code but stored in version control rather than generated as part
