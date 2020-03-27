@@ -16,7 +16,7 @@ class LocalChannel(Channel, RepresentationMixin):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__(self, userhome=".", envs={}, script_dir=None, **kwargs):
+    def __init__(self, userhome=".", envs={}, script_dir=None):
         ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:

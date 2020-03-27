@@ -215,9 +215,7 @@ class DataFlowKernel(object):
             stderr_name = str(e)
         task_log_info['task_stdout'] = stdout_name
         task_log_info['task_stderr'] = stderr_name
-        task_log_info['task_fail_history'] = None
-        if self.tasks[task_id]['fail_history'] is not None:
-            task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
+        task_log_info['task_fail_history'] = ",".join(self.tasks[task_id]['fail_history'])
         task_log_info['task_depends'] = None
         if self.tasks[task_id]['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t.tid) for t in self.tasks[task_id]['depends']
@@ -399,7 +397,7 @@ class DataFlowKernel(object):
         task_record = self.tasks.get(task_id)
         if task_record is None:
             # assume this task has already been processed to completion
-            logger.info("Task {} has no task record. Assuming it has already been processed to completion.".format(task_id))
+            logger.debug("Task {} has no task record. Assuming it has already been processed to completion.".format(task_id))
             return
         if self._count_deps(task_record['depends']) == 0:
 
