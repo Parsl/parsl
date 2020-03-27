@@ -31,7 +31,7 @@ try:
     from work_queue import WORK_QUEUE_OUTPUT
     from work_queue import WORK_QUEUE_RESULT_SUCCESS
     from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
-    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX
+    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
     from work_queue import cctools_debug_flags_set
     from work_queue import cctools_debug_config_file
 except ImportError:
@@ -105,12 +105,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         q.specify_password_file(project_password_file)
     if autolabel:
         q.enable_monitoring()
-        q.specify_category_mode(None, WORK_QUEUE_ALLOCATION_MODE_MAX)
-        # We're running individual functions so try a relatively
-        # small allocation first. Hungrier tasks will be automatically
-        # retried with higher limits.
-        q.specify_category_max_resources(None,
-                {'cores': 1, 'memory':  1024, 'disk': 10240})
+        q.tune('category-steady-n-tasks', 1)
+        q.specify_category_mode('parsl-default', WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
 
     # Only write logs when the wq_log_dir is specified, which it most likely will be
     if wq_log_dir is not None:
@@ -200,6 +196,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
                 continue
+
+            t.specify_category('parsl-default')
 
             # Specify environment variables for the task
             if env is not None:
