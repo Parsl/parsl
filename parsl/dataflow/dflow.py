@@ -507,7 +507,8 @@ class DataFlowKernel(object):
             - kwargs (Dict) : Kwargs to app function
         """
 
-        # Return if the task is _*_stage_in
+        # Return if the task is a data management task, rather than doing
+        # data managament on it.
         if executor == 'data_manager':
             return args, kwargs, func
 
@@ -817,7 +818,7 @@ class DataFlowKernel(object):
 
         total_summarized = sum(keytasks.values())
         if total_summarized != self.task_count:
-            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but task counters registered {} tasks".format(
+            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but task counter registered {} tasks".format(
                 total_summarized, self.task_count))
         logger.info("End of summary")
 
