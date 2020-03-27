@@ -16,7 +16,6 @@ parsl.channels.SSHChannel
       ~SSHChannel.__init__
       ~SSHChannel.abspath
       ~SSHChannel.close
-      ~SSHChannel.execute_no_wait
       ~SSHChannel.execute_wait
       ~SSHChannel.isdir
       ~SSHChannel.makedirs
