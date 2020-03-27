@@ -38,7 +38,8 @@ class BadCheckpoint(DataFlowException):
 
 
 class DependencyError(DataFlowException):
-    """Error raised at the end of app execution due to missing output files.
+    """Error raised if an app cannot run because there was an error
+       in a dependency.
 
     Args:
          - dependent_exceptions: List of exceptions

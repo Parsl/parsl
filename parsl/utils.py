@@ -41,7 +41,7 @@ def get_all_checkpoints(rundir="runinfo"):
        - rundir(str) : Path to the runinfo directory
 
     Returns:
-       - a list suitable for the checkpointFiles parameter of DataFlowKernel
+       - a list suitable for the checkpointFiles parameter of the DataFlowKernel
          constructor
 
     """
@@ -74,7 +74,7 @@ def get_last_checkpoint(rundir="runinfo"):
        - rundir(str) : Path to the runinfo directory
 
     Returns:
-     - a list suitable for checkpointFiles parameter of DataFlowKernel
+     - a list suitable for the checkpointFiles parameter of the DataFlowKernel
        constructor, with 0 or 1 elements
 
     """
