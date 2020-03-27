@@ -155,6 +155,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             input_files = item["input_files"]
             output_files = item["output_files"]
             std_files = item["std_files"]
+            category = item["category"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
@@ -197,7 +198,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 logger.error("Unable to create task: {}".format(e))
                 continue
 
-            t.specify_category('parsl-default')
+            if category is None:
+                t.specify_category('parsl-default')
+            else:
+                t.specify_category(category)
+                if autolabel:
+                    q.specify_category_mode(category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
 
             # Specify environment variables for the task
             if env is not None:
@@ -688,6 +694,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         logger.debug("Placing task {} on message queue".format(task_id))
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
+               "category": func.__qualname__,
                "result_loc": function_result_file,
                "input_files": input_files,
                "output_files": output_files,
