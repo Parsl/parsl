@@ -45,7 +45,7 @@ class TaskStatusPoller(object):
         self._strategy = Strategy(dfk)
 
     def poll(self, tasks=None, kind=None):
-        logging.debug("Polling")
+        logger.debug("Polling")
         self._update_state()
         self._strategy.strategize(self._poll_items, tasks)
 
@@ -57,6 +57,6 @@ class TaskStatusPoller(object):
     def add_executors(self, executors: Sequence[ParslExecutor]):
         for executor in executors:
             if executor.status_polling_interval > 0:
-                logging.debug("Adding executor {}".format(executor))
+                logger.debug("Adding executor {}".format(executor))
                 self._poll_items.append(PollItem(executor))
         self._strategy.add_executors(executors)
