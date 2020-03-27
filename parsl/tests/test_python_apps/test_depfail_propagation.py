@@ -3,6 +3,7 @@ from parsl.dataflow.error import DependencyError
 
 from parsl.tests.logfixtures import permit_severe_log
 
+
 @python_app
 def fails():
     raise ValueError("Deliberate failure")
