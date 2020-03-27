@@ -65,6 +65,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           data_dir=".",
                           full=False,
                           autolabel=False,
+                          autocategory=False,
                           cancel_value=multiprocessing.Value('i', 1),
                           port=WORK_QUEUE_DEFAULT_PORT,
                           wq_log_dir=None,
@@ -198,7 +199,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 logger.error("Unable to create task: {}".format(e))
                 continue
 
-            if category is None:
+            if not autocategory or category is None:
                 t.specify_category('parsl-default')
             else:
                 t.specify_category(category)
@@ -441,6 +442,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Use the Resource Monitor to automatically determine resource
             labels based on observed task behavior.
 
+        autocategory: bool
+            Place each app in its own category by default. If all
+            invocations of an app have similar performance characteristics,
+            this will provide a reasonable set of categories automatically.
+
         init_command: str
             Command line to run before executing a task in a worker.
             Default is ''.
@@ -462,6 +468,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  shared_fs=False,
                  source=False,
                  autolabel=False,
+                 autocategory=False,
                  init_command="",
                  full_debug=True,
                  see_worker_output=False):
@@ -490,6 +497,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.full = full_debug
         self.source = source
         self.autolabel = autolabel
+        self.autocategory = autocategory
         self.cancel_value = multiprocessing.Value('i', 1)
 
         # Resolve ambiguity when password and password_file are both specified
@@ -533,6 +541,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "see_worker_output": self.worker_output,
                                  "full": self.full,
                                  "autolabel": self.autolabel,
+                                 "autocategory": self.autocategory,
                                  "cancel_value": self.cancel_value,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
