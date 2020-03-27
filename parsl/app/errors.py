@@ -43,13 +43,11 @@ class AppFailure(AppException):
     Contains:
     reason(string)
     exitcode(int)
-    retries(int/None)
     """
 
-    def __init__(self, reason, exitcode, retries=None):
+    def __init__(self, reason, exitcode):
         self.reason = reason
         self.exitcode = exitcode
-        self.retries = retries
 
 
 class AppTimeout(AppException):
@@ -62,15 +60,11 @@ class BashAppNoReturn(AppException):
 
     Contains:
     reason(string)
-    exitcode(int)
-    retries(int/None)
     """
 
-    def __init__(self, reason, exitcode=-21, retries=None):
+    def __init__(self, reason):
         super().__init__(reason)
         self.reason = reason
-        self.exitcode = exitcode
-        self.retries = retries
 
 
 class MissingOutputs(ParslError):
