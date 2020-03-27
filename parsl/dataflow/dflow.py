@@ -399,7 +399,7 @@ class DataFlowKernel(object):
         task_record = self.tasks.get(task_id)
         if task_record is None:
             # assume this task has already been processed to completion
-            logger.info("Task {} has no task record. Assuming it has already been processed to completion.".format(task_id))
+            logger.debug("Task {} has no task record. Assuming it has already been processed to completion.".format(task_id))
             return
         if self._count_deps(task_record['depends']) == 0:
 
