@@ -25,7 +25,7 @@ extras_require = {
     'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
-    'azure' : ['azure', 'msrestazure'],
+    'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
 }
 extras_require['all'] = sum(extras_require.values(), [])
