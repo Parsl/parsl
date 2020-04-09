@@ -61,12 +61,19 @@ For Developers
 
     $ git clone https://github.com/Parsl/parsl
 
-2. Install::
+
+2. Build and Test::
+
+    $ make   # show all available makefile targets
+    $ make deps # create a local pip .venv environment
+    $ make test # make tests
+
+3. Install::
 
     $ cd parsl
     $ python3 setup.py install
 
-3. Use Parsl!
+4. Use Parsl!
 
 Requirements
 ============
