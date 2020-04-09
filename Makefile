@@ -77,5 +77,4 @@ coverage: test ## show the coverage report
 
 .PHONY: clean
 clean: ## remove venv and flush out
-	rm -rf $(VENV) dist *.egg-info .mypy_cache
-	find . -name __pycache__ | xargs --no-run-if-empty rm -rf
+	rm -rf $(VENV) dist *.egg-info .mypy_cache build .pytest_cache .coverage
