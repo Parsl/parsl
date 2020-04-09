@@ -17,6 +17,9 @@ def format_time(value):
         return str(datetime.timedelta(seconds=round(value)))
     elif isinstance(value, datetime.datetime):
         return value.replace(microsecond=0)
+    elif isinstance(value, datetime.timedelta):
+        rounded_timedelta = datetime.timedelta(days=value.days, seconds=value.seconds)
+        return rounded_timedelta
     else:
         print("Incorrect time format (neither float nor datetime object): {}, type: {}".format(value, type(value)))  # TODO: use logging
         return "Incorrect time format"
