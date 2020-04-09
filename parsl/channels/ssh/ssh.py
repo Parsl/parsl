@@ -26,7 +26,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, port=22):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, port=22, key_filename=None):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -40,6 +40,7 @@ class SSHChannel(Channel, RepresentationMixin):
             - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
             - envs (dict) : A dictionary of environment variables to be set when executing commands
+            - key_filename (string or list): the filename, or list of filenames, of optional private key(s)
 
         Raises:
         '''
@@ -72,6 +73,7 @@ class SSHChannel(Channel, RepresentationMixin):
                 allow_agent=True,
                 gss_auth=gssapi_auth,
                 gss_kex=gssapi_auth,
+                key_filename=key_filename
             )
             t = self.ssh_client.get_transport()
             self.sftp_client = paramiko.SFTPClient.from_transport(t)
