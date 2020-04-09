@@ -62,7 +62,7 @@ For Developers
     $ git clone https://github.com/Parsl/parsl
 
 
-3. Build and Test::
+2. Build and Test::
 
     $ make   # show all available makefile targets
     $ make deps # create a local pip .venv environment
