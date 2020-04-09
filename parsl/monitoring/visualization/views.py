@@ -18,7 +18,8 @@ def format_time(value):
     elif isinstance(value, datetime.datetime):
         return value.replace(microsecond=0)
     else:
-        return "Incorrect time format found (neither float nor datetime.datetime object)"
+        print("Incorrect time format (neither float nor datetime object): {}, type: {}".format(value, type(value)))  # TODO: use logging
+        return "Incorrect time format"
 
 
 app.jinja_env.filters['timeformat'] = format_time
