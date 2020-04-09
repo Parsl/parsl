@@ -49,7 +49,7 @@ def test_mac_safe_queue_size():
 
     [task_q.put(i) for i in range(x)]
     assert task_q.empty() is False, "Task queue should not be empty"
-    assert task_q.qsize() == x, "Task queue should not be empty"
+    assert task_q.qsize() == x, "Task queue should be {}; instead got {}".format(x, task_q.qsize())
 
     p = multiprocessing.Process(target=consumer, args=(task_q, result_q,))
     p.start()
@@ -57,7 +57,7 @@ def test_mac_safe_queue_size():
     p.join()
     assert result_q.empty() is False, "Result queue should not be empty"
     qlen = result_q.qsize()
-    assert qlen == x + 1, "Result queue should be {} instead got {}".format(x + 1, qlen)
+    assert qlen == x + 1, "Result queue should be {}; instead got {}".format(x + 1, qlen)
 
 
 if __name__ == "__main__":
