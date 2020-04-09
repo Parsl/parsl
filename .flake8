@@ -19,4 +19,8 @@ per-file-ignores = parsl/monitoring/visualization/*:E741,
   # needed because this deliberately has undefined names in it
   parsl/tests/test_swift.py:F821,
   # test_ssh_errors.py really is broken
-  parsl/tests/integration/test_channels/test_ssh_errors.py:F821
+  parsl/tests/integration/test_channels/test_ssh_errors.py:F821,
+  # I had visualization problems with this import removed, which I need to
+  # investigate before pushing this to master. This exemption works around
+  # that.
+  parsl/monitoring/visualization/app.py:F401
