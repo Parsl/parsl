@@ -1,14 +1,12 @@
 SHELL := $(shell which bash) # Use bash instead of bin/sh as shell
-SYS_PYTHON := $(shell which python3 || echo ".python_is_missing")
+PYTHON := $(shell which python3 || echo ".python_is_missing")
 GIT := $(shell which git || echo ".git_is_missing")
+PYTEST := $(shell which pytest || echo ".pytest_is_missing")
+FLAKE8 := $(shell which flake8 || echo ".flake8 is missing")
+PIP := $(shell which pip || echo ".pip_is_missing")
+MYPY := $(VENV_BIN)/mypy $(shell which mypy || echo ".mypy_is_missing")
 CWD := $(shell pwd)
-VENV = $(CWD)/.venv
-VENV_BIN := $(VENV)/bin
-PIP := $(VENV_BIN)/pip3
-MYPY := $(VENV_BIN)/mypy
-DEPS := $(VENV)/.deps
-PYTHON := $(VENV_BIN)/python3
-PYTEST := $(VENV_BIN)/pytest
+DEPS := .deps
 WORKQUEUE_INSTALL := /tmp/cctools
 MPICH=mpich
 OPENMPI=openmpi
@@ -23,10 +21,7 @@ export MPI=$(MPICH)
 help: ## me
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-$(VENV):
-	$(SYS_PYTHON) -m venv $(VENV)
-
-$(DEPS): $(VENV) test-requirements.txt
+$(DEPS): test-requirements.txt
 	$(PIP) install --upgrade pip
 	$(PIP) install -r test-requirements.txt
 	touch $(DEPS)
@@ -40,7 +35,7 @@ lint: ## run linter script
 
 .PHONY: flake8
 flake8:  ## run flake
-	$(VENV_BIN)/flake8 parsl/
+	$(FLAKE8) parsl/
 
 .PHONY: clean_coverage
 clean_coverage:
@@ -105,4 +100,4 @@ coverage: test ## show the coverage report
 
 .PHONY: clean
 clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy caches, coverage info, etc
-	rm -rf $(VENV) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo_* $(WORKQUEUE_INSTALL)
+	rm -rf .venv $(DEPS) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo_* $(WORKQUEUE_INSTALL)

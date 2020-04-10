@@ -64,8 +64,10 @@ For Developers
 
 2. Build and Test::
 
+    $ python3 -m venv .venv  # create a virtual environment
+    $ source .venv/bin/activate  # activate it
     $ make   # show all available makefile targets
-    $ make deps # create a local pip .venv environment
+    $ make deps # install from test-requirements.txt
     $ make test # make tests
 
 3. Install::
