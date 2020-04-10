@@ -7,7 +7,7 @@ PIP := $(VENV_BIN)/pip
 DEPS := $(VENV)/.deps
 PYTHON := $(VENV_BIN)/python3
 PYTEST := $(VENV_BIN)/pytest
-export PATH := $(VENV_BIN):$(PATH)
+export PATH := parsl/executors/*/:$(VENV_BIN):$(PATH)
 
 .PHONY: help
 help: ## me
@@ -47,9 +47,9 @@ local_thread_test: $(DEPS) clean_coverage lint flake ## run all tests with local
 	$(PYTEST) parsl -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= --random-order
 
 
-.PHONY: local_thread_test
+.PHONY: htex_local_test
 htex_local_test: $(DEPS) clean_coverage lint flake ## run all tests with htex_local config
-	$(PYTEST) parsl -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= --random-order
+	 PYTHONPATH=.  $(PYTEST) parsl -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= --random-order
 
 
 .PHONY: tag
@@ -77,4 +77,4 @@ coverage: test ## show the coverage report
 
 .PHONY: clean
 clean: ## remove venv and flush out
-	rm -rf $(VENV) dist *.egg-info .mypy_cache build .pytest_cache .coverage
+	rm -rf $(VENV) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo_*
