@@ -79,6 +79,7 @@ workqueue_ex_test: $(DEPS) $(WORKQUEUE_INSTALL)  ## run all tests with workqueue
 
 .PHONY: config_local_test
 config_local_test: $(DEPS) ## run all tests with workqueue_ex config
+	$(PIP) install ".[extreme_scale]"
 	PYTHONPATH=. $(PYTEST) parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: test ## run all tests with all config types
