@@ -65,7 +65,8 @@ For Developers
 2. Build and Test::
 
     $ make   # show all available makefile targets
-    $ make virtualenv # create and activate virtual environment
+    $ make virtualenv # create a virtual environment
+    $ source .venv/bin/activate # activate the virtual environment
     $ make deps # create virtualenv and install from test-requirements.txt
     $ make test # make tests
     $ make clean # remove virtualenv and all test and build artifacts

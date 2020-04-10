@@ -21,7 +21,7 @@ VENV = .venv
 .PHONY: virtualenv
 virtualenv: ## create an activate a virtual env
 	test -f venv/bin/activate || $(PYTHON) -m venv $(VENV)
-	. .venv/bin/activate
+	echo "Run 'source $(VENV)/bin/activate' to activate the virtual environment"
 
 
 $(DEPS): virtualenv test-requirements.txt
