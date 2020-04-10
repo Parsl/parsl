@@ -7,11 +7,11 @@ WORKQUEUE_INSTALL := /tmp/cctools
 MPICH=mpich
 OPENMPI=openmpi
 EXECUTORS_PATH := $(shell ls -d parsl/executors/*/ | tr '\n' ':')
-export PATH := $(EXECUTORS_PATH):$(WORKQUEUE_INSTALL)/bin/:$(VENV_BIN):$(PATH)
+export PATH := $(EXECUTORS_PATH):$(WORKQUEUE_INSTALL)/bin/:$(PATH)
 export CCTOOLS_VERSION=7.0.11
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
-export MPI=$(MPICH)
+MPI=$(MPICH)
 
 .PHONY: help
 help: ## me
@@ -54,6 +54,7 @@ htex_local_test: $(DEPS) ## run all tests with htex_local config
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: $(DEPS) ## run all tests with htex_local config
+	echo "$(MPI)}"
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
 	pip3 install ".[extreme_scale,monitoring]"
 	PYTHONPATH=.  pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
@@ -61,12 +62,17 @@ htex_local_alternate_test: $(DEPS) ## run all tests with htex_local config
 $(WORKQUEUE_INSTALL):
 	parsl/executors/workqueue/install-workqueue.sh
 
+
+work_queue_procs := $(shell ps aux | grep -E -e "[0-9]+:[0-9]+ work_queue_worker" | tr -s ' ' | cut -f 2 -d " ")
+work_queue_killcmd := $(if $(work_queue_procs), "kill" "-3" $(procs), "echo" "no work_queue_workers to running")
+
 .PHONY: workqueue_ex_test
 workqueue_ex_test: $(DEPS) $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
 	pip3 install ".[extreme_scale]"
+	@$(work_queue_killcmd)
 	work_queue_worker localhost 9000  &> /dev/null &
 	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  pytest parsl -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order --bodge-dfk-per-test
-	kill -3 $(ps aux | grep -E -e "[0-9]+:[0-9]+ work_queue_worker" | tr -s ' ' | cut -f 2 -d " ")
+	@$(work_queue_killcmd)
 
 .PHONY: config_local_test
 config_local_test: $(DEPS) ## run all tests with workqueue_ex config
@@ -74,7 +80,7 @@ config_local_test: $(DEPS) ## run all tests with workqueue_ex config
 	PYTHONPATH=. pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: test ## run all tests with all config types
-test: $(DEPS) clean_coverage lint flake8 local_thread_test htex_local_test config_local_test htex_local_alternate_test workqueue_ex_test  ## run all tests
+test: $(DEPS) clean_coverage lint flake8 local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test  config_local_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag
