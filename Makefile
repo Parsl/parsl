@@ -1,5 +1,5 @@
 SHELL := $(shell which bash) # Use bash instead of bin/sh as shell
-SYS_PYTHON := $(shell which python3.7 || echo ".python_is_missing")
+SYS_PYTHON := $(shell which python3 || echo ".python_is_missing")
 GIT := $(shell which git || echo ".git_is_missing")
 CWD := $(shell pwd)
 VENV = .venv
