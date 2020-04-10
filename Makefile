@@ -1,10 +1,6 @@
 SHELL := $(shell which bash) # Use bash instead of bin/sh as shell
 PYTHON := $(shell which python3 || echo ".python_is_missing")
 GIT := $(shell which git || echo ".git_is_missing")
-PYTEST := $(shell which pytest || echo ".pytest_is_missing")
-FLAKE8 := $(shell which flake8 || echo ".flake8 is missing")
-PIP := $(shell which pip || echo ".pip_is_missing")
-MYPY := $(shell which mypy || echo ".mypy_is_missing")
 CWD := $(shell pwd)
 DEPS := .deps
 WORKQUEUE_INSTALL := /tmp/cctools
@@ -22,8 +18,8 @@ help: ## me
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 $(DEPS): test-requirements.txt
-	$(PIP) install --upgrade pip
-	$(PIP) install -r test-requirements.txt
+	pip3 install --upgrade pip
+	pip3 install -r test-requirements.txt
 	touch $(DEPS)
 
 .PHONY: deps
@@ -35,7 +31,7 @@ lint: ## run linter script
 
 .PHONY: flake8
 flake8:  ## run flake
-	$(FLAKE8) parsl/
+	flake8 parsl/
 
 .PHONY: clean_coverage
 clean_coverage:
@@ -44,38 +40,38 @@ clean_coverage:
 .PHONY: mypy
 mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/configs/
-	MYPYPATH=$(CWD)/mypy-stubs $(MYPY) parsl/tests/test*/
-	MYPYPATH=$(CWD)/mypy-stubs $(MYPY) parsl/tests/sites/
-	MYPYPATH=$(CWD)/mypy-stubs $(MYPY) parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/
+	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/test*/
+	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/sites/
+	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/
 
 .PHONY: local_thread_test
 local_thread_test: $(DEPS) ## run all tests with local_thread config
-	$(PYTEST) parsl -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= --random-order
+	pytest parsl -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: htex_local_test
 htex_local_test: $(DEPS) ## run all tests with htex_local config
-	PYTHONPATH=.  $(PYTEST) parsl -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= --random-order
+	PYTHONPATH=.  pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: $(DEPS) ## run all tests with htex_local config
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
-	$(PIP) install ".[extreme_scale,monitoring]"
-	PYTHONPATH=.  $(PYTEST) parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
+	pip3 install ".[extreme_scale,monitoring]"
+	PYTHONPATH=.  pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
 
 $(WORKQUEUE_INSTALL):
 	parsl/executors/workqueue/install-workqueue.sh
 
 .PHONY: workqueue_ex_test
 workqueue_ex_test: $(DEPS) $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
-	$(PIP) install ".[extreme_scale]"
+	pip3 install ".[extreme_scale]"
 	work_queue_worker localhost 9000  &> /dev/null &
-	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  $(PYTEST) parsl -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order --bodge-dfk-per-test
+	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  pytest parsl -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order --bodge-dfk-per-test
 	kill -3 $(ps aux | grep -E -e "[0-9]+:[0-9]+ work_queue_worker" | tr -s ' ' | cut -f 2 -d " ")
 
 .PHONY: config_local_test
 config_local_test: $(DEPS) ## run all tests with workqueue_ex config
-	$(PIP) install ".[extreme_scale]"
-	PYTHONPATH=. $(PYTEST) parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
+	pip3 install ".[extreme_scale]"
+	PYTHONPATH=. pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: test ## run all tests with all config types
 test: $(DEPS) clean_coverage lint flake8 local_thread_test htex_local_test config_local_test htex_local_alternate_test workqueue_ex_test  ## run all tests
@@ -96,7 +92,7 @@ deploy: ## deploy the distribution
 release: deps tag package deploy   ## create a release. To run, do a 'make VERSION="version string"  release'
 
 coverage: test ## show the coverage report
-	$(VENV_BIN)/coverage report
+	coverage report
 
 .PHONY: clean
 clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy caches, coverage info, etc
