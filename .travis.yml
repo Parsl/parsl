@@ -23,7 +23,7 @@ before_install:
 
 # install parsl with no optional extras
 install:
-    - pip install .
+    - make deps
 
 # Os tests
 os:
@@ -31,7 +31,6 @@ os:
 
 # command to run tests
 script:
-    - make deps
     - make flake8
     - make lint
 
@@ -75,4 +74,4 @@ script:
     #       sort out this commented out block appropriately.
 
     # prints report of coverage data stored in .coverage
-    - make coverage_report
+    - make coverage
