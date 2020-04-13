@@ -1,16 +1,11 @@
 import argparse
 
-import pytest
-
 import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
 local_config = config
-
-
-pytestmark = pytest.mark.skip('not asserting anything; hanging in Travis')
 
 
 @python_app
@@ -21,13 +16,7 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     s = sleep_dur + random.randint(-sleep_rand_max, sleep_rand_max)
 
     time.sleep(s)
-    x = float(random.randint(0, 100)) / 100
-    if x <= fail_prob:
-        # print("Fail")
-        raise Exception("App failure")
-    else:
-        pass
-        # print("Succeed")
+    raise Exception("App failure")
 
 
 def test_no_deps(numtasks=2):
@@ -115,9 +104,9 @@ def test_deps(numtasks=2):
         print("Caught the right exception")
         print("Exception : ", e)
     except Exception as e:
-        assert 5 == 1, "Expected DependencyError got : %s" % e
+        assert False, "Expected DependencyError but got: %s" % e
     else:
-        print("Shoot! no errors ")
+        raise RuntimeError("Expected DependencyError, but got no exception")
 
 
 if __name__ == "__main__":
