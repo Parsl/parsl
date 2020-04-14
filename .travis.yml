@@ -79,6 +79,16 @@ script:
     # testing of what is installed
     - pip install .[all]
 
+
+    # Check that parsl-visualize does not give errors.
+    # 'monitoring.db' needs to exist and have some interesting content in it
+    # which at time of writing comes from the htex_local_alternative test
+    # run.
+    - parsl-visualize &
+    # wget will return a failure code if any of the requested URLs don't return an HTTP 200 result
+    - wget http://127.0.0.1:8080/ --recursive --no-verbose --page-requisites --level=inf -e robots=off
+
+
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
     # - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
