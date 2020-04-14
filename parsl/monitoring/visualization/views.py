@@ -7,8 +7,6 @@ from parsl.monitoring.visualization.plots.default.workflow_plots import task_gan
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
 from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_efficiency, worker_efficiency
 
-dummy = True
-
 import datetime
 
 
@@ -20,7 +18,8 @@ def format_time(value):
     elif isinstance(value, datetime.datetime):
         return value.replace(microsecond=0)
     else:
-        return "Incorrect time format found (neither float nor datetime.datetime object)"
+        print("Incorrect time format (neither float nor datetime object): {}, type: {}".format(value, type(value)))  # TODO: use logging
+        return "Incorrect time format"
 
 
 app.jinja_env.filters['timeformat'] = format_time
