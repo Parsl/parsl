@@ -63,7 +63,7 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         """
         logger.debug("Submitting to threadpool executor")
-        r= self.executor.submit(*args, **kwargs)
+        r = self.executor.submit(*args, **kwargs)
         logger.debug("Ended submitting to threadpool executor")
         return r
 

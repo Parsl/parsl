@@ -220,7 +220,7 @@ class DataFlowKernel(object):
             stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
         except Exception as e:
             logger.warning("Incorrect stderr format {} for Task {}".format(stderr_spec, task_id))
-            stderr_name, stderr_mode = str(e), None
+            stderr_name = str(e)
         task_log_info['task_stdout'] = stdout_name
         task_log_info['task_stderr'] = stderr_name
         task_log_info['task_fail_history'] = None
