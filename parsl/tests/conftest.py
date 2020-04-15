@@ -235,6 +235,14 @@ def pytest_make_collect_report(collector):
         from _pytest import nose
         from _pytest.outcomes import Skipped
         skip_exceptions = (Skipped,) + nose.get_skip_exceptions()
+
+        # this test for KeyError will mark a test as skipped for every
+        # test that fails with a KeyError; it is intended to skip tests
+        # which fail a user options lookup, not tests which raise a
+        # key error as a genuine failure. Such genuine failures will be
+        # misreported as skips not fails.
+        # Maybe can inspect the stack trace and see if this is a keyerror
+        # directly in a parsl/tests/configs/ source file?
         if call.excinfo.errisinstance(KeyError):
             outcome = "skipped"
             r = collector._repr_failure_py(call.excinfo, "line").reprcrash
