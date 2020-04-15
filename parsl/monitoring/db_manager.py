@@ -33,6 +33,7 @@ else:
 
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
+TRY = 'try'
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
@@ -105,10 +106,10 @@ class Database:
         host = Column(Text, nullable=False)
         user = Column(Text, nullable=False)
         rundir = Column(Text, nullable=False)
+
         tasks_failed_count = Column(Integer, nullable=False)
         tasks_completed_count = Column(Integer, nullable=False)
 
-    # TODO: expand to full set of info
     class Status(Base):
         __tablename__ = STATUS
         task_id = Column(Integer, sa.ForeignKey(
@@ -116,6 +117,7 @@ class Database:
         task_status_name = Column(Text, nullable=False)
         timestamp = Column(DateTime, nullable=False)
         run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
+        try_id = Column('try_id', Integer, nullable=False)
         hostname = Column('hostname', Text, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id',
@@ -126,16 +128,8 @@ class Database:
         __tablename__ = TASK
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
-        hostname = Column('hostname', Text, nullable=True)
         task_depends = Column('task_depends', Text, nullable=True)
-        task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
-        task_time_submitted = Column(
-            'task_time_submitted', DateTime, nullable=True)
-        task_time_running = Column(
-            'task_time_running', DateTime, nullable=True)
-        task_time_returned = Column(
-            'task_time_returned', DateTime, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
         task_hashsum = Column('task_hashsum', Text, nullable=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
@@ -143,10 +137,39 @@ class Database:
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
+
+        task_time_returned = Column(
+            'task_time_returned', DateTime, nullable=True)
+
         task_fail_count = Column('task_fail_count', Integer, nullable=False)
-        task_fail_history = Column('task_fail_history', Text, nullable=True)
+
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id'),
+        )
+
+    class Try(Base):
+        __tablename__ = TRY
+        try_id = Column('try_id', Integer, nullable=False)
+        task_id = Column('task_id', Integer, nullable=False)
+        run_id = Column('run_id', Text, nullable=False)
+
+        hostname = Column('hostname', Text, nullable=True)
+
+        task_executor = Column('task_executor', Text, nullable=False)
+
+        task_time_submitted = Column(
+            'task_time_submitted', DateTime, nullable=True)
+
+        task_time_running = Column(
+            'task_time_running', DateTime, nullable=True)
+
+        task_try_time_returned = Column(
+            'task_try_time_returned', DateTime, nullable=True)
+
+        task_fail_history = Column('task_fail_history', Text, nullable=True)
+
+        __table_args__ = (
+            PrimaryKeyConstraint('try_id', 'task_id', 'run_id'),
         )
 
     class Node(Base):
@@ -163,11 +186,13 @@ class Database:
 
     class Resource(Base):
         __tablename__ = RESOURCE
+        try_id = Column('try_id', Integer, sa.ForeignKey(
+            'try.try_id'), nullable=False)
         task_id = Column('task_id', Integer, sa.ForeignKey(
             'task.task_id'), nullable=False)
-        timestamp = Column('timestamp', DateTime, nullable=False)
         run_id = Column('run_id', Text, sa.ForeignKey(
             'workflow.run_id'), nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
         resource_monitoring_interval = Column(
             'resource_monitoring_interval', Float, nullable=True)
         psutil_process_pid = Column(
@@ -193,7 +218,7 @@ class Database:
         psutil_process_status = Column(
             'psutil_process_status', Text, nullable=True)
         __table_args__ = (
-            PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
+            PrimaryKeyConstraint('try_id', 'task_id', 'run_id', 'timestamp'),
         )
 
 
@@ -262,6 +287,11 @@ class DatabaseManager:
         """
         inserted_tasks = set()  # type: Set[object]
 
+        """
+        like inserted_tasks but for task,try tuples
+        """
+        inserted_tries = set()  # type: Set[Any]
+
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
@@ -294,6 +324,7 @@ class DatabaseManager:
                 logger.debug(
                     "Got {} messages from priority queue".format(len(priority_messages)))
                 task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
+                try_update_messages, try_insert_messages, try_all_messages = [], [], []
                 for msg_type, msg in priority_messages:
                     if msg_type.value == MessageType.WORKFLOW_INFO.value:
                         if "python_version" in msg:   # workflow start message
@@ -310,7 +341,8 @@ class DatabaseManager:
                                          messages=[msg])
                             self.workflow_end = True
 
-                    else:                             # TASK_INFO message
+                    elif msg_type.value == MessageType.TASK_INFO.value:
+                        task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                         task_info_all_messages.append(msg)
                         if msg['task_id'] in inserted_tasks:
                             task_info_update_messages.append(msg)
@@ -318,31 +350,59 @@ class DatabaseManager:
                             inserted_tasks.add(msg['task_id'])
                             task_info_insert_messages.append(msg)
 
-                            # check if there is an left_message for this task
-                            if msg['task_id'] in deferred_resource_messages:
-                                reprocessable_first_resource_messages.append(
-                                    deferred_resource_messages.pop(msg['task_id']))
+                        try_all_messages.append(msg)
+                        if task_try_id in inserted_tries:
+                            try_update_messages.append(msg)
+                        else:
+                            inserted_tries.add(task_try_id)
+                            try_insert_messages.append(msg)
 
-                logger.debug(
-                    "Updating and inserting TASK_INFO to all tables")
+                            # check if there is a left_message for this task
+                            if task_try_id in deferred_resource_messages:
+                                reprocessable_first_resource_messages.append(
+                                    deferred_resource_messages.pop(task_try_id))
+                    else:
+                        raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
+
+                logger.debug("Updating and inserting TASK_INFO to all tables")
+                logger.debug("Updating {} TASK_INFO into workflow table".format(len(task_info_update_messages)))
+                self._update(table=WORKFLOW,
+                             columns=['run_id', 'tasks_failed_count',
+                                      'tasks_completed_count'],
+                             messages=task_info_all_messages)
 
                 if task_info_insert_messages:
                     self._insert(table=TASK, messages=task_info_insert_messages)
                     logger.debug(
                         "There are {} inserted task records".format(len(inserted_tasks)))
+
                 if task_info_update_messages:
-                    self._update(table=WORKFLOW,
-                                 columns=['run_id', 'tasks_failed_count',
-                                          'tasks_completed_count'],
-                                 messages=task_info_update_messages)
+                    logger.debug("Updating {} TASK_INFO into task table".format(len(task_info_update_messages)))
                     self._update(table=TASK,
                                  columns=['task_time_submitted',
                                           'task_time_returned',
                                           'run_id', 'task_id',
-                                          'task_fail_count',
-                                          'task_fail_history'],
+                                          'task_fail_count'],
                                  messages=task_info_update_messages)
+                logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
+
                 self._insert(table=STATUS, messages=task_info_all_messages)
+
+                if try_insert_messages:
+                    logger.debug("Inserting {} TASK_INFO to try table".format(len(try_insert_messages)))
+                    self._insert(table=TRY, messages=try_insert_messages)
+                    logger.debug(
+                        "There are {} inserted task records".format(len(inserted_tasks)))
+
+                if try_update_messages:
+                    logger.debug("Updating {} TASK_INFO into try table".format(len(try_update_messages)))
+                    self._update(table=TRY,
+                                 columns=['task_time_returned',
+                                          'run_id', 'task_id', 'try_id',
+                                          'task_fail_history',
+                                          'task_time_submitted',
+                                          'task_try_time_returned'],
+                                 messages=try_update_messages)
 
             """
             NODE_INFO messages
@@ -369,23 +429,24 @@ class DatabaseManager:
                     "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
                 self._insert(table=RESOURCE, messages=resource_messages)
                 for msg in resource_messages:
+                    task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                     if msg['first_msg']:
 
                         msg['task_status_name'] = States.running.name
                         msg['task_time_running'] = msg['timestamp']
 
-                        if msg['task_id'] in inserted_tasks:
+                        if task_try_id in inserted_tries:  # TODO: needs to become task_id and try_id, and check against inserted_tries
                             reprocessable_first_resource_messages.append(msg)
                         else:
-                            if msg['task_id'] in deferred_resource_messages:
+                            if task_try_id in deferred_resource_messages:
                                 logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
-                            deferred_resource_messages[msg['task_id']] = msg
+                            deferred_resource_messages[task_try_id] = msg
 
             if reprocessable_first_resource_messages:
                 self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
-                self._update(table=TASK,
+                self._update(table=TRY,
                              columns=['task_time_running',
-                                      'run_id', 'task_id',
+                                      'run_id', 'task_id', 'try_id',
                                       'hostname'],
                              messages=reprocessable_first_resource_messages)
 
