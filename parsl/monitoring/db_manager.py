@@ -208,7 +208,8 @@ class DatabaseManager(object):
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging.DEBUG)
+        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging.DEBUG,
+                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
 
         logger.debug("Initializing Database Manager process")
 
@@ -369,7 +370,7 @@ class DatabaseManager(object):
                                  messages=first_messages)
 
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
-        logger.info("[{}_queue_PULL_THREAD] Starting".format(queue_tag))
+        logger.info("Starting processing for queue {}".format(queue_tag))
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
             logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
