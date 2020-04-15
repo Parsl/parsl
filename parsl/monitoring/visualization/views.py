@@ -57,8 +57,8 @@ def workflow(workflow_id):
 
     df_status = pd.read_sql_query(
         "SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='%s'" % workflow_id, db.engine)
-    df_task = pd.read_sql_query("""SELECT task_id, task_func_name, task_time_submitted,
-                                task_time_returned, task_time_running from task
+    df_task = pd.read_sql_query("""SELECT task_id, task_func_name,
+                                task_time_returned from task
                                 WHERE run_id='%s'"""
                                 % (workflow_id), db.engine)
     task_summary = db.engine.execute(
