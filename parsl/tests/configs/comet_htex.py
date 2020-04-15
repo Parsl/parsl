@@ -4,8 +4,6 @@ from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_query
 
-from parsl.tests.utils import get_rundir
-
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either
 #       1) create a local `user_opts.py`, or
@@ -37,6 +35,5 @@ config = Config(
                 nodes_per_block=2,
             ),
         )
-    ],
-    run_dir=get_rundir()
+    ]
 )

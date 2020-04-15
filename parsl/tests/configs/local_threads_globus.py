@@ -2,7 +2,6 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import default_staging
 from parsl.data_provider.globus import GlobusStaging
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either
@@ -23,8 +22,7 @@ config = Config(
             working_dir=user_opts['globus']['path'],
             storage_access=storage_access
         )
-    ],
-    run_dir=get_rundir()
+    ]
 )
 
 remote_writeable = user_opts['globus']['remote_writeable']

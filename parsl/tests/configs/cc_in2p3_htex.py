@@ -3,7 +3,6 @@ from parsl.channels import LocalChannel
 from parsl.providers import GridEngineProvider
 from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_query
-from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either
@@ -28,6 +27,5 @@ config = Config(
                 worker_init=user_opts['cc_in2p3']['worker_init'],
             ),
         )
-    ],
-    run_dir=get_rundir(),
+    ]
 )

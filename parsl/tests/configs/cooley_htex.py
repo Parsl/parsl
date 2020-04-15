@@ -5,7 +5,6 @@ from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_hostname
 from parsl.launchers import MpiRunLauncher
 from parsl.providers import CobaltProvider
-from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either
@@ -35,6 +34,5 @@ config = Config(
                 walltime='00:10:00',
             ),
         )
-    ],
-    run_dir=get_rundir(),
+    ]
 )

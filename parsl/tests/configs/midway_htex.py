@@ -3,7 +3,6 @@ from parsl.channels import SSHChannel
 from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
 from parsl.executors import HighThroughputExecutor
-from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either
@@ -33,6 +32,5 @@ config = Config(
             ),
         )
 
-    ],
-    run_dir=get_rundir()
+    ]
 )
