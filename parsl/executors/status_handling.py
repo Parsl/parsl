@@ -87,16 +87,17 @@ class StatusHandlingExecutor(ParslExecutor):
     def provider(self):
         return self._provider
 
-    def _filter_scale_in_ids(self, to_kill, r):
-        assert len(to_kill) == len(r)
+    def _filter_scale_in_ids(self, to_kill, killed):
+        assert len(to_kill) == len(killed)
 
-        l = []
+        result = []
 
-        for i in range(len(r)):
-            if r[i]:
-                l.append(to_kill[i])
+        for i in range(len(killed)):
+            if killed[i]:
+                result.append(to_kill[i])
 
-        return l
+        return result
+
 
 class NoStatusHandlingExecutor(ParslExecutor):
     def __init__(self):
