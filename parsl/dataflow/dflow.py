@@ -409,7 +409,6 @@ class DataFlowKernel(object):
 
                 self._send_task_log_info(task_record)
 
-                self.tasks[task_id]['retries_left'] = 0
                 exec_fu = Future()
                 exec_fu.set_exception(DependencyError(exceptions,
                                                       task_id,
@@ -473,8 +472,6 @@ class DataFlowKernel(object):
 
         self._send_task_log_info(self.tasks[task_id])
 
-        self.tasks[task_id]['retries_left'] = self._config.retries - \
-            self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
