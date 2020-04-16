@@ -12,9 +12,6 @@ class Channel(metaclass=ABCMeta):
           cmd, wtime    ------->|  execute_wait
           (ec, stdout, stderr)<-|---+
                                 |
-          cmd, wtime    ------->|  execute_no_wait
-          (ec, stdout, stderr)<-|---+
-                                |
           src, dst_dir  ------->|  push_file
              dst_path  <--------|----+
                                 |
@@ -61,22 +58,6 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def execute_no_wait(self, cmd, walltime, envs={}, *args, **kwargs):
-        ''' Execute asynchronousely without waiting for exitcode
-
-        Args:
-            - cmd (string): Command string to execute over the channel
-            - walltime (int) : Timeout in seconds
-
-        KWargs:
-            - envs (dict) : Environment variables to push to the remote side
-
-        Returns:
-            - the type of return value is channel specific
-        '''
-        pass
-
-    @abstractmethod
     def push_file(self, source, dest_dir):
         ''' Channel will take care of moving the file from source to the destination
         directory
@@ -84,6 +65,19 @@ class Channel(metaclass=ABCMeta):
         Args:
             source (string) : Full filepath of the file to be moved
             dest_dir (string) : Absolute path of the directory to move to
+
+        Returns:
+            destination_path (string)
+        '''
+        pass
+
+    def pull_file(self, remote_source, local_dir):
+        ''' Transport file on the remote side to a local directory
+
+        Args:
+            remote_source (string): remote_source
+            local_dir (string): Local directory to copy to
+
 
         Returns:
             destination_path (string)
