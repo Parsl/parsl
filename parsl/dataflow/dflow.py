@@ -481,8 +481,8 @@ class DataFlowKernel(object):
         """
         self.tasks[task_id]['time_submitted'] = datetime.datetime.now()
 
-        hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
-        if hit:
+        memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
+        if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
             return memo_fu
 
