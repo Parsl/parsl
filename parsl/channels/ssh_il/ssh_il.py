@@ -13,7 +13,7 @@ class SSHInteractiveLoginChannel(SSHChannel):
     keys are not set up.
     """
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -32,7 +32,6 @@ class SSHInteractiveLoginChannel(SSHChannel):
         self.hostname = hostname
         self.username = username
         self.password = password
-        self.kwargs = kwargs
 
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.load_system_host_keys()

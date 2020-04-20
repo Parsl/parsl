@@ -23,7 +23,7 @@ def test_files():
         os.remove('cat_out.txt')
 
     fs = [File('data/' + f) for f in os.listdir('data')]
-    x = cat(inputs=fs, outputs=['cat_out.txt'],
+    x = cat(inputs=fs, outputs=[File('cat_out.txt')],
             stdout='f_app.out', stderr='f_app.err')
     d_x = x.outputs[0]
     print(x.result())

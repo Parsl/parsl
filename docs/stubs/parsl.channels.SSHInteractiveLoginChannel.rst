@@ -16,7 +16,6 @@ parsl.channels.SSHInteractiveLoginChannel
       ~SSHInteractiveLoginChannel.__init__
       ~SSHInteractiveLoginChannel.abspath
       ~SSHInteractiveLoginChannel.close
-      ~SSHInteractiveLoginChannel.execute_no_wait
       ~SSHInteractiveLoginChannel.execute_wait
       ~SSHInteractiveLoginChannel.isdir
       ~SSHInteractiveLoginChannel.makedirs

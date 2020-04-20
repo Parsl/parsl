@@ -106,32 +106,5 @@ class OAuthSSHChannel(SSHChannel):
 
         return exit_status, stdout, stderr
 
-    def execute_no_wait(self, cmd, walltime=60, envs={}):
-        ''' Execute asynchronousely without waiting for exitcode
-
-        Args:
-            - cmd (string): Commandline string to be executed on the remote side
-
-        KWargs:
-            - walltime (int): timeout to exec_command
-            - envs (dict): A dictionary of env variables
-
-        Returns:
-            - None, stdout (readable stream), stderr (readable stream)
-
-        Raises:
-            - ChannelExecFailed (reason)
-        '''
-        session = self.transport.open_session()
-        session.setblocking(0)
-
-        nbytes = 10240
-        session.exec_command(self.prepend_envs(cmd, envs))
-
-        stdout = session.recv(nbytes).decode('utf-8')
-        stderr = session.recv_stderr(nbytes).decode('utf-8')
-
-        return None, stdout, stderr
-
     def close(self):
         return self.transport.close()
