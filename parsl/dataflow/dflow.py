@@ -713,6 +713,8 @@ class DataFlowKernel(object):
         for kw in ['stdout', 'stderr']:
             if kw in app_kwargs:
                 if app_kwargs[kw] == parsl.AUTO_LOGNAME:
+                    if kw not in ignore_for_cache:
+                        ignore_for_cache += [kw]
                     app_kwargs[kw] = os.path.join(
                                 self.run_dir,
                                 'task_logs',
