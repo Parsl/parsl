@@ -23,8 +23,7 @@ configuration can be specified.
       from parsl.executors.threads import ThreadPoolExecutor
 
       config = Config(
-          executors=[ThreadPoolExecutor()],
-          lazy_errors=True
+          executors=[ThreadPoolExecutor()]
       )
       parsl.load(config)
 
