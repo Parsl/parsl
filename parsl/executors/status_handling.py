@@ -1,5 +1,6 @@
 import logging
 import threading
+from itertools import compress
 from abc import abstractmethod
 from concurrent.futures import Future
 from typing import List, Any, Dict
@@ -88,15 +89,11 @@ class StatusHandlingExecutor(ParslExecutor):
         return self._provider
 
     def _filter_scale_in_ids(self, to_kill, killed):
+        """ Filter out job id's that were not killed
+        """
         assert len(to_kill) == len(killed)
-
-        result = []
-
-        for i in range(len(killed)):
-            if killed[i]:
-                result.append(to_kill[i])
-
-        return result
+        # Filters first iterable by bool values in second
+        return list(compress(to_kill, killed))
 
 
 class NoStatusHandlingExecutor(ParslExecutor):
