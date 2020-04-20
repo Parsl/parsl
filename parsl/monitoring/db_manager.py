@@ -338,10 +338,6 @@ class DatabaseManager(object):
                     "Got {} messages from node queue".format(len(messages)))
                 self._insert(table=NODE, messages=messages)
 
-            """
-            RESOURCE_INFO messages
-
-            """
             messages = self._get_messages_in_batch(self.pending_resource_queue,
                                                    interval=self.batching_interval,
                                                    threshold=self.batching_threshold)
@@ -366,6 +362,9 @@ class DatabaseManager(object):
                                           'hostname'],
                                  messages=first_messages)
 
+    # this function is specialised on queue tag, and reformats the messages expecting
+    # a different format inside each one. that might not be the clearest way to implement
+    # this.
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
         logger.info("Starting processing for queue {}".format(queue_tag))
 
@@ -373,7 +372,7 @@ class DatabaseManager(object):
             logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
                          .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
             try:
-                x, addr = logs_queue.get(timeout=0.1)
+                x, addr = logs_queue.get(timeout=0.1)   # addr is unused... could be tidied?
             except queue.Empty:
                 continue
             else:
@@ -383,7 +382,7 @@ class DatabaseManager(object):
                     else:
                         self.pending_priority_queue.put(x)
                 elif queue_tag == 'resource':
-                    self.pending_resource_queue.put(x[-1])
+                    self.pending_resource_queue.put(x[-1]) # put last element of data (the message) ignoring the other fields (id, time)
                 elif queue_tag == 'node':
                     self.pending_node_queue.put(x[-1])
 

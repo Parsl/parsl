@@ -89,16 +89,12 @@ class UDPRadio:
                                   socket.IPPROTO_UDP)  # UDP
         self.sock.settimeout(self.sock_timeout)
 
-    def send(self, message_type, task_id, message):
+    def send(self, message):
         """ Sends a message to the UDP receiver
 
         Parameter
         ---------
 
-        message_type: monitoring.MessageType (enum)
-            In this case message type is RESOURCE_INFO most often
-        task_id: int
-            Task identifier of the task for which resource monitoring is being reported
         message: object
             Arbitrary pickle-able object that is to be sent
 
@@ -108,7 +104,6 @@ class UDPRadio:
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
                                    int(time.time()),  # epoch timestamp
-                                   message_type,
                                    message))
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
@@ -555,7 +550,7 @@ def monitor(pid,
             d['psutil_process_time_user'] += total_children_user_time
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
-            radio.send(MessageType.TASK_INFO, task_id, d)
+            radio.send(d)
             first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
