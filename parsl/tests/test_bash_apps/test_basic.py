@@ -7,6 +7,7 @@ import time
 import parsl
 from parsl import File
 from parsl.app.app import bash_app
+from parsl.data_provider.files import File
 
 from parsl.tests.configs.local_threads import config
 

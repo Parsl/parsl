@@ -38,7 +38,8 @@ class BadCheckpoint(DataFlowException):
 
 
 class DependencyError(DataFlowException):
-    """Error raised at the end of app execution due to missing output files.
+    """Error raised if an app cannot run because there was an error
+       in a dependency.
 
     Args:
          - dependent_exceptions: List of exceptions
@@ -54,8 +55,8 @@ class DependencyError(DataFlowException):
         self.task_id = task_id
 
     def __repr__(self):
-        return "[{}] Dependency failure from: {}".format(self.task_id,
-                                                         self.dependent_exceptions)
+        return "Dependency failure for task {} from: {}".format(self.task_id,
+                                                                self.dependent_exceptions)
 
     def __str__(self):
         return self.__repr__()
