@@ -239,7 +239,7 @@ class Strategy(object):
                         logger.debug("Idle time has reached {}s for executor {}; removing resources".format(
                             self.max_idletime, label)
                         )
-                        executor.scale_in(active_blocks - min_blocks)
+                        exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
                         pass
@@ -262,14 +262,14 @@ class Strategy(object):
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
-                    executor.scale_out(excess_blocks)
+                    exec_status.scale_out(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
                 # Case 4
                 # Check if slots are being lost quickly ?
                 logger.debug("Requesting single slot")
                 if active_blocks < max_blocks:
-                    executor.scale_out(1)
+                    exec_status.scale_out(1)
             # Case 3
             # tasks ~ slots
             else:

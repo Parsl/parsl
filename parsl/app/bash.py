@@ -97,9 +97,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     missing = []
     for outputfile in kwargs.get('outputs', []):
-        fpath = outputfile
-        if type(outputfile) != str:
-            fpath = outputfile.filepath
+        fpath = outputfile.filepath
 
         if not os.path.exists(fpath):
             missing.extend([outputfile])
