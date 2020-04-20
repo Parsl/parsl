@@ -71,6 +71,7 @@ class Channel(metaclass=ABCMeta):
         '''
         pass
 
+    @abstractmethod
     def pull_file(self, remote_source, local_dir):
         ''' Transport file on the remote side to a local directory
 
