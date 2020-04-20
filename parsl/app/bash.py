@@ -91,15 +91,13 @@ def remote_side_bash_executor(func, *args, **kwargs):
         raise pe.AppException("[{}] App caught exception with returncode: {}".format(func_name, returncode), e)
 
     if returncode != 0:
-        raise pe.AppFailure("[{}] App failed with exit code: {}".format(func_name, proc.returncode), proc.returncode)
+        raise pe.BashExitFailure(func_name, proc.returncode)
 
     # TODO : Add support for globs here
 
     missing = []
     for outputfile in kwargs.get('outputs', []):
-        fpath = outputfile
-        if type(outputfile) != str:
-            fpath = outputfile.filepath
+        fpath = outputfile.filepath
 
         if not os.path.exists(fpath):
             missing.extend([outputfile])

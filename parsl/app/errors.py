@@ -36,12 +36,11 @@ class AppBadFormatting(ParslError):
     """
 
 
-class AppFailure(AppException):
-    """An error raised during execution of an app.
+class BashExitFailure(AppException):
+    """A non-zero exit code returned from a @bash_app
 
-    What this exception contains depends entirely on context
     Contains:
-    reason(string)
+    reason(str)
     exitcode(int)
     """
 
