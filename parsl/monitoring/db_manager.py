@@ -440,9 +440,9 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
-    dbm = DatabaseManager(*args, **kwargs)
-    logger.info("Starting dbm in dbm starter")
     try:
+        dbm = DatabaseManager(*args, **kwargs)
+        logger.info("Starting dbm in dbm starter")
         dbm.start(priority_msgs, node_msgs, resource_msgs)
     except Exception as e:
         logger.exception("dbm.start exception")
