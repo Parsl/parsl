@@ -413,9 +413,21 @@ class DataFlowKernel(object):
                 # Acquire a lock, retest the state, launch
                 with task_record['task_launch_lock']:
                     if task_record['status'] == States.pending:
-                        exec_fu = self.launch_task(
-                            task_id, task_record['func'], *new_args, **kwargs)
+                        try:
+                            exec_fu = self.launch_task(
+                                task_id, task_record['func'], *new_args, **kwargs)
+                        except Exception as e:
+                            # task launched failed somehow. the execution might
+                            # have been launched and an exception raised after
+                            # that, though. that's hard to detect from here.
+                            # we don't attempt retries here. This is an error with submission
+                            # even though it might come from user code such as a plugged-in
+                            # executor or memoization hash function.
 
+                            logger.debug("Got an exception launching task", exc_info=True)
+                            self.tasks[task_id]['retries_left'] = 0
+                            exec_fu = Future()
+                            exec_fu.set_exception(e)
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
@@ -437,6 +449,11 @@ class DataFlowKernel(object):
                 try:
                     exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
                 except Exception as e:
+                    # this exception is ignored here because it is assumed that exception
+                    # comes from directly executing handle_exec_update (because exec_fu is
+                    # done already). If the callback executes later, then any exception
+                    # coming out of the callback will be ignored and not propate anywhere,
+                    # so this block attempts to keep the same behaviour here.
                     logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
                 task_record['exec_fu'] = exec_fu
@@ -464,8 +481,8 @@ class DataFlowKernel(object):
         """
         self.tasks[task_id]['time_submitted'] = datetime.datetime.now()
 
-        hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
-        if hit:
+        memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
+        if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
             return memo_fu
 

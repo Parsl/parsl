@@ -72,6 +72,20 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def pull_file(self, remote_source, local_dir):
+        ''' Transport file on the remote side to a local directory
+
+        Args:
+            remote_source (string): remote_source
+            local_dir (string): Local directory to copy to
+
+
+        Returns:
+            destination_path (string)
+        '''
+        pass
+
+    @abstractmethod
     def close(self):
         ''' Closes the channel. Clean out any auth credentials.
 
