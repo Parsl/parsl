@@ -600,7 +600,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         r = self.provider.cancel(to_kill)
 
-        return r
+        return self._filter_scale_in_ids(to_kill, r)
 
     def _get_job_ids(self) -> List[object]:
         return list(self.blocks.values())
