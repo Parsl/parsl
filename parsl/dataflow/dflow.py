@@ -713,6 +713,8 @@ class DataFlowKernel(object):
         for kw in ['stdout', 'stderr']:
             if kw in app_kwargs:
                 if app_kwargs[kw] == parsl.AUTO_LOGNAME:
+                    if kw not in ignore_for_cache:
+                        ignore_for_cache += [kw]
                     app_kwargs[kw] = os.path.join(
                                 self.run_dir,
                                 'task_logs',
@@ -760,7 +762,7 @@ class DataFlowKernel(object):
 
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
-        self.tasks[task_id]['depends'] = depends
+        task_def['depends'] = depends
 
         depend_descs = []
         for d in depends:
@@ -778,10 +780,10 @@ class DataFlowKernel(object):
                                                               task_def['func_name'],
                                                               waiting_message))
 
-        self.tasks[task_id]['task_launch_lock'] = threading.Lock()
+        task_def['task_launch_lock'] = threading.Lock()
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
-        self.tasks[task_id]['status'] = States.pending
+        task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
