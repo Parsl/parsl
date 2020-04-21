@@ -133,7 +133,6 @@ class Database(object):
             'task_time_running', DateTime, nullable=True)
         task_time_returned = Column(
             'task_time_returned', DateTime, nullable=True)
-        task_elapsed_time = Column('task_elapsed_time', Float, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
         task_hashsum = Column('task_hashsum', Text, nullable=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
@@ -321,7 +320,7 @@ class DatabaseManager(object):
                                  messages=update_messages)
                     self._update(table=TASK,
                                  columns=['task_time_returned',
-                                          'task_elapsed_time', 'run_id', 'task_id',
+                                          'run_id', 'task_id',
                                           'task_fail_count',
                                           'task_fail_history'],
                                  messages=update_messages)
