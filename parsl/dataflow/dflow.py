@@ -606,7 +606,11 @@ class DataFlowKernel(object):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    dep_failures.extend([e])
+                    if hasattr(dep, 'task_def'):
+                        tid = dep.task_def['id']
+                    else:
+                        tid = None
+                    dep_failures.extend([(e, tid)])
             else:
                 new_args.extend([dep])
 
@@ -617,7 +621,11 @@ class DataFlowKernel(object):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    dep_failures.extend([e])
+                    if hasattr(dep, 'task_def'):
+                        tid = dep.task_def['id']
+                    else:
+                        tid = None
+                    dep_failures.extend([(e, tid)])
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
@@ -627,7 +635,11 @@ class DataFlowKernel(object):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        dep_failures.extend([e])
+                        if hasattr(dep, 'task_def'):
+                            tid = dep.task_def['id']
+                        else:
+                            tid = None
+                        dep_failures.extend([(e, tid)])
 
                 else:
                     new_inputs.extend([dep])
