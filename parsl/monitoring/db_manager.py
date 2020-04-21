@@ -293,7 +293,7 @@ class DatabaseManager(object):
                                          columns=['run_id', 'tasks_failed_count',
                                                   'tasks_completed_count', 'time_completed'],
                                          messages=[msg])
-                    else:                             # TASK_INFO message
+                    elif msg_type.value == MessageType.TASK_INFO.value:
                         all_messages.append(msg)
                         if msg['task_id'] in inserted_tasks:
                             update_messages.append(msg)
@@ -305,6 +305,8 @@ class DatabaseManager(object):
                             if msg['task_id'] in left_messages:
                                 first_messages.append(
                                     left_messages.pop(msg['task_id']))
+                    else:
+                        raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
 
                 logger.debug(
                     "Updating and inserting TASK_INFO to all tables")
