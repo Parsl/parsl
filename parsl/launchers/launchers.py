@@ -411,7 +411,7 @@ echo "Done"
         return x
 
 
-class AprunLauncher(Launcher):
+class AprunLauncher(ClusterLauncher):
     """  Worker launcher that wraps the user's command with the Aprun launch framework
     to launch multiple cmd invocations in parallel on a single job allocation
 
@@ -455,7 +455,7 @@ echo "Done"
         return x
 
 
-class JsrunLauncher(Launcher):
+class JsrunLauncher(ClusterLauncher):
     """  Worker launcher that wraps the user's command with the Jsrun launch framework
     to launch multiple cmd invocations in parallel on a single job allocation
 
