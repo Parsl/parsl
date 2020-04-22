@@ -15,6 +15,26 @@ class Launcher(RepresentationMixin, metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def compute_tasks_per_block(self, tasks_per_node: int, nodes_per_block: int) -> int:
+        """Compute the number of tasks produced by this launcher
+
+        Args:
+            tasks_per_node (int): Number of tasks to place on each node
+            nodes_per_block (int): Number of nodes per block
+        """
+        pass
+
+
+class ClusterLauncher(Launcher, metaclass=ABCMeta):
+    """Base class for launchers deploy tasks onto multiple nodes
+
+    The only feature this base class provides is a calculation for the
+    number of tasks per block."""
+
+    def compute_tasks_per_block(self, tasks_per_node: int, nodes_per_block: int) -> int:
+        return tasks_per_node * nodes_per_block
+
 
 class SimpleLauncher(Launcher):
     """ Does no wrapping. Just returns the command as-is
@@ -28,6 +48,9 @@ class SimpleLauncher(Launcher):
 
         """
         return command
+
+    def compute_tasks_per_block(self, tasks_per_node: int, nodes_per_block: int) -> int:
+        return 1
 
 
 class WrappedLauncher(Launcher):
@@ -51,6 +74,9 @@ class WrappedLauncher(Launcher):
             logger.warning('WrappedLauncher ignores the number of nodes per block. '
                            'You may be getting fewer workers than expected')
         return "{0} {1}".format(self.prepend, command)
+
+    def compute_tasks_per_block(self, tasks_per_node: int, nodes_per_block: int) -> int:
+        return 1
 
 
 class SingleNodeLauncher(Launcher):
@@ -124,8 +150,11 @@ exit $RET
 '''.format(command, task_blocks, fail_on_any_num)
         return x
 
+    def compute_tasks_per_block(self, tasks_per_node: int, nodes_per_block: int) -> int:
+        return tasks_per_node * nodes_per_block
 
-class GnuParallelLauncher(Launcher):
+
+class GnuParallelLauncher(ClusterLauncher):
     """ Worker launcher that wraps the user's command with the framework to
     launch multiple command invocations via GNU parallel sshlogin.
 
@@ -184,7 +213,7 @@ echo "All workers done"
         return x
 
 
-class MpiExecLauncher(Launcher):
+class MpiExecLauncher(ClusterLauncher):
     """ Worker launcher that wraps the user's command with the framework to
     launch multiple command invocations via mpiexec.
 
@@ -229,7 +258,7 @@ echo "All workers done"
         return x
 
 
-class MpiRunLauncher(Launcher):
+class MpiRunLauncher(ClusterLauncher):
     """ Worker launcher that wraps the user's command with the framework to
     launch multiple command invocations via mpirun.
 
@@ -269,7 +298,7 @@ echo "All workers done"
         return x
 
 
-class SrunLauncher(Launcher):
+class SrunLauncher(ClusterLauncher):
     """ Worker launcher that wraps the user's command with the SRUN launch framework
     to launch multiple cmd invocations in parallel on a single job allocation.
     """
@@ -314,7 +343,7 @@ echo "Done"
         return x
 
 
-class SrunMPILauncher(Launcher):
+class SrunMPILauncher(ClusterLauncher):
     """Launches as many workers as MPI tasks to be executed concurrently within a block.
 
     Use this launcher instead of SrunLauncher if each block will execute multiple MPI applications
