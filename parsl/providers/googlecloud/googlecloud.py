@@ -105,7 +105,6 @@ class GoogleCloudProvider():
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
-        self.provisioned_blocks = 0
         atexit.register(self.bye)
 
     def submit(self, command, tasks_per_node, job_name="parsl.gcs"):
@@ -130,7 +129,6 @@ class GoogleCloudProvider():
                                     1)
 
         instance, name = self.create_instance(command=wrapped_cmd)
-        self.provisioned_blocks += 1
         self.resources[name] = {"job_id": name, "status": JobStatus(translate_table[instance['status']])}
         return name
 
@@ -173,7 +171,6 @@ class GoogleCloudProvider():
             try:
                 self.delete_instance(job_id)
                 statuses.append(True)
-                self.provisioned_blocks -= 1
             except Exception:
                 statuses.append(False)
         return statuses
