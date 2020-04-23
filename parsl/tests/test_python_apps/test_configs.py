@@ -1,13 +1,13 @@
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
 local_config = config
 
 
-@App('python')
+@python_app
 def worker_identify(x, sleep_dur=0.2):
     import time
     import os

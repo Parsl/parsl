@@ -14,25 +14,14 @@ parsl.data\_provider.data\_manager.DataManager
    .. autosummary::
    
       ~DataManager.__init__
-      ~DataManager.add_file
-      ~DataManager.get_data_manager
-      ~DataManager.scale_in
-      ~DataManager.scale_out
-      ~DataManager.shutdown
+      ~DataManager.optionally_stage_in
+      ~DataManager.replace_task
+      ~DataManager.replace_task_stage_out
       ~DataManager.stage_in
       ~DataManager.stage_out
-      ~DataManager.start
-      ~DataManager.submit
    
    
 
    
-   
-   .. rubric:: Attributes
-
-   .. autosummary::
-   
-      ~DataManager.run_dir
-      ~DataManager.scaling_enabled
    
    

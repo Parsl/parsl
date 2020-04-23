@@ -16,11 +16,16 @@ import zmq
 import math
 import json
 import psutil
+import multiprocessing
 
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
-import multiprocessing
+from parsl.executors.high_throughput.probe import probe_addresses
+if platform.system() == 'Darwin':
+    from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
+else:
+    from multiprocessing import Queue as mpQueue
 
 from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
 from ipyparallel.serialize import serialize_object
@@ -48,8 +53,9 @@ class Manager(object):
 
     """
     def __init__(self,
-                 task_q_url="tcp://127.0.0.1:50097",
-                 result_q_url="tcp://127.0.0.1:50098",
+                 addresses="127.0.0.1",
+                 task_port="50097",
+                 result_port="50098",
                  cores_per_worker=1,
                  mem_per_worker=None,
                  max_workers=float('inf'),
@@ -107,6 +113,21 @@ class Manager(object):
 
         logger.info("Manager started")
 
+        try:
+            ix_address = probe_addresses(addresses.split(','), task_port)
+            if not ix_address:
+                raise Exception("No viable address found")
+            else:
+                logger.info("Connection to Interchange successful on {}".format(ix_address))
+                task_q_url = "tcp://{}:{}".format(ix_address, task_port)
+                result_q_url = "tcp://{}:{}".format(ix_address, result_port)
+                logger.info("Task url : {}".format(task_q_url))
+                logger.info("Result url : {}".format(result_q_url))
+        except Exception:
+            logger.exception("Caught exception while trying to determine viable address to interchange")
+            print("Failed to find a viable address to connect to interchange. Exiting")
+            exit(5)
+
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
@@ -147,9 +168,9 @@ class Manager(object):
                                 math.floor(cores_on_node / cores_per_worker))
         logger.info("Manager will spawn {} workers".format(self.worker_count))
 
-        self.pending_task_queue = multiprocessing.Queue()
-        self.pending_result_queue = multiprocessing.Queue()
-        self.ready_worker_queue = multiprocessing.Queue()
+        self.pending_task_queue = mpQueue()
+        self.pending_result_queue = mpQueue()
+        self.ready_worker_queue = mpQueue()
 
         self.max_queue_size = self.prefetch_capacity + self.worker_count
 
@@ -453,7 +474,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     Pop request from queue
     Put result into result_queue
     """
-    start_file_logger('{}/{}/worker_{}.log'.format(args.logdir, pool_id, worker_id),
+    start_file_logger('{}/block-{}/{}/worker_{}.log'.format(args.logdir, args.block_id, pool_id, worker_id),
                       worker_id,
                       name="worker_log",
                       level=logging.DEBUG if args.debug else logging.INFO)
@@ -525,36 +546,13 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-         - name (string) : Set the logger name.
-         - level (logging.LEVEL) : Set to logging.DEBUG by default.
-         - format_string (sting) : Set to None by default.
-
-    Returns:
-         - None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
-        # format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
+    parser.add_argument("-a", "--addresses", default='',
+                        help="Comma separated list of addresses at which the interchange could be reached")
     parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
                         help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
@@ -565,8 +563,8 @@ if __name__ == "__main__":
                         help="Number of cores assigned to each worker process. Default=1.0")
     parser.add_argument("-m", "--mem_per_worker", default=0,
                         help="GB of memory assigned to each worker process. Default=0, no assignment")
-    parser.add_argument("-t", "--task_url", required=True,
-                        help="REQUIRED: ZMQ url for receiving tasks")
+    parser.add_argument("-t", "--task_port", required=True,
+                        help="REQUIRED: Task port for receiving tasks from the interchange")
     parser.add_argument("--max_workers", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
     parser.add_argument("-p", "--prefetch_capacity", default=0,
@@ -577,15 +575,15 @@ if __name__ == "__main__":
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
     parser.add_argument("--poll", default=10,
                         help="Poll period used in milliseconds")
-    parser.add_argument("-r", "--result_url", required=True,
-                        help="REQUIRED: ZMQ url for posting results")
+    parser.add_argument("-r", "--result_port", required=True,
+                        help="REQUIRED: Result port for posting results to the interchange")
 
     args = parser.parse_args()
 
-    os.makedirs(os.path.join(args.logdir, args.uid), exist_ok=True)
+    os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
     try:
-        start_file_logger('{}/{}/manager.log'.format(args.logdir, args.uid),
+        start_file_logger('{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 
@@ -596,14 +594,16 @@ if __name__ == "__main__":
         logger.info("Block ID: {}".format(args.block_id))
         logger.info("cores_per_worker: {}".format(args.cores_per_worker))
         logger.info("mem_per_worker: {}".format(args.mem_per_worker))
-        logger.info("task_url: {}".format(args.task_url))
-        logger.info("result_url: {}".format(args.result_url))
+        logger.info("task_port: {}".format(args.task_port))
+        logger.info("result_port: {}".format(args.result_port))
+        logger.info("addresses: {}".format(args.addresses))
         logger.info("max_workers: {}".format(args.max_workers))
         logger.info("poll_period: {}".format(args.poll))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
 
-        manager = Manager(task_q_url=args.task_url,
-                          result_q_url=args.result_url,
+        manager = Manager(task_port=args.task_port,
+                          result_port=args.result_port,
+                          addresses=args.addresses,
                           uid=args.uid,
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),

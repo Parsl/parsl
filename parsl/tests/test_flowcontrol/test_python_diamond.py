@@ -3,8 +3,8 @@ import time
 import pytest
 
 import parsl
-from parsl.app.app import App
-from parsl.tests.configs.local_ipp import fresh_config
+from parsl.app.app import python_app
+from parsl.tests.configs.htex_local import fresh_config
 
 
 def local_setup():
@@ -20,7 +20,7 @@ def local_teardown():
     parsl.clear()
 
 
-@App("python")
+@python_app
 def diamond(sleep=0, inputs=[]):
     import time
     time.sleep(sleep)

@@ -3,21 +3,68 @@
 Futures
 =======
 
-When a Python function is invoked, the Python interpreter waits for the function to complete execution
-and returns the results. When functions execute for a long period of time it may not be desirable to wait for completion, instead it is often preferable that the function executes asynchronously. Parsl provides such asynchronous behavior by returning a `future <https://en.wikipedia.org/wiki/Futures_and_promises>`_ in lieu of results.
-A future is essentially an object that can be used track the status of an asynchronous task so that it may, in the future, be interrogated to find the status,
+When an ordinary Python function is invoked in a Python program, the Python interpreter waits for the function to complete execution
+before proceeding to the next statement. 
+But if a function is expected to execute for a long period of time, it may be preferable not to wait for its completion but instead to proceed immediately with executing subsequent statements.
+The function can then execute concurrently with that other computation.
+
+Concurrency can be used to enhance performance when concurrent activities can execute on different cores or nodes,
+as in the following code fragment, where we may save time by executing the two function calls at the same time.
+
+   .. code-block:: python
+
+       v1 = expensive_function(1)
+       v2 = expensive_function(2)
+       result = v1 + v2
+     
+However, concurrency also introduces a need for **synchronization**.
+In the example, we do not want to sum `v1` and `v2` until the function calls have completed,
+as the values of those two variables may not be valid before then.
+A synchronization mechanism provides a way of blocking execution of one activity
+(here, the statement `result = v1 + v2`) until other activities (here, the two calls to `expensive_function()`) have completed.
+
+Parsl supports concurrency and synchronization as follows. 
+Whenever a program calls a function that the programmer has defined to be a Parsl app (see :ref:`label-apps`),
+Parsl starts the function executing in a separate thread or process (on the same or another computer), returns a `future <https://en.wikipedia.org/wiki/Futures_and_promises>`_ in lieu of that function's result(s), 
+and continues immediately to the next statement in the Python program.
+Furthermore, when a computation attempts to access the value of a future (using mechanisms that we describe below), 
+Parsl blocks that computation until the future has a value. 
+
+More generaally, a future is an object that can be used track the status of an asynchronous task. 
+This object may, in the future, be interrogated to determine the task's status,
 results, exceptions, etc. A future is a proxy for a result that may not yet be available.
 
-Parsl provides two types of futures: AppFutures and DataFutures. While related, these two types of futures enable subtly different workflow patterns.
+Parsl provides two types of futures: AppFutures and DataFutures. While related, they enable subtly different workflow patterns.
 
 AppFutures
 ----------
 
-AppFutures are the basic building block upon which Parsl scripts are built. Every invocation of a Parsl app returns an AppFuture which may be used to manage execution and control the workflow.
+AppFutures are the basic building block upon which Parsl scripts are built. Every invocation of a Parsl app returns an AppFuture that may be used to monitor and manage the task's execution.
 AppFutures are inherited from Python's `concurrent library <https://docs.python.org/3/library/concurrent.futures.html>`_.
-AppFutures provide several key functionalities:
+They provide three key functionalities:
 
-1. An AppFuture provides a way to check the current status of an app.
+1. An AppFuture's ``result()`` function can be used to wait for an app to complete, and then access any result(s).
+This function is blocking: it returns only when the app completes or fails. 
+Thus the following code fragment implements essentially the behavior of the `expensive_function()` example above:
+the addition executes only when the two `sleep_double()` function calls complete.
+
+   .. code-block:: python
+
+      @python_app
+      def sleep_double(x):
+           import time
+           time.sleep(2)   # Sleep for 2 seconds
+           return x*2
+
+      # Start two concurrent sleep_double apps. doubled_x1 and doubled_x2 are AppFutures
+      doubled_x1 = sleep_double(10)
+      doubled_x2 = sleep_double(5)
+
+      # The result() function will block until each of the corresponding app calls have completed
+      print(doubled_x1.result() + doubled_x2.result())
+
+2. An AppFuture's ``done()`` function can be used to check the status of an app, *without blocking*.
+This function is non-blocking.
 
    .. code-block:: python
 
@@ -28,24 +75,8 @@ AppFutures provide several key functionalities:
        # doubled_x is an AppFuture
        doubled_x = double(10)
 
-       # Check status of doubled_x, this will print True if the result is available, else false
+       # Check status of doubled_x, this will print True if the result is available, else False
        print(doubled_x.done())
-
-2. An AppFuture provides a way to block and wait for the result of an app:
-
-   .. code-block:: python
-
-      @python_app
-      def sleep_double(x):
-           import time
-           time.sleep(2)   # Sleep for 2 seconds
-           return x*2
-
-      # doubled_x is an AppFuture
-      doubled_x = sleep_double(10)
-
-      # The result() function will block until the app has completed
-      print(doubled_x.result())
 
 3. An AppFuture provides a safe way to handle exceptions and errors while executing complex workflows.
 
@@ -67,14 +98,18 @@ AppFutures provide several key functionalities:
            print('Oops! Something really bad happened')
 
 
-In addition to being able to capture exceptions raised by a specific app, Parsl also raises ``DependencyErrors`` when apps are unable to execute due to failures in prior dependent apps. That is, an app that is dependent on the successful completion of another app will fail with a dependency error if any of the apps on which it depends fail.
+In addition to being able to capture exceptions raised by a specific app, Parsl also raises ``DependencyErrors`` when apps are unable to execute due to failures in prior dependent apps. 
+That is, an app that is dependent upon the successful completion of another app will fail with a dependency error if any of the apps on which it depends fail.
 
 
 DataFutures
 -----------
 
-While AppFutures represent the execution of an asynchronous app, DataFutures represent the files an app produces. Parsl's dataflow model, in which data is passed from one app to another via files, requires such a construct to enable apps to validate the creation of required files and to subsequently resolve dependencies when input files are created. When invoking an app, Parsl requires that a list of output files be specified (using the outputs keyword argument). A DataFuture for each file is returned by the app when it is executed. Throughout execution of the app Parsl will monitor these files to 1) ensure they are created, and 2) pass them to any dependent apps. DataFutures are accessible through the ``outputs`` attribute of the AppFuture.
-DataFutures are inherited from Python's `concurrent library <https://docs.python.org/3/library/concurrent.futures.html>`_.
+While an AppFuture represents the execution of an asynchronous app, a DataFuture represent a file that an app produces.
+Parsl's dataflow model requires such a construct so that it can determine when other apps that are to consume a file produced by the app can start execution. 
+When calling an app that produces files as outputs, Parsl requires that a list of output files be specified via the ``outputs`` keyword argument. A DataFuture is returned for each file by the app when it executes. 
+As the app executes, Parsl monitors each file to 1) ensure it is created, and 2) pass it to any dependent app(s). The DataFutures thus produced by an app are accessible through the ``outputs`` attribute of the AppFuture.
+DataFutures inherit from and extend Python's `concurrent library <https://docs.python.org/3/library/concurrent.futures.html>`_.
 
 The following code snippet shows how DataFutures are used:
 
@@ -87,7 +122,7 @@ The following code snippet shows how DataFutures are used:
           return 'echo {} &> {}'.format(message, outputs[0])
 
       # Call echo specifying the output file
-      hello = echo('Hello World!', outputs=['hello1.txt'])
+      hello = echo('Hello World!', outputs=[File('hello1.txt')])
 
       # The AppFuture's outputs attribute is a list of DataFutures
       print(hello.outputs)
@@ -98,7 +133,7 @@ The following code snippet shows how DataFutures are used:
 
 .. note::
       Adding `.filepath` is only needed on python 3.5. With python
-      >= 3.6 the resulting file can maybe be passed to open directly.
+      >= 3.6 the resulting file can be passed to `open` directly.
 
 
 

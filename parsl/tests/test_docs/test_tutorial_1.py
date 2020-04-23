@@ -3,14 +3,14 @@ import parsl
 
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 
 
 local_config = config
 
 
-@App('bash')
+@bash_app
 def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
     # The bash app function, requires that the bash script is assigned to the special variable
     # cmd_line. Positional and Keyword args to the fn() are formatted into the cmd_line string

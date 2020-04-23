@@ -43,11 +43,6 @@ def workflow(workflow_id):
     if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
-#     df_task = pd.read_sql_query("""SELECT task.task_id, task.task_func_name, task.task_time_submitted,
-#                                 status.timestamp, task.task_time_returned from task, status
-#                                 WHERE task.run_id='%s' and status.run_id=task.run_id and
-#                                 status.task_status_name='running' and status.task_id=task.task_id"""
-#                                 % (workflow_id), db.engine)
     df_status = pd.read_sql_query(
         "SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='%s'" % workflow_id, db.engine)
     df_task = pd.read_sql_query("""SELECT task_id, task_func_name, task_time_submitted,
@@ -111,12 +106,10 @@ def task(workflow_id, task_id):
                            workflow_details=workflow_details,
                            task_details=task_details,
                            task_status=task_status,
-                           # time_series_cpu_time=time_series_cpu_per_task_plot(df_resources, 'psutil_process_time_user', 'CPU user time'),
                            time_series_cpu_percent=time_series_cpu_per_task_plot(
                                df_resources, 'psutil_process_cpu_percent', 'CPU Utilization'),
                            time_series_memory_resident=time_series_memory_per_task_plot(
                                df_resources, 'psutil_process_memory_resident', 'Memory Usage'),
-                           # time_series_memory_percent=time_series_memory_per_task_plot(df_resources, 'psutil_process_memory_percent', 'Memory utilization')
                            )
 
 

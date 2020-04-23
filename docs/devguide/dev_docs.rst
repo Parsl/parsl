@@ -76,23 +76,19 @@ Exceptions
 
 .. autoclass:: parsl.app.errors.NotFutureError
 
-.. autoclass:: parsl.app.errors.InvalidAppTypeError
-
 .. autoclass:: parsl.app.errors.AppException
 
 .. autoclass:: parsl.app.errors.AppBadFormatting
 
-.. autoclass:: parsl.app.errors.AppFailure
+.. autoclass:: parsl.app.errors.BashExitFailure
 
 .. autoclass:: parsl.app.errors.MissingOutputs
 
-.. autoclass:: parsl.app.errors.DependencyError
-
 .. autoclass:: parsl.dataflow.error.DataFlowException
 
-.. autoclass:: parsl.dataflow.error.DuplicateTaskError
+.. autoclass:: parsl.dataflow.error.DependencyError
 
-.. autoclass:: parsl.dataflow.error.MissingFutError
+.. autoclass:: parsl.dataflow.error.DuplicateTaskError
 
 DataFlowKernel
 ==============
@@ -126,12 +122,6 @@ ThreadPoolExecutor
 .. autoclass:: parsl.executors.threads.ThreadPoolExecutor
    :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled
 
-IPyParallelExecutor
--------------------
-
-.. autoclass:: parsl.executors.ipp.IPyParallelExecutor
-   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd
-
 HighThroughputExecutor
 ----------------------
 
@@ -139,6 +129,13 @@ HighThroughputExecutor
    :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd,
               _start_queue_management_thread, _start_local_queue_process,
               hold_worker, outstanding, connected_workers
+
+WorkQueueExecutor
+----------------------
+
+.. autoclass:: parsl.executors.WorkQueueExecutor
+   :members:  __init__, start, submit, scale_out, scale_in,
+              shutdown, scaling_enabled, run_dir, create_new_name, create_name_tuple
 
 ExtremeScaleExecutor
 --------------------
@@ -342,22 +339,22 @@ to the resource managers of compute facilities. The simplest Channel, *LocalChan
 locally on a shell, while the *SshChannel* authenticates you to remote systems.
 
 .. autoclass:: parsl.channels.base.Channel
-   :members:  execute_wait, script_dir, execute_no_wait, push_file, close
+   :members:  execute_wait, script_dir, push_file, close
 
 LocalChannel
 ^^^^^^^^^^^^
 .. autoclass:: parsl.channels.LocalChannel
-   :members:  __init__, execute_wait, execute_no_wait, push_file, script_dir, close
+   :members:  __init__, execute_wait, push_file, script_dir, close
 
 SSHChannel
 ^^^^^^^^^^^^
 .. autoclass:: parsl.channels.SSHChannel
-   :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
+   :members:  __init__, execute_wait, push_file, pull_file, script_dir, close
 
 SSHILChannel
 ^^^^^^^^^^^^
 .. autoclass:: parsl.channels.SSHInteractiveLoginChannel
-   :members:  __init__, execute_wait, execute_no_wait, push_file, pull_file, script_dir, close
+   :members:  __init__, execute_wait, push_file, pull_file, script_dir, close
 
 
 
@@ -411,13 +408,6 @@ FlowControl
 
 .. autoclass:: parsl.dataflow.flow_control.FlowControl
    :members:
-
-FlowNoControl
--------------
-
-.. autoclass:: parsl.dataflow.flow_control.FlowNoControl
-   :members:
-   :special-members:
 
 
 Timer

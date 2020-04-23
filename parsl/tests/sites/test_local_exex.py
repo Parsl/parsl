@@ -1,10 +1,8 @@
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.exex_local import config
-
-parsl.set_stream_logger()
 
 import logging
 logger = logging.getLogger(__name__)
@@ -12,7 +10,7 @@ logger = logging.getLogger(__name__)
 local_config = config
 
 
-@App("python", executors=['Extreme_Local'])
+@python_app(executors=['Extreme_Local'])
 def python_app_2():
     import os
     import threading
@@ -21,7 +19,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", executors=['Extreme_Local'])
+@python_app(executors=['Extreme_Local'])
 def python_app_1():
     import os
     import threading
@@ -30,7 +28,7 @@ def python_app_1():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("bash")
+@parsl.bash_app
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 

@@ -75,6 +75,9 @@ class Database(object):
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
 
+    def rollback(self):
+        self.session.rollback()
+
     def _generate_mappings(self, table, columns=None, messages=[]):
         mappings = []
         for msg in messages:
@@ -130,6 +133,7 @@ class Database(object):
             'task_time_returned', DateTime, nullable=True)
         task_elapsed_time = Column('task_elapsed_time', Float, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
+        task_hashsum = Column('task_hashsum', Text, nullable=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
@@ -219,21 +223,24 @@ class DatabaseManager(object):
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
                                                                 priority_queue, 'priority', self._kill_event,),
-                                                            name="Monitoring-migrate-priority"
+                                                            name="Monitoring-migrate-priority",
+                                                            daemon=True,
                                                             )
         self._priority_queue_pull_thread.start()
 
         self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                         args=(
                                                             node_queue, 'node', self._kill_event,),
-                                                        name="Monitoring-migrate-node"
+                                                        name="Monitoring-migrate-node",
+                                                        daemon=True,
                                                         )
         self._node_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
                                                                 resource_queue, 'resource', self._kill_event,),
-                                                            name="Monitoring-migrate-resource"
+                                                            name="Monitoring-migrate-resource",
+                                                            daemon=True,
                                                             )
         self._resource_queue_pull_thread.start()
 
@@ -380,10 +387,24 @@ class DatabaseManager(object):
                     self.pending_node_queue.put(x[-1])
 
     def _update(self, table, columns, messages):
-        self.db.update(table=table, columns=columns, messages=messages)
+        try:
+            self.db.update(table=table, columns=columns, messages=messages)
+        except Exception:
+            self.logger.exception("Got exception when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                self.logger.exception("Rollback failed")
 
     def _insert(self, table, messages):
-        self.db.insert(table=table, messages=messages)
+        try:
+            self.db.insert(table=table, messages=messages)
+        except Exception:
+            self.logger.exception("Got exception when trying to insert to Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                self.logger.exception("Rollback failed")
 
     def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
         messages = []
@@ -417,7 +438,7 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
     filename: string
         Name of the file to write logs to. Required.
     name: string
-        Logger name. Default="parsl.executors.interchange"
+        Logger name.
     level: logging.LEVEL
         Set the logging level. Default=logging.DEBUG
         - format_string (string): Set the format string
@@ -428,7 +449,7 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
         None.
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     global logger
     logger = logging.getLogger(name)
@@ -441,11 +462,18 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
     return logger
 
 
-def dbm_starter(priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
     dbm = DatabaseManager(*args, **kwargs)
-    dbm.start(priority_msgs, node_msgs, resource_msgs)
+    dbm.logger.info("Starting dbm in dbm starter")
+    try:
+        dbm.start(priority_msgs, node_msgs, resource_msgs)
+    except Exception as e:
+        dbm.logger.exception("dbm.start exception")
+        exception_q.put(("DBM", str(e)))
+
+    dbm.logger.info("End of dbm_starter")
