@@ -28,8 +28,10 @@ parsl.providers.GridEngineProvider
 
    .. autosummary::
    
+      ~GridEngineProvider.cores_per_node
       ~GridEngineProvider.current_capacity
       ~GridEngineProvider.label
-      ~GridEngineProvider.scaling_enabled
+      ~GridEngineProvider.mem_per_node
+      ~GridEngineProvider.status_polling_interval
    
    

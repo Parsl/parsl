@@ -81,24 +81,23 @@ right address or network interface to use.
 
 
 
-For `IPyParallelExecutor` the address is specified in the :class:`~parsl.config.Config`
+For `HighThroughputExecutor` the address is specified in the :class:`~parsl.config.Config`
 as shown below :
 
 .. code-block:: python
 
     # THIS IS A CONFIG FRAGMENT FOR ILLUSTRATION
     from parsl.config import Config
-    from parsl.executors import IPyParallelExecutor
-    from parsl.executors.ipp_controller import Controller
+    from parsl.executors import HighThroughputExecutor
     from parsl.addresses import address_by_route, address_by_query, address_by_hostname
     config = Config(
         executors=[
-            IPyParallelExecutor(
+            HighThroughputExecutor(
                 label='ALCF_theta_local',
-                controller=Controller(public_ip='<AA.BB.CC.DD>')          # specify public ip here
-                # controller=Controller(public_ip=address_by_route())     # Alternatively you can try this
-                # controller=Controller(public_ip=address_by_query())     # Alternatively you can try this
-                # controller=Controller(public_ip=address_by_hostname())  # Alternatively you can try this
+                address='<AA.BB.CC.DD>'          # specify public ip here
+                # address=address_by_route()     # Alternatively you can try this
+                # address=address_by_query()     # Alternatively you can try this
+                # address=address_by_hostname()  # Alternatively you can try this
             )
         ],
     )
@@ -259,21 +258,21 @@ There are a few common situations in which a Parsl script might hang:
 
    * Firewall restrictions that block certain port ranges.
      If there is a certain port range that is **not** blocked, you may specify
-     that via the :class:`~parsl.executors.ipp_controller.Controller` object:
+     that via configuration:
 
      .. code-block:: python
 
         from libsubmit.providers import Cobalt
         from parsl.config import Config
-        from parsl.executors.ipp import IPyParallelExecutor
-        from parsl.executors.ipp_controller import Controller
+        from parsl.executors import HighThroughputExecutor
 
         config = Config(
             executors=[
-                IPyParallelExecutor(
+                HighThroughputExecutor(
                     label='ALCF_theta_local',
                     provider=Cobalt(),
-                    controller=Controller(port_range='50000,55000')
+                    worer_port_range=('50000,55000'),
+                    interchange_port_range=('50000,55000')
                 )
             ],
         )

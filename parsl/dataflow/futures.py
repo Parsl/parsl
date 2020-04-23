@@ -10,8 +10,6 @@ from concurrent.futures import Future
 import logging
 import threading
 
-from parsl.app.errors import RemoteExceptionWrapper
-
 logger = logging.getLogger(__name__)
 
 # Possible future states (for internal use by the futures package).
@@ -70,39 +68,6 @@ class AppFuture(Future):
         self._update_lock = threading.Lock()
         self._outputs = []
         self.task_def = task_def
-
-    def parent_callback(self, executor_fu):
-        """Callback from a parent future to update the AppFuture.
-
-        Used internally by AppFuture, and should not be called by code using AppFuture.
-
-        Args:
-            - executor_fu (Future): Future returned by the executor along with callback.
-
-        Returns:
-            - None
-
-        Updates the future with the result() or exception()
-        """
-        with self._update_lock:
-
-            if not executor_fu.done():
-                raise ValueError("done callback called, despite future not reporting itself as done")
-
-            try:
-                res = executor_fu.result()
-                if isinstance(res, RemoteExceptionWrapper):
-                    res.reraise()
-                self.set_result(executor_fu.result())
-
-            except Exception as e:
-                if executor_fu.retries_left > 0:
-                    # ignore this exception, because assume some later
-                    # parent executor, started external to this class,
-                    # will provide the answer
-                    pass
-                else:
-                    self.set_exception(e)
 
     @property
     def stdout(self):

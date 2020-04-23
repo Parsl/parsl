@@ -5,7 +5,7 @@ from parsl.providers.kubernetes.template import template_string
 logger = logging.getLogger(__name__)
 
 from parsl.providers.error import OptionalModuleMissing
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.utils import RepresentationMixin
 
 import typeguard
@@ -151,7 +151,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                          job_name=job_name,
                          cmd_string=formatted_cmd,
                          volumes=self.persistent_volumes)
-        self.resources[pod_name] = {'status': 'RUNNING'}
+        self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
 
         return pod_name
 
@@ -161,14 +161,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Args:
              - job_ids (list) : A list of job identifiers
         Returns:
-             - A list of status from ['PENDING', 'RUNNING', 'CANCELLED', 'COMPLETED',
-               'FAILED', 'TIMEOUT'] corresponding to each job_id in the job_ids list.
+             - A list of JobStatus objects corresponding to each job_id in the job_ids list.
         Raises:
              - ExecutionProviderExceptions or its subclasses
         """
         self._status()
         # This is a hack
-        return ['RUNNING' for jid in job_ids]
+        return [JobStatus(JobState.RUNNING) for jid in job_ids]
 
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
@@ -182,7 +181,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             # Here we are assuming that for local, the job_ids are the process id's
             self._delete_pod(job)
 
-            self.resources[job]['status'] = 'CANCELLED'
+            self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
             del self.resources[job]
         rets = [True for i in job_ids]
 
@@ -287,3 +286,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     @property
     def label(self):
         return "kubernetes"
+
+    @property
+    def status_polling_interval(self):
+        return 60

@@ -9,6 +9,12 @@ parsl.launchers.MpiExecLauncher
    .. automethod:: __init__
 
    
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~MpiExecLauncher.__init__
+   
    
 
    

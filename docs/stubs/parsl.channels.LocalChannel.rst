@@ -16,10 +16,10 @@ parsl.channels.LocalChannel
       ~LocalChannel.__init__
       ~LocalChannel.abspath
       ~LocalChannel.close
-      ~LocalChannel.execute_no_wait
       ~LocalChannel.execute_wait
       ~LocalChannel.isdir
       ~LocalChannel.makedirs
+      ~LocalChannel.pull_file
       ~LocalChannel.push_file
    
    

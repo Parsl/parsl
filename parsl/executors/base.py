@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from concurrent.futures import Future
+from typing import Any, Callable, Dict, Optional, List
 
-from typing import Any, Callable, Optional
+from parsl.providers.provider_base import JobStatus
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -42,24 +43,23 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def submit(self, func: Callable, *args: Any, **kwargs: Any) -> Future:
         """Submit.
-
-        The value returned must be a Future, with the further requirements that
-        it must be possible to assign a retries_left member slot to that object.
         """
         pass
 
     @abstractmethod
-    def scale_out(self, blocks: int) -> None:
+    def scale_out(self, blocks: int) -> List[object]:
         """Scale out method.
 
         We should have the scale out method simply take resource object
         which will have the scaling methods, scale_out itself should be a coroutine, since
         scaling tasks can be slow.
+
+        :return: A list of job ids corresponding to the blocks that were added.
         """
         pass
 
     @abstractmethod
-    def scale_in(self, blocks: int) -> None:
+    def scale_in(self, blocks: int) -> List[object]:
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
@@ -67,6 +67,8 @@ class ParslExecutor(metaclass=ABCMeta):
         We should have the scale in method simply take resource object
         which will have the scaling methods, scale_in itself should be a coroutine, since
         scaling tasks can be slow.
+
+        :return: A list of job ids corresponding to the blocks that were removed.
         """
         pass
 
@@ -85,6 +87,58 @@ class ParslExecutor(metaclass=ABCMeta):
         The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
         """
+        pass
+
+    @abstractmethod
+    def status(self) -> Dict[object, JobStatus]:
+        """Return the status of all jobs/blocks currently known to this executor.
+
+        :return: a dictionary mapping job ids to status strings
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def status_polling_interval(self) -> int:
+        """Returns the interval, in seconds, at which the status method should be called. The
+        assumption here is that, once initialized, an executor's polling interval is fixed.
+        In practice, at least given the current situation, the executor uses a single task provider
+        and this method is a delegate to the corresponding method in the provider.
+
+        :return: the number of seconds to wait between calls to status() or zero if no polling
+        should be done
+        """
+        pass
+
+    @abstractmethod
+    def set_bad_state_and_fail_all(self, exception: Exception):
+        """Allows external error handlers to mark this executor as irrecoverably bad and cause
+        all tasks submitted to it now and in the future to fail. The executor is responsible
+        for checking  :method:bad_state_is_set() in the :method:submit() method and raising the
+        appropriate exception, which is available through :method:executor_exception().
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def bad_state_is_set(self) -> bool:
+        """Returns true if this executor is in an irrecoverable error state. If this method
+        returns true, :property:executor_exception should contain an exception indicating the
+        cause.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def executor_exception(self) -> Exception:
+        """Returns an exception that indicates why this executor is in an irrecoverable state."""
+        pass
+
+    @property
+    @abstractmethod
+    def tasks(self) -> Dict[object, Future]:
+        """Contains a dictionary mapping task IDs to the corresponding Future objects for all
+        tasks that have been submitted to this executor."""
         pass
 
     @property
