@@ -44,8 +44,6 @@ class Strategy(object):
 
     .. code:: python
 
-          slots = current_capacity * tasks_per_node * nodes_per_block
-
           active_tasks = pending_tasks + running_tasks
 
           Parallelism = slots / tasks

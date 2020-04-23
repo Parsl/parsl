@@ -691,11 +691,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def label(self):
         return self._label
 
-    @property
-    def current_capacity(self):
-        """Returns the current blocksize."""
-        return len(self.instances)
-
     def goodbye(self):
         self.teardown()
 
