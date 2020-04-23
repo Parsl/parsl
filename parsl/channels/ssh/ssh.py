@@ -26,7 +26,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, port=22, **kwargs):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, port=22, key_filename=None):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -40,6 +40,7 @@ class SSHChannel(Channel, RepresentationMixin):
             - script_dir (string) : Full path to a script dir where
               generated scripts could be sent to.
             - envs (dict) : A dictionary of environment variables to be set when executing commands
+            - key_filename (string or list): the filename, or list of filenames, of optional private key(s)
 
         Raises:
         '''
@@ -48,10 +49,10 @@ class SSHChannel(Channel, RepresentationMixin):
         self.username = username
         self.password = password
         self.port = port
-        self.kwargs = kwargs
         self.script_dir = script_dir
         self.skip_auth = skip_auth
         self.gssapi_auth = gssapi_auth
+        self.key_filename = key_filename
 
         if self.skip_auth:
             self.ssh_client = NoAuthSSHClient()
@@ -73,6 +74,7 @@ class SSHChannel(Channel, RepresentationMixin):
                 allow_agent=True,
                 gss_auth=gssapi_auth,
                 gss_kex=gssapi_auth,
+                key_filename=key_filename
             )
             t = self.ssh_client.get_transport()
             self.sftp_client = paramiko.SFTPClient.from_transport(t)
@@ -123,29 +125,6 @@ class SSHChannel(Channel, RepresentationMixin):
         # Block on exit status from the command
         exit_status = stdout.channel.recv_exit_status()
         return exit_status, stdout.read().decode("utf-8"), stderr.read().decode("utf-8")
-
-    def execute_no_wait(self, cmd, walltime=2, envs={}):
-        ''' Execute asynchronousely without waiting for exitcode
-
-        Args:
-            - cmd (string): Commandline string to be executed on the remote side
-            - walltime (int): timeout to exec_command
-
-        KWargs:
-            - envs (dict): A dictionary of env variables
-
-        Returns:
-            - None, stdout (readable stream), stderr (readable stream)
-
-        Raises:
-            - ChannelExecFailed (reason)
-        '''
-
-        # Execute the command
-        stdin, stdout, stderr = self.ssh_client.exec_command(
-            self.prepend_envs(cmd, envs), bufsize=-1, timeout=walltime
-        )
-        return None, stdout, stderr
 
     def push_file(self, local_source, remote_dir):
         ''' Transport a local file to a directory on a remote machine

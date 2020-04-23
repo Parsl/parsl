@@ -1,6 +1,6 @@
-parsl.app.errors.DependencyError
+parsl.app.errors.BashExitFailure
 ================================
 
 .. currentmodule:: parsl.app.errors
 
-.. autoexception:: DependencyError
+.. autoexception:: BashExitFailure

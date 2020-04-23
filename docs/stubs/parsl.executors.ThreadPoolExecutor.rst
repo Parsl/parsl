@@ -37,6 +37,7 @@ parsl.executors.ThreadPoolExecutor
       ~ThreadPoolExecutor.provider
       ~ThreadPoolExecutor.run_dir
       ~ThreadPoolExecutor.scaling_enabled
+      ~ThreadPoolExecutor.status_polling_interval
       ~ThreadPoolExecutor.tasks
    
    

@@ -1,8 +1,6 @@
 from parsl import python_app
 from parsl.dataflow.error import DependencyError
 
-from parsl.dataflow.states import States
-
 
 @python_app
 def fails():
@@ -20,10 +18,8 @@ def test_depfail_once():
     f2 = depends(f1)
 
     assert isinstance(f1.exception(), Exception)
-    assert f1.task_def['status'] == States.failed
-
+    assert not isinstance(f1.exception(), DependencyError)
     assert isinstance(f2.exception(), DependencyError)
-    assert f2.task_def['status'] == States.dep_fail
 
 
 def test_depfail_chain():
@@ -34,16 +30,10 @@ def test_depfail_chain():
     f4 = depends(f3)
 
     assert isinstance(f1.exception(), Exception)
-    assert f1.task_def['status'] == States.failed
-
+    assert not isinstance(f1.exception(), DependencyError)
     assert isinstance(f2.exception(), DependencyError)
-    assert f2.task_def['status'] == States.dep_fail
-
     assert isinstance(f3.exception(), DependencyError)
-    assert f3.task_def['status'] == States.dep_fail
-
     assert isinstance(f4.exception(), DependencyError)
-    assert f4.task_def['status'] == States.dep_fail
 
 
 def test_depfail_branches():
@@ -55,10 +45,6 @@ def test_depfail_branches():
     f3 = depends(f1)
 
     assert isinstance(f1.exception(), Exception)
-    assert f1.task_def['status'] == States.failed
-
+    assert not isinstance(f1.exception(), DependencyError)
     assert isinstance(f2.exception(), DependencyError)
-    assert f2.task_def['status'] == States.dep_fail
-
     assert isinstance(f3.exception(), DependencyError)
-    assert f3.task_def['status'] == States.dep_fail
