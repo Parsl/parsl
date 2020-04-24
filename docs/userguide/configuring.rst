@@ -209,6 +209,17 @@ The following snippet shows an example configuration for accessing TACC's **Stam
 
 .. literalinclude:: ../../parsl/configs/stampede2.py
 
+
+ASPIRE 1 (NSCC)
+------------
+
+.. image:: https://www.nscc.sg/wp-content/uploads/2017/04/ASPIRE1Img.png
+
+The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how `scheduler_options` parameter could be used for scheduling array jobs in PBSPro.
+
+.. literalinclude:: ../../parsl/configs/ASPIRE1.py
+
+
 Frontera (TACC)
 ---------------
 

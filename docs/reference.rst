@@ -67,11 +67,10 @@ Reference guide
 
     parsl.app.errors.AppBadFormatting
     parsl.app.errors.AppException
-    parsl.app.errors.AppFailure
     parsl.app.errors.AppTimeout
     parsl.app.errors.BadStdStreamFile
     parsl.app.errors.BashAppNoReturn
-    parsl.app.errors.DependencyError
+    parsl.app.errors.BashExitFailure
     parsl.app.errors.MissingOutputs
     parsl.app.errors.NotFutureError
     parsl.app.errors.ParslError
@@ -84,7 +83,6 @@ Reference guide
     parsl.dataflow.error.DataFlowException
     parsl.dataflow.error.ConfigurationError
     parsl.dataflow.error.DuplicateTaskError
-    parsl.dataflow.error.MissingFutError
     parsl.dataflow.error.BadCheckpoint
     parsl.dataflow.error.DependencyError
     parsl.launchers.error.BadLauncher

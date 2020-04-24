@@ -146,21 +146,32 @@ class Memoizer(object):
         """
         # Function name TODO: Add fn body later
 
+        t = []
+
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
-        if 'outputs' in task['kwargs']:
-            newkw = task['kwargs'].copy()
-            outputs = task['kwargs']['outputs']
-            del newkw['outputs']
-            kw_id = id_for_memo(newkw) + id_for_memo(outputs, output_ref=True)
-        else:
-            newkw = task['kwargs']
-            kw_id = id_for_memo(newkw)
+        # kwargs listed in ignore_for_cache will also be removed
 
-        t = [id_for_memo(task['func_name']),
-             id_for_memo(task['fn_hash']),
-             id_for_memo(task['args']),
-             kw_id]
+        filtered_kw = task['kwargs'].copy()
+
+        ignore_list = task['ignore_for_cache']
+
+        logger.debug("Ignoring these kwargs for checkpointing: {}".format(ignore_list))
+        for k in ignore_list:
+            logger.debug("Ignoring kwarg {}".format(k))
+            del filtered_kw[k]
+
+        if 'outputs' in task['kwargs']:
+            outputs = task['kwargs']['outputs']
+            del filtered_kw['outputs']
+            t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
+
+        t = t + [id_for_memo(filtered_kw)]
+
+        t = t + [id_for_memo(task['func_name']),
+                 id_for_memo(task['fn_hash']),
+                 id_for_memo(task['args'])]
+
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
@@ -176,23 +187,19 @@ class Memoizer(object):
             - task(task) : task from the dfk.tasks table
 
         Returns:
-            Tuple of the following:
-            - present (Bool): Is this present in the memo_lookup_table
-            - Result (Py Obj): Result of the function if present in table
+            - Result (Future): A completed future containing the memoized result
 
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
         """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
             logger.debug("Task {} will not be memoized".format(task_id))
-            return False, None
+            return None
 
         hashsum = self.make_hash(task)
         logger.debug("Task {} has memoization hash {}".format(task_id, hashsum))
-        present = False
         result = None
         if hashsum in self.memo_lookup_table:
-            present = True
             result = self.memo_lookup_table[hashsum]
             logger.info("Task %s using result from cache", task_id)
         else:
@@ -200,7 +207,7 @@ class Memoizer(object):
 
         task['hashsum'] = hashsum
 
-        return present, result
+        return result
 
     def hash_lookup(self, hashsum):
         """Lookup a hash in the memoization table.
@@ -227,7 +234,7 @@ class Memoizer(object):
         A warning is issued when a hash collision occurs during the update.
         This is not likely.
         """
-        if not self.memoize or not task['memoize']:
+        if not self.memoize or not task['memoize'] or 'hashsum' not in task:
             return
 
         if task['hashsum'] in self.memo_lookup_table:

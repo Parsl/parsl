@@ -44,7 +44,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if executable is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e))
         else:
-            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned None - with this exception: {}".format(func_name, e), None)
+            raise pe.BashAppNoReturn("Bash app '{}' did not return a value, or returned None - with this exception: {}".format(func_name, e))
 
     except IndexError as e:
         raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e))
@@ -91,15 +91,13 @@ def remote_side_bash_executor(func, *args, **kwargs):
         raise pe.AppException("[{}] App caught exception with returncode: {}".format(func_name, returncode), e)
 
     if returncode != 0:
-        raise pe.AppFailure("[{}] App failed with exit code: {}".format(func_name, proc.returncode), proc.returncode)
+        raise pe.BashExitFailure(func_name, proc.returncode)
 
     # TODO : Add support for globs here
 
     missing = []
     for outputfile in kwargs.get('outputs', []):
-        fpath = outputfile
-        if type(outputfile) != str:
-            fpath = outputfile.filepath
+        fpath = outputfile.filepath
 
         if not os.path.exists(fpath):
             missing.extend([outputfile])
@@ -112,8 +110,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all'):
-        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache)
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=[]):
+        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache, ignore_for_cache=ignore_for_cache)
         self.kwargs = {}
 
         # We duplicate the extraction of parameter defaults
@@ -122,7 +120,7 @@ class BashApp(AppBase):
         sig = signature(func)
 
         for s in sig.parameters:
-            if sig.parameters[s].default != Parameter.empty:
+            if sig.parameters[s].default is not Parameter.empty:
                 self.kwargs[s] = sig.parameters[s].default
 
     def __call__(self, *args, **kwargs):
@@ -148,10 +146,11 @@ class BashApp(AppBase):
             dfk = self.data_flow_kernel
 
         app_fut = dfk.submit(wrap_error(update_wrapper(remote_side_bash_executor, self.func)),
-                             self.func, *args,
+                             app_args=(self.func, *args),
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
-                             **invocation_kwargs)
+                             ignore_for_cache=self.ignore_for_cache,
+                             app_kwargs=invocation_kwargs)
 
         return app_fut

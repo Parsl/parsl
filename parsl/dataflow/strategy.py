@@ -1,8 +1,11 @@
 import logging
 import time
 import math
+from typing import List
 
+from parsl.dataflow.task_status_poller import ExecutorStatus
 from parsl.executors import HighThroughputExecutor, ExtremeScaleExecutor
+
 from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
@@ -128,7 +131,7 @@ class Strategy(object):
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
 
-    def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_noop(self, status: List[ExecutorStatus], tasks, *args, kind=None, **kwargs):
         """Do nothing.
 
         Args:
@@ -146,13 +149,13 @@ class Strategy(object):
 
         root_logger = logging.getLogger()
 
-        for hndlr in root_logger.handlers:
-            if hndlr not in self.prior_loghandlers:
-                hndlr.setLevel(logging.ERROR)
+        for handler in root_logger.handlers:
+            if handler not in self.prior_loghandlers:
+                handler.setLevel(logging.ERROR)
 
         self.logger_flag = True
 
-    def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_simple(self, status_list, tasks, *args, kind=None, **kwargs):
         """Peek at the DFK and the executors specified.
 
         We assume here that tasks are not held in a runnable
@@ -167,14 +170,17 @@ class Strategy(object):
             - kind (Not used)
         """
 
-        for label, executor in self.dfk.executors.items():
+        for exec_status in status_list:
+            executor = exec_status.executor
+            label = executor.label
             if not executor.scaling_enabled:
                 continue
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
 
-            status = executor.status()
+            status = exec_status.status
+            # Dict[object, JobStatus]: job_id -> status
             self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these
@@ -233,7 +239,7 @@ class Strategy(object):
                         logger.debug("Idle time has reached {}s for executor {}; removing resources".format(
                             self.max_idletime, label)
                         )
-                        executor.scale_in(active_blocks - min_blocks)
+                        exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
                         pass
@@ -256,14 +262,14 @@ class Strategy(object):
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
-                    executor.scale_out(excess_blocks)
+                    exec_status.scale_out(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
                 # Case 4
                 # Check if slots are being lost quickly ?
                 logger.debug("Requesting single slot")
                 if active_blocks < max_blocks:
-                    executor.scale_out(1)
+                    exec_status.scale_out(1)
             # Case 3
             # tasks ~ slots
             else:

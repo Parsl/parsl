@@ -1,5 +1,6 @@
 import logging
 import threading
+from itertools import compress
 from abc import abstractmethod
 from concurrent.futures import Future
 from typing import List, Any, Dict
@@ -37,6 +38,13 @@ class StatusHandlingExecutor(ParslExecutor):
 
     def _set_provider(self, provider: ExecutionProvider):
         self._provider = provider
+
+    @property
+    def status_polling_interval(self):
+        if self._provider is None:
+            return 0
+        else:
+            return self._provider.status_polling_interval
 
     @abstractmethod
     def _get_job_ids(self) -> List[object]:
@@ -80,11 +88,22 @@ class StatusHandlingExecutor(ParslExecutor):
     def provider(self):
         return self._provider
 
+    def _filter_scale_in_ids(self, to_kill, killed):
+        """ Filter out job id's that were not killed
+        """
+        assert len(to_kill) == len(killed)
+        # Filters first iterable by bool values in second
+        return list(compress(to_kill, killed))
+
 
 class NoStatusHandlingExecutor(ParslExecutor):
     def __init__(self):
         super().__init__()
         self._tasks = {}  # type: Dict[object, Future]
+
+    @property
+    def status_polling_interval(self):
+        return -1
 
     @property
     def bad_state_is_set(self):
