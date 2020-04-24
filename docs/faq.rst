@@ -304,6 +304,7 @@ Run::
 
 Now all available conda environments (for example, one created by following the instructions `here <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.
 
+.. _label_serialization_error:
 
 Addressing SerializationError
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
