@@ -517,7 +517,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         logger.info("Completed task {}".format(tid))
         try:
             pkl_package = pickle.dumps(result_package)
-        except Exception as e:
+        except Exception:
             logger.exception("Caught exception while trying to pickle the result package")
             pkl_package = pickle.dumps({'task_id': tid,
                                         'exception': serialize_object(
