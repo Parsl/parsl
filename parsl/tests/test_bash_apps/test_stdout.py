@@ -15,7 +15,7 @@ def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
     return 'echo "{0}"; echo "{0}" >&2'.format(msg)
 
 
-@App('bash')
+@bash_app
 def echo_stdout_name(file, stdout=parsl.AUTO_LOGNAME):
     return 'echo {stdout} > {filename}'.format(stdout=stdout, filename=file.filepath)
 
