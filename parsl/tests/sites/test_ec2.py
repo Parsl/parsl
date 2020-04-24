@@ -1,19 +1,16 @@
 import parsl
+import pytest
 
-if __name__ == "__main__":
-    parsl.set_stream_logger()
-    # initialise logging before importing config, to get logging
-    # from config declaration # as it looks like the AWS initializer
-    # is doing more than just creating data structures
-
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.ec2_single_node import config
 
 import logging
 logger = logging.getLogger(__name__)
 
+local_config = config
 
-@App("python", executors=['ec2_single_node'])
+
+@python_app(executors=['ec2_single_node'])
 def python_app_2():
     import os
     import threading
@@ -22,7 +19,7 @@ def python_app_2():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("python", executors=['ec2_single_node'])
+@python_app(executors=['ec2_single_node'])
 def python_app_1():
     import os
     import threading
@@ -31,12 +28,12 @@ def python_app_1():
     return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
 
 
-@App("bash")
+@parsl.bash_app
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 
 
-# @pytest.mark.local
+@pytest.mark.local
 def test_python(N=2):
     """Testing basic python functionality."""
 
@@ -55,10 +52,7 @@ def test_python(N=2):
     return
 
 
-local_config = config
-
-
-# @pytest.mark.local
+@pytest.mark.local
 def test_bash():
     """Testing basic bash functionality."""
 
@@ -71,6 +65,14 @@ def test_bash():
 
 
 if __name__ == "__main__":
+    parsl.set_stream_logger()
+
+    # this config is imported inside the main block for the same
+    # reason that it has local standup/teardown code at the top
+    # of this file. For that same reason, set_stream_logger
+    # is called before this import.
+
+    from parsl.tests.configs.ec2_single_node import config
     parsl.load(config)
     test_python()
     test_bash()

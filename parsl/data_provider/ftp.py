@@ -43,7 +43,7 @@ class FTPInTaskStaging(Staging, RepresentationMixin):
         else:
             file.local_path = file.filename
 
-        return file
+        return None
 
     def replace_task(self, dm, executor, file, f):
         working_dir = dm.dfk.executors[executor].working_dir

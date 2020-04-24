@@ -3,20 +3,20 @@ Regression tests for issue #69
 '''
 import pytest
 
-from parsl.app.app import App
+from parsl.app.app import bash_app, python_app
 from parsl.tests.configs.local_threads import config
 
 
 local_config = config
 
 
-@App('bash')
+@bash_app
 def echo_slow_message(msg, sleep=0, fu=None, outputs=[], stderr='std.err', stdout='std.out'):
     cmd_line = 'sleep {sleep}; echo {0} > {outputs[0]}'
     return cmd_line
 
 
-@App('python')
+@python_app
 def sleep(sleep_dur=0.1):
     import time
     time.sleep(sleep_dur)

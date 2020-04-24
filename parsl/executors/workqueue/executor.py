@@ -14,11 +14,11 @@ import queue
 import inspect
 from ipyparallel.serialize import pack_apply_message
 
-from parsl.app.errors import AppFailure
+from parsl.app.errors import AppException
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
-from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
+from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import workqueue_worker
 
@@ -39,6 +39,19 @@ else:
     _work_queue_enabled = True
 
 logger = logging.getLogger(__name__)
+
+
+class WorkqueueTaskFailure(AppException):
+    """A failure executing a task in workqueue
+
+    Contains:
+    reason(string)
+    status(int)
+    """
+
+    def __init__(self, reason, status):
+        self.reason = reason
+        self.status = status
 
 
 def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
@@ -363,7 +376,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         if received is False:
             reason = item["reason"]
             status = item["status"]
-            future.set_exception(AppFailure(reason, status))
+            future.set_exception(WorkqueueTaskFailure(reason, status))
         # Successful task
         else:
             result = item["result"]
@@ -383,7 +396,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
     return
 
 
-class WorkQueueExecutor(ParslExecutor):
+class WorkQueueExecutor(NoStatusHandlingExecutor):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -461,6 +474,7 @@ class WorkQueueExecutor(ParslExecutor):
                  init_command="",
                  full_debug=True,
                  see_worker_output=False):
+        NoStatusHandlingExecutor.__init__(self)
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
@@ -468,7 +482,6 @@ class WorkQueueExecutor(ParslExecutor):
         self.managed = managed
         self.task_queue = multiprocessing.Queue()
         self.collector_queue = multiprocessing.Queue()
-        self.tasks = {}
         self.port = port
         self.task_counter = -1
         self.scaling_enabled = False

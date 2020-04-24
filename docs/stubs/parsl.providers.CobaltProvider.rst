@@ -27,8 +27,10 @@ parsl.providers.CobaltProvider
 
    .. autosummary::
    
+      ~CobaltProvider.cores_per_node
       ~CobaltProvider.current_capacity
       ~CobaltProvider.label
-      ~CobaltProvider.scaling_enabled
+      ~CobaltProvider.mem_per_node
+      ~CobaltProvider.status_polling_interval
    
    

@@ -4,20 +4,20 @@ import os
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 
 
 local_config = config
 
 
-@App('bash')
+@bash_app
 def app1(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
     cmd_line = """echo 'test' > {outputs[0]}"""
     return cmd_line
 
 
-@App('bash')
+@bash_app
 def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
 
     with open('somefile.txt', 'w') as f:

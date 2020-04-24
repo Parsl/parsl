@@ -3,7 +3,7 @@ import argparse
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import fresh_config
 
 
@@ -11,7 +11,7 @@ local_config = fresh_config()
 local_config.retries = 2
 
 
-@App('python')
+@python_app
 def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
     import time
     import random
@@ -28,7 +28,7 @@ def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
         # print("Succeed")
 
 
-@App('python')
+@python_app
 def double(x):
     return x * 2
 
@@ -140,7 +140,7 @@ def test_deps(numtasks=10):
         print("Shoot! no errors ")
 
 
-@App('python')
+@python_app
 def sleep_then_fail(sleep_dur=0.1):
     import time
     import math

@@ -2,27 +2,33 @@ import os
 import math
 import time
 import logging
+import typeguard
+
+from typing import Optional
 
 from parsl.channels import LocalChannel
+from parsl.channels.base import Channel
 from parsl.launchers import SingleNodeLauncher
+from parsl.launchers.launchers import Launcher
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.provider_base import JobState, JobStatus
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
 translate_table = {
-    'PD': 'PENDING',
-    'R': 'RUNNING',
-    'CA': 'CANCELLED',
-    'CF': 'PENDING',  # (configuring),
-    'CG': 'RUNNING',  # (completing),
-    'CD': 'COMPLETED',
-    'F': 'FAILED',  # (failed),
-    'TO': 'TIMEOUT',  # (timeout),
-    'NF': 'FAILED',  # (node failure),
-    'RV': 'FAILED',  # (revoked) and
-    'SE': 'FAILED'
+    'PD': JobState.PENDING,
+    'R': JobState.RUNNING,
+    'CA': JobState.CANCELLED,
+    'CF': JobState.PENDING,  # (configuring),
+    'CG': JobState.RUNNING,  # (completing),
+    'CD': JobState.COMPLETED,
+    'F': JobState.FAILED,  # (failed),
+    'TO': JobState.TIMEOUT,  # (timeout),
+    'NF': JobState.FAILED,  # (node failure),
+    'RV': JobState.FAILED,  # (revoked) and
+    'SE': JobState.FAILED
 }  # (special exit state
 
 
@@ -36,7 +42,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     Parameters
     ----------
     partition : str
-        Slurm partition to request blocks from.
+        Slurm partition to request blocks from. If none, no partition slurm directive will be specified.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
@@ -47,7 +53,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     cores_per_node : int
         Specify the number of cores to provision per node. If set to None, executors
         will assume all cores on the node are available for computation. Default is None.
-    mem_per_node : float
+    mem_per_node : int
         Specify the real memory to provision per node in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
     min_blocks : int
@@ -74,23 +80,24 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
      move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
+    @typeguard.typechecked
     def __init__(self,
-                 partition,
-                 channel=LocalChannel(),
-                 nodes_per_block=1,
-                 cores_per_node=None,
-                 mem_per_node=None,
-                 init_blocks=1,
-                 min_blocks=0,
-                 max_blocks=10,
-                 parallelism=1,
-                 walltime="00:10:00",
-                 scheduler_options='',
-                 worker_init='',
-                 cmd_timeout=10,
-                 exclusive=True,
-                 move_files=True,
-                 launcher=SingleNodeLauncher()):
+                 partition: Optional[str],
+                 channel: Channel = LocalChannel(),
+                 nodes_per_block: int = 1,
+                 cores_per_node: Optional[int] = None,
+                 mem_per_node: Optional[int] = None,
+                 init_blocks: int = 1,
+                 min_blocks: int = 0,
+                 max_blocks: int = 10,
+                 parallelism: float = 1,
+                 walltime: str = "00:10:00",
+                 scheduler_options: str = '',
+                 worker_init: str = '',
+                 cmd_timeout: int = 10,
+                 exclusive: bool = True,
+                 move_files: bool = True,
+                 launcher: Launcher = SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
                          channel,
@@ -111,6 +118,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
+        if partition:
+            self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
         self.worker_init = worker_init + '\n'
 
     def _status(self):
@@ -124,11 +133,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
         job_id_list = ','.join(self.resources.keys())
         cmd = "squeue --job {0}".format(job_id_list)
-
+        logger.debug("Executing sqeueue")
         retcode, stdout, stderr = self.execute_wait(cmd)
+        logger.debug("sqeueue returned")
 
         # Execute_wait failed. Do no update
         if retcode != 0:
+            logger.warning("squeue failed with non-zero exit code {} - see https://github.com/Parsl/parsl/issues/1588".format(retcode))
             return
 
         jobs_missing = list(self.resources.keys())
@@ -136,17 +147,18 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             parts = line.split()
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
-                status = translate_table.get(parts[4], 'UNKNOWN')
-                self.resources[job_id]['status'] = status
+                status = translate_table.get(parts[4], JobState.UNKNOWN)
+                logger.debug("Updating job {} with slurm status {} to parsl status {}".format(job_id, parts[4], status))
+                self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            if self.resources[missing_job]['status'] in ['PENDING', 'RUNNING']:
-                self.resources[missing_job]['status'] = 'COMPLETED'
+            logger.debug("Updating missing job {} to completed status".format(missing_job))
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
-    def submit(self, command, tasks_per_node, job_name="parsl.auto"):
+    def submit(self, command, tasks_per_node, job_name="parsl.slurm"):
         """Submit the command as a slurm job.
 
         Parameters
@@ -191,7 +203,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config["walltime"] = wtime_to_minutes(self.walltime)
         job_config["scheduler_options"] = scheduler_options
         job_config["worker_init"] = worker_init
-        job_config["partition"] = self.partition
         job_config["user_script"] = command
 
         # Wrap the command
@@ -216,7 +227,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             for line in stdout.split('\n'):
                 if line.startswith("Submitted batch job"):
                     job_id = line.split("Submitted batch job")[1].strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': 'PENDING'}
+                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             print("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
@@ -237,18 +248,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['CA']  # Setting state to cancelled
+                self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)  # Setting state to cancelled
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
 
         return rets
 
-    def _test_add_resource(self, job_id):
-        self.resources.extend([{'job_id': job_id, 'status': 'PENDING', 'size': 1}])
-        return True
-
-
-if __name__ == "__main__":
-
-    print("None")
+    @property
+    def status_polling_interval(self):
+        return 60

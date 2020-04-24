@@ -6,7 +6,7 @@ import pytest
 from dateutil.parser import parse
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads_checkpoint_periodic import config
 
 
@@ -21,7 +21,7 @@ def local_teardown():
     parsl.clear()
 
 
-@App('python', cache=True)
+@python_app(cache=True)
 def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)
@@ -60,8 +60,8 @@ def test_periodic(n=4):
 
     with open("{}/parsl.log".format(dfk.run_dir), 'r') as f:
         log_lines = f.readlines()
-        expected_msg = "]  Done checkpointing".format(n)
-        expected_msg2 = "]  No tasks checkpointed in this pass".format(n)
+        expected_msg = "]  Done checkpointing"
+        expected_msg2 = "]  No tasks checkpointed in this pass"
 
         lines = [line for line in log_lines if expected_msg in line or expected_msg2 in line]
         assert len(lines) >= 3, "Insufficient checkpoint lines in logfile"
