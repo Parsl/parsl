@@ -309,7 +309,8 @@ Now all available conda environments (for example, one created by following the 
 Addressing SerializationError
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As of `1.0.0` Parsl will raise a `SerializationError` when it encounters a data object passed as an argument to an app.
+As of `1.0.0` Parsl will raise a `SerializationError` when it encounters an object that Parsl cannot serialize.
+This applies to objects passed as arguments to an app, as well as objects returned from the app.
 
 Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects
 to/from functions. Therefore, Python apps can only use input and output objects that can be serialized by
