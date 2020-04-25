@@ -7,17 +7,11 @@ import parsl
 import parsl.app.errors as perror
 from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
-from parsl.data_provider.files import File
 
 
 @bash_app
 def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
     return 'echo "{0}"; echo "{0}" >&2'.format(msg)
-
-
-@bash_app
-def echo_stdout_name(file, stdout=parsl.AUTO_LOGNAME):
-    return 'echo {stdout} > {filename}'.format(stdout=stdout, filename=file.filepath)
 
 
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
@@ -121,28 +115,6 @@ def test_stdout_append():
     assert len1 == 1 and len2 == 2, "Line count of output files should be 1 and 2, but:  len1={} len2={}".format(len1, len2)
 
     os.system('rm -f ' + out + ' ' + err)
-
-
-def test_stdout_autologname():
-
-    """ Testing appending to prior content of stdout (default open() mode) """
-
-    filename = "t1.fn"
-
-    os.system('rm -f ' + filename)
-
-    file = File(filename)
-
-    fut = echo_stdout_name(file)
-
-    fut.result()
-
-    stdout_filename = open(filename).readlines()[0].strip()
-
-    assert "echo_stdout_name" in stdout_filename, "stdout filename should contain app name"
-    assert stdout_filename == fut.stdout, "AppFuture stdout filename should match stdout name seen by bash code"
-
-    os.system('rm -f ' + filename)
 
 
 if __name__ == '__main__':
