@@ -490,7 +490,7 @@ class Interchange(object):
                     logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
-                        # logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
+                        logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
                         self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
                     self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
