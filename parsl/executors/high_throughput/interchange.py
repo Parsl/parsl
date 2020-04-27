@@ -18,7 +18,7 @@ from ipyparallel.serialize import serialize_object
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.monitoring.message_type import MessageType
-
+from parsl.process_loggers import wrap_with_logs
 
 LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
@@ -342,12 +342,12 @@ class Interchange(object):
         count = 0
 
         self._kill_event = threading.Event()
-        self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
+        self._task_puller_thread = threading.Thread(target=wrap_with_logs(self.migrate_tasks_to_internal),
                                                     args=(self._kill_event,),
                                                     name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
-        self._command_thread = threading.Thread(target=self._command_server,
+        self._command_thread = threading.Thread(target=wrap_with_logs(self._command_server),
                                                 args=(self._kill_event,),
                                                 name="Interchange-Command")
         self._command_thread.start()

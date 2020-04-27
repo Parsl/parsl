@@ -19,6 +19,7 @@ from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
+from parsl.process_loggers import wrap_with_logs
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -411,7 +412,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         get the worker task and result ports that the interchange has bound to.
         """
         comm_q = Queue(maxsize=10)
-        self.queue_proc = Process(target=interchange.starter,
+        self.queue_proc = Process(target=wrap_with_logs(interchange.starter),
                                   args=(comm_q,),
                                   kwargs={"client_ports": (self.outgoing_q.port,
                                                            self.incoming_q.port,
@@ -444,7 +445,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         """
         if self._queue_management_thread is None:
             logger.debug("Starting queue management thread")
-            self._queue_management_thread = threading.Thread(target=self._queue_management_worker, name="HTEX-Queue-Management-Thread")
+            self._queue_management_thread = threading.Thread(target=wrap_with_logs(self._queue_management_worker), name="HTEX-Queue-Management-Thread")
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
             logger.debug("Started queue management thread")

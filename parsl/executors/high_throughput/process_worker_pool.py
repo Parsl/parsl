@@ -18,6 +18,8 @@ import json
 import psutil
 import multiprocessing
 
+from parsl.process_loggers import wrap_with_logs
+
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
@@ -353,7 +355,7 @@ class Manager(object):
                     except KeyError:
                         logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was not busy when it died".format(worker_id))
 
-                    p = multiprocessing.Process(target=worker, args=(worker_id,
+                    p = multiprocessing.Process(target=wrap_with_logs(worker), args=(worker_id,
                                                                      self.uid,
                                                                      self.worker_count,
                                                                      self.pending_task_queue,
@@ -378,7 +380,7 @@ class Manager(object):
 
         self.procs = {}
         for worker_id in range(self.worker_count):
-            p = multiprocessing.Process(target=worker, args=(worker_id,
+            p = multiprocessing.Process(target=wrap_with_logs(worker), args=(worker_id,
                                                              self.uid,
                                                              self.worker_count,
                                                              self.pending_task_queue,
@@ -391,13 +393,13 @@ class Manager(object):
 
         logger.debug("Manager synced with workers")
 
-        self._task_puller_thread = threading.Thread(target=self.pull_tasks,
+        self._task_puller_thread = threading.Thread(target=wrap_with_logs(self.pull_tasks),
                                                     args=(self._kill_event,),
                                                     name="Task-Puller")
-        self._result_pusher_thread = threading.Thread(target=self.push_results,
+        self._result_pusher_thread = threading.Thread(target=wrap_with_logs(self.push_results),
                                                       args=(self._kill_event,),
                                                       name="Result-Pusher")
-        self._worker_watchdog_thread = threading.Thread(target=self.worker_watchdog,
+        self._worker_watchdog_thread = threading.Thread(target=wrap_with_logs(self.worker_watchdog),
                                                         args=(self._kill_event,),
                                                         name="worker-watchdog")
         self._task_puller_thread.start()

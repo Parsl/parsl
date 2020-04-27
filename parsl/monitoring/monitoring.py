@@ -11,6 +11,8 @@ import queue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 
+from parsl.process_loggers import wrap_with_logs
+
 from parsl.monitoring.message_type import MessageType
 
 from typing import Optional, Tuple
@@ -220,7 +222,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
-        self.queue_proc = Process(target=hub_starter,
+        self.queue_proc = Process(target=wrap_with_logs(hub_starter),
                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
@@ -236,7 +238,7 @@ class MonitoringHub(RepresentationMixin):
         )
         self.queue_proc.start()
 
-        self.dbm_proc = Process(target=dbm_starter,
+        self.dbm_proc = Process(target=wrap_with_logs(dbm_starter),
                                 args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
@@ -306,7 +308,7 @@ class MonitoringHub(RepresentationMixin):
 
             command_q = Queue(maxsize=10)
             logger.debug("wrapped: 2. created queue")
-            p = Process(target=monitor,
+            p = Process(target=wrap_with_logs(monitor),
                         args=(os.getpid(),
                               task_id,
                               monitoring_hub_url,
