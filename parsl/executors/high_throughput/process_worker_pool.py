@@ -206,7 +206,7 @@ class Manager(object):
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
-        logger.debug("Return from heartbeat: {}".format(r))
+        logger.debug("Sent heartbeat, return code {}".format(r))
 
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
