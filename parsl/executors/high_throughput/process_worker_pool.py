@@ -254,6 +254,7 @@ class Manager(object):
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 last_interchange_contact = time.time()
+                logger.debug("Heartbeat from interchange at {}".format(last_interchange_contact))
 
                 if tasks == 'STOP':
                     logger.critical("[TASK_PULL_THREAD] Received stop request")
