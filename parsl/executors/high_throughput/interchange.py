@@ -493,7 +493,10 @@ class Interchange(object):
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
                         logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
-                        self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                        try:
+                            self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                        except Exception as e:
+                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(task_id, manager, self._ready_manager_queue[manager]['tasks']))
                     self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                 logger.debug("[MAIN] leaving results_incoming section")
