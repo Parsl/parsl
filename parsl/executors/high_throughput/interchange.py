@@ -387,6 +387,7 @@ class Interchange(object):
                         logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
 
                     # By default we set up to ignore bad nodes/registration messages.
+                    logger.info("[MAIN] Creating manager record for manager {}".format(manager))
                     self._ready_manager_queue[manager] = {'last': time.time(),
                                                           'free_capacity': 0,
                                                           'block_id': None,
