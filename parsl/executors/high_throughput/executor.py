@@ -288,7 +288,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
-        self._start_local_queue_process()
+        self._start_local_interchange_process()
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
@@ -405,14 +405,14 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         """We do not use this yet."""
         q.put(None)
 
-    def _start_local_queue_process(self):
+    def _start_local_interchange_process(self):
         """ Starts the interchange process locally
 
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
         comm_q = Queue(maxsize=10)
-        self.queue_proc = Process(target=wrap_with_logs(interchange.starter),
+        self.interchange_proc = Process(target=wrap_with_logs(interchange.starter),
                                   args=(comm_q,),
                                   kwargs={"client_ports": (self.outgoing_q.port,
                                                            self.incoming_q.port,
@@ -430,7 +430,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                   daemon=True,
                                   name="HTEX-Interchange"
         )
-        self.queue_proc.start()
+        self.interchange_proc.start()
         try:
             (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -621,6 +621,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
-        self.queue_proc.terminate()
+        self.interchange_proc.terminate()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
         return True
