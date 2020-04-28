@@ -464,6 +464,11 @@ class Interchange(object):
                         tasks = self.get_tasks(real_capacity)
                         if tasks:
                             self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
+                            # after this point, we've sent a task to the manager, but we haven't
+                            # added it to the 'task' list for that manager, because we don't
+                            # do that for another 5 lines. That should be pretty fast, though?
+                            # but we shouldn't try removing it from the tasks list until we have
+                            # passed that point anyway?
                             task_count = len(tasks)
                             count += task_count
                             tids = [t['task_id'] for t in tasks]
@@ -496,7 +501,7 @@ class Interchange(object):
                         try:
                             self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
                         except Exception as e:
-                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(task_id, manager, self._ready_manager_queue[manager]['tasks']))
+                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(r['task_id'], manager, self._ready_manager_queue[manager]['tasks']))
                     self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                 logger.debug("[MAIN] leaving results_incoming section")
