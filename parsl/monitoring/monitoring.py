@@ -222,7 +222,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
-        self.queue_proc = Process(target=wrap_with_logs(hub_starter),
+        self.queue_proc = Process(target=hub_starter,
                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
@@ -238,7 +238,7 @@ class MonitoringHub(RepresentationMixin):
         )
         self.queue_proc.start()
 
-        self.dbm_proc = Process(target=wrap_with_logs(dbm_starter),
+        self.dbm_proc = Process(target=dbm_starter,
                                 args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
@@ -308,7 +308,7 @@ class MonitoringHub(RepresentationMixin):
 
             command_q = Queue(maxsize=10)
             logger.debug("wrapped: 2. created queue")
-            p = Process(target=wrap_with_logs(monitor),
+            p = Process(target=monitor,
                         args=(os.getpid(),
                               task_id,
                               monitoring_hub_url,
@@ -471,6 +471,7 @@ class Hub(object):
         self.logger.info("Hub finished")
 
 
+@wrap_with_logs
 def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     hub = Hub(*args, **kwargs)
     comm_q.put((hub.hub_port, hub.ic_port))
@@ -484,6 +485,7 @@ def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *a
     hub.logger.info("End of hub starter")
 
 
+@wrap_with_logs
 def monitor(pid,
             task_id,
             monitoring_hub_url,

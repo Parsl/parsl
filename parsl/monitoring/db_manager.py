@@ -7,6 +7,7 @@ import time
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
+from parsl.process_loggers import wrap_with_logs
 
 try:
     import sqlalchemy as sa
@@ -462,6 +463,7 @@ def start_file_logger(filename, name='database_manager', level=logging.DEBUG, fo
     return logger
 
 
+@wrap_with_logs
 def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     """Start the database manager process
 

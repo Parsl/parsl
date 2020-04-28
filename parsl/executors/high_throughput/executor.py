@@ -4,7 +4,7 @@ import logging
 import threading
 import queue
 import pickle
-from multiprocessing import Process, Queue
+import multiprocessing
 from typing import Dict, List, Optional, Tuple, Union
 import math
 
@@ -180,6 +180,9 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         logger.debug("Initializing HighThroughputExecutor")
 
         StatusHandlingExecutor.__init__(self, provider)
+
+        self.mp_context = multiprocessing.get_context('fork')
+
         self.label = label
         self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug
@@ -294,6 +297,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self.initialize_scaling()
 
+    @wrap_with_logs
     def _queue_management_worker(self):
         """Listen to the queue for task status messages and handle them.
 
@@ -411,8 +415,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        comm_q = Queue(maxsize=10)
-        self.interchange_proc = Process(target=wrap_with_logs(interchange.starter),
+        comm_q = self.mp_context.Queue(maxsize=10)
+        self.interchange_proc = self.mp_context.Process(target=interchange.starter,
                                   args=(comm_q,),
                                   kwargs={"client_ports": (self.outgoing_q.port,
                                                            self.incoming_q.port,
@@ -445,7 +449,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         """
         if self._queue_management_thread is None:
             logger.debug("Starting queue management thread")
-            self._queue_management_thread = threading.Thread(target=wrap_with_logs(self._queue_management_worker), name="HTEX-Queue-Management-Thread")
+            self._queue_management_thread = threading.Thread(target=self._queue_management_worker, name="HTEX-Queue-Management-Thread")
             self._queue_management_thread.daemon = True
             self._queue_management_thread.start()
             logger.debug("Started queue management thread")

@@ -210,6 +210,7 @@ class Manager(object):
         r = self.task_incoming.send(heartbeat)
         logger.debug("Sent heartbeat, return code {}".format(r))
 
+    @wrap_with_logs
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
@@ -291,6 +292,7 @@ class Manager(object):
                     logger.critical("[TASK_PULL_THREAD] Exiting")
                     break
 
+    @wrap_with_logs
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -327,6 +329,7 @@ class Manager(object):
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
+    @wrap_with_logs
     def worker_watchdog(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -355,7 +358,7 @@ class Manager(object):
                     except KeyError:
                         logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was not busy when it died".format(worker_id))
 
-                    p = multiprocessing.Process(target=wrap_with_logs(worker), args=(worker_id,
+                    p = multiprocessing.Process(target=worker, args=(worker_id,
                                                                      self.uid,
                                                                      self.worker_count,
                                                                      self.pending_task_queue,
@@ -380,7 +383,7 @@ class Manager(object):
 
         self.procs = {}
         for worker_id in range(self.worker_count):
-            p = multiprocessing.Process(target=wrap_with_logs(worker), args=(worker_id,
+            p = multiprocessing.Process(target=worker, args=(worker_id,
                                                              self.uid,
                                                              self.worker_count,
                                                              self.pending_task_queue,
@@ -393,13 +396,13 @@ class Manager(object):
 
         logger.debug("Manager synced with workers")
 
-        self._task_puller_thread = threading.Thread(target=wrap_with_logs(self.pull_tasks),
+        self._task_puller_thread = threading.Thread(target=self.pull_tasks,
                                                     args=(self._kill_event,),
                                                     name="Task-Puller")
-        self._result_pusher_thread = threading.Thread(target=wrap_with_logs(self.push_results),
+        self._result_pusher_thread = threading.Thread(target=self.push_results,
                                                       args=(self._kill_event,),
                                                       name="Result-Pusher")
-        self._worker_watchdog_thread = threading.Thread(target=wrap_with_logs(self.worker_watchdog),
+        self._worker_watchdog_thread = threading.Thread(target=self.worker_watchdog,
                                                         args=(self._kill_event,),
                                                         name="worker-watchdog")
         self._task_puller_thread.start()
@@ -469,6 +472,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
+@wrap_with_logs
 def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress):
     """
 

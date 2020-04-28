@@ -241,6 +241,7 @@ class Interchange(object):
 
         return tasks
 
+    @wrap_with_logs
     def migrate_tasks_to_internal(self, kill_event):
         """Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
@@ -271,6 +272,7 @@ class Interchange(object):
                 task_counter += 1
                 logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
 
+    @wrap_with_logs
     def _command_server(self, kill_event):
         """ Command server to run async command to the interchange
         """
@@ -342,12 +344,12 @@ class Interchange(object):
         count = 0
 
         self._kill_event = threading.Event()
-        self._task_puller_thread = threading.Thread(target=wrap_with_logs(self.migrate_tasks_to_internal),
+        self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
                                                     args=(self._kill_event,),
                                                     name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
-        self._command_thread = threading.Thread(target=wrap_with_logs(self._command_server),
+        self._command_thread = threading.Thread(target=self._command_server,
                                                 args=(self._kill_event,),
                                                 name="Interchange-Command")
         self._command_thread.start()
@@ -552,6 +554,7 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
+@wrap_with_logs
 def starter(comm_q, *args, **kwargs):
     """Start the interchange process
 
