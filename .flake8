@@ -19,4 +19,8 @@ per-file-ignores = parsl/monitoring/visualization/*:E741,
   # needed because this deliberately has undefined names in it
   parsl/tests/test_swift.py:F821,
   # test_ssh_errors.py really is broken
-  parsl/tests/integration/test_channels/test_ssh_errors.py:F821
+  parsl/tests/integration/test_channels/test_ssh_errors.py:F821,
+  # import needs to happen to make some stuff visible even though
+  # no symbols are explciitly used: viz seems to break if I removed
+  # this import
+  parsl/monitoring/visualization/app.py:F401
