@@ -110,6 +110,9 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return local_dest
 
+    def pull_file(self, remote_source, local_dir):
+        return self.push_file(remote_source, local_dir)
+
     def close(self):
         ''' There's nothing to close here, and this really doesn't do anything
 

@@ -122,7 +122,7 @@ The following code snippet shows how DataFutures are used:
           return 'echo {} &> {}'.format(message, outputs[0])
 
       # Call echo specifying the output file
-      hello = echo('Hello World!', outputs=['hello1.txt'])
+      hello = echo('Hello World!', outputs=[File('hello1.txt')])
 
       # The AppFuture's outputs attribute is a list of DataFutures
       print(hello.outputs)
