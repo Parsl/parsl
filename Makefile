@@ -104,7 +104,8 @@ deploy: ## deploy the distribution
 .PHONY: release
 release: deps tag package deploy   ## create a release. To run, do a 'make VERSION="version string"  release'
 
-coverage: test ## show the coverage report
+.PHONY: coverage
+coverage: ## show the coverage report
 	coverage report
 
 .PHONY: clean
