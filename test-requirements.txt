@@ -11,3 +11,13 @@ sphinx_rtd_theme
 mypy==0.761
 sqlalchemy-stubs
 Sphinx==2.2.0
+typeguard>=2.5
+paramiko
+dill
+tblib
+ipyparallel
+psutil>=5.5.1
+globus-sdk
+flake8
+twine
+wheel
