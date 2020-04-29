@@ -1,19 +1,23 @@
 #!/bin/bash
-
-VERSION=$1
-
-PARSL_VERSION=$(python3 -c "import parsl; print(parsl.__version__)")
-
-if [[ $PARSL_VERSION == $VERSION ]]
-then
-    echo "Version requested matches package version: $VERSION"
-else
-    echo "[ERROR] Version mismatch. User request:$VERSION while package version is:$PARSL_VERSION"
-    exit -1
-fi
-
+set -euf -o pipefail
 
 create_tag () {
+    if [ -z "$1" ]
+      then
+        VERSION="unknown"
+      else
+        VERSION=$1
+    fi
+
+    PARSL_VERSION=$(python3 -c "import parsl; print(parsl.__version__)")
+
+    if [[ $PARSL_VERSION == "$VERSION" ]]
+    then
+        echo "Version requested matches package version: $VERSION"
+    else
+        echo "[ERROR] Version mismatch. User request: '$VERSION' while package version is: '$PARSL_VERSION'"
+        exit 1
+    fi
 
     echo "Creating tag"
     git tag -a "$VERSION" -m "Parsl $VERSION"
@@ -23,9 +27,9 @@ create_tag () {
 
 }
 
+package() {
 
-release () {
-    rm dist/*
+    rm -f dist/*
 
     echo "======================================================================="
     echo "Starting clean builds"
@@ -36,14 +40,15 @@ release () {
     echo "======================================================================="
     echo "Done with builds"
     echo "======================================================================="
-    sleep 1
+
+
+}
+
+release () {
     echo "======================================================================="
     echo "Push to PyPi. This will require your username and password"
     echo "======================================================================="
     twine upload dist/*
 }
 
-
-create_tag
-release
-
+"$@"
