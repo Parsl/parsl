@@ -19,6 +19,7 @@ parsl.channels.LocalChannel
       ~LocalChannel.execute_wait
       ~LocalChannel.isdir
       ~LocalChannel.makedirs
+      ~LocalChannel.pull_file
       ~LocalChannel.push_file
    
    
