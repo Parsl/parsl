@@ -24,6 +24,7 @@ parsl.dataflow.futures.AppFuture
       ~AppFuture.set_exception
       ~AppFuture.set_result
       ~AppFuture.set_running_or_notify_cancel
+      ~AppFuture.task_status
    
    
 
