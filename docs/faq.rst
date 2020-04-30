@@ -304,6 +304,34 @@ Run::
 
 Now all available conda environments (for example, one created by following the instructions `here <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.
 
+.. _label_serialization_error:
+
+Addressing SerializationError
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As of `1.0.0` Parsl will raise a `SerializationError` when it encounters an object that Parsl cannot serialize.
+This applies to objects passed as arguments to an app, as well as objects returned from the app.
+
+Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects
+to/from functions. Therefore, Python apps can only use input and output objects that can be serialized by
+cloudpickle or pickle. For example the following data types are known to have issues with serializability :
+
+* Closures
+* Objects of complex classes with no `__dict__` or `__getstate__` methods defined
+* System objects such as file descriptors, sockets and locks (e.g threading.Lock)
+
+If Parsl raises a `SerializationError`, first identify what objects are problematic with a quick test:
+
+.. code-block:: python
+
+   import pickle
+   # If non-serializable you will get a TypeError
+   pickle.dumps(YOUR_DATA_OBJECT)
+
+If the data object simply is complex, Please refer `here <https://docs.python.org/3/library/pickle.html#handling-stateful-objects>`_ for more details,
+on adding custom mechanisms for supporting serialization.
+
+
 
 How do I cite Parsl?
 ^^^^^^^^^^^^^^^^^^^^
