@@ -32,7 +32,7 @@ $(DEPS): virtualenv test-requirements.txt
 .PHONY: deps
 deps: $(DEPS) ## install the dependencies
 
-.PHONY:
+.PHONY: lint
 lint: ## run linter script
 	parsl/tests/lint-inits.sh
 
