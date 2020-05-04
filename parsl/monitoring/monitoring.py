@@ -220,7 +220,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
-        self.queue_proc = Process(target=hub_starter,
+        self.router_proc = Process(target=router_starter,
                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
                                   kwargs={"hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
@@ -234,7 +234,7 @@ class MonitoringHub(RepresentationMixin):
                                   name="Monitoring-Queue-Process",
                                   daemon=True,
         )
-        self.queue_proc.start()
+        self.router_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
                                 args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
@@ -246,7 +246,7 @@ class MonitoringHub(RepresentationMixin):
                                 daemon=True,
         )
         self.dbm_proc.start()
-        self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
+        self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
@@ -277,10 +277,10 @@ class MonitoringHub(RepresentationMixin):
             if exception_msgs:
                 for exception_msg in exception_msgs:
                     self.logger.info("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
-                self.queue_proc.terminate()
+                self.router_proc.terminate()
                 self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
-            self.queue_proc.join()
+            self.router_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
             if len(exception_msgs) == 0:
                 self.priority_msgs.put(("STOP", 0))
@@ -321,7 +321,7 @@ class MonitoringHub(RepresentationMixin):
         return wrapped
 
 
-class Hub:
+class MonitoringRouter:
 
     def __init__(self,
                  hub_address,
@@ -453,17 +453,17 @@ class Hub:
         self.logger.info("Hub finished")
 
 
-def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
-    hub = Hub(*args, **kwargs)
+def router_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+    hub = MonitoringRouter(*args, **kwargs)
     comm_q.put((hub.hub_port, hub.ic_port))
-    hub.logger.info("Starting Hub in Hub starter")
+    hub.logger.info("Starting MonitoringRouter in router_starter")
     try:
         hub.start(priority_msgs, node_msgs, resource_msgs)
     except Exception as e:
         hub.logger.exception("hub.start exception")
         exception_q.put(('Hub', str(e)))
 
-    hub.logger.info("End of hub starter")
+    hub.logger.info("End of router_starter")
 
 
 def monitor(pid,
