@@ -1,6 +1,3 @@
-"""HighThroughputExecutor builds on the Swift/T EMEWS architecture to use MPI for fast task distribution
-"""
-
 from concurrent.futures import Future
 import typeguard
 import logging
@@ -11,16 +8,17 @@ from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple, Union
 import math
 
-from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
-from ipyparallel.serialize import deserialize_object  # ,serialize_object
+from ipyparallel.serialize import pack_apply_message
+from ipyparallel.serialize import deserialize_object
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
-from parsl.executors.base import ParslExecutor
+from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError, SerializationError
+from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
+from parsl.addresses import get_all_addresses
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -31,7 +29,7 @@ BUFFER_THRESHOLD = 1024 * 1024
 ITEM_THRESHOLD = 1024
 
 
-class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
+class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
 
     The HighThroughputExecutor system has the following components:
@@ -95,8 +93,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         An address to connect to the main Parsl process which is reachable from the network in which
         workers will be running. This can be either a hostname as returned by `hostname` or an
         IP address. Most login nodes on clusters have several network interfaces available, only
-        some of which can be reached from the compute nodes.  Some trial and error might be
-        necessary to identify what addresses are reachable from compute nodes.
+        some of which can be reached from the compute nodes.
+        By default, the executor will attempt to enumerate and connect through all possible addresses.
+        Setting an address here overrides the default behavior.
+        default=None
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -158,7 +158,7 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
-                 address: str = "127.0.0.1",
+                 address: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
@@ -178,19 +178,23 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         logger.debug("Initializing HighThroughputExecutor")
 
+        StatusHandlingExecutor.__init__(self, provider)
         self.label = label
         self.launch_cmd = launch_cmd
-        self.provider = provider
         self.worker_debug = worker_debug
         self.storage_access = storage_access
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
-        self.tasks = {}  # type: Dict[str, Future]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
+        self.address = address
+        if self.address:
+            self.all_addresses = address
+        else:
+            self.all_addresses = ','.join(get_all_addresses())
 
         mem_slots = max_workers
         cpu_slots = max_workers
@@ -208,7 +212,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
             self.workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
-        self.address = address
         self.hub_address = None  # set to the correct hub address in dfk
         self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
@@ -223,12 +226,13 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
+                               "-a {addresses} "
                                "-p {prefetch_capacity} "
                                "-c {cores_per_worker} "
                                "-m {mem_per_worker} "
                                "--poll {poll_period} "
-                               "--task_url={task_url} "
-                               "--result_url={result_url} "
+                               "--task_port={task_port} "
+                               "--result_port={result_port} "
                                "--logdir={logdir} "
                                "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
@@ -249,8 +253,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
-                                       task_url=self.worker_task_url,
-                                       result_url=self.worker_result_url,
+                                       addresses=self.all_addresses,
+                                       task_port=self.worker_task_port,
+                                       result_port=self.worker_result_port,
                                        cores_per_worker=self.cores_per_worker,
                                        mem_per_worker=self.mem_per_worker,
                                        max_workers=max_workers,
@@ -280,8 +285,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self.is_alive = True
 
-        self._executor_bad_state = threading.Event()
-        self._executor_exception = None
         self._queue_management_thread = None
         self._start_queue_management_thread()
         self._start_local_queue_process()
@@ -325,10 +328,9 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
         logger.debug("[MTHREAD] queue management worker starting")
 
-        while not self._executor_bad_state.is_set():
+        while not self.bad_state_is_set:
             try:
                 msgs = self.incoming_q.get(timeout=1)
-                # logger.debug("[MTHREAD] get has returned {}".format(len(msgs)))
 
             except queue.Empty:
                 logger.debug("[MTHREAD] queue empty")
@@ -362,14 +364,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
                         if tid == -1 and 'exception' in msg:
                             logger.warning("Executor shutting down due to exception from interchange")
-                            self._executor_exception, _ = deserialize_object(msg['exception'])
-                            logger.exception("Exception: {}".format(self._executor_exception))
-                            # Set bad state to prevent new tasks from being submitted
-                            self._executor_bad_state.set()
-                            # We set all current tasks to this exception to make sure that
-                            # this is raised in the main context.
-                            for task in self.tasks:
-                                self.tasks[task].set_exception(self._executor_exception)
+                            exception, _ = deserialize_object(msg['exception'])
+                            self.set_bad_state_and_fail_all(exception)
                             break
 
                         task_fut = self.tasks[tid]
@@ -435,13 +431,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         )
         self.queue_proc.start()
         try:
-            (worker_task_port, worker_result_port) = comm_q.get(block=True, timeout=120)
+            (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
         except queue.Empty:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
-
-        self.worker_task_url = "tcp://{}:{}".format(self.address, worker_task_port)
-        self.worker_result_url = "tcp://{}:{}".format(self.address, worker_result_port)
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
@@ -478,7 +471,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
     @property
     def outstanding(self):
         outstanding_c = self.command_client.run("OUTSTANDING_C")
-        # logger.debug("Got outstanding count: {}".format(outstanding_c))
         return outstanding_c
 
     @property
@@ -524,8 +516,8 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         Returns:
               Future
         """
-        if self._executor_bad_state.is_set():
-            raise self._executor_exception
+        if self.bad_state_is_set:
+            raise self.executor_exception
 
         self._task_counter += 1
         task_id = self._task_counter
@@ -538,9 +530,12 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         self.tasks[task_id] = Future()
 
-        fn_buf = pack_apply_message(func, args, kwargs,
-                                    buffer_threshold=1024 * 1024,
-                                    item_threshold=1024)
+        try:
+            fn_buf = pack_apply_message(func, args, kwargs,
+                                        buffer_threshold=1024 * 1024,
+                                        item_threshold=1024)
+        except TypeError:
+            raise SerializationError(func.__name__)
 
         msg = {"task_id": task_id,
                "buffer": fn_buf}
@@ -608,14 +603,10 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
 
         r = self.provider.cancel(to_kill)
 
-        return r
+        return self._filter_scale_in_ids(to_kill, r)
 
-    def status(self):
-        """Return status of all blocks."""
-
-        status = self.provider.status(list(self.blocks.values()))
-
-        return status
+    def _get_job_ids(self) -> List[object]:
+        return list(self.blocks.values())
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.
@@ -632,8 +623,6 @@ class HighThroughputExecutor(ParslExecutor, RepresentationMixin):
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
-        # self.outgoing_q.close()
-        # self.incoming_q.close()
         self.queue_proc.terminate()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
         return True

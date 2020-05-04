@@ -7,6 +7,10 @@ Reference guide
 
     parsl.set_stream_logger
     parsl.set_file_logger
+    parsl.addresses.address_by_hostname
+    parsl.addresses.address_by_interface
+    parsl.addresses.address_by_query
+    parsl.addresses.address_by_route
     parsl.app.app.python_app
     parsl.app.app.bash_app
     parsl.app.futures.DataFuture
@@ -16,10 +20,15 @@ Reference guide
     parsl.data_provider.data_manager.DataManager
     parsl.data_provider.data_manager.Staging
     parsl.data_provider.files.File
+    parsl.data_provider.ftp.FTPSeparateTaskStaging
+    parsl.data_provider.ftp.FTPInTaskStaging
+    parsl.data_provider.file_noop.NoOpFileStaging
+    parsl.data_provider.globus.GlobusStaging
+    parsl.data_provider.http.HTTPSeparateTaskStaging
+    parsl.data_provider.http.HTTPInTaskStaging
+    parsl.data_provider.rsync.RSyncStaging
     parsl.executors.base.ParslExecutor
     parsl.executors.ThreadPoolExecutor
-    parsl.executors.IPyParallelExecutor
-    parsl.executors.ipp_controller.Controller
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.ExtremeScaleExecutor
@@ -58,12 +67,10 @@ Reference guide
 
     parsl.app.errors.AppBadFormatting
     parsl.app.errors.AppException
-    parsl.app.errors.AppFailure
     parsl.app.errors.AppTimeout
     parsl.app.errors.BadStdStreamFile
     parsl.app.errors.BashAppNoReturn
-    parsl.app.errors.DependencyError
-    parsl.app.errors.InvalidAppTypeError
+    parsl.app.errors.BashExitFailure
     parsl.app.errors.MissingOutputs
     parsl.app.errors.NotFutureError
     parsl.app.errors.ParslError
@@ -73,12 +80,9 @@ Reference guide
     parsl.executors.errors.InsufficientMPIRanks
     parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
-    parsl.executors.exceptions.ExecutorException
-    parsl.executors.exceptions.TaskExecException
     parsl.dataflow.error.DataFlowException
     parsl.dataflow.error.ConfigurationError
     parsl.dataflow.error.DuplicateTaskError
-    parsl.dataflow.error.MissingFutError
     parsl.dataflow.error.BadCheckpoint
     parsl.dataflow.error.DependencyError
     parsl.launchers.error.BadLauncher

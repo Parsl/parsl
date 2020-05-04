@@ -15,12 +15,12 @@ import argparse
 import os
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
-@App('python')
+@python_app
 def delay_incr(x, delay=0, outputs=[]):
     import time
     if outputs:

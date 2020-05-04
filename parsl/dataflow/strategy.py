@@ -1,9 +1,12 @@
 import logging
 import time
 import math
+from typing import List
 
-from parsl.executors import IPyParallelExecutor, HighThroughputExecutor, ExtremeScaleExecutor
+from parsl.dataflow.task_status_poller import ExecutorStatus
+from parsl.executors import HighThroughputExecutor, ExtremeScaleExecutor
 
+from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +131,7 @@ class Strategy(object):
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
 
-    def _strategy_noop(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_noop(self, status: List[ExecutorStatus], tasks, *args, kind=None, **kwargs):
         """Do nothing.
 
         Args:
@@ -146,13 +149,13 @@ class Strategy(object):
 
         root_logger = logging.getLogger()
 
-        for hndlr in root_logger.handlers:
-            if hndlr not in self.prior_loghandlers:
-                hndlr.setLevel(logging.ERROR)
+        for handler in root_logger.handlers:
+            if handler not in self.prior_loghandlers:
+                handler.setLevel(logging.ERROR)
 
         self.logger_flag = True
 
-    def _strategy_simple(self, tasks, *args, kind=None, **kwargs):
+    def _strategy_simple(self, status_list, tasks, *args, kind=None, **kwargs):
         """Peek at the DFK and the executors specified.
 
         We assume here that tasks are not held in a runnable
@@ -167,21 +170,24 @@ class Strategy(object):
             - kind (Not used)
         """
 
-        for label, executor in self.dfk.executors.items():
+        for exec_status in status_list:
+            executor = exec_status.executor
+            label = executor.label
             if not executor.scaling_enabled:
                 continue
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
 
-            status = executor.status()
+            status = exec_status.status
+            # Dict[object, JobStatus]: job_id -> status
             self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            if isinstance(executor, IPyParallelExecutor) or isinstance(executor, HighThroughputExecutor):
+            if isinstance(executor, HighThroughputExecutor):
                 tasks_per_node = executor.workers_per_node
             elif isinstance(executor, ExtremeScaleExecutor):
                 tasks_per_node = executor.ranks_per_node
@@ -189,18 +195,17 @@ class Strategy(object):
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
 
-            running = sum([1 for x in status if x == 'RUNNING'])
-            submitting = sum([1 for x in status if x == 'SUBMITTING'])
-            pending = sum([1 for x in status if x == 'PENDING'])
-            active_blocks = running + submitting + pending
+            running = sum([1 for x in status.values() if x.state == JobState.RUNNING])
+            pending = sum([1 for x in status.values() if x.state == JobState.PENDING])
+            active_blocks = running + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
             if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} active tasks, {}/{}/{} running/submitted/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, submitting, pending, executor.connected_workers))
+                logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
+                    label, active_tasks, running, pending, executor.connected_workers))
             else:
-                logger.debug('Executor {} has {} active tasks and {}/{}/{} running/submitted/pending blocks'.format(
-                    label, active_tasks, running, submitting, pending))
+                logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
+                    label, active_tasks, running, pending))
 
             # reset kill timer if executor has active tasks
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
@@ -234,7 +239,7 @@ class Strategy(object):
                         logger.debug("Idle time has reached {}s for executor {}; removing resources".format(
                             self.max_idletime, label)
                         )
-                        executor.scale_in(active_blocks - min_blocks)
+                        exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
                         pass
@@ -257,14 +262,14 @@ class Strategy(object):
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
-                    executor.scale_out(excess_blocks)
+                    exec_status.scale_out(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
                 # Case 4
                 # Check if slots are being lost quickly ?
                 logger.debug("Requesting single slot")
                 if active_blocks < max_blocks:
-                    executor.scale_out(1)
+                    exec_status.scale_out(1)
             # Case 3
             # tasks ~ slots
             else:

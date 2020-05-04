@@ -4,7 +4,7 @@ import pickle
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.utils import time_limited_open
 from parsl.tests.configs.local_threads_checkpoint_task_exit import config
 
@@ -18,7 +18,7 @@ def local_teardown():
     parsl.clear()
 
 
-@App('python', cache=True)
+@python_app(cache=True)
 def slow_double(x, sleep_dur=1):
     import time
     time.sleep(sleep_dur)

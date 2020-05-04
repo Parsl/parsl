@@ -16,7 +16,7 @@ class LocalChannel(Channel, RepresentationMixin):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__(self, userhome=".", envs={}, script_dir=None, **kwargs):
+    def __init__(self, userhome=".", envs={}, script_dir=None):
         ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
@@ -65,7 +65,8 @@ class LocalChannel(Channel, RepresentationMixin):
                 stderr=subprocess.PIPE,
                 cwd=self.userhome,
                 env=current_env,
-                shell=True
+                shell=True,
+                preexec_fn=os.setpgrp
             )
             proc.wait(timeout=walltime)
             stdout = proc.stdout.read()
@@ -77,42 +78,6 @@ class LocalChannel(Channel, RepresentationMixin):
             raise
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
-
-    def execute_no_wait(self, cmd, walltime, envs={}):
-        ''' Synchronously execute a commandline string on the shell.
-
-        Args:
-            - cmd (string) : Commandline string to execute
-            - walltime (int) : walltime in seconds, this is not really used now.
-
-        Returns a tuple containing:
-
-           - pid : process id
-           - proc : a subprocess.Popen object
-
-        Raises:
-         None.
-        '''
-        current_env = copy.deepcopy(self._envs)
-        current_env.update(envs)
-
-        try:
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=self.userhome,
-                env=current_env,
-                shell=True,
-                preexec_fn=os.setpgrp
-            )
-            pid = proc.pid
-
-        except Exception as e:
-            logger.warning("Execution of command '{}' failed due to \n{}".format(cmd, e))
-            raise
-
-        return pid, proc
 
     def push_file(self, source, dest_dir):
         ''' If the source files dirpath is the same as dest_dir, a copy
@@ -144,6 +109,9 @@ class LocalChannel(Channel, RepresentationMixin):
             os.chmod(local_dest, 0o777)
 
         return local_dest
+
+    def pull_file(self, remote_source, local_dir):
+        return self.push_file(remote_source, local_dir)
 
     def close(self):
         ''' There's nothing to close here, and this really doesn't do anything

@@ -3,6 +3,7 @@ python:
   - "3.5"
   - "3.6"
   - "3.7"
+  - "3.8"
 
 env:
   global:
@@ -22,7 +23,7 @@ before_install:
 
 # install parsl with no optional extras
 install:
-    - pip install .
+    - make deps
 
 # Os tests
 os:
@@ -30,49 +31,41 @@ os:
 
 # command to run tests
 script:
-    - pip install -r test-requirements.txt
-    - flake8 parsl/
-    - parsl/tests/lint-inits.sh
+    - make flake8
+    - make lint
 
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
     # parsl
-    - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/tests/configs/
-    - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/tests/test*/
-    - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/tests/sites/
-    - MYPYPATH=$(pwd)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/
+    - make mypy
 
       # do this before any testing, but not in-between tests
-    - rm -f .coverage
+    - make clean_coverage
 
-    - pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= --random-order
-    - pytest parsl -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= --random-order
+    # run the make targets for the two supported targets.
+    - make test
 
-    # some of the site/ tests require more dependencies. These are installed here as needed,
-    # so that the above tests happen with only the basic requirements installed.
+    # check that documentation stubs are up to date, as they are compiled from
+    # python code but stored in version control rather than generated as part
+    # of doc build. prereqs for this will have been installed because of above
+    # pip install .[all] step
+    - cd docs
+    - rm -rfv stubs
+    - sphinx-autogen reference.rst userguide/*rst devguide/*rst
+    # this will both display any diffs in log output, and fail if there is any diff
+    - git diff --exit-code
+    - cd ..
 
-    # workqueue
-    - ./parsl/executors/workqueue/install-workqueue.sh
-    - export PATH=$PATH:/tmp/cctools/bin
-    - export PYTHONPATH=/tmp/cctools/lib/python3.5/site-packages
+    # assert that none of the runs in this test have put an ERROR message into a
+    # database manager log file or monitoring hub log file. It would be better if
+    # the tests themselves failed immediately when there was a monitoring error, but
+    # in the absence of that, this is a dirty way to check.
+    - bash -c '! grep ERROR runinfo*/*/database_manager.log'
+    - bash -c '! grep ERROR runinfo*/*/hub.log'
 
-    # mpi
-    - bash parsl/executors/extreme_scale/install-mpi.sh $MPI
-    - if [[ "$MPI" == "mpich"   ]]; then mpichversion; fi
-    - if [[ "$MPI" == "openmpi" ]]; then ompi_info;    fi
-
-    - pip install .[extreme_scale,monitoring]
-
-    - pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
-
-    - work_queue_worker localhost 9000 &> /dev/null &
-
-    - pytest parsl -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order --bodge-dfk-per-test
-    - kill -3 $(ps aux | grep -E -e "[0-9]+:[0-9]+ work_queue_worker" | tr -s ' ' | cut -f 2 -d " ")
-
-    # these tests run with specific configs loaded within the tests themselves.
-    # This mode is enabled with: --config local
-    - pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
+    # check that 'all' install target works, even though we aren't doing any further
+    # testing of what is installed
+    - pip install .[all]
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
@@ -81,4 +74,4 @@ script:
     #       sort out this commented out block appropriately.
 
     # prints report of coverage data stored in .coverage
-    - coverage report
+    - make coverage

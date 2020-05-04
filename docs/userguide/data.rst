@@ -7,10 +7,23 @@ Parsl supports staging of file data between execution locations and at-rest
 locations. This supports two pieces of functionality: execution location
 abstraction, and ordering of execution by data flow.
 
-Parsl implements a flexible file abstraction that can be used to reference
-data files using an execution-location independent URL. This model supports
-files on the submit side file system (made available to workers using either
-a shared file system or `rsync`), FTP, HTTP(S), and `Globus <https://globus.org>`_.
+Parsl abstracts not only parallel execution but also execution location. That is, it makes it possible for a Parsl app to execute anywhere, so that, for example, the following code will behave in the same way whether the `double` app is run locally or dispatched to a remote computer:
+
+       @python_app
+       def double(x):
+             return x * 2
+
+       double(x)
+
+Achieving this location independence requires data location abstraction, so that a Parsl app receives the same input arguments, and can access files, in the same manner reqardless of its execution location.
+To this end, Parsl:
+
+* Orchestrates the movement of data passed as input arguments to a app, such as `x` in the above example, to whichever location is selected for that app's execution;
+
+* Orchestrates the return value of any Python object returned by a Parsl Python object
+
+* Implements a flexible file abstraction that can be used to reference data irrespective of its location. At present this model supports local files as well as files accessible on the submit-side filesystem
+or via FTP, HTTP, HTTPS, and `Globus <https://globus.org>`_.
 
 In a workflow, file handling is split into two pieces: files are named in an
 execution-location independent manner using :py:class:`~parsl.data_provider.files.File`
@@ -83,8 +96,8 @@ The following example defines a file accessible on a remote FTP server.
 
     File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
 
-When such a file object is passed as an input to an app, Parsl will download the file to the executor where the app is scheduled for execution.
-The following example illustrates how the remote file is implicitly downloaded from an FTP server and then converted. Note: the app does not need to know the local location of the downloaded file as Parsl abstracts this translation. 
+When such a file object is passed as an input to an app, Parsl will download the file to whatever location is selected for the app to execute.
+The following example illustrates how the remote file is implicitly downloaded from an FTP server and then converted. Note that the app does not need to know the location of the downloaded file on the remote computer, as Parsl abstracts this translation. 
 
 .. code-block:: python
 
@@ -134,7 +147,7 @@ endpoint and a path to the file on the endpoint, for example:
 
         File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
 
-Note: the Globus endpoint UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page.
+Note: a Globus endpoint's UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page.
 
 There must also be a Globus endpoint available with access to a
 execute-side shared file system, because Globus file transfers happen
@@ -143,16 +156,16 @@ between two Globus endpoints.
 Globus Configuration
 ^^^^^^^^^^^^^^^^^^^^
 
-In order to specify where data is staged users must configure the default ``working_dir`` on a remote executor. This is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter. For example:
+In order to manage where data are staged, users may configure the default ``working_dir`` on a remote location. This information is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
 
 .. code-block:: python
 
         from parsl.config import Config
-        from parsl.executors.ipp import IPyParallelExecutor
+        from parsl.executors import HighThroughputExecutor
 
         config = Config(
             executors=[
-                IPyParallelExecutor(
+                HighThroughputExecutor(
                     working_dir="/home/user/parsl_script"
                 )
             ]
@@ -160,19 +173,18 @@ In order to specify where data is staged users must configure the default ``work
 
 Parsl requires knowledge of the Globus endpoint that is associated with an executor. This is done by specifying the ``endpoint_name`` (the UUID of the Globus endpoint that is associated with the system) in the configuration.
 
-In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus endpoint is mounted on a supercomputer, the path seen by Globus is not the same as the filesystem path seen by apps.
- In this case the configuration can specify a mapping between the ``endpoint_path`` (the common root path seen in Globus), and the ``local_path`` (the common root path on the execute-side local file system). In most cases ``endpoint_path`` and ``local_path`` are the same and so do not need to be specified.
+In some cases, for example when using a Globus `shared endpoint <https://www.globus.org/data-sharing>`_ or when a Globus endpoint is mounted on a supercomputer, the path seen by Globus is not the same as the local path seen by Parsl. In this case the configuration may optionally specify a mapping between the ``endpoint_path`` (the common root path seen in Globus), and the ``local_path`` (the common root path on the local file system), as in the following. In most cases, ``endpoint_path`` and ``local_path`` are the same and do not need to be specified.
 
 .. code-block:: python
 
         from parsl.config import Config
-        from parsl.executors.ipp import IPyParallelExecutor
+        from parsl.executors import HighThroughputExecutor
         from parsl.data_provider.globus import GlobusStaging
         from parsl.data_provider.data_manager import default_staging
 
         config = Config(
             executors=[
-                IPyParallelExecutor(
+                HighThroughputExecutor(
                     working_dir="/home/user/parsl_script",
                     storage_access=default_staging + [GlobusStaging(
                         endpoint_uuid="7d2dc622-2edb-11e8-b8be-0ac6873fc732",
@@ -182,14 +194,16 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
                 )
             ]
         )
+        
+However, in most cases, ``endpoint_path`` and ``local_path`` are the same.
 
 Globus Authorization
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""
 
 In order to interact with Globus, you must be authorised. The first time that
 you use Globus with Parsl, prompts will take you through an authorization
 procedure involving your web browser. You can authorize without having to
-run a script (for example, if you're running your script in a batch system
+run a script (for example, if you are running your script in a batch system
 where it will be unattended) by running this command line:
 
 .. code-block:: bash
@@ -203,17 +217,18 @@ where it will be unattended) by running this command line:
 rsync
 ^^^^^
 
-`rsync` can be used to transfer files in the `file:` scheme in configurations where
+The `rsync` utility can be used to transfer files in the `file:` scheme in configurations where
 workers cannot access the submit side filesystem directly, such as when executing
 on an AWS EC2 instance. Instead, the submit side filesystem must be exposed using
 rsync.
 
 rsync Configuration
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
-rsync must be installed on both the submit and worker side. It can usually be installed
-using the operating system package manager - for example `apt-get install rsync`.
+`rsync` must be installed on both the submit and worker side. It can usually be installed
+by using the operating system package manager: for example, by `apt-get install rsync`.
 
+An `RSyncStaging` option must then be added to the Parsl configuration file, as in the following.
 The parameter to RSyncStaging should describe the prefix to be passed to each rsync
 command to connect from workers to the submit side host. This will often be the username
 and public IP address of the submitting system.
@@ -231,16 +246,16 @@ and public IP address of the submitting system.
         )
 
 rsync Authorization
-^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""
 
 The rsync staging provider delegates all authentication and authorization to the 
-underlying rsync command. This command must be correctly authorized to connect back to 
+underlying `rsync` command. This command must be correctly authorized to connect back to 
 the submitting system. The form of this authorization will depend on the systems in 
 question.
 
-This example installs an ssh key from the submit side filesystem and turns off host key 
-checking, in the worker_init initialization of an EC2 instance. The ssh key must have 
-sufficient privileges to run rsync over ssh on the submitting system.
+The following example installs an ssh key from the submit side filesystem and turns off host key 
+checking, in the `worker_init` initialization of an EC2 instance. The ssh key must have 
+sufficient privileges to run `rsync` over ssh on the submitting system.
 
 .. code-block:: python
 

@@ -10,8 +10,6 @@ from concurrent.futures import Future
 import logging
 import threading
 
-from parsl.app.errors import RemoteExceptionWrapper
-
 logger = logging.getLogger(__name__)
 
 # Possible future states (for internal use by the futures package).
@@ -71,39 +69,6 @@ class AppFuture(Future):
         self._outputs = []
         self.task_def = task_def
 
-    def parent_callback(self, executor_fu):
-        """Callback from a parent future to update the AppFuture.
-
-        Used internally by AppFuture, and should not be called by code using AppFuture.
-
-        Args:
-            - executor_fu (Future): Future returned by the executor along with callback.
-
-        Returns:
-            - None
-
-        Updates the future with the result() or exception()
-        """
-        with self._update_lock:
-
-            if not executor_fu.done():
-                raise ValueError("done callback called, despite future not reporting itself as done")
-
-            try:
-                res = executor_fu.result()
-                if isinstance(res, RemoteExceptionWrapper):
-                    res.reraise()
-                self.set_result(executor_fu.result())
-
-            except Exception as e:
-                if executor_fu.retries_left > 0:
-                    # ignore this exception, because assume some later
-                    # parent executor, started external to this class,
-                    # will provide the answer
-                    pass
-                else:
-                    self.set_exception(e)
-
     @property
     def stdout(self):
         return self.task_def['kwargs'].get('stdout')
@@ -121,6 +86,29 @@ class AppFuture(Future):
 
     def cancelled(self):
         return False
+
+    def task_status(self):
+        """Returns the status of the task that will provide the value
+           for this future.  This may not be in-sync with the result state
+           of this future - for example, task_status might return 'done' but
+           self.done() might not be true (which in turn means self.result()
+           and self.exception() might block).
+
+           The actual status description strings returned by this method are
+           likely to change over subsequent versions of parsl, as use-cases
+           and infrastructure are worked out.
+
+           It is expected that the status values will be from a limited set
+           of strings (so that it makes sense, for example, to group and
+           count statuses from many futures).
+
+           It is expected that might be a non-trivial cost in acquiring the
+           status in future (for example, by communicating with a remote
+           worker).
+
+           Returns: str
+        """
+        return self.task_def['status'].name
 
     @property
     def outputs(self):

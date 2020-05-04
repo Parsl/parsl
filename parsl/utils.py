@@ -3,10 +3,10 @@ import logging
 import os
 import shlex
 import subprocess
-import threading
 import time
+import typeguard
 from contextlib import contextmanager
-from functools import wraps
+from typing import List
 
 import parsl
 from parsl.version import VERSION
@@ -14,7 +14,8 @@ from parsl.version import VERSION
 logger = logging.getLogger(__name__)
 
 
-def get_version():
+@typeguard.typechecked
+def get_version() -> str:
     version = parsl.__version__
     work_tree = os.path.dirname(os.path.dirname(__file__))
     git_dir = os.path.join(work_tree, '.git')
@@ -32,7 +33,8 @@ def get_version():
     return version
 
 
-def get_all_checkpoints(rundir="runinfo"):
+@typeguard.typechecked
+def get_all_checkpoints(rundir: str = "runinfo") -> List[str]:
     """Finds the checkpoints from all last runs.
 
     Note that checkpoints are incremental, and this helper will not find
@@ -43,7 +45,7 @@ def get_all_checkpoints(rundir="runinfo"):
        - rundir(str) : Path to the runinfo directory
 
     Returns:
-       - a list suitable for the checkpointFiles parameter of DataFlowKernel
+       - a list suitable for the checkpointFiles parameter of the DataFlowKernel
          constructor
 
     """
@@ -65,8 +67,9 @@ def get_all_checkpoints(rundir="runinfo"):
     return checkpoints
 
 
-def get_last_checkpoint(rundir="runinfo"):
-    """Find the checkpoint from the last run, if one exists.
+@typeguard.typechecked
+def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
+    """Finds the checkpoint from the last run, if one exists.
 
     Note that checkpoints are incremental, and this helper will not find
     previous checkpoints from earlier than the most recent run. It probably
@@ -76,7 +79,7 @@ def get_last_checkpoint(rundir="runinfo"):
        - rundir(str) : Path to the runinfo directory
 
     Returns:
-     - a list suitable for checkpointFiles parameter of DataFlowKernel
+     - a list suitable for the checkpointFiles parameter of the DataFlowKernel
        constructor, with 0 or 1 elements
 
     """
@@ -97,18 +100,22 @@ def get_last_checkpoint(rundir="runinfo"):
     return [last_checkpoint]
 
 
-def timeout(seconds=None):
-    def decorator(func, *args, **kwargs):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            t = threading.Thread(target=func, args=args, kwargs=kwargs, name="Timeout-Decorator")
-            t.start()
-            result = t.join(seconds)
-            if t.is_alive():
-                raise RuntimeError('timed out in {}'.format(func))
-            return result
-        return wrapper
-    return decorator
+def get_std_fname_mode(fdname, stdfspec):
+    import parsl.app.errors as pe
+    if stdfspec is None:
+        return None, None
+    elif isinstance(stdfspec, str):
+        fname = stdfspec
+        mode = 'a+'
+    elif isinstance(stdfspec, tuple):
+        if len(stdfspec) != 2:
+            raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
+        fname, mode = stdfspec
+        if not isinstance(fname, str) or not isinstance(mode, str):
+            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+    else:
+        raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+    return fname, mode
 
 
 @contextmanager

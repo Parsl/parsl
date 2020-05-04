@@ -19,13 +19,12 @@ parsl.dataflow.futures.AppFuture
       ~AppFuture.cancelled
       ~AppFuture.done
       ~AppFuture.exception
-      ~AppFuture.parent_callback
       ~AppFuture.result
       ~AppFuture.running
       ~AppFuture.set_exception
       ~AppFuture.set_result
       ~AppFuture.set_running_or_notify_cancel
-      ~AppFuture.update_parent
+      ~AppFuture.task_status
    
    
 

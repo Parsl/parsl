@@ -1,14 +1,14 @@
 import pytest
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads_globus import config, remote_writeable
 
 local_config = config
 
 
-@App('python')
+@python_app
 def sort_strings(inputs=[], outputs=[]):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
@@ -62,13 +62,13 @@ def test_stage_in_out_globus():
 
     result_file = f.outputs[0].result()
 
-    assert not hasattr(unsorted_file, 'local_path'), "Input file on local side has overridden local_path, file: {}".format(repr(unsorted_file))
+    assert unsorted_file.local_path is None, "Input file on local side has overridden local_path, file: {}".format(repr(unsorted_file))
 
     # use 'is' rather than '==' because specifically want to check
     # object identity rather than value equality
     assert sorted_file is result_file, "Result file is not the specified input-output file"
 
-    assert not hasattr(result_file, 'local_path'), "Result file on local side has overridden local_path, file: {}".format(repr(result_file))
+    assert result_file.local_path is None, "Result file on local side has overridden local_path, file: {}".format(repr(result_file))
 
 
 if __name__ == "__main__":

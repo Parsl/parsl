@@ -1,23 +1,23 @@
 import argparse
 
 import parsl
-from parsl.app.app import App
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
 
-@App('python')
+@python_app
 def fan_out(x, dur):
     import time
     time.sleep(dur)
     return x * 2
 
 
-@App('python')
+@python_app
 def accumulate(inputs=[]):
     return sum(inputs)
 
 
-@App('python')
+@python_app
 def accumulate_t(*args):
     return sum(args)
 

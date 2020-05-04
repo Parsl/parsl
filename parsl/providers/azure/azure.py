@@ -6,7 +6,7 @@ from string import Template
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.azure.template import template_string
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
@@ -29,11 +29,11 @@ else:
     _api_enabled = True
 
 translate_table = {
-    'VM pending': 'PENDING',
-    'VM running': 'RUNNING',
-    'VM deallocated': 'COMPLETED',
-    'VM stopping': 'COMPLETED',  # We shouldn't really see this state
-    'VM stopped': 'COMPLETED',  # We shouldn't really see this state
+    'VM pending': JobState.PENDING,
+    'VM running': JobState.RUNNING,
+    'VM deallocated': JobState.COMPLETED,
+    'VM stopping': JobState.COMPLETED,  # We shouldn't really see this state
+    'VM stopped': JobState.COMPLETED,  # We shouldn't really see this state
 }
 
 
@@ -125,10 +125,10 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                  parallelism=1,
                  worker_init='',
                  location='westus',
-                 group_name='parsl.auto',
+                 group_name='parsl.group',
                  key_name=None,
                  key_file=None,
-                 vnet_name="parsl.auto",
+                 vnet_name="parsl.vnet",
                  linger=False,
                  launcher=SingleNodeLauncher()):
         if not _api_enabled:
@@ -208,7 +208,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     def submit(self,
                command='sleep 1',
                tasks_per_node=1,
-               job_name="parsl.auto"):
+               job_name="parsl.azure"):
         """
         Submit the command onto a freshly instantiated Azure VM
         Submit returns an ID that corresponds to the task that was just submitted.
@@ -244,7 +244,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                                                   self.vm_reference)
 
         # Uniqueness strategy from AWS provider
-        job_name = "{0}-parsl-auto".format(str(time.time()).replace(".", ""))
+        job_name = "{0}-parsl-azure".format(str(time.time()).replace(".", ""))
 
         async_vm_creation = self.compute_client.\
             virtual_machines.create_or_update(
@@ -261,7 +261,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             self.resources[vm_info.id] = {
                 "job_id": vm_info.id,
                 "instance": vm_info,
-                "status": "PENDING"
+                "status": JobStatus(JobState.PENDING)
             }
 
             vm_info.storage_profile.data_disks.append({
@@ -317,10 +317,10 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                 vm = self.compute_client.virtual_machines.get(
                     self.group_name, job_id, expand='instanceView')
                 status = vm.instance_view.statuses[1].display_status
-                statuses.append(translate_table.get(status, "UNKNOWN"))
+                statuses.append(JobStatus(translate_table.get(status, JobState.UNKNOWN)))
             # This only happens when it is in ProvisionState/Pending
             except IndexError:
-                statuses.append("PENDING")
+                statuses.append(JobStatus(JobState.PENDING))
         return statuses
 
     def cancel(self, job_ids):
@@ -486,3 +486,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             })
         data_disk = async_disk_creation.result()
         return data_disk, name
+
+    @property
+    def status_polling_interval(self):
+        return 60

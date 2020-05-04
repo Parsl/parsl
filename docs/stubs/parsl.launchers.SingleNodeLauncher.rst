@@ -9,6 +9,12 @@ parsl.launchers.SingleNodeLauncher
    .. automethod:: __init__
 
    
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SingleNodeLauncher.__init__
+   
    
 
    
