@@ -33,7 +33,7 @@ RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 
 
-class Database(object):
+class Database:
 
     if not _sqlalchemy_enabled:
         raise OptionalModuleMissing(['sqlalchemy'],
@@ -194,7 +194,7 @@ class Database(object):
         )
 
 
-class DatabaseManager(object):
+class DatabaseManager:
     def __init__(self,
                  db_url='sqlite:///monitoring.db',
                  logdir='.',
