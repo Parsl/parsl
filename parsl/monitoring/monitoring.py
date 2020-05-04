@@ -426,6 +426,16 @@ class MonitoringRouter:
                 msg = self.dfk_channel.recv_pyobj()
                 self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
                 priority_msgs.put((msg, 0))
+                # TODO:
+                #  i) this is an ugly implicit way of determining "is this
+                #     the last message from the DFK" - this condition should be
+                #     more explicit.
+                # ii) does this mean the loop can exit before the UDP and
+                #     interchange queues have been properly drained? yes i think,
+                #     because there is then an explicit drainer for the UDP
+                #     queue but not for the interchange queue. the database manager
+                #     drains its queues in a different way. the approach should be
+                #     unified and thought about.
                 if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
                     break
             except zmq.Again:
