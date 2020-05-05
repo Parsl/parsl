@@ -108,7 +108,7 @@ DataFutures
 While an AppFuture represents the execution of an asynchronous app, a DataFuture represents a file that an app produces.
 Parsl's dataflow model requires such a construct so that it can determine when other apps that are to consume a file produced by the app can start execution. 
 
-When calling an app that produces files as outputs, Parsl requires that a list of output files be specified (as a list of `File` objects pass in via the ``outputs`` keyword argument). A DataFuture for each output file is returned in the AppFuture when the app is executed, in the `outputs` attribute.
+When calling an app that produces files as outputs, Parsl requires that a list of output files be specified (as a list of `File` objects passed in via the ``outputs`` keyword argument). A DataFuture for each output file is returned in the AppFuture when the app is executed, in the `outputs` attribute.
 
 Each DataFuture will complete when the App has finished executing,
 and the corresponding data file has been staged out.
