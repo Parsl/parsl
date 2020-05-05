@@ -488,11 +488,24 @@ class Interchange(object):
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:
                     logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
+                    bad_manager_flag = False
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
                         # logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
-                        self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
-                    self.results_outgoing.send_multipart(b_messages)
+                        try:
+                            self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                        except Exception:
+                            bad_manager_flag = True
+                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
+                                r['task_id'],
+                                manager,
+                                self._ready_manager_queue[manager]['tasks']))
+
+                    # bad_manager_flag indicates that the messages are from a manager that we called dead
+                    # and the results from that manager should not be propagated, since they would've previously
+                    # been set to fail.
+                    if not bad_manager_flag:
+                        self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                 logger.debug("[MAIN] leaving results_incoming section")
 
