@@ -66,7 +66,7 @@ Staging providers
 
 Each executor can be configured with a list of
 :py:class:`~parsl.data_provider.staging.Staging` instances
-which will be used to stage files in and out of execution
+that will be used to stage files in and out of execution
 locations. This list should be supplied as the `storage_access`
 parameter to an executor when it is constructed as part of a
 Parsl configuration.
