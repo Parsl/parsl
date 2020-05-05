@@ -4,7 +4,9 @@ Data management
 ===============
 
 Parsl supports staging of file data between execution locations and at-rest
-locations. This supports two pieces of functionality: execution location
+locations, specifically staging inputs from at-rest locations to execution locations,
+and staging outputs from execution locations to at-rest locations. 
+This supports two pieces of functionality: execution location
 abstraction, and ordering of execution by data flow.
 
 Parsl abstracts not only parallel execution but also execution location. That is, it makes it possible for a Parsl app to execute anywhere, so that, for example, the following code will behave in the same way whether the `double` app is run locally or dispatched to a remote computer:
@@ -78,7 +80,7 @@ NoOpFileStaging for Local/Shared File Systems
 
 The NoOpFileStaging provider assumes that files specified either
 with a path or with the ``file`` URL scheme are available both
-on the submit and execution side - for example, when there is a
+on the submit and execution side - this occurs, for example, when there is a
 shared file system. 
 
 FTP, HTTP, HTTPS: separate task staging
@@ -86,7 +88,7 @@ FTP, HTTP, HTTPS: separate task staging
 
 Files named with an ``ftp``, ``http`` or ``https`` URL will be
 staged in using HTTP GET or anonymous FTP executed as a separate
-Parsl task which will complete before the corresponding App
+Parsl task that will complete before the corresponding App
 executes. These providers cannot be used to stage out output files.
 
 
@@ -121,7 +123,7 @@ The following example illustrates how the remote file is implicitly downloaded f
 FTP, HTTP, HTTPS: in-task staging
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-These staging providers are intended for use on executors which do not have
+These staging providers are intended for use on executors that do not have
 a file system shared between each executor node.
 
 These providers will use the same HTTP GET/anonymous FTP as the separate
