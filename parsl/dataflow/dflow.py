@@ -180,6 +180,11 @@ class DataFlowKernel(object):
 
         atexit.register(self.atexit_cleanup)
 
+    def _send_task_log_info(self, task_record):
+        if self.monitoring:
+            task_log_info = self._create_task_log_info(task_record)
+            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+
     def _create_task_log_info(self, task_record):
         """
         Create the dictionary that will be included in the log.
@@ -305,9 +310,7 @@ class DataFlowKernel(object):
         if task_record['app_fu'].stderr is not None:
             logger.info("Standard error for task {} available at {}".format(task_id, task_record['app_fu'].stderr))
 
-        if self.monitoring:
-            task_log_info = self._create_task_log_info(task_record)
-            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+        self._send_task_log_info(task_record)
 
         # it might be that in the course of the update, we've gone back to being
         # pending - in which case, we should consider ourself for relaunch
@@ -410,9 +413,7 @@ class DataFlowKernel(object):
                 task_record['status'] = States.dep_fail
                 self.tasks_dep_fail_count += 1
 
-                if self.monitoring is not None:
-                    task_log_info = self._create_task_log_info(task_record)
-                    self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+                self._send_task_log_info(task_record)
 
                 exec_fu = Future()
                 exec_fu.set_exception(DependencyError(exceptions,
@@ -478,9 +479,8 @@ class DataFlowKernel(object):
         with self.submitter_lock:
             exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)
         self.tasks[task_id]['status'] = States.launched
-        if self.monitoring is not None:
-            task_log_info = self._create_task_log_info(self.tasks[task_id])
-            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+
+        self._send_task_log_info(self.tasks[task_id])
 
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
@@ -764,9 +764,7 @@ class DataFlowKernel(object):
         task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
-        if self.monitoring is not None:
-            task_log_info = self._create_task_log_info(self.tasks[task_id])
-            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+        self._send_task_log_info(task_def)
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.
