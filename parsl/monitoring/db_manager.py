@@ -444,7 +444,6 @@ class DatabaseManager(object):
                              columns=['run_id', 'time_completed',
                                       'workflow_duration'],
                              messages=[self.workflow_message])
-            self.workflow_end = True
         self.batching_interval, self.batching_threshold = float(
             'inf'), float('inf')
         self._kill_event.set()
