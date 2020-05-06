@@ -209,6 +209,7 @@ class MonitoringHub(RepresentationMixin):
         self.monitoring_hub_active = True
         self._context = zmq.Context()
         self._dfk_channel = self._context.socket(zmq.DEALER)
+        self._dfk_channel.setsockopt(zmq.SNDTIMEO, 1000)
         self._dfk_channel.set_hwm(0)
         self.dfk_port = self._dfk_channel.bind_to_random_port("tcp://{}".format(self.client_address),
                                                               min_port=self.client_port_range[0],
@@ -259,7 +260,10 @@ class MonitoringHub(RepresentationMixin):
 
     def send(self, mtype, message):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
-        return self._dfk_channel.send_pyobj((mtype, message))
+        try:
+            self._dfk_channel.send_pyobj((mtype, message))
+        except zmq.Again as e:
+            self.logger.exception("[MONITORING] Monitoring send error")
 
     def close(self):
         if self.logger:
