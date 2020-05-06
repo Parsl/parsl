@@ -262,7 +262,7 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
         try:
             self._dfk_channel.send_pyobj((mtype, message))
-        except zmq.Again as e:
+        except zmq.Again:
             self.logger.exception("[MONITORING] Monitoring send error")
 
     def close(self):
