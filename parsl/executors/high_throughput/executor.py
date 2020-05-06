@@ -134,6 +134,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         When there are a few tasks (<100) or when tasks are long running, this option should
         be set to 0 for better load balancing. Default is 0.
 
+    address_probe_timeout : int
+        Managers attempt connecting over many different addesses to determine a viable address.
+        This option sets a time limit in seconds on the connection attempt. Default is 30s.
+
     suppress_failure : Bool
         If set, the interchange will suppress failures rather than terminate early. Default: True
 
@@ -172,6 +176,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
+                 address_probe_timeout: int = 30,
                  suppress_failure: bool = True,
                  managed: bool = True,
                  worker_logdir_root: Optional[str] = None):
@@ -191,6 +196,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
         self.address = address
+        self.address_probe_timeout = address_probe_timeout
         if self.address:
             self.all_addresses = address
         else:
@@ -236,6 +242,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                "--logdir={logdir} "
                                "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
+                               "--address_probe_timeout={address_probe_timeout} "
                                "--hb_threshold={heartbeat_threshold} ")
 
     def initialize_scaling(self):
@@ -253,6 +260,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
+                                       address_probe_timeout=self.address_probe_timeout,
                                        addresses=self.all_addresses,
                                        task_port=self.worker_task_port,
                                        result_port=self.worker_result_port,
