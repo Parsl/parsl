@@ -3,6 +3,7 @@ import threading
 import queue
 import os
 import time
+import datetime
 
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
@@ -202,6 +203,7 @@ class DatabaseManager(object):
                  batching_threshold=99999,
                  ):
 
+        self.workflow_end = False
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -284,6 +286,7 @@ class DatabaseManager(object):
                             self.logger.debug(
                                 "Inserting workflow start info to WORKFLOW table")
                             self._insert(table=WORKFLOW, messages=[msg])
+                            self.workflow_message = msg
                         else:                         # workflow end message
                             self.logger.debug(
                                 "Updating workflow end info to WORKFLOW table")
@@ -292,6 +295,8 @@ class DatabaseManager(object):
                                                   'tasks_completed_count', 'time_completed',
                                                   'workflow_duration'],
                                          messages=[msg])
+                            self.workflow_end = True
+
                     else:                             # TASK_INFO message
                         all_messages.append(msg)
                         if msg['task_id'] in inserted_tasks:
@@ -425,7 +430,21 @@ class DatabaseManager(object):
     def close(self):
         if self.logger:
             self.logger.info(
-                "Finishing all the logging and terminating Database Manager.")
+                "Database Manager cleanup initiated.")
+        if not self.workflow_end:
+            if self.logger:
+                self.logger.info(
+                    "Logging workflow end info to database due to abnormal exit")
+            time_completed = datetime.datetime.now()
+            msg = {'time_completed': time_completed,
+                   'workflow_duration': (time_completed - self.workflow_message['time_began']).total_seconds()}
+            if hasattr(self, 'workflow_message'):
+                self.workflow_message.update(msg)
+                self._update(table=WORKFLOW,
+                             columns=['run_id', 'time_completed',
+                                      'workflow_duration'],
+                             messages=[self.workflow_message])
+            self.workflow_end = True
         self.batching_interval, self.batching_threshold = float(
             'inf'), float('inf')
         self._kill_event.set()
@@ -472,8 +491,12 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
     dbm.logger.info("Starting dbm in dbm starter")
     try:
         dbm.start(priority_msgs, node_msgs, resource_msgs)
+    except KeyboardInterrupt:
+        dbm.logger.exception("KeyboardInterrupt signal caught")
+        dbm.close()
     except Exception as e:
         dbm.logger.exception("dbm.start exception")
         exception_q.put(("DBM", str(e)))
+        dbm.close()
 
     dbm.logger.info("End of dbm_starter")

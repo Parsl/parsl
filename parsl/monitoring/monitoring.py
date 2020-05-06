@@ -289,6 +289,7 @@ class MonitoringHub(RepresentationMixin):
             if len(exception_msgs) == 0:
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
+            self.logger.debug("Finished waiting for DBM termination")
 
     @staticmethod
     def monitor_wrapper(f,
