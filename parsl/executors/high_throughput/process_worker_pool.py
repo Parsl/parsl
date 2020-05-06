@@ -73,7 +73,7 @@ class Manager(object):
              comma separated list of addresses for the interchange
 
         address_probe_timeout : int
-             Timeout is seconds for the address probe to detect viable addresses
+             Timeout in seconds for the address probe to detect viable addresses
              to the interchange. Default : 30s
 
         worker_url : str
