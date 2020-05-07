@@ -204,6 +204,7 @@ class DatabaseManager(object):
                  ):
 
         self.workflow_end = False
+        self.workflow_start_message = None
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -286,7 +287,7 @@ class DatabaseManager(object):
                             self.logger.debug(
                                 "Inserting workflow start info to WORKFLOW table")
                             self._insert(table=WORKFLOW, messages=[msg])
-                            self.workflow_message = msg
+                            self.workflow_start_message = msg
                         else:                         # workflow end message
                             self.logger.debug(
                                 "Updating workflow end info to WORKFLOW table")
@@ -433,19 +434,18 @@ class DatabaseManager(object):
         if self.logger:
             self.logger.info(
                 "Database Manager cleanup initiated.")
-        if not self.workflow_end:
+        if not self.workflow_end and self.workflow_start_message:
             if self.logger:
                 self.logger.info(
                     "Logging workflow end info to database due to abnormal exit")
             time_completed = datetime.datetime.now()
             msg = {'time_completed': time_completed,
-                   'workflow_duration': (time_completed - self.workflow_message['time_began']).total_seconds()}
-            if hasattr(self, 'workflow_message'):
-                self.workflow_message.update(msg)
-                self._update(table=WORKFLOW,
-                             columns=['run_id', 'time_completed',
-                                      'workflow_duration'],
-                             messages=[self.workflow_message])
+                   'workflow_duration': (time_completed - self.workflow_start_message['time_began']).total_seconds()}
+            self.workflow_start_message.update(msg)
+            self._update(table=WORKFLOW,
+                         columns=['run_id', 'time_completed',
+                                  'workflow_duration'],
+                         messages=[self.workflow_start_message])
         self.batching_interval, self.batching_threshold = float(
             'inf'), float('inf')
         self._kill_event.set()
