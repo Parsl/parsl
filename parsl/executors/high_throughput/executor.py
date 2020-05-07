@@ -134,9 +134,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         When there are a few tasks (<100) or when tasks are long running, this option should
         be set to 0 for better load balancing. Default is 0.
 
-    address_probe_timeout : int
+    address_probe_timeout : int | None
         Managers attempt connecting over many different addesses to determine a viable address.
-        This option sets a time limit in seconds on the connection attempt. Default is 30s.
+        This option sets a time limit in seconds on the connection attempt.
+        Default of None implies 30s timeout set on worker.
 
     heartbeat_threshold : int
         Seconds since the last message from the counterpart in the communication pair:
@@ -173,7 +174,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
-                 address_probe_timeout: int = 30,
+                 address_probe_timeout: Optional[int] = None,
                  managed: bool = True,
                  worker_logdir_root: Optional[str] = None):
 
@@ -237,7 +238,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                "--logdir={logdir} "
                                "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
-                               "--address_probe_timeout={address_probe_timeout} "
+                               "{address_probe_timeout_string} "
                                "--hb_threshold={heartbeat_threshold} ")
 
     def initialize_scaling(self):
@@ -249,13 +250,16 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
+        address_probe_timeout_string = ""
+        if self.address_probe_timeout:
+            address_probe_timeout_string = "--address_probe_timeout={}".format(self.address_probe_timeout)
         worker_logdir = "{}/{}".format(self.run_dir, self.label)
         if self.worker_logdir_root is not None:
             worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
-                                       address_probe_timeout=self.address_probe_timeout,
+                                       address_probe_timeout_string=address_probe_timeout_string,
                                        addresses=self.all_addresses,
                                        task_port=self.worker_task_port,
                                        result_port=self.worker_result_port,
