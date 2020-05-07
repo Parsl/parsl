@@ -495,6 +495,7 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
     except KeyboardInterrupt:
         dbm.logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
+        raise
     except Exception as e:
         dbm.logger.exception("dbm.start exception")
         exception_q.put(("DBM", str(e)))
