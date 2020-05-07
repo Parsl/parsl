@@ -394,22 +394,24 @@ class DatabaseManager(object):
     def _update(self, table, columns, messages):
         try:
             self.db.update(table=table, columns=columns, messages=messages)
-        except Exception:
+        except BaseException:
             self.logger.exception("Got exception when trying to update Table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
                 self.logger.exception("Rollback failed")
+            raise
 
     def _insert(self, table, messages):
         try:
             self.db.insert(table=table, messages=messages)
-        except Exception:
+        except BaseException:
             self.logger.exception("Got exception when trying to insert to Table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
                 self.logger.exception("Rollback failed")
+            raise
 
     def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
         messages = []
