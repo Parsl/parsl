@@ -138,9 +138,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         Managers attempt connecting over many different addesses to determine a viable address.
         This option sets a time limit in seconds on the connection attempt. Default is 30s.
 
-    suppress_failure : Bool
-        If set, the interchange will suppress failures rather than terminate early. Default: True
-
     heartbeat_threshold : int
         Seconds since the last message from the counterpart in the communication pair:
         (interchange, manager) after which the counterpart is assumed to be un-available. Default: 120s
@@ -177,7 +174,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
                  address_probe_timeout: int = 30,
-                 suppress_failure: bool = True,
                  managed: bool = True,
                  worker_logdir_root: Optional[str] = None):
 
@@ -226,7 +222,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
         self.poll_period = poll_period
-        self.suppress_failure = suppress_failure
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
 
@@ -429,7 +424,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                           "hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
                                           "logdir": "{}/{}".format(self.run_dir, self.label),
-                                          "suppress_failure": self.suppress_failure,
                                           "heartbeat_threshold": self.heartbeat_threshold,
                                           "poll_period": self.poll_period,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
