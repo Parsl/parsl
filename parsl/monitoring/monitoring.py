@@ -207,9 +207,10 @@ class MonitoringHub(RepresentationMixin):
 
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
+        self.dfk_channel_timeout = 10000  # in milliseconds
         self._context = zmq.Context()
         self._dfk_channel = self._context.socket(zmq.DEALER)
-        self._dfk_channel.setsockopt(zmq.SNDTIMEO, 1000)
+        self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
         self._dfk_channel.set_hwm(0)
         self.dfk_port = self._dfk_channel.bind_to_random_port("tcp://{}".format(self.client_address),
                                                               min_port=self.client_port_range[0],
@@ -263,7 +264,8 @@ class MonitoringHub(RepresentationMixin):
         try:
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
-            self.logger.exception("[MONITORING] Monitoring send error")
+            self.logger.exception(
+                f"[MONITORING] The monitoring message sent from DFK to Hub timeouts after {self.dfk_channel_timeout}ms")
 
     def close(self):
         if self.logger:
