@@ -265,7 +265,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
             self.logger.exception(
-                f"[MONITORING] The monitoring message sent from DFK to Hub timeouts after {self.dfk_channel_timeout}ms")
+                "[MONITORING] The monitoring message sent from DFK to Hub timeouts after {}ms".format(self.dfk_channel_timeout))
 
     def close(self):
         if self.logger:
