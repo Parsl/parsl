@@ -432,11 +432,6 @@ class Interchange(object):
                                                                                                     msg['python_v'].rsplit(".", 1)[0]))
                     else:
                         # Registration has failed.
-                        self._kill_event.set()
-                        e = BadRegistration(manager, critical=False)
-                        result_package = {'task_id': -1, 'exception': serialize_object(e)}
-                        pkl_package = pickle.dumps(result_package)
-                        self.results_outgoing.send(pkl_package)
                         logger.debug("[MAIN] Suppressing bad registration from manager:{}".format(
                             manager))
 
