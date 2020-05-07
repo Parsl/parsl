@@ -36,20 +36,17 @@ class AppBadFormatting(ParslError):
     """
 
 
-class AppFailure(AppException):
-    """An error raised during execution of an app.
+class BashExitFailure(AppException):
+    """A non-zero exit code returned from a @bash_app
 
-    What this exception contains depends entirely on context
     Contains:
-    reason(string)
+    reason(str)
     exitcode(int)
-    retries(int/None)
     """
 
-    def __init__(self, reason, exitcode, retries=None):
+    def __init__(self, reason, exitcode):
         self.reason = reason
         self.exitcode = exitcode
-        self.retries = retries
 
 
 class AppTimeout(AppException):
@@ -62,15 +59,11 @@ class BashAppNoReturn(AppException):
 
     Contains:
     reason(string)
-    exitcode(int)
-    retries(int/None)
     """
 
-    def __init__(self, reason, exitcode=-21, retries=None):
+    def __init__(self, reason):
         super().__init__(reason)
         self.reason = reason
-        self.exitcode = exitcode
-        self.retries = retries
 
 
 class MissingOutputs(ParslError):

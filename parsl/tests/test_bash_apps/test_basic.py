@@ -5,6 +5,7 @@ import shutil
 import time
 
 import parsl
+from parsl import File
 from parsl.app.app import bash_app
 
 from parsl.tests.configs.local_threads import config
@@ -70,7 +71,7 @@ def test_parallel_for(n=3):
     for i in range(0, n):
         d[i] = echo_to_file(
             inputs=['Hello World {0}'.format(i)],
-            outputs=['{0}/out.{1}.txt'.format(outdir, i)],
+            outputs=[File('{0}/out.{1}.txt'.format(outdir, i))],
             stdout='{0}/std.{1}.out'.format(outdir, i),
             stderr='{0}/std.{1}.err'.format(outdir, i),
         )

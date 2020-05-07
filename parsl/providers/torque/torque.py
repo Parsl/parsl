@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 # From the man pages for qstat for PBS/Torque systems
 translate_table = {
+    'B': JobState.RUNNING,  # This state is returned for running array jobs
     'R': JobState.RUNNING,
     'C': JobState.COMPLETED,  # Completed after having run
     'E': JobState.COMPLETED,  # Exiting after having run

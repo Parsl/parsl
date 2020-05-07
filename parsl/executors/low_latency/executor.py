@@ -256,7 +256,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
         to_kill = self.blocks[:blocks]
         if self.provider:
             r = self.provider.cancel(to_kill)
-        return r
+        return self._filter_scale_in_ids(to_kill, r)
 
     def _get_job_ids(self):
         return self.blocks

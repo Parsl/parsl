@@ -61,12 +61,22 @@ For Developers
 
     $ git clone https://github.com/Parsl/parsl
 
-2. Install::
+
+2. Build and Test::
+
+    $ make   # show all available makefile targets
+    $ make virtualenv # create a virtual environment
+    $ source .venv/bin/activate # activate the virtual environment
+    $ make deps # install python dependencies from test-requirements.txt
+    $ make test # make (all) tests. Run "make config_local_test" for a faster, smaller test set.
+    $ make clean # remove virtualenv and all test and build artifacts
+
+3. Install::
 
     $ cd parsl
     $ python3 setup.py install
 
-3. Use Parsl!
+4. Use Parsl!
 
 Requirements
 ============

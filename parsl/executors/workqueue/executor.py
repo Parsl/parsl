@@ -14,7 +14,7 @@ import queue
 import inspect
 from ipyparallel.serialize import pack_apply_message
 
-from parsl.app.errors import AppFailure
+from parsl.app.errors import AppException
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
@@ -39,6 +39,19 @@ else:
     _work_queue_enabled = True
 
 logger = logging.getLogger(__name__)
+
+
+class WorkqueueTaskFailure(AppException):
+    """A failure executing a task in workqueue
+
+    Contains:
+    reason(string)
+    status(int)
+    """
+
+    def __init__(self, reason, status):
+        self.reason = reason
+        self.status = status
 
 
 def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
@@ -363,7 +376,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         if received is False:
             reason = item["reason"]
             status = item["status"]
-            future.set_exception(AppFailure(reason, status))
+            future.set_exception(WorkqueueTaskFailure(reason, status))
         # Successful task
         else:
             result = item["result"]
