@@ -20,6 +20,7 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.providers import LocalProvider
 from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import workqueue_worker
@@ -464,7 +465,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
     def __init__(self,
                  label="WorkQueueExecutor",
-                 provider=None,
+                 provider=LocalProvider(),
                  working_dir=".",
                  managed=True,
                  project_name=None,
@@ -478,19 +479,19 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  full_debug=True,
                  see_worker_output=False):
         NoStatusHandlingExecutor.__init__(self)
+        self._provider = provider
+        self._scaling_enabled = False
+
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
         self.label = label
-        self.provider = provider
         self.managed = managed
         self.task_queue = multiprocessing.Queue()
         self.collector_queue = multiprocessing.Queue()
-        self.tasks = {}
         self.blocks = {}
         self.port = port
         self.task_counter = -1
-        self.scaling_enabled = False
         self.project_name = project_name
         self.project_password = project_password
         self.project_password_file = project_password_file
