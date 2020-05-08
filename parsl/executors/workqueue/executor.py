@@ -114,6 +114,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
     wq_tasks = set()
     orig_ppid = os.getppid()
     continue_running = True
+
+    result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
+
     while(continue_running):
         # Monitor the task queue
         ppid = os.getppid()
@@ -197,6 +200,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_tag(str(parsl_id))
+            result_file_of_task_id[str(parsl_id)] = function_result_loc
+
             logger.debug("Parsl ID: {}".format(t.id))
 
             # Specify all input/output files for task
@@ -309,8 +314,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         if see_worker_output:
                             print(t.output)
 
-                        # Load result into result file
-                        result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
+                        # Load result into result file. The tag of the task is the parsl_id.
+                        result_loc = result_file_of_task_id.pop(t.tag)
                         logger.debug("Looking for result in {}".format(result_loc))
                         f = open(result_loc, "rb")
                         result = pickle.load(f)
