@@ -23,6 +23,7 @@ from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import workqueue_worker
 
 try:
+    import work_queue as wq
     from work_queue import WorkQueue
     from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
@@ -271,27 +272,27 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         # WorkQueue system failure
                         else:
                             reason = "WorkQueue System Failure: "
-                            if task_result == 1:
+                            if task_result == wq.WORK_QUEUE_RESULT_INPUT_MISSING:
                                 reason += "missing input file"
-                            elif task_result == 2:
+                            elif task_result == wq.WORK_QUEUE_RESULT_OUTPUT_MISSING:
                                 reason += "unable to generate output file"
-                            elif task_result == 4:
+                            elif task_result == wq.WORK_QUEUE_RESULT_STDOUT_MISSING:
                                 reason += "stdout has been truncated"
-                            elif task_result == 1 << 3:
+                            elif task_result == wq.WORK_QUEUE_RESULT_SIGNAL:
                                 reason += "task terminated with a signal"
-                            elif task_result == 2 << 3:
+                            elif task_result == wq.WORK_QUEUE_RESULT_RESOURCE_EXHAUSTION:
                                 reason += "task used more resources than requested"
-                            elif task_result == 3 << 3:
+                            elif task_result == wq.WORK_QUEUE_RESULT_TASK_TIMEOUT:
                                 reason += "task ran past the specified end time"
-                            elif task_result == 4 << 3:
+                            elif task_result == wq.WORK_QUEUE_RESULT_UNKNOWN:
                                 reason += "result could not be classified"
-                            elif task_result == 5 << 3:
+                            elif task_result == wq.WORK_QUEUE_RESULT_FORSAKEN:
                                 reason += "task failed, but not a task error"
-                            elif task_result == 6 << 3:
+                            elif task_result == wq.WORK_QUEUE_RESULT_MAX_RETRIES:
                                 reason += "unable to complete after specified number of retries"
-                            elif task_result == 7 << 3:
+                            elif task_result == wq.WORK_QUEUE_RESULT_TASK_MAX_RUN_TIME:
                                 reason += "task ran for more than the specified time"
-                            elif task_result == 8 << 3:
+                            elif task_result == wq.WORK_QUEUE_RESULT_DISK_ALLOC_FULL:
                                 reason += "task needed more space to complete task"
                             else:
                                 reason += "unable to process Work Queue system failure"
