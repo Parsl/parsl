@@ -294,6 +294,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                                 reason += "task ran for more than the specified time"
                             elif task_result == wq.WORK_QUEUE_RESULT_DISK_ALLOC_FULL:
                                 reason += "task needed more space to complete task"
+                            elif task_result == wq.WORK_QUEUE_RESULT_RMONITOR_ERROR:
+                                reason += "task failed because the monitor did not produce an output"
                             else:
                                 reason += "unable to process Work Queue system failure"
 
