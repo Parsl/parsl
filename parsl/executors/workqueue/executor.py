@@ -198,7 +198,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_tag(str(parsl_id))
-            logger.debug("Parsl ID: {}".format(t.id))
+            logger.debug("Parsl ID: {}".format(parsl_id))
 
             # Specify all input/output files for task
             for item in input_files:
