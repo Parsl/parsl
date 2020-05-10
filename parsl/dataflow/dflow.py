@@ -663,7 +663,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=[], app_kwargs={}):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -693,6 +693,9 @@ class DataFlowKernel(object):
                (AppFuture) [DataFutures,]
 
         """
+
+        if ignore_for_cache is None:
+            ignore_for_cache = []
 
         if self.cleanup_called:
             raise ValueError("Cannot submit to a DFK that has been cleaned up")

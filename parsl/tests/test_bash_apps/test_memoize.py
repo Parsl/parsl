@@ -2,8 +2,8 @@ import argparse
 import os
 
 import parsl
+from parsl import File
 from parsl.app.app import bash_app
-from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
@@ -20,6 +20,8 @@ def test_bash_memoization(n=2):
 
     if os.path.exists(temp_filename):
         os.remove(temp_filename)
+
+    temp_file = File(temp_filename)
 
     print("Launching: ", n)
     x = fail_on_presence(outputs=[temp_file])
@@ -46,6 +48,8 @@ def test_bash_memoization_keywords(n=2):
 
     if os.path.exists(temp_filename):
         os.remove(temp_filename)
+
+    temp_file = File(temp_filename)
 
     print("Launching: ", n)
     x = fail_on_presence_kw(outputs=[temp_file], foo={"a": 1, "b": 2})
