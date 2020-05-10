@@ -23,6 +23,7 @@ from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import workqueue_worker
 
 try:
+    import work_queue as wq
     from work_queue import WorkQueue
     from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
@@ -114,6 +115,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
     wq_tasks = set()
     orig_ppid = os.getppid()
     continue_running = True
+
+    result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
+
     while(continue_running):
         # Monitor the task queue
         ppid = os.getppid()
@@ -197,7 +201,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_tag(str(parsl_id))
-            logger.debug("Parsl ID: {}".format(t.id))
+            result_file_of_task_id[str(parsl_id)] = function_result_loc
+
+            logger.debug("Parsl ID: {}".format(parsl_id))
 
             # Specify all input/output files for task
             for item in input_files:
@@ -251,50 +257,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
                     # Task failure
                     if status != 0 or (task_result != WORK_QUEUE_RESULT_SUCCESS and task_result != WORK_QUEUE_RESULT_OUTPUT_MISSING):
-                        logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}".format(status, task_result))
-                        # Wrapper script failure
-                        if status != 0:
-                            logger.debug("WorkQueue task {} failed with status {}".format(t.id, status))
-                            reason = "Wrapper Script Failure: "
-                            if status == 1:
-                                reason += "problem parsing command line options"
-                            elif status == 2:
-                                reason += "problem loading function data"
-                            elif status == 3:
-                                reason += "problem remapping file names"
-                            elif status == 4:
-                                reason += "problem writing out function result"
-                            else:
-                                reason += "unable to process wrapper script failure with status = {}".format(status)
-                            reason += "\nTrace:\n" + str(t.output)
-                            logger.debug("WorkQueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
-                        # WorkQueue system failure
-                        else:
-                            reason = "WorkQueue System Failure: "
-                            if task_result == 1:
-                                reason += "missing input file"
-                            elif task_result == 2:
-                                reason += "unable to generate output file"
-                            elif task_result == 4:
-                                reason += "stdout has been truncated"
-                            elif task_result == 1 << 3:
-                                reason += "task terminated with a signal"
-                            elif task_result == 2 << 3:
-                                reason += "task used more resources than requested"
-                            elif task_result == 3 << 3:
-                                reason += "task ran past the specified end time"
-                            elif task_result == 4 << 3:
-                                reason += "result could not be classified"
-                            elif task_result == 5 << 3:
-                                reason += "task failed, but not a task error"
-                            elif task_result == 6 << 3:
-                                reason += "unable to complete after specified number of retries"
-                            elif task_result == 7 << 3:
-                                reason += "task ran for more than the specified time"
-                            elif task_result == 8 << 3:
-                                reason += "task needed more space to complete task"
-                            else:
-                                reason += "unable to process Work Queue system failure"
+                        logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
+                                     .format(status, task_result))
+
+                        reason = explain_task_exit_status(t, parsl_tid)
+                        logger.debug("WorkQueue runner script failed for parsl task {} (wq {}) because:\n{}"
+                                     .format(parsl_id, t.id, reason))
 
                         msg = {"tid": parsl_tid,
                                "result_received": False,
@@ -309,8 +277,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         if see_worker_output:
                             print(t.output)
 
-                        # Load result into result file
-                        result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
+                        # Load result into result file. The tag of the task is the parsl_id.
+                        result_loc = result_file_of_task_id.pop(t.tag)
                         logger.debug("Looking for result in {}".format(result_loc))
                         f = open(result_loc, "rb")
                         result = pickle.load(f)
@@ -768,3 +736,56 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         if value is not None:
             self._run_dir = value
         return self._run_dir
+
+
+def explain_task_exit_status(wq_task, parsl_id):
+    """Returns a string with the reason why a task failed."""
+
+    status = wq_task.return_status  # aka exit code
+    wq_result = wq_task.result
+
+    if status != 0:
+        reason = "Wrapper Script Failure: "
+        if status == 1:
+            reason += "problem parsing command line options"
+        elif status == 2:
+            reason += "problem loading function data"
+        elif status == 3:
+            reason += "problem remapping file names"
+        elif status == 4:
+            reason += "problem writing out function result"
+        else:
+            reason += "unable to process wrapper script failure with status = {}".format(status)
+        reason += "\nTrace:\n" + str(wq_task.output)
+# WorkQueue system failure
+    else:
+        reason = "work queue result: "
+        if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS:
+            reason += "succesful execution"
+        elif wq_result == wq.WORK_QUEUE_RESULT_INPUT_MISSING:
+            reason += "missing input file"
+        elif wq_result == wq.WORK_QUEUE_RESULT_OUTPUT_MISSING:
+            reason += "unable to generate output file"
+        elif wq_result == wq.WORK_QUEUE_RESULT_STDOUT_MISSING:
+            reason += "stdout has been truncated"
+        elif wq_result == wq.WORK_QUEUE_RESULT_SIGNAL:
+            reason += "task terminated with a signal"
+        elif wq_result == wq.WORK_QUEUE_RESULT_RESOURCE_EXHAUSTION:
+            reason += "task used more resources than requested"
+        elif wq_result == wq.WORK_QUEUE_RESULT_TASK_TIMEOUT:
+            reason += "task ran past the specified end time"
+        elif wq_result == wq.WORK_QUEUE_RESULT_UNKNOWN:
+            reason += "result could not be classified"
+        elif wq_result == wq.WORK_QUEUE_RESULT_FORSAKEN:
+            reason += "task failed, but not a task error"
+        elif wq_result == wq.WORK_QUEUE_RESULT_MAX_RETRIES:
+            reason += "unable to complete after specified number of retries"
+        elif wq_result == wq.WORK_QUEUE_RESULT_TASK_MAX_RUN_TIME:
+            reason += "task ran for more than the specified time"
+        elif wq_result == wq.WORK_QUEUE_RESULT_DISK_ALLOC_FULL:
+            reason += "task needed more space to complete task"
+        elif wq_result == wq.WORK_QUEUE_RESULT_RMONITOR_ERROR:
+            reason += "task failed because the monitor did not produce an output"
+        else:
+            reason += "unable to process Work Queue system failure"
+    return reason
