@@ -255,6 +255,7 @@ def setup_data():
     with open("data/test2.txt", 'w') as f:
         f.write("2\n")
 
+
 @pytest.fixture(autouse=True, scope='function')
 def wait_for_task_completion(pytestconfig):
     """If we're in a config-file based mode, wait for task completion between
