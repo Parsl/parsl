@@ -55,14 +55,19 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def submit(self, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """Submits work to the thread pool.
 
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         """
-        return self.executor.submit(*args, **kwargs)
+        if len(resource_specification) > 0:
+            logger.warning("Ignoring the resource specification. "
+                           "Parsl resource specification is not supported in ThreadPool Executor. "
+                           "Please check WorkQueueExecutor if resource specification is needed.")
+
+        return self.executor.submit(func, *args, **kwargs)
 
     def scale_out(self, workers=1):
         """Scales out the number of active workers by 1.

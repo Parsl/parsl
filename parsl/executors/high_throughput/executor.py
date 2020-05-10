@@ -507,7 +507,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 logger.debug("[HOLD_BLOCK]: Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """Submits work to the the outgoing_q.
 
         The outgoing_q is an external process listens on this
@@ -524,6 +524,11 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         Returns:
               Future
         """
+        if len(resource_specification) > 0:
+            logger.warning("Ignoring the resource specification. "
+                           "Parsl resource specification is not supported in HighThroughput Executor. "
+                           "Please check WorkQueueExecutor if resource specification is needed.")
+
         if self.bad_state_is_set:
             raise self.executor_exception
 

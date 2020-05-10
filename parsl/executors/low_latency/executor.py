@@ -189,8 +189,13 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         logger.info("[MTHREAD] queue management worker finished")
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """ TODO: docstring """
+        if len(resource_specification) > 0:
+            logger.warning("Ignoring the resource specification. "
+                           "Parsl resource specification is not supported in LowLatency Executor. "
+                           "Please check WorkQueueExecutor if resource specification is needed.")
+
         if self.bad_state_is_set:
             raise self.executor_exception
 

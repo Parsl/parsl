@@ -619,7 +619,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             index += 1
         return new_name
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
         information to the task queue, to be executed using the Work Queue
         system. The args and kwargs are processed for input and output files to
