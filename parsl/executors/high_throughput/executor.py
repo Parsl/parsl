@@ -14,7 +14,7 @@ from ipyparallel.serialize import deserialize_object
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
+from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError, SerializationError
 from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
@@ -134,6 +134,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         When there are a few tasks (<100) or when tasks are long running, this option should
         be set to 0 for better load balancing. Default is 0.
 
+    address_probe_timeout : int
+        Managers attempt connecting over many different addesses to determine a viable address.
+        This option sets a time limit in seconds on the connection attempt. Default is 30s.
+
     suppress_failure : Bool
         If set, the interchange will suppress failures rather than terminate early. Default: True
 
@@ -172,6 +176,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
+                 address_probe_timeout: int = 30,
                  suppress_failure: bool = True,
                  managed: bool = True,
                  worker_logdir_root: Optional[str] = None):
@@ -191,6 +196,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
         self.address = address
+        self.address_probe_timeout = address_probe_timeout
         if self.address:
             self.all_addresses = address
         else:
@@ -236,6 +242,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                "--logdir={logdir} "
                                "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
+                               "--address_probe_timeout={address_probe_timeout} "
                                "--hb_threshold={heartbeat_threshold} ")
 
     def initialize_scaling(self):
@@ -253,6 +260,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
+                                       address_probe_timeout=self.address_probe_timeout,
                                        addresses=self.all_addresses,
                                        task_port=self.worker_task_port,
                                        result_port=self.worker_result_port,
@@ -530,9 +538,12 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self.tasks[task_id] = Future()
 
-        fn_buf = pack_apply_message(func, args, kwargs,
-                                    buffer_threshold=1024 * 1024,
-                                    item_threshold=1024)
+        try:
+            fn_buf = pack_apply_message(func, args, kwargs,
+                                        buffer_threshold=1024 * 1024,
+                                        item_threshold=1024)
+        except TypeError:
+            raise SerializationError(func.__name__)
 
         msg = {"task_id": task_id,
                "buffer": fn_buf}
@@ -600,7 +611,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         r = self.provider.cancel(to_kill)
 
-        return r
+        return self._filter_scale_in_ids(to_kill, r)
 
     def _get_job_ids(self) -> List[object]:
         return list(self.blocks.values())

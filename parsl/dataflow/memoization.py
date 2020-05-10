@@ -187,23 +187,19 @@ class Memoizer(object):
             - task(task) : task from the dfk.tasks table
 
         Returns:
-            Tuple of the following:
-            - present (Bool): Is this present in the memo_lookup_table
-            - Result (Py Obj): Result of the function if present in table
+            - Result (Future): A completed future containing the memoized result
 
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
         """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
             logger.debug("Task {} will not be memoized".format(task_id))
-            return False, None
+            return None
 
         hashsum = self.make_hash(task)
         logger.debug("Task {} has memoization hash {}".format(task_id, hashsum))
-        present = False
         result = None
         if hashsum in self.memo_lookup_table:
-            present = True
             result = self.memo_lookup_table[hashsum]
             logger.info("Task %s using result from cache", task_id)
         else:
@@ -211,7 +207,7 @@ class Memoizer(object):
 
         task['hashsum'] = hashsum
 
-        return present, result
+        return result
 
     def hash_lookup(self, hashsum):
         """Lookup a hash in the memoization table.
