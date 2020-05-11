@@ -669,30 +669,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
 
-        # Obtain function information and put into dictionary
-        if self.source:
-            # Obtain function information and put into dictionary
-            source_code = inspect.getsource(func)
-            name = func.__name__
-            function_info = {"source code": source_code,
-                             "name": name,
-                             "args": args,
-                             "kwargs": kwargs}
-
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
-        else:
-            # Serialize function information
-            function_info = pack_apply_message(func, args, kwargs,
-                                               buffer_threshold=1024 * 1024,
-                                               item_threshold=1024)
-
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
+        self._serialize_function(function_data_file, func, args, kwargs)
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
@@ -705,6 +682,24 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.task_queue.put_nowait(msg)
 
         return fu
+
+    def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
+        """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
+        and serializes it to the file fn_path."""
+
+        # Either build a dictionary with the source of the function, or pickle
+        # the function directly:
+        if self.source:
+            function_info = {"source code": inspect.getsource(parsl_fn),
+                             "name": parsl_fn.__name__,
+                             "args": parsl_fn_args,
+                             "kwargs": parsl_fn_kwargs}
+        else:
+            function_info = pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
+                                               buffer_threshold=1024 * 1024,
+                                               item_threshold=1024)
+            with open(fn_path, "wb") as f_out:
+                pickle.dump(function_info, f_out)
 
     def scale_out(self, *args, **kwargs):
         """Scale out method. Not implemented.
