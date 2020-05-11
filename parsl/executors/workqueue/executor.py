@@ -500,7 +500,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.storage_access = storage_access
         self.working_dir = working_dir
         self.used_names = {}
-        self.shared_files = set()
         self.registered_files = set()
         self.worker_output = see_worker_output
         self.full = full_debug
@@ -606,8 +605,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         file_is_shared = False
         if parsl_file_obj in self.registered_files:
             file_is_shared = True
-            if parsl_file_obj not in self.shared_files:
-                self.shared_files.add(parsl_file_obj)
         else:
             self.registered_files.add(parsl_file_obj)
         return (parsl_file_obj.filepath, new_name, file_is_shared, in_or_out)
