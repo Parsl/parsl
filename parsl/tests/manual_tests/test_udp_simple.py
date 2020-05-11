@@ -1,20 +1,24 @@
 from parsl import python_app
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.config import Config
-from parsl.configs.htex_local import config
-
+from parsl.executors import ThreadPoolExecutor
 import parsl
 import logging
 
 
-config.executors[0].max_workers = 4
-config.monitoring = MonitoringHub(
-       hub_address="127.0.0.1",
-       hub_port=55055,
-       monitoring_debug=True,
-       resource_monitoring_interval=10)
+def local_setup():
+    threads_config = Config(
+        executors=[ThreadPoolExecutor(
+            label='threads',
+            max_threads=4)
+        ],
+        monitoring=MonitoringHub(
+            hub_address="127.0.0.1",
+            hub_port=55055,
+            logging_level=logging.INFO,
+            resource_monitoring_interval=10))
 
-parsl.load(config)
+    parsl.load(threads_config)
 
 
 def local_teardown():
@@ -22,13 +26,13 @@ def local_teardown():
 
 
 @python_app
-def sleeper(dur=3):
+def sleeper(dur=25):
     import time
     time.sleep(dur)
-    return 1
+
 
 @python_app
-def cpu_stress(dur=1):
+def cpu_stress(dur=30):
     import time
     s = 0
     start = time.time()
@@ -43,5 +47,5 @@ if __name__ == "__main__":
 
     tasks = [sleeper() for i in range(8)]
     # tasks = [cpu_stress() for i in range(10)]
-    print("Finished submitting")
+
     print([i.result() for i in tasks])
