@@ -156,7 +156,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             function_result_loc_remote = function_result_loc.split("/")[-1]
             input_files = item["input_files"]
             output_files = item["output_files"]
-            std_files = item["std_files"]
             category = item["category"]
 
             full_script_name = workqueue_worker.__file__
@@ -222,8 +221,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             for item in input_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_INPUT, cache=item[2])
             for item in output_files:
-                t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
-            for item in std_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
 
             # Submit the task to the WorkQueue object
@@ -649,7 +646,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         input_files = []
         output_files = []
-        std_files = []
 
         # Add input files from the "inputs" keyword argument
         func_inputs = kwargs.get("inputs", [])
@@ -715,8 +711,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                "category": category,
                "result_loc": function_result_file,
                "input_files": input_files,
-               "output_files": output_files,
-               "std_files": std_files}
+               "output_files": output_files}
         self.task_queue.put_nowait(msg)
 
         return fu
