@@ -18,7 +18,7 @@ config = Config(
                                  project_name="WQexample",
                                  see_worker_output=True,
                                  source=True,
-                                 provider=CondorProvider(transfer_input_files = [path_to_worker],
+                                 provider=CondorProvider(transfer_input_files=[path_to_worker],
                                                          environment={'PATH': '.:/bin:/usr/bin'}),
                                  # init_command='source /home/yadu/src/wq_parsl/setup_parsl_env.sh;
                                  # echo "Ran at $date" > /home/yadu/src/wq_parsl/parsl/tests/workqueue_tests/ran.log',
