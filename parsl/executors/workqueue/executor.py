@@ -150,16 +150,11 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             parsl_id = item["task_id"]
 
             # Extract information about the task
-            function_data_loc = item["data_loc"]
-            function_data_loc_remote = function_data_loc.split("/")[-1]
-            function_result_loc = item["result_loc"]
-            function_result_loc_remote = function_result_loc.split("/")[-1]
+            function_file = item["function_file"]
+            result_file = item["result_file"]
             input_files = item["input_files"]
             output_files = item["output_files"]
             category = item["category"]
-
-            full_script_name = workqueue_worker.__file__
-            script_name = full_script_name.split("/")[-1]
 
             remapping_string = ""
             std_string = ""
@@ -185,8 +180,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             # Create command string
             logger.debug(launch_cmd)
-            command_str = launch_cmd.format(input_file=function_data_loc_remote,
-                                            output_file=function_result_loc_remote,
+            command_str = launch_cmd.format(input_file=os.path.basename(function_file),
+                                            output_file=os.path.basename(result_file),
                                             remapping_string=remapping_string)
             command_str = std_string + command_str
             logger.debug(command_str)
@@ -209,11 +204,11 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     t.specify_environment_variable(var, env[var])
 
             # Specify script, and data/result files for task
-            t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
-            t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
-            t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
+            t.specify_input_file(workqueue_worker.__file__, cache=True)
+            t.specify_input_file(function_file, cache=False)
+            t.specify_output_file(result_file, cache=False)
             t.specify_tag(str(parsl_id))
-            result_file_of_task_id[str(parsl_id)] = function_result_loc
+            result_file_of_task_id[str(parsl_id)] = result_file
 
             logger.debug("Parsl ID: {}".format(parsl_id))
 
@@ -637,6 +632,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.task_counter += 1
         task_id = self.task_counter
 
+        # Create a per task directory for the function, result, map, and result files
+        os.mkdir(self._path_in_task(task_id))
+
         input_files = []
         output_files = []
 
@@ -688,21 +686,21 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
 
         # Pickle the result into object to pass into message buffer
-        function_data_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_data")
-        function_result_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_result")
+        function_file = self._path_in_task(task_id, "function")
+        result_file = self._path_in_task(task_id, "result")
 
-        logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
-        logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
+        logger.debug("Creating Task {} with function at: {}".format(task_id, function_file))
+        logger.debug("Creating Task {} with result to be found at: {}".format(task_id, result_file))
 
-        self._serialize_function(function_data_file, func, args, kwargs)
+        self._serialize_function(function_file, func, args, kwargs)
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
         msg = {"task_id": task_id,
-               "data_loc": function_data_file,
                "category": category,
-               "result_loc": function_result_file,
+               "function_file": function_file,
+               "result_file": result_file,
                "input_files": input_files,
                "output_files": output_files}
         self.task_queue.put_nowait(msg)
