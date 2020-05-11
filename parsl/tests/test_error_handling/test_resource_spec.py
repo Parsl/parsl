@@ -1,10 +1,5 @@
-import argparse
-import time
-
-import pytest
-
 import parsl
-from parsl.app.app import python_app, bash_app
+from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors import WorkQueueExecutor
@@ -18,7 +13,7 @@ def double(x, parsl_resource_specification={}):
 
 
 def test_resource(n=2):
-    spec={'cores': 2, 'memory': '1GiB'}
+    spec = {'cores': 2, 'memory': '1GiB'}
     fut = double(n, parsl_resource_specification=spec)
     try:
         fut.result()
@@ -26,7 +21,7 @@ def test_resource(n=2):
         assert isinstance(e, UnsupportedFeatureError)
     else:
         executor = list(parsl.dfk().executors.values())[0]
-        assert isinstance(executor, WorkQueueExecutor) 
+        assert isinstance(executor, WorkQueueExecutor)
 
 
 if __name__ == '__main__':
