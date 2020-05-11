@@ -485,8 +485,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
         if self.shared_fs is True:
             self.launch_cmd += " --shared-fs"
-        if self.source is True:
-            self.launch_cmd += " --source"
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
