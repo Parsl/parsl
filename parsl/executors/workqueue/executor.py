@@ -380,37 +380,40 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         label: str
             A human readable label for the executor, unique
-            with respect to other Work Queue master programs
+            with respect to other Work Queue master programs.
+            Default is "WorkQueueExecutor".
 
         working_dir: str
             Location for Parsl to perform app delegation to the Work
-            Queue system
+            Queue system. Defaults to current directory.
 
         managed: bool
-            If this executor is managed by the DFK or externally handled
+            Whether this executor is managed by the DFK or externally handled.
+            Default is True (managed by DFK).
 
         project_name: str
-            Work Queue process name
+            If given, Work Queue master process name. Default is None.
 
         project_password: str
-            Optional password for the Work Queue project
+            Optional password for the Work Queue project. Default is None.
 
         project_password_file: str
-            Optional password file for the work queue project
+            Optional password file for the work queue project. Default is None.
 
         port: int
             TCP port on Parsl submission machine for Work Queue workers
             to connect to. Workers will specify this port number when
-            trying to connect to Parsl
+            trying to connect to Parsl. Default is 9123.
 
         env: dict{str}
             Dictionary that contains the environmental variables that
-            need to be set on the Work Queue worker machine
+            need to be set on the Work Queue worker machine.
 
         shared_fs: bool
             Define if working in a shared file system or not. If Parsl
             and the Work Queue workers are on a shared file system, Work
-            Queue does not need to transfer and rename files for execution
+            Queue does not need to transfer and rename files for execution.
+            Default is False.
 
         source: bool
             Choose whether to transfer parsl app information as
@@ -418,14 +421,15 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             @python_apps, but the implementation does not include
             functionality for @bash_apps, and thus source=False
             must be used for programs utilizing @bash_apps.)
+            Default is False.
 
         init_command: str
-            Command to run before constructed Work Queue command
+            Command line to run before executing a task in a worker.
+            Default is ''.
 
         see_worker_output: bool
-            Prints worker standard output if true
-
-
+            Prints worker standard output when a task finishes.
+            Default is False.
     """
 
     def __init__(self,
