@@ -395,7 +395,14 @@ class DatabaseManager(object):
     def _update(self, table, columns, messages):
         try:
             self.db.update(table=table, columns=columns, messages=messages)
-        except BaseException:
+        except KeyboardInterrupt:
+            self.logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                self.logger.exception("Rollback failed")
+            raise
+        except Exception:
             self.logger.exception("Got exception when trying to update Table {}".format(table))
             try:
                 self.db.rollback()
@@ -406,7 +413,14 @@ class DatabaseManager(object):
     def _insert(self, table, messages):
         try:
             self.db.insert(table=table, messages=messages)
-        except BaseException:
+        except KeyboardInterrupt:
+            self.logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                self.logger.exception("Rollback failed")
+            raise
+        except Exception:
             self.logger.exception("Got exception when trying to insert to Table {}".format(table))
             try:
                 self.db.rollback()
