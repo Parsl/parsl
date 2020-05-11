@@ -695,9 +695,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                              "args": parsl_fn_args,
                              "kwargs": parsl_fn_kwargs}
         else:
-            function_info = pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
-                                               buffer_threshold=1024 * 1024,
-                                               item_threshold=1024)
+            function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
+                                                             buffer_threshold=1024 * 1024,
+                                                             item_threshold=1024)}
             with open(fn_path, "wb") as f_out:
                 pickle.dump(function_info, f_out)
 

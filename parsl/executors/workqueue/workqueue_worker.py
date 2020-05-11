@@ -59,15 +59,17 @@ if __name__ == "__main__":
         input_function = open(input_function_file, "rb")
         function_info = pickle.load(input_function)
         # Extract information from transferred source code
-        if source:
+        if "source code" in function_info:
             source_code = function_info["source code"]
             name = function_info["name"]
             args = function_info["args"]
             kwargs = function_info["kwargs"]
         # Extract information from function pointer
-        else:
+        elif "byte code" in function_info:
             from ipyparallel.serialize import unpack_apply_message
-            func, args, kwargs = unpack_apply_message(function_info, user_ns, copy=False)
+            func, args, kwargs = unpack_apply_message(function_info["byte code"], user_ns, copy=False)
+        else:
+            raise Exception("Function file does not have a valid function representation.")
         input_function.close()
     except Exception as e:
         print(e)
