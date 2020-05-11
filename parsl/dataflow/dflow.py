@@ -729,7 +729,7 @@ class DataFlowKernel(object):
                                     kw)
                     )
 
-        resource_specification = app_kwargs.pop('parsl_resource_specification', {})
+        resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
         task_def = {'depends': None,
                     'executor': executor,
