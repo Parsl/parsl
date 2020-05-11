@@ -606,23 +606,16 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             self.registered_files.add(parsl_file_obj)
         return (parsl_file_obj.filepath, new_name, file_is_shared, in_or_out)
 
-    def create_new_name(self, file_name):
-        """Returns a unique file name for an input file name. If the file name
-        is already unique with respect to the Parsl process, then it returns
-        the original file name
-
-        Parameters
-        ----------
-
-        file_name : str
-            Name of file that needs to be unique
+    def _path_in_task(self, task_id, *path_components):
+        """Returns a filename specific to a task.
+        It is used for the following filename's:
+            (not given): The subdirectory per task that contains function, result, etc.
+            'function': Pickled file that contains the function to be executed.
+            'result': Pickled file that (will) contain the result of the function.
+            'map': Pickled file with a dict between local parsl names, and remote work queue names.
         """
-        new_name = file_name
-        index = 0
-        while new_name in self.used_names:
-            new_name = file_name + "-" + str(index)
-            index += 1
-        return new_name
+        task_dir = "{:04d}".format(task_id)
+        return os.path.join(self.function_data_dir, task_dir, *path_components)
 
     def submit(self, func, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
