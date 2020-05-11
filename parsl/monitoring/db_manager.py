@@ -408,7 +408,6 @@ class DatabaseManager(object):
                 self.db.rollback()
             except Exception:
                 self.logger.exception("Rollback failed")
-            raise
 
     def _insert(self, table, messages):
         try:
@@ -426,7 +425,6 @@ class DatabaseManager(object):
                 self.db.rollback()
             except Exception:
                 self.logger.exception("Rollback failed")
-            raise
 
     def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
         messages = []
