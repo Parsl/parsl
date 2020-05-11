@@ -7,6 +7,8 @@ from typing import Any, List, Optional
 
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
+from parsl.executors.errors import UnsupportedFeatureError
+
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +65,10 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         """
         if len(resource_specification) > 0:
-            logger.warning("Ignoring the resource specification. "
-                           "Parsl resource specification is not supported in ThreadPool Executor. "
-                           "Please check WorkQueueExecutor if resource specification is needed.")
+            logger.error("Ignoring the resource specification. "
+                         "Parsl resource specification is not supported in ThreadPool Executor. "
+                         "Please check WorkQueue Executor if resource specification is needed.")
+            raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', 'WorkQueue Executor')
 
         return self.executor.submit(func, *args, **kwargs)
 
