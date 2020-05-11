@@ -948,7 +948,7 @@ class DataFlowKernel(object):
         self.flowcontrol.close()
 
         for executor in self.executors.values():
-            if executor.managed:
+            if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
                     executor.scale_in(len(job_ids))
