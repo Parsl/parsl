@@ -65,6 +65,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           data_dir=".",
                           full=False,
                           autolabel=False,
+                          autolabel_window=None,
                           autocategory=False,
                           cancel_value=multiprocessing.Value('i', 1),
                           port=WORK_QUEUE_DEFAULT_PORT,
@@ -106,8 +107,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         q.specify_password_file(project_password_file)
     if autolabel:
         q.enable_monitoring()
-        q.tune('category-steady-n-tasks', 1)
         q.specify_category_mode('parsl-default', WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+        if autolabel_window is not None:
+            q.tune('category-steady-n-tasks', autolabel_window)
 
     # Only write logs when the wq_log_dir is specified, which it most likely will be
     if wq_log_dir is not None:
@@ -442,6 +444,14 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Use the Resource Monitor to automatically determine resource
             labels based on observed task behavior.
 
+        autolabel_window: int
+            Set the number of tasks considered for autolabeling. Work Queue
+            will wait for a series of N tasks with steady resource
+            requirements before making a decision on labels. Increasing
+            this parameter will reduce the number of failed tasks due to
+            resource exhaustion when autolabeling, at the cost of increased
+            resources spent collecting stats.
+
         autocategory: bool
             Place each app in its own category by default. If all
             invocations of an app have similar performance characteristics,
@@ -468,6 +478,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  shared_fs=False,
                  source=False,
                  autolabel=False,
+                 autolabel_window=1,
                  autocategory=False,
                  init_command="",
                  full_debug=True,
@@ -497,6 +508,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.full = full_debug
         self.source = source
         self.autolabel = autolabel
+        self.autolabel_window = autolabel_window
         self.autocategory = autocategory
         self.cancel_value = multiprocessing.Value('i', 1)
 
@@ -541,6 +553,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "see_worker_output": self.worker_output,
                                  "full": self.full,
                                  "autolabel": self.autolabel,
+                                 "autolabel_window": self.autolabel_window,
                                  "autocategory": self.autocategory,
                                  "cancel_value": self.cancel_value,
                                  "port": self.port,
