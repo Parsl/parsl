@@ -86,6 +86,10 @@ config_local_test: $(DEPS) ## run all tests with workqueue_ex config
 	pip3 install ".[extreme_scale]"
 	PYTHONPATH=. pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
+.PHONY: site_test
+site_test:
+	pytest parsl/tests/site_tests/ --config parsl/tests/site_tests/site_config_selector.py
+
 .PHONY: test ## run all tests with all config types
 test: $(DEPS) clean_coverage lint flake8 local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test  config_local_test ## run all tests
 
