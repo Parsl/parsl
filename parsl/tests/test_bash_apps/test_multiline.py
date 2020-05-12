@@ -5,6 +5,7 @@ import shutil
 import time
 
 import parsl
+from parsl import File
 from parsl.app.app import bash_app
 from parsl.tests.configs.local_threads import config
 
@@ -37,9 +38,9 @@ def test_multiline():
     f = multiline(
             inputs=["Hello", "This is", "Cat!"],
             outputs=[
-                '{0}/hello.txt'.format(outdir),
-                '{0}/this.txt'.format(outdir),
-                '{0}/cat.txt'.format(outdir)
+                File('{0}/hello.txt'.format(outdir)),
+                File('{0}/this.txt'.format(outdir)),
+                File('{0}/cat.txt'.format(outdir))
             ]
     )
     print(f.result())

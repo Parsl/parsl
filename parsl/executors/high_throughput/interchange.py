@@ -39,7 +39,7 @@ class ShutdownRequest(Exception):
 
 
 class ManagerLost(Exception):
-    ''' Task lost due to worker loss. Worker is considered lost when multiple heartbeats
+    ''' Task lost due to manager loss. Manager is considered lost when multiple heartbeats
     have been missed.
     '''
     def __init__(self, manager_id, hostname):
@@ -48,7 +48,7 @@ class ManagerLost(Exception):
         self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of Manager {} on host {}".format(self.manager_id, self.hostname)
+        return "Task failure due to loss of manager {} on host {}".format(self.manager_id.decode(), self.hostname)
 
     def __str__(self):
         return self.__repr__()
@@ -383,15 +383,15 @@ class Interchange(object):
                         logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
                             manager), exc_info=True)
                         logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
-
-                    # By default we set up to ignore bad nodes/registration messages.
-                    self._ready_manager_queue[manager] = {'last': time.time(),
-                                                          'free_capacity': 0,
-                                                          'block_id': None,
-                                                          'max_capacity': 0,
-                                                          'worker_count': 0,
-                                                          'active': True,
-                                                          'tasks': []}
+                    else:
+                        # We set up an entry only if registration works correctly
+                        self._ready_manager_queue[manager] = {'last': time.time(),
+                                                              'free_capacity': 0,
+                                                              'block_id': None,
+                                                              'max_capacity': 0,
+                                                              'worker_count': 0,
+                                                              'active': True,
+                                                              'tasks': []}
                     if reg_flag is True:
                         interesting_managers.add(manager)
                         logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
@@ -490,8 +490,15 @@ class Interchange(object):
                     logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
-                        # logger.debug("[MAIN] Received result for task {} from {}".format(r['task_id'], manager))
-                        self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                        try:
+                            self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                        except Exception:
+                            # If we reach here, there's something very wrong.
+                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
+                                r['task_id'],
+                                manager,
+                                self._ready_manager_queue[manager]['tasks']))
+
                     self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                 logger.debug("[MAIN] leaving results_incoming section")

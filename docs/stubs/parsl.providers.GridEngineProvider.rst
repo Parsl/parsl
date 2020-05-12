@@ -32,5 +32,6 @@ parsl.providers.GridEngineProvider
       ~GridEngineProvider.current_capacity
       ~GridEngineProvider.label
       ~GridEngineProvider.mem_per_node
+      ~GridEngineProvider.status_polling_interval
    
    

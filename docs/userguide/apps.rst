@@ -73,7 +73,7 @@ There are limitations on the Python functions that can be converted to apps:
 
 1. Functions should act only on defined input arguments. That is, they should not use script-level or global variables.
 2. Functions must explicitly import any required modules.
-3. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects to/from functions. Therefore, Python apps can only use input and output objects that can be serialized by cloudpickle or pickle.
+3. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects to/from functions. Therefore, Python apps can only use input and output objects that can be serialized by cloudpickle or pickle. See :ref:`label_serialization_error`.
 4. STDOUT and STDERR produced by Python apps remotely are not captured.
 
 Special Keyword Arguments
@@ -138,8 +138,8 @@ Special Keywords
 
 In addition to the ``inputs``, ``outputs``, and ``walltime`` argument keywords described above, a Bash app can take the following keywords:
 
-4. stdout: (string or `parsl.AUTO_LOGNAME`) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory.
-5. stderr: (string or `parsl.AUTO_LOGNAME`) The path to a file to which standard error should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory.
+4. stdout: (string, tuple or `parsl.AUTO_LOGNAME`) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory. If set to a tuple `(filename, mode)` then standard output will be redirected to the named file, opened with the specified mode as used by the python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
+5. stderr: (string or `parsl.AUTO_LOGNAME`) Like stdout, but for the standard error stream.
 6. label: (string) If the app is invoked with `stdout=parsl.AUTO_LOGNAME` or `stderr=parsl.AUTO_LOGNAME`, append `label` to the log name.
 
 A Bash app can construct the string to execute on the command-line from arguments passed
@@ -167,5 +167,5 @@ A Bash app can only return results via files specified via ``outputs``, ``stderr
 
 If the Bash app exits with Unix exit code 0, then the AppFuture will complete. If the Bash app
 exits with any other code, this will be treated as a failure, and the AppFuture will instead
-contain an AppFailure exception. The Unix exit code can be accessed through the
-`exitcode` attribute of that AppFailure.
+contain an BashExitFailure exception. The Unix exit code can be accessed through the
+`exitcode` attribute of that BashExitFailure.

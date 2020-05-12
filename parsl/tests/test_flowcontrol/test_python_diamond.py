@@ -4,7 +4,7 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_ipp import fresh_config
+from parsl.tests.configs.htex_local import fresh_config
 
 
 def local_setup():
