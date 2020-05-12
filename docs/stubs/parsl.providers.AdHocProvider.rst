@@ -30,5 +30,6 @@ parsl.providers.AdHocProvider
       ~AdHocProvider.label
       ~AdHocProvider.mem_per_node
       ~AdHocProvider.scaling_enabled
+      ~AdHocProvider.status_polling_interval
    
    

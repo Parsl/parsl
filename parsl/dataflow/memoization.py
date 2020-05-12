@@ -158,20 +158,11 @@ class Memoizer(object):
 
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
+        # kwargs listed in ignore_for_cache will also be removed
+
         filtered_kw = task['kwargs'].copy()
 
-        # handle special kwargs: outputs and non-checkpointed kwargs
-
-        # previously ignore list came from kwargs but I'm changing that to be on the
-        # decorator: task['kwargs'][ignore_checkpoint_name]:
-        # so how can I get at decorator state? I guess it needs to be passed in along
-        # with how cache is passed in to dfk.submit and stored in the task record?
-
-        # TODO: across this whole patch, ignore_for_checkpointing needs to be
-        # called ignore_for_memoization I think - because it applies to memoization,
-        # rather than only for checkpointing
-
-        ignore_list = task['ignore_for_checkpointing']
+        ignore_list = task['ignore_for_cache']
 
         logger.debug("Ignoring these kwargs for checkpointing: {}".format(ignore_list))
         for k in ignore_list:
@@ -183,13 +174,12 @@ class Memoizer(object):
             del filtered_kw['outputs']
             t = t + [b'outputs', id_for_memo(outputs, output_ref=True)]   # TODO: use append?
 
-        t = t + [b'filtered_kw', id_for_memo(filtered_kw)]
+        t = t + [id_for_memo(filtered_kw)]
 
-        t = t + [b'func_name', id_for_memo(task['func_name']),
-                 b'args',
+        t = t + [id_for_memo(task['func_name']),
+                 id_for_memo(task['fn_hash']),
                  id_for_memo(task['args'])]
 
-        logger.debug("Raw data to pass into checkpoint hash: {}".format(t))
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
@@ -205,23 +195,19 @@ class Memoizer(object):
             - task(task) : task from the dfk.tasks table
 
         Returns:
-            Tuple of the following:
-            - present (Bool): Is this present in the memo_lookup_table
-            - Result (Py Obj): Result of the function if present in table
+            - Result (Future): A completed future containing the memoized result
 
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
         """
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
             logger.debug("Task {} will not be memoized".format(task_id))
-            return False, None
+            return None
 
         hashsum = self.make_hash(task)
         logger.debug("Task {} has memoization hash {}".format(task_id, hashsum))
-        present = False
         result = None
         if hashsum in self.memo_lookup_table:
-            present = True
             result = self.memo_lookup_table[hashsum]
             logger.info("Task %s using result from cache", task_id)
         else:
@@ -229,7 +215,7 @@ class Memoizer(object):
 
         task['hashsum'] = hashsum
 
-        return present, result
+        return result
 
     def hash_lookup(self, hashsum):
         """Lookup a hash in the memoization table.

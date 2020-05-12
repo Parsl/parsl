@@ -122,7 +122,7 @@ Thus, we can write programs such as the following that take a file on one Globus
         f.result()
 
 Configuration
-^^^^^^^^^^^^^
+"""""""""""""
 
 In order to manage where data are staged, users may configure the default ``working_dir`` on a remote location. This information is passed to the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
 
@@ -166,7 +166,7 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
 However, in most cases, ``endpoint_path`` and ``local_path`` are the same.
 
 Authorization
-^^^^^^^^^^^^^
+"""""""""""""
 
 In order to interact with Globus, you must be authorised. The first time that
 you use Globus with Parsl, prompts will take you through an authorization
@@ -190,7 +190,7 @@ workers cannot access the submit side filesystem directly, such as when executin
 on an AWS EC2 instance.
 
 Configuration
-^^^^^^^^^^^^^
+"""""""""""""
 
 `rsync` must be installed on both the submit and worker side. It can usually be installed
 by using the operating system package manager: for example, by `apt-get install rsync`.
@@ -213,7 +213,7 @@ and public IP address of the submitting system.
         )
 
 Authorization
-^^^^^^^^^^^^^
+"""""""""""""
 
 The rsync staging provider delegates all authentication and authorization to the 
 underlying `rsync` command. This command must be correctly authorized to connect back to 

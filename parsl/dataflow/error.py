@@ -16,13 +16,6 @@ class DuplicateTaskError(DataFlowException):
     """
 
 
-class MissingFutError(DataFlowException):
-    """Raised when a particular future is not found within the dataflowkernel's datastructures.
-
-    Deprecated.
-    """
-
-
 class BadCheckpoint(DataFlowException):
     """Error raised at the end of app execution due to missing output files.
 
@@ -45,22 +38,21 @@ class BadCheckpoint(DataFlowException):
 
 
 class DependencyError(DataFlowException):
-    """Error raised at the end of app execution due to missing output files.
+    """Error raised if an app cannot run because there was an error
+       in a dependency.
 
     Args:
          - dependent_exceptions: List of exceptions
          - task_id: Identity of the task failed task
-         - outputs ?
 
     Contains:
     reason (string)
     dependent_exceptions
     """
 
-    def __init__(self, dependent_exceptions, task_id, outputs):
+    def __init__(self, dependent_exceptions, task_id):
         self.dependent_exceptions = dependent_exceptions
         self.task_id = task_id
-        self.outputs = outputs
 
     def __repr__(self):
         return "Dependency failure for task {}".format(self.task_id)

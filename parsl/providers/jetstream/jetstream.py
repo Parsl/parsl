@@ -127,3 +127,7 @@ class JetstreamProvider(object):
             count += 1
 
         return count
+
+    @property
+    def status_polling_interval(self):
+        return 60

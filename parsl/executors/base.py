@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, List
 
 from parsl.providers.provider_base import JobStatus
 
@@ -47,17 +47,19 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_out(self, blocks: int) -> None:
+    def scale_out(self, blocks: int) -> List[object]:
         """Scale out method.
 
         We should have the scale out method simply take resource object
         which will have the scaling methods, scale_out itself should be a coroutine, since
         scaling tasks can be slow.
+
+        :return: A list of job ids corresponding to the blocks that were added.
         """
         pass
 
     @abstractmethod
-    def scale_in(self, blocks: int) -> None:
+    def scale_in(self, blocks: int) -> List[object]:
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
@@ -65,6 +67,8 @@ class ParslExecutor(metaclass=ABCMeta):
         We should have the scale in method simply take resource object
         which will have the scaling methods, scale_in itself should be a coroutine, since
         scaling tasks can be slow.
+
+        :return: A list of job ids corresponding to the blocks that were removed.
         """
         pass
 
@@ -90,6 +94,19 @@ class ParslExecutor(metaclass=ABCMeta):
         """Return the status of all jobs/blocks currently known to this executor.
 
         :return: a dictionary mapping job ids to status strings
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def status_polling_interval(self) -> int:
+        """Returns the interval, in seconds, at which the status method should be called. The
+        assumption here is that, once initialized, an executor's polling interval is fixed.
+        In practice, at least given the current situation, the executor uses a single task provider
+        and this method is a delegate to the corresponding method in the provider.
+
+        :return: the number of seconds to wait between calls to status() or zero if no polling
+        should be done
         """
         pass
 

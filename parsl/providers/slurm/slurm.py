@@ -133,9 +133,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
         job_id_list = ','.join(self.resources.keys())
         cmd = "squeue --job {0}".format(job_id_list)
-        logger.debug("Right before sqeueue")
+        logger.debug("Executing sqeueue")
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("Right after sqeueue")
+        logger.debug("sqeueue returned")
 
         # Execute_wait failed. Do no update
         if retcode != 0:
@@ -255,11 +255,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         return rets
 
-    def _test_add_resource(self, job_id):
-        self.resources.extend([{'job_id': job_id, 'status': JobStatus(JobState.PENDING), 'size': 1}])
-        return True
-
-
-if __name__ == "__main__":
-
-    print("None")
+    @property
+    def status_polling_interval(self):
+        return 60

@@ -14,7 +14,7 @@ from ipyparallel.serialize import deserialize_object
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError
+from parsl.executors.errors import BadMessage, ScalingFailed, DeserializationError, SerializationError
 from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
@@ -135,8 +135,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         When there are a few tasks (<100) or when tasks are long running, this option should
         be set to 0 for better load balancing. Default is 0.
 
-    suppress_failure : Bool
-        If set, the interchange will suppress failures rather than terminate early. Default: True
+    address_probe_timeout : int | None
+        Managers attempt connecting over many different addesses to determine a viable address.
+        This option sets a time limit in seconds on the connection attempt.
+        Default of None implies 30s timeout set on worker.
 
     heartbeat_threshold : int
         Seconds since the last message from the counterpart in the communication pair:
@@ -175,7 +177,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
-                 suppress_failure: bool = True,
+                 address_probe_timeout: Optional[int] = None,
                  managed: bool = True,
                  worker_logdir_root: Optional[str] = None):
 
@@ -197,6 +199,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
         self.address = address
+        self.address_probe_timeout = address_probe_timeout
         if self.address:
             self.all_addresses = address
         else:
@@ -226,7 +229,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
         self.poll_period = poll_period
-        self.suppress_failure = suppress_failure
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
 
@@ -242,6 +244,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                "--logdir={logdir} "
                                "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
+                               "{address_probe_timeout_string} "
                                "--hb_threshold={heartbeat_threshold} ")
 
     def initialize_scaling(self):
@@ -253,12 +256,16 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
+        address_probe_timeout_string = ""
+        if self.address_probe_timeout:
+            address_probe_timeout_string = "--address_probe_timeout={}".format(self.address_probe_timeout)
         worker_logdir = "{}/{}".format(self.run_dir, self.label)
         if self.worker_logdir_root is not None:
             worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
+                                       address_probe_timeout_string=address_probe_timeout_string,
                                        addresses=self.all_addresses,
                                        task_port=self.worker_task_port,
                                        result_port=self.worker_result_port,
@@ -417,8 +424,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        comm_q = self.mp_context.Queue(maxsize=10)
-        self.interchange_proc = self.mp_context.Process(target=interchange.starter,
+        comm_q = multiprocessing.Queue(maxsize=10)
+        self.interchange_proc = multiprocessing.Process(target=interchange.starter,
                                                         args=(comm_q,),
                                                         kwargs={"client_ports": (self.outgoing_q.port,
                                                                                  self.incoming_q.port,
@@ -428,7 +435,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                                                 "hub_address": self.hub_address,
                                                                 "hub_port": self.hub_port,
                                                                 "logdir": "{}/{}".format(self.run_dir, self.label),
-                                                                "suppress_failure": self.suppress_failure,
                                                                 "heartbeat_threshold": self.heartbeat_threshold,
                                                                 "poll_period": self.poll_period,
                                                                 "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
@@ -537,9 +543,12 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self.tasks[task_id] = Future()
 
-        fn_buf = pack_apply_message(func, args, kwargs,
-                                    buffer_threshold=1024 * 1024,
-                                    item_threshold=1024)
+        try:
+            fn_buf = pack_apply_message(func, args, kwargs,
+                                        buffer_threshold=1024 * 1024,
+                                        item_threshold=1024)
+        except TypeError:
+            raise SerializationError(func.__name__)
 
         msg = {"task_id": task_id,
                "buffer": fn_buf}
@@ -607,7 +616,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         r = self.provider.cancel(to_kill)
 
-        return r
+        return self._filter_scale_in_ids(to_kill, r)
 
     def _get_job_ids(self) -> List[object]:
         return list(self.blocks.values())

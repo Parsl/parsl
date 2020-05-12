@@ -38,7 +38,7 @@ class ShutdownRequest(Exception):
 
 
 class ManagerLost(Exception):
-    ''' Task lost due to worker loss. Worker is considered lost when multiple heartbeats
+    ''' Task lost due to manager loss. Manager is considered lost when multiple heartbeats
     have been missed.
     '''
     def __init__(self, manager_id, hostname):
@@ -47,7 +47,7 @@ class ManagerLost(Exception):
         self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of Manager {} on host {}".format(self.manager_id, self.hostname)
+        return "Task failure due to loss of manager {} on host {}".format(self.manager_id.decode(), self.hostname)
 
     def __str__(self):
         return self.__repr__()
@@ -65,6 +65,22 @@ class BadRegistration(Exception):
         return "Manager {} attempted to register with a bad registration message. Caused a {} failure".format(
             self.worker_id,
             self.handled)
+
+    def __str__(self):
+        return self.__repr__()
+
+
+class VersionMismatch(Exception):
+    ''' Manager and Interchange versions do not match
+    '''
+    def __init__(self, interchange_version, manager_version):
+        self.interchange_version = interchange_version
+        self.manager_version = manager_version
+
+    def __repr__(self):
+        return "Manager version info {} does not match interchange version info {}, causing a critical failure".format(
+            self.interchange_version,
+            self.manager_version)
 
     def __str__(self):
         return self.__repr__()
@@ -94,7 +110,6 @@ class Interchange(object):
                  logdir=".",
                  logging_level=logging.INFO,
                  poll_period=10,
-                 suppress_failure=False,
              ):
         """
         Parameters
@@ -135,9 +150,6 @@ class Interchange(object):
         poll_period : int
              The main thread polling period, in milliseconds. Default: 10ms
 
-        suppress_failure : Bool
-             When set to True, the interchange will attempt to suppress failures. Default: False
-
         """
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
@@ -147,7 +159,6 @@ class Interchange(object):
 
         self.client_address = client_address
         self.interchange_address = interchange_address
-        self.suppress_failure = suppress_failure
         self.poll_period = poll_period
 
         logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
@@ -425,32 +436,25 @@ class Interchange(object):
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
                             logger.warning("[MAIN] Manager {} has incompatible version info with the interchange".format(manager))
-
-                            if self.suppress_failure is False:
-                                logger.debug("Setting kill event")
-                                self._kill_event.set()
-                                e = ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
-                                result_package = {'task_id': -1, 'exception': serialize_object(e)}
-                                pkl_package = pickle.dumps(result_package)
-                                self.results_outgoing.send(pkl_package)
-                                logger.warning("[MAIN] Sent failure reports, unregistering manager")
-                            else:
-                                logger.debug("[MAIN] Suppressing shutdown due to version incompatibility")
+                            logger.debug("Setting kill event")
+                            self._kill_event.set()
+                            e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
+                                                                            self.current_platform['parsl_v']),
+                                                "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
+                                                                            msg['parsl_v'])
+                            )
+                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                            pkl_package = pickle.dumps(result_package)
+                            self.results_outgoing.send(pkl_package)
+                            logger.warning("[MAIN] Sent failure reports, unregistering manager")
                         else:
                             logger.info("[MAIN] Manager {} has compatible Parsl version {}".format(manager, msg['parsl_v']))
                             logger.info("[MAIN] Manager {} has compatible Python version {}".format(manager,
                                                                                                     msg['python_v'].rsplit(".", 1)[0]))
                     else:
                         # Registration has failed.
-                        if self.suppress_failure is False:
-                            self._kill_event.set()
-                            e = BadRegistration(manager, critical=True)
-                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
-                            pkl_package = pickle.dumps(result_package)
-                            self.results_outgoing.send(pkl_package)
-                        else:
-                            logger.debug("[MAIN] Suppressing bad registration from manager:{}".format(
-                                manager))
+                        logger.debug("[MAIN] Suppressing bad registration from manager:{}".format(
+                            manager))
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
@@ -614,8 +618,6 @@ if __name__ == '__main__':
                         help="REQUIRED: poll period used for main thread")
     parser.add_argument("--worker_ports", default=None,
                         help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
-    parser.add_argument("--suppress_failure", action='store_true',
-                        help="Enables suppression of failures")
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
 
@@ -636,7 +638,6 @@ if __name__ == '__main__':
     logger.debug("Starting Interchange")
 
     optionals = {}
-    optionals['suppress_failure'] = args.suppress_failure
 
     if args.worker_ports:
         optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
