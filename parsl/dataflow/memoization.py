@@ -194,6 +194,7 @@ class Memoizer:
         if 'outputs' in task['kwargs']:
             outputs = task['kwargs']['outputs']
             del filtered_kw['outputs']
+            t.append(b'outputs')
             t.append(id_for_memo(outputs, output_ref=True))
 
         t.extend(map(id_for_memo, (filtered_kw, task['func'], task['args'])))
@@ -265,8 +266,8 @@ class Memoizer:
         if not self.memoize or not task['memoize'] or 'hashsum' not in task:
             return
 
-        if not isinstance(task['hashsum'], str):
-            logger.error("Attempting to update app cache entry but hashsum is not a string key")
+        if 'hashsum' not in task or task['hashsum'] is None:
+            logger.error("Attempt to update memo for task {} with no hashsum".format(task_id))
             return
 
         if task['hashsum'] in self.memo_lookup_table:

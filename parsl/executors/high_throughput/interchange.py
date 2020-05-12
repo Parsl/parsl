@@ -138,6 +138,7 @@ class Interchange:
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
+
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
@@ -348,6 +349,18 @@ class Interchange:
 
         poll_period = self.poll_period
 
+        # for my hacking:
+        # poll_period = 1000
+        # because the executor level poll period also changes the worker pool poll period setting, which I want to experiment with separately.
+        # This setting reduces the speed at which the interchange main loop
+        # iterates. It will iterate once per this tmie, or when two of the
+        # three queues that we need to check are interesting. which means that
+        # third queue (pending_task_queue) will only be dispatched on once
+        # every poll_period. although everythign waiting will be dispatched
+        # then. this will reduce speed of task dispatching some, but give
+        # much less log output. I wonder if it is possible to make this detectable
+        # using poll too (it's a python queue, not a zmq queue which the other poll is for)
+
         start = time.time()
 
         self._task_puller_thread = threading.Thread(target=self.task_puller,
@@ -471,6 +484,11 @@ class Interchange:
                     tasks = self.get_tasks(real_capacity)
                     if tasks:
                         self.task_outgoing.send_multipart([manager_id, b'', pickle.dumps(tasks)])
+                        # after this point, we've sent a task to the manager, but we haven't
+                        # added it to the 'task' list for that manager, because we don't
+                        # do that for another 5 lines. That should be pretty fast, though?
+                        # but we shouldn't try removing it from the tasks list until we have
+                        # passed that point anyway?
                         task_count = len(tasks)
                         self.count += task_count
                         tids = [t['task_id'] for t in tasks]
