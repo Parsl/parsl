@@ -568,37 +568,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.submit_process.start()
         self.collector_thread.start()
 
-    def create_name_tuple(self, parsl_file_obj, in_or_out):
-        """Returns a tuple containing information about an input or output file
-        to a Parsl app. Utilized to specify input and output files for a specific
-        Work Queue task within the system.
-
-        Parameters
-        ---------
-
-        parsl_file_obj : str
-            Name of file specified as input or output file to the Parsl app
-
-        in_or_out : str
-            Specifies whether the file is an input or output file to the Parsl
-            app
-        """
-        # Determine new_name
-        new_name = parsl_file_obj.filepath
-        if parsl_file_obj.filepath not in self.used_names:
-            if self.shared_fs is False:
-                new_name = self.create_new_name(os.path.basename(parsl_file_obj.filepath))
-                self.used_names[parsl_file_obj.filepath] = new_name
-        else:
-            new_name = self.used_names[parsl_file_obj.filepath]
-        # Determine file_is_shared
-        file_is_shared = False
-        if parsl_file_obj in self.registered_files:
-            file_is_shared = True
-        else:
-            self.registered_files.add(parsl_file_obj)
-        return (parsl_file_obj.filepath, new_name, file_is_shared, in_or_out)
-
     def _path_in_task(self, task_id, *path_components):
         """Returns a filename specific to a task.
         It is used for the following filename's:
