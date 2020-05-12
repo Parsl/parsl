@@ -162,24 +162,40 @@ class Database(object):
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
 
-
         # this times are a bit of a tangle and might split out into
         # something in 'status' (to capture multiple runs) for task_time_running
         # to properly capture the ability to start running multiple times
         # (and in the same way, capture multiple hostnames?)
 
+        # task_time_submitted:   time_submitted field from dfk task record
+        # ... which is the time the task was "launched". "launched" here means:
+        # ready to be passed to an executor, but maybe we didn't pass to an
+        # executor because of memoization. so sometimes is around the same time
+        # as DFK.state goes to States.launched, but not always as memoization
+        # might happen and we'd go straight from pending to failed/done. This may
+        # be set multiple times in the presence of retries, because a task may be
+        # launched multiple times in the presence of retries. Which is some data
+        # loss that would be better handled in the status table, perhaps? -- this
+        # is "try" level not "task" level
 
-        # task_time_submitted:   time_submitted field from dfk task record ... which is the time the task was "launched". "launched" here means: ready to be passed to an executor, but maybe we didn't pass to an executor because of memoization. so sometimes is around the same time as DFK.state goes to States.launched, but not always as memoization might happen and we'd go straight from pending to failed/done. This may be set multiple times in the presence of retries, because a task may be launched multiple times in the presence of retries. Which is some data loss that would be better handled in the status table, perhaps? -- this is "try" level not "task" level
-        # task_time_running - this is a message timestamp from some kind of message where the first_msg flag is set. This looks like it is from a different clock to the others - it is from the executor host clock, not the submit host clock. this is "try" level not "task" level
+        # task_time_running - this is a message timestamp from some kind of
+        # message where the first_msg flag is set. This looks like it is from
+        # a different clock to the others - it is from the executor host clock,
+        # not the submit host clock. this is "try" level not "task" level
 
-        # task_time_returned    time_returned from dfk task record, which is when the task went into 'done' state (according to the DFK-side clock)... so does that happen for failing tasks? it looks like maybe no?. This is "task" not "try" level
+        # task_time_returned    time_returned from dfk task record, which is
+        # when the task went into 'done' state (according to the DFK-side clock)...
+        # so does that happen for failing tasks? it looks like maybe no?
+        # This is "task" not "try" level.
         # I think the db should be changed to:
         #   * task table: app invocation/result being available: start/end times (2 times, DFK clock)
         #     end time reflects going into *any* final state
         #     BUT potentially this info is acquirable from a joined states table
         #   * try table:
         #     start and end of try (so roughly submit to execution/executor future completing in either fail or success)
-        #   * how to accomodate other-sourced info such as wrapper giving the `task_time_running` value? That's a bit like a State value but not entirely. Maybe it lines up with the resource table.
+        #   * how to accomodate other-sourced info such as wrapper giving the
+        #     `task_time_running` value? That's a bit like a State value but not entirely.
+        #     Maybe it lines up with the resource table.
         #     matching that (potentially inconsistent data) with task/try table could be done on the query side.
 
         task_time_returned = Column(
@@ -200,7 +216,6 @@ class Database(object):
         try_id = Column('try_id', Integer, nullable=False)
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
-
 
         # this is try-relevant
         hostname = Column('hostname', Text, nullable=True)
@@ -339,10 +354,14 @@ class DatabaseManager(object):
         """
         like inserted_tasks but for task,try tuples
         """
-        inserted_tries = set() # type: Set[Any]
+        inserted_tries = set()  # type: Set[Any]
 
-        # for any task ID, we can defer exactly one message, which is the assumed-to-be-unique first message (with first message flag set). The code prior to this patch will discard previous message in the case of multiple messages to defer. I've added in a test that will give an ERROR log line if there is already an entry.
-        deferred_resource_messages = {} # type: Dict[str, Any]
+        # for any task ID, we can defer exactly one message, which is the
+        # assumed-to-be-unique first message (with first message flag set).
+        # The code prior to this patch will discard previous message in
+        # the case of multiple messages to defer. I've added in a test that
+        # will give an ERROR log line if there is already an entry.
+        deferred_resource_messages = {}  # type: Dict[str, Any]
 
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
@@ -364,8 +383,8 @@ class DatabaseManager(object):
 
             # Get a batch of priority messages (TODO: clarify "priority" meaning)
             priority_messages = self._get_messages_in_batch(self.pending_priority_queue,
-                                                   interval=self.batching_interval,
-                                                   threshold=self.batching_threshold)
+                                                            interval=self.batching_interval,
+                                                            threshold=self.batching_threshold)
             if priority_messages:
                 logger.debug(
                     "Got {} messages from priority queue".format(len(priority_messages)))
@@ -373,7 +392,10 @@ class DatabaseManager(object):
                 try_update_messages, try_insert_messages, try_all_messages = [], [], []
                 for msg_type, msg in priority_messages:
                     if msg_type.value == MessageType.WORKFLOW_INFO.value:
-                        if "python_version" in msg:   # workflow start message # TODO: the start message should be indicated by a proper flag or test if we have seen the workflow before, not a magic other field that is about something else
+                        if "python_version" in msg:   # workflow start message
+                            # TODO: the start message should be indicated by a proper
+                            # flag or test if we have seen the workflow before, not a
+                            # magic other field that is about something else
                             logger.debug(
                                 "Inserting workflow start info to WORKFLOW table")
                             self._insert(table=WORKFLOW, messages=[msg])
@@ -426,7 +448,13 @@ class DatabaseManager(object):
 
                 if task_info_update_messages:
                     logger.debug("Updating {} TASK_INFO into task table".format(len(task_info_update_messages)))
-                    # i am unclear if it is right to list the names of fields here rather than have them put into the task record at sender side if they should be updated, and then update every field in every table that matches? that would put more of the update decision into the sender side and less into the DB layer which would become less aware of the nuances of the connection between the DB schema and what is happening in the DFK.
+                    # i am unclear if it is right to list the names of fields here
+                    # rather than have them put into the task record at sender
+                    # side if they should be updated, and then update every field
+                    # in every table that matches? that would put more of the update
+                    # decision into the sender side and less into the DB layer
+                    # which would become less aware of the nuances of the connection
+                    # between the DB schema and what is happening in the DFK.
                     self._update(table=TASK,
                                  columns=['task_time_returned',
                                           'run_id', 'task_id',
@@ -452,23 +480,21 @@ class DatabaseManager(object):
                                           'task_time_submitted'],
                                  messages=try_update_messages)
 
-
-
             """
             NODE_INFO messages
 
             """
             node_info_messages = self._get_messages_in_batch(self.pending_node_queue,
-                                                   interval=self.batching_interval,
-                                                   threshold=self.batching_threshold)
+                                                             interval=self.batching_interval,
+                                                             threshold=self.batching_threshold)
             if node_info_messages:
                 logger.debug(
                     "Got {} messages from node queue".format(len(node_info_messages)))
                 self._insert(table=NODE, messages=node_info_messages)
 
             resource_messages = self._get_messages_in_batch(self.pending_resource_queue,
-                                                   interval=self.batching_interval,
-                                                   threshold=self.batching_threshold)
+                                                            interval=self.batching_interval,
+                                                            threshold=self.batching_threshold)
 
             # this block can be split into two, i think, one for resource messages and
             # one for reprocessible resource messages. As this changes logic, it should
@@ -476,8 +502,16 @@ class DatabaseManager(object):
             if resource_messages:
                 logger.debug(
                     "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
-                # these RESOURCE INSERTs don't need task rows to exist because the resource table doesn't have a foreign key constraint on the TASK table. TODO: that's a modelling inconsistency: what's good for RESOURCE should be good for STATUS? (or vice versa?) - open an issue to discuss that.
-                # deferral also happens because the first resource message is used to set the task_time_running value. Maybe this should come from the STATUS table? then maybe this deferral mechanism can be removed entirely?
+                # these RESOURCE INSERTs don't need task rows to exist because
+                # the resource table doesn't have a foreign key constraint on
+                # the TASK table.
+                # TODO: that's a modelling inconsistency: what's good for
+                # RESOURCE should be good for STATUS? (or vice versa?)
+                #   - open an issue to discuss that.
+                # deferral also happens because the first resource message is
+                # used to set the task_time_running value. Maybe this should
+                # come from the STATUS table? then maybe this deferral mechanism
+                # can be removed entirely?
                 self._insert(table=RESOURCE, messages=resource_messages)
                 for msg in resource_messages:
                     task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
@@ -485,9 +519,9 @@ class DatabaseManager(object):
 
                         # TODO: these facts should come from the reporter, rather than being stated by the database manager?
                         msg['task_status_name'] = States.running.name
-                        msg['task_time_running'] = msg['timestamp'] 
+                        msg['task_time_running'] = msg['timestamp']
 
-                        if task_try_id in inserted_tries: # TODO: needs to becoem task_id and try_id, and check against inserted_tries
+                        if task_try_id in inserted_tries:  # TODO: needs to become task_id and try_id, and check against inserted_tries
                             reprocessable_first_resource_messages.append(msg)
                         else:
                             if task_try_id in deferred_resource_messages:
@@ -522,7 +556,7 @@ class DatabaseManager(object):
                     else:
                         self.pending_priority_queue.put(x)
                 elif queue_tag == 'resource':
-                    self.pending_resource_queue.put(x[-1]) # put last element of data (the message) ignoring the other fields (id, time)
+                    self.pending_resource_queue.put(x[-1])  # put last element of data (the message) ignoring the other fields (id, time)
                 elif queue_tag == 'node':
                     self.pending_node_queue.put(x[-1])
 

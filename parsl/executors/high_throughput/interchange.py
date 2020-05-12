@@ -163,7 +163,6 @@ class Interchange(object):
         self.task_incoming.RCVTIMEO = 5000  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
 
-
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
@@ -267,7 +266,8 @@ class Interchange(object):
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("[TASK_PULL_THREAD] No task received from task_incoming zmq queue. {} tasks already in internal queue".format(self.pending_task_queue.qsize()))
+                logger.debug("[TASK_PULL_THREAD] No task received from task_incoming zmq queue. {} tasks already in internal queue".format(
+                    self.pending_task_queue.qsize()))
                 continue
 
             if msg == 'STOP':
@@ -348,7 +348,14 @@ class Interchange(object):
         # however for my hacking:
         poll_period = 1000
         # because the executor level poll period also changes the worker pool poll period setting, which I want to experiment with separately.
-        # This setting reduces the speed at which the interchange main loop iterates. It will iterate once per this tmie, or when two of the three queues that we need to check are interesting. which means that third queue (pending_task_queue) will only be dispatched on once every poll_period. although everythign waiting will be dispatched then. this will reduce speed of task dispatching some, but give much less log output. I wonder if it is possible to make this detectable using poll too (it's a python queue, not a zmq queue which the other poll is for)
+        # This setting reduces the speed at which the interchange main loop
+        # iterates. It will iterate once per this tmie, or when two of the
+        # three queues that we need to check are interesting. which means that
+        # third queue (pending_task_queue) will only be dispatched on once
+        # every poll_period. although everythign waiting will be dispatched
+        # then. this will reduce speed of task dispatching some, but give
+        # much less log output. I wonder if it is possible to make this detectable
+        # using poll too (it's a python queue, not a zmq queue which the other poll is for)
 
         start = time.time()
         count = 0
@@ -460,8 +467,8 @@ class Interchange(object):
             # If we had received any requests, check if there are tasks that could be passed
 
             logger.debug("Managers count (interesting/total): {interesting}/{total}".format(
-                total = len(self._ready_manager_queue),
-                interesting = len(interesting_managers)))
+                total=len(self._ready_manager_queue),
+                interesting=len(interesting_managers)))
 
             if interesting_managers and not self.pending_task_queue.empty():
                 shuffled_managers = list(interesting_managers)

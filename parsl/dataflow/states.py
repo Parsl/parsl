@@ -5,7 +5,13 @@ class States(IntEnum):
     """Map states for tasks to an int."""
     unsched = -1
     pending = 0
-    running = 2   # this state is special - a task record never goes into this state, but monitoring may represent a task in this state because the monitoring DB contains different information
+
+    running = 2
+    # this state is special - a task record never goes into
+    # this state, but monitoring may represent a task in
+    # this state because the monitoring DB contains different information
+
+    done = 3
     exec_done = 3
     failed = 4
     dep_fail = 5

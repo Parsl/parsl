@@ -117,7 +117,7 @@ class Manager(object):
                  poll period before that worker is restarted. 10ms is crazy
                  low for LSST purposes. A minute would be fine. That loop
                  doesn't seem to generate log load though in normal use.
-   
+
         """
 
         logger.info("Manager started")
@@ -316,7 +316,10 @@ class Manager(object):
 
         # push_poll_period is in s
 
-        push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be at least 10 ms [BENC: why? and why does this one have more of a restriction than any of the other timing parameters? That max statement enforces that. but why enforce it vs other timings?]
+        push_poll_period = max(10, self.poll_period) / 1000
+        # push_poll_period must be at least 10 ms [BENC: why? and why does
+        # this one have more of a restriction than any of the other timing
+        # parameters? That max statement enforces that. but why enforce it vs other timings?]
         logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
@@ -381,7 +384,7 @@ class Manager(object):
                     self.procs[worker_id] = p
                     logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
                 # time.sleep(self.poll_period)
-                time.sleep(30000) # LSST specific timing
+                time.sleep(30000)  # LSST specific timing
 
         logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
 

@@ -20,7 +20,7 @@ per-file-ignores = parsl/monitoring/visualization/*:E741,
   parsl/tests/test_swift.py:F821,
   # test_ssh_errors.py really is broken
   parsl/tests/integration/test_channels/test_ssh_errors.py:F821,
-  # import needs to happen to make some stuff visible even though
-  # no symbols are explciitly used: viz seems to break if I removed
-  # this import
+  # I had visualization problems with this import removed, which I need to
+  # investigate before pushing this to master. This exemption works around
+  # that.
   parsl/monitoring/visualization/app.py:F401

@@ -419,22 +419,22 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         """
         comm_q = self.mp_context.Queue(maxsize=10)
         self.interchange_proc = self.mp_context.Process(target=interchange.starter,
-                                  args=(comm_q,),
-                                  kwargs={"client_ports": (self.outgoing_q.port,
-                                                           self.incoming_q.port,
-                                                           self.command_client.port),
-                                          "worker_ports": self.worker_ports,
-                                          "worker_port_range": self.worker_port_range,
-                                          "hub_address": self.hub_address,
-                                          "hub_port": self.hub_port,
-                                          "logdir": "{}/{}".format(self.run_dir, self.label),
-                                          "suppress_failure": self.suppress_failure,
-                                          "heartbeat_threshold": self.heartbeat_threshold,
-                                          "poll_period": self.poll_period,
-                                          "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
-                                  },
-                                  daemon=True,
-                                  name="HTEX-Interchange"
+                                                        args=(comm_q,),
+                                                        kwargs={"client_ports": (self.outgoing_q.port,
+                                                                                 self.incoming_q.port,
+                                                                                 self.command_client.port),
+                                                                "worker_ports": self.worker_ports,
+                                                                "worker_port_range": self.worker_port_range,
+                                                                "hub_address": self.hub_address,
+                                                                "hub_port": self.hub_port,
+                                                                "logdir": "{}/{}".format(self.run_dir, self.label),
+                                                                "suppress_failure": self.suppress_failure,
+                                                                "heartbeat_threshold": self.heartbeat_threshold,
+                                                                "poll_period": self.poll_period,
+                                                                "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                                        },
+                                                        daemon=True,
+                                                        name="HTEX-Interchange"
         )
         self.interchange_proc.start()
         try:

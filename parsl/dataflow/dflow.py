@@ -289,7 +289,6 @@ class DataFlowKernel(object):
             task_record['fail_history'].append(str(e))
             task_record['fail_count'] += 1
 
-
             if task_record['status'] == States.dep_fail:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
                 with task_record['app_fu']._update_lock:
