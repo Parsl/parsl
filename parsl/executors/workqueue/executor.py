@@ -48,6 +48,11 @@ logger = logging.getLogger(__name__)
 # Support structure to communicate parsl tasks to the work queue submit thread.
 ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category function_file result_file input_files output_files')
 
+# Support structure to communicate final status of work queue tasks to parsl
+# result is only valid if result_received is True
+# reason and status are only valid if result_received is False
+WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason status')
+
 
 class WorkqueueTaskFailure(AppException):
     """A failure executing a task in workqueue
@@ -190,11 +195,16 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 t = Task(command_str)
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
+                collector_queue.put_nowait(WqTaskToParsl(id=task.id,
+                                                         result_received=False,
+                                                         result=None,
+                                                         reason="task could not be created by work queue",
+                                                         status=-1))
                 continue
 
-            t.specify_category(category)
+            t.specify_category(task.category)
             if autolabel:
-                q.specify_category_mode(category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+                q.specify_category_mode(task.category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
 
             # Specify environment variables for the task
             if env is not None:
@@ -223,13 +233,11 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 wq_tasks.add(wq_id)
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
-
-                msg = {"tid": task.id,
-                       "result_received": False,
-                       "reason": "Workqueue Task Start Failure",
-                       "status": 1}
-
-                collector_queue.put_nowait(msg)
+                collector_queue.put_nowait(WqTaskToParsl(id=task.id,
+                                                         result_received=False,
+                                                         result=None,
+                                                         reason="task could not be submited to work queue",
+                                                         status=-1))
                 continue
 
             logger.debug("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
@@ -256,7 +264,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, parsl_tid))
                     status = t.return_status
                     task_result = t.result
-                    msg = None
 
                     # Task failure
                     if status != 0 or (task_result != WORK_QUEUE_RESULT_SUCCESS and task_result != WORK_QUEUE_RESULT_OUTPUT_MISSING):
@@ -267,12 +274,11 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         logger.debug("WorkQueue runner script failed for parsl task {} (wq {}) because:\n{}"
                                      .format(parsl_tid, t.id, reason))
 
-                        msg = {"tid": parsl_tid,
-                               "result_received": False,
-                               "reason": reason,
-                               "status": status}
-
-                        collector_queue.put_nowait(msg)
+                        collector_queue.put_nowait(WqTaskToParsl(id=parsl_tid,
+                                                                 result_received=False,
+                                                                 result=None,
+                                                                 reason=reason,
+                                                                 status=t.return_status))
 
                     # Task Success
                     else:
@@ -287,12 +293,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         result = pickle.load(f)
                         f.close()
 
-                        msg = {"tid": parsl_tid,
-                               "result_received": True,
-                               "result": result}
+                        collector_queue.put_nowait(WqTaskToParsl(id=parsl_tid,
+                                                                 result_received=True,
+                                                                 result=result,
+                                                                 reason=None,
+                                                                 status=t.result))
                         wq_tasks.remove(t.id)
-
-                    collector_queue.put_nowait(msg)
 
         if continue_running is False:
             logger.debug("Exiting WorkQueue Master Thread event loop")
@@ -331,37 +337,31 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
 
         # Get the result message from the collector_queue
         try:
-            item = collector_queue.get(timeout=1)
+            task_report = collector_queue.get(timeout=1)
         except queue.Empty:
             continue
 
-        parsl_tid = item["tid"]
-        received = item["result_received"]
-
         # Obtain the future from the tasks dictionary
         tasks_lock.acquire()
-        future = tasks[parsl_tid]
+        future = tasks[task_report.id]
         tasks_lock.release()
 
-        # Failed task
-        if received is False:
-            reason = item["reason"]
-            status = item["status"]
-            future.set_exception(WorkqueueTaskFailure(reason, status))
-        # Successful task
+        logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
+        if task_report.result_received and not task_report.result["failure"]:
+            future.set_result(task_report.result["result"])
+        elif task_report.result_received and task_report.result["failure"]:
+            # On failure, result contains the corresponding exception, but wrapped.
+            # The exception is reraised for logging purposes.
+            future_fail = pickle.loads(task_report.result["result"])
+            exc = RemoteExceptionWrapper(*future_fail)
+            try:
+                exc.reraise()
+            except Exception as e:
+                future.set_exception(e)
         else:
-            result = item["result"]
-            future_update = result["result"]
-            logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
-            if result["failure"] is False:
-                future.set_result(future_update)
-            else:
-                future_fail = pickle.loads(future_update)
-                exc = RemoteExceptionWrapper(*future_fail)
-                try:
-                    exc.reraise()
-                except Exception as e:
-                    future.set_exception(e)
+            # If there are no results, then it is something that went wrong with work queue.
+            # Bug: This should be converted to exceptions that parsl expects.
+            future.set_exception(WorkqueueTaskFailure(task_report.reason, task_report.result))
 
     logger.debug("Exiting Collector Thread")
     return
