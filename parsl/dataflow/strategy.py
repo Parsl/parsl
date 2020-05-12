@@ -307,7 +307,7 @@ class Strategy(object):
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            if isinstance(executor, IPyParallelExecutor) or isinstance(executor, HighThroughputExecutor):
+            if isinstance(executor, HighThroughputExecutor):
 
                 tasks_per_node = executor.workers_per_node
             elif isinstance(executor, ExtremeScaleExecutor):
