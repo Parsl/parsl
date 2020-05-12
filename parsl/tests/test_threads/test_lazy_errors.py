@@ -9,7 +9,6 @@ def test_lazy_behavior():
     """Testing that lazy errors work"""
 
     config = fresh_config()
-    config.lazy_errors = True
     parsl.load(config)
 
     @python_app
