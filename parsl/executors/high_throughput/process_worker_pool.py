@@ -117,7 +117,7 @@ class Manager(object):
         heartbeat_period : int
              Number of seconds after which a heartbeat message is sent to the interchange
 
-        poll_period : int
+        poll_period : int  - either s or ms depending on who is reading it (!)
              Timeout period used by the manager in milliseconds. Default: 10ms
              This will affect:
 
@@ -125,6 +125,7 @@ class Manager(object):
                  poll period before that worker is restarted. 10ms is crazy
                  low for LSST purposes. A minute would be fine. That loop
                  doesn't seem to generate log load though in normal use.
+                 But time.sleep is used, which means it defaults to 1000x slower than the other periods. That seems like a bug that should be fixed/clarified
 
         """
 
@@ -365,6 +366,7 @@ class Manager(object):
         logger.debug("[WORKER_WATCHDOG_THREAD] Starting thread")
 
         while not kill_event.is_set():
+            logger.debug("[WORKER_WATCHDOG_THREAD] Loop")
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
                     logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has died".format(worker_id))
@@ -391,8 +393,10 @@ class Manager(object):
                                                                  ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
-                # time.sleep(self.poll_period)
-                time.sleep(30000)  # LSST specific timing
+                else:
+                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} is alive".format(worker_id))
+                # time.sleep(self.poll_period) # is this seconds (like sleep) or ms (like self.poll_period)
+                time.sleep(30)  # LSST specific timing
 
         logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
 

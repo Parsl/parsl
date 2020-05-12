@@ -11,7 +11,6 @@ class States(IntEnum):
     # this state, but monitoring may represent a task in
     # this state because the monitoring DB contains different information
 
-    done = 3
     exec_done = 3
     failed = 4
     dep_fail = 5
