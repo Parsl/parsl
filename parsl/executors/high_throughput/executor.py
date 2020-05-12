@@ -8,6 +8,7 @@ import pickle
 from multiprocessing import Queue
 from typing import Dict  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union
+from typing import Dict  # noqa F401 (used in type annotation)
 import math
 
 from parsl.serialize import pack_apply_message, deserialize
@@ -159,6 +160,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     poll_period : int
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
         trades performance for cpu efficiency. Default: 10ms
+        This period controls both an interchange poll period and a worker pool poll period, with different effects in both.
+
 
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
@@ -191,6 +194,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.debug("Initializing HighThroughputExecutor")
 
         BlockProviderExecutor.__init__(self, provider)
+
         self.label = label
         self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug
@@ -313,7 +317,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
-        self._start_local_queue_process()
+        self._start_local_interchange_process()
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
@@ -433,31 +437,31 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 break
         logger.info("[MTHREAD] queue management worker finished")
 
-    def _start_local_queue_process(self):
+    def _start_local_interchange_process(self):
         """ Starts the interchange process locally
 
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
         comm_q = Queue(maxsize=10)
-        self.queue_proc = ForkProcess(target=interchange.starter,
-                                      args=(comm_q,),
-                                      kwargs={"client_ports": (self.outgoing_q.port,
-                                                               self.incoming_q.port,
-                                                               self.command_client.port),
-                                              "worker_ports": self.worker_ports,
-                                              "worker_port_range": self.worker_port_range,
-                                              "hub_address": self.hub_address,
-                                              "hub_port": self.hub_port,
-                                              "logdir": "{}/{}".format(self.run_dir, self.label),
-                                              "heartbeat_threshold": self.heartbeat_threshold,
-                                              "poll_period": self.poll_period,
-                                              "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
-                                      },
-                                      daemon=True,
-                                      name="HTEX-Interchange"
+        self.interchange_proc = ForkProcess(target=interchange.starter,
+                                            args=(comm_q,),
+                                            kwargs={"client_ports": (self.outgoing_q.port,
+                                                                     self.incoming_q.port,
+                                                                     self.command_client.port),
+                                                    "worker_ports": self.worker_ports,
+                                                    "worker_port_range": self.worker_port_range,
+                                                    "hub_address": self.hub_address,
+                                                    "hub_port": self.hub_port,
+                                                    "logdir": "{}/{}".format(self.run_dir, self.label),
+                                                    "heartbeat_threshold": self.heartbeat_threshold,
+                                                    "poll_period": self.poll_period,
+                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                            },
+                                            daemon=True,
+                                            name="HTEX-Interchange"
         )
-        self.queue_proc.start()
+        self.interchange_proc.start()
         try:
             (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -703,6 +707,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
-        self.queue_proc.terminate()
+        self.interchange_proc.terminate()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
         return True
