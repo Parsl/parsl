@@ -11,6 +11,7 @@ from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
+from parsl.process_loggers import wrap_with_logs
 
 logger = logging.getLogger("database_manager")
 
@@ -579,6 +580,7 @@ class DatabaseManager:
         self._kill_event.set()
 
 
+@wrap_with_logs
 def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
                 priority_msgs: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
                 node_msgs: "queue.Queue[Dict[str, Any]]",
