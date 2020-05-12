@@ -30,7 +30,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     logname = __name__ + "." + str(t)
     logger = logging.getLogger(logname)
     set_file_logger(filename='{0}/bashexec.{1}.log'.format(logbase, t), name=logname, level=logging.DEBUG, format_string=format_string)
-
+    logger.debug("In remote-side bash executor")
     func_name = func.__name__
 
     executable = None
@@ -71,30 +71,43 @@ def remote_side_bash_executor(func, *args, **kwargs):
             raise pe.BadStdStreamFile(fname, e)
         return fd
 
+    logger.debug("In remote-side bash executor 2")
     std_out = open_std_fd('stdout')
+    logger.debug("In remote-side bash executor 3")
     std_err = open_std_fd('stderr')
+    logger.debug("In remote-side bash executor 4")
     timeout = kwargs.get('walltime')
+    logger.debug("In remote-side bash executor 5")
 
     if std_err is not None:
         print('--> executable follows <--\n{}\n--> end executable <--'.format(executable), file=std_err, flush=True)
 
     returncode = None
+    logger.debug("In remote-side bash executor 6 - about to run")
     try:
         proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
+        logger.debug("In remote-side bash executor 7 process launched. now waiting. pid is {}".format(proc.pid))
         proc.wait(timeout=timeout)
+        logger.debug("In remote-side bash executor 8 process launched. waiting over")
         returncode = proc.returncode
+        logger.debug("In remote-side bash executor 9 process launched. getting return code")
 
     except subprocess.TimeoutExpired:
+        logger.debug("In remote-side bash executor 10 timeoutexpired path")
         raise pe.AppTimeout("[{}] App exceeded walltime: {}".format(func_name, timeout))
 
     except Exception as e:
+        logger.debug("In remote-side bash executor 11 exception path")
         raise pe.AppException("[{}] App caught exception with returncode: {}".format(func_name, returncode), e)
 
+    logger.debug("In remote-side bash executor 12 no exception path")
     if returncode != 0:
+        logger.debug("In remote-side bash executor 12 non-zero return code path")
         raise pe.BashExitFailure(func_name, proc.returncode)
 
     # TODO : Add support for globs here
 
+    logger.debug("In remote-side bash executor 13 looking at outputs")
     missing = []
     for outputfile in kwargs.get('outputs', []):
         fpath = outputfile.filepath
@@ -102,9 +115,12 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if not os.path.exists(fpath):
             missing.extend([outputfile])
 
+    logger.debug("In remote-side bash executor 14 done with outputs")
     if missing:
+        logger.debug("In remote-side bash executor 15 missing outputs path")
         raise pe.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
 
+    logger.debug("In remote-side bash executor 16 normal return path")
     return returncode
 
 
