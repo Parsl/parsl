@@ -7,6 +7,7 @@ import threading
 import multiprocessing
 import logging
 from concurrent.futures import Future
+from ctypes import c_bool
 
 import os
 import pickle
@@ -67,7 +68,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           autolabel=False,
                           autolabel_window=None,
                           autocategory=False,
-                          cancel_value=multiprocessing.Value('i', 1),
+                          should_stop=None,
                           port=WORK_QUEUE_DEFAULT_PORT,
                           wq_log_dir=None,
                           project_password=None,
@@ -123,25 +124,18 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
     wq_tasks = set()
     orig_ppid = os.getppid()
-    continue_running = True
 
     result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
 
-    while(continue_running):
+    while not should_stop.value:
         # Monitor the task queue
         ppid = os.getppid()
         if ppid != orig_ppid:
             logger.debug("new Process")
-            continue_running = False
-            continue
+            break
 
         # Submit tasks
-        while task_queue.qsize() > 0:
-            if cancel_value.value == 0:
-                logger.debug("cancel value set to cancel")
-                continue_running = False
-                break
-
+        while task_queue.qsize() > 0 and not should_stop.value:
             # Obtain task from task_queue
             try:
                 item = task_queue.get(timeout=1)
@@ -236,7 +230,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 wq_id = q.submit(t)
                 wq_tasks.add(wq_id)
             except Exception as e:
-                logger.error("Unable to create task: {}".format(e))
+                logger.error("Unable to submit task: {}".format(e))
 
                 msg = {"tid": parsl_id,
                        "result_received": False,
@@ -248,18 +242,10 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             logger.debug("Task {} submitted to WorkQueue with id {}".format(parsl_id, wq_id))
 
-        if cancel_value.value == 0:
-            continue_running = False
-
         # If the queue is not empty wait on the WorkQueue queue for a task
         task_found = True
-        if not q.empty() and continue_running:
-            while task_found is True:
-                if cancel_value.value == 0:
-                    continue_running = False
-                    task_found = False
-                    continue
-
+        if not q.empty():
+            while task_found and not should_stop.value:
                 # Obtain the task from the queue
                 t = q.wait(1)
                 if t is None:
@@ -308,10 +294,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
                     collector_queue.put_nowait(msg)
 
-        if continue_running is False:
-            logger.debug("Exiting WorkQueue Master Thread event loop")
-            break
-
     # Remove all WorkQueue tasks that remain in the queue object
     for wq_task in wq_tasks:
         logger.debug("Cancelling WorkQueue Task {}".format(wq_task))
@@ -324,7 +306,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
                              tasks={},
                              tasks_lock=threading.Lock(),
-                             cancel_value=multiprocessing.Value('i', 1),
+                             should_stop=None,
                              submit_process=None,
                              executor=None):
     """Processes completed Parsl tasks. If an error arose while the Parsl task
@@ -332,15 +314,11 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
     """
 
     logger.debug("Starting Collector Thread")
-
-    continue_running = True
-    while continue_running:
-        if cancel_value.value == 0:
-            continue_running = False
-            continue
-
-        # The WorkQueue process that creates task has died
-        if not submit_process.is_alive() and cancel_value.value != 0:
+    while not should_stop.value:
+        # Guard against submit_process early termination, and also the unlikely
+        # case of submit_process correctly terminating between the previous
+        # while loop test condition and the is_alive check.
+        if not submit_process.is_alive() and not should_stop.value:
             raise ExecutorError(executor, "Workqueue Submit Process is not alive")
 
         # Get the result message from the collector_queue
@@ -510,7 +488,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
-        self.cancel_value = multiprocessing.Value('i', 1)
+        self.should_stop = multiprocessing.Value(c_bool, False)
 
         # Resolve ambiguity when password and password_file are both specified
         if self.project_password is not None and self.project_password_file is not None:
@@ -555,7 +533,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
                                  "autocategory": self.autocategory,
-                                 "cancel_value": self.cancel_value,
+                                 "should_stop": self.should_stop,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
                                  "project_password": self.project_password,
@@ -569,7 +547,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         collector_thread_kwargs = {"collector_queue": self.collector_queue,
                                    "tasks": self.tasks,
                                    "tasks_lock": self.tasks_lock,
-                                   "cancel_value": self.cancel_value,
+                                   "should_stop": self.should_stop,
                                    "submit_process": self.submit_process,
                                    "executor": self}
         self.collector_thread = threading.Thread(target=WorkQueueCollectorThread,
@@ -757,9 +735,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
-        # Set shared variable to 0 to signal shutdown
-        logger.debug("Setting value to cancel")
-        self.cancel_value.value = 0
+        self.should_stop.value = True
 
         self.submit_process.join()
         self.collector_thread.join()
