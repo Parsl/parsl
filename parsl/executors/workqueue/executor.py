@@ -22,6 +22,8 @@ from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import workqueue_worker
 
+from collections import namedtuple
+
 try:
     import work_queue as wq
     from work_queue import WorkQueue
@@ -41,6 +43,10 @@ else:
     _work_queue_enabled = True
 
 logger = logging.getLogger(__name__)
+
+
+# Support structure to communicate parsl tasks to the work queue submit thread.
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category function_file result_file input_files output_files')
 
 
 class WorkqueueTaskFailure(AppException):
@@ -143,25 +149,17 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             # Obtain task from task_queue
             try:
-                item = task_queue.get(timeout=1)
+                task = task_queue.get(timeout=1)
                 logger.debug("Removing task from queue")
             except queue.Empty:
                 continue
-            parsl_id = item["task_id"]
-
-            # Extract information about the task
-            function_file = item["function_file"]
-            result_file = item["result_file"]
-            input_files = item["input_files"]
-            output_files = item["output_files"]
-            category = item["category"]
 
             remapping_string = ""
             std_string = ""
 
             # Parse input file information
             logger.debug("Looking at input")
-            for item in input_files:
+            for item in task.input_files:
                 if item[3] == "std":
                     std_string += "mv " + item[1] + " " + item[0] + "; "
                 else:
@@ -170,24 +168,24 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             # Parse output file information
             logger.debug("Looking at output")
-            for item in output_files:
+            for item in task.output_files:
                 remapping_string += item[0] + ":" + item[1] + ","
             logger.debug(remapping_string)
 
-            if len(input_files) + len(output_files) > 0:
+            if len(task.input_files) + len(task.output_files) > 0:
                 remapping_string = "-r " + remapping_string
                 remapping_string = remapping_string[:-1]
 
             # Create command string
             logger.debug(launch_cmd)
-            command_str = launch_cmd.format(input_file=os.path.basename(function_file),
-                                            output_file=os.path.basename(result_file),
+            command_str = launch_cmd.format(input_file=os.path.basename(task.function_file),
+                                            output_file=os.path.basename(task.result_file),
                                             remapping_string=remapping_string)
             command_str = std_string + command_str
             logger.debug(command_str)
 
             # Create WorkQueue task for the command
-            logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
+            logger.debug("Sending task {} with command: {}".format(task.id, command_str))
             try:
                 t = Task(command_str)
             except Exception as e:
@@ -205,28 +203,28 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             # Specify script, and data/result files for task
             t.specify_input_file(workqueue_worker.__file__, cache=True)
-            t.specify_input_file(function_file, cache=False)
-            t.specify_output_file(result_file, cache=False)
-            t.specify_tag(str(parsl_id))
-            result_file_of_task_id[str(parsl_id)] = result_file
+            t.specify_input_file(task.function_file, cache=False)
+            t.specify_output_file(task.result_file, cache=False)
+            t.specify_tag(str(task.id))
+            result_file_of_task_id[str(task.id)] = task.result_file
 
-            logger.debug("Parsl ID: {}".format(parsl_id))
+            logger.debug("Parsl ID: {}".format(task.id))
 
             # Specify all input/output files for task
-            for item in input_files:
+            for item in task.input_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_INPUT, cache=item[2])
-            for item in output_files:
+            for item in task.output_files:
                 t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
 
             # Submit the task to the WorkQueue object
-            logger.debug("Submitting task {} to WorkQueue".format(parsl_id))
+            logger.debug("Submitting task {} to WorkQueue".format(task.id))
             try:
                 wq_id = q.submit(t)
                 wq_tasks.add(wq_id)
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
 
-                msg = {"tid": parsl_id,
+                msg = {"tid": task.id,
                        "result_received": False,
                        "reason": "Workqueue Task Start Failure",
                        "status": 1}
@@ -234,7 +232,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 collector_queue.put_nowait(msg)
                 continue
 
-            logger.debug("Task {} submitted to WorkQueue with id {}".format(parsl_id, wq_id))
+            logger.debug("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
 
         if cancel_value.value == 0:
             continue_running = False
@@ -267,7 +265,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
                         reason = explain_task_exit_status(t, parsl_tid)
                         logger.debug("WorkQueue runner script failed for parsl task {} (wq {}) because:\n{}"
-                                     .format(parsl_id, t.id, reason))
+                                     .format(parsl_tid, t.id, reason))
 
                         msg = {"tid": parsl_tid,
                                "result_received": False,
@@ -697,13 +695,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
-        msg = {"task_id": task_id,
-               "category": category,
-               "function_file": function_file,
-               "result_file": result_file,
-               "input_files": input_files,
-               "output_files": output_files}
-        self.task_queue.put_nowait(msg)
+        self.task_queue.put_nowait(ParslTaskToWq(task_id, category, function_file, result_file, input_files, output_files))
 
         return fu
 
