@@ -564,7 +564,7 @@ class DatabaseManager(object):
         try:
             self.db.update(table=table, columns=columns, messages=messages)
         except Exception:
-            logger.exception("Got exception when trying to update table {}. Rolling back and not propagating exception.".format(table))
+            logger.exception("Got exception when trying to update table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
@@ -574,7 +574,7 @@ class DatabaseManager(object):
         try:
             self.db.insert(table=table, messages=messages)
         except Exception:
-            logger.exception("Got exception when trying to insert to table {}. Rolling back and not propagating exception.".format(table))
+            logger.exception("Got exception when trying to insert to table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
