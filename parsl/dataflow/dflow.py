@@ -5,6 +5,7 @@ import pathlib
 import pickle
 import random
 import time
+import traceback
 import typeguard
 import inspect
 import threading
@@ -118,13 +119,16 @@ class DataFlowKernel(object):
             self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
+                logger.debug("Considering candidate for workflow name: {}".format(frame.filename))
                 fname = os.path.basename(str(frame.filename))
                 parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
+                    logger.debug("Using {} as workflow name".format(fname))
                     break
             else:
+                logger.debug("Could not choose a name automatically")
                 self.workflow_name = "unnamed"
 
         self.workflow_version = str(self.time_began.replace(microsecond=0))
@@ -309,12 +313,14 @@ class DataFlowKernel(object):
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
-
                 logger.info("Task {} marked for retry".format(task_id))
 
             else:
-                logger.exception("Task {} failed after {} retry attempts".format(task_id,
-                                                                                 self._config.retries))
+                logger.error("Task {} failed after {} retry attempts. Last exception was: {}: {}".format(task_id,
+                                                                                                         self._config.retries,
+                                                                                                         type(e).__name__,
+                                                                                                         e))
+                logger.debug("Task {} traceback: {}".format(task_id, traceback.format_tb(e.__traceback__)))
                 task_record['time_returned'] = datetime.datetime.now()
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
@@ -994,7 +1000,10 @@ class DataFlowKernel(object):
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
+            logger.info("DFK cleanup because python process is exiting")
             self.cleanup()
+        else:
+            logger.info("python process is exiting, but DFK has already been cleaned up")
 
     def wait_for_current_tasks(self):
         """Waits for all tasks in the task list to be completed, by waiting for their

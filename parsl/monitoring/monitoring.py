@@ -398,6 +398,8 @@ class MonitoringHub(RepresentationMixin):
         except zmq.Again:
             self.logger.exception(
                 "The monitoring message sent from DFK to Hub timed-out after {}ms".format(self.dfk_channel_timeout))
+        else:
+            self.logger.debug("Sent message {}, {}".format(mtype, message))
 
     def close(self) -> None:
         if self.logger:
@@ -447,12 +449,14 @@ class MonitoringHub(RepresentationMixin):
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
+            logger.debug("wrapped: 1. start of wrapped")
             # Send first message to monitoring router
             send_first_message(try_id,
                                task_id,
                                monitoring_hub_url,
                                run_id,
                                radio_mode)
+            logger.debug("wrapped: 2. sent first message")
 
             if monitor_resources:
                 # create the monitor process and start
@@ -467,17 +471,25 @@ class MonitoringHub(RepresentationMixin):
                                   logging_level,
                                   sleep_dur),
                             name="Monitor-Wrapper-{}".format(task_id))
+                logger.debug("wrapped: 3. created monitor process, pid {}".format(p.pid))
                 p.start()
+                logger.debug("wrapped: 4. started monitor process, pid {}".format(p.pid))
             else:
                 p = None
 
             try:
-                return f(*args, **kwargs)
+                logger.debug("wrapped: 5. invoking wrapped function")
+                r = f(*args, **kwargs)
+                logger.debug("wrapped: 6. back from wrapped function ok")
+                return r
             finally:
+                logger.debug("wrapped: 10 in 2nd finally")
                 # There's a chance of zombification if the workers are killed by some signals
                 if p:
                     p.terminate()
+                    logger.debug("wrapped: 11 done terminating monitor")
                     p.join()
+                    logger.debug("wrapped: 12 done joining monitor again")
         return wrapped
 
 
