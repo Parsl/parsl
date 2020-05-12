@@ -6,6 +6,7 @@ import pathlib
 import pickle
 import random
 import time
+import traceback
 import typeguard
 import inspect
 import threading
@@ -332,12 +333,14 @@ class DataFlowKernel(object):
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
-
                 logger.info("Task {} marked for retry".format(task_id))
 
             else:
-                logger.exception("Task {} failed after {} retry attempts".format(task_id,
-                                                                                 task_record['try_id']))
+                logger.error("Task {} failed after {} retry attempts. Last exception was: {}: {}".format(task_id,
+                                                                                                         task_record['try_id'],
+                                                                                                         type(e).__name__,
+                                                                                                         e))
+                logger.debug("Task {} traceback: {}".format(task_id, traceback.format_tb(e.__traceback__)))
                 task_record['time_returned'] = datetime.datetime.now()
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()

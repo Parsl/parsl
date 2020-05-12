@@ -219,6 +219,8 @@ class Manager(object):
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
 
+    # BENC: TODO: this doesn't send valid JSON but the registration receiver code
+    # expects to decode json (for example, the json coming out of create_reg_message)
     def heartbeat_to_incoming(self):
         """ Send heartbeat to the incoming task queue
         """
@@ -273,6 +275,7 @@ class Manager(object):
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 last_interchange_contact = time.time()
+                logger.debug("Updating time of last heartbeat from interchange at {}".format(last_interchange_contact))
 
                 if tasks == 'STOP':
                     logger.critical("Received stop request")
@@ -318,7 +321,10 @@ class Manager(object):
 
         logger.debug("Starting result push thread")
 
-        push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
+        push_poll_period = max(10, self.poll_period) / 1000
+        # push_poll_period must be at least 10 ms [BENC: why? and why does
+        # this one have more of a restriction than any of the other timing
+        # parameters? That max statement enforces that. but why enforce it vs other timings?]
         logger.debug("push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
@@ -374,6 +380,7 @@ class Manager(object):
         logger.debug("Starting worker watchdog")
 
         while not kill_event.is_set():
+            logger.debug("Loop")
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
                     logger.info("Worker {} has died".format(worker_id))
