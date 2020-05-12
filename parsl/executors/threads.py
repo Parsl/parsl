@@ -62,7 +62,10 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         """
-        return self.executor.submit(*args, **kwargs)
+        logger.debug("Submitting to threadpool executor")
+        r = self.executor.submit(*args, **kwargs)
+        logger.debug("Ended submitting to threadpool executor")
+        return r
 
     def scale_out(self, workers=1):
         """Scales out the number of active workers by 1.

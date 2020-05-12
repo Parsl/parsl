@@ -35,12 +35,13 @@ def timeout(f, seconds):
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all'):
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_checkpointing=[]):
         super().__init__(
             wrap_error(func),
             data_flow_kernel=data_flow_kernel,
             executors=executors,
-            cache=cache
+            cache=cache,
+            ignore_for_checkpointing=ignore_for_checkpointing
         )
 
     def __call__(self, *args, **kwargs):
@@ -56,8 +57,11 @@ class PythonApp(AppBase):
 
         """
         invocation_kwargs = {}
+        logger.debug("invocation_kwargs step 1: {}".format(invocation_kwargs))
         invocation_kwargs.update(self.kwargs)
+        logger.debug("invocation_kwargs step 2: {}".format(invocation_kwargs))
         invocation_kwargs.update(kwargs)
+        logger.debug("invocation_kwargs step 3: {}".format(invocation_kwargs))
 
         if self.data_flow_kernel is None:
             dfk = DataFlowKernelLoader.dfk()
@@ -74,6 +78,7 @@ class PythonApp(AppBase):
                              executors=self.executors,
                              fn_hash=self.func_hash,
                              cache=self.cache,
+                             ignore_for_checkpointing=self.ignore_for_checkpointing,
                              **kwargs)
 
         return app_fut

@@ -10,6 +10,7 @@ from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
+from parsl.process_loggers import wrap_with_logs
 
 logger = logging.getLogger(__name__)
 
@@ -570,6 +571,7 @@ class DatabaseManager(object):
         self._kill_event.set()
 
 
+@wrap_with_logs
 def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     """Start the database manager process
 

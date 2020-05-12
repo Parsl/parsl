@@ -43,7 +43,6 @@ def id_for_memo(obj, output_ref=False):
 @id_for_memo.register(str)
 @id_for_memo.register(int)
 @id_for_memo.register(float)
-@id_for_memo.register(types.FunctionType)
 @id_for_memo.register(type(None))
 def id_for_memo_serialize(obj, output_ref=False):
     return serialize_object(obj)[0]
@@ -79,6 +78,15 @@ def id_for_memo_dict(denormalized_dict, output_ref=False):
         normalized_list.append(id_for_memo(k))
         normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
     return serialize_object(normalized_list)[0]
+
+
+@id_for_memo.register(types.FunctionType)
+def id_for_memo_func(f, output_ref=False):
+    """This will extract some, but deliberately not all, details from the function.
+    The intention is to allow the function to be modified in source file without
+    causing memoization invalidation.
+    """
+    return ["types.FunctionType", f.__name__, f.__module__]
 
 
 class Memoizer(object):
@@ -146,21 +154,42 @@ class Memoizer(object):
         """
         # Function name TODO: Add fn body later
 
+        t = []
+
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
-        if 'outputs' in task['kwargs']:
-            newkw = task['kwargs'].copy()
-            outputs = task['kwargs']['outputs']
-            del newkw['outputs']
-            kw_id = id_for_memo(newkw) + id_for_memo(outputs, output_ref=True)
-        else:
-            newkw = task['kwargs']
-            kw_id = id_for_memo(newkw)
+        filtered_kw = task['kwargs'].copy()
 
-        t = [id_for_memo(task['func_name']),
-             id_for_memo(task['fn_hash']),
-             id_for_memo(task['args']),
-             kw_id]
+        # handle special kwargs: outputs and non-checkpointed kwargs
+
+        # previously ignore list came from kwargs but I'm changing that to be on the
+        # decorator: task['kwargs'][ignore_checkpoint_name]:
+        # so how can I get at decorator state? I guess it needs to be passed in along
+        # with how cache is passed in to dfk.submit and stored in the task record?
+
+        # TODO: across this whole patch, ignore_for_checkpointing needs to be
+        # called ignore_for_memoization I think - because it applies to memoization,
+        # rather than only for checkpointing
+
+        ignore_list = task['ignore_for_checkpointing']
+
+        logger.debug("Ignoring these kwargs for checkpointing: {}".format(ignore_list))
+        for k in ignore_list:
+            logger.debug("Ignoring kwarg {}".format(k))
+            del filtered_kw[k]
+
+        if 'outputs' in task['kwargs']:
+            outputs = task['kwargs']['outputs']
+            del filtered_kw['outputs']
+            t = t + [b'outputs', id_for_memo(outputs, output_ref=True)]   # TODO: use append?
+
+        t = t + [b'filtered_kw', id_for_memo(filtered_kw)]
+
+        t = t + [b'func_name', id_for_memo(task['func_name']),
+                 b'args',
+                 id_for_memo(task['args'])]
+
+        logger.debug("Raw data to pass into checkpoint hash: {}".format(t))
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
@@ -230,9 +259,14 @@ class Memoizer(object):
         if not self.memoize or not task['memoize'] or 'hashsum' not in task:
             return
 
+        if 'hashsum' not in task:
+            logger.error("Attempt to update memo for task {} with no hashsum".format(task_id))
+            return
+
         if task['hashsum'] in self.memo_lookup_table:
             logger.info('Updating app cache entry with latest %s:%s call' %
                         (task['func_name'], task_id))
             self.memo_lookup_table[task['hashsum']] = r
         else:
+            logger.debug("Storing original memo for task {}".format(task_id))
             self.memo_lookup_table[task['hashsum']] = r

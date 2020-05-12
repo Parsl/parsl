@@ -9,7 +9,7 @@ from zmq.utils.monitor import recv_monitor_message
 logger = logging.getLogger(__name__)
 
 
-def probe_addresses(addresses, task_port, timeout=2):
+def probe_addresses(addresses, task_port, timeout=120):
     """
     Parameters
     ----------

@@ -18,6 +18,8 @@ import json
 import psutil
 import multiprocessing
 
+from parsl.process_loggers import wrap_with_logs
+
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
@@ -109,6 +111,13 @@ class Manager(object):
 
         poll_period : int
              Timeout period used by the manager in milliseconds. Default: 10ms
+             This will affect:
+
+               * worker watchdog restart - if a worker fails, we may wait a
+                 poll period before that worker is restarted. 10ms is crazy
+                 low for LSST purposes. A minute would be fine. That loop
+                 doesn't seem to generate log load though in normal use.
+   
         """
 
         logger.info("Manager started")
@@ -201,13 +210,16 @@ class Manager(object):
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
 
+    # BENC: TODO: this doesn't send valid JSON but the registration receiver code
+    # expects to decode json (for example, the json coming out of create_reg_message)
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
-        logger.debug("Return from heartbeat: {}".format(r))
+        logger.debug("Sent heartbeat, return code {}".format(r))
 
+    @wrap_with_logs
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
@@ -229,14 +241,15 @@ class Manager(object):
         last_interchange_contact = time.time()
         task_recv_counter = 0
 
+        # what units is poll_timer? according to this assignment, it should be ms. ZMQ poller also wants poll_timer to be ms.
         poll_timer = self.poll_period
 
         while not kill_event.is_set():
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
-            logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
-                                                                                        pending_task_count))
+            logger.debug("[TASK_PULL_THREAD] ready workers: {}, pending tasks: {}".format(ready_worker_count,
+                                                                                          pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat()
@@ -254,6 +267,7 @@ class Manager(object):
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 last_interchange_contact = time.time()
+                logger.debug("Updating time of last heartbeat from interchange at {}".format(last_interchange_contact))
 
                 if tasks == 'STOP':
                     logger.critical("[TASK_PULL_THREAD] Received stop request")
@@ -288,6 +302,7 @@ class Manager(object):
                     logger.critical("[TASK_PULL_THREAD] Exiting")
                     break
 
+    @wrap_with_logs
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -299,7 +314,9 @@ class Manager(object):
 
         logger.debug("[RESULT_PUSH_THREAD] Starting thread")
 
-        push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
+        # push_poll_period is in s
+
+        push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be at least 10 ms [BENC: why? and why does this one have more of a restriction than any of the other timing parameters? That max statement enforces that. but why enforce it vs other timings?]
         logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
@@ -324,6 +341,7 @@ class Manager(object):
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
+    @wrap_with_logs
     def worker_watchdog(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -362,7 +380,8 @@ class Manager(object):
                                                                  ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
-                time.sleep(self.poll_period)
+                # time.sleep(self.poll_period)
+                time.sleep(30000) # LSST specific timing
 
         logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
 
@@ -388,7 +407,7 @@ class Manager(object):
             p.start()
             self.procs[worker_id] = p
 
-        logger.debug("Manager synced with workers")
+        logger.debug("Workers started")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
                                                     args=(self._kill_event,),
@@ -466,6 +485,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
+@wrap_with_logs
 def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress):
     """
 
@@ -600,6 +620,8 @@ if __name__ == "__main__":
         logger.info("max_workers: {}".format(args.max_workers))
         logger.info("poll_period: {}".format(args.poll))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
+        logger.info("Heartbeat threshold: {}".format(args.hb_threshold))
+        logger.info("Heartbeat period: {}".format(args.hb_period))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
