@@ -200,8 +200,14 @@ class Interchange(object):
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
-        self.task_incoming.RCVTIMEO = 10  # in milliseconds
+
+        # this controls the speed at which the task incoming queue loop runs. The only thing
+        # that loop does aside from task_incoming is check for kill event. The default of
+        # 10ms is pretty high - for this project, I'm fine with this taking a second or so to
+        # detect a kill event.
+        self.task_incoming.RCVTIMEO = 5000  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
+
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
@@ -300,7 +306,8 @@ class Interchange(object):
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("[TASK_PULL_THREAD] {} tasks in internal queue".format(self.pending_task_queue.qsize()))
+                logger.debug("[TASK_PULL_THREAD] No task received from task_incoming zmq queue. {} tasks already in internal queue".format(
+                    self.pending_task_queue.qsize()))
                 continue
 
             if msg == 'STOP':
@@ -395,7 +402,7 @@ class Interchange(object):
                 continue
 
     @wrap_with_logs
-    def start(self, poll_period=None):
+    def start(self):
         """ Start the interchange
 
         Parameters:
@@ -407,8 +414,19 @@ class Interchange(object):
 
         hub_channel = self._create_monitoring_channel()
 
-        if poll_period is None:
-            poll_period = self.poll_period
+        # poll period is never specified as a start() parameter, so removing the defaulting here as noise.
+        # poll_period = self.poll_period
+        # however for my hacking:
+        poll_period = 1000
+        # because the executor level poll period also changes the worker pool poll period setting, which I want to experiment with separately.
+        # This setting reduces the speed at which the interchange main loop
+        # iterates. It will iterate once per this tmie, or when two of the
+        # three queues that we need to check are interesting. which means that
+        # third queue (pending_task_queue) will only be dispatched on once
+        # every poll_period. although everythign waiting will be dispatched
+        # then. this will reduce speed of task dispatching some, but give
+        # much less log output. I wonder if it is possible to make this detectable
+        # using poll too (it's a python queue, not a zmq queue which the other poll is for)
 
         start = time.time()
         count = 0
@@ -436,7 +454,9 @@ class Interchange(object):
         interesting_managers = set()
 
         while not self._kill_event.is_set():
+            logger.debug("BENC: starting poll")
             self.socks = dict(poller.poll(timeout=poll_period))
+            logger.debug("BENC: ending poll")
 
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
@@ -454,7 +474,7 @@ class Interchange(object):
                     except Exception:
                         logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
                             manager), exc_info=True)
-                        logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
+                        logger.debug("[MAIN] Message :\n{}\n".format(message[1]))
                     else:
                         # We set up an entry only if registration works correctly
                         self._ready_manager_queue[manager] = {'last_heartbeat': time.time(),
@@ -527,6 +547,11 @@ class Interchange(object):
                         tasks = self.get_tasks(real_capacity)
                         if tasks:
                             self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
+                            # after this point, we've sent a task to the manager, but we haven't
+                            # added it to the 'task' list for that manager, because we don't
+                            # do that for another 5 lines. That should be pretty fast, though?
+                            # but we shouldn't try removing it from the tasks list until we have
+                            # passed that point anyway?
                             task_count = len(tasks)
                             count += task_count
                             tids = [t['task_id'] for t in tasks]
