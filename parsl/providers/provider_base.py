@@ -34,6 +34,12 @@ class JobStatus(object):
     def terminal(self):
         return self.state.terminal
 
+    def __eq__(self, other):
+        return (self.state) == other.state
+
+    def __ne__(self, other):
+        return (self.state) != other.state
+
     def __repr__(self):
         if self.message is not None:
             return "{} ({})".format(self.state, self.message)
