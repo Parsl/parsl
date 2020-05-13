@@ -31,6 +31,7 @@ try:
     from work_queue import WORK_QUEUE_OUTPUT
     from work_queue import WORK_QUEUE_RESULT_SUCCESS
     from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
+    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
     from work_queue import cctools_debug_flags_set
     from work_queue import cctools_debug_config_file
 except ImportError:
@@ -63,6 +64,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           see_worker_output=False,
                           data_dir=".",
                           full=False,
+                          autolabel=False,
+                          autolabel_window=None,
+                          autocategory=False,
                           cancel_value=multiprocessing.Value('i', 1),
                           port=WORK_QUEUE_DEFAULT_PORT,
                           wq_log_dir=None,
@@ -101,6 +105,11 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         q.specify_password(project_password)
     elif project_password_file:
         q.specify_password_file(project_password_file)
+    if autolabel:
+        q.enable_monitoring()
+        q.specify_category_mode('parsl-default', WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+        if autolabel_window is not None:
+            q.tune('category-steady-n-tasks', autolabel_window)
 
     # Only write logs when the wq_log_dir is specified, which it most likely will be
     if wq_log_dir is not None:
@@ -149,6 +158,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             input_files = item["input_files"]
             output_files = item["output_files"]
             std_files = item["std_files"]
+            category = item["category"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
@@ -190,6 +200,13 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
                 continue
+
+            if autocategory:
+                t.specify_category(category)
+                if autolabel:
+                    q.specify_category_mode(category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+            else:
+                t.specify_category('parsl-default')
 
             # Specify environment variables for the task
             if env is not None:
@@ -423,6 +440,23 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             must be used for programs utilizing @bash_apps.)
             Default is False.
 
+        autolabel: bool
+            Use the Resource Monitor to automatically determine resource
+            labels based on observed task behavior.
+
+        autolabel_window: int
+            Set the number of tasks considered for autolabeling. Work Queue
+            will wait for a series of N tasks with steady resource
+            requirements before making a decision on labels. Increasing
+            this parameter will reduce the number of failed tasks due to
+            resource exhaustion when autolabeling, at the cost of increased
+            resources spent collecting stats.
+
+        autocategory: bool
+            Place each app in its own category by default. If all
+            invocations of an app have similar performance characteristics,
+            this will provide a reasonable set of categories automatically.
+
         init_command: str
             Command line to run before executing a task in a worker.
             Default is ''.
@@ -443,6 +477,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  env=None,
                  shared_fs=False,
                  source=False,
+                 autolabel=False,
+                 autolabel_window=1,
+                 autocategory=False,
                  init_command="",
                  full_debug=True,
                  see_worker_output=False):
@@ -470,6 +507,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.worker_output = see_worker_output
         self.full = full_debug
         self.source = source
+        self.autolabel = autolabel
+        self.autolabel_window = autolabel_window
+        self.autocategory = autocategory
         self.cancel_value = multiprocessing.Value('i', 1)
 
         # Resolve ambiguity when password and password_file are both specified
@@ -485,8 +525,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
         if self.shared_fs is True:
             self.launch_cmd += " --shared-fs"
-        if self.source is True:
-            self.launch_cmd += " --source"
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -514,6 +552,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "collector_queue": self.collector_queue,
                                  "see_worker_output": self.worker_output,
                                  "full": self.full,
+                                 "autolabel": self.autolabel,
+                                 "autolabel_window": self.autolabel_window,
+                                 "autocategory": self.autocategory,
                                  "cancel_value": self.cancel_value,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
@@ -669,35 +710,13 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
 
-        # Obtain function information and put into dictionary
-        if self.source:
-            # Obtain function information and put into dictionary
-            source_code = inspect.getsource(func)
-            name = func.__name__
-            function_info = {"source code": source_code,
-                             "name": name,
-                             "args": args,
-                             "kwargs": kwargs}
-
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
-        else:
-            # Serialize function information
-            function_info = pack_apply_message(func, args, kwargs,
-                                               buffer_threshold=1024 * 1024,
-                                               item_threshold=1024)
-
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
+        self._serialize_function(function_data_file, func, args, kwargs)
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
+               "category": func.__qualname__,
                "result_loc": function_result_file,
                "input_files": input_files,
                "output_files": output_files,
@@ -705,6 +724,24 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.task_queue.put_nowait(msg)
 
         return fu
+
+    def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
+        """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
+        and serializes it to the file fn_path."""
+
+        # Either build a dictionary with the source of the function, or pickle
+        # the function directly:
+        if self.source:
+            function_info = {"source code": inspect.getsource(parsl_fn),
+                             "name": parsl_fn.__name__,
+                             "args": parsl_fn_args,
+                             "kwargs": parsl_fn_kwargs}
+        else:
+            function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
+                                                             buffer_threshold=1024 * 1024,
+                                                             item_threshold=1024)}
+            with open(fn_path, "wb") as f_out:
+                pickle.dump(function_info, f_out)
 
     def scale_out(self, *args, **kwargs):
         """Scale out method. Not implemented.

@@ -1,4 +1,4 @@
-flake8
+flake8==3.8.0
 pandas
 pytest>=4.6,<5
 pytest-cov
@@ -18,6 +18,5 @@ tblib
 ipyparallel
 psutil>=5.5.1
 globus-sdk
-flake8
 twine
 wheel
