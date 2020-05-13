@@ -54,6 +54,7 @@ class Manager(object):
     """
     def __init__(self,
                  addresses="127.0.0.1",
+                 address_probe_timeout=30,
                  task_port="50097",
                  result_port="50098",
                  cores_per_worker=1,
@@ -68,6 +69,13 @@ class Manager(object):
         """
         Parameters
         ----------
+        addresses : str
+             comma separated list of addresses for the interchange
+
+        address_probe_timeout : int
+             Timeout in seconds for the address probe to detect viable addresses
+             to the interchange. Default : 30s
+
         worker_url : str
              Worker url on which workers will attempt to connect back
 
@@ -114,7 +122,7 @@ class Manager(object):
         logger.info("Manager started")
 
         try:
-            ix_address = probe_addresses(addresses.split(','), task_port)
+            ix_address = probe_addresses(addresses.split(','), task_port, timeout=address_probe_timeout)
             if not ix_address:
                 raise Exception("No viable address found")
             else:
@@ -580,6 +588,8 @@ if __name__ == "__main__":
                         help="Heartbeat period in seconds. Uses manager default unless set")
     parser.add_argument("--hb_threshold", default=120,
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
+    parser.add_argument("--address_probe_timeout", default=30,
+                        help="Timeout to probe for viable address to interchange. Default: 30s")
     parser.add_argument("--poll", default=10,
                         help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_port", required=True,
@@ -606,11 +616,13 @@ if __name__ == "__main__":
         logger.info("addresses: {}".format(args.addresses))
         logger.info("max_workers: {}".format(args.max_workers))
         logger.info("poll_period: {}".format(args.poll))
+        logger.info("address_probe_timeout: {}".format(args.address_probe_timeout))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
                           addresses=args.addresses,
+                          address_probe_timeout=int(args.address_probe_timeout),
                           uid=args.uid,
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
