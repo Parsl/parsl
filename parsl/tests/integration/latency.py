@@ -79,8 +79,8 @@ def test_python_remote_slow(count=2):
         print(fu.result())
 
 
-def average(l):
-    return sum(l) / len(l)
+def average(x):
+    return sum(x) / len(x)
 
 
 def test_python(count):
