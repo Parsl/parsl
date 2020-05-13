@@ -5,8 +5,7 @@ import pytest
 import parsl
 from parsl.app.app import python_app  # , bash_app
 from parsl.providers.provider_base import JobState, JobStatus
-from site_config_selector import config
-
+from parsl.tests.site_tests.site_config_selector import config
 local_config = config
 
 

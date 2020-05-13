@@ -4,6 +4,8 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app  # , bash_app
+from parsl.tests.site_tests.site_config_selector import config
+local_config = config
 
 
 @python_app
@@ -18,9 +20,6 @@ def platform(sleep=10, stdout=None):
 def test_platform(n=2, sleep_dur=10):
     """ This should sleep to make sure that concurrent apps will go to different workers
     """
-    from parsl.tests.site_tests.site_config_selector import config
-    local_config = config
-
     dfk = parsl.dfk()
     name = list(dfk.executors.keys())[0]
     print("Trying to get executor : ", name)
