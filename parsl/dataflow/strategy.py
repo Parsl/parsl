@@ -398,7 +398,8 @@ class Strategy(object):
                 logger.warning("YADU: More slots than tasks")
                 if isinstance(executor, HighThroughputExecutor):
                     blocks = {}
-                    executor.scale_in(1, force=False)
+                    if active_blocks > min_blocks:
+                        executor.scale_in(1, force=False)
                     logger.debug("[STRATEGY] CASE:4 Block slots:{}".format(blocks.keys()))
             # Case 3
             # tasks ~ slots
