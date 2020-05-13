@@ -8,12 +8,18 @@ def get_site_config(hostname):
 
     if 'thetalogin' in hostname:
         from parsl.tests.configs.theta import config
-        print("Theta")
+        print("Loading Theta config")
     elif 'frontera' in hostname:
+        print("Loading Frontera config")
         from parsl.tests.configs.frontera import config
     else:
-        raise Exception("No matching site")
-
+        print("Loading Local HTEX config"
+        from parsl.tests.configs.htex_local import config
+        config.executors[0].max_workers = 2
+        config.executors[0].provider.init_blocks=2
+        config.executors[0].provider.max_blocks=2
+        config.executors[0].provider.min_blocks=2
+        
     return config
 
 
