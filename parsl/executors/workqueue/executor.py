@@ -15,8 +15,7 @@ import inspect
 import itertools
 from ipyparallel.serialize import pack_apply_message
 
-from parsl.app.errors import AppException
-from parsl.app.errors import RemoteExceptionWrapper
+import parsl.app.errors as perror
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
@@ -58,7 +57,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 # cache tells whether the file should be cached at workers. Only valid if stage == True
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name cache')
 
-class WorkqueueTaskFailure(AppException):
+class WorkqueueTaskFailure(perror.AppException):
     """A failure executing a task in workqueue
 
     Contains:
@@ -343,7 +342,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
             # On failure, result contains the corresponding exception, but wrapped.
             # The exception is reraised for logging purposes.
             future_fail = pickle.loads(task_report.result["result"])
-            exc = RemoteExceptionWrapper(*future_fail)
+            exc = perror.RemoteExceptionWrapper(*future_fail)
             try:
                 exc.reraise()
             except Exception as e:
