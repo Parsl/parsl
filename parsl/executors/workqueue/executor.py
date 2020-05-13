@@ -639,6 +639,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
         self._construct_map_file(map_file, input_files, output_files)
 
+        if not self.submit_process.is_alive():
+            raise ExecutorError(self, "Workqueue Submit Process is not alive")
+
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
