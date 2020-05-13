@@ -1,51 +1,37 @@
+from parsl.data_provider.files import File
 import sys
 import pickle
 
+def load_pickled_file(filename):
+    try:
+        with open(filename, "rb") as f_in:
+            return pickle.load(f_in)
+    except pickle.PickleError:
+        print("Error while unplickling {}".format(filename))
+        sys.exit(2)
 
-def check_file(parsl_file_obj, mapping, file_type_string):
-    type_desc = str(type(parsl_file_obj))
-    # Rename the file type string to the appropriate string
-    if file_type_string is None:
-        file_type_string = "<class 'parsl.data_provider.files.File'>"
-    # Obtain the local_path from the mapping
-    if type_desc == file_type_string:
-        if parsl_file_obj.filepath in mapping:
-            parsl_file_obj.local_path = mapping[parsl_file_obj.filepath]
+def remap_location(mapping, parsl_file):
+    if not isinstance(parsl_file, File):
+        return
+
+    master_location = parsl_file.filepath
+    if master_location in mapping:
+        parsl_file.local_path = mapping[master_location]
 
 
 if __name__ == "__main__":
     name = "parsl"
-    shared_fs = False
     fn_from_source = False
-    input_function_file = ""
-    output_result_file = ""
-    remapping_string = None
     file_type_string = None
 
     # Parse command line options
     try:
-        index = 1
-        while index < len(sys.argv):
-            if sys.argv[index] == "-i":
-                input_function_file = sys.argv[index + 1]
-                index += 1
-            elif sys.argv[index] == "-o":
-                output_result_file = sys.argv[index + 1]
-                index += 1
-            elif sys.argv[index] == "-r":
-                remapping_string = sys.argv[index + 1]
-                index += 1
-            elif sys.argv[index] == "-t":
-                file_type_string = sys.argv[index + 1]
-                index += 1
-            elif sys.argv[index] == "--shared-fs":
-                shared_fs = True
-            else:
-                print("command line argument not supported")
-                exit(1)
-            index += 1
-    except Exception as e:
-        print(e)
+        if len(sys.argv) != 4:
+            raise IndexError
+
+        (map_file, function_file, result_file) = sys.argv[1:4]
+    except IndexError:
+        print("Usage:\n\t{} function result mapping".format(sys.argv[0]))
         exit(1)
 
     # Get all variables from the user namespace, and add __builtins__
@@ -54,8 +40,7 @@ if __name__ == "__main__":
 
     # Load function data
     try:
-        input_function = open(input_function_file, "rb")
-        function_info = pickle.load(input_function)
+        function_info = load_pickled_file(function_file)
         # Extract information from transferred source code
         if "source code" in function_info:
             fn_from_source = True
@@ -69,51 +54,39 @@ if __name__ == "__main__":
             from ipyparallel.serialize import unpack_apply_message
             func, args, kwargs = unpack_apply_message(function_info["byte code"], user_ns, copy=False)
         else:
-            raise Exception("Function file does not have a valid function representation.")
-        input_function.close()
+            print("Function file does not have a valid function representation.")
+            sys.exit(2)
     except Exception as e:
         print(e)
         exit(2)
 
-    # Remapping file names using remapping string
-    mapping = {}
     try:
-        if shared_fs is False and remapping_string is not None:
-            # Parse the remapping string into a dictionary
-            for i in remapping_string.split(","):
-                split_mapping = i.split(":")
-                mapping[split_mapping[0]] = split_mapping[1]
+        mapping = load_pickled_file(map_file)
+        print(mapping)
+        for maybe_file in args:
+            remap_location(mapping, maybe_file)
+        for maybe_file in kwargs.get("inputs", []):
+            remap_location(mapping, maybe_file)
+        for maybe_file in kwargs.get("outputs", []):
+            remap_location(mapping, maybe_file)
 
-            # Check file attributes for inputs and make appropriate changes
-            func_inputs = kwargs.get("inputs", [])
-            for inp in func_inputs:
-                check_file(inp, mapping, file_type_string)
-
-            # Iterate through all arguments to the function
-            for kwarg, potential_f in kwargs.items():
-                # Process the "stdout" and "stderr" arguments and add them to kwargs
-                if kwarg == "stdout" or kwarg == "stderr":
-                    if (isinstance(potential_f, str) or isinstance(potential_f, tuple)):
-                        if isinstance(potential_f, tuple) and len(potential_f) == 2:
-                            l_f = list(potential_f)
-                            p_f = l_f[0]
-                            if p_f in mapping:
-                                p_f = mapping[p_f]
-                            kwargs[kwarg] = tuple([p_f] + l_f[1:])
-                        elif isinstance(potential_f, str):
-                            if potential_f in mapping:
-                                kwargs[kwarg] = mapping[potential_f]
+        # Iterate through all arguments to the function
+        for kwarg, maybe_file in kwargs.items():
+            print(kwarg, maybe_file)
+            # Process the "stdout" and "stderr" arguments and add them to kwargs
+            # They come in the form of str, or (str, str)
+            if kwarg == "stdout" or kwarg == "stderr":
+                if isinstance(maybe_file, str):
+                    if maybe_file in mapping:
+                        kwargs[kwarg] = mapping[maybe_file]
+                elif isinstance(maybe_file, (tuple, list)) and len(maybe_file) > 0:
+                    if maybe_file[0] in mapping:
+                        kwargs[kwarg] = (mapping[maybe_file[0]], *maybe_file[1:])
                 else:
-                    check_file(potential_f, mapping, file_type_string)
-
-            # Check all non-key-word arguments and make appropriate changes
-            for inp in args:
-                check_file(inp, mapping, file_type_string)
-
-            # Check file attributes for outputs and make appropriate changes
-            func_outputs = kwargs.get("outputs", [])
-            for output in func_outputs:
-                check_file(output, mapping, file_type_string)
+                    pass
+                    #raise Exception("Unknown {} specification: {}".format(kwarg, maybe_file))
+            elif isinstance(maybe_file, File):
+                remap_location(mapping, maybe_file)
     except Exception as e:
         print(e)
         exit(3)
@@ -160,9 +133,8 @@ if __name__ == "__main__":
 
     # Write out function result to the result file
     try:
-        f = open(output_result_file, "wb")
-        pickle.dump(result_package, f)
-        f.close()
+        with open(result_file, "wb") as f_out:
+            pickle.dump(result_package, f_out)
         exit(0)
     except Exception as e:
         print(e)

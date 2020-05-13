@@ -12,6 +12,7 @@ import os
 import pickle
 import queue
 import inspect
+import itertools
 from ipyparallel.serialize import pack_apply_message
 
 from parsl.app.errors import AppException
@@ -46,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -159,34 +160,11 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             except queue.Empty:
                 continue
 
-            remapping_string = ""
-            std_string = ""
-
-            # Parse input file information
-            logger.debug("Looking at input")
-            for item in task.input_files:
-                if item[3] == "std":
-                    std_string += "mv " + item[1] + " " + item[0] + "; "
-                else:
-                    remapping_string += item[0] + ":" + item[1] + ","
-            logger.debug(remapping_string)
-
-            # Parse output file information
-            logger.debug("Looking at output")
-            for item in task.output_files:
-                remapping_string += item[0] + ":" + item[1] + ","
-            logger.debug(remapping_string)
-
-            if len(task.input_files) + len(task.output_files) > 0:
-                remapping_string = "-r " + remapping_string
-                remapping_string = remapping_string[:-1]
-
             # Create command string
             logger.debug(launch_cmd)
-            command_str = launch_cmd.format(input_file=os.path.basename(task.function_file),
-                                            output_file=os.path.basename(task.result_file),
-                                            remapping_string=remapping_string)
-            command_str = std_string + command_str
+            command_str = launch_cmd.format(mapping=os.path.basename(task.map_file),
+                                            function=os.path.basename(task.function_file),
+                                            result=os.path.basename(task.result_file))
             logger.debug(command_str)
 
             # Create WorkQueue task for the command
@@ -214,6 +192,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             # Specify script, and data/result files for task
             t.specify_input_file(workqueue_worker.__file__, cache=True)
             t.specify_input_file(task.function_file, cache=False)
+            t.specify_input_file(task.map_file, cache=False)
             t.specify_output_file(task.result_file, cache=False)
             t.specify_tag(str(task.id))
             result_file_of_task_id[str(task.id)] = task.result_file
@@ -509,9 +488,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 self.project_password_file = None
 
         # Build foundations of the launch command
-        self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
-        if self.shared_fs is True:
-            self.launch_cmd += " --shared-fs"
+        self.launch_cmd = ("python3 workqueue_worker.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -655,16 +632,20 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Pickle the result into object to pass into message buffer
         function_file = self._path_in_task(task_id, "function")
         result_file = self._path_in_task(task_id, "result")
+        map_file = self._path_in_task(task_id, "map")
 
         logger.debug("Creating Task {} with function at: {}".format(task_id, function_file))
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, result_file))
 
         self._serialize_function(function_file, func, args, kwargs)
 
+        logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
+        self._construct_map_file(map_file, input_files, output_files)
+
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
-        self.task_queue.put_nowait(ParslTaskToWq(task_id, category, function_file, result_file, input_files, output_files))
+        self.task_queue.put_nowait(ParslTaskToWq(task_id, category, map_file, function_file, result_file, input_files, output_files))
 
         return fu
 
@@ -685,6 +666,22 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                                              item_threshold=1024)}
             with open(fn_path, "wb") as f_out:
                 pickle.dump(function_info, f_out)
+
+    def _construct_map_file(self, map_file, input_files, output_files):
+        """ Map local filepath of parsl files to the filenames at the execution worker.
+        If using a shared filesystem, the filepath is mapped to its absolute filename.
+        Otherwise, to its original relative filename. In this later case, work queue
+        recreates any directory hierarchy needed."""
+        file_translation_map = {}
+        for spec in itertools.chain(input_files, output_files):
+            local_name = spec[0]
+            if self.shared_fs:
+                remote_name = os.path.abspath(local_name)
+            else:
+                remote_name = local_name
+            file_translation_map[local_name] = remote_name
+        with open(map_file, "wb") as f_out:
+            pickle.dump(file_translation_map, f_out)
 
     def scale_out(self, *args, **kwargs):
         """Scale out method. Not implemented.
@@ -733,7 +730,7 @@ def explain_task_exit_status(wq_task, parsl_id):
         if status == 1:
             reason += "problem parsing command line options"
         elif status == 2:
-            reason += "problem loading function data"
+            reason += "problem loading function and map data"
         elif status == 3:
             reason += "problem remapping file names"
         elif status == 4:
