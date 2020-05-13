@@ -1,9 +1,14 @@
 import argparse
 import time
+import pytest
 
 import parsl
 from parsl.app.app import python_app  # , bash_app
 from parsl.providers.provider_base import JobState, JobStatus
+from site_config_selector import config
+
+local_config = config
+
 
 @python_app
 def platform(sleep=10, stdout=None):
@@ -13,6 +18,7 @@ def platform(sleep=10, stdout=None):
     return platform.uname()
 
 
+@pytest.mark.local
 def test_provider():
     """ Provider scaling
     """
