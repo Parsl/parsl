@@ -1,4 +1,5 @@
 from parsl.data_provider.files import File
+from parsl.utils import get_std_fname_mode
 import sys
 import pickle
 
@@ -62,7 +63,6 @@ if __name__ == "__main__":
 
     try:
         mapping = load_pickled_file(map_file)
-        print(mapping)
         for maybe_file in args:
             remap_location(mapping, maybe_file)
         for maybe_file in kwargs.get("inputs", []):
@@ -72,19 +72,12 @@ if __name__ == "__main__":
 
         # Iterate through all arguments to the function
         for kwarg, maybe_file in kwargs.items():
-            print(kwarg, maybe_file)
             # Process the "stdout" and "stderr" arguments and add them to kwargs
             # They come in the form of str, or (str, str)
             if kwarg == "stdout" or kwarg == "stderr":
-                if isinstance(maybe_file, str):
-                    if maybe_file in mapping:
-                        kwargs[kwarg] = mapping[maybe_file]
-                elif isinstance(maybe_file, (tuple, list)) and len(maybe_file) > 0:
-                    if maybe_file[0] in mapping:
-                        kwargs[kwarg] = (mapping[maybe_file[0]], *maybe_file[1:])
-                else:
-                    pass
-                    #raise Exception("Unknown {} specification: {}".format(kwarg, maybe_file))
+                (fname, mode) = get_std_fname_mode(kwarg, maybe_file)
+                if fname in mapping:
+                    kwargs[kwarg] = (mapping[fname], mode)
             elif isinstance(maybe_file, File):
                 remap_location(mapping, maybe_file)
     except Exception as e:

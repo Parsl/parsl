@@ -17,6 +17,7 @@ from ipyparallel.serialize import pack_apply_message
 
 from parsl.app.errors import AppException
 from parsl.app.errors import RemoteExceptionWrapper
+import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
@@ -30,8 +31,6 @@ try:
     from work_queue import WorkQueue
     from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
-    from work_queue import WORK_QUEUE_INPUT
-    from work_queue import WORK_QUEUE_OUTPUT
     from work_queue import WORK_QUEUE_RESULT_SUCCESS
     from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
     from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
@@ -54,6 +53,10 @@ ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category map_file function_file 
 # reason and status are only valid if result_received is False
 WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason status')
 
+# Support structure to report parsl filenames to work queue.
+# parsl_name is the filepath attribute of a parsl file object.
+# cache tells whether the file should be cached at workers. Only valid if stage == True
+ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name cache')
 
 class WorkqueueTaskFailure(AppException):
     """A failure executing a task in workqueue
@@ -76,6 +79,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           see_worker_output=False,
                           data_dir=".",
                           full=False,
+                          shared_fs=False,
                           autolabel=False,
                           autolabel_window=None,
                           autocategory=False,
@@ -199,11 +203,18 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             logger.debug("Parsl ID: {}".format(task.id))
 
-            # Specify all input/output files for task
-            for item in task.input_files:
-                t.specify_file(item[0], item[1], WORK_QUEUE_INPUT, cache=item[2])
-            for item in task.output_files:
-                t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
+            # Specify input/output files that need to be staged.
+            # Absolute paths are assumed to be in shared filesystem, and thus
+            # not staged by work queue.
+            if not shared_fs:
+                for spec in task.input_files:
+                    (name, cache) = (spec.parsl_name, spec.cache)
+                    if not os.path.isabs(name):
+                        t.specify_input_file(name, name, cache=cache)
+                for spec in task.output_files:
+                    (name, cache) = (spec.parsl_name, spec.cache)
+                    if not os.path.isabs(name):
+                        t.specify_output_file(name, name, cache=cache)
 
             # Submit the task to the WorkQueue object
             logger.debug("Submitting task {} to WorkQueue".format(task.id))
@@ -397,6 +408,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Queue does not need to transfer and rename files for execution.
             Default is False.
 
+        use_cache: bool
+            Whether workers should cache files that are common to tasks.
+            Warning: Two files are considered the same if they have the same
+            filepath name. Use with care when reusing the executor instance
+            across multiple parsl workflows. Default is False.
+
         source: bool
             Choose whether to transfer parsl app information as
             source code. (Note: this increases throughput for
@@ -442,6 +459,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  env=None,
                  shared_fs=False,
                  storage_access=None,
+                 use_cache=False,
                  source=False,
                  autolabel=False,
                  autolabel_window=1,
@@ -467,6 +485,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.init_command = init_command
         self.shared_fs = shared_fs
         self.storage_access = storage_access
+        self.use_cache = use_cache
         self.working_dir = working_dir
         self.used_names = {}
         self.registered_files = set()
@@ -516,6 +535,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "collector_queue": self.collector_queue,
                                  "see_worker_output": self.worker_output,
                                  "full": self.full,
+                                 "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
                                  "autocategory": self.autocategory,
@@ -582,44 +602,21 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         input_files = []
         output_files = []
 
-        # Add input files from the "inputs" keyword argument
-        func_inputs = kwargs.get("inputs", [])
-        for inp in func_inputs:
-            if isinstance(inp, File):
-                input_files.append(self.create_name_tuple(inp, "in"))
+        # Determine which input and output files should be cached at the workers
+        input_files += [self._register_file(f) for f in kwargs.get("inputs", []) if isinstance(f, File)]
+        output_files += [self._register_file(f) for f in kwargs.get("outputs", []) if isinstance(f, File)]
 
-        for kwarg, inp in kwargs.items():
+        # Also consider any *arg that looks like a file as an input:
+        input_files += [self._register_file(f) for f in args if isinstance(f, File)]
+
+        for kwarg, maybe_file in kwargs.items():
             # Add appropriate input and output files from "stdout" and "stderr" keyword arguments
             if kwarg == "stdout" or kwarg == "stderr":
-                if (isinstance(inp, tuple) and len(inp) > 1 and isinstance(inp[0], str) and isinstance(inp[1], str)) or isinstance(inp, str):
-                    if isinstance(inp, tuple):
-                        inp = inp[0]
-                    if not os.path.exists(os.path.join(".", os.path.split(inp)[0])):
-                        continue
-                    # Create "std" files instead of input or output files
-                    if inp in self.registered_files:
-                        input_files.append((inp, os.path.basename(inp) + "-1", False, "std"))
-                        output_files.append((inp, os.path.basename(inp), False, "std"))
-                    else:
-                        output_files.append((inp, os.path.basename(inp), False, "std"))
-                        self.registered_files.add(inp)
-            # Add to input file if passed-in argument is a File object
-            elif isinstance(inp, File):
-                input_files.append(self.create_name_tuple(inp, "in"))
-
-        # Add to input file if passed-in argument is a File object
-        for inp in args:
-            if isinstance(inp, File):
-                input_files.append(self.create_name_tuple(inp, "in"))
-
-        # Add output files from the "outputs" keyword argument
-        func_outputs = kwargs.get("outputs", [])
-        for output in func_outputs:
-            if isinstance(output, File):
-                output_files.append(self.create_name_tuple(output, "out"))
-
-        if not self.submit_process.is_alive():
-            raise ExecutorError(self, "Workqueue Submit Process is not alive")
+                if maybe_file:
+                    output_files.append(self._std_output_filename(kwarg, maybe_file))
+            # For any other keyword that looks like a file, assume it is an input file
+            elif isinstance(maybe_file, File):
+                input_files.append(self._register_file(maybe_file))
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
@@ -682,6 +679,30 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             file_translation_map[local_name] = remote_name
         with open(map_file, "wb") as f_out:
             pickle.dump(file_translation_map, f_out)
+
+    def _register_file(self, parsl_file):
+        """Generates a tuple (parsl_file.filepath, cache) to give to work
+        queue. cache is always False if self.use_cache is False.
+        Otherwise, it is set to True if parsl_file is used more than once.
+
+        It has the side-effect of adding parsl_file to a list of registered
+        files.
+
+        Note: The first time a file is used cache is set to False. Since
+        tasks are generated dynamically, without other information this is
+        the best we can do."""
+        to_cache = False
+        if self.use_cache:
+            to_cache = parsl_file in self.registered_files
+        self.registered_files.add(parsl_file)
+
+        return ParslFileToWq(parsl_file.filepath, to_cache)
+
+    def _std_output_filename(self, fdname, stdfspec):
+        """Find the name of the file that will contain stdout or stderr and
+        return a ParslFileToWq with it. For these files, cache is always False."""
+        fname, mode = putils.get_std_fname_mode(fdname, stdfspec)
+        return ParslFileToWq(fname, cache=False)
 
     def scale_out(self, *args, **kwargs):
         """Scale out method. Not implemented.
