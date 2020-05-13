@@ -201,12 +201,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 logger.error("Unable to create task: {}".format(e))
                 continue
 
-            if not autocategory or category is None:
-                t.specify_category('parsl-default')
-            else:
+            if autocategory:
                 t.specify_category(category)
                 if autolabel:
                     q.specify_category_mode(category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+            else:
+                t.specify_category('parsl-default')
 
             # Specify environment variables for the task
             if env is not None:
