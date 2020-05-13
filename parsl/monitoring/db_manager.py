@@ -3,6 +3,7 @@ import threading
 import queue
 import os
 import time
+import datetime
 
 from typing import Any, Dict, Set
 
@@ -298,6 +299,8 @@ class DatabaseManager(object):
                  batching_threshold=99999,
                  ):
 
+        self.workflow_end = False
+        self.workflow_start_message = None
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -400,6 +403,7 @@ class DatabaseManager(object):
                             logger.debug(
                                 "Inserting workflow start info to WORKFLOW table")
                             self._insert(table=WORKFLOW, messages=[msg])
+                            self.workflow_start_message = msg
                         else:                         # workflow end message
                             logger.debug(
                                 "Updating workflow end info to WORKFLOW table")
@@ -407,6 +411,8 @@ class DatabaseManager(object):
                                          columns=['run_id', 'tasks_failed_count',
                                                   'tasks_completed_count', 'time_completed'],
                                          messages=[msg])
+                            self.workflow_end = True
+
                     elif msg_type.value == MessageType.TASK_INFO.value:
                         task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                         task_info_all_messages.append(msg)
@@ -564,6 +570,13 @@ class DatabaseManager(object):
     def _update(self, table, columns, messages):
         try:
             self.db.update(table=table, columns=columns, messages=messages)
+        except KeyboardInterrupt:
+            logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                logger.exception("Rollback failed")
+            raise
         except Exception:
             logger.exception("Got exception when trying to update table {}".format(table))
             try:
@@ -574,6 +587,13 @@ class DatabaseManager(object):
     def _insert(self, table, messages):
         try:
             self.db.insert(table=table, messages=messages)
+        except KeyboardInterrupt:
+            logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                logger.exception("Rollback failed")
+            raise
         except Exception:
             logger.exception("Got exception when trying to insert to table {}".format(table))
             try:
@@ -598,9 +618,17 @@ class DatabaseManager(object):
         return messages
 
     def close(self):
-        if logger:
-            logger.info(
-                "Finishing all the logging and terminating Database Manager.")
+        logger.info("Database Manager cleanup initiated.")
+        if not self.workflow_end and self.workflow_start_message:
+            logger.info("Logging workflow end info to database due to abnormal exit")
+            time_completed = datetime.datetime.now()
+            msg = {'time_completed': time_completed,
+                   'workflow_duration': (time_completed - self.workflow_start_message['time_began']).total_seconds()}
+            self.workflow_start_message.update(msg)
+            self._update(table=WORKFLOW,
+                         columns=['run_id', 'time_completed',
+                                  'workflow_duration'],
+                         messages=[self.workflow_start_message])
         self.batching_interval, self.batching_threshold = float(
             'inf'), float('inf')
         self._kill_event.set()
@@ -617,8 +645,13 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
         dbm = DatabaseManager(*args, **kwargs)
         logger.info("Starting dbm in dbm starter")
         dbm.start(priority_msgs, node_msgs, resource_msgs)
+    except KeyboardInterrupt:
+        dbm.logger.exception("KeyboardInterrupt signal caught")
+        dbm.close()
+        raise
     except Exception as e:
         logger.exception("dbm.start exception")
         exception_q.put(("DBM", str(e)))
+        dbm.close()
 
     logger.info("End of dbm_starter")
