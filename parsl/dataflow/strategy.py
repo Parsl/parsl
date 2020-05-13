@@ -399,7 +399,7 @@ class Strategy(object):
                 if isinstance(executor, HighThroughputExecutor):
                     blocks = {}
                     if active_blocks > min_blocks:
-                        executor.scale_in(1, force=False)
+                        executor.scale_in(1, force=False, max_idletime=self.max_idletime)
                     logger.debug("[STRATEGY] CASE:4 Block slots:{}".format(blocks.keys()))
             # Case 3
             # tasks ~ slots

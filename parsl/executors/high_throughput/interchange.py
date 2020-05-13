@@ -290,6 +290,7 @@ class Interchange(object):
                     for manager in self._ready_manager_queue:
                         num_workers += self._ready_manager_queue[manager]['worker_count']
                     reply = num_workers
+
                 elif command_req == "MANAGERS":
                     reply = []
                     for manager in self._ready_manager_queue:
@@ -299,6 +300,21 @@ class Interchange(object):
                                 'tasks': len(self._ready_manager_queue[manager]['tasks']),
                                 'active': self._ready_manager_queue[manager]['active']}
                         reply.append(resp)
+
+                elif command_req == "BLOCKS":
+                    logger.info("[COMMAND] Got BLOCKS command")
+                    reply = {}
+                    for manager in self._ready_manager_queue:
+                        b_id = self._ready_manager_queue[manager]['block_id']
+                        if b_id not in reply:
+                            reply[b_id] = [0, float('inf')]
+                        reply[b_id][0] += len(self._ready_manager_queue[manager]['tasks'])
+                        if self._ready_manager_queue[manager]['idle_since']:
+                            if reply[b_id][1] == float('inf'):
+                                reply[b_id][1] = self._ready_manager_queue[manager]['idle_since']
+                            else:
+                                reply[b_id][1] = max(reply[b_id][1], self._ready_manager_queue[manager]['idle_since'])
+                    logger.info("[COMMAND] Responding {}".format(reply))
 
                 elif command_req.startswith("HOLD_WORKER"):
                     cmd, s_manager = command_req.split(';')
@@ -386,6 +402,7 @@ class Interchange(object):
                     else:
                         # We set up an entry only if registration works correctly
                         self._ready_manager_queue[manager] = {'last': time.time(),
+                                                              'idle_since': time.time(),
                                                               'free_capacity': 0,
                                                               'block_id': None,
                                                               'max_capacity': 0,
@@ -467,6 +484,7 @@ class Interchange(object):
                             tids = [t['task_id'] for t in tasks]
                             self._ready_manager_queue[manager]['free_capacity'] -= task_count
                             self._ready_manager_queue[manager]['tasks'].extend(tids)
+                            self._ready_manager_queue[manager]['idle_since'] = None
                             logger.debug("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
                             if self._ready_manager_queue[manager]['free_capacity'] > 0:
                                 logger.debug("[MAIN] Manager {} has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
@@ -501,6 +519,8 @@ class Interchange(object):
 
                     self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
+                    if len(self._ready_manager_queue[manager]['tasks']) == 0:
+                        self._ready_manager_queue[manager]['idle_since'] = time.time()
                 logger.debug("[MAIN] leaving results_incoming section")
 
             bad_managers = [manager for manager in self._ready_manager_queue if

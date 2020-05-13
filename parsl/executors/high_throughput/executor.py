@@ -4,6 +4,7 @@ import logging
 import threading
 import queue
 import pickle
+import time
 from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple, Union
 import math
@@ -491,6 +492,11 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         workers = self.command_client.run("MANAGERS")
         return workers
 
+    @property
+    def block_status(self):
+        blocks = self.command_client.run("BLOCKS")
+        return blocks
+
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
 
@@ -577,7 +583,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             self.blocks[external_block_id] = internal_block
         return r
 
-    def scale_in(self, blocks=None, block_ids=[], force=True):
+    def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -595,6 +601,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
              When force = True, we will kill blocks regardless of the blocks being busy
              When force = False, we will kill only idle blocks
 
+        max_idletime: float
+             A time to indicate how long a block can be idle.
+             Used along with force = False to kill blocks that have been idle for that long.
+
         block_ids : list
              List of specific block ids to terminate. Optional
 
@@ -605,16 +615,23 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         if block_ids:
             block_ids_to_kill = block_ids
         else:
-            managers = self.connected_managers
-            blks = {}
-            for i in managers:
-                blks[i['block_id']] = blks.get(i['block_id'], 0) + i['tasks']
-            sorted_blks = sorted(blks.items(), key=lambda item: item[1])
+            logger.info("ZZ: requesting block status")
+            blks = self.block_status
+            logger.warning("ZZ: block status: {}".format(blks))
+            sorted_blks = sorted(blks.items(), key=lambda item: (item[1][1], item[1][0]))
             logger.warning("YADU: sorted_block : {}".format(sorted_blks))
             if force is True:
                 block_ids_to_kill = [x[0] for x in sorted_blks[:blocks]]
             else:
-                block_ids_to_kill = [x[0] for x in sorted_blks[:blocks] if x[1] == 0]
+                if not max_idletime:
+                    block_ids_to_kill = [x[0] for x in sorted_blks[:blocks] if x[1][0] == 0]
+                else:
+                    block_ids_to_kill = []
+                    for  x in sorted_blks:
+                        if time.time() - x[1][1] > max_idletime and x[1][0] == 0:
+                            block_ids_to_kill.append(x[0])
+                            if len(block_ids_to_kill) == blocks:
+                                break
                 logger.warning("Selecting block ids to kill since they are idle : {}".format(
                     block_ids_to_kill))
 
