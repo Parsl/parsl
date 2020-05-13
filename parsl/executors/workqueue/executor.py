@@ -710,7 +710,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
-        category = func.__qualname__ if autocategory else 'parsl-default'
+        category = func.__qualname__ if self.autocategory else 'parsl-default'
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
                "category": category,
