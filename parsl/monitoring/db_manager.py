@@ -12,7 +12,7 @@ from parsl.providers.error import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("database_manager")
 
 try:
     import sqlalchemy as sa
@@ -302,7 +302,8 @@ class DatabaseManager(object):
         os.makedirs(self.logdir, exist_ok=True)
 
         set_file_logger("{}/database_manager.log".format(self.logdir), level=logging.DEBUG,
-                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
+                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
+                        name="database_manager")
 
         logger.debug("Initializing Database Manager process")
 
