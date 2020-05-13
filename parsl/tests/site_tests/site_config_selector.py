@@ -8,6 +8,7 @@ def get_site_config(hostname):
 
     if 'thetalogin' in hostname:
         from parsl.tests.configs.theta import config
+        print("Theta")
     elif 'frontera' in hostname:
         from parsl.tests.configs.frontera import config
     else:
