@@ -23,6 +23,7 @@ from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import workqueue_worker
 
 try:
+    import work_queue as wq
     from work_queue import WorkQueue
     from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
@@ -30,6 +31,7 @@ try:
     from work_queue import WORK_QUEUE_OUTPUT
     from work_queue import WORK_QUEUE_RESULT_SUCCESS
     from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
+    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
     from work_queue import cctools_debug_flags_set
     from work_queue import cctools_debug_config_file
 except ImportError:
@@ -62,6 +64,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           see_worker_output=False,
                           data_dir=".",
                           full=False,
+                          autolabel=False,
+                          autolabel_window=None,
+                          autocategory=False,
                           cancel_value=multiprocessing.Value('i', 1),
                           port=WORK_QUEUE_DEFAULT_PORT,
                           wq_log_dir=None,
@@ -100,6 +105,10 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         q.specify_password(project_password)
     elif project_password_file:
         q.specify_password_file(project_password_file)
+    if autolabel:
+        q.enable_monitoring()
+        if autolabel_window is not None:
+            q.tune('category-steady-n-tasks', autolabel_window)
 
     # Only write logs when the wq_log_dir is specified, which it most likely will be
     if wq_log_dir is not None:
@@ -114,6 +123,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
     wq_tasks = set()
     orig_ppid = os.getppid()
     continue_running = True
+
+    result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
+
     while(continue_running):
         # Monitor the task queue
         ppid = os.getppid()
@@ -145,6 +157,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             input_files = item["input_files"]
             output_files = item["output_files"]
             std_files = item["std_files"]
+            category = item["category"]
 
             full_script_name = workqueue_worker.__file__
             script_name = full_script_name.split("/")[-1]
@@ -187,6 +200,10 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 logger.error("Unable to create task: {}".format(e))
                 continue
 
+            t.specify_category(category)
+            if autolabel:
+                q.specify_category_mode(category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+
             # Specify environment variables for the task
             if env is not None:
                 for var in env:
@@ -197,7 +214,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
             t.specify_tag(str(parsl_id))
-            logger.debug("Parsl ID: {}".format(t.id))
+            result_file_of_task_id[str(parsl_id)] = function_result_loc
+
+            logger.debug("Parsl ID: {}".format(parsl_id))
 
             # Specify all input/output files for task
             for item in input_files:
@@ -251,50 +270,12 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
                     # Task failure
                     if status != 0 or (task_result != WORK_QUEUE_RESULT_SUCCESS and task_result != WORK_QUEUE_RESULT_OUTPUT_MISSING):
-                        logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}".format(status, task_result))
-                        # Wrapper script failure
-                        if status != 0:
-                            logger.debug("WorkQueue task {} failed with status {}".format(t.id, status))
-                            reason = "Wrapper Script Failure: "
-                            if status == 1:
-                                reason += "problem parsing command line options"
-                            elif status == 2:
-                                reason += "problem loading function data"
-                            elif status == 3:
-                                reason += "problem remapping file names"
-                            elif status == 4:
-                                reason += "problem writing out function result"
-                            else:
-                                reason += "unable to process wrapper script failure with status = {}".format(status)
-                            reason += "\nTrace:\n" + str(t.output)
-                            logger.debug("WorkQueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
-                        # WorkQueue system failure
-                        else:
-                            reason = "WorkQueue System Failure: "
-                            if task_result == 1:
-                                reason += "missing input file"
-                            elif task_result == 2:
-                                reason += "unable to generate output file"
-                            elif task_result == 4:
-                                reason += "stdout has been truncated"
-                            elif task_result == 1 << 3:
-                                reason += "task terminated with a signal"
-                            elif task_result == 2 << 3:
-                                reason += "task used more resources than requested"
-                            elif task_result == 3 << 3:
-                                reason += "task ran past the specified end time"
-                            elif task_result == 4 << 3:
-                                reason += "result could not be classified"
-                            elif task_result == 5 << 3:
-                                reason += "task failed, but not a task error"
-                            elif task_result == 6 << 3:
-                                reason += "unable to complete after specified number of retries"
-                            elif task_result == 7 << 3:
-                                reason += "task ran for more than the specified time"
-                            elif task_result == 8 << 3:
-                                reason += "task needed more space to complete task"
-                            else:
-                                reason += "unable to process Work Queue system failure"
+                        logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
+                                     .format(status, task_result))
+
+                        reason = explain_task_exit_status(t, parsl_tid)
+                        logger.debug("WorkQueue runner script failed for parsl task {} (wq {}) because:\n{}"
+                                     .format(parsl_id, t.id, reason))
 
                         msg = {"tid": parsl_tid,
                                "result_received": False,
@@ -309,8 +290,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                         if see_worker_output:
                             print(t.output)
 
-                        # Load result into result file
-                        result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
+                        # Load result into result file. The tag of the task is the parsl_id.
+                        result_loc = result_file_of_task_id.pop(t.tag)
                         logger.debug("Looking for result in {}".format(result_loc))
                         f = open(result_loc, "rb")
                         result = pickle.load(f)
@@ -412,37 +393,40 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         label: str
             A human readable label for the executor, unique
-            with respect to other Work Queue master programs
+            with respect to other Work Queue master programs.
+            Default is "WorkQueueExecutor".
 
         working_dir: str
             Location for Parsl to perform app delegation to the Work
-            Queue system
+            Queue system. Defaults to current directory.
 
         managed: bool
-            If this executor is managed by the DFK or externally handled
+            Whether this executor is managed by the DFK or externally handled.
+            Default is True (managed by DFK).
 
         project_name: str
-            Work Queue process name
+            If given, Work Queue master process name. Default is None.
 
         project_password: str
-            Optional password for the Work Queue project
+            Optional password for the Work Queue project. Default is None.
 
         project_password_file: str
-            Optional password file for the work queue project
+            Optional password file for the work queue project. Default is None.
 
         port: int
             TCP port on Parsl submission machine for Work Queue workers
             to connect to. Workers will specify this port number when
-            trying to connect to Parsl
+            trying to connect to Parsl. Default is 9123.
 
         env: dict{str}
             Dictionary that contains the environmental variables that
-            need to be set on the Work Queue worker machine
+            need to be set on the Work Queue worker machine.
 
         shared_fs: bool
             Define if working in a shared file system or not. If Parsl
             and the Work Queue workers are on a shared file system, Work
-            Queue does not need to transfer and rename files for execution
+            Queue does not need to transfer and rename files for execution.
+            Default is False.
 
         source: bool
             Choose whether to transfer parsl app information as
@@ -450,14 +434,32 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             @python_apps, but the implementation does not include
             functionality for @bash_apps, and thus source=False
             must be used for programs utilizing @bash_apps.)
+            Default is False.
+
+        autolabel: bool
+            Use the Resource Monitor to automatically determine resource
+            labels based on observed task behavior.
+
+        autolabel_window: int
+            Set the number of tasks considered for autolabeling. Work Queue
+            will wait for a series of N tasks with steady resource
+            requirements before making a decision on labels. Increasing
+            this parameter will reduce the number of failed tasks due to
+            resource exhaustion when autolabeling, at the cost of increased
+            resources spent collecting stats.
+
+        autocategory: bool
+            Place each app in its own category by default. If all
+            invocations of an app have similar performance characteristics,
+            this will provide a reasonable set of categories automatically.
 
         init_command: str
-            Command to run before constructed Work Queue command
+            Command line to run before executing a task in a worker.
+            Default is ''.
 
         see_worker_output: bool
-            Prints worker standard output if true
-
-
+            Prints worker standard output when a task finishes.
+            Default is False.
     """
 
     def __init__(self,
@@ -470,7 +472,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
+                 storage_access=None,
                  source=False,
+                 autolabel=False,
+                 autolabel_window=1,
+                 autocategory=False,
                  init_command="",
                  full_debug=True,
                  see_worker_output=False):
@@ -491,6 +497,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.env = env
         self.init_command = init_command
         self.shared_fs = shared_fs
+        self.storage_access = storage_access
         self.working_dir = working_dir
         self.used_names = {}
         self.shared_files = set()
@@ -498,6 +505,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.worker_output = see_worker_output
         self.full = full_debug
         self.source = source
+        self.autolabel = autolabel
+        self.autolabel_window = autolabel_window
+        self.autocategory = autocategory
         self.cancel_value = multiprocessing.Value('i', 1)
 
         # Resolve ambiguity when password and password_file are both specified
@@ -513,8 +523,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
         if self.shared_fs is True:
             self.launch_cmd += " --shared-fs"
-        if self.source is True:
-            self.launch_cmd += " --source"
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -542,6 +550,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "collector_queue": self.collector_queue,
                                  "see_worker_output": self.worker_output,
                                  "full": self.full,
+                                 "autolabel": self.autolabel,
+                                 "autolabel_window": self.autolabel_window,
+                                 "autocategory": self.autocategory,
                                  "cancel_value": self.cancel_value,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
@@ -697,35 +708,14 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
 
-        # Obtain function information and put into dictionary
-        if self.source:
-            # Obtain function information and put into dictionary
-            source_code = inspect.getsource(func)
-            name = func.__name__
-            function_info = {"source code": source_code,
-                             "name": name,
-                             "args": args,
-                             "kwargs": kwargs}
-
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
-        else:
-            # Serialize function information
-            function_info = pack_apply_message(func, args, kwargs,
-                                               buffer_threshold=1024 * 1024,
-                                               item_threshold=1024)
-
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
+        self._serialize_function(function_data_file, func, args, kwargs)
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
+        category = func.__qualname__ if self.autocategory else 'parsl-default'
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
+               "category": category,
                "result_loc": function_result_file,
                "input_files": input_files,
                "output_files": output_files,
@@ -733,6 +723,24 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.task_queue.put_nowait(msg)
 
         return fu
+
+    def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
+        """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
+        and serializes it to the file fn_path."""
+
+        # Either build a dictionary with the source of the function, or pickle
+        # the function directly:
+        if self.source:
+            function_info = {"source code": inspect.getsource(parsl_fn),
+                             "name": parsl_fn.__name__,
+                             "args": parsl_fn_args,
+                             "kwargs": parsl_fn_kwargs}
+        else:
+            function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
+                                                             buffer_threshold=1024 * 1024,
+                                                             item_threshold=1024)}
+            with open(fn_path, "wb") as f_out:
+                pickle.dump(function_info, f_out)
 
     def scale_out(self, *args, **kwargs):
         """Scale out method. Not implemented.
@@ -768,3 +776,56 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         if value is not None:
             self._run_dir = value
         return self._run_dir
+
+
+def explain_task_exit_status(wq_task, parsl_id):
+    """Returns a string with the reason why a task failed."""
+
+    status = wq_task.return_status  # aka exit code
+    wq_result = wq_task.result
+
+    if status != 0:
+        reason = "Wrapper Script Failure: "
+        if status == 1:
+            reason += "problem parsing command line options"
+        elif status == 2:
+            reason += "problem loading function data"
+        elif status == 3:
+            reason += "problem remapping file names"
+        elif status == 4:
+            reason += "problem writing out function result"
+        else:
+            reason += "unable to process wrapper script failure with status = {}".format(status)
+        reason += "\nTrace:\n" + str(wq_task.output)
+# WorkQueue system failure
+    else:
+        reason = "work queue result: "
+        if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS:
+            reason += "succesful execution"
+        elif wq_result == wq.WORK_QUEUE_RESULT_INPUT_MISSING:
+            reason += "missing input file"
+        elif wq_result == wq.WORK_QUEUE_RESULT_OUTPUT_MISSING:
+            reason += "unable to generate output file"
+        elif wq_result == wq.WORK_QUEUE_RESULT_STDOUT_MISSING:
+            reason += "stdout has been truncated"
+        elif wq_result == wq.WORK_QUEUE_RESULT_SIGNAL:
+            reason += "task terminated with a signal"
+        elif wq_result == wq.WORK_QUEUE_RESULT_RESOURCE_EXHAUSTION:
+            reason += "task used more resources than requested"
+        elif wq_result == wq.WORK_QUEUE_RESULT_TASK_TIMEOUT:
+            reason += "task ran past the specified end time"
+        elif wq_result == wq.WORK_QUEUE_RESULT_UNKNOWN:
+            reason += "result could not be classified"
+        elif wq_result == wq.WORK_QUEUE_RESULT_FORSAKEN:
+            reason += "task failed, but not a task error"
+        elif wq_result == wq.WORK_QUEUE_RESULT_MAX_RETRIES:
+            reason += "unable to complete after specified number of retries"
+        elif wq_result == wq.WORK_QUEUE_RESULT_TASK_MAX_RUN_TIME:
+            reason += "task ran for more than the specified time"
+        elif wq_result == wq.WORK_QUEUE_RESULT_DISK_ALLOC_FULL:
+            reason += "task needed more space to complete task"
+        elif wq_result == wq.WORK_QUEUE_RESULT_RMONITOR_ERROR:
+            reason += "task failed because the monitor did not produce an output"
+        else:
+            reason += "unable to process Work Queue system failure"
+    return reason

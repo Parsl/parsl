@@ -44,7 +44,7 @@ def create_dirs(cwd):
         for i in range(0, random.randint(1, 5)):
             rdir = '{0}/{1}'.format(rel_dir, i)
             os.makedirs(rdir)
-            with open('{0}/results'.format(rdir, i), 'w') as f:
+            with open('{0}/results'.format(rdir), 'w') as f:
                 f.write("{0} {1} - test data\n".format(i, dir))
 
     for dir in ['neb01', 'neb02', 'neb03', 'neb04']:
