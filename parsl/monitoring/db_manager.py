@@ -354,7 +354,7 @@ class DatabaseManager:
         If that happens, the message will be added to deferred_resource_messages and processed later.
 
         """
-        inserted_tasks = set()
+        inserted_tasks = set()  # type: Set[object]
 
         """
         like inserted_tasks but for task,try tuples
