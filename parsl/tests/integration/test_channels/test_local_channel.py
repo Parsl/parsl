@@ -9,10 +9,10 @@ def test_env():
     rc, stdout, stderr = lc.execute_wait("env", 1)
 
     stdout = stdout.split('\n')
-    x = [l for l in stdout if l.startswith("PATH=")]
+    x = [s for s in stdout if s.startswith("PATH=")]
     assert x, "PATH not found"
 
-    x = [l for l in stdout if l.startswith("HOME=")]
+    x = [s for s in stdout if s.startswith("HOME=")]
     assert x, "HOME not found"
 
     print("RC:{} \nSTDOUT:{} \nSTDERR:{}".format(rc, stdout, stderr))
@@ -26,13 +26,13 @@ def test_env_mod():
     rc, stdout, stderr = lc.execute_wait("env", 1, {'TEST_ENV': 'fooo'})
 
     stdout = stdout.split('\n')
-    x = [l for l in stdout if l.startswith("PATH=")]
+    x = [s for s in stdout if s.startswith("PATH=")]
     assert x, "PATH not found"
 
-    x = [l for l in stdout if l.startswith("HOME=")]
+    x = [s for s in stdout if s.startswith("HOME=")]
     assert x, "HOME not found"
 
-    x = [l for l in stdout if l.startswith("TEST_ENV=fooo")]
+    x = [s for s in stdout if s.startswith("TEST_ENV=fooo")]
     assert x, "User set env missing"
 
 
