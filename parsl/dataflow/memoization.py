@@ -1,7 +1,6 @@
 from __future__ import annotations
 import hashlib
 from functools import lru_cache, singledispatch
-from inspect import getsource
 import logging
 from parsl.dataflow.taskrecord import TaskRecord
 
@@ -108,22 +107,12 @@ def id_for_memo_dict(denormalized_dict: dict, output_ref: bool = False) -> bytes
 # that the .register() call, so that the cache-decorated version is registered.
 @id_for_memo.register(types.FunctionType)
 @lru_cache()
-def id_for_memo_function(function: types.FunctionType, output_ref: bool = False) -> bytes:
-    """This produces function hash material using the source definition of the
-       function.
-
-       The standard serialize_object based approach cannot be used as it is
-       too sensitive to irrelevant facts such as the source line, meaning
-       a whitespace line added at the top of a source file will cause the hash
-       to change.
+def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> bytes:
+    """This will extract some, but deliberately not all, details from the function.
+    The intention is to allow the function to be modified in source file without
+    causing memoization invalidation.
     """
-    logger.debug("serialising id_for_memo_function for function {}, type {}".format(function, type(function)))
-    try:
-        fn_source = getsource(function)
-    except Exception as e:
-        logger.warning("Unable to get source code for app caching. Recommend creating module. Exception was: {}".format(e))
-        fn_source = function.__name__
-    return serialize(fn_source.encode('utf-8'))
+    return serialize(["types.FunctionType", f.__name__, f.__module__])
 
 
 class Memoizer(object):
