@@ -618,6 +618,8 @@ if __name__ == "__main__":
         logger.info("poll_period: {}".format(args.poll))
         logger.info("address_probe_timeout: {}".format(args.address_probe_timeout))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
+        logger.info("Heartbeat threshold: {}".format(args.hb_threshold))
+        logger.info("Heartbeat period: {}".format(args.hb_period))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
