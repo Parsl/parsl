@@ -53,9 +53,10 @@ ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category map_file function_file 
 WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason status')
 
 # Support structure to report parsl filenames to work queue.
-# parsl_name is the filepath attribute of a parsl file object.
+# parsl_name is the local_name or filepath attribute of a parsl file object.
+# stage tells whether the file should be copied by work queue to the workers.
 # cache tells whether the file should be cached at workers. Only valid if stage == True
-ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name cache')
+ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 class WorkqueueTaskFailure(perror.AppException):
     """A failure executing a task in workqueue
@@ -207,13 +208,11 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
             # not staged by work queue.
             if not shared_fs:
                 for spec in task.input_files:
-                    (name, cache) = (spec.parsl_name, spec.cache)
-                    if not os.path.isabs(name):
-                        t.specify_input_file(name, name, cache=cache)
+                    if spec.stage:
+                        t.specify_input_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
                 for spec in task.output_files:
-                    (name, cache) = (spec.parsl_name, spec.cache)
-                    if not os.path.isabs(name):
-                        t.specify_output_file(name, name, cache=cache)
+                    if spec.stage:
+                        t.specify_output_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
 
             # Submit the task to the WorkQueue object
             logger.debug("Submitting task {} to WorkQueue".format(task.id))
@@ -601,7 +600,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         input_files = []
         output_files = []
 
-        # Determine which input and output files should be cached at the workers
+        # Determine the input and output files that will exist at the workes:
         input_files += [self._register_file(f) for f in kwargs.get("inputs", []) if isinstance(f, File)]
         output_files += [self._register_file(f) for f in kwargs.get("outputs", []) if isinstance(f, File)]
 
@@ -612,7 +611,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             # Add appropriate input and output files from "stdout" and "stderr" keyword arguments
             if kwarg == "stdout" or kwarg == "stderr":
                 if maybe_file:
-                    output_files.append(self._std_output_filename(kwarg, maybe_file))
+                    output_files.append(self._std_output_to_wq(kwarg, maybe_file))
             # For any other keyword that looks like a file, assume it is an input file
             elif isinstance(maybe_file, File):
                 input_files.append(self._register_file(maybe_file))
@@ -683,9 +682,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             pickle.dump(file_translation_map, f_out)
 
     def _register_file(self, parsl_file):
-        """Generates a tuple (parsl_file.filepath, cache) to give to work
-        queue. cache is always False if self.use_cache is False.
+        """Generates a tuple (parsl_file.filepath, stage, cache) to give to
+        work queue. cache is always False if self.use_cache is False.
         Otherwise, it is set to True if parsl_file is used more than once.
+        stage is True if the file needs to be copied by work queue. (i.e., not
+        a URL or an absolute path)
 
         It has the side-effect of adding parsl_file to a list of registered
         files.
@@ -696,15 +697,22 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         to_cache = False
         if self.use_cache:
             to_cache = parsl_file in self.registered_files
+
+        to_stage = False
+        if parsl_file.scheme == 'file' or parsl_file.local_path:
+            to_stage = not os.path.isabs(parsl_file.filepath)
+
         self.registered_files.add(parsl_file)
 
-        return ParslFileToWq(parsl_file.filepath, to_cache)
+        return ParslFileToWq(parsl_file.filepath, to_stage, to_cache)
 
-    def _std_output_filename(self, fdname, stdfspec):
+    def _std_output_to_wq(self, fdname, stdfspec):
         """Find the name of the file that will contain stdout or stderr and
-        return a ParslFileToWq with it. For these files, cache is always False."""
+        return a ParslFileToWq with it. These files are never cached"""
         fname, mode = putils.get_std_fname_mode(fdname, stdfspec)
-        return ParslFileToWq(fname, cache=False)
+        to_stage = not os.path.isabs(fname)
+        print(ParslFileToWq(fname, stage=to_stage, cache=False))
+        return ParslFileToWq(fname, stage=to_stage, cache=False)
 
     def scale_out(self, *args, **kwargs):
         """Scale out method. Not implemented.

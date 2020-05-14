@@ -14,10 +14,13 @@ def load_pickled_file(filename):
 def remap_location(mapping, parsl_file):
     if not isinstance(parsl_file, File):
         return
-
-    master_location = parsl_file.filepath
-    if master_location in mapping:
-        parsl_file.local_path = mapping[master_location]
+    # Below we rewrite .local_path when scheme != file only when the local_name
+    # was given by the main parsl process.  This is the case when scheme !=
+    # 'file' but .local_path (via filepath) is in mapping.
+    if parsl_file.scheme == 'file' or parsl_file.local_path:
+        master_location = parsl_file.filepath
+        if master_location in mapping:
+            parsl_file.local_path = mapping[master_location]
 
 
 if __name__ == "__main__":
