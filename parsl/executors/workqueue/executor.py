@@ -22,9 +22,6 @@ from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import workqueue_worker
 
-from typing import List, Optional
-from parsl.data_provider.staging import Staging
-
 try:
     import work_queue as wq
     from work_queue import WorkQueue
@@ -479,7 +476,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
-                 storage_access: Optional[List[Staging]] = None,
+                 storage_access=None,
                  source=False,
                  autolabel=False,
                  autolabel_window=1,
