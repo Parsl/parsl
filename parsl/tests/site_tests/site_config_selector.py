@@ -13,7 +13,7 @@ def get_site_config(hostname):
         print("Loading Frontera config")
         from parsl.tests.configs.frontera import config
     else:
-        print("Loading Local HTEX config"
+        print("Loading Local HTEX config")
         from parsl.tests.configs.htex_local import config
         config.executors[0].max_workers = 2
         config.executors[0].provider.init_blocks=2

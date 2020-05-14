@@ -5,8 +5,6 @@ import pytest
 import parsl
 from parsl.app.app import python_app  # , bash_app
 from parsl.providers.provider_base import JobState, JobStatus
-from parsl.tests.site_tests.site_config_selector import config
-local_config = config
 
 
 @python_app
@@ -21,6 +19,9 @@ def platform(sleep=10, stdout=None):
 def test_provider():
     """ Provider scaling
     """
+    from parsl.tests.site_tests.site_config_selector import config
+    parsl.load(config)
+
     dfk = parsl.dfk()
     name = list(dfk.executors.keys())[0]
     print("Trying to get executor : ", name)
@@ -49,6 +50,7 @@ def test_provider():
 
     current_jobs = executor._get_job_ids()
     assert len(current_jobs) == 0, "Expected current_jobs == 0"    
+    parsl.clear()
     
 
 if __name__ == '__main__':
