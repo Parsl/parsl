@@ -11,15 +11,16 @@ class States(IntEnum):
     # state; but the monitoring database may represent a task in this state
     # based on non-DFK information received from monitor_wrapper.
 
-    done = 3
+    exec_done = 3
     failed = 4
     dep_fail = 5
     launched = 7
     fail_retryable = 8
+    memo_done = 9
 
 
 # states from which we will never move to another state
-FINAL_STATES = [States.done, States.failed, States.dep_fail]
+FINAL_STATES = [States.exec_done, States.memo_done, States.failed, States.dep_fail]
 
 # states which are final and which indicate a failure. This must
 # be a subset of FINAL_STATES
