@@ -271,8 +271,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
                                        logdir=worker_logdir)
-        self.launch_cmd = l_cmd
-        logger.debug("Launch command: {}".format(self.launch_cmd))
+        self.formatted_launch_cmd = l_cmd
+        logger.debug("Launch command: {}".format(self.formatted_launch_cmd))
 
         self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
@@ -565,7 +565,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         r = []
         for i in range(blocks):
             external_block_id = str(len(self.blocks))
-            launch_cmd = self.launch_cmd.format(block_id=external_block_id)
+            launch_cmd = self.formatted_launch_cmd.format(block_id=external_block_id)
             internal_block = self.provider.submit(launch_cmd, 1)
             logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
             if not internal_block:
