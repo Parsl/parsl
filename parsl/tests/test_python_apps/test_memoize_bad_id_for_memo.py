@@ -20,7 +20,7 @@ class FailingMemoizerTestError(ValueError):
 
 @id_for_memo.register(FailingMemoizable)
 def failing_memoizer(v, output_ref=False):
-    raise FailingMemoizerTestError("BENC TODO")
+    raise FailingMemoizerTestError("Deliberate memoizer failure")
 
 
 @python_app(cache=True)

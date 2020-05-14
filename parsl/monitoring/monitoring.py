@@ -349,7 +349,7 @@ class Hub:
         Parameters
         ----------
         hub_address : str
-             The ip address at which the workers will be able to reach the Hub. Default: "127.0.0.1"
+             The ip address at which the workers will be able to reach the Hub.
         hub_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
