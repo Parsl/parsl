@@ -1,7 +1,9 @@
 import parsl
-from parsl.configs.htex_local import config
 from parsl import python_app
 import pytest
+from parsl.tests.configs.htex_local import config
+
+local_config = config
 
 
 @python_app
@@ -13,13 +15,13 @@ def compute_descript(size=1000):
 
 @pytest.mark.local
 def test_1480(size=10**6):
-    parsl.load(config)
+    #parsl.load(config)
     x = compute_descript(size=size)
 
     # This should raise a TypeError: can't pickle memoryview objects
     with pytest.raises(TypeError):
         x.result()
-    parsl.clear()
+    #parsl.clear()
 
 
 if __name__ == "__main__":
