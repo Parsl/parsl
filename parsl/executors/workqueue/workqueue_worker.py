@@ -3,6 +3,7 @@ from parsl.utils import get_std_fname_mode
 import sys
 import pickle
 
+
 def load_pickled_file(filename):
     try:
         with open(filename, "rb") as f_in:
@@ -10,6 +11,7 @@ def load_pickled_file(filename):
     except pickle.PickleError:
         print("Error while unplickling {}".format(filename))
         sys.exit(2)
+
 
 def remap_location(mapping, parsl_file):
     if not isinstance(parsl_file, File):

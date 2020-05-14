@@ -58,6 +58,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 # cache tells whether the file should be cached at workers. Only valid if stage == True
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
+
 class WorkqueueTaskFailure(perror.AppException):
     """A failure executing a task in workqueue
 
