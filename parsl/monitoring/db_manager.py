@@ -136,6 +136,9 @@ class Database:
     # which will (in a complete execution) end in a terminal state.
     # do some of these rows need a try crossreference (not as part of PK)
     # so that status transitions associated with a particular try can happen?
+
+    # TODO: the foreign key should be (try_id, task_id, run_id) together rather than
+    # as separates - see how the primary key constraint works
     class Status(Base):
         __tablename__ = STATUS
         task_id = Column(Integer, sa.ForeignKey(
@@ -143,6 +146,7 @@ class Database:
         task_status_name = Column(Text, nullable=False)
         timestamp = Column(DateTime, nullable=False)
         run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
+        try_id = Column('try_id', Integer, nullable=False)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id',
                                  'task_status_name', 'timestamp'),
@@ -204,9 +208,6 @@ class Database:
 
         # the 'try' table will have some relevance here? rows in try table?
         task_fail_count = Column('task_fail_count', Integer, nullable=False)
-
-        # this should turn into a column in multiple rows of the try table
-        task_fail_history = Column('task_fail_history', Text, nullable=True)
 
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id'),

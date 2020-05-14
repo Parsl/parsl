@@ -39,8 +39,8 @@ class ParslExecutor(metaclass=ABCMeta):
     # and __init__ removed.
 
     @abstractmethod
-    def __init__(self, label: str) -> None:
-        self.label = label
+    def __init__(self) -> None:
+        self.label = ""  # type: str
 
     @abstractmethod
     def start(self) -> None:
