@@ -1,13 +1,14 @@
 import os
 import platform
-hostname = platform.uname().node
+import copy
 
-
-def get_site_config(hostname):
+def fresh_config():
+    hostname = os.getenv('PARSL_HOSTNAME', platform.uname().node)
     print(f"Loading config for {hostname}")
 
     if 'thetalogin' in hostname:
-        from parsl.tests.configs.theta import config
+        from parsl.tests.configs.theta import fresh_config
+        config = fresh_config()
         print("Loading Theta config")
     elif 'frontera' in hostname:
         print("Loading Frontera config")
@@ -23,5 +24,5 @@ def get_site_config(hostname):
     return config
 
 
-preferred_hostname = os.getenv('PARSL_HOSTNAME', hostname)
-config = get_site_config(preferred_hostname)
+
+
