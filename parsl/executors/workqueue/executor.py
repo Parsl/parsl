@@ -107,7 +107,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
         q.specify_password_file(project_password_file)
     if autolabel:
         q.enable_monitoring()
-        q.specify_category_mode('parsl-default', WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
         if autolabel_window is not None:
             q.tune('category-steady-n-tasks', autolabel_window)
 
@@ -201,12 +200,9 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 logger.error("Unable to create task: {}".format(e))
                 continue
 
-            if autocategory:
-                t.specify_category(category)
-                if autolabel:
-                    q.specify_category_mode(category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
-            else:
-                t.specify_category('parsl-default')
+            t.specify_category(category)
+            if autolabel:
+                q.specify_category_mode(category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
 
             # Specify environment variables for the task
             if env is not None:
@@ -716,9 +712,10 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
+        category = func.__qualname__ if self.autocategory else 'parsl-default'
         msg = {"task_id": task_id,
                "data_loc": function_data_file,
-               "category": func.__qualname__,
+               "category": category,
                "result_loc": function_result_file,
                "input_files": input_files,
                "output_files": output_files,
