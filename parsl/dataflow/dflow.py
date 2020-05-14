@@ -750,6 +750,7 @@ class DataFlowKernel(object):
                     'exec_fu': None,
                     'fail_count': 0,
                     'fail_history': [],
+                    'from_memo': None,
                     'ignore_for_cache': ignore_for_cache,
                     'from_memo': None,
                     'status': States.unsched,
