@@ -1,6 +1,6 @@
 import os
 import platform
-import copy
+
 
 def fresh_config():
     hostname = os.getenv('PARSL_HOSTNAME', platform.uname().node)
@@ -17,12 +17,11 @@ def fresh_config():
         print("Loading Local HTEX config")
         from parsl.tests.configs.htex_local import config
         config.executors[0].max_workers = 2
-        config.executors[0].provider.init_blocks=2
-        config.executors[0].provider.max_blocks=2
-        config.executors[0].provider.min_blocks=2
-        
+        config.executors[0].provider.init_blocks = 2
+        config.executors[0].provider.max_blocks = 2
+        config.executors[0].provider.min_blocks = 2
+
     return config
 
 
-
-
+config = fresh_config()

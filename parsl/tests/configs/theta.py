@@ -6,6 +6,7 @@ from parsl.addresses import address_by_hostname
 
 from .user_opts import user_opts
 
+
 def fresh_config():
     return Config(
         executors=[
@@ -32,5 +33,6 @@ def fresh_config():
             )
         ],
     )
+
 
 config = fresh_config()

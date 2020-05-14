@@ -1,9 +1,9 @@
 import argparse
-import time
 import pytest
 import parsl
 from parsl.app.app import python_app  # , bash_app
 from parsl.tests.site_tests.site_config_selector import fresh_config
+
 
 @python_app
 def platform(sleep=10, stdout=None):
@@ -39,7 +39,7 @@ def test_platform(n=2, sleep_dur=10):
     assert len(pinfo) == 2, "Expected two nodes, instead got {}".format(pinfo)
 
     print("Test passed")
-    
+
     parsl.clear()
     del dfk
     return True
@@ -53,7 +53,7 @@ if __name__ == '__main__':
                         help="Count of apps to launch")
     parser.add_argument("-t", "--time", default="60",
                         help="Sleep time for each app")
-    
+
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
     args = parser.parse_args()

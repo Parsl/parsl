@@ -1,11 +1,11 @@
 import argparse
-import time
 import pytest
-
 import parsl
+import time
 from parsl.app.app import python_app  # , bash_app
-from parsl.providers.provider_base import JobState, JobStatus
+from parsl.providers.provider_base import JobState
 from parsl.tests.site_tests.site_config_selector import fresh_config
+
 
 @python_app
 def platform(sleep=10, stdout=None):
@@ -25,10 +25,9 @@ def test_provider():
     name = list(dfk.executors.keys())[0]
     print("Trying to get executor : ", name)
 
-    
     x = platform(sleep=0)
     print(x.result())
-    
+
     executor = dfk.executors[name]
     provider = dfk.executors[name].provider
 
@@ -38,21 +37,21 @@ def test_provider():
 
     status = provider.status(current_jobs)
     assert status[0].state == JobState.RUNNING, "Expected job to be in state RUNNING"
-    
+
     # Scale down to 0
     scale_in_status = executor.scale_in(blocks=1)
     time.sleep(60)
     status = provider.status(scale_in_status)
     print("Block status: ", status)
-    assert status[0].terminal == True, "Terminal state"
+    assert status[0].terminal is True, "Terminal state"
     print("Job in terminal state")
 
     current_jobs = executor._get_job_ids()
-    assert len(current_jobs) == 0, "Expected current_jobs == 0"    
+    assert len(current_jobs) == 0, "Expected current_jobs == 0"
     parsl.clear()
     del dfk
     return True
-    
+
 
 if __name__ == '__main__':
 
@@ -62,7 +61,7 @@ if __name__ == '__main__':
                         help="Count of apps to launch")
     parser.add_argument("-t", "--time", default="60",
                         help="Sleep time for each app")
-    
+
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
     args = parser.parse_args()
@@ -88,5 +87,3 @@ if __name__ == '__main__':
         parsl.load(config)
 
     x = test_provider()
-
-    
