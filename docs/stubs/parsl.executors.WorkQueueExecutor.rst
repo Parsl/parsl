@@ -14,8 +14,6 @@ parsl.executors.WorkQueueExecutor
    .. autosummary::
    
       ~WorkQueueExecutor.__init__
-      ~WorkQueueExecutor.create_name_tuple
-      ~WorkQueueExecutor.create_new_name
       ~WorkQueueExecutor.run_dir
       ~WorkQueueExecutor.scale_in
       ~WorkQueueExecutor.scale_out
