@@ -14,6 +14,7 @@ then
     exit 0
 fi
 
+
 create_conda() {
     pushd .
     cd $PARSL_ROOT
@@ -22,16 +23,43 @@ create_conda() {
     then
 	echo "On theta"
 	module load miniconda-3/latest
-	conda create -p $CONDA_TARGET --clone $CONDA_PREFIX
-	conda activate $CONDA_TARGET
+	conda create -p $CONDA_TARGET --clone $CONDA_PREFIX --yes --force
+	conda activate $CONDA_TARGET 
 	# Theta is weird, we do explicit install
 	pip install -r test-requirements.txt
-	yes | conda install pip psutil
+	conda install pip psutil --yes
 	python3 setup.py install
+	echo "module load miniconda-3/latest;"           >  ~/setup_parsl_test_env.sh
+ 	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 	return
+
+    elif [[ "$(hostname)" =~ .*frontera.* ]]
+    then
+	echo "On Frontera"
+	if [[ -d ~/anaconda3 ]]
+	then
+	    echo "Loading anaconda3 from ~/anaconda3"
+	    source ~/anaconda3/bin/activate
+	else
+	    echo "Please install conda to your home dir at ~/anaconda3"
+	fi
+	conda create -p $CONDA_TARGET python=3.7 --yes --force
+	conda activate $CONDA_TARGET
+	echo "source ~/anaconda3/bin/activate;"          >  ~/setup_parsl_test_env.sh
+ 	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
+
+    elif [[ "$(hostname)" =~ .*cori.* ]]
+    then
+	echo "On Cori"
+	module load python/3.7-anaconda-2019.07
+	conda create -p $CONDA_TARGET python=3.7 --yes --force
+	conda activate $CONDA_TARGET
+	echo "module load python/3.7-anaconda-2019.07;"  >  ~/setup_parsl_test_env.sh
+ 	echo "conda activate $CONDA_TARGET"              >> ~/setup_parsl_test_env.sh
+
     fi
 
-    yes | conda install pip psutil
+    echo "Installing parsl from $PARSL_ROOT"
     python3 -m pip install .
     pip install -r test-requirements.txt
 
