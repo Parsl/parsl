@@ -21,7 +21,7 @@ from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.error import OptionalModuleMissing
-from parsl.executors.workqueue import workqueue_worker
+from parsl.executors.workqueue import exec_parsl_function
 
 from collections import namedtuple
 
@@ -195,7 +195,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     t.specify_environment_variable(var, env[var])
 
             # Specify script, and data/result files for task
-            t.specify_input_file(workqueue_worker.__file__, cache=True)
+            t.specify_input_file(exec_parsl_function.__file__, cache=True)
             t.specify_input_file(task.function_file, cache=False)
             t.specify_input_file(task.map_file, cache=False)
             t.specify_output_file(task.result_file, cache=False)
@@ -506,7 +506,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 self.project_password_file = None
 
         # Build foundations of the launch command
-        self.launch_cmd = ("python3 workqueue_worker.py {mapping} {function} {result}")
+        self.launch_cmd = ("python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
