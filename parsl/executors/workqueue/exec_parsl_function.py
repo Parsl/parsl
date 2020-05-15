@@ -3,6 +3,13 @@ from parsl.utils import get_std_fname_mode
 import sys
 import pickle
 
+# Exit codes:
+# 0: The function was evaluated to completion. The result or any exception
+#    wrapped with RemoteExceptionWrapper were written to result_file.
+# anything else: There was an error that prevented writing to the result file altogether.
+#                The exit code corresponds to whatever the python interpreter gives.
+#
+
 
 def load_pickled_file(filename):
     try:
