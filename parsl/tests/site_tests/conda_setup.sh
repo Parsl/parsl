@@ -51,7 +51,6 @@ create_conda() {
     elif [[ "$(hostname -f)" =~ .*summit.* ]]
     then
         echo "On Summit"
-
         module load ibm-wml-ce
         conda create -p $CONDA_TARGET --yes --force
         conda activate $PWD/$CONDA_TARGET
