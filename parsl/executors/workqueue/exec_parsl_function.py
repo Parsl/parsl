@@ -59,6 +59,7 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
             # Treat anything else as a possible File to be remapped.
             remap_location(mapping, maybe_file)
 
+
 def unpack_function(function_info, user_namespace):
     if "source code" in function_info:
         return unpack_source_code_function(function_info, user_namespace)
@@ -67,6 +68,7 @@ def unpack_function(function_info, user_namespace):
     else:
         raise ValueError("Function file does not have a valid function representation.")
 
+
 def unpack_source_code_function(function_info, user_namespace):
     source_code = function_info["source code"]
     name = function_info["name"]
@@ -74,10 +76,12 @@ def unpack_source_code_function(function_info, user_namespace):
     kwargs = function_info["kwargs"]
     return (source_code, name, args, kwargs)
 
+
 def unpack_byte_code_function(function_info, user_namespace):
     from ipyparallel.serialize import unpack_apply_message
     func, args, kwargs = unpack_apply_message(function_info["byte code"], user_namespace, copy=False)
     return (func, 'parsl_function_name', args, kwargs)
+
 
 def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
     # Returns a tuple (code, result_name)
@@ -101,15 +105,17 @@ def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
 
     return (code, result_name)
 
+
 def encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
-    # source_list = source_code.split('\n')[1:]
-    # full_source = ""
-    # for line in source_list:
-    #     full_source = full_source + line + "\n"
-    # code = "{0} = {1}(*{2}, **{3})".format(resultname, name,
-    #                                         argname, kwargname)
-    # code = full_source + code
-    pass
+    # We drop the first line as it names the parsl decorator used (i.e., @python_app)
+    source = fn.split('\n')[1:]
+    fn_app = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
+
+    source.append(fn_app)
+
+    code = "\n".join(source)
+    return code
+
 
 def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
     user_namespace.update({fn_name: fn})
