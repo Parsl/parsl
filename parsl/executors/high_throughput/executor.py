@@ -492,11 +492,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         workers = self.command_client.run("MANAGERS")
         return workers
 
-    @property
-    def block_status(self):
-        blocks = self.command_client.run("BLOCKS")
-        return blocks
-
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
 
