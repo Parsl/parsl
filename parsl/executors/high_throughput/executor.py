@@ -4,7 +4,6 @@ import logging
 import threading
 import queue
 import pickle
-import time
 from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple, Union
 import math
@@ -630,7 +629,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                     block_ids_to_kill = [x[0] for x in sorted_blks[:blocks] if x[1][0] == 0]
                 else:
                     block_ids_to_kill = []
-                    for  x in sorted_blks:
+                    for x in sorted_blks:
                         if x[1][1] > max_idletime and x[1][0] == 0:
                             block_ids_to_kill.append(x[0])
                             if len(block_ids_to_kill) == blocks:
