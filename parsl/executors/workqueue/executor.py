@@ -486,6 +486,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Use conda-pack to prepare a self-contained Python evironment for
             each task. This greatly increases task latency, but does not
             require a common environment or shared FS on execution nodes.
+            Implies source=True.
 
         autolabel: bool
             Use the Resource Monitor to automatically determine resource
@@ -556,7 +557,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.registered_files = set()
         self.worker_output = see_worker_output
         self.full = full_debug
-        self.source = source
+        self.source = True if pack else source
         self.pack = pack
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
