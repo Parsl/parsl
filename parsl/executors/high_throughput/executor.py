@@ -636,7 +636,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 else:
                     block_ids_to_kill = []
                     for  x in sorted_blks:
-                        if time.time() - x[1][1] > max_idletime and x[1][0] == 0:
+                        if x[1][1] > max_idletime and x[1][0] == 0:
                             block_ids_to_kill.append(x[0])
                             if len(block_ids_to_kill) == blocks:
                                 break
