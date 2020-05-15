@@ -28,8 +28,8 @@ user_opts = {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },
     'cori': {
-      'worker_init': 'source ~/setup_parsl_test_env.sh;',
-    },  
+        'worker_init': 'source ~/setup_parsl_test_env.sh;',
+    },
     # 'comet': {
     #     'username': COMET_USERNAME,
     #     'script_dir': '/home/{}/parsl_scripts'.format(COMET_USERNAME),
@@ -134,6 +134,7 @@ user_opts = {
     #    'worker_init': 'init commands',  # worker_init for remote systems
     #    'script_dir': "/path"  # script directory on remote systems
     # }
+    #
 }  # type: Dict[str, Any]
 
 # This block attempts to import local_user_opts.py, which

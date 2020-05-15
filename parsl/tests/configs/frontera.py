@@ -10,6 +10,7 @@ from .user_opts import user_opts
 of Frontera at TACC. Each job submitted to the scheduler will request 2 nodes for 10 minutes.
 """
 
+
 def fresh_config():
     return Config(
         executors=[
@@ -26,11 +27,11 @@ def fresh_config():
                     max_blocks=1,
                     partition='development',  # Replace with partition name
                     scheduler_options=user_opts['frontera']['scheduler_options'],
-                    
+
                     # Command to be run before starting a worker, such as:
                     # 'module load Anaconda; source activate parsl_env'.
                     worker_init=user_opts['frontera']['worker_init'],
-                    
+
                     # Ideally we set the walltime to the longest supported walltime.
                     walltime='00:10:00',
                     launcher=SrunLauncher(),
