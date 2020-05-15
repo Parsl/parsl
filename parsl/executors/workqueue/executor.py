@@ -228,11 +228,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             # Specify script, and data/result files for task
             if env_pkg is not None:
-                t.specify_file(package_run_script,
-                    os.path.basename(package_run_script), WORK_QUEUE_INPUT,
-                    cache=True)
-                t.specify_file(env_pkg, os.path.basename(env_pkg),
-                    WORK_QUEUE_INPUT, cache=True)
+                t.specify_file(package_run_script, os.path.basename(package_run_script), WORK_QUEUE_INPUT, cache=True)
+                t.specify_file(env_pkg, os.path.basename(env_pkg), WORK_QUEUE_INPUT, cache=True)
             t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
             t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
             t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
@@ -786,24 +783,19 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         if id(fn) in self.cached_envs:
             return self.cached_envs[id(fn)]
         source_code = inspect.getsource(fn).encode()
-        pkg_dir = os.path.join(tempfile.gettempdir(),
-                "python_package-{}".format(os.geteuid()))
+        pkg_dir = os.path.join(tempfile.gettempdir(), "python_package-{}".format(os.geteuid()))
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
-            subprocess.run([package_analyze_script, '-', spec.name],
-                    input=source_code, check=True)
+            subprocess.run([package_analyze_script, '-', spec.name], input=source_code, check=True)
             with open(spec.name, mode='rb') as f:
-                pkg = os.path.join(pkg_dir,
-                    "pack-{}.tar.gz".format(hashlib.sha256(f.read()).hexdigest()))
+                pkg = os.path.join(pkg_dir, "pack-{}.tar.gz".format(hashlib.sha256(f.read()).hexdigest()))
             if os.access(pkg, os.R_OK):
                 self.cached_envs[id(fn)] = pkg
                 return pkg
-            (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp',
-                    suffix='.tar.gz')
+            (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp', suffix='.tar.gz')
             os.close(fd)
             with open(os.devnull, 'w') as devnull:
-                subprocess.run([package_create_script, spec.name, tarball],
-                    stdout=devnull, check=True)
+                subprocess.run([package_create_script, spec.name, tarball], stdout=devnull, check=True)
             os.rename(tarball, pkg)
             self.cached_envs[id(fn)] = pkg
             return pkg
