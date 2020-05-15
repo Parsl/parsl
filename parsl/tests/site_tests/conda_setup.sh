@@ -24,13 +24,13 @@ create_conda() {
 	echo "On theta"
 	module load miniconda-3/latest
 	conda create -p $CONDA_TARGET --clone $CONDA_PREFIX --yes --force
-	conda activate $CONDA_TARGET 
+	conda activate $CONDA_TARGET
 	# Theta is weird, we do explicit install
 	pip install -r test-requirements.txt
 	conda install pip psutil --yes
 	python3 setup.py install
 	echo "module load miniconda-3/latest;"           >  ~/setup_parsl_test_env.sh
- 	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
+	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 	return
 
     elif [[ "$(hostname)" =~ .*frontera.* ]]
@@ -46,7 +46,7 @@ create_conda() {
 	conda create -p $CONDA_TARGET python=3.7 --yes --force
 	conda activate $CONDA_TARGET
 	echo "source ~/anaconda3/bin/activate;"          >  ~/setup_parsl_test_env.sh
- 	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
+	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 
     elif [[ "$(hostname -f)" =~ .*summit.* ]]
     then
@@ -58,16 +58,20 @@ create_conda() {
 	conda install paramiko>=2.7.1 pip numpy psutil pandas --yes
 	# conda install --file requirements.txt --yes
 	echo "module load ibm-wml-ce"                    >  ~/setup_parsl_test_env.sh
- 	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
+	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 
     elif [[ "$(hostname)" =~ .*cori.* ]]
     then
 	echo "On Cori"
 	module load python/3.7-anaconda-2019.07
+	# conda create --name=$CONDA_TARGET python=3.7 --yes --force
 	conda create -p $CONDA_TARGET python=3.7 --yes --force
-	conda activate $CONDA_TARGET
+	source activate $PWD/$CONDA_TARGET
+	# conda install pip --yes 
+	# pip install .
+	# pip install -r test-requirements.txt
 	echo "module load python/3.7-anaconda-2019.07;"  >  ~/setup_parsl_test_env.sh
- 	echo "conda activate $CONDA_TARGET"              >> ~/setup_parsl_test_env.sh
+	echo "source activate $PWD/$CONDA_TARGET"        >> ~/setup_parsl_test_env.sh
 
     fi
 
