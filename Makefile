@@ -79,7 +79,6 @@ workqueue_ex_test: $(DEPS) $(WORKQUEUE_INSTALL)  ## run all tests with workqueue
 	@$(work_queue_killcmd)
 	work_queue_worker localhost 9000  &> /dev/null &
 	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  pytest parsl -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order
-	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  pytest parsl -k "issue363" --config parsl/tests/configs/workqueue_ex_shared.py --cov=parsl --cov-append --cov-report= --random-order
 	@$(work_queue_killcmd)
 
 .PHONY: config_local_test
