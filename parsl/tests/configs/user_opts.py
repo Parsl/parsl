@@ -21,7 +21,15 @@ from typing import Any, Dict
 # COMET_USERNAME = "yadunand"
 
 user_opts = {
-    # "public_ip" : PUBLIC_IP,
+    'frontera': {
+        'worker_init': 'source ~/setup_parsl_test_env.sh;',
+    },
+    'theta': {
+        'worker_init': 'source ~/setup_parsl_test_env.sh;',
+    },
+    'cori': {
+      'worker_init': 'source ~/setup_parsl_test_env.sh;',
+    },  
     # 'comet': {
     #     'username': COMET_USERNAME,
     #     'script_dir': '/home/{}/parsl_scripts'.format(COMET_USERNAME),
