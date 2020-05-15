@@ -51,29 +51,6 @@ package_create_script = os.path.join(
 package_run_script = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "python_package_run")
 
-def _prepare_package(source_code):
-    pkg_dir = os.path.join(tempfile.gettempdir(),
-            "python_package-{}".format(os.geteuid()))
-    os.makedirs(pkg_dir, exist_ok=True)
-    with tempfile.NamedTemporaryFile(suffix='.py', mode='w') as src, \
-            tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
-        src.write(source_code)
-        src.flush()
-        os.fsync(src.fileno())
-        subprocess.check_call([package_analyze_script, src.name, spec.name])
-        with open(spec.name, mode='rb') as f:
-            pkg = os.path.join(pkg_dir,
-                "pack-{}.tar.gz".format(hashlib.sha256(f.read()).hexdigest()))
-        if os.access(pkg, os.R_OK):
-            return pkg
-        (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp',
-                suffix='.tar.gz')
-        os.close(fd)
-        with open(os.devnull, 'w') as devnull:
-            subprocess.check_call([package_create_script, spec.name, tarball],
-                stdout=devnull)
-        os.rename(tarball, pkg)
-        return pkg
 
 class WorkqueueTaskFailure(AppException):
     """A failure executing a task in workqueue
@@ -563,6 +540,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
         self.cancel_value = multiprocessing.Value('i', 1)
+        self.cached_envs = {}
 
         # Resolve ambiguity when password and password_file are both specified
         if self.project_password is not None and self.project_password_file is not None:
@@ -767,8 +745,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self._serialize_function(function_data_file, func, args, kwargs)
 
         if self.pack:
-            source_code = inspect.getsource(func)
-            env_pkg = _prepare_package(source_code)
+            env_pkg = self._prepare_package(func)
         else:
             env_pkg = None
 
@@ -804,6 +781,32 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                                              item_threshold=1024)}
         with open(fn_path, "wb") as f_out:
             pickle.dump(function_info, f_out)
+
+    def _prepare_package(self, fn):
+        if id(fn) in self.cached_envs:
+            return self.cached_envs[id(fn)]
+        source_code = inspect.getsource(fn).encode()
+        pkg_dir = os.path.join(tempfile.gettempdir(),
+                "python_package-{}".format(os.geteuid()))
+        os.makedirs(pkg_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
+            subprocess.run([package_analyze_script, '-', spec.name],
+                    input=source_code, check=True)
+            with open(spec.name, mode='rb') as f:
+                pkg = os.path.join(pkg_dir,
+                    "pack-{}.tar.gz".format(hashlib.sha256(f.read()).hexdigest()))
+            if os.access(pkg, os.R_OK):
+                self.cached_envs[id(fn)] = pkg
+                return pkg
+            (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp',
+                    suffix='.tar.gz')
+            os.close(fd)
+            with open(os.devnull, 'w') as devnull:
+                subprocess.run([package_create_script, spec.name, tarball],
+                    stdout=devnull, check=True)
+            os.rename(tarball, pkg)
+            self.cached_envs[id(fn)] = pkg
+            return pkg
 
     def scale_out(self, *args, **kwargs):
         """Scale out method. Not implemented.
