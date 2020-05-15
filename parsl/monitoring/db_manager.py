@@ -233,6 +233,9 @@ class Database:
         task_time_running = Column(
             'task_time_running', DateTime, nullable=True)
 
+        task_try_time_returned = Column(
+            'task_try_time_returned', DateTime, nullable=True)
+
         # this should turn into a text field with only the current
         # failure (if there is one) rather than concatenated messages.
         task_fail_history = Column('task_fail_history', Text, nullable=True)
@@ -485,7 +488,8 @@ class DatabaseManager:
                                  columns=['task_time_returned',
                                           'run_id', 'task_id', 'try_id',
                                           'task_fail_history',
-                                          'task_time_submitted'],
+                                          'task_time_submitted',
+                                          'task_try_time_returned'],
                                  messages=try_update_messages)
 
             """
@@ -647,7 +651,7 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
         logger.info("Starting dbm in dbm starter")
         dbm.start(priority_msgs, node_msgs, resource_msgs)
     except KeyboardInterrupt:
-        dbm.logger.exception("KeyboardInterrupt signal caught")
+        logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
         raise
     except Exception as e:

@@ -198,7 +198,7 @@ class DataFlowKernel(object):
         """
 
         info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
-                           'id', 'time_submitted', 'time_returned', 'executor']
+                           'id', 'time_submitted', 'time_returned', 'try_time_returned', 'executor']
 
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
@@ -270,6 +270,8 @@ class DataFlowKernel(object):
 
         task_record = self.tasks[task_id]
 
+        task_record['try_time_returned'] = datetime.datetime.now()
+
         if not future.done():
             raise ValueError("done callback called, despite future not reporting itself as done")
 
@@ -287,6 +289,7 @@ class DataFlowKernel(object):
 
             if task_record['status'] == States.dep_fail:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
+                task_record['time_returned'] = datetime.datetime.now()
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -310,7 +313,7 @@ class DataFlowKernel(object):
                 task_record['try_id'] += 1
                 task_record['status'] = States.pending
                 task_record['time_submitted'] = None
-                task_record['time_returned'] = None
+                task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
                 logger.info("Task {} marked for retry".format(task_id))
 
@@ -318,6 +321,7 @@ class DataFlowKernel(object):
                 logger.error("Task {} failed after {} retry attempts. Last exception was: {}".format(task_id,
                                                                                                      self._config.retries,
                                                                                                      e))
+                task_record['time_returned'] = datetime.datetime.now()
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
                 with task_record['app_fu']._update_lock:
@@ -757,7 +761,8 @@ class DataFlowKernel(object):
                     'try_id': 0,
                     'id': task_id,
                     'time_submitted': None,
-                    'time_returned': None}
+                    'time_returned': None,
+                    'try_time_returned': None}
 
         app_fu = AppFuture(task_def)
 
