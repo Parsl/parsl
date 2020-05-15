@@ -17,9 +17,11 @@ def load_pickled_file(filename):
     with open(filename, "rb") as f_in:
         return pickle.load(f_in)
 
+
 def dump_result_to_file(result_file, result_package):
     with open(result_file, "wb") as f_out:
         pickle.dump(result_package, f_out)
+
 
 def remap_location(mapping, parsl_file):
     if not isinstance(parsl_file, File):
@@ -32,6 +34,30 @@ def remap_location(mapping, parsl_file):
         if master_location in mapping:
             parsl_file.local_path = mapping[master_location]
 
+
+def remap_list_of_files(mapping, maybe_files):
+    for maybe_file in maybe_files:
+        remap_location(mapping, maybe_file)
+
+
+def remap_all_files(mapping, fn_args, fn_kwargs):
+    # remap any positional argument given to the function that looks like a
+    # File
+    remap_list_of_files(mapping, fn_args)
+
+    # remap any keyword argument in the same way, but we need to treat
+    # "inputs" and "outputs" specially because they are lists, and
+    # "stdout" and "stderr", because they are not File's.
+    for kwarg, maybe_file in fn_kwargs.items():
+        if kwarg in ["inputs", "outputs"]:
+            remap_list_of_files(mapping, maybe_file)
+        if kwarg in ["stdout", "stderr"]:
+            (fname, mode) = get_std_fname_mode(kwarg, maybe_file)
+            if fname in mapping:
+                fn_kwargs[kwarg] = (mapping[fname], mode)
+        else:
+            # Treat anything else as a possible File to be remapped.
+            remap_location(mapping, maybe_file)
 
 def execute_function(map_file, function_file):
     # Get all variables from the user namespace, and add __builtins__
@@ -55,23 +81,7 @@ def execute_function(map_file, function_file):
         raise ValueError("Function file does not have a valid function representation.")
 
     mapping = load_pickled_file(map_file)
-    for maybe_file in args:
-        remap_location(mapping, maybe_file)
-    for maybe_file in kwargs.get("inputs", []):
-        remap_location(mapping, maybe_file)
-    for maybe_file in kwargs.get("outputs", []):
-        remap_location(mapping, maybe_file)
-
-    # Iterate through all arguments to the function
-    for kwarg, maybe_file in kwargs.items():
-        # Process the "stdout" and "stderr" arguments and add them to kwargs
-        # They come in the form of str, or (str, str)
-        if kwarg == "stdout" or kwarg == "stderr":
-            (fname, mode) = get_std_fname_mode(kwarg, maybe_file)
-            if fname in mapping:
-                kwargs[kwarg] = (mapping[fname], mode)
-        elif isinstance(maybe_file, File):
-            remap_location(mapping, maybe_file)
+    remap_all_files(mapping, args, kwargs)
 
     prefix = "parsl_"
     argname = prefix + "args"
