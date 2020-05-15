@@ -59,58 +59,80 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
             # Treat anything else as a possible File to be remapped.
             remap_location(mapping, maybe_file)
 
+def unpack_function(function_info, user_namespace):
+    if "source code" in function_info:
+        return unpack_source_code_function(function_info, user_namespace)
+    elif "byte code" in function_info:
+        return unpack_byte_code_function(function_info, user_namespace)
+    else:
+        raise ValueError("Function file does not have a valid function representation.")
+
+def unpack_source_code_function(function_info, user_namespace):
+    source_code = function_info["source code"]
+    name = function_info["name"]
+    args = function_info["args"]
+    kwargs = function_info["kwargs"]
+    return (source_code, name, args, kwargs)
+
+def unpack_byte_code_function(function_info, user_namespace):
+    from ipyparallel.serialize import unpack_apply_message
+    func, args, kwargs = unpack_apply_message(function_info["byte code"], user_namespace, copy=False)
+    return (func, 'parsl_function_name', args, kwargs)
+
+def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
+    # Returns a tuple (code, result_name)
+    # code can be exec in the user_namespace to produce result_name.
+    prefix = "parsl_"
+    args_name = prefix + "args"
+    kwargs_name = prefix + "kwargs"
+    result_name = prefix + "result"
+
+    # Add variables to the namespace to make function call
+    user_namespace.update({args_name: fn_args,
+                           kwargs_name: fn_kwargs,
+                           result_name: result_name})
+
+    if isinstance(fn, str):
+        code = encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name)
+    elif callable(fn):
+        code = encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name)
+    else:
+        raise ValueError("Function object does not look like a function.")
+
+    return (code, result_name)
+
+def encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
+    # source_list = source_code.split('\n')[1:]
+    # full_source = ""
+    # for line in source_list:
+    #     full_source = full_source + line + "\n"
+    # code = "{0} = {1}(*{2}, **{3})".format(resultname, name,
+    #                                         argname, kwargname)
+    # code = full_source + code
+    pass
+
+def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
+    user_namespace.update({fn_name: fn})
+    code = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
+    return code
+
+
 def execute_function(map_file, function_file):
     # Get all variables from the user namespace, and add __builtins__
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
     function_info = load_pickled_file(function_file)
-    # Extract information from transferred source code
-    if "source code" in function_info:
-        fn_from_source = True
-        source_code = function_info["source code"]
-        name = function_info["name"]
-        args = function_info["args"]
-        kwargs = function_info["kwargs"]
-    # Extract information from function pointer
-    elif "byte code" in function_info:
-        fn_from_source = False
-        from ipyparallel.serialize import unpack_apply_message
-        func, args, kwargs = unpack_apply_message(function_info["byte code"], user_ns, copy=False)
-    else:
-        raise ValueError("Function file does not have a valid function representation.")
+
+    (fn, fn_name, fn_args, fn_kwargs) = unpack_function(function_info, user_ns)
 
     mapping = load_pickled_file(map_file)
-    remap_all_files(mapping, args, kwargs)
+    remap_all_files(mapping, fn_args, fn_kwargs)
 
-    prefix = "parsl_"
-    argname = prefix + "args"
-    kwargname = prefix + "kwargs"
-    resultname = prefix + "result"
-
-    # Add variables to the namespace to make function call
-    user_ns.update({argname: args,
-                    kwargname: kwargs,
-                    resultname: resultname})
-
-    # Import function source code and create function call
-    if fn_from_source:
-        source_list = source_code.split('\n')[1:]
-        full_source = ""
-        for line in source_list:
-            full_source = full_source + line + "\n"
-        code = "{0} = {1}(*{2}, **{3})".format(resultname, name,
-                                               argname, kwargname)
-        code = full_source + code
-    # Otherwise, only import function call
-    else:
-        fname = prefix + "f"
-        user_ns.update({fname: func})
-        code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                               argname, kwargname)
+    (code, result_name) = encode_function(user_ns, fn, fn_name, fn_args, fn_kwargs)
 
     exec(code, user_ns, user_ns)
-    result = user_ns.get(resultname)
+    result = user_ns.get(result_name)
 
     return result
 
