@@ -219,7 +219,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
 
             pkg_pfx = ""
             if env_pkg is not None:
-                pkg_pfx = "./{} {} ".format(
+                pkg_pfx = "./{} -e {} ".format(
                     os.path.basename(package_run_script),
                     os.path.basename(env_pkg))
 
