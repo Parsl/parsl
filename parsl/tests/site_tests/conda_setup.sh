@@ -48,6 +48,18 @@ create_conda() {
 	echo "source ~/anaconda3/bin/activate;"          >  ~/setup_parsl_test_env.sh
  	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 
+    elif [[ "$(hostname -f)" =~ .*summit.* ]]
+    then
+	echo "On Summit"
+
+	module load ibm-wml-ce
+	conda create -p $CONDA_TARGET --yes --force
+	conda activate $PWD/$CONDA_TARGET
+	conda install paramiko>=2.7.1 pip numpy psutil pandas --yes
+	# conda install --file requirements.txt --yes
+	echo "module load ibm-wml-ce"                    >  ~/setup_parsl_test_env.sh
+ 	echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
+
     elif [[ "$(hostname)" =~ .*cori.* ]]
     then
 	echo "On Cori"
@@ -61,7 +73,7 @@ create_conda() {
 
     echo "Installing parsl from $PARSL_ROOT"
     python3 -m pip install .
-    pip install -r test-requirements.txt
+    python3 -m pip install -r test-requirements.txt
 
     popd
 
