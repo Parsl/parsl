@@ -700,7 +700,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             to_cache = parsl_file in self.registered_files
 
         to_stage = False
-        if parsl_file.scheme == 'file' or parsl_file.local_path:
+        if parsl_file.scheme == 'file' or (parsl_file.local_path and os.path.exists(parsl_file.local_path)):
             to_stage = not os.path.isabs(parsl_file.filepath)
 
         self.registered_files.add(parsl_file)
