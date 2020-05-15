@@ -1,5 +1,7 @@
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.utils import get_std_fname_mode
+import traceback
 import sys
 import pickle
 
@@ -12,13 +14,12 @@ import pickle
 
 
 def load_pickled_file(filename):
-    try:
-        with open(filename, "rb") as f_in:
-            return pickle.load(f_in)
-    except pickle.PickleError:
-        print("Error while unplickling {}".format(filename))
-        sys.exit(2)
+    with open(filename, "rb") as f_in:
+        return pickle.load(f_in)
 
+def dump_result_to_file(result_file, result_package):
+    with open(result_file, "wb") as f_out:
+        pickle.dump(result_package, f_out)
 
 def remap_location(mapping, parsl_file):
     if not isinstance(parsl_file, File):
@@ -32,69 +33,45 @@ def remap_location(mapping, parsl_file):
             parsl_file.local_path = mapping[master_location]
 
 
-if __name__ == "__main__":
-    name = "parsl"
-    fn_from_source = False
-    file_type_string = None
-
-    # Parse command line options
-    try:
-        if len(sys.argv) != 4:
-            raise IndexError
-
-        (map_file, function_file, result_file) = sys.argv[1:4]
-    except IndexError:
-        print("Usage:\n\t{} function result mapping".format(sys.argv[0]))
-        exit(1)
-
+def execute_function(map_file, function_file):
     # Get all variables from the user namespace, and add __builtins__
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
-    # Load function data
-    try:
-        function_info = load_pickled_file(function_file)
-        # Extract information from transferred source code
-        if "source code" in function_info:
-            fn_from_source = True
-            source_code = function_info["source code"]
-            name = function_info["name"]
-            args = function_info["args"]
-            kwargs = function_info["kwargs"]
-        # Extract information from function pointer
-        elif "byte code" in function_info:
-            fn_from_source = False
-            from ipyparallel.serialize import unpack_apply_message
-            func, args, kwargs = unpack_apply_message(function_info["byte code"], user_ns, copy=False)
-        else:
-            print("Function file does not have a valid function representation.")
-            sys.exit(2)
-    except Exception as e:
-        print(e)
-        exit(2)
+    function_info = load_pickled_file(function_file)
+    # Extract information from transferred source code
+    if "source code" in function_info:
+        fn_from_source = True
+        source_code = function_info["source code"]
+        name = function_info["name"]
+        args = function_info["args"]
+        kwargs = function_info["kwargs"]
+    # Extract information from function pointer
+    elif "byte code" in function_info:
+        fn_from_source = False
+        from ipyparallel.serialize import unpack_apply_message
+        func, args, kwargs = unpack_apply_message(function_info["byte code"], user_ns, copy=False)
+    else:
+        raise ValueError("Function file does not have a valid function representation.")
 
-    try:
-        mapping = load_pickled_file(map_file)
-        for maybe_file in args:
-            remap_location(mapping, maybe_file)
-        for maybe_file in kwargs.get("inputs", []):
-            remap_location(mapping, maybe_file)
-        for maybe_file in kwargs.get("outputs", []):
-            remap_location(mapping, maybe_file)
+    mapping = load_pickled_file(map_file)
+    for maybe_file in args:
+        remap_location(mapping, maybe_file)
+    for maybe_file in kwargs.get("inputs", []):
+        remap_location(mapping, maybe_file)
+    for maybe_file in kwargs.get("outputs", []):
+        remap_location(mapping, maybe_file)
 
-        # Iterate through all arguments to the function
-        for kwarg, maybe_file in kwargs.items():
-            # Process the "stdout" and "stderr" arguments and add them to kwargs
-            # They come in the form of str, or (str, str)
-            if kwarg == "stdout" or kwarg == "stderr":
-                (fname, mode) = get_std_fname_mode(kwarg, maybe_file)
-                if fname in mapping:
-                    kwargs[kwarg] = (mapping[fname], mode)
-            elif isinstance(maybe_file, File):
-                remap_location(mapping, maybe_file)
-    except Exception as e:
-        print(e)
-        exit(3)
+    # Iterate through all arguments to the function
+    for kwarg, maybe_file in kwargs.items():
+        # Process the "stdout" and "stderr" arguments and add them to kwargs
+        # They come in the form of str, or (str, str)
+        if kwarg == "stdout" or kwarg == "stderr":
+            (fname, mode) = get_std_fname_mode(kwarg, maybe_file)
+            if fname in mapping:
+                kwargs[kwarg] = (mapping[fname], mode)
+        elif isinstance(maybe_file, File):
+            remap_location(mapping, maybe_file)
 
     prefix = "parsl_"
     argname = prefix + "args"
@@ -122,25 +99,37 @@ if __name__ == "__main__":
         code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
                                                argname, kwargname)
 
-    # Perform the function call and handle errors
+    exec(code, user_ns, user_ns)
+    result = user_ns.get(resultname)
+
+    return result
+
+
+if __name__ == "__main__":
     try:
-        exec(code, user_ns, user_ns)
-    # Failed function execution
-    except Exception:
-        from tblib import pickling_support
-        pickling_support.install()
-        exec_info = sys.exc_info()
-        result_package = {"failure": True, "result": pickle.dumps(exec_info)}
-    # Successful function execution
-    else:
-        result = user_ns.get(resultname)
+        # parse the three required command line arguments:
+        # map_file: contains a pickled dictionary to map original names to
+        #           names at the execution site.
+        # function_file: contains the pickled parsl function to execute.
+        # result_file: any output (including exceptions) will be written to
+        #              this file.
+        try:
+            (map_file, function_file, result_file) = sys.argv[1:]
+        except ValueError:
+            print("Usage:\n\t{} function result mapping\n".format(sys.argv[0]))
+            raise
+
+        result = execute_function(map_file, function_file)
         result_package = {"failure": False, "result": result}
+    except Exception:
+        print("There was an error while setting up the function.")
+        traceback.print_exc()
+        result = RemoteExceptionWrapper(*sys.exc_info())
+        result_package = {"failure": True, "result": result}
 
     # Write out function result to the result file
     try:
-        with open(result_file, "wb") as f_out:
-            pickle.dump(result_package, f_out)
-        exit(0)
-    except Exception as e:
-        print(e)
-        exit(4)
+        dump_result_to_file(result_file, result_package)
+    except Exception:
+        print("Could not write to result file.")
+        traceback.print_exc()

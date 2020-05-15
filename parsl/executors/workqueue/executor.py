@@ -341,10 +341,8 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         elif task_report.result_received and task_report.result["failure"]:
             # On failure, result contains the corresponding exception, but wrapped.
             # The exception is reraised for logging purposes.
-            future_fail = pickle.loads(task_report.result["result"])
-            exc = perror.RemoteExceptionWrapper(*future_fail)
             try:
-                exc.reraise()
+                task_report.result["result"].reraise()
             except Exception as e:
                 future.set_exception(e)
         else:
@@ -757,20 +755,14 @@ def explain_task_exit_status(wq_task, parsl_id):
     status = wq_task.return_status  # aka exit code
     wq_result = wq_task.result
 
-    if status != 0:
+    if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS and status != 0:
         reason = "Wrapper Script Failure: "
-        if status == 1:
-            reason += "problem parsing command line options"
-        elif status == 2:
-            reason += "problem loading function and map data"
-        elif status == 3:
-            reason += "problem remapping file names"
-        elif status == 4:
-            reason += "problem writing out function result"
-        else:
-            reason += "unable to process wrapper script failure with status = {}".format(status)
+        reason += "There was unrecoverable error while executing the function.\n"
+        reason += "This usually means that there is a problem with the python setup,\n"
+        reason += "or the wrapper that executes the function."
         reason += "\nTrace:\n" + str(wq_task.output)
-# WorkQueue system failure
+
+    # WorkQueue system failure
     else:
         reason = "work queue result: "
         if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS:
