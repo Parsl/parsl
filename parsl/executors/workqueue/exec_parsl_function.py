@@ -5,6 +5,18 @@ import traceback
 import sys
 import pickle
 
+# This scripts executes a parsl function which is pickled in a file:
+#
+# exec_parsl_function.py map_file function_file result_file
+#
+# map_file: Contains a pickled dictionary that indicates which local_paths the
+#           parsl Files should take.
+#
+# function_file: Contains a pickle parsl function.
+#
+# result_file: It will contain the result of the function, including any
+#              exception generated. Exceptions will be wrapped with RemoteExceptionWrapper.
+#
 # Exit codes:
 # 0: The function was evaluated to completion. The result or any exception
 #    wrapped with RemoteExceptionWrapper were written to result_file.
