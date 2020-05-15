@@ -16,7 +16,12 @@ def platform(sleep=10, stdout=None):
 @pytest.mark.local
 def test_platform(n=2, sleep_dur=10):
     """ This should sleep to make sure that concurrent apps will go to different workers
+    on different nodes.
     """
+    config = fresh_config()
+    if config.executors[0].label == "htex_local":
+        return
+
     parsl.load(fresh_config())
 
     dfk = parsl.dfk()
