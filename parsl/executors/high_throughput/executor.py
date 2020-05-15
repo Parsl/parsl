@@ -615,9 +615,17 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         if block_ids:
             block_ids_to_kill = block_ids
         else:
-            logger.info("ZZ: requesting block status")
-            blks = self.block_status
-            logger.warning("ZZ: block status: {}".format(blks))
+            managers = self.connected_managers
+            blks = {}
+            for manager in managers:
+                if not manager['active']:
+                    continue
+                b_id = manager['block_id']
+                if b_id not in blks:
+                    blks[b_id] = [0, float('inf')]
+                blks[b_id][0] += manager['tasks']
+                blks[b_id][1] = min(blks[b_id][1], manager['idle_duration'])
+
             sorted_blks = sorted(blks.items(), key=lambda item: (item[1][1], item[1][0]))
             logger.warning("YADU: sorted_block : {}".format(sorted_blks))
             if force is True:

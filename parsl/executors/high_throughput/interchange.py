@@ -294,27 +294,16 @@ class Interchange(object):
                 elif command_req == "MANAGERS":
                     reply = []
                     for manager in self._ready_manager_queue:
+                        idle_duration = 0
+                        if self._ready_manager_queue[manager]['idle_since'] is not None:
+                            idle_duration = time.time() - self._ready_manager_queue[manager]['idle_since']
                         resp = {'manager': manager.decode('utf-8'),
                                 'block_id': self._ready_manager_queue[manager]['block_id'],
                                 'worker_count': self._ready_manager_queue[manager]['worker_count'],
                                 'tasks': len(self._ready_manager_queue[manager]['tasks']),
+                                'idle_duration': idle_duration,
                                 'active': self._ready_manager_queue[manager]['active']}
                         reply.append(resp)
-
-                elif command_req == "BLOCKS":
-                    logger.info("[COMMAND] Got BLOCKS command")
-                    reply = {}
-                    for manager in self._ready_manager_queue:
-                        b_id = self._ready_manager_queue[manager]['block_id']
-                        if b_id not in reply:
-                            reply[b_id] = [0, float('inf')]
-                        reply[b_id][0] += len(self._ready_manager_queue[manager]['tasks'])
-                        if self._ready_manager_queue[manager]['idle_since']:
-                            if reply[b_id][1] == float('inf'):
-                                reply[b_id][1] = self._ready_manager_queue[manager]['idle_since']
-                            else:
-                                reply[b_id][1] = max(reply[b_id][1], self._ready_manager_queue[manager]['idle_since'])
-                    logger.info("[COMMAND] Responding {}".format(reply))
 
                 elif command_req.startswith("HOLD_WORKER"):
                     cmd, s_manager = command_req.split(';')
