@@ -16,11 +16,13 @@ def fresh_config():
         config = fresh_config()
     else:
         print("Loading Local HTEX config")
-        from parsl.tests.configs.htex_local import config
-        config.executors[0].max_workers = 2
-        config.executors[0].provider.init_blocks = 2
-        config.executors[0].provider.max_blocks = 2
-        config.executors[0].provider.min_blocks = 2
+        from parsl.tests.configs.htex_local import fresh_config
+        config = fresh_config()
+        config.executors[0].max_workers = 1
+        config.executors[0].provider.init_blocks = 1
+        config.executors[0].provider.min_blocks = 0
+        config.executors[0].provider.max_blocks = 1
+        # We should skip this.
 
     return config
 
