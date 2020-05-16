@@ -5,6 +5,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_interface
 from .user_opts import user_opts
 
+
 def fresh_config():
     return Config(
         executors=[
@@ -22,11 +23,11 @@ def fresh_config():
                     # string to prepend to #SBATCH blocks in the submit
                     # script to the scheduler eg: '#SBATCH --constraint=knl,quad,cache'
                     scheduler_options=user_opts['cori']['scheduler_options'],
-                    
+
                     # Command to be run before starting a worker, such as:
                     # 'module load Anaconda; source activate parsl_env'.
                     worker_init=user_opts['cori']['worker_init'],
-                    
+
                     # We request all hyperthreads on a node.
                     launcher=SrunLauncher(overrides='-c 272'),
                     walltime='00:10:00',
