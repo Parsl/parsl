@@ -4,7 +4,7 @@ import platform
 
 def fresh_config():
     hostname = os.getenv('PARSL_HOSTNAME', platform.uname().node)
-    print(f"Loading config for {hostname}")
+    print("Loading config for {}".format(hostname))
 
     if 'thetalogin' in hostname:
         from parsl.tests.configs.theta import fresh_config
