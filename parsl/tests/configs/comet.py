@@ -5,6 +5,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_query
 from .user_opts import user_opts
 
+
 def fresh_config():
     return Config(
         executors=[
@@ -30,5 +31,6 @@ def fresh_config():
             )
         ]
     )
+
 
 config = fresh_config()
