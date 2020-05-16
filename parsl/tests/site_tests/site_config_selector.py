@@ -26,6 +26,11 @@ def fresh_config():
         from parsl.tests.configs.stampede2 import fresh_config
         config = fresh_config()
 
+    elif 'comet' in hostname:
+        print("Loading Comet config")
+        from parsl.tests.configs.comet import fresh_config
+        config = fresh_config()
+
     else:
         print("Loading Local HTEX config")
         from parsl.tests.configs.htex_local import fresh_config

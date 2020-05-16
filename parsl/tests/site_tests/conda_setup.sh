@@ -64,13 +64,28 @@ create_conda() {
         echo "On Cori"
         module load python/3.7-anaconda-2019.07
         conda create -p $CONDA_TARGET python=3.7 --yes --force
-        conda activate $CONDA_TARGET
+        conda activate $PWD/$CONDA_TARGET
         echo "module load python/3.7-anaconda-2019.07;"  >  ~/setup_parsl_test_env.sh
-        echo "conda activate $CONDA_TARGET"              >> ~/setup_parsl_test_env.sh
+        echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 
     elif [[ "$(hostname)" =~ .*stampede2.* ]]
     then
         echo "On Stampede2"
+        if [[ -d ~/anaconda3 ]]
+        then
+            echo "Loading anaconda3 from ~/anaconda3"
+            source ~/anaconda3/bin/activate
+        else
+            echo "Please install conda to your home dir at ~/anaconda3"
+        fi
+        conda create -p $CONDA_TARGET python=3.7 --yes --force
+        conda activate $PWD/$CONDA_TARGET
+        echo "source ~/anaconda3/bin/activate;"          >  ~/setup_parsl_test_env.sh
+        echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
+
+    elif [[ "$(hostname)" =~ .*comet.* ]]
+    then
+        echo "On Comet"
         if [[ -d ~/anaconda3 ]]
         then
             echo "Loading anaconda3 from ~/anaconda3"
