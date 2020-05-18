@@ -16,13 +16,14 @@ import inspect
 import itertools
 from ipyparallel.serialize import pack_apply_message
 
-import parsl.app.errors as perror
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import exec_parsl_function
+
+from .errors import WorkQueueTaskFailure
 
 from collections import namedtuple
 
@@ -56,19 +57,6 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 # stage tells whether the file should be copied by work queue to the workers.
 # cache tells whether the file should be cached at workers. Only valid if stage == True
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
-
-
-class WorkQueueTaskFailure(perror.AppException):
-    """A failure executing a task in workqueue
-
-    Contains:
-    reason(string)
-    status(int)
-    """
-
-    def __init__(self, reason, status):
-        self.reason = reason
-        self.status = status
 
 
 def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
