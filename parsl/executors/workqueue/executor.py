@@ -303,9 +303,8 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
             continue
 
         # Obtain the future from the tasks dictionary
-        tasks_lock.acquire()
-        future = tasks[task_report.id]
-        tasks_lock.release()
+        with tasks_lock:
+            future = tasks[task_report.id]
 
         logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
         if task_report.result_received:
@@ -580,9 +579,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
-        self.tasks_lock.acquire()
-        self.tasks[str(task_id)] = fu
-        self.tasks_lock.release()
+        with self.tasks_lock:
+            self.tasks[str(task_id)] = fu
 
         logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
 
