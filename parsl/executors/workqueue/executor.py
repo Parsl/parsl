@@ -58,7 +58,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkqueueTaskFailure(perror.AppException):
+class WorkQueueTaskFailure(perror.AppException):
     """A failure executing a task in workqueue
 
     Contains:
@@ -312,7 +312,7 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         else:
             # If there are no results, then the task failed according to one of
             # work queue modes, such as resource exhaustion.
-            future.set_exception(WorkqueueTaskFailure(task_report.reason, task_report.result))
+            future.set_exception(WorkQueueTaskFailure(task_report.reason, task_report.result))
 
     logger.debug("Exiting Collector Thread")
     return
