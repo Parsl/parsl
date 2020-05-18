@@ -30,8 +30,6 @@ try:
     from work_queue import WorkQueue
     from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
-    from work_queue import WORK_QUEUE_RESULT_SUCCESS
-    from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
     from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
     from work_queue import cctools_debug_flags_set
     from work_queue import cctools_debug_config_file
@@ -271,7 +269,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     # failure according to work queue error codes. We generate
                     # an exception and wrap it with RemoteExceptionWrapper, to
                     # match the positive case.
-                    except:
+                    except Exception as e:
                         reason = _explain_work_queue_result(t)
                         logger.debug("Did not find result in {}".format(result_file))
                         logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
@@ -280,7 +278,7 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                                      .format(parsl_id, t.id, reason))
                         collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
                                                                  result_received=False,
-                                                                 result=None,
+                                                                 result=e,
                                                                  reason=reason,
                                                                  status=t.return_status))
 
@@ -735,6 +733,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         if value is not None:
             self._run_dir = value
         return self._run_dir
+
 
 def _explain_work_queue_result(wq_task):
     """Returns a string with the reason why a task failed according to work queue."""
