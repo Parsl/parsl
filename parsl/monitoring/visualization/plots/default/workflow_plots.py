@@ -109,8 +109,8 @@ def task_per_app_plot(task, status):
                              yaxis=dict(title='Number of tasks'),
                              title="Tasks per app"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
-    except Exception as e:
-        return "The tasks per app plot cannot be generated because of exception {}.".format(e)
+    except Exception:
+        raise
 
 
 def total_tasks_plot(df_task, df_status, columns=20):
