@@ -386,10 +386,10 @@ class MonitoringRouter:
 
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = start_file_logger("{}/hub.log".format(logdir),
-                                        name="hub",
+        self.logger = start_file_logger("{}/monitoring_router.log".format(logdir),
+                                        name="monitoring_router",
                                         level=logging_level)
-        self.logger.debug("Hub starting")
+        self.logger.debug("Monitoring router starting")
 
         self.hub_port = hub_port
         self.hub_address = hub_address
@@ -487,16 +487,16 @@ class MonitoringRouter:
 
 @wrap_with_logs
 def router_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
-    hub = MonitoringRouter(*args, **kwargs)
-    comm_q.put((hub.hub_port, hub.ic_port))
-    hub.logger.info("Starting MonitoringRouter in router_starter")
+    router = MonitoringRouter(*args, **kwargs)
+    comm_q.put((router.hub_port, router.ic_port))
+    router.logger.info("Starting MonitoringRouter in router_starter")
     try:
-        hub.start(priority_msgs, node_msgs, resource_msgs)
+        router.start(priority_msgs, node_msgs, resource_msgs)
     except Exception as e:
-        hub.logger.exception("hub.start exception")
+        router.logger.exception("router.start exception")
         exception_q.put(('Hub', str(e)))
 
-    hub.logger.info("End of router_starter")
+    router.logger.info("End of router_starter")
 
 
 @wrap_with_logs

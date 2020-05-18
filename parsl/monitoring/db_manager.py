@@ -504,6 +504,10 @@ class DatabaseManager:
                     "Got {} messages from node queue".format(len(node_info_messages)))
                 self._insert(table=NODE, messages=node_info_messages)
 
+            """
+            Resource info messages
+
+            """
             resource_messages = self._get_messages_in_batch(self.pending_resource_queue,
                                                             interval=self.batching_interval,
                                                             threshold=self.batching_threshold)
