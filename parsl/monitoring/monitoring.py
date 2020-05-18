@@ -143,16 +143,16 @@ class MonitoringHub(RepresentationMixin):
         Parameters
         ----------
         hub_address : str
-             The ip address at which the workers will be able to reach the Hub.
+             The ip address at which the workers will be able to reach the Router.
         hub_port : int
-             The specific port at which workers will be able to reach the Hub via UDP. Default: None
+             The specific port at which workers will be able to reach the Router via UDP. Default: None
         hub_port_range : tuple(int, int)
-             The MonitoringHub picks ports at random from the range which will be used by Hub.
+             The MonitoringHub picks ports at random from the range which will be used by Router.
              This is overridden when the hub_port option is set. Default: (55050, 56000)
         client_address : str
-             The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
+             The ip address at which the dfk will be able to reach Router. Default: "127.0.0.1"
         client_port_range : tuple(int, int)
-             The MonitoringHub picks ports at random from the range which will be used by Hub.
+             The MonitoringHub picks ports at random from the range which will be used by Router.
              Default: (55000, 56000)
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
@@ -224,9 +224,9 @@ class MonitoringHub(RepresentationMixin):
 
         self.router_proc = Process(target=router_starter,
                                    args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
-                                   kwargs={"hub_address": self.hub_address,
-                                           "hub_port": self.hub_port,
-                                           "hub_port_range": self.hub_port_range,
+                                   kwargs={"router_address": self.hub_address,
+                                           "router_port": self.hub_port,
+                                           "router_port_range": self.hub_port_range,
                                            "client_address": self.client_address,
                                            "client_port": self.dfk_port,
                                            "logdir": self.logdir,
@@ -248,13 +248,13 @@ class MonitoringHub(RepresentationMixin):
                                 daemon=True,
         )
         self.dbm_proc.start()
-        self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
+        self.logger.info("Started the Router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
         except queue.Empty:
-            self.logger.error("Hub has not completed initialization in 120s. Aborting")
-            raise Exception("Hub failed to start")
+            self.logger.error("Router has not completed initialization in 120s. Aborting")
+            raise Exception("Router failed to start")
 
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_dish_port)
         return ic_port
@@ -265,7 +265,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
             self.logger.exception(
-                "[MONITORING] The monitoring message sent from DFK to Hub timeouts after {}ms".format(self.dfk_channel_timeout))
+                "[MONITORING] The monitoring message sent from DFK to Router timeouts after {}ms".format(self.dfk_channel_timeout))
 
     def close(self):
         if self.logger:
@@ -274,7 +274,7 @@ class MonitoringHub(RepresentationMixin):
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.info("Either Hub or DBM process got exception.")
+                self.logger.info("Either Router or DBM process got exception.")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -285,9 +285,9 @@ class MonitoringHub(RepresentationMixin):
                     self.logger.info("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
-            self.logger.info("Waiting for Hub to receive all messages and terminate")
+            self.logger.info("Waiting for Router to receive all messages and terminate")
             self.router_proc.join()
-            self.logger.debug("Finished waiting for Hub termination")
+            self.logger.debug("Finished waiting for Router termination")
             if len(exception_msgs) == 0:
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
@@ -331,9 +331,9 @@ class MonitoringHub(RepresentationMixin):
 class MonitoringRouter:
 
     def __init__(self,
-                 hub_address,
-                 hub_port=None,
-                 hub_port_range=(55050, 56000),
+                 router_address,
+                 router_port=None,
+                 router_port_range=(55050, 56000),
 
                  client_address="127.0.0.1",
                  client_port=None,
@@ -348,23 +348,23 @@ class MonitoringRouter:
 
         Parameters
         ----------
-        hub_address : str
-             The ip address at which the workers will be able to reach the Hub.
-        hub_port : int
-             The specific port at which workers will be able to reach the Hub via UDP. Default: None
-        hub_port_range : tuple(int, int)
-             The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+        router_address : str
+             The ip address at which the workers will be able to reach the Router.
+        router_port : int
+             The specific port at which workers will be able to reach the Router via UDP. Default: None
+        router_port_range : tuple(int, int)
+             The MonitoringHub picks ports at random from the range which will be used by Router.
+             This is overridden when the router_port option is set. Defauls: (55050, 56000)
         client_address : str
-             The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
+             The ip address at which the dfk will be able to reach Router. Default: "127.0.0.1"
         client_port : tuple(int, int)
-             The port at which the dfk will be able to reach Hub. Defauls: None
+             The port at which the dfk will be able to reach Router. Defauls: None
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
-            The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
+            The amount of time in seconds to terminate the router without receiving any messages, after the last dfk workflow message is received.
 
         """
         os.makedirs(logdir, exist_ok=True)
@@ -373,8 +373,8 @@ class MonitoringRouter:
                                         level=logging_level)
         self.logger.debug("Monitoring router starting")
 
-        self.hub_port = hub_port
-        self.hub_address = hub_address
+        self.router_port = router_port
+        self.router_address = router_address
         self.atexit_timeout = atexit_timeout
         self.run_id = run_id
 
@@ -387,16 +387,16 @@ class MonitoringRouter:
                                       socket.IPPROTO_UDP)
 
             # We are trying to bind to all interfaces with 0.0.0.0
-            if not self.hub_port:
+            if not self.router_port:
                 self.sock.bind(('0.0.0.0', 0))
-                self.hub_port = self.sock.getsockname()[1]
+                self.router_port = self.sock.getsockname()[1]
             else:
-                self.sock.bind(('0.0.0.0', self.hub_port))
+                self.sock.bind(('0.0.0.0', self.router_port))
             self.sock.settimeout(self.loop_freq / 1000)
-            self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
+            self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.router_port))
         except OSError:
             self.logger.critical("The port is already in use")
-            self.hub_port = -1
+            self.router_port = -1
 
         self._context = zmq.Context()
         self.dfk_channel = self._context.socket(zmq.DEALER)
@@ -409,10 +409,10 @@ class MonitoringRouter:
         self.ic_channel.setsockopt(zmq.LINGER, 0)
         self.ic_channel.set_hwm(0)
         self.ic_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
-        self.logger.debug("hub_address: {}. hub_port_range {}".format(hub_address, hub_port_range))
+        self.logger.debug("router_address: {}, router_port_range {}".format(router_address, router_port_range))
         self.ic_port = self.ic_channel.bind_to_random_port("tcp://*",
-                                                           min_port=hub_port_range[0],
-                                                           max_port=hub_port_range[1])
+                                                           min_port=router_port_range[0],
+                                                           max_port=router_port_range[1])
 
     def start(self, priority_msgs, node_msgs, resource_msgs):
 
@@ -459,13 +459,13 @@ class MonitoringRouter:
 
 def router_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     router = MonitoringRouter(*args, **kwargs)
-    comm_q.put((router.hub_port, router.ic_port))
+    comm_q.put((router.router_port, router.ic_port))
     router.logger.info("Starting MonitoringRouter in router_starter")
     try:
         router.start(priority_msgs, node_msgs, resource_msgs)
     except Exception as e:
         router.logger.exception("router.start exception")
-        exception_q.put(('Hub', str(e)))
+        exception_q.put(('Router', str(e)))
 
     router.logger.info("End of router_starter")
 
@@ -562,7 +562,7 @@ def monitor(pid,
             radio.send(MessageType.TASK_INFO, task_id, d)
             first_msg = False
         except Exception:
-            logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
+            logging.exception("Exception getting the resource usage. Not sending usage to Router", exc_info=True)
 
         try:
             msg = command_q.get(block=False)
