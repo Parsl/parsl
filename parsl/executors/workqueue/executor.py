@@ -34,8 +34,6 @@ try:
     from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
     from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
-    from work_queue import cctools_debug_flags_set
-    from work_queue import cctools_debug_config_file
 except ImportError:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0
@@ -91,17 +89,16 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
     logger.debug("Starting WorkQueue Submit/Wait Process")
 
     # Enable debugging flags and create logging file
+    wq_debug_log = None
     if wq_log_dir is not None:
         logger.debug("Setting debugging flags and creating logging file")
         wq_debug_log = os.path.join(wq_log_dir, "debug_log")
-        cctools_debug_flags_set("all")
-        cctools_debug_config_file(wq_debug_log)
 
     # Create WorkQueue queue object
     logger.debug("Creating WorkQueue Object")
     try:
         logger.debug("Listening on port {}".format(port))
-        q = WorkQueue(port)
+        q = WorkQueue(port, debug_log=wq_debug_log)
     except Exception as e:
         logger.error("Unable to create WorkQueue object: {}".format(e))
         raise e
