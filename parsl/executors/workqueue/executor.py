@@ -94,6 +94,10 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
     submitted to Work Queue. After tasks are completed, processes the
     exit status and exit code of the task, and sends results to the
     Work Queue collector thread.
+    To avoid python's global interpreter lock with work queue's wait, this
+    function should be launched as a process, not as a lightweight thread. This
+    means that any communication should be done using the multiprocessing
+    module capabilities, rather than shared memory.
     """
     logger.debug("Starting WorkQueue Submit/Wait Process")
 
