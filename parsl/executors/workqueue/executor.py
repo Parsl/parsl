@@ -246,41 +246,41 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                 if t is None:
                     task_found = False
                     continue
-                else:
-                    wq_tasks.remove(t.id)
-                    parsl_id = t.tag
-                    logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, t.tag))
-                    result_file = result_file_of_task_id.pop(t.tag)
+                # When a task is found:
+                wq_tasks.remove(t.id)
+                parsl_id = t.tag
+                logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, t.tag))
+                result_file = result_file_of_task_id.pop(t.tag)
 
-                    # A tasks completes 'succesfully' if it has result file,
-                    # and it can be loaded. This may mean that the 'success' is
-                    # an exception.
-                    logger.debug("Looking for result in {}".format(result_file))
-                    try:
-                        with open(result_file, "rb") as f_in:
-                            result = pickle.load(f_in)
-                        logger.debug("Found result in {}".format(result_file))
-                        collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
-                                                                 result_received=True,
-                                                                 result=result,
-                                                                 reason=None,
-                                                                 status=t.return_status))
-                    # If a result file could not be generated, explain the
-                    # failure according to work queue error codes. We generate
-                    # an exception and wrap it with RemoteExceptionWrapper, to
-                    # match the positive case.
-                    except Exception as e:
-                        reason = _explain_work_queue_result(t)
-                        logger.debug("Did not find result in {}".format(result_file))
-                        logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
-                                     .format(t.return_status, t.result))
-                        logger.debug("Task with id parsl {} / wq {} failed because:\n{}"
-                                     .format(parsl_id, t.id, reason))
-                        collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
-                                                                 result_received=False,
-                                                                 result=e,
-                                                                 reason=reason,
-                                                                 status=t.return_status))
+                # A tasks completes 'succesfully' if it has result file,
+                # and it can be loaded. This may mean that the 'success' is
+                # an exception.
+                logger.debug("Looking for result in {}".format(result_file))
+                try:
+                    with open(result_file, "rb") as f_in:
+                        result = pickle.load(f_in)
+                    logger.debug("Found result in {}".format(result_file))
+                    collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
+                                                             result_received=True,
+                                                             result=result,
+                                                             reason=None,
+                                                             status=t.return_status))
+                # If a result file could not be generated, explain the
+                # failure according to work queue error codes. We generate
+                # an exception and wrap it with RemoteExceptionWrapper, to
+                # match the positive case.
+                except Exception as e:
+                    reason = _explain_work_queue_result(t)
+                    logger.debug("Did not find result in {}".format(result_file))
+                    logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
+                                 .format(t.return_status, t.result))
+                    logger.debug("Task with id parsl {} / wq {} failed because:\n{}"
+                                 .format(parsl_id, t.id, reason))
+                    collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
+                                                             result_received=False,
+                                                             result=e,
+                                                             reason=reason,
+                                                             status=t.return_status))
 
         if continue_running is False:
             logger.debug("Exiting WorkQueue Master Thread event loop")
