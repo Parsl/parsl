@@ -62,7 +62,6 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                             launch_cmd=None,
                             env=None,
                             collector_queue=multiprocessing.Queue(),
-                            see_worker_output=False,
                             data_dir=".",
                             full=False,
                             shared_fs=False,
@@ -341,10 +340,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         init_command: str
             Command line to run before executing a task in a worker.
             Default is ''.
-
-        see_worker_output: bool
-            Prints worker standard output when a task finishes.
-            Default is False.
     """
 
     def __init__(self,
@@ -364,8 +359,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  autolabel_window=1,
                  autocategory=False,
                  init_command="",
-                 full_debug=True,
-                 see_worker_output=False):
+                 full_debug=True):
         NoStatusHandlingExecutor.__init__(self)
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
@@ -388,7 +382,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.working_dir = working_dir
         self.used_names = {}
         self.registered_files = set()
-        self.worker_output = see_worker_output
         self.full = full_debug
         self.source = source
         self.autolabel = autolabel
@@ -430,7 +423,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "launch_cmd": self.launch_cmd,
                                  "data_dir": self.function_data_dir,
                                  "collector_queue": self.collector_queue,
-                                 "see_worker_output": self.worker_output,
                                  "full": self.full,
                                  "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
