@@ -87,7 +87,7 @@ config_local_test: ## run all tests with workqueue_ex config
 	PYTHONPATH=. pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: test ## run all tests with all config types
-test: clean_coverage lint flake8 local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test  config_local_test ## run all tests
+test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test  config_local_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag

@@ -31,11 +31,6 @@ os:
 
 # command to run tests
 script:
-    # This uses all of the configurations and tests as the base from which to
-    # run mypy checks - these are likely to capture most of the code used in
-    # parsl
-    - make mypy
-
       # do this before any testing, but not in-between tests
     - make clean_coverage
 
