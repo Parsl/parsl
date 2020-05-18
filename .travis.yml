@@ -31,9 +31,6 @@ os:
 
 # command to run tests
 script:
-    - make flake8
-    - make lint
-
     # This uses all of the configurations and tests as the base from which to
     # run mypy checks - these are likely to capture most of the code used in
     # parsl
