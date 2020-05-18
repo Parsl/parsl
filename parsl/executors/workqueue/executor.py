@@ -72,7 +72,6 @@ class WorkqueueTaskFailure(perror.AppException):
 
 
 def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
-                          queue_lock=threading.Lock(),
                           launch_cmd=None,
                           env=None,
                           collector_queue=multiprocessing.Queue(),
@@ -478,7 +477,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the Work Queue system.
         """
-        self.queue_lock = threading.Lock()
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
@@ -492,7 +490,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
-                                 "queue_lock": self.queue_lock,
                                  "launch_cmd": self.launch_cmd,
                                  "data_dir": self.function_data_dir,
                                  "collector_queue": self.collector_queue,
