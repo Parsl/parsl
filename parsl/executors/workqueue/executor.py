@@ -128,7 +128,6 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
         q.specify_log(wq_master_log)
         q.specify_transactions_log(wq_trans_log)
 
-    wq_tasks = set()
     orig_ppid = os.getppid()
 
     result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
@@ -203,7 +202,6 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             logger.debug("Submitting task {} to WorkQueue".format(task.id))
             try:
                 wq_id = q.submit(t)
-                wq_tasks.add(wq_id)
             except Exception as e:
                 logger.error("Unable to submit task to work queue: {}".format(e))
                 collector_queue.put_nowait(WqTaskToParsl(id=task.id,
@@ -224,7 +222,6 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                     task_found = False
                     continue
                 # When a task is found:
-                wq_tasks.remove(t.id)
                 parsl_id = t.tag
                 logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, t.tag))
                 result_file = result_file_of_task_id.pop(t.tag)
@@ -258,11 +255,6 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                                                              result=e,
                                                              reason=reason,
                                                              status=t.return_status))
-    # Remove all WorkQueue tasks that remain in the queue object
-    for wq_task in wq_tasks:
-        logger.debug("Cancelling WorkQueue Task {}".format(wq_task))
-        q.cancel_by_taskid(wq_task)
-
     logger.debug("Exiting WorkQueue Monitoring Process")
     return 0
 
