@@ -24,6 +24,7 @@ from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.workqueue import exec_parsl_function
 
 from .errors import WorkQueueTaskFailure
+from .errors import WorkQueueFailure
 
 from collections import namedtuple
 

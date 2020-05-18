@@ -12,3 +12,10 @@ class WorkQueueTaskFailure(perror.AppException):
     def __init__(self, reason, status):
         self.reason = reason
         self.status = status
+
+
+class WorkQueueFailure(perror.ParslError):
+    """A failure in the work queue executor that prevented the task to be
+    executed.""
+    """
+    pass
