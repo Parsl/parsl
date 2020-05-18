@@ -24,7 +24,7 @@ virtualenv: ## create an activate a virtual env
 	echo "Run 'source $(VENV)/bin/activate' to activate the virtual environment"
 
 
-$(DEPS): virtualenv test-requirements.txt
+$(DEPS): test-requirements.txt
 	pip3 install --upgrade pip
 	pip3 install -r test-requirements.txt
 	touch $(DEPS)
