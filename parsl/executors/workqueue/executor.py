@@ -389,6 +389,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.storage_access = storage_access
         self.use_cache = use_cache
         self.working_dir = working_dir
+        self.used_names = {}
         self.registered_files = set()
         self.worker_output = see_worker_output
         self.full = full_debug
@@ -643,30 +644,34 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         """Sets the values of tasks' futures of tasks completed by work queue.
         """
         logger.debug("Starting Collector Thread")
-        while not self.should_stop.value:
-            # Guard against submit_process early termination, and also the unlikely
-            # case of submit_process correctly terminating between the previous
-            # while loop test condition and the is_alive check.
-            if not self.submit_process.is_alive() and not self.should_stop.value:
-                raise ExecutorError(self, "Workqueue Submit Process is not alive")
+        try:
+            while not self.should_stop.value:
+                if not self.submit_process.is_alive():
+                    raise ExecutorError(self, "Workqueue Submit Process is not alive")
 
-            # Get the result message from the collector_queue
-            try:
-                task_report = self.collector_queue.get(timeout=1)
-            except queue.Empty:
-                continue
+                # Get the result message from the collector_queue
+                try:
+                    task_report = self.collector_queue.get(timeout=1)
+                except queue.Empty:
+                    continue
 
-            # Obtain the future from the tasks dictionary
+                # Obtain the future from the tasks dictionary
+                with self.tasks_lock:
+                    future = self.tasks[task_report.id]
+
+                logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
+                if task_report.result_received:
+                    future.set_result(task_report.result)
+                else:
+                    # If there are no results, then the task failed according to one of
+                    # work queue modes, such as resource exhaustion.
+                    future.set_exception(WorkQueueTaskFailure(task_report.reason, task_report.result))
+        finally:
             with self.tasks_lock:
-                future = self.tasks[task_report.id]
-
-            logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
-            if task_report.result_received:
-                future.set_result(task_report.result)
-            else:
-                # If there are no results, then the task failed according to one of
-                # work queue modes, such as resource exhaustion.
-                future.set_exception(WorkQueueTaskFailure(task_report.reason, task_report.result))
+                # set exception for tasks waiting for results that work queue did not execute
+                for fu in self.tasks.values():
+                    if not fu.done():
+                        fu.set_exception(WorkQueueFailure("work queue executor failed to execute the task."))
         logger.debug("Exiting Collector Thread")
 
 
