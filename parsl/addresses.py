@@ -101,7 +101,7 @@ def get_all_addresses() -> Set[str]:
             logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
             pass
 
-    resolution_functions = [address_by_hostname, address_by_route, address_by_query] # type: List[Callable[[], str]]
+    resolution_functions = [address_by_hostname, address_by_route, address_by_query]  # type: List[Callable[[], str]]
     for f in resolution_functions:
         try:
             s_addresses.add(f())
