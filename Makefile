@@ -61,9 +61,7 @@ htex_local_test: ## run all tests with htex_local config
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: ## run all tests with htex_local config
-	echo "$(MPI)}"
-	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
-	pip3 install ".[extreme_scale,monitoring]"
+	pip3 install ".[monitoring]"
 	PYTHONPATH=.  pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
 
 $(WORKQUEUE_INSTALL):
@@ -75,7 +73,6 @@ work_queue_killcmd := $(if $(work_queue_procs), "kill" "-3" $(procs), "echo" "no
 
 .PHONY: workqueue_ex_test
 workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
-	pip3 install ".[extreme_scale]"
 	@$(work_queue_killcmd)
 	work_queue_worker localhost 9000  &> /dev/null &
 	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  pytest parsl -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order --bodge-dfk-per-test
