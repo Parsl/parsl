@@ -336,18 +336,10 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         tasks_lock.release()
 
         logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
-        if task_report.result_received and not task_report.result["failure"]:
-            future.set_result(task_report.result["result"])
-        elif task_report.result_received and task_report.result["failure"]:
-            # On failure, result contains the corresponding exception, but wrapped.
-            # The exception is reraised for logging purposes.
-            try:
-                task_report.result["result"].reraise()
-            except Exception as e:
-                future.set_exception(e)
+        if task_report.result_received:
+            future.set_result(task_report.result)
         else:
             # If there are no results, then it is something that went wrong with work queue.
-            # Bug: This should be converted to exceptions that parsl expects.
             future.set_exception(WorkqueueTaskFailure(task_report.reason, task_report.result))
 
     logger.debug("Exiting Collector Thread")

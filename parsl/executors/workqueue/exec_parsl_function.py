@@ -170,16 +170,14 @@ if __name__ == "__main__":
             raise
 
         result = execute_function(map_file, function_file)
-        result_package = {"failure": False, "result": result}
     except Exception:
         print("There was an error while setting up the function.")
         traceback.print_exc()
         result = RemoteExceptionWrapper(*sys.exc_info())
-        result_package = {"failure": True, "result": result}
 
     # Write out function result to the result file
     try:
-        dump_result_to_file(result_file, result_package)
+        dump_result_to_file(result_file, result)
     except Exception:
         print("Could not write to result file.")
         traceback.print_exc()
