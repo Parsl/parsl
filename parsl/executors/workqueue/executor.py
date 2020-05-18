@@ -389,7 +389,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.storage_access = storage_access
         self.use_cache = use_cache
         self.working_dir = working_dir
-        self.used_names = {}
         self.registered_files = set()
         self.worker_output = see_worker_output
         self.full = full_debug
