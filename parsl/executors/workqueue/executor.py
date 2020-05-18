@@ -60,23 +60,23 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
-                          launch_cmd=None,
-                          env=None,
-                          collector_queue=multiprocessing.Queue(),
-                          see_worker_output=False,
-                          data_dir=".",
-                          full=False,
-                          shared_fs=False,
-                          autolabel=False,
-                          autolabel_window=None,
-                          autocategory=False,
-                          should_stop=None,
-                          port=WORK_QUEUE_DEFAULT_PORT,
-                          wq_log_dir=None,
-                          project_password=None,
-                          project_password_file=None,
-                          project_name=None):
+def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
+                            launch_cmd=None,
+                            env=None,
+                            collector_queue=multiprocessing.Queue(),
+                            see_worker_output=False,
+                            data_dir=".",
+                            full=False,
+                            shared_fs=False,
+                            autolabel=False,
+                            autolabel_window=None,
+                            autocategory=False,
+                            should_stop=None,
+                            port=WORK_QUEUE_DEFAULT_PORT,
+                            wq_log_dir=None,
+                            project_password=None,
+                            project_password_file=None,
+                            project_name=None):
     """Thread to handle Parsl app submissions to the Work Queue objects.
     Takes in Parsl functions submitted using submit(), and creates a
     Work Queue task with the appropriate specifications, which is then
@@ -493,7 +493,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "project_password": self.project_password,
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name}
-        self.submit_process = multiprocessing.Process(target=WorkQueueSubmitThread,
+        self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
                                                       name="submit_thread",
                                                       kwargs=submit_process_kwargs)
 
