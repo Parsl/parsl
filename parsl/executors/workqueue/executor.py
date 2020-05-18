@@ -249,45 +249,40 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                     task_found = False
                     continue
                 else:
-                    parsl_tid = t.tag
-                    logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, parsl_tid))
-                    status = t.return_status
-                    task_result = t.result
+                    wq_tasks.remove(t.id)
+                    parsl_id = t.tag
+                    logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, t.tag))
+                    result_file = result_file_of_task_id.pop(t.tag)
 
-                    # Task failure
-                    if status != 0 or (task_result != WORK_QUEUE_RESULT_SUCCESS and task_result != WORK_QUEUE_RESULT_OUTPUT_MISSING):
+                    # A tasks completes 'succesfully' if it has result file,
+                    # and it can be loaded. This may mean that the 'success' is
+                    # an exception.
+                    logger.debug("Looking for result in {}".format(result_file))
+                    try:
+                        with open(result_file, "rb") as f_in:
+                            result = pickle.load(f_in)
+                        logger.debug("Found result in {}".format(result_file))
+                        collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
+                                                                 result_received=True,
+                                                                 result=result,
+                                                                 reason=None,
+                                                                 status=t.return_status))
+                    # If a result file could not be generated, explain the
+                    # failure according to work queue error codes. We generate
+                    # an exception and wrap it with RemoteExceptionWrapper, to
+                    # match the positive case.
+                    except:
+                        reason = _explain_work_queue_result(t)
+                        logger.debug("Did not find result in {}".format(result_file))
                         logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
-                                     .format(status, task_result))
-
-                        reason = explain_task_exit_status(t, parsl_tid)
-                        logger.debug("WorkQueue runner script failed for parsl task {} (wq {}) because:\n{}"
-                                     .format(parsl_tid, t.id, reason))
-
-                        collector_queue.put_nowait(WqTaskToParsl(id=parsl_tid,
+                                     .format(t.return_status, t.result))
+                        logger.debug("Task with id parsl {} / wq {} failed because:\n{}"
+                                     .format(parsl_id, t.id, reason))
+                        collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
                                                                  result_received=False,
                                                                  result=None,
                                                                  reason=reason,
                                                                  status=t.return_status))
-
-                    # Task Success
-                    else:
-                        # Print the output from the task
-                        if see_worker_output:
-                            print(t.output)
-
-                        # Load result into result file. The tag of the task is the parsl_id.
-                        result_loc = result_file_of_task_id.pop(t.tag)
-                        logger.debug("Looking for result in {}".format(result_loc))
-                        f = open(result_loc, "rb")
-                        result = pickle.load(f)
-                        f.close()
-
-                        collector_queue.put_nowait(WqTaskToParsl(id=parsl_tid,
-                                                                 result_received=True,
-                                                                 result=result,
-                                                                 reason=None,
-                                                                 status=t.result))
-                        wq_tasks.remove(t.id)
 
         if continue_running is False:
             logger.debug("Exiting WorkQueue Master Thread event loop")
@@ -339,7 +334,8 @@ def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
         if task_report.result_received:
             future.set_result(task_report.result)
         else:
-            # If there are no results, then it is something that went wrong with work queue.
+            # If there are no results, then the task failed according to one of
+            # work queue modes, such as resource exhaustion.
             future.set_exception(WorkqueueTaskFailure(task_report.reason, task_report.result))
 
     logger.debug("Exiting Collector Thread")
@@ -740,49 +736,41 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             self._run_dir = value
         return self._run_dir
 
+def _explain_work_queue_result(wq_task):
+    """Returns a string with the reason why a task failed according to work queue."""
 
-def explain_task_exit_status(wq_task, parsl_id):
-    """Returns a string with the reason why a task failed."""
-
-    status = wq_task.return_status  # aka exit code
     wq_result = wq_task.result
 
-    if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS and status != 0:
-        reason = "Wrapper Script Failure: "
-        reason += "There was unrecoverable error while executing the function.\n"
+    reason = "work queue result: "
+    if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS:
+        reason += "succesful execution with exit code {}".format(wq_task.return_status)
+    elif wq_result == wq.WORK_QUEUE_RESULT_OUTPUT_MISSING:
+        reason += "The result file was not transfered from the worker.\n"
         reason += "This usually means that there is a problem with the python setup,\n"
         reason += "or the wrapper that executes the function."
         reason += "\nTrace:\n" + str(wq_task.output)
-
-    # WorkQueue system failure
+    elif wq_result == wq.WORK_QUEUE_RESULT_INPUT_MISSING:
+        reason += "missing input file"
+    elif wq_result == wq.WORK_QUEUE_RESULT_STDOUT_MISSING:
+        reason += "stdout has been truncated"
+    elif wq_result == wq.WORK_QUEUE_RESULT_SIGNAL:
+        reason += "task terminated with a signal"
+    elif wq_result == wq.WORK_QUEUE_RESULT_RESOURCE_EXHAUSTION:
+        reason += "task used more resources than requested"
+    elif wq_result == wq.WORK_QUEUE_RESULT_TASK_TIMEOUT:
+        reason += "task ran past the specified end time"
+    elif wq_result == wq.WORK_QUEUE_RESULT_UNKNOWN:
+        reason += "result could not be classified"
+    elif wq_result == wq.WORK_QUEUE_RESULT_FORSAKEN:
+        reason += "task failed, but not a task error"
+    elif wq_result == wq.WORK_QUEUE_RESULT_MAX_RETRIES:
+        reason += "unable to complete after specified number of retries"
+    elif wq_result == wq.WORK_QUEUE_RESULT_TASK_MAX_RUN_TIME:
+        reason += "task ran for more than the specified time"
+    elif wq_result == wq.WORK_QUEUE_RESULT_DISK_ALLOC_FULL:
+        reason += "task needed more space to complete task"
+    elif wq_result == wq.WORK_QUEUE_RESULT_RMONITOR_ERROR:
+        reason += "task failed because the monitor did not produce an output"
     else:
-        reason = "work queue result: "
-        if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS:
-            reason += "succesful execution"
-        elif wq_result == wq.WORK_QUEUE_RESULT_INPUT_MISSING:
-            reason += "missing input file"
-        elif wq_result == wq.WORK_QUEUE_RESULT_OUTPUT_MISSING:
-            reason += "unable to generate output file"
-        elif wq_result == wq.WORK_QUEUE_RESULT_STDOUT_MISSING:
-            reason += "stdout has been truncated"
-        elif wq_result == wq.WORK_QUEUE_RESULT_SIGNAL:
-            reason += "task terminated with a signal"
-        elif wq_result == wq.WORK_QUEUE_RESULT_RESOURCE_EXHAUSTION:
-            reason += "task used more resources than requested"
-        elif wq_result == wq.WORK_QUEUE_RESULT_TASK_TIMEOUT:
-            reason += "task ran past the specified end time"
-        elif wq_result == wq.WORK_QUEUE_RESULT_UNKNOWN:
-            reason += "result could not be classified"
-        elif wq_result == wq.WORK_QUEUE_RESULT_FORSAKEN:
-            reason += "task failed, but not a task error"
-        elif wq_result == wq.WORK_QUEUE_RESULT_MAX_RETRIES:
-            reason += "unable to complete after specified number of retries"
-        elif wq_result == wq.WORK_QUEUE_RESULT_TASK_MAX_RUN_TIME:
-            reason += "task ran for more than the specified time"
-        elif wq_result == wq.WORK_QUEUE_RESULT_DISK_ALLOC_FULL:
-            reason += "task needed more space to complete task"
-        elif wq_result == wq.WORK_QUEUE_RESULT_RMONITOR_ERROR:
-            reason += "task failed because the monitor did not produce an output"
-        else:
-            reason += "unable to process Work Queue system failure"
+        reason += "unable to process Work Queue system failure"
     return reason
