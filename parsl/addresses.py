@@ -15,7 +15,7 @@ import fcntl
 import struct
 import psutil
 
-from typing import Set
+from typing import Set, List, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def address_by_route() -> str:
     return addr
 
 
-def address_by_query(timeout=30) -> str:
+def address_by_query(timeout: float = 30) -> str:
     """Finds an address for the local host by querying ipify. This may
        return an unusable value when the host is behind NAT, or when the
        internet-facing address is not reachable from workers.
@@ -44,7 +44,7 @@ def address_by_query(timeout=30) -> str:
           Timeout for the request in seconds. Can be < 1. Default: 30s
     """
     logger.debug("Finding address by querying remote service")
-    response = requests.get('https://api.ipify.org', timeout=30)
+    response = requests.get('https://api.ipify.org', timeout=timeout)
 
     if response.status_code == 200:
         addr = response.text
@@ -101,7 +101,7 @@ def get_all_addresses() -> Set[str]:
             logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
             pass
 
-    resolution_functions = [address_by_hostname, address_by_route, address_by_query]
+    resolution_functions = [address_by_hostname, address_by_route, address_by_query] # type: List[Callable[[], str]]
     for f in resolution_functions:
         try:
             s_addresses.add(f())
