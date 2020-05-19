@@ -61,13 +61,17 @@ def workflow(workflow_id):
                                 task_time_returned from task
                                 WHERE run_id='%s'"""
                                 % (workflow_id), db.engine)
+    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+                                      task_time_running, task_time_returned from task, try
+                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
+                                      % (workflow_id, workflow_id), db.engine)
     task_summary = db.engine.execute(
         "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
-                           task_per_app=task_per_app_plot(df_task, df_status))
+                           task_per_app=task_per_app_plot(df_task_tries, df_status))
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
