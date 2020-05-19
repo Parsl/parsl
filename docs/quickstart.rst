@@ -71,11 +71,14 @@ can be installed easily via `pip` using a pip extras option.
 Here's a list of the components and their extras option:
 
 * Amazon Web Services (Cloud) : `aws`
-* Google Cloud : `google_cloud`
-* Kubernetes : `kubernetes`
+* OAuth based SSH : `oauth_ssh`
 * Extreme Scale Executor (Supercomputing) : `extreme_scale`
-* Logging monitoring data to a database: `monitoring`
-* Jetstream (NSF Cloud) : `jetstream`
+* Google Cloud : `google_cloud`
+* Python GSSAPI for SSH : `gssapi`
+* Azure (Cloud) : `azure`
+* Kubernetes : `kubernetes`
+* Work Queue execution framework : `workqueue`
+
 
 Optional extras can be installed using the following syntax::
 
