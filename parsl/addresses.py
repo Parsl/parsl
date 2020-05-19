@@ -41,7 +41,7 @@ def address_by_query(timeout: float = 30) -> str:
        -----------
 
        timeout : float
-          Timeout for the request in seconds. Can be < 1. Default: 30s
+          Timeout for the request in seconds. Default: 30s
     """
     logger.debug("Finding address by querying remote service")
     response = requests.get('https://api.ipify.org', timeout=timeout)
