@@ -778,23 +778,33 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             pickle.dump(function_info, f_out)
 
     def _prepare_package(self, fn):
-        if id(fn) in self.cached_envs:
-            return self.cached_envs[id(fn)]
+        fn_id = id(fn)
+        fn_name = fn.__qualname__
+        if fn_id in self.cached_envs:
+            logger.debug("Skipping analysis of %s, previously got %s", fn_name, self.cached_envs[fn_id])
+            return self.cached_envs[fn_id]
         source_code = inspect.getsource(fn).encode()
         pkg_dir = os.path.join(tempfile.gettempdir(), "python_package-{}".format(os.geteuid()))
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
+            logger.info("Analyzing dependencies of %s", fn_name)
             subprocess.run([package_analyze_script, '-', spec.name], input=source_code, check=True)
             with open(spec.name, mode='rb') as f:
-                pkg = os.path.join(pkg_dir, "pack-{}.tar.gz".format(hashlib.sha256(f.read()).hexdigest()))
+                spec_hash = hashlib.sha256(f.read()).hexdigest()
+                logger.debug("Spec hash for %s is %s", fn_name, spec_hash)
+                pkg = os.path.join(pkg_dir, "pack-{}.tar.gz".format(spec_hash))
             if os.access(pkg, os.R_OK):
-                self.cached_envs[id(fn)] = pkg
+                self.cached_envs[fn_id] = pkg
+                logger.debug("Cached package for %s found at %s", fn_name, pkg)
                 return pkg
             (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp', suffix='.tar.gz')
             os.close(fd)
+            logger.info("Creating dependency package for %s", fn_name)
+            logger.debug("Writing deps for %s to %s", fn_name, tarball)
             subprocess.run([package_create_script, spec.name, tarball], stdout=subprocess.DEVNULL, check=True)
+            logger.debug("Done with conda-pack; moving %s to %s", tarball, pkg)
             os.rename(tarball, pkg)
-            self.cached_envs[id(fn)] = pkg
+            self.cached_envs[fn_id] = pkg
             return pkg
 
     def scale_out(self, *args, **kwargs):
