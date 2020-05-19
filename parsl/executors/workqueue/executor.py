@@ -69,7 +69,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           cancel_value=multiprocessing.Value('i', 1),
                           port=WORK_QUEUE_DEFAULT_PORT,
                           wq_log_dir=None,
-                          project_password=None,
                           project_password_file=None,
                           project_name=None):
     """Thread to handle Parsl app submissions to the Work Queue objects.
@@ -100,9 +99,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
     # Specify WorkQueue queue attributes
     if project_name:
         q.specify_name(project_name)
-    if project_password:
-        q.specify_password(project_password)
-    elif project_password_file:
+
+    if project_password_file:
         q.specify_password_file(project_password_file)
 
     # Only write logs when the wq_log_dir is specified, which it most likely will be
@@ -397,9 +395,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         project_name: str
             If given, Work Queue master process name. Default is None.
 
-        project_password: str
-            Optional password for the Work Queue project. Default is None.
-
         project_password_file: str
             Optional password file for the work queue project. Default is None.
 
@@ -441,7 +436,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  working_dir=".",
                  managed=True,
                  project_name=None,
-                 project_password=None,
                  project_password_file=None,
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
@@ -465,7 +459,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.port = port
         self.task_counter = -1
         self.project_name = project_name
-        self.project_password = project_password
         self.project_password_file = project_password_file
         self.env = env
         self.init_command = init_command
@@ -480,14 +473,10 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.cancel_value = multiprocessing.Value('i', 1)
         self.worker_command = ("work_queue_worker {hostname} {port}")
 
-        # Resolve ambiguity when password and password_file are both specified
-        if self.project_password is not None and self.project_password_file is not None:
-            logger.warning("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
-            self.project_password_file = None
-        if self.project_password_file is not None:
-            if os.path.exists(self.project_password_file) is False:
-                logger.debug("Password File does not exist, no file used")
-                self.project_password_file = None
+
+        if self.project_password_file is not None and not os.path.exists(self.project_password_file):
+            # This exception will be made more specific once the pr with WorkQueueFailure is merged.
+            raise Exception('Could not find password file: {}'.format(self.project_password_file))
 
         # Build foundations of the launch command
         self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
@@ -525,7 +514,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "cancel_value": self.cancel_value,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
-                                 "project_password": self.project_password,
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name}
         self.submit_process = multiprocessing.Process(target=WorkQueueSubmitThread,
