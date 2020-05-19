@@ -452,7 +452,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  see_worker_output=False):
         NoStatusHandlingExecutor.__init__(self)
         self._provider = provider
-        self._scaling_enabled = False
+        self._scaling_enabled = True
 
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
