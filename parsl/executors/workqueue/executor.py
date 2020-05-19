@@ -347,8 +347,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
                                                              buffer_threshold=1024 * 1024,
                                                              item_threshold=1024)}
-            with open(fn_path, "wb") as f_out:
-                pickle.dump(function_info, f_out)
+        with open(fn_path, "wb") as f_out:
+            pickle.dump(function_info, f_out)
 
     def _construct_map_file(self, map_file, input_files, output_files):
         """ Map local filepath of parsl files to the filenames at the execution worker.
