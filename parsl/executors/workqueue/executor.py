@@ -394,9 +394,16 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         project_name: str
             If given, Work Queue master process name. Default is None.
+            Overrides hostname.
 
         project_password_file: str
             Optional password file for the work queue project. Default is None.
+
+        hostname: str
+            The ip to contact this work queue master process.
+            If not given, uses the hostname of the current machine as returned
+            by socket.gethostname().
+            Ignored if project_name is specified.
 
         port: int
             TCP port on Parsl submission machine for Work Queue workers
@@ -437,6 +444,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  managed=True,
                  project_name=None,
                  project_password_file=None,
+                 hostname=None,
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
@@ -456,6 +464,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.task_queue = multiprocessing.Queue()
         self.collector_queue = multiprocessing.Queue()
         self.blocks = {}
+        self.hostname = hostname
         self.port = port
         self.task_counter = -1
         self.project_name = project_name
@@ -471,8 +480,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.full = full_debug
         self.source = source
         self.cancel_value = multiprocessing.Value('i', 1)
-        self.worker_command = ("work_queue_worker {hostname} {port}")
 
+        if not self.hostname:
+            self.hostname = socket.gethostname()
 
         if self.project_password_file is not None and not os.path.exists(self.project_password_file):
             # This exception will be made more specific once the pr with WorkQueueFailure is merged.
