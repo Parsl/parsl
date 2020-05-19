@@ -10,6 +10,7 @@ from concurrent.futures import Future
 import tempfile
 import hashlib
 import subprocess
+import shutil
 import os
 import pickle
 import queue
@@ -44,12 +45,9 @@ else:
 
 logger = logging.getLogger(__name__)
 
-package_analyze_script = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "python_package_analyze")
-package_create_script = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "python_package_create")
-package_run_script = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "python_package_run")
+package_analyze_script = shutil.which("python_package_analyze")
+package_create_script = shutil.which("python_package_create")
+package_run_script = shutil.which("python_package_run")
 
 
 class WorkqueueTaskFailure(AppException):
