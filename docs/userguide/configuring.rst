@@ -30,8 +30,8 @@ configuration can be specified.
 .. contents:: Configuration How-To and Examples:
 
 .. note::
-   Please note that all configuration examples below require customization for your account, 
-   allocation, Python environment, etc. 
+   Please note that all configuration examples below require customization for your account,
+   allocation, Python environment, etc.
 
 How to Configure
 ----------------
@@ -114,7 +114,7 @@ In addition, examples for some specific configurations follow.
 .. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale at which
        we've tested the `ExtremeScaleExecutor`.
 
-.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and 
+.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and
        20000 CPU cores.
 
 .. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
@@ -204,7 +204,7 @@ Stampede2 (TACC)
 
 .. image:: https://www.tacc.utexas.edu/documents/1084364/1413880/stampede2-0717.jpg/
 
-The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
+The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler.
 
 .. literalinclude:: ../../parsl/configs/stampede2.py
 
@@ -246,9 +246,9 @@ using the `CobaltProvider`. This configuration assumes that the script is being 
 Cooley (ALCF)
 -------------
 
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's 
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
 **Cooley** analysis and visualization system.
-The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler 
+The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler
 using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
 .. literalinclude:: ../../parsl/configs/cooley.py
@@ -380,7 +380,7 @@ To utilize Work Queue with Parsl, please install the full CCTools software packa
     $ conda activate <environment>
     $ conda install -y -c conda-forge cctools
 
-This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library. 
+This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
 
 
 Further help
@@ -390,4 +390,3 @@ For help constructing a configuration, you can click on class names such as :cla
 
     >>> from parsl.config import Config
     >>> help(Config)
-
