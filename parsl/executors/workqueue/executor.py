@@ -794,8 +794,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 return pkg
             (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp', suffix='.tar.gz')
             os.close(fd)
-            with open(os.devnull, 'w') as devnull:
-                subprocess.run([package_create_script, spec.name, tarball], stdout=devnull, check=True)
+            subprocess.run([package_create_script, spec.name, tarball], stdout=subprocess.DEVNULL, check=True)
             os.rename(tarball, pkg)
             self.cached_envs[id(fn)] = pkg
             return pkg
