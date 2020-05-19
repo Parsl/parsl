@@ -725,7 +725,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         else:
             worker_command += ' {} {}'.format(self.hostname, self.port)
 
-        logger.debug("Using worker command: {}".format(self.worker_command))
+        logger.debug("Using worker command: {}".format(worker_command))
         return worker_command
 
     def _patch_providers(self):
