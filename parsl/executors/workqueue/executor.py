@@ -13,6 +13,7 @@ import socket
 import pickle
 import queue
 import inspect
+import shutil
 from ipyparallel.serialize import pack_apply_message
 
 from parsl.app.errors import AppException
@@ -20,7 +21,7 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
-from parsl.providers import LocalProvider
+from parsl.providers import LocalProvider, CondorProvider
 from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import workqueue_worker
@@ -719,9 +720,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         worker_command = 'work_queue_worker'
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
-            # The password file is not currently sent with the
-            # work_queue_worker...
-            raise NotImplementedError
         if self.project_name:
             worker_command += ' -M {}'.format(self.project_name)
         else:
@@ -729,6 +727,16 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         logger.debug("Using worker command: {}".format(self.worker_command))
         return worker_command
+
+    def _patch_providers(self):
+        # Add the worker and password file to files that the provider needs to stage.
+        # (Currently only for the CondorProvider)
+        if isinstance(self.provider, CondorProvider):
+            path_to_worker = shutil.which('work_queue_worker')
+            self.worker_command = './' + self.worker_command
+            self.provider.transfer_input_files.append(path_to_worker)
+            if self.project_password_file:
+                self.provider.transfer_input_files.append(self.project_password_file)
 
     def initialize_scaling(self):
         """ Compose the launch command and call scale out
@@ -738,6 +746,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Start scaling out
         logger.debug("Starting WorkQueueExecutor with provider: %s", self.provider)
         self.worker_command = self._construct_worker_command()
+        self._patch_providers()
 
         if hasattr(self.provider, 'init_blocks'):
             try:
