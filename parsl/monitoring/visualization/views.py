@@ -25,7 +25,16 @@ def format_time(value):
         return "Incorrect time format"
 
 
+def format_duration(value):
+    (start, end) = value
+    if start and end:
+        return format_time(end-start)
+    else:
+        return "-"
+
+
 app.jinja_env.filters['timeformat'] = format_time
+app.jinja_env.filters['durationformat'] = format_duration
 
 
 @app.route('/')
