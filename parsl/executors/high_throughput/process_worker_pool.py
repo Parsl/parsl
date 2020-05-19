@@ -523,7 +523,14 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             # logger.debug("Result: {}".format(result))
 
         logger.info("Completed task {}".format(tid))
-        pkl_package = pickle.dumps(result_package)
+        try:
+            pkl_package = pickle.dumps(result_package)
+        except Exception:
+            logger.exception("Caught exception while trying to pickle the result package")
+            pkl_package = pickle.dumps({'task_id': tid,
+                                        'exception': serialize_object(
+                                            RemoteExceptionWrapper(*sys.exc_info()))
+            })
 
         result_queue.put(pkl_package)
         tasks_in_progress.pop(worker_id)
@@ -611,6 +618,8 @@ if __name__ == "__main__":
         logger.info("poll_period: {}".format(args.poll))
         logger.info("address_probe_timeout: {}".format(args.address_probe_timeout))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
+        logger.info("Heartbeat threshold: {}".format(args.hb_threshold))
+        logger.info("Heartbeat period: {}".format(args.hb_period))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
