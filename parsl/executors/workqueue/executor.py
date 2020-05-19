@@ -715,20 +715,30 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         return fu
 
+    def _construct_worker_command(self):
+        worker_command = 'work_queue_worker'
+        if self.project_password_file:
+            worker_command += ' --password {}'.format(self.project_password_file)
+            # The password file is not currently sent with the
+            # work_queue_worker...
+            raise NotImplementedError
+        if self.project_name:
+            worker_command += ' -M {}'.format(self.project_name)
+        else:
+            worker_command += ' {} {}'.format(self.hostname, self.port)
+
+        logger.debug("Using worker command: {}".format(self.worker_command))
+        return worker_command
+
     def initialize_scaling(self):
         """ Compose the launch command and call scale out
 
         Scales the workers to the appropriate nodes with provider
         """
-
-        # Format launch command for the Provider
-        launch_command = self.worker_command.format(hostname=socket.gethostname(), port=self.port)
-        self.worker_command = launch_command
-        logger.debug("Launch command: {}".format(self.worker_command))
-
         # Start scaling out
-        self._scaling_enabled = True
         logger.debug("Starting WorkQueueExecutor with provider: %s", self.provider)
+        self.worker_command = self._construct_worker_command()
+
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
