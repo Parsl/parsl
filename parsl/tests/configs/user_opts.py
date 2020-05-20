@@ -33,6 +33,9 @@ user_opts = {
     'summit': {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },
+    'midway': {
+        'worker_init': 'source ~/setup_parsl_test_env.sh;',
+    },
     # 'comet': {
     #     'username': COMET_USERNAME,
     #     'script_dir': '/home/{}/parsl_scripts'.format(COMET_USERNAME),

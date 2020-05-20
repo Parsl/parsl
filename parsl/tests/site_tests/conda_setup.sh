@@ -98,6 +98,19 @@ create_conda() {
         echo "source ~/anaconda3/bin/activate;"          >  ~/setup_parsl_test_env.sh
         echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 
+    elif [[ "$(hostname)" =~ .*midway.* ]]
+    then
+        echo "On Midway"
+        module unload python
+        module load Anaconda3/5.3.0
+        conda create -p $CONDA_TARGET python=3.7 --yes --force
+        source /software/Anaconda3-5.3.0-el7-x86_64/bin/activate
+        conda activate $PWD/$CONDA_TARGET
+        echo "module unload python"                                         >  ~/setup_parsl_test_env.sh
+        echo "module load Anaconda3/5.3.0"                                  >> ~/setup_parsl_test_env.sh
+        echo "source /software/Anaconda3-5.3.0-el7-x86_64/bin/activate"     >> ~/setup_parsl_test_env.sh
+        echo "conda activate $PWD/$CONDA_TARGET"                            >> ~/setup_parsl_test_env.sh
+
     else
         echo "Treating $(hostname) as Local"
         if [[ -d ~/anaconda3 ]]

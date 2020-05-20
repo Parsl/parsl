@@ -31,6 +31,11 @@ def fresh_config():
         from parsl.tests.configs.comet import fresh_config
         config = fresh_config()
 
+    elif 'midway' in hostname:
+        print("Loading Midway config")
+        from parsl.tests.configs.midway import fresh_config
+        config = fresh_config()
+
     else:
         print("Loading Local HTEX config")
         from parsl.tests.configs.htex_local import fresh_config
