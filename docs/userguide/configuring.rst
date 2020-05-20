@@ -51,38 +51,41 @@ In addition, examples for some specific configurations follow.
 
 1. Where would you like the apps in the Parsl program to run?
 
-+---------------------+----------------------------+------------------------+
-| Target              | Executor                   | Provider               |
-+=====================+============================+========================+
-| Laptop/Workstation  | * `ThreadPoolExecutor`     | `LocalProvider`        |
-|                     | * `WorkQueueExecutor`      |                        |
-|                     | * `HighThroughputExecutor` |                        |
-|                     | * `ExtremeScaleExecutor`   |                        |
-+---------------------+----------------------------+------------------------+
-| Amazon Web Services | * `HighThroughputExecutor` | `AWSProvider`          |
-+---------------------+----------------------------+------------------------+
-| Google Cloud        | * `HighThroughputExecutor` | `GoogleCloudProvider`  |
-+---------------------+----------------------------+------------------------+
-| Slurm based system  | * `WorkQueueExecutor`      | `SlurmProvider`        |
-|                     | * `HighThroughputExecutor` |                        |
-|                     | * `ExtremeScaleExecutor`   |                        |
-+---------------------+----------------------------+------------------------+
-| Torque/PBS based    | * `WorkQueueExecutor`      | `TorqueProvider`       |
-| system              | * `HighThroughputExecutor` |                        |
-|                     | * `ExtremeScaleExecutor`   |                        |
-+---------------------+----------------------------+------------------------+
-| Cobalt based system | * `WorkQueueExecutor`      | `CobaltProvider`       |
-|                     | * `HighThroughputExecutor` |                        |
-|                     | * `ExtremeScaleExecutor`   |                        |
-+---------------------+----------------------------+------------------------+
-| GridEngine based    | * `WorkQueueExecutor`      | `GridEngineProvider`   |
-| system              | * `HighThroughputExecutor` |                        |
-+---------------------+----------------------------+------------------------+
-| Condor based        | * `WorkQueueExecutor`      | `CondorProvider`       |
-| cluster or grid     | * `HighThroughputExecutor` |                        |
-+---------------------+----------------------------+------------------------+
-| Kubernetes cluster  | * `HighThroughputExecutor` | `KubernetesProvider`   |
-+---------------------+----------------------------+------------------------+
++---------------------+-------------------------------+------------------------+
+| Target              | Executor                      | Provider               |
++=====================+===============================+========================+
+| Laptop/Workstation  | * `ThreadPoolExecutor`        | `LocalProvider`        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
+|                     | * `HighThroughputExecutor`    |                        |
+|                     | * `ExtremeScaleExecutor`      |                        |
++---------------------+-------------------------------+------------------------+
+| Amazon Web Services | * `HighThroughputExecutor`    | `AWSProvider`          |
++---------------------+-------------------------------+------------------------+
+| Google Cloud        | * `HighThroughputExecutor`    | `GoogleCloudProvider`  |
++---------------------+-------------------------------+------------------------+
+| Slurm based system  | * `WorkQueueExecutor` beta_   | `SlurmProvider`        |
+|                     | * `HighThroughputExecutor`    |                        |
+|                     | * `ExtremeScaleExecutor`      |                        |
++---------------------+-------------------------------+------------------------+
+| Torque/PBS based    | * `WorkQueueExecutor` beta_   | `TorqueProvider`       |
+| system              | * `HighThroughputExecutor`    |                        |
+|                     | * `ExtremeScaleExecutor`      |                        |
++---------------------+-------------------------------+------------------------+
+| Cobalt based system | * `WorkQueueExecutor` beta_   | `CobaltProvider`       |
+|                     | * `HighThroughputExecutor`    |                        |
+|                     | * `ExtremeScaleExecutor`      |                        |
++---------------------+-------------------------------+------------------------+
+| GridEngine based    | * `WorkQueueExecutor` beta_   | `GridEngineProvider`   |
+| system              | * `HighThroughputExecutor`    |                        |
++---------------------+-------------------------------+------------------------+
+| Condor based        | * `WorkQueueExecutor` beta_   | `CondorProvider`       |
+| cluster or grid     | * `HighThroughputExecutor`    |                        |
++---------------------+-------------------------------+------------------------+
+| Kubernetes cluster  | * `HighThroughputExecutor`    | `KubernetesProvider`   |
++---------------------+-------------------------------+------------------------+
+
+.. [beta] WorkQueueExecutor is available in `v1.0.0` in beta status.
+
 
 2. How many nodes will you use to run them? What task durations give good performance on different executors?
 
