@@ -136,6 +136,7 @@ class Strategy(object):
         Args:
             - tasks (task_ids): Not used here.
         """
+        logger.debug("strategy_noop: doing nothing")
 
     def unset_logging(self):
         """ Mute newly added handlers to the root level, right after calling executor.status
@@ -175,11 +176,15 @@ class Strategy(object):
         self._general_strategy(status_list, tasks, strategy_type='htex')
 
     def _general_strategy(self, status_list, tasks, *, strategy_type):
+        logger.debug("general strategy starting")
+
         for exec_status in status_list:
             executor = exec_status.executor
             label = executor.label
             if not executor.scaling_enabled:
+                logger.debug("strategy_simple: skipping executor {} because scaling not enabled".format(label))
                 continue
+            logger.debug("strategy_simple: strategizing for executor {}".format(label))
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
@@ -201,6 +206,8 @@ class Strategy(object):
             active_blocks = running + pending
             active_slots = active_blocks * tasks_per_node * nodes_per_block
 
+            logger.debug("Slot ratio calculation: active_slots = {}, active_tasks = {}".format(active_slots, active_tasks))
+
             if hasattr(executor, 'connected_workers'):
                 logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
                     label, active_tasks, running, pending, executor.connected_workers))
@@ -209,6 +216,7 @@ class Strategy(object):
                     label, active_tasks, running, pending))
 
             # reset kill timer if executor has active tasks
+
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
                 self.executors[executor.label]['idle_since'] = None
 
@@ -216,17 +224,18 @@ class Strategy(object):
             # No tasks.
             if active_tasks == 0:
                 # Case 1a
+                logger.debug("1. active_tasks == 0")
+
                 # Fewer blocks that min_blocks
                 if active_blocks <= min_blocks:
-                    # Ignore
-                    # logger.debug("Strategy: Case.1a")
-                    pass
-
+                    logger.debug("Case 1a: executor has no active tasks, and <= min blocks. Taking no action.")
                 # Case 1b
                 # More blocks than min_blocks. Scale down
                 else:
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
+                    logger.debug("Case 1b: executor has no active tasks, and more ({}) than min blocks ({})".format(active_blocks, min_blocks))
+
                     if not self.executors[executor.label]['idle_since']:
                         logger.debug("Executor {} has 0 active tasks; starting kill timer (if idle time exceeds {}s, resources will be removed)".format(
                             label, self.max_idletime)
@@ -243,22 +252,22 @@ class Strategy(object):
                         exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
-                        pass
-                        # logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
+                        logger.debug("1.2.2 Idle time {} is less than max_idletime {}s for executor {}; not scaling in".format(time.time() - idle_since,
+                                                                                                                               self.max_idletime, label))
 
             # Case 2
             # More tasks than the available slots.
             elif (float(active_slots) / active_tasks) < parallelism:
+                logger.debug("Case 22. (slot_ratio = active_slots/active_tasks) < parallelism")
+
                 # Case 2a
                 # We have the max blocks possible
                 if active_blocks >= max_blocks:
                     # Ignore since we already have the max nodes
-                    # logger.debug("Strategy: Case.2a")
-                    pass
-
+                    logger.debug("Case 2a active_blocks {} >= max_blocks {} so not scaling".format(active_blocks, max_blocks))
                 # Case 2b
                 else:
-                    # logger.debug("Strategy: Case.2b")
+                    logger.debug("Case 2b active_blocks {} < max_blocks {} so scaling".format(active_blocks, max_blocks))
                     excess = math.ceil((active_tasks * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
@@ -266,12 +275,17 @@ class Strategy(object):
                     exec_status.scale_out(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
-                # Case 4
-                logger.debug("Requesting single slot")
-                if active_blocks < max_blocks:
-                    exec_status.scale_out(1)
+                logger.debug("Case 4(I). No active slots, some active tasks...")
 
-            # Case 4
+                # Case 4(I)
+                if active_blocks < max_blocks:
+                    logger.debug("Requesting single slot")
+
+                    exec_status.scale_out(1)
+                else:
+                    logger.debug("Not requesting single slot, because at maxblocks already")
+
+            # Case 4(II)
             # More slots than tasks
             elif active_slots > 0 and active_slots > active_tasks:
                 if strategy_type == 'htex':
@@ -280,13 +294,13 @@ class Strategy(object):
                     if isinstance(executor, HighThroughputExecutor):
                         if active_blocks > min_blocks:
                             exec_status.scale_in(1, force=False, max_idletime=self.max_idletime)
-
+                    else:
+                        logger.debug("This strategy does not support scaling down except for HighThroughputExecutor")
                 elif strategy_type == 'simple':
+                    logger.debug("This strategy does not support scaling down")
                     # skip for simple strategy
-                    pass
 
             # Case 3
             # tasks ~ slots
             else:
-                # logger.debug("Strategy: Case 3")
-                pass
+                logger.debug("Case 3: do-nothing strategy case: no changes necessary to current load")
