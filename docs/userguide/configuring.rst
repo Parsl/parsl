@@ -355,7 +355,7 @@ The configuration uses the `CondorProvider` to interface with the scheduler.
 
 
 Stampede2 (TACC)
-------------
+----------------
 
 .. image:: https://www.tacc.utexas.edu/documents/1084364/1413880/stampede2-0717.jpg/
 
