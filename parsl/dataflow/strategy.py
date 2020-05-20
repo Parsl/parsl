@@ -141,6 +141,7 @@ class Strategy(object):
         KWargs:
             - kind (Not used)
         """
+        logger.debug("strategy_noop: doing nothing")
 
     def unset_logging(self):
         """ Mute newly added handlers to the root level, right after calling executor.status
@@ -170,12 +171,14 @@ class Strategy(object):
         KWargs:
             - kind (Not used)
         """
-
+        logger.debug("strategy_simple starting")
         for exec_status in status_list:
             executor = exec_status.executor
             label = executor.label
             if not executor.scaling_enabled:
+                logger.debug("strategy_simple: skipping executor {} because scaling not enabled".format(label))
                 continue
+            logger.debug("strategy_simple: strategizing for executor {}".format(label))
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
@@ -212,23 +215,33 @@ class Strategy(object):
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
                 self.executors[executor.label]['idle_since'] = None
 
+            # calculate slot ratio here so i can log it
+            logger.debug("Slot ratio calculation: active_slots = {}, active_tasks = {}".format(active_slots, active_tasks))
+            if active_tasks > 0:
+                slot_ratio = (float(active_slots) / active_tasks)
+                logger.debug("slot_ratio = {}, parallelism = {}".format(slot_ratio, parallelism))
+            else:
+                logger.debug("not computing slot_ratio because active_tasks = 0")
+
             # Case 1
             # No tasks.
             if active_tasks == 0:
-                # Case 1a
+                logger.debug("1. active_tasks == 0")
+                # Case 1.1
                 # Fewer blocks that min_blocks
                 if active_blocks <= min_blocks:
                     # Ignore
-                    # logger.debug("Strategy: Case.1a")
+                    logger.debug("1.1 executor has no active tasks, and <= min blocks. Taking no action.")
                     pass
 
-                # Case 1b
+                # Case 1.2
                 # More blocks than min_blocks. Scale down
                 else:
+                    logger.debug("1.2 executor has no active tasks, and more ({}) than min blocks ({})".format(active_blocks, min_blocks))
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
                     if not self.executors[executor.label]['idle_since']:
-                        logger.debug("Executor {} has 0 active tasks; starting kill timer (if idle time exceeds {}s, resources will be removed)".format(
+                        logger.debug("1.2 Executor {} has 0 active tasks; starting kill timer (if idle time exceeds {}s, resources will be removed)".format(
                             label, self.max_idletime)
                         )
                         self.executors[executor.label]['idle_since'] = time.time()
@@ -237,28 +250,31 @@ class Strategy(object):
                     if (time.time() - idle_since) > self.max_idletime:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
-                        logger.debug("Idle time has reached {}s for executor {}; removing resources".format(
+                        logger.debug("1.2.1 Idle time has reached {}s for executor {}; removing resources".format(
                             self.max_idletime, label)
                         )
                         exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
+                        logger.debug("1.2.2 Idle time {} is less than max_idletime {}s for executor {}; not scaling in".format(time.time() - idle_since,
+                                                                                                                               self.max_idletime, label))
                         pass
                         # logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
 
             # Case 2
             # More tasks than the available slots.
             elif (float(active_slots) / active_tasks) < parallelism:
+                logger.debug("2. (slot_ratio = active_slots/active_tasks) < parallelism")
                 # Case 2a
                 # We have the max blocks possible
                 if active_blocks >= max_blocks:
                     # Ignore since we already have the max nodes
-                    # logger.debug("Strategy: Case.2a")
+                    logger.debug("2.1 active_blocks {} >= max_blocks {} so not scaling".format(active_blocks, max_blocks))
                     pass
 
                 # Case 2b
                 else:
-                    # logger.debug("Strategy: Case.2b")
+                    logger.debug("2.2 active_blocks {} < max_blocks {} so scaling".format(active_blocks, max_blocks))
                     excess = math.ceil((active_tasks * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
@@ -266,16 +282,20 @@ class Strategy(object):
                     exec_status.scale_out(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
-                # Case 4
+                # Case 3
                 # Check if slots are being lost quickly ?
-                logger.debug("Requesting single slot")
+                logger.debug("3. No active slots, some active tasks...")
                 if active_blocks < max_blocks:
+                    logger.debug("3.1 ... active_blocks less than max blocks so requesting one block")
                     exec_status.scale_out(1)
-            # Case 3
+                else:
+                    logger.debug("3.2 ... active_blocks ({}) >= max_blocks ({}) so not requesting a new block".format(active_blocks, max_blocks))
+            # Case 4
             # tasks ~ slots
             else:
-                # logger.debug("Strategy: Case 3")
+                logger.debug("4. do-nothing strategy case: no changes necessary to current load")
                 pass
+        logger.debug("strategy_simple finished")
 
     def _strategy_htex_auto_scale(self, tasks, *args, kind=None, **kwargs):
         """ HTEX specific auto scaling strategy
