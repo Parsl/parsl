@@ -14,7 +14,7 @@ installation.
 * `conda_setup.sh` will create a unique conda env mapped to `parsl/parsl_<GIT_HASH>` and
   leave a script `~/setup_parsl_test_env.sh` that will activate this env.
 
-* `site_config_selector.py` is a facade that checks the site's hostname and picks a matching
+* `site_config_selector.py` is a facade that checks the submit node's hostname and picks a matching
   configuration from `parsl/parsl/tests/configs`.
 
 * The tests in this folder are designed to use the site_config_selector and runs test against
@@ -26,15 +26,17 @@ Running tests
 
 Assuming the site tests are supported on your site, here's how you run tests::
 
-  1. Checkout the git tag/hash for testing
+  1. Checkout parsl into a *shared filesystem* with the right git tag/hash for testing
      * If you are running tests on a system where the $HOME is not mounted on compute nodes
        checkout to $WORK / $SCRATCH or the equivalent. For eg, Comet and Stampede2
-
   2. `cd parsl/tests/site_tests`
   3. `bash conda_setup.sh`
-  4. Now check if the setup script is available at `~/setup_parsl_test_env.sh`
-  5. Go back to the parsl root dir
-  6. Run tests with `make site_test`
+  4. Update parsl/parsl/tests/configs/local_user_opts.py with user specific options.
+  5. Now check if the setup script is available at `~/setup_parsl_test_env.sh`
+  6. Go back to the parsl root dir
+  7. Reinstall parsl, if you've made config changes in step 3 or 4.
+        >>> pip install .
+  8. Run tests with `make site_test`
 
 
 Adding a new site
