@@ -117,8 +117,8 @@ In addition, examples for some specific configurations follow.
 .. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and
        20000 CPU cores.
 
-.. warning:: `IPyParallelExecutor` is be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
-             as the recommended replacement.
+.. warning:: `IPyParallelExecutor` is  deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
+   as the recommended replacement.
 
 
 3. If you are running on a cluster or supercomputer, will you request multiple nodes per batch (scheduler) job?
@@ -256,10 +256,11 @@ The following snippet shows an example configuration for using the Work Queue di
 
 To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment (instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`):
 
-.. codeblock:: bash
-    $ conda create -y --name <environment> python=<version>
-    $ conda activate <environment>
-    $ conda install -y -c conda-forge cctools
+.. code-block:: bash
+
+   $ conda create -y --name <environment> python=<version>
+   $ conda activate <environment>
+   $ conda install -y -c conda-forge cctools
 
 This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
 
@@ -273,8 +274,6 @@ The following snippet shows an example configuration for executing remotely on S
 Center's **Comet** supercomputer. The example is designed to be executed on the login nodes, using the
 `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
-.. warning:: This config has **NOT** been tested with Parsl v0.9.0
-
 .. literalinclude:: ../../parsl/configs/comet.py
 
 
@@ -287,7 +286,6 @@ The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt sc
 using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
 .. literalinclude:: ../../parsl/configs/cooley.py
-
 
 
 .. _configuring_nersc_cori:
