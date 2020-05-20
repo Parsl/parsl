@@ -132,8 +132,9 @@ def worker_efficiency(task, node):
                              title="Worker efficiency"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
     except Exception as e:
-        print(e)
-        return "The worker efficiency plot cannot be generated due to missing data."
+        raise
+        # print(e)
+        # return "The worker efficiency plot cannot be generated due to missing data."
 
 
 def resource_efficiency(resource, node, label='CPU'):

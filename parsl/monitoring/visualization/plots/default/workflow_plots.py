@@ -61,7 +61,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
               'failed': 'rgb(255, 128, 128)',
               'exec_done': 'rgb(128, 255, 128)',
               'memo_done': 'rgb(240, 255, 128)',
-              'fail_retryable': rgb(255, 168,168)
+              'fail_retryable': 'rgb(255, 168,168)'
              }
 
     fig = ff.create_gantt(parsl_tasks,

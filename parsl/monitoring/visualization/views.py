@@ -56,31 +56,21 @@ def workflow(workflow_id):
 
     df_status = pd.read_sql_query(
         "SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='%s'" % workflow_id, db.engine)
-    df_task = pd.read_sql_query("""SELECT task_id, task_func_name, task_time_submitted,
-                                task_time_returned, task_time_running from task
+    df_task = pd.read_sql_query("""SELECT task_id, task_func_name,
+                                task_time_returned from task
                                 WHERE run_id='%s'"""
                                 % (workflow_id), db.engine)
+    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+                                      task_time_running, task_time_returned from task, try
+                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
+                                      % (workflow_id, workflow_id), db.engine)
     task_summary = db.engine.execute(
         "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
-                           task_per_app=task_per_app_plot(df_task, df_status))
-
-
-@app.route('/workflow/<workflow_id>/app/')
-def parsl_apps(workflow_id):
-    workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
-
-    if workflow_details is None:
-        return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
-
-    task_summary = Task.query.filter_by(run_id=workflow_id)
-    return render_template('app.html',
-                           app_name="All Apps",
-                           workflow_details=workflow_details,
-                           task_summary=task_summary)
+                           task_per_app=task_per_app_plot(df_task_tries, df_status))
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
@@ -94,6 +84,20 @@ def parsl_app(workflow_id, app_name):
         run_id=workflow_id, task_func_name=app_name)
     return render_template('app.html',
                            app_name=app_name,
+                           workflow_details=workflow_details,
+                           task_summary=task_summary)
+
+
+@app.route('/workflow/<workflow_id>/task/')
+def parsl_apps(workflow_id):
+    workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
+
+    if workflow_details is None:
+        return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
+
+    task_summary = Task.query.filter_by(run_id=workflow_id)
+    return render_template('app.html',
+                           app_name="All Apps",
                            workflow_details=workflow_details,
                            task_summary=task_summary)
 

@@ -4,6 +4,7 @@ import os
 import pathlib
 import pickle
 import random
+import time
 import typeguard
 import inspect
 import threading
@@ -27,7 +28,7 @@ from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States
+from parsl.dataflow.states import FINAL_STATES, States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.utils import get_version, get_std_fname_mode
@@ -848,6 +849,7 @@ class DataFlowKernel(object):
         keytasks = {state: 0 for state in States}
 
         for tid in self.tasks:
+            logger.debug("Accumulating task id {}".format(tid))
             keytasks[self.tasks[tid]['status']] += 1
         # Fetch from counters since tasks get wiped
         keytasks[States.exec_done] = self.tasks_completed_count
@@ -924,15 +926,22 @@ class DataFlowKernel(object):
 
         logger.info("Waiting for all remaining tasks to complete")
         for task_id in list(self.tasks):
+            logger.debug("Waiting for task id {}".format(task_id))
             # .exception() is a less exception throwing way of
             # waiting for completion than .result()
             if task_id not in self.tasks:
                 logger.debug("Task {} no longer in task list".format(task_id))
             else:
-                fut = self.tasks[task_id]['app_fu']
+                task_record = self.tasks[task_id] # still a race condition with the above self.tasks if-statement
+                fut = task_record['app_fu']
                 if not fut.done():
-                    logger.debug("Waiting for task {} to complete".format(task_id))
+                    logger.debug("Waiting for task {} to complete AppFuture".format(task_id))
                     fut.exception()
+                logger.debug("App future completed - now fast-polling for DFK state to change") # which still might not be enough?
+                while task_record['status'] not in FINAL_STATES:
+                    logger.debug("Waiting for task {} to complete. State now is {}".format(task_id, task_record['status']))
+                    time.sleep(0.1) # ugh sleep - is there a blocking form of this loop?
+                    
         logger.info("All remaining tasks completed")
 
     def cleanup(self):

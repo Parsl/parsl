@@ -25,18 +25,16 @@
     <thead>
       <tr>
         <th>Name</th>
-        <th>Task_ID</th>
+        <th>Task ID</th>
         <th>Dependencies</th>
-        <th>Executor</th>
-        <th>Started</th>
         <th>Completed</th>
       </tr>
     </thead>
     <tbody>
       {% for t in task_summary %}
       <tr>
-        <td><a href="/workflow/{{ workflow_details['run_id'] }}/task/{{ t['task_id'] }}">{{ t.task_func_name }}</a></td>
-        <td>{{ t['task_id'] }}</td>
+        <td>{{ t.task_func_name }}</td>
+        <td><a href="/workflow/{{ workflow_details['run_id'] }}/task/{{ t['task_id'] }}">{{ t['task_id'] }}</a></td>
         <td>
         {% if t['task_depends'] %}
             {% for id in t['task_depends'].split(",") %}
@@ -46,8 +44,6 @@
             None
         {% endif %}
         </td>
-        <td>{{ t['task_executor'] }}</td>
-        <td>{{ t['task_time_submitted'] | timeformat }}</td>
         <td> {{ t['task_time_returned'] | timeformat }}</td>
       </tr>
     {% endfor %}
