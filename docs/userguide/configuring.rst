@@ -54,32 +54,32 @@ In addition, examples for some specific configurations follow.
 +---------------------+-------------------------------+------------------------+
 | Target              | Executor                      | Provider               |
 +=====================+===============================+========================+
-| Laptop/Workstation  | * `ThreadPoolExecutor`        | `LocalProvider`        |
-|                     | * `WorkQueueExecutor` beta_   |                        |
+| Laptop/Workstation  | * `ExtremeScaleExecutor`      | `LocalProvider`        |
 |                     | * `HighThroughputExecutor`    |                        |
-|                     | * `ExtremeScaleExecutor`      |                        |
+|                     | * `ThreadPoolExecutor`        |                        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
 +---------------------+-------------------------------+------------------------+
 | Amazon Web Services | * `HighThroughputExecutor`    | `AWSProvider`          |
 +---------------------+-------------------------------+------------------------+
 | Google Cloud        | * `HighThroughputExecutor`    | `GoogleCloudProvider`  |
 +---------------------+-------------------------------+------------------------+
-| Slurm based system  | * `WorkQueueExecutor` beta_   | `SlurmProvider`        |
+| Slurm based system  | * `ExtremeScaleExecutor`      | `SlurmProvider`        |
 |                     | * `HighThroughputExecutor`    |                        |
-|                     | * `ExtremeScaleExecutor`      |                        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
 +---------------------+-------------------------------+------------------------+
-| Torque/PBS based    | * `WorkQueueExecutor` beta_   | `TorqueProvider`       |
+| Torque/PBS based    | * `ExtremeScaleExecutor`      | `TorqueProvider`       |
 | system              | * `HighThroughputExecutor`    |                        |
-|                     | * `ExtremeScaleExecutor`      |                        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
 +---------------------+-------------------------------+------------------------+
-| Cobalt based system | * `WorkQueueExecutor` beta_   | `CobaltProvider`       |
+| Cobalt based system | * `ExtremeScaleExecutor`      | `CobaltProvider`       |
 |                     | * `HighThroughputExecutor`    |                        |
-|                     | * `ExtremeScaleExecutor`      |                        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
 +---------------------+-------------------------------+------------------------+
-| GridEngine based    | * `WorkQueueExecutor` beta_   | `GridEngineProvider`   |
-| system              | * `HighThroughputExecutor`    |                        |
+| GridEngine based    | * `HighThroughputExecutor`    | `GridEngineProvider`   |
+| system              | * `WorkQueueExecutor` beta_   |                        |
 +---------------------+-------------------------------+------------------------+
-| Condor based        | * `WorkQueueExecutor` beta_   | `CondorProvider`       |
-| cluster or grid     | * `HighThroughputExecutor`    |                        |
+| Condor based        | * `HighThroughputExecutor`    | `CondorProvider`       |
+| cluster or grid     | * `WorkQueueExecutor` beta_   |                        |
 +---------------------+-------------------------------+------------------------+
 | Kubernetes cluster  | * `HighThroughputExecutor`    | `KubernetesProvider`   |
 +---------------------+-------------------------------+------------------------+
