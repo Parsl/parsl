@@ -72,6 +72,7 @@ Here's a list of the components and their extras option:
 
 * Amazon Web Services (Cloud) : `aws`
 * OAuth based SSH : `oauth_ssh`
+* Logging monitoring data to a database: `monitoring`
 * Extreme Scale Executor (Supercomputing) : `extreme_scale`
 * Google Cloud : `google_cloud`
 * Python GSSAPI for SSH : `gssapi`
