@@ -81,7 +81,7 @@ def task_per_app_plot(task, status, time_completed):
         task['epoch_time_running'] = (pd.to_datetime(
             task['task_try_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
-            task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            task['task_try_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = int(task['epoch_time_running'].min())
 
         end = int(task['epoch_time_returned'].max())
@@ -100,12 +100,12 @@ def task_per_app_plot(task, status, time_completed):
             if math.isnan(row['epoch_time_running']):
                 # Skip rows with no running start time.
                 continue
-            if math.isnan(row['epoch_time_returned']):
+            if math.isnan(row['epoch_try_time_returned']):
                 # Some kind of inference about time returned (workflow end time / current time? see gantt chart for inferences)
 
                 time_returned = end
             else:
-                time_returned = int(row['epoch_time_returned'])
+                time_returned = int(row['epoch_try_time_returned'])
 
             if row['task_func_name'] not in tasks_per_app:
                 tasks_per_app[row['task_func_name']] = [0] * (end - start + 1)
