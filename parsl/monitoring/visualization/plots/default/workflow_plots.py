@@ -130,7 +130,7 @@ def task_per_app_plot(task, status, time_completed):
             layout=go.Layout(xaxis=dict(autorange=True,
                                         title='Time (seconds)'),
                              yaxis=dict(title='Number of tasks'),
-                             title="Tasks per app"))
+                             title="Execution tries per app"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
     except Exception:
         raise
