@@ -191,7 +191,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
 
     def submit(self, func, resource_specification, *args, **kwargs):
         """ TODO: docstring """
-        if len(resource_specification) > 0:
+        if resource_specification:
             logger.error("Ignoring the resource specification. "
                          "Parsl resource specification is not supported in LowLatency Executor. "
                          "Please check WorkQueueExecutor if resource specification is needed.")

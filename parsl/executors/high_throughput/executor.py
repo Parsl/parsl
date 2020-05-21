@@ -529,7 +529,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         Returns:
               Future
         """
-        if len(resource_specification) > 0:
+        if resource_specification:
             logger.error("Ignoring the resource specification. "
                          "Parsl resource specification is not supported in HighThroughput Executor. "
                          "Please check WorkQueueExecutor if resource specification is needed.")
