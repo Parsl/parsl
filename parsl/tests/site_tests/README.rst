@@ -54,7 +54,7 @@ Adding a new site
   Please ensure that the site config uses:
     * max_workers = 1
     * init_blocks = 1
-    * min_blocks = 1
+    * min_blocks = 0
 
 * Add this site config to `parsl/tests/site_tests/site_config_selector.py`
 * Reinstall parsl, using `pip install .`
