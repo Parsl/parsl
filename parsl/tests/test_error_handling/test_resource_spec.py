@@ -4,8 +4,6 @@ from parsl.tests.configs.local_threads import config
 from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors import WorkQueueExecutor
 
-local_config = config
-
 
 @python_app
 def double(x, parsl_resource_specification={}):
@@ -25,6 +23,6 @@ def test_resource(n=2):
 
 
 if __name__ == '__main__':
-
+    local_config = config
     parsl.load(local_config)
     x = test_resource(2)
