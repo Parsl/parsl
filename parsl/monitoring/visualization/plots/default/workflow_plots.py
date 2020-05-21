@@ -119,13 +119,14 @@ def task_per_app_plot(task, status, time_completed):
                 all_tasks[j - start] += 1
         fig = go.Figure(
             data=[go.Scatter(x=list(range(0, end - start + 1)),
-                             y=tasks_per_app[app],
-                             name=app,
-                             ) for app in tasks_per_app] +
-                 [go.Scatter(x=list(range(0, end - start + 1)),
                              y=all_tasks,
                              name='All',
-                             )],
+                             )] +
+                 [go.Scatter(x=list(range(0, end - start + 1)),
+                             y=tasks_per_app[app],
+                             name=app,
+                             ) for app in tasks_per_app],
+
             layout=go.Layout(xaxis=dict(autorange=True,
                                         title='Time (seconds)'),
                              yaxis=dict(title='Number of tasks'),
