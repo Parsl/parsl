@@ -13,11 +13,6 @@ benefits to be obtained by modularizing the workflow, including:
    3. Ease of reuse of components
 
 
-.. note::
-   Support for isolating configuration loading and app definition is available since 0.6.0.
-   Refer: `Issue#50 <https://github.com/Parsl/parsl/issues/50>`_
-
-
 The following example illustrates how a Parsl project can be organized into modules.
 
 The configuration(s) can be defined in a module or file (e.g., ``config.py``)
