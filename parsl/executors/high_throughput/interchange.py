@@ -449,8 +449,9 @@ class Interchange(object):
 
             # If we had received any requests, check if there are tasks that could be passed
 
-            logger.debug("Managers count (total/interesting): {}/{}".format(len(self._ready_manager_queue),
-                                                                            len(interesting_managers)))
+            logger.debug("Managers count (interesting/total): {interesting}/{total}".format(
+                total=len(self._ready_manager_queue),
+                interesting=len(interesting_managers)))
 
             if interesting_managers and not self.pending_task_queue.empty():
                 shuffled_managers = list(interesting_managers)
