@@ -19,7 +19,11 @@ def test_resource(n=2):
         assert isinstance(e, UnsupportedFeatureError)
     else:
         executors = parsl.dfk().executors
-        executor = executors[list(executors.keys() - 'data_manager')[0]]
+        executor = None
+        for label in executors:
+            if label != 'data_manager':
+                executor = executors[label]
+                break
         assert isinstance(executor, WorkQueueExecutor)
 
 
