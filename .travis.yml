@@ -27,7 +27,7 @@ install:
 
 # Os tests
 os:
-    - linux
+    - osx
 
 # command to run tests
 script:
