@@ -425,14 +425,14 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         project_name: str
             If given, Work Queue master process name. Default is None.
-            Overrides hostname.
+            Overrides address.
 
         project_password_file: str
             Optional password file for the work queue project. Default is None.
 
-        hostname: str
+        address: str
             The ip to contact this work queue master process.
-            If not given, uses the hostname of the current machine as returned
+            If not given, uses the address of the current machine as returned
             by socket.gethostname().
             Ignored if project_name is specified.
 
@@ -498,7 +498,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  managed=True,
                  project_name=None,
                  project_password_file=None,
-                 hostname=None,
+                 address=None,
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
@@ -523,7 +523,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.task_queue = multiprocessing.Queue()
         self.collector_queue = multiprocessing.Queue()
         self.blocks = {}
-        self.hostname = hostname
+        self.address = address
         self.port = port
         self.task_counter = -1
         self.project_name = project_name
@@ -546,8 +546,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.cancel_value = multiprocessing.Value('i', 1)
         self.cached_envs = {}
 
-        if not self.hostname:
-            self.hostname = socket.gethostname()
+        if not self.address:
+            self.address = socket.gethostname()
 
         if self.project_password_file is not None and not os.path.exists(self.project_password_file):
             # This exception will be made more specific once the pr with WorkQueueFailure is merged.
@@ -775,7 +775,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         if self.project_name:
             worker_command += ' -M {}'.format(self.project_name)
         else:
-            worker_command += ' {} {}'.format(self.hostname, self.port)
+            worker_command += ' {} {}'.format(self.address, self.port)
 
         logger.debug("Using worker command: {}".format(worker_command))
         return worker_command
