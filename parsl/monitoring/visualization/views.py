@@ -71,7 +71,7 @@ def workflow(workflow_id):
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
-                           task_per_app=task_per_app_plot(df_task_tries, df_status))
+                           task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed))
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
