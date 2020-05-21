@@ -16,7 +16,7 @@ def check_file(parsl_file_obj, mapping, file_type_string):
 if __name__ == "__main__":
     name = "parsl"
     shared_fs = False
-    source = False
+    fn_from_source = False
     input_function_file = ""
     output_result_file = ""
     remapping_string = None
@@ -40,8 +40,6 @@ if __name__ == "__main__":
                 index += 1
             elif sys.argv[index] == "--shared-fs":
                 shared_fs = True
-            elif sys.argv[index] == "--source":
-                source = True
             else:
                 print("command line argument not supported")
                 exit(1)
@@ -59,15 +57,19 @@ if __name__ == "__main__":
         input_function = open(input_function_file, "rb")
         function_info = pickle.load(input_function)
         # Extract information from transferred source code
-        if source:
+        if "source code" in function_info:
+            fn_from_source = True
             source_code = function_info["source code"]
             name = function_info["name"]
             args = function_info["args"]
             kwargs = function_info["kwargs"]
         # Extract information from function pointer
-        else:
+        elif "byte code" in function_info:
+            fn_from_source = False
             from ipyparallel.serialize import unpack_apply_message
-            func, args, kwargs = unpack_apply_message(function_info, user_ns, copy=False)
+            func, args, kwargs = unpack_apply_message(function_info["byte code"], user_ns, copy=False)
+        else:
+            raise Exception("Function file does not have a valid function representation.")
         input_function.close()
     except Exception as e:
         print(e)
@@ -127,7 +129,7 @@ if __name__ == "__main__":
                     resultname: resultname})
 
     # Import function source code and create function call
-    if source:
+    if fn_from_source:
         source_list = source_code.split('\n')[1:]
         full_source = ""
         for line in source_list:
