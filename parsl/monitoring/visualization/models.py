@@ -66,7 +66,6 @@ class Task(db.Model):
         'task_time_running', db.DateTime, nullable=True)
     task_time_returned = db.Column(
         'task_time_returned', db.DateTime, nullable=True)
-    task_elapsed_time = db.Column('task_elapsed_time', db.Float, nullable=True)
     task_memoize = db.Column('task_memoize', db.Text, nullable=False)
     task_inputs = db.Column('task_inputs', db.Text, nullable=True)
     task_outputs = db.Column('task_outputs', db.Text, nullable=True)
