@@ -18,7 +18,7 @@ def test_resource(n=2):
     except Exception as e:
         assert isinstance(e, UnsupportedFeatureError)
     else:
-        executor = list(parsl.dfk().executors.values())[0]
+        executor = list(parsl.dfk().executors.keys() - 'data_manager')[0]
         assert isinstance(executor, WorkQueueExecutor)
 
 
