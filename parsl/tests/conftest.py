@@ -256,6 +256,21 @@ def setup_data():
         f.write("2\n")
 
 
+@pytest.fixture(autouse=True, scope='function')
+def wait_for_task_completion(pytestconfig):
+    """If we're in a config-file based mode, wait for task completion between
+       each test. This will detect early on (by hanging) if particular test
+       tasks are not finishing, rather than silently falling off the end of
+       the test run with tasks still in progress.
+       In local mode, this fixture does nothing, as there isn't anything
+       reasonable to assume about DFK behaviour here.
+    """
+    config = pytestconfig.getoption('config')[0]
+    yield
+    if config != 'local':
+        parsl.dfk().wait_for_current_tasks()
+
+
 def pytest_make_collect_report(collector):
     call = runner.CallInfo.from_call(lambda: list(collector.collect()), 'collect')
     longrepr = None

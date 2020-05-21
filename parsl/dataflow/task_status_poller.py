@@ -23,7 +23,7 @@ class PollItem(ExecutorStatus):
 
     def poll(self, now: float):
         if self._should_poll(now):
-            logger.debug("Polling {}".format(self._executor))
+            logger.debug("Polling {}".format(self._executor.label))
             self._status = self._executor.status()
             self._last_poll_time = now
 
@@ -71,6 +71,6 @@ class TaskStatusPoller(object):
     def add_executors(self, executors: Sequence[ParslExecutor]):
         for executor in executors:
             if executor.status_polling_interval > 0:
-                logger.debug("Adding executor {}".format(executor))
+                logger.debug("Adding executor {}".format(executor.label))
                 self._poll_items.append(PollItem(executor))
         self._strategy.add_executors(executors)

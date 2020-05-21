@@ -22,8 +22,8 @@ def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
 def total(inputs=[]):
     total = 0
     with open(inputs[0].filepath, 'r') as f:
-        for l in f:
-            total += int(l)
+        for line in f:
+            total += int(line)
     return total
 
 
