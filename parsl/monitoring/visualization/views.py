@@ -22,7 +22,8 @@ def format_time(value):
         return rounded_timedelta
     else:
         print("Incorrect time format (neither float nor datetime object): {}, type: {}".format(value, type(value)))  # TODO: use logging
-        return "Incorrect time format"
+        # raise ValueError("Incorrect time format: {}, type {}".format(value, type(value)))
+        return "-"
 
 
 def format_duration(value):
