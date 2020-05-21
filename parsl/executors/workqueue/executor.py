@@ -9,6 +9,10 @@ import logging
 from concurrent.futures import Future
 from ctypes import c_bool
 
+import tempfile
+import hashlib
+import subprocess
+import shutil
 import os
 import pickle
 import queue
@@ -40,11 +44,15 @@ except ImportError:
 else:
     _work_queue_enabled = True
 
+package_analyze_script = shutil.which("python_package_analyze")
+package_create_script = shutil.which("python_package_create")
+package_run_script = shutil.which("python_package_run")
+
 logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -121,7 +129,13 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             @python_apps, but the implementation does not include
             functionality for @bash_apps, and thus source=False
             must be used for programs utilizing @bash_apps.)
-            Default is False.
+            Default is False. Set to True if pack is True
+
+         pack: bool
+            Use conda-pack to prepare a self-contained Python evironment for
+            each task. This greatly increases task latency, but does not
+            require a common environment or shared FS on execution nodes.
+            Implies source=True.
 
         autolabel: bool
             Use the Resource Monitor to automatically determine resource
@@ -158,6 +172,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  storage_access=None,
                  use_cache=False,
                  source=False,
+                 pack=False,
                  autolabel=False,
                  autolabel_window=1,
                  autocategory=False,
@@ -186,11 +201,13 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.used_names = {}
         self.registered_files = set()
         self.full = full_debug
-        self.source = source
+        self.source = True if pack else source
+        self.pack = pack
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
         self.should_stop = multiprocessing.Value(c_bool, False)
+        self.cached_envs = {}
 
         # Resolve ambiguity when password and password_file are both specified
         if self.project_password is not None and self.project_password_file is not None:
@@ -202,7 +219,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 self.project_password_file = None
 
         # Build foundations of the launch command
-        self.launch_cmd = ("python3 exec_parsl_function.py {mapping} {function} {result}")
+        self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -214,9 +231,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         # Create directories for data and results
         self.function_data_dir = os.path.join(self.run_dir, "function_data")
+        self.package_dir = os.path.join(self.run_dir, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
         os.mkdir(self.function_data_dir)
+        os.mkdir(self.package_dir)
         os.mkdir(self.wq_log_dir)
 
         logger.debug("Starting WorkQueueExectutor")
@@ -319,6 +338,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         self._serialize_function(function_file, func, args, kwargs)
 
+        if self.pack:
+            env_pkg = self._prepare_package(func)
+        else:
+            env_pkg = None
+
         logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
         self._construct_map_file(map_file, input_files, output_files)
 
@@ -328,7 +352,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
-        self.task_queue.put_nowait(ParslTaskToWq(task_id, category, map_file, function_file, result_file, input_files, output_files))
+        self.task_queue.put_nowait(ParslTaskToWq(task_id, category, env_pkg, map_file, function_file, result_file, input_files, output_files))
 
         return fu
 
@@ -398,6 +422,36 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         to_stage = not os.path.isabs(fname)
         print(ParslFileToWq(fname, stage=to_stage, cache=False))
         return ParslFileToWq(fname, stage=to_stage, cache=False)
+
+    def _prepare_package(self, fn):
+        fn_id = id(fn)
+        fn_name = fn.__qualname__
+        if fn_id in self.cached_envs:
+            logger.debug("Skipping analysis of %s, previously got %s", fn_name, self.cached_envs[fn_id])
+            return self.cached_envs[fn_id]
+        source_code = inspect.getsource(fn).encode()
+        pkg_dir = os.path.join(tempfile.gettempdir(), "python_package-{}".format(os.geteuid()))
+        os.makedirs(pkg_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
+            logger.info("Analyzing dependencies of %s", fn_name)
+            subprocess.run([package_analyze_script, '-', spec.name], input=source_code, check=True)
+            with open(spec.name, mode='rb') as f:
+                spec_hash = hashlib.sha256(f.read()).hexdigest()
+                logger.debug("Spec hash for %s is %s", fn_name, spec_hash)
+                pkg = os.path.join(pkg_dir, "pack-{}.tar.gz".format(spec_hash))
+            if os.access(pkg, os.R_OK):
+                self.cached_envs[fn_id] = pkg
+                logger.debug("Cached package for %s found at %s", fn_name, pkg)
+                return pkg
+            (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp', suffix='.tar.gz')
+            os.close(fd)
+            logger.info("Creating dependency package for %s", fn_name)
+            logger.debug("Writing deps for %s to %s", fn_name, tarball)
+            subprocess.run([package_create_script, spec.name, tarball], stdout=subprocess.DEVNULL, check=True)
+            logger.debug("Done with conda-pack; moving %s to %s", tarball, pkg)
+            os.rename(tarball, pkg)
+            self.cached_envs[fn_id] = pkg
+            return pkg
 
     def scale_out(self, *args, **kwargs):
         """Scale out method. Not implemented.
@@ -553,9 +607,15 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             except queue.Empty:
                 continue
 
+            pkg_pfx = ""
+            if task.env_pkg is not None:
+                pkg_pfx = "./{} -e {} ".format(os.path.basename(package_run_script),
+                                               os.path.basename(task.env_pkg))
+
             # Create command string
             logger.debug(launch_cmd)
-            command_str = launch_cmd.format(mapping=os.path.basename(task.map_file),
+            command_str = launch_cmd.format(package_prefix=pkg_pfx,
+                                            mapping=os.path.basename(task.map_file),
                                             function=os.path.basename(task.function_file),
                                             result=os.path.basename(task.result_file))
             logger.debug(command_str)
@@ -581,6 +641,10 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             if env is not None:
                 for var in env:
                     t.specify_environment_variable(var, env[var])
+
+            if task.env_pkg is not None:
+                t.specify_input_file(package_run_script, cache=True)
+                t.specify_input_file(task.env_pkg, cache=True)
 
             # Specify script, and data/result files for task
             t.specify_input_file(exec_parsl_function.__file__, cache=True)
