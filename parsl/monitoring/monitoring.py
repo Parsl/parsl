@@ -96,7 +96,6 @@ class UDPRadio:
         ---------
 
         message_type: monitoring.MessageType (enum)
-            In this case message type is RESOURCE_INFO most often
         task_id: int
             Task identifier of the task for which resource monitoring is being reported
         message: object
