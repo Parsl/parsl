@@ -346,7 +346,7 @@ class DatabaseManager:
                 self._insert(table=NODE, messages=messages)
 
             """
-            RESOURCE_INFO messages
+            Resource info messages
 
             """
             messages = self._get_messages_in_batch(self.pending_resource_queue,
@@ -467,9 +467,9 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
-    dbm = DatabaseManager(*args, **kwargs)
-    logger.info("Starting dbm in dbm starter")
     try:
+        dbm = DatabaseManager(*args, **kwargs)
+        logger.info("Starting dbm in dbm starter")
         dbm.start(priority_msgs, node_msgs, resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
