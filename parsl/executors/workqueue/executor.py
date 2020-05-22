@@ -283,7 +283,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Initialize scaling for the provider
         self.initialize_scaling()
 
-
     def _path_in_task(self, task_id, *path_components):
         """Returns a filename specific to a task.
         It is used for the following filename's:
