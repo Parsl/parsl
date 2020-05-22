@@ -67,16 +67,9 @@ htex_local_alternate_test: ## run all tests with htex_local config
 $(WORKQUEUE_INSTALL):
 	parsl/executors/workqueue/install-workqueue.sh
 
-
-work_queue_procs := $(shell ps aux | grep -E -e "[0-9]+:[0-9]+ work_queue_worker" | tr -s ' ' | cut -f 2 -d " ")
-work_queue_killcmd := $(if $(work_queue_procs), "kill" "-3" $(procs), "echo" "no work_queue_workers to running")
-
 .PHONY: workqueue_ex_test
 workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
-	@$(work_queue_killcmd)
-	work_queue_worker localhost 9000  &> /dev/null &
 	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  pytest parsl -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order
-	@$(work_queue_killcmd)
 
 .PHONY: config_local_test
 config_local_test: ## run all tests with workqueue_ex config
