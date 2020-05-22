@@ -220,10 +220,6 @@ class DataFlowKernel(object):
         if self.tasks[task_id]['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t.tid) for t in self.tasks[task_id]['depends']
                                                       if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
-        task_log_info['task_elapsed_time'] = None
-        if self.tasks[task_id]['time_returned'] is not None:
-            task_log_info['task_elapsed_time'] = (self.tasks[task_id]['time_returned'] -
-                                                  self.tasks[task_id]['time_submitted']).total_seconds()
         return task_log_info
 
     def _count_deps(self, depends):
@@ -493,7 +489,7 @@ class DataFlowKernel(object):
                                                          self.monitoring.resource_monitoring_interval)
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, *args, **kwargs)
+            exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)
         self.tasks[task_id]['status'] = States.launched
         if self.monitoring is not None:
             task_log_info = self._create_task_log_info(task_id)
@@ -720,6 +716,8 @@ class DataFlowKernel(object):
                                     kw)
                     )
 
+        resource_specification = app_kwargs.get('parsl_resource_specification', {})
+
         task_def = {'depends': None,
                     'executor': executor,
                     'func_name': func.__name__,
@@ -733,7 +731,8 @@ class DataFlowKernel(object):
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
-                    'time_returned': None}
+                    'time_returned': None,
+                    'resource_specification': resource_specification}
 
         app_fu = AppFuture(task_def)
 
