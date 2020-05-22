@@ -10,7 +10,6 @@ from concurrent.futures import Future
 import tempfile
 import hashlib
 import subprocess
-import shutil
 import os
 import socket
 import pickle
