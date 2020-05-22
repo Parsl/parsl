@@ -4,8 +4,6 @@ from parsl.providers import LocalProvider
 
 config = Config(
     executors=[WorkQueueExecutor(port=50055,
-                                 project_name="WQexample",
-                                 see_worker_output=True,
                                  source=True,
                                  provider=LocalProvider(),
                                  # init_command='source /home/yadu/src/wq_parsl/setup_parsl_env.sh;
