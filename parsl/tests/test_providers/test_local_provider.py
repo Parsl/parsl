@@ -21,7 +21,20 @@ def _run_tests(p: LocalProvider):
     assert status.stdout == ''
     assert status.stderr == ''
 
+    status = _run(p, '/bin/true', np=2)
+    assert status.message is None
+    assert status.state == JobState.COMPLETED
+    assert status.exit_code == 0
+    assert status.stdout == ''
+    assert status.stderr == ''
+
     status = _run(p, '/bin/false')
+    assert status.state == JobState.FAILED
+    assert status.exit_code != 0
+    assert status.stdout == ''
+    assert status.stderr == ''
+
+    status = _run(p, '/bin/false', np=2)
     assert status.state == JobState.FAILED
     assert status.exit_code != 0
     assert status.stdout == ''
@@ -176,8 +189,8 @@ def _find_free_port(start: int):
     raise Exception('Could not find free port')
 
 
-def _run(p: LocalProvider, command: str):
-    id = p.submit(command, 1)
+def _run(p: LocalProvider, command: str, np: int = 1):
+    id = p.submit(command, 1, np)
     return _wait(p, id)
 
 
