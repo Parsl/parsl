@@ -224,8 +224,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             self.address = socket.gethostname()
 
         if self.project_password_file is not None and not os.path.exists(self.project_password_file):
-            # This exception will be made more specific once the pr with WorkQueueFailure is merged.
-            raise Exception('Could not find password file: {}'.format(self.project_password_file))
+            raise WorkQueueFailure('Could not find password file: {}'.format(self.project_password_file))
 
         if self.project_password_file is not None:
             if os.path.exists(self.project_password_file) is False:
