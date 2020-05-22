@@ -295,7 +295,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         task_dir = "{:04d}".format(task_id)
         return os.path.join(self.function_data_dir, task_dir, *path_components)
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
         information to the task queue, to be executed using the Work Queue
         system. The args and kwargs are processed for input and output files to
