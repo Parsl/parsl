@@ -12,7 +12,7 @@ from ipyparallel.serialize import deserialize_object  # ,serialize_object
 
 from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
-from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
+from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage, UnsupportedFeatureError
 from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -189,8 +189,14 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         logger.info("[MTHREAD] queue management worker finished")
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """ TODO: docstring """
+        if resource_specification:
+            logger.error("Ignoring the resource specification. "
+                         "Parsl resource specification is not supported in LowLatency Executor. "
+                         "Please check WorkQueueExecutor if resource specification is needed.")
+            raise UnsupportedFeatureError('resource specification', 'LowLatency Executor', 'WorkQueue Executor')
+
         if self.bad_state_is_set:
             raise self.executor_exception
 
