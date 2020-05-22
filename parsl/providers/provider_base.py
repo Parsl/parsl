@@ -26,9 +26,13 @@ class JobState(bytes, Enum):
 class JobStatus(object):
     """Encapsulates a job state together with other details, presently a (error) message"""
 
-    def __init__(self, state: JobState, message: str = None):
+    def __init__(self, state: JobState, message: str = None, exit_code: int = -1,
+                 stdout: str = None, stderr: str = None):
         self.state = state
         self.message = message
+        self.exit_code = exit_code
+        self.stdout = stdout
+        self.stderr = stderr
 
     @property
     def terminal(self):
