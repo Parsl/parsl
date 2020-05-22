@@ -10,11 +10,12 @@ from concurrent.futures import Future
 import tempfile
 import hashlib
 import subprocess
-import shutil
 import os
+import socket
 import pickle
 import queue
 import inspect
+import shutil
 from ipyparallel.serialize import pack_apply_message
 
 from parsl.app.errors import AppException
@@ -22,7 +23,9 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.providers import LocalProvider, CondorProvider
 from parsl.providers.error import OptionalModuleMissing
+from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import workqueue_worker
 
 try:
@@ -77,7 +80,6 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
                           cancel_value=multiprocessing.Value('i', 1),
                           port=WORK_QUEUE_DEFAULT_PORT,
                           wq_log_dir=None,
-                          project_password=None,
                           project_password_file=None,
                           project_name=None):
     """Thread to handle Parsl app submissions to the Work Queue objects.
@@ -108,9 +110,8 @@ def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
     # Specify WorkQueue queue attributes
     if project_name:
         q.specify_name(project_name)
-    if project_password:
-        q.specify_password(project_password)
-    elif project_password_file:
+
+    if project_password_file:
         q.specify_password_file(project_password_file)
     if autolabel:
         q.enable_monitoring()
@@ -424,12 +425,16 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         project_name: str
             If given, Work Queue master process name. Default is None.
-
-        project_password: str
-            Optional password for the Work Queue project. Default is None.
+            Overrides address.
 
         project_password_file: str
             Optional password file for the work queue project. Default is None.
+
+        address: str
+            The ip to contact this work queue master process.
+            If not given, uses the address of the current machine as returned
+            by socket.gethostname().
+            Ignored if project_name is specified.
 
         port: int
             TCP port on Parsl submission machine for Work Queue workers
@@ -488,11 +493,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
     def __init__(self,
                  label="WorkQueueExecutor",
+                 provider=LocalProvider(),
                  working_dir=".",
                  managed=True,
                  project_name=None,
-                 project_password=None,
                  project_password_file=None,
+                 address=None,
                  port=WORK_QUEUE_DEFAULT_PORT,
                  env=None,
                  shared_fs=False,
@@ -506,6 +512,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  full_debug=True,
                  see_worker_output=False):
         NoStatusHandlingExecutor.__init__(self)
+        self._provider = provider
+        self._scaling_enabled = True
+
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
@@ -513,11 +522,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.managed = managed
         self.task_queue = multiprocessing.Queue()
         self.collector_queue = multiprocessing.Queue()
+        self.blocks = {}
+        self.address = address
         self.port = port
         self.task_counter = -1
-        self.scaling_enabled = False
         self.project_name = project_name
-        self.project_password = project_password
         self.project_password_file = project_password_file
         self.env = env
         self.init_command = init_command
@@ -537,14 +546,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.cancel_value = multiprocessing.Value('i', 1)
         self.cached_envs = {}
 
-        # Resolve ambiguity when password and password_file are both specified
-        if self.project_password is not None and self.project_password_file is not None:
-            logger.warning("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
-            self.project_password_file = None
-        if self.project_password_file is not None:
-            if os.path.exists(self.project_password_file) is False:
-                logger.debug("Password File does not exist, no file used")
-                self.project_password_file = None
+        if not self.address:
+            self.address = socket.gethostname()
+
+        if self.project_password_file is not None and not os.path.exists(self.project_password_file):
+            # This exception will be made more specific once the pr with WorkQueueFailure is merged.
+            raise Exception('Could not find password file: {}'.format(self.project_password_file))
 
         # Build foundations of the launch command
         self.launch_cmd = ("{pkg_pfx}python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
@@ -585,7 +592,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "cancel_value": self.cancel_value,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
-                                 "project_password": self.project_password,
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name}
         self.submit_process = multiprocessing.Process(target=WorkQueueSubmitThread,
@@ -607,6 +613,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Begin both processes
         self.submit_process.start()
         self.collector_thread.start()
+
+        # Initialize scaling for the provider
+        self.initialize_scaling()
 
     def create_name_tuple(self, parsl_file_obj, in_or_out):
         """Returns a tuple containing information about an input or output file
@@ -759,6 +768,28 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         return fu
 
+    def _construct_worker_command(self):
+        worker_command = 'work_queue_worker'
+        if self.project_password_file:
+            worker_command += ' --password {}'.format(self.project_password_file)
+        if self.project_name:
+            worker_command += ' -M {}'.format(self.project_name)
+        else:
+            worker_command += ' {} {}'.format(self.address, self.port)
+
+        logger.debug("Using worker command: {}".format(worker_command))
+        return worker_command
+
+    def _patch_providers(self):
+        # Add the worker and password file to files that the provider needs to stage.
+        # (Currently only for the CondorProvider)
+        if isinstance(self.provider, CondorProvider):
+            path_to_worker = shutil.which('work_queue_worker')
+            self.worker_command = './' + self.worker_command
+            self.provider.transfer_input_files.append(path_to_worker)
+            if self.project_password_file:
+                self.provider.transfer_input_files.append(self.project_password_file)
+
     def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
         """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
         and serializes it to the file fn_path."""
@@ -807,15 +838,54 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             self.cached_envs[fn_id] = pkg
             return pkg
 
-    def scale_out(self, *args, **kwargs):
-        """Scale out method. Not implemented.
+    def initialize_scaling(self):
+        """ Compose the launch command and call scale out
+
+        Scales the workers to the appropriate nodes with provider
         """
-        pass
+        # Start scaling in/out
+        logger.debug("Starting WorkQueueExecutor with provider: %s", self.provider)
+        self.worker_command = self._construct_worker_command()
+        self._patch_providers()
+
+        if hasattr(self.provider, 'init_blocks'):
+            try:
+                self.scale_out(blocks=self.provider.init_blocks)
+            except Exception as e:
+                logger.debug("Scaling out failed: {}".format(e))
+                raise e
+
+    def scale_out(self, blocks=1):
+        """Scale out method.
+
+        We should have the scale out method simply take resource object
+        which will have the scaling methods, scale_out itself should be a coroutine, since
+        scaling tasks can be slow.
+        """
+        if self.provider:
+            for i in range(blocks):
+                external_block = str(len(self.blocks))
+                internal_block = self.provider.submit(self.worker_command, 1)
+                # Failed to create block with provider
+                if not internal_block:
+                    raise(ScalingFailed(self.provider.label, "Attempts to create nodes using the provider has failed"))
+                else:
+                    self.blocks[external_block] = internal_block
+        else:
+            logger.error("No execution provider available to scale")
 
     def scale_in(self, count):
         """Scale in method. Not implemented.
         """
-        pass
+        # Obtain list of blocks to kill
+        to_kill = list(self.blocks.keys())[:count]
+        kill_ids = [self.blocks[block] for block in to_kill]
+
+        # Cancel the blocks provisioned
+        if self.provider:
+            self.provider.cancel(kill_ids)
+        else:
+            logger.error("No execution provider available to scale")
 
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
@@ -825,6 +895,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         logger.debug("Setting value to cancel")
         self.cancel_value.value = 0
 
+        # Remove the workers that are still going
+        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
+        if self.provider:
+            self.provider.cancel(kill_ids)
+
         self.submit_process.join()
         self.collector_thread.join()
 
@@ -833,7 +908,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
     def scaling_enabled(self):
         """Specify if scaling is enabled. Not enabled in Work Queue.
         """
-        return False
+        return self._scaling_enabled
 
     def run_dir(self, value=None):
         """Path to the run directory.
