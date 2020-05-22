@@ -40,5 +40,3 @@ parsl.executors.WorkQueueExecutor
       ~WorkQueueExecutor.provider
       ~WorkQueueExecutor.status_polling_interval
       ~WorkQueueExecutor.tasks
-   
-   
