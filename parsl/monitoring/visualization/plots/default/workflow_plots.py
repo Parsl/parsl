@@ -16,7 +16,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
     # that tasks should continue in their last state until now,
     # rather than the workflow end time.
     if not time_completed:
-        time_completed = time_returned = datetime.datetime.now()
+        time_completed = df_status['timestamp'].max()
 
     df_task = df_task.sort_values(by=['task_id'], ascending=False)
 
@@ -77,39 +77,54 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
 
-def task_per_app_plot(task, status):
+def task_per_app_plot(task, status, time_completed):
 
     try:
         task['epoch_time_running'] = (pd.to_datetime(
             task['task_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
-        task['epoch_time_returned'] = (pd.to_datetime(
-            task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+        task['epoch_try_time_returned'] = (pd.to_datetime(
+            task['task_try_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = int(task['epoch_time_running'].min())
-        end = int(task['epoch_time_returned'].max())
+
+        end = int(task['epoch_try_time_returned'].max())
+        # should we take the max of this and time_completed here? because they might not align just right, and cause array overflows later in this plot? probably yes.  - need to get a notion of "latest time interesting" which is either max of "now" and all task completion times (because clock skew, may complete in future) if the workflow is not completed, and the max of workflow and all task completion times if the workflow is recorded as completed. Or maybe the last known time is the right time to assume there?
+
+
         tasks_per_app = {}
         all_tasks = [0] * (end - start + 1)
         for i, row in task.iterrows():
             if math.isnan(row['epoch_time_running']):
                 # Skip rows with no running start time.
                 continue
+            if math.isnan(row['epoch_try_time_returned']):
+                # Some kind of inference about time returned (workflow end time / current time? see gantt chart for inferences)
+
+                time_returned = end
+            else:
+                time_returned = int(row['epoch_try_time_returned'])
+
             if row['task_func_name'] not in tasks_per_app:
                 tasks_per_app[row['task_func_name']] = [0] * (end - start + 1)
-            for j in range(int(row['epoch_time_running']) + 1, int(row['epoch_time_returned']) + 1):
-                tasks_per_app[row['task_func_name']][j - start] += 1
+            for j in range(int(row['epoch_time_running']) + 1, time_returned + 1):
+                try:
+                    tasks_per_app[row['task_func_name']][j - start] += 1
+                except:
+                    raise RuntimeError("BENC: j = {}, start = {}, end={}, end-start+1={},  j will range over {} .. {}".format(j, start, end, end-start+1, int(row['epoch_time_running']) + 1, int(time_returned) + 1))
                 all_tasks[j - start] += 1
         fig = go.Figure(
             data=[go.Scatter(x=list(range(0, end - start + 1)),
-                             y=tasks_per_app[app],
-                             name=app,
-                             ) for app in tasks_per_app] +
-                 [go.Scatter(x=list(range(0, end - start + 1)),
                              y=all_tasks,
                              name='All',
-                             )],
+                             )] +
+                 [go.Scatter(x=list(range(0, end - start + 1)),
+                             y=tasks_per_app[app],
+                             name=app,
+                             ) for app in tasks_per_app],
+
             layout=go.Layout(xaxis=dict(autorange=True,
                                         title='Time (seconds)'),
                              yaxis=dict(title='Number of tasks'),
-                             title="Tasks per app"))
+                             title="Execution tries per app"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
     except Exception as e:
         raise

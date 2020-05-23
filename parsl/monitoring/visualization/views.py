@@ -22,7 +22,8 @@ def format_time(value):
         return rounded_timedelta
     else:
         print("Incorrect time format (neither float nor datetime object): {}, type: {}".format(value, type(value)))  # TODO: use logging
-        return "Incorrect time format"
+        # raise ValueError("Incorrect time format: {}, type {}".format(value, type(value)))
+        return "-"
 
 
 def format_duration(value):
@@ -61,7 +62,7 @@ def workflow(workflow_id):
                                 WHERE run_id='%s'"""
                                 % (workflow_id), db.engine)
     df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
-                                      task_time_running, task_time_returned from task, try
+                                      task_time_running, task_try_time_returned from task, try
                                       WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
                                       % (workflow_id, workflow_id), db.engine)
     task_summary = db.engine.execute(
@@ -70,7 +71,7 @@ def workflow(workflow_id):
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
-                           task_per_app=task_per_app_plot(df_task_tries, df_status))
+                           task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed))
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
