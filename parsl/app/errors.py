@@ -1,11 +1,15 @@
 """Exceptions raised by Apps."""
 from functools import wraps
+from typing import List, Union, Callable, Dict, Tuple, Any
+from types import TracebackType
 
 import dill
 import logging
 from tblib import Traceback
 
 from six import reraise
+
+from parsl import File
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +48,7 @@ class BashExitFailure(AppException):
     exitcode(int)
     """
 
-    def __init__(self, reason, exitcode):
+    def __init__(self, reason: str, exitcode: int):
         self.reason = reason
         self.exitcode = exitcode
 
@@ -61,7 +65,7 @@ class BashAppNoReturn(AppException):
     reason(string)
     """
 
-    def __init__(self, reason):
+    def __init__(self, reason: str):
         super().__init__(reason)
         self.reason = reason
 
@@ -74,12 +78,12 @@ class MissingOutputs(ParslError):
     outputs(List of strings/files..)
     """
 
-    def __init__(self, reason, outputs):
+    def __init__(self, reason: str, outputs: List[Union[str, File]]):
         super().__init__(reason, outputs)
         self.reason = reason
         self.outputs = outputs
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Missing Outputs: {0}, Reason:{1}".format(self.outputs, self.reason)
 
 
@@ -92,27 +96,27 @@ class BadStdStreamFile(ParslError):
        exception object
     """
 
-    def __init__(self, outputs, exception):
+    def __init__(self, outputs: List[Union[str, File]], exception: Exception):
         super().__init__(outputs, exception)
         self._outputs = outputs
         self._exception = exception
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "FilePath: [{}] Exception: {}".format(self._outputs,
                                                      self._exception)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__repr__()
 
 
 class RemoteExceptionWrapper:
-    def __init__(self, e_type, e_value, traceback):
+    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType):
 
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
         self.e_traceback = Traceback(traceback)
 
-    def reraise(self):
+    def reraise(self) -> None:
 
         t = dill.loads(self.e_type)
 
@@ -128,9 +132,12 @@ class RemoteExceptionWrapper:
         reraise(t, v, tb)
 
 
-def wrap_error(func):
+# TODO: I don't think this is correct. We need to constrain the type of the wrapper
+# to that of the wrapped function, whereas this specification makes the wrapper
+# untyped. That said, I found no evidence on the InterTubes that this is possible.
+def wrap_error(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: object, **kwargs: object) -> Any:
         import sys
         from parsl.app.errors import RemoteExceptionWrapper
         try:
