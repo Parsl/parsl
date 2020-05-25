@@ -1,5 +1,6 @@
 ''' Exceptions raise by Apps.
 '''
+from typing import Optional
 
 
 class ChannelError(Exception):
@@ -7,10 +8,12 @@ class ChannelError(Exception):
 
     Only to be invoked when only a more specific error is not available.
     """
-    def __repr__(self):
+    def __repr__(self) -> str:
+        # TODO: [typing] move these properties to this class instead of having them
+        # copied in all derived classes
         return "Hostname:{0}, Reason:{1}".format(self.hostname, self.reason)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__repr__()
 
 
@@ -24,7 +27,7 @@ class BadHostKeyException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
+    def __init__(self, e: Exception, hostname: str):
         super().__init__()
         self.reason = "SSH channel could not be created since server's host keys could not be verified"
         self.hostname = hostname
@@ -40,7 +43,7 @@ class BadScriptPath(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
+    def __init__(self, e: Exception, hostname: str):
         super().__init__()
         self.reason = "Inaccessible remote script dir. Specify script_dir"
         self.hostname = hostname
@@ -56,7 +59,7 @@ class BadPermsScriptPath(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
+    def __init__(self, e: Exception, hostname: str):
         super().__init__()
         self.reason = "User does not have permissions to access the script_dir"
         self.hostname = hostname
@@ -73,8 +76,10 @@ class FileExists(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname, filename=None):
+    def __init__(self, e: Exception, hostname: str, filename: Optional[str] = None):
         super().__init__()
+        # TODO: [typing] fix this. If filename is left to the default of None, this will
+        # throw an exception.
         self.reason = "File name collision in channel transport phase:" + filename
         self.hostname = hostname
         self.e = e
@@ -89,7 +94,7 @@ class AuthException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
+    def __init__(self, e: Exception, hostname: str):
         super().__init__()
         self.reason = "Authentication to remote server failed"
         self.hostname = hostname
@@ -105,7 +110,7 @@ class SSHException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
+    def __init__(self, e: Exception, hostname: str):
         super().__init__()
         self.reason = "Error connecting or establishing an SSH session"
         self.hostname = hostname
@@ -121,7 +126,7 @@ class FileCopyException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
+    def __init__(self, e: Exception, hostname: str):
         super().__init__()
         self.reason = "File copy failed due to {0}".format(e)
         self.hostname = hostname
