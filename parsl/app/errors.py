@@ -1,6 +1,6 @@
 """Exceptions raised by Apps."""
 from functools import wraps
-from typing import List, Union, Callable, Dict, Tuple, Any
+from typing import List, Union, Callable, Any
 from types import TracebackType
 
 import dill
@@ -132,8 +132,8 @@ class RemoteExceptionWrapper:
         reraise(t, v, tb)
 
 
-# TODO: I don't think this is correct. We need to constrain the type of the wrapper
-# to that of the wrapped function, whereas this specification makes the wrapper
+# TODO: [typing] I don't think this is correct. We need to constrain the type of the
+# wrapper to that of the wrapped function, whereas this specification makes the wrapper
 # untyped. That said, I found no evidence on the InterTubes that this is possible.
 def wrap_error(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)

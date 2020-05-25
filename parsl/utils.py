@@ -220,7 +220,7 @@ class RepresentationMixin(object):
                 return "\n".join("    " + line for line in lines).strip()
             args = ["\n    {},".format(indent(repr(a))) for a in args]
             kwargsl = ["\n    {}={}".format(k, indent(repr(v)))
-                      for k, v in sorted(kwargs.items())]
+                       for k, v in sorted(kwargs.items())]
 
             info = "".join(args) + ", ".join(kwargsl)
             return self.__class__.__name__ + "({}\n)".format(info)
