@@ -138,7 +138,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             must be used for programs utilizing @bash_apps.)
             Default is False. Set to True if pack is True
 
-         pack: bool
+        pack: bool
             Use conda-pack to prepare a self-contained Python evironment for
             each task. This greatly increases task latency, but does not
             require a common environment or shared FS on execution nodes.
