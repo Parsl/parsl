@@ -134,9 +134,14 @@ def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_nam
     code = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
     return code
 
+def load_function(map_file, function_file):
+    # Decodes the function and its file arguments to be executed into
+    # function_code, and updates a user namespace with the function name and
+    # the variable named result_name. When the function is executed, its result
+    # will be stored in this variable in the user namespace.
+    # Returns (namespace, function_code, result_name)
 
-def execute_function(map_file, function_file):
-    # Get all variables from the user namespace, and add __builtins__
+    # Create the namespace to isolate the function execution.
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
@@ -149,8 +154,14 @@ def execute_function(map_file, function_file):
 
     (code, result_name) = encode_function(user_ns, fn, fn_name, fn_args, fn_kwargs)
 
-    exec(code, user_ns, user_ns)
-    result = user_ns.get(result_name)
+    return (user_ns, code, result_name)
+
+def execute_function(namespace, function_code, result_name):
+    # On executing the function inside the namespace, its result will be in a
+    # variable named result_name.
+
+    exec(function_code, namespace, namespace)
+    result = namespace.get(result_name)
 
     return result
 
@@ -169,9 +180,18 @@ if __name__ == "__main__":
             print("Usage:\n\t{} function result mapping\n".format(sys.argv[0]))
             raise
 
-        result = execute_function(map_file, function_file)
+        try:
+            (namespace, function_code, result_name) = load_function(map_file, function_file)
+        except Exception:
+            print("There was an error setting up the function for execution.")
+            raise
+
+        try:
+            result = execute_function(namespace, function_code, result_name)
+        except Exception:
+            print("There was an error executing the function.")
+            raise
     except Exception:
-        print("There was an error while setting up the function.")
         traceback.print_exc()
         result = RemoteExceptionWrapper(*sys.exc_info())
 
