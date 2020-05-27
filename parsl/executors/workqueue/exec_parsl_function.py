@@ -134,6 +134,7 @@ def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_nam
     code = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
     return code
 
+
 def load_function(map_file, function_file):
     # Decodes the function and its file arguments to be executed into
     # function_code, and updates a user namespace with the function name and
@@ -155,6 +156,7 @@ def load_function(map_file, function_file):
     (code, result_name) = encode_function(user_ns, fn, fn_name, fn_args, fn_kwargs)
 
     return (user_ns, code, result_name)
+
 
 def execute_function(namespace, function_code, result_name):
     # On executing the function inside the namespace, its result will be in a
