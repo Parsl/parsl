@@ -40,10 +40,10 @@ def fresh_config():
                     # Should follow the Kubernetes naming rules
                     pod_name='parsl-site-test-pod',
 
-                    nodes_per_block=2,
+                    nodes_per_block=1,
                     init_blocks=1,
                     # Maximum number of pods to scale up
-                    max_blocks=1,
+                    max_blocks=2,
                 ),
             ),
         ]

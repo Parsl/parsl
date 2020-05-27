@@ -38,6 +38,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     """.format(i=inputs[0], o=outputs[0])
 
 
+@pytest.mark.issue363
 def test_regression_200():
     """Regression test for #200. Pickleablility of Files"""
 
