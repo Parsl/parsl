@@ -11,7 +11,7 @@ def fresh_config():
     worker_init_file = user_opts['petrelkube']['worker_init']
     with open(os.path.expanduser(worker_init_file)) as f:
         lines = f.readlines()
-    worker_init = ';'.join([l.strip() for l in lines])
+    worker_init = ';'.join([line.strip() for line in lines])
 
     config = Config(
         executors=[

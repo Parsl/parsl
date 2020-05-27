@@ -36,7 +36,7 @@ user_opts = {
     'midway': {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },
-    'petrelkube' : {
+    'petrelkube': {
         'worker_init': '~/setup_parsl_test_env.sh',
     },
     # 'comet': {
