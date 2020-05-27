@@ -47,20 +47,23 @@ def test_python_unmemoizable():
 def test_python_failing_memoizer():
     """Testing behaviour when id_for_memo raises an exception
     """
-    fut = noop_app(FailingMemoizable())
-    with pytest.raises(FailingMemoizerTestError):
-        fut.result()
+    with permit_severe_log():
+        fut = noop_app(FailingMemoizable())
+        with pytest.raises(FailingMemoizerTestError):
+            fut.result()
 
 
 def test_python_unmemoizable_after_dep():
     sleep_fut = sleep(1)
-    fut = noop_app(Unmemoizable(), inputs=[sleep_fut])
-    with pytest.raises(ValueError):
-        fut.result()
+    with permit_severe_log():
+        fut = noop_app(Unmemoizable(), inputs=[sleep_fut])
+        with pytest.raises(ValueError):
+            fut.result()
 
 
 def test_python_failing_memoizer_afer_dep():
     sleep_fut = sleep(1)
-    fut = noop_app(FailingMemoizable(), inputs=[sleep_fut])
-    with pytest.raises(ValueError):
-        fut.result()
+    with permit_severe_log():
+        fut = noop_app(FailingMemoizable(), inputs=[sleep_fut])
+        with pytest.raises(ValueError):
+            fut.result()
