@@ -184,7 +184,7 @@ class DataFlowKernel(object):
 
         atexit.register(self.atexit_cleanup)
 
-    def _create_task_log_info(self, task_id, fail_mode):
+    def _create_task_log_info(self, task_id):
         """
         Create the dictionary that will be included in the log.
         """
@@ -220,11 +220,6 @@ class DataFlowKernel(object):
         if self.tasks[task_id]['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t.tid) for t in self.tasks[task_id]['depends']
                                                       if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
-        task_log_info['task_elapsed_time'] = None
-        if self.tasks[task_id]['time_returned'] is not None:
-            task_log_info['task_elapsed_time'] = (self.tasks[task_id]['time_returned'] -
-                                                  self.tasks[task_id]['time_submitted']).total_seconds()
-        task_log_info['task_fail_mode'] = fail_mode
         return task_log_info
 
     def _count_deps(self, depends):
@@ -274,14 +269,6 @@ class DataFlowKernel(object):
             self.tasks[task_id]['fail_history'].append(str(e))
             self.tasks[task_id]['fail_count'] += 1
 
-            if not self._config.lazy_errors:
-                logger.exception("Eager fail, skipping retry logic")
-                self.tasks[task_id]['status'] = States.failed
-                if self.monitoring:
-                    task_log_info = self._create_task_log_info(task_id, 'eager')
-                    self.monitoring.send(MessageType.TASK_INFO, task_log_info)
-                return
-
             if self.tasks[task_id]['status'] == States.dep_fail:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
             elif self.tasks[task_id]['fail_count'] <= self._config.retries:
@@ -308,7 +295,7 @@ class DataFlowKernel(object):
             logger.info("Standard error for task {} available at {}".format(task_id, self.tasks[task_id]['app_fu'].stderr))
 
         if self.monitoring:
-            task_log_info = self._create_task_log_info(task_id, 'lazy')
+            task_log_info = self._create_task_log_info(task_id)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
         # it might be that in the course of the update, we've gone back to being
@@ -413,9 +400,21 @@ class DataFlowKernel(object):
                 # Acquire a lock, retest the state, launch
                 with task_record['task_launch_lock']:
                     if task_record['status'] == States.pending:
-                        exec_fu = self.launch_task(
-                            task_id, task_record['func'], *new_args, **kwargs)
+                        try:
+                            exec_fu = self.launch_task(
+                                task_id, task_record['func'], *new_args, **kwargs)
+                        except Exception as e:
+                            # task launched failed somehow. the execution might
+                            # have been launched and an exception raised after
+                            # that, though. that's hard to detect from here.
+                            # we don't attempt retries here. This is an error with submission
+                            # even though it might come from user code such as a plugged-in
+                            # executor or memoization hash function.
 
+                            logger.debug("Got an exception launching task", exc_info=True)
+                            self.tasks[task_id]['retries_left'] = 0
+                            exec_fu = Future()
+                            exec_fu.set_exception(e)
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
@@ -424,7 +423,7 @@ class DataFlowKernel(object):
                 self.tasks_dep_fail_count += 1
 
                 if self.monitoring is not None:
-                    task_log_info = self._create_task_log_info(task_id, 'lazy')
+                    task_log_info = self._create_task_log_info(task_id)
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
                 self.tasks[task_id]['retries_left'] = 0
@@ -437,6 +436,11 @@ class DataFlowKernel(object):
                 try:
                     exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
                 except Exception as e:
+                    # this exception is ignored here because it is assumed that exception
+                    # comes from directly executing handle_exec_update (because exec_fu is
+                    # done already). If the callback executes later, then any exception
+                    # coming out of the callback will be ignored and not propate anywhere,
+                    # so this block attempts to keep the same behaviour here.
                     logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
                 task_record['exec_fu'] = exec_fu
@@ -464,8 +468,8 @@ class DataFlowKernel(object):
         """
         self.tasks[task_id]['time_submitted'] = datetime.datetime.now()
 
-        hit, memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
-        if hit:
+        memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
+        if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
             return memo_fu
 
@@ -485,10 +489,10 @@ class DataFlowKernel(object):
                                                          self.monitoring.resource_monitoring_interval)
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, *args, **kwargs)
+            exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)
         self.tasks[task_id]['status'] = States.launched
         if self.monitoring is not None:
-            task_log_info = self._create_task_log_info(task_id, 'lazy')
+            task_log_info = self._create_task_log_info(task_id)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
         self.tasks[task_id]['retries_left'] = self._config.retries - \
@@ -646,7 +650,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=[], app_kwargs={}):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -677,6 +681,9 @@ class DataFlowKernel(object):
 
         """
 
+        if ignore_for_cache is None:
+            ignore_for_cache = []
+
         if self.cleanup_called:
             raise ValueError("Cannot submit to a DFK that has been cleaned up")
 
@@ -696,6 +703,8 @@ class DataFlowKernel(object):
         for kw in ['stdout', 'stderr']:
             if kw in app_kwargs:
                 if app_kwargs[kw] == parsl.AUTO_LOGNAME:
+                    if kw not in ignore_for_cache:
+                        ignore_for_cache += [kw]
                     app_kwargs[kw] = os.path.join(
                                 self.run_dir,
                                 'task_logs',
@@ -706,6 +715,8 @@ class DataFlowKernel(object):
                                     '' if label is None else '_{}'.format(label),
                                     kw)
                     )
+
+        resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
         task_def = {'depends': None,
                     'executor': executor,
@@ -720,7 +731,8 @@ class DataFlowKernel(object):
                     'status': States.unsched,
                     'id': task_id,
                     'time_submitted': None,
-                    'time_returned': None}
+                    'time_returned': None,
+                    'resource_specification': resource_specification}
 
         app_fu = AppFuture(task_def)
 
@@ -743,7 +755,7 @@ class DataFlowKernel(object):
 
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
-        self.tasks[task_id]['depends'] = depends
+        task_def['depends'] = depends
 
         depend_descs = []
         for d in depends:
@@ -761,10 +773,10 @@ class DataFlowKernel(object):
                                                               task_def['func_name'],
                                                               waiting_message))
 
-        self.tasks[task_id]['task_launch_lock'] = threading.Lock()
+        task_def['task_launch_lock'] = threading.Lock()
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
-        self.tasks[task_id]['status'] = States.pending
+        task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
@@ -926,7 +938,7 @@ class DataFlowKernel(object):
         self.flowcontrol.close()
 
         for executor in self.executors.values():
-            if executor.managed:
+            if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
                     executor.scale_in(len(job_ids))

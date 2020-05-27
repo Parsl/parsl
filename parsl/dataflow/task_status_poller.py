@@ -6,7 +6,7 @@ from typing import Dict, List, Sequence
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.dataflow.strategy import Strategy
 from parsl.executors.base import ParslExecutor
-from parsl.providers.provider_base import JobStatus
+from parsl.providers.provider_base import JobStatus, JobState
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class PollItem(ExecutorStatus):
 
     def poll(self, now: float):
         if self._should_poll(now):
-            logger.debug("Polling {}".format(self._executor))
+            logger.debug("Polling {}".format(self._executor.label))
             self._status = self._executor.status()
             self._last_poll_time = now
 
@@ -34,6 +34,20 @@ class PollItem(ExecutorStatus):
     @property
     def executor(self) -> ParslExecutor:
         return self._executor
+
+    def scale_in(self, n):
+        ids = self._executor.scale_in(n)
+        if ids is not None:
+            for id in ids:
+                del self._status[id]
+        return ids
+
+    def scale_out(self, n):
+        ids = self._executor.scale_out(n)
+        if ids is not None:
+            for id in ids:
+                self._status[id] = JobStatus(JobState.PENDING)
+        return ids
 
     def __repr__(self):
         return self._status.__repr__()
@@ -57,6 +71,6 @@ class TaskStatusPoller(object):
     def add_executors(self, executors: Sequence[ParslExecutor]):
         for executor in executors:
             if executor.status_polling_interval > 0:
-                logger.debug("Adding executor {}".format(executor))
+                logger.debug("Adding executor {}".format(executor.label))
                 self._poll_items.append(PollItem(executor))
         self._strategy.add_executors(executors)

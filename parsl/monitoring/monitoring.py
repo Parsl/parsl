@@ -58,7 +58,7 @@ def start_file_logger(filename, name='monitoring', level=logging.DEBUG, format_s
     return logger
 
 
-class UDPRadio(object):
+class UDPRadio:
 
     def __init__(self, monitoring_url, source_id=None, timeout=10):
         """
@@ -96,7 +96,6 @@ class UDPRadio(object):
         ---------
 
         message_type: monitoring.MessageType (enum)
-            In this case message type is RESOURCE_INFO most often
         task_id: int
             Task identifier of the task for which resource monitoring is being reported
         message: object
@@ -207,8 +206,10 @@ class MonitoringHub(RepresentationMixin):
 
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
+        self.dfk_channel_timeout = 10000  # in milliseconds
         self._context = zmq.Context()
         self._dfk_channel = self._context.socket(zmq.DEALER)
+        self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
         self._dfk_channel.set_hwm(0)
         self.dfk_port = self._dfk_channel.bind_to_random_port("tcp://{}".format(self.client_address),
                                                               min_port=self.client_port_range[0],
@@ -220,21 +221,21 @@ class MonitoringHub(RepresentationMixin):
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
 
-        self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
-                                  kwargs={"hub_address": self.hub_address,
-                                          "hub_port": self.hub_port,
-                                          "hub_port_range": self.hub_port_range,
-                                          "client_address": self.client_address,
-                                          "client_port": self.dfk_port,
-                                          "logdir": self.logdir,
-                                          "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                          "run_id": run_id
-                                  },
-                                  name="Monitoring-Queue-Process",
-                                  daemon=True,
+        self.router_proc = Process(target=router_starter,
+                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
+                                   kwargs={"hub_address": self.hub_address,
+                                           "hub_port": self.hub_port,
+                                           "hub_port_range": self.hub_port_range,
+                                           "client_address": self.client_address,
+                                           "client_port": self.dfk_port,
+                                           "logdir": self.logdir,
+                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                           "run_id": run_id
+                                   },
+                                   name="Monitoring-Router-Process",
+                                   daemon=True,
         )
-        self.queue_proc.start()
+        self.router_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
                                 args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
@@ -246,7 +247,7 @@ class MonitoringHub(RepresentationMixin):
                                 daemon=True,
         )
         self.dbm_proc.start()
-        self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
+        self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
@@ -259,7 +260,11 @@ class MonitoringHub(RepresentationMixin):
 
     def send(self, mtype, message):
         self.logger.debug("Sending message {}, {}".format(mtype, message))
-        return self._dfk_channel.send_pyobj((mtype, message))
+        try:
+            self._dfk_channel.send_pyobj((mtype, message))
+        except zmq.Again:
+            self.logger.exception(
+                "[MONITORING] The monitoring message sent from DFK to Hub timeouts after {}ms".format(self.dfk_channel_timeout))
 
     def close(self):
         if self.logger:
@@ -277,14 +282,15 @@ class MonitoringHub(RepresentationMixin):
             if exception_msgs:
                 for exception_msg in exception_msgs:
                     self.logger.info("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
-                self.queue_proc.terminate()
+                self.router_proc.terminate()
                 self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
-            self.queue_proc.join()
+            self.router_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
             if len(exception_msgs) == 0:
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
+            self.logger.debug("Finished waiting for DBM termination")
 
     @staticmethod
     def monitor_wrapper(f,
@@ -321,7 +327,7 @@ class MonitoringHub(RepresentationMixin):
         return wrapped
 
 
-class Hub(object):
+class MonitoringRouter:
 
     def __init__(self,
                  hub_address,
@@ -342,7 +348,7 @@ class Hub(object):
         Parameters
         ----------
         hub_address : str
-             The ip address at which the workers will be able to reach the Hub. Default: "127.0.0.1"
+             The ip address at which the workers will be able to reach the Hub.
         hub_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
@@ -361,10 +367,10 @@ class Hub(object):
 
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = start_file_logger("{}/hub.log".format(logdir),
-                                        name="hub",
+        self.logger = start_file_logger("{}/monitoring_router.log".format(logdir),
+                                        name="monitoring_router",
                                         level=logging_level)
-        self.logger.debug("Hub starting")
+        self.logger.debug("Monitoring router starting")
 
         self.hub_port = hub_port
         self.hub_address = hub_address
@@ -447,20 +453,20 @@ class Hub(object):
             except socket.timeout:
                 pass
 
-        self.logger.info("Hub finished")
+        self.logger.info("Monitoring router finished")
 
 
-def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
-    hub = Hub(*args, **kwargs)
-    comm_q.put((hub.hub_port, hub.ic_port))
-    hub.logger.info("Starting Hub in Hub starter")
+def router_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+    router = MonitoringRouter(*args, **kwargs)
+    comm_q.put((router.hub_port, router.ic_port))
+    router.logger.info("Starting MonitoringRouter in router_starter")
     try:
-        hub.start(priority_msgs, node_msgs, resource_msgs)
+        router.start(priority_msgs, node_msgs, resource_msgs)
     except Exception as e:
-        hub.logger.exception("hub.start exception")
+        router.logger.exception("router.start exception")
         exception_q.put(('Hub', str(e)))
 
-    hub.logger.info("End of hub starter")
+    router.logger.info("End of router_starter")
 
 
 def monitor(pid,

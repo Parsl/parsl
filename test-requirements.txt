@@ -1,4 +1,4 @@
-flake8
+flake8==3.8.0
 pandas
 pytest>=4.6,<5
 pytest-cov
@@ -11,3 +11,12 @@ sphinx_rtd_theme
 mypy==0.761
 sqlalchemy-stubs
 Sphinx==2.2.0
+typeguard>=2.5
+paramiko
+dill
+tblib
+ipyparallel
+psutil>=5.5.1
+globus-sdk
+twine
+wheel

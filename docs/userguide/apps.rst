@@ -73,7 +73,7 @@ There are limitations on the Python functions that can be converted to apps:
 
 1. Functions should act only on defined input arguments. That is, they should not use script-level or global variables.
 2. Functions must explicitly import any required modules.
-3. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects to/from functions. Therefore, Python apps can only use input and output objects that can be serialized by cloudpickle or pickle.
+3. Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects to/from functions. Therefore, Python apps can only use input and output objects that can be serialized by cloudpickle or pickle. See :ref:`label_serialization_error`.
 4. STDOUT and STDERR produced by Python apps remotely are not captured.
 
 Special Keyword Arguments
@@ -167,5 +167,5 @@ A Bash app can only return results via files specified via ``outputs``, ``stderr
 
 If the Bash app exits with Unix exit code 0, then the AppFuture will complete. If the Bash app
 exits with any other code, this will be treated as a failure, and the AppFuture will instead
-contain an AppFailure exception. The Unix exit code can be accessed through the
-`exitcode` attribute of that AppFailure.
+contain an BashExitFailure exception. The Unix exit code can be accessed through the
+`exitcode` attribute of that BashExitFailure.

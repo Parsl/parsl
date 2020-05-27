@@ -21,24 +21,46 @@ class FailingMemoizerTestError(ValueError):
 
 @id_for_memo.register(FailingMemoizable)
 def failing_memoizer(v, output_ref=False):
-    raise FailingMemoizerTestError("BENC TODO")
+    raise FailingMemoizerTestError("Deliberate memoizer failure")
 
 
 @python_app(cache=True)
-def noop_app(x, cache=True):
+def noop_app(x, inputs=[], cache=True):
     return None
+
+
+@python_app
+def sleep(t):
+    import time
+    time.sleep(t)
 
 
 def test_python_unmemoizable():
     """Testing behaviour when an unmemoizable parameter is used
     """
     with permit_severe_log():
+        fut = noop_app(Unmemoizable())
         with pytest.raises(ValueError):
-            noop_app(Unmemoizable())
+            fut.result()
 
 
 def test_python_failing_memoizer():
     """Testing behaviour when id_for_memo raises an exception
     """
+    fut = noop_app(FailingMemoizable())
     with pytest.raises(FailingMemoizerTestError):
-        noop_app(FailingMemoizable())
+        fut.result()
+
+
+def test_python_unmemoizable_after_dep():
+    sleep_fut = sleep(1)
+    fut = noop_app(Unmemoizable(), inputs=[sleep_fut])
+    with pytest.raises(ValueError):
+        fut.result()
+
+
+def test_python_failing_memoizer_afer_dep():
+    sleep_fut = sleep(1)
+    fut = noop_app(FailingMemoizable(), inputs=[sleep_fut])
+    with pytest.raises(ValueError):
+        fut.result()
