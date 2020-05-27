@@ -25,10 +25,15 @@ import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
+
+import typeguard
+from typing import Dict, List, Optional, Set
+from parsl.data_provider.staging import Staging
 
 from .errors import WorkQueueTaskFailure
 from .errors import WorkQueueFailure
@@ -166,26 +171,27 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Default is ''.
     """
 
+    @typeguard.typechecked
     def __init__(self,
-                 label="WorkQueueExecutor",
-                 provider=LocalProvider(),
-                 working_dir=".",
-                 managed=True,
-                 project_name=None,
-                 project_password_file=None,
-                 address=None,
-                 port=WORK_QUEUE_DEFAULT_PORT,
-                 env=None,
-                 shared_fs=False,
-                 storage_access=None,
-                 use_cache=False,
-                 source=False,
-                 pack=False,
-                 autolabel=False,
-                 autolabel_window=1,
-                 autocategory=False,
-                 init_command="",
-                 full_debug=True):
+                 label: str = "WorkQueueExecutor",
+                 provider: ExecutionProvider = LocalProvider(),
+                 working_dir: str = ".",
+                 managed: bool = True,
+                 project_name: Optional[str] = None,
+                 project_password_file: Optional[str] = None,
+                 address: Optional[str] = None,
+                 port: int = WORK_QUEUE_DEFAULT_PORT,
+                 env: Optional[Dict] = None,
+                 shared_fs: bool = False,
+                 storage_access: Optional[List[Staging]] = None,
+                 use_cache: bool = False,
+                 source: bool = False,
+                 pack: bool = False,
+                 autolabel: bool = False,
+                 autolabel_window: int = 1,
+                 autocategory: bool = False,
+                 init_command: str = "",
+                 full_debug: bool = True):
         NoStatusHandlingExecutor.__init__(self)
         self._provider = provider
         self._scaling_enabled = True
@@ -195,9 +201,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         self.label = label
         self.managed = managed
-        self.task_queue = multiprocessing.Queue()
-        self.collector_queue = multiprocessing.Queue()
-        self.blocks = {}
+        self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
+        self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
+        self.blocks = {}  # type: Dict[str, str]
         self.address = address
         self.port = port
         self.task_counter = -1
@@ -209,8 +215,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.storage_access = storage_access
         self.use_cache = use_cache
         self.working_dir = working_dir
-        self.used_names = {}
-        self.registered_files = set()
+        self.registered_files = set()  # type: Set[str]
         self.full = full_debug
         self.source = True if pack else source
         self.pack = pack
@@ -218,7 +223,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
         self.should_stop = multiprocessing.Value(c_bool, False)
-        self.cached_envs = {}
+        self.cached_envs = {}  # type: Dict[int, str]
 
         if not self.address:
             self.address = socket.gethostname()
