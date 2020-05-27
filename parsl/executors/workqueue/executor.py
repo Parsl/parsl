@@ -457,7 +457,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         return a ParslFileToWq with it. These files are never cached"""
         fname, mode = putils.get_std_fname_mode(fdname, stdfspec)
         to_stage = not os.path.isabs(fname)
-        print(ParslFileToWq(fname, stage=to_stage, cache=False))
         return ParslFileToWq(fname, stage=to_stage, cache=False)
 
     def _prepare_package(self, fn):
