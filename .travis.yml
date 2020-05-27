@@ -65,8 +65,11 @@ script:
     # which at time of writing comes from the htex_local_alternative test
     # run.
     - parsl-visualize &
+    # now wait for this to become responsive to connections
+    - wget http://127.0.0.1:8080/ --retry-connrefused --tries 30 --waitretry=1
     # wget will return a failure code if any of the requested URLs don't return an HTTP 200 result
     - wget http://127.0.0.1:8080/ --recursive --no-verbose --page-requisites --level=inf -e robots=off
+    - killall --wait parsl-visualize
 
 
     # run simple worker test. this is unlikely to scale due to
