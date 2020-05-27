@@ -31,7 +31,7 @@ from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set
 from parsl.data_provider.staging import Staging
 
 from .errors import WorkQueueTaskFailure
@@ -177,7 +177,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  managed: bool = True,
                  project_name: Optional[str] = None,
                  project_password_file: Optional[str] = None,
-                 address: Optional[str] =None,
+                 address: Optional[str] = None,
                  port: int = WORK_QUEUE_DEFAULT_PORT,
                  env: Optional[Dict] = None,
                  shared_fs: bool = False,
