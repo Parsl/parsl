@@ -60,3 +60,9 @@ Adding a new site
 * Reinstall parsl, using `pip install .`
 * Test a single test: `python3 test_site.py -d` to confirm that the site works correctly.
 * Once tests are passing run the whole site_test with `make site_test`
+
+
+Shared filesystem option
+------------------------
+
+There is a new env variable "SHARED_FS_OPTIONS" to deselect tests that rely on a shared-fs. Currently we mark all these test as `issue363` (issue #363). However, there are two categories of tests in these marked tests. One category of tests rely on a share-fs to transfer `stdout` and `stderr`, and the other category of tests rely on a share-fs to transfer `input` and `output`.
