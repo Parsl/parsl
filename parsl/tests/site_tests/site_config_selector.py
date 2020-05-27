@@ -42,6 +42,11 @@ def fresh_config():
         from parsl.tests.configs.cc_in2p3 import fresh_config
         config = fresh_config()
 
+    elif 'cooley' in hostname:
+        print("on Cooley, loading PetrelKube config")
+        from parsl.tests.configs.petrelkube import fresh_config
+        config = fresh_config()
+
     else:
         print("Loading Local HTEX config")
         from parsl.tests.configs.htex_local import fresh_config

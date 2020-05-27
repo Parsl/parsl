@@ -124,6 +124,22 @@ export SHARED_FS_OPTIONS='-k "not issue363"'
 EOF
         echo "source activate $PWD/$CONDA_TARGET"            >> ~/setup_parsl_test_env.sh
 
+    elif [[ "$(hostname)" =~ .*cooley.* ]]
+    then
+        echo "On Cooley, testing Kubernetes on PetrelKube"
+        if [[ -d ~/anaconda3 ]]
+        then
+            echo "Loading anaconda3 from ~/anaconda3"
+            source ~/anaconda3/bin/activate
+        else
+            echo "Please install conda to your home dir at ~/anaconda3"
+        fi
+        conda create -p $CONDA_TARGET python=3.7 --yes --force
+        conda activate $PWD/$CONDA_TARGET
+        pip install kubernetes
+        echo "pip install git+https://github.com/Parsl/parsl@$PARSL_GITHASH" >  ~/setup_parsl_test_env.sh
+        echo 'pip install pytest==4.6'                                       >> ~/setup_parsl_test_env.sh
+
     else
         echo "Unknown site"
         exit -1
