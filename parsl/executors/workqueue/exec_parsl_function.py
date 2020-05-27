@@ -201,3 +201,4 @@ if __name__ == "__main__":
     except Exception:
         print("Could not write to result file.")
         traceback.print_exc()
+        sys.exit(1)
