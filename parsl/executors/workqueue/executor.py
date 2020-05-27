@@ -31,6 +31,7 @@ from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 
+import typeguard
 from typing import Dict, List, Optional, Set
 from parsl.data_provider.staging import Staging
 
@@ -170,6 +171,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Default is ''.
     """
 
+    @typeguard.typechecked
     def __init__(self,
                  label: str = "WorkQueueExecutor",
                  provider: ExecutionProvider = LocalProvider(),
