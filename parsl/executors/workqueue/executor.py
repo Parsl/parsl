@@ -213,7 +213,6 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.storage_access = storage_access
         self.use_cache = use_cache
         self.working_dir = working_dir
-        self.used_names = {}
         self.registered_files: Set[str] = set()
         self.full = full_debug
         self.source = True if pack else source
