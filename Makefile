@@ -24,7 +24,7 @@ virtualenv: ## create an activate a virtual env
 	echo "Run 'source $(VENV)/bin/activate' to activate the virtual environment"
 
 
-$(DEPS): virtualenv test-requirements.txt
+$(DEPS): test-requirements.txt
 	pip3 install --upgrade pip
 	pip3 install -r test-requirements.txt
 	touch $(DEPS)
@@ -52,47 +52,39 @@ mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/
 
 .PHONY: local_thread_test
-local_thread_test: $(DEPS) ## run all tests with local_thread config
+local_thread_test: ## run all tests with local_thread config
 	pytest parsl -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: htex_local_test
-htex_local_test: $(DEPS) ## run all tests with htex_local config
+htex_local_test: ## run all tests with htex_local config
 	PYTHONPATH=.  pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: htex_local_alternate_test
-htex_local_alternate_test: $(DEPS) ## run all tests with htex_local config
-	echo "$(MPI)}"
-	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
-	pip3 install ".[extreme_scale,monitoring]"
+htex_local_alternate_test: ## run all tests with htex_local config
+	pip3 install ".[monitoring]"
 	PYTHONPATH=.  pytest parsl -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
 
 $(WORKQUEUE_INSTALL):
 	parsl/executors/workqueue/install-workqueue.sh
 
-
-work_queue_procs := $(shell ps aux | grep -E -e "[0-9]+:[0-9]+ work_queue_worker" | tr -s ' ' | cut -f 2 -d " ")
-work_queue_killcmd := $(if $(work_queue_procs), "kill" "-3" $(procs), "echo" "no work_queue_workers to running")
-
 .PHONY: workqueue_ex_test
-workqueue_ex_test: $(DEPS) $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
-	pip3 install ".[extreme_scale]"
-	@$(work_queue_killcmd)
-	work_queue_worker localhost 9000  &> /dev/null &
+workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
 	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  pytest parsl -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order --bodge-dfk-per-test
-	@$(work_queue_killcmd)
 
 .PHONY: config_local_test
-config_local_test: $(DEPS) ## run all tests with workqueue_ex config
+config_local_test: ## run all tests with workqueue_ex config
+	echo "$(MPI)}"
+	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
 	pip3 install ".[extreme_scale]"
 	PYTHONPATH=. pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: site_test
 site_test:
-	pytest parsl -k "not cleannet" --config parsl/tests/site_tests/site_config_selector.py --cov=parsl --cov-append --cov-report= --random-order
-	pytest parsl/tests/site_tests/ --config local
+	pytest parsl -k "not cleannet" ${SHARED_FS_OPTIONS} --config parsl/tests/site_tests/site_config_selector.py --cov=parsl --cov-append --cov-report= --random-order
+	pytest parsl/tests/site_tests/ ${SHARED_FS_OPTIONS} --config local
 
 .PHONY: test ## run all tests with all config types
-test: $(DEPS) clean_coverage lint flake8 local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test  config_local_test ## run all tests
+test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test  config_local_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag

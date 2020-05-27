@@ -19,10 +19,11 @@ def platform(sleep=10, stdout=None):
 def test_provider():
     """ Provider scaling
     """
-    parsl.load(fresh_config())
+    config = fresh_config()
+    name = config.executors[0].label
+    parsl.load(config)
 
     dfk = parsl.dfk()
-    name = list(dfk.executors.keys())[0]
     print("Trying to get executor : ", name)
 
     x = platform(sleep=0)

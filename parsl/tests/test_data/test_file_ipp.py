@@ -1,6 +1,5 @@
 import os
 import pytest
-
 import parsl
 from parsl.app.app import bash_app
 from parsl.data_provider.files import File
@@ -59,6 +58,7 @@ def test_regression_200():
         assert "Hello World" in data, "Missed data"
 
 
+@pytest.mark.issue363
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """

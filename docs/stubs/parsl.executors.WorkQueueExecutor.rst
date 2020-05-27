@@ -16,6 +16,7 @@ parsl.executors.WorkQueueExecutor
       ~WorkQueueExecutor.__init__
       ~WorkQueueExecutor.create_name_tuple
       ~WorkQueueExecutor.create_new_name
+      ~WorkQueueExecutor.initialize_scaling
       ~WorkQueueExecutor.run_dir
       ~WorkQueueExecutor.scale_in
       ~WorkQueueExecutor.scale_out

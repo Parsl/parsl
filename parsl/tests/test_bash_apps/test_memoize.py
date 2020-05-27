@@ -1,5 +1,6 @@
 import argparse
 import os
+import pytest
 
 import parsl
 from parsl import File
@@ -12,6 +13,7 @@ def fail_on_presence(outputs=[]):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
 
 
+@pytest.mark.issue363
 def test_bash_memoization(n=2):
     """Testing bash memoization
     """

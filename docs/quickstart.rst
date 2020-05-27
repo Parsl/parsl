@@ -17,7 +17,7 @@ $ gcc --version
 
 Parsl has been tested on Linux and MacOS.
 
-.. note:: As of Parsl v0.7.2 we are switching to an opt-in model for anonymous usage tracking. To help support the
+.. note:: Parsl uses an opt-in model for anonymous usage tracking. To help support the
    Parsl project we request that users opt-in where possible by setting ``PARSL_TRACKING=true`` in their environment
    or by setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). To read more about
    what information is collected and how it is used see :ref:`label-usage-tracking`.
@@ -26,7 +26,7 @@ Installation using Pip
 ^^^^^^^^^^^^^^^^^^^^^^
 
 While ``pip`` and ``pip3`` can be used to install Parsl we suggest the following approach
-for reliable installation when many Python environments are avaialble.
+for reliable installation when many Python environments are available.
 
 1. Install Parsl::
 
@@ -53,9 +53,9 @@ Installation using Conda
 2. Install Parsl::
 
      $ python3 -m pip install parsl
-     
+
      or
-     
+
      $ conda config --add channels conda-forge
      $ conda install parsl
 
@@ -71,11 +71,15 @@ can be installed easily via `pip` using a pip extras option.
 Here's a list of the components and their extras option:
 
 * Amazon Web Services (Cloud) : `aws`
-* Google Cloud : `google_cloud`
-* Kubernetes : `kubernetes`
-* Extreme Scale Executor (Supercomputing) : `extreme_scale`
+* OAuth based SSH : `oauth_ssh`
 * Logging monitoring data to a database: `monitoring`
-* Jetstream (NSF Cloud) : `jetstream`
+* Extreme Scale Executor (Supercomputing) : `extreme_scale`
+* Google Cloud : `google_cloud`
+* Python GSSAPI for SSH : `gssapi`
+* Azure (Cloud) : `azure`
+* Kubernetes : `kubernetes`
+* Work Queue execution framework : `workqueue`
+
 
 Optional extras can be installed using the following syntax::
 

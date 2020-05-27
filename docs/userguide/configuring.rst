@@ -30,8 +30,8 @@ configuration can be specified.
 .. contents:: Configuration How-To and Examples:
 
 .. note::
-   Please note that all configuration examples below require customization for your account, 
-   allocation, Python environment, etc. 
+   Please note that all configuration examples below require customization for your account,
+   allocation, Python environment, etc.
 
 How to Configure
 ----------------
@@ -51,41 +51,41 @@ In addition, examples for some specific configurations follow.
 
 1. Where would you like the apps in the Parsl program to run?
 
-+---------------------+----------------------------+------------------------+
-| Target              | Executor                   | Provider               |
-+=====================+============================+========================+
-| Laptop/Workstation  | * `ThreadPoolExecutor`     | `LocalProvider`        |
-|                     | * `IPyParallelExecutor`    |                        |
-|                     | * `HighThroughputExecutor` |                        |
-|                     | * `ExtremeScaleExecutor`   |                        |
-+---------------------+----------------------------+------------------------+
-| Amazon Web Services | * `IPyParallelExecutor`    | `AWSProvider`          |
-|                     | * `HighThroughputExecutor` |                        |
-+---------------------+----------------------------+------------------------+
-| Google Cloud        | * `IPyParallelExecutor`    | `GoogleCloudProvider`  |
-|                     | * `HighThroughputExecutor` |                        |
-+---------------------+----------------------------+------------------------+
-| Slurm based cluster | * `IPyParallelExecutor`    | `SlurmProvider`        |
-| or supercomputer    | * `HighThroughputExecutor` |                        |
-|                     | * `ExtremeScaleExecutor`   |                        |
-+---------------------+----------------------------+------------------------+
-| Torque/PBS based    | * `IPyParallelExecutor`    | `TorqueProvider`       |
-| cluster or          | * `HighThroughputExecutor` |                        |
-| supercomputer       | * `ExtremeScaleExecutor`   |                        |
-+---------------------+----------------------------+------------------------+
-| Cobalt based cluster| * `IPyParallelExecutor`    | `CobaltProvider`       |
-| or supercomputer    | * `HighThroughputExecutor` |                        |
-|                     | * `ExtremeScaleExecutor`   |                        |
-+---------------------+----------------------------+------------------------+
-| GridEngine based    | * `IPyParallelExecutor`    | `GridEngineProvider`   |
-| cluster or grid     | * `HighThroughputExecutor` |                        |
-+---------------------+----------------------------+------------------------+
-| Condor based        | * `IPyParallelExecutor`    | `CondorProvider`       |
-| cluster or grid     | * `HighThroughputExecutor` |                        |
-+---------------------+----------------------------+------------------------+
-| Kubernetes cluster  | * `IPyParallelExecutor`    | `KubernetesProvider`   |
-|                     | * `HighThroughputExecutor` |                        |
-+---------------------+----------------------------+------------------------+
++---------------------+-------------------------------+------------------------+
+| Target              | Executor                      | Provider               |
++=====================+===============================+========================+
+| Laptop/Workstation  | * `ExtremeScaleExecutor`      | `LocalProvider`        |
+|                     | * `HighThroughputExecutor`    |                        |
+|                     | * `ThreadPoolExecutor`        |                        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
++---------------------+-------------------------------+------------------------+
+| Amazon Web Services | * `HighThroughputExecutor`    | `AWSProvider`          |
++---------------------+-------------------------------+------------------------+
+| Google Cloud        | * `HighThroughputExecutor`    | `GoogleCloudProvider`  |
++---------------------+-------------------------------+------------------------+
+| Slurm based system  | * `ExtremeScaleExecutor`      | `SlurmProvider`        |
+|                     | * `HighThroughputExecutor`    |                        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
++---------------------+-------------------------------+------------------------+
+| Torque/PBS based    | * `ExtremeScaleExecutor`      | `TorqueProvider`       |
+| system              | * `HighThroughputExecutor`    |                        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
++---------------------+-------------------------------+------------------------+
+| Cobalt based system | * `ExtremeScaleExecutor`      | `CobaltProvider`       |
+|                     | * `HighThroughputExecutor`    |                        |
+|                     | * `WorkQueueExecutor` beta_   |                        |
++---------------------+-------------------------------+------------------------+
+| GridEngine based    | * `HighThroughputExecutor`    | `GridEngineProvider`   |
+| system              | * `WorkQueueExecutor` beta_   |                        |
++---------------------+-------------------------------+------------------------+
+| Condor based        | * `HighThroughputExecutor`    | `CondorProvider`       |
+| cluster or grid     | * `WorkQueueExecutor` beta_   |                        |
++---------------------+-------------------------------+------------------------+
+| Kubernetes cluster  | * `HighThroughputExecutor`    | `KubernetesProvider`   |
++---------------------+-------------------------------+------------------------+
+
+.. [beta] WorkQueueExecutor is available in `v1.0.0` in beta status.
+
 
 2. How many nodes will you use to run them? What task durations give good performance on different executors?
 
@@ -114,11 +114,11 @@ In addition, examples for some specific configurations follow.
 .. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale at which
        we've tested the `ExtremeScaleExecutor`.
 
-.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and 
+.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and
        20000 CPU cores.
 
-.. warning:: `IPyParallelExecutor` will be deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
-             as the recommended replacement.
+.. warning:: `IPyParallelExecutor` is  deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
+   as the recommended replacement.
 
 
 3. If you are running on a cluster or supercomputer, will you request multiple nodes per batch (scheduler) job?
@@ -172,6 +172,99 @@ In addition, examples for some specific configurations follow.
 +------------------------+--------------------------+------------------------------------+
 
 
+Ad-Hoc Clusters
+---------------
+
+Any collection of compute nodes without a scheduler setup for task scheduling can be considered an
+ad-hoc cluster. Often these machines have a shared filesystem such as NFS or Lustre.
+In order to use these resources with Parsl, they need to set-up for password-less SSH access.
+
+To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
+for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
+configuration follows.
+
+.. literalinclude:: ../../parsl/configs/ad_hoc.py
+
+.. note::
+   Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
+
+.. note::
+   Load-balancing will not work properly with this approach. In future work, a dedicated provider
+   that supports load-balancing will be implemented. You can follow progress on this work
+   `here <https://github.com/Parsl/parsl/issues/941>`_.
+
+
+Amazon Web Services
+-------------------
+
+.. image:: ./aws_image.png
+
+.. note::
+   Please note that **boto3** library is a requirement to use AWS with Parsl.
+   This can be installed via ``python3 -m pip install parsl[aws]``
+
+Amazon Web Services is a commercial cloud service which allows you to rent a range of computers and other computing services.
+The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
+The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
+re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
+
+.. literalinclude:: ../../parsl/configs/ec2.py
+
+
+ASPIRE 1 (NSCC)
+---------------
+
+.. image:: https://www.nscc.sg/wp-content/uploads/2017/04/ASPIRE1Img.png
+
+The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how `scheduler_options` parameter could be used for scheduling array jobs in PBSPro.
+
+.. literalinclude:: ../../parsl/configs/ASPIRE1.py
+
+
+Blue Waters (NCSA)
+------------------
+
+.. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png
+
+The following snippet shows an example configuration for executing remotely on Blue Waters, a flagship machine at the National Center for Supercomputing Applications.
+The configuration assumes the user is running on a login node and uses the `TorqueProvider` to interface
+with the scheduler, and uses the `AprunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/bluewaters.py
+
+
+CC-IN2P3
+--------
+
+.. image:: https://cc.in2p3.fr/wp-content/uploads/2017/03/bandeau_accueil.jpg
+
+The snippet below shows an example configuration for executing from a login node on IN2P3's Computing Centre.
+The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
+This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
+
+.. literalinclude:: ../../parsl/configs/cc_in2p3.py
+
+
+CCL (Notre Dame, with Work Queue)
+---------------------------------
+
+.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
+
+The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large. This examples uses the `WorkQueueExecutor` to schedule tasks locally, and assumes that Work Queue workers have been externally connected to the master using the `work_queue_worker` or `condor_submit_workers` command line utilities from CCTools. For more information the process of submitting tasks and workers to Work Queue, please refer to the `CCTools Work Queue documentation <https://cctools.readthedocs.io/en/latest/work_queue/>`.
+
+.. literalinclude::  ../../parsl/configs/wqex_local.py
+
+To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment (instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`):
+
+.. code-block:: bash
+
+   $ conda create -y --name <environment> python=<version>
+   $ conda activate <environment>
+   $ conda install -y -c conda-forge cctools
+
+This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
+
+
 Comet (SDSC)
 ------------
 
@@ -181,9 +274,18 @@ The following snippet shows an example configuration for executing remotely on S
 Center's **Comet** supercomputer. The example is designed to be executed on the login nodes, using the
 `SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
 
-.. warning:: This config has **NOT** been tested with Parsl v0.9.0
-
 .. literalinclude:: ../../parsl/configs/comet.py
+
+
+Cooley (ALCF)
+-------------
+
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
+**Cooley** analysis and visualization system.
+The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler
+using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
+
+.. literalinclude:: ../../parsl/configs/cooley.py
 
 
 .. _configuring_nersc_cori:
@@ -199,26 +301,6 @@ It is configured to request 2 nodes configured with 1 TaskBlock per node. Finall
 .. literalinclude:: ../../parsl/configs/cori.py
 
 
-Stampede2 (TACC)
-------------
-
-.. image:: https://www.tacc.utexas.edu/documents/1084364/1413880/stampede2-0717.jpg/
-
-The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler. 
-
-.. literalinclude:: ../../parsl/configs/stampede2.py
-
-
-ASPIRE 1 (NSCC)
-------------
-
-.. image:: https://www.nscc.sg/wp-content/uploads/2017/04/ASPIRE1Img.png
-
-The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how `scheduler_options` parameter could be used for scheduling array jobs in PBSPro.
-
-.. literalinclude:: ../../parsl/configs/ASPIRE1.py
-
-
 Frontera (TACC)
 ---------------
 
@@ -231,62 +313,17 @@ running on a login node and uses the `SlurmProvider` to interface with the sched
 .. literalinclude:: ../../parsl/configs/frontera.py
 
 
-Theta (ALCF)
-------------
+Kubernetes Clusters
+-------------------
 
-.. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
+.. image:: https://d1.awsstatic.com/PAC/kuberneteslogo.eabc6359f48c8e30b7a138c18177f3fd39338e05.png
 
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
-**Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
-using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
+Kubernetes is an open-source system for container management, such as automating deployment and scaling of containers.
+The snippet below shows an example configuration for deploying pods as workers on a Kubernetes cluster.
+The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in `~/.kube/config`.
 
-.. literalinclude:: ../../parsl/configs/theta.py
+.. literalinclude:: ../../parsl/configs/kubernetes.py
 
-
-Cooley (ALCF)
--------------
-
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's 
-**Cooley** analysis and visualization system.
-The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler 
-using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
-
-.. literalinclude:: ../../parsl/configs/cooley.py
-
-
-Blue Waters (NCSA)
--------------
-
-.. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png
-
-The following snippet shows an example configuration for executing remotely on Blue Waters, a flagship machine at the National Center for Supercomputing Applications.
-The configuration assumes the user is running on a login node and uses the `TorqueProvider` to interface
-with the scheduler, and uses the `AprunLauncher` to launch workers.
-
-.. literalinclude:: ../../parsl/configs/bluewaters.py
-
-
-Summit (ORNL)
--------------
-
-.. image:: https://www.olcf.ornl.gov/wp-content/uploads/2018/06/Summit_Exaop-1500x844.jpg
-
-The following snippet shows an example configuration for executing from the login node on Summit, the leadership class supercomputer hosted at the Oak Ridge National Laboratory.
-The example uses the `LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `JsrunLauncher` to launch workers across the compute nodes.
-
-.. literalinclude:: ../../parsl/configs/summit.py
-
-
-CC-IN2P3
---------
-
-.. image:: https://cc.in2p3.fr/wp-content/uploads/2017/03/bandeau_accueil.jpg
-
-The snippet below shows an example configuration for executing from a login node on IN2P3's Computing Centre.
-The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
-This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
-
-.. literalinclude:: ../../parsl/configs/cc_in2p3.py
 
 Midway (RCC, UChicago)
 ----------------------
@@ -314,73 +351,38 @@ The configuration uses the `CondorProvider` to interface with the scheduler.
 
 .. literalinclude:: ../../parsl/configs/osg.py
 
-Amazon Web Services
--------------------
 
-.. image:: ./aws_image.png
+Stampede2 (TACC)
+----------------
 
-.. note::
-   Please note that **boto3** library is a requirement to use AWS with Parsl.
-   This can be installed via ``python3 -m pip install parsl[aws]``
+.. image:: https://www.tacc.utexas.edu/documents/1084364/1413880/stampede2-0717.jpg/
 
-Amazon Web Services is a commercial cloud service which allows you to rent a range of computers and other computing services.
-The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
-The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
-re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
+The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler.
 
-.. literalinclude:: ../../parsl/configs/ec2.py
-
-Kubernetes Clusters
--------------------
-
-.. image:: https://d1.awsstatic.com/PAC/kuberneteslogo.eabc6359f48c8e30b7a138c18177f3fd39338e05.png
-
-Kubernetes is an open-source system for container management, such as automating deployment and scaling of containers.
-The snippet below shows an example configuration for deploying pods as workers on a Kubernetes cluster.
-The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in `~/.kube/config`.
-
-.. literalinclude:: ../../parsl/configs/kubernetes.py
+.. literalinclude:: ../../parsl/configs/stampede2.py
 
 
-Ad-Hoc Clusters
----------------
+Summit (ORNL)
+-------------
 
-Any collection of compute nodes without a scheduler setup for task scheduling can be considered an
-ad-hoc cluster. Often these machines have a shared filesystem such as NFS or Lustre.
-In order to use these resources with Parsl, they need to set-up for password-less SSH access.
+.. image:: https://www.olcf.ornl.gov/wp-content/uploads/2018/06/Summit_Exaop-1500x844.jpg
 
-To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
-for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
-configuration follows.
+The following snippet shows an example configuration for executing from the login node on Summit, the leadership class supercomputer hosted at the Oak Ridge National Laboratory.
+The example uses the `LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `JsrunLauncher` to launch workers across the compute nodes.
 
-.. literalinclude:: ../../parsl/configs/ad_hoc.py
-
-.. note::
-   Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
-
-.. note::
-   Load-balancing will not work properly with this approach. In future work, a dedicated provider
-   that supports load-balancing will be implemented. You can follow progress on this work
-   `here <https://github.com/Parsl/parsl/issues/941>`_.
+.. literalinclude:: ../../parsl/configs/summit.py
 
 
-Work Queue (CCL ND)
-------------------
+Theta (ALCF)
+------------
 
-.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
+.. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
 
-The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large. This examples uses the `WorkQueueExecutor` to schedule tasks locally, and assumes that Work Queue workers have been externally connected to the master using the `work_queue_worker` or `condor_submit_workers` command line utilities from CCTools. For more information the process of submitting tasks and workers to Work Queue, please refer to the `CCTools Work Queue documentation <https://cctools.readthedocs.io/en/latest/work_queue/>`.
+The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
+**Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
+using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
-.. literalinclude::  ../../parsl/configs/wqex_local.py
-
-To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment (instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`):
-
-.. codeblock:: bash
-    $ conda create -y --name <environment> python=<version>
-    $ conda activate <environment>
-    $ conda install -y -c conda-forge cctools
-
-This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library. 
+.. literalinclude:: ../../parsl/configs/theta.py
 
 
 Further help
@@ -390,4 +392,3 @@ For help constructing a configuration, you can click on class names such as :cla
 
     >>> from parsl.config import Config
     >>> help(Config)
-

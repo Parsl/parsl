@@ -41,6 +41,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
 
 
 @pytest.mark.usefixtures('setup_data')
+@pytest.mark.issue363
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """
