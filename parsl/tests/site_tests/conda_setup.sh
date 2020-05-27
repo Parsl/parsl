@@ -111,6 +111,19 @@ create_conda() {
         echo "source /software/Anaconda3-5.3.0-el7-x86_64/bin/activate"     >> ~/setup_parsl_test_env.sh
         echo "conda activate $PWD/$CONDA_TARGET"                            >> ~/setup_parsl_test_env.sh
 
+    elif [[ "$(hostname -f)" =~ .*in2p3.* ]]
+    then
+        echo "On CC-IN2P3"
+	export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH
+        conda create -p $CONDA_TARGET python=3.7 --yes --force
+        source activate $PWD/$CONDA_TARGET
+	conda install pip --yes
+	cat <<'EOF' > ~/setup_parsl_test_env.sh
+export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH
+export SHARED_FS_OPTIONS='-k "not issue363"'
+EOF
+        echo "source activate $PWD/$CONDA_TARGET"            >> ~/setup_parsl_test_env.sh
+
     else
         echo "Unknown site"
         exit -1
