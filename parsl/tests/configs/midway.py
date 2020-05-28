@@ -35,3 +35,6 @@ def fresh_config():
         ],
     )
     return config
+
+
+config = fresh_config()
