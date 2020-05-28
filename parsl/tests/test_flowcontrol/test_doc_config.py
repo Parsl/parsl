@@ -14,6 +14,7 @@ def python_app():
     time.sleep(20)
     return "Hello from {0}:{1}".format(os.getpid(), platform.uname())
 
+
 @pytest.mark.skip('We shouldnt run tests on midway on CI local env')
 @pytest.mark.local
 def test_python(N=5):
