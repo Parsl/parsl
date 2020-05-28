@@ -217,7 +217,7 @@ class RepresentationMixin(object):
                 lines = text.splitlines()
                 if len(lines) <= 1:
                     return text
-                return "\n".join("    " + l for l in lines).strip()
+                return "\n".join("    " + line for line in lines).strip()
             args = ["\n    {},".format(indent(repr(a))) for a in args]
             kwargs = ["\n    {}={}".format(k, indent(repr(v)))
                       for k, v in sorted(kwargs.items())]
