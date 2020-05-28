@@ -2,7 +2,6 @@ from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import JsrunLauncher
 from parsl.providers import LSFProvider
-from parsl.addresses import address_by_interface
 
 from .user_opts import user_opts
 """ This config assumes that it is used to launch parsl tasks from the login nodes
@@ -21,9 +20,9 @@ def fresh_config():
 
                 # address=address_by_interface('ib0'),  # This assumes Parsl is running on login node
                 worker_port_range=(50000, 55000),
-                max_workers = 1,
+                max_workers=1,
                 provider=LSFProvider(
-                launcher=JsrunLauncher(),
+                    launcher=JsrunLauncher(),
                     walltime="00:10:00",
                     nodes_per_block=2,
                     init_blocks=1,
@@ -32,6 +31,6 @@ def fresh_config():
                     project=user_opts['summit']['project'],
                     cmd_timeout=60
                 ),
-            )            
+            )
         ],
     )
