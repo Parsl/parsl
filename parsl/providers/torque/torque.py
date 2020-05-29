@@ -75,7 +75,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
-                 max_blocks=100,
+                 max_blocks=1,
                  parallelism=1,
                  launcher=AprunLauncher(),
                  walltime="00:20:00",

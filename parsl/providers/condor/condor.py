@@ -84,7 +84,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  mem_per_slot: Optional[float] = None,
                  init_blocks: int = 1,
                  min_blocks: int = 0,
-                 max_blocks: int = 10,
+                 max_blocks: int = 1,
                  parallelism: float = 1,
                  environment: Optional[Dict[str, str]] = None,
                  project: str = '',
