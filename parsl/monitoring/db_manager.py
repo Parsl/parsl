@@ -3,10 +3,14 @@ import threading
 import queue
 import os
 import time
+import datetime
 
+from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
+
+logger = logging.getLogger("database_manager")
 
 try:
     import sqlalchemy as sa
@@ -32,7 +36,7 @@ RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 
 
-class Database(object):
+class Database:
 
     if not _sqlalchemy_enabled:
         raise OptionalModuleMissing(['sqlalchemy'],
@@ -74,6 +78,9 @@ class Database(object):
         mapper = get_mapper(table)
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
+
+    def rollback(self):
+        self.session.rollback()
 
     def _generate_mappings(self, table, columns=None, messages=[]):
         mappings = []
@@ -128,8 +135,8 @@ class Database(object):
             'task_time_running', DateTime, nullable=True)
         task_time_returned = Column(
             'task_time_returned', DateTime, nullable=True)
-        task_elapsed_time = Column('task_elapsed_time', Float, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
+        task_hashsum = Column('task_hashsum', Text, nullable=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
@@ -189,7 +196,7 @@ class Database(object):
         )
 
 
-class DatabaseManager(object):
+class DatabaseManager:
     def __init__(self,
                  db_url='sqlite:///monitoring.db',
                  logdir='.',
@@ -198,12 +205,14 @@ class DatabaseManager(object):
                  batching_threshold=99999,
                  ):
 
+        self.workflow_end = False
+        self.workflow_start_message = None
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        self.logger = start_file_logger(
-            "{}/database_manager.log".format(self.logdir), level=logging_level)
-        self.logger.debug("Initializing Database Manager process")
+        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level, name="database_manager")
+
+        logger.debug("Initializing Database Manager process")
 
         self.db = Database(db_url)
         self.batching_interval = batching_interval
@@ -219,21 +228,24 @@ class DatabaseManager(object):
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
                                                                 priority_queue, 'priority', self._kill_event,),
-                                                            name="Monitoring-migrate-priority"
+                                                            name="Monitoring-migrate-priority",
+                                                            daemon=True,
                                                             )
         self._priority_queue_pull_thread.start()
 
         self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                         args=(
                                                             node_queue, 'node', self._kill_event,),
-                                                        name="Monitoring-migrate-node"
+                                                        name="Monitoring-migrate-node",
+                                                        daemon=True,
                                                         )
         self._node_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
                                                                 resource_queue, 'resource', self._kill_event,),
-                                                            name="Monitoring-migrate-resource"
+                                                            name="Monitoring-migrate-resource",
+                                                            daemon=True,
                                                             )
         self._resource_queue_pull_thread.start()
 
@@ -255,7 +267,7 @@ class DatabaseManager(object):
             WORKFLOW_INFO and TASK_INFO messages
 
             """
-            self.logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}""".format(
+            logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}""".format(
                               self._kill_event.is_set(),
                               self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
                               priority_queue.qsize() != 0, resource_queue.qsize() != 0))
@@ -268,23 +280,26 @@ class DatabaseManager(object):
                                                    interval=self.batching_interval,
                                                    threshold=self.batching_threshold)
             if messages:
-                self.logger.debug(
+                logger.debug(
                     "Got {} messages from priority queue".format(len(messages)))
                 update_messages, insert_messages, all_messages = [], [], []
                 for msg_type, msg in messages:
                     if msg_type.value == MessageType.WORKFLOW_INFO.value:
                         if "python_version" in msg:   # workflow start message
-                            self.logger.debug(
+                            logger.debug(
                                 "Inserting workflow start info to WORKFLOW table")
                             self._insert(table=WORKFLOW, messages=[msg])
+                            self.workflow_start_message = msg
                         else:                         # workflow end message
-                            self.logger.debug(
+                            logger.debug(
                                 "Updating workflow end info to WORKFLOW table")
                             self._update(table=WORKFLOW,
                                          columns=['run_id', 'tasks_failed_count',
                                                   'tasks_completed_count', 'time_completed',
                                                   'workflow_duration'],
                                          messages=[msg])
+                            self.workflow_end = True
+
                     else:                             # TASK_INFO message
                         all_messages.append(msg)
                         if msg['task_id'] in inserted_tasks:
@@ -298,12 +313,12 @@ class DatabaseManager(object):
                                 first_messages.append(
                                     left_messages.pop(msg['task_id']))
 
-                self.logger.debug(
+                logger.debug(
                     "Updating and inserting TASK_INFO to all tables")
 
                 if insert_messages:
                     self._insert(table=TASK, messages=insert_messages)
-                    self.logger.debug(
+                    logger.debug(
                         "There are {} inserted task records".format(len(inserted_tasks)))
                 if update_messages:
                     self._update(table=WORKFLOW,
@@ -312,7 +327,7 @@ class DatabaseManager(object):
                                  messages=update_messages)
                     self._update(table=TASK,
                                  columns=['task_time_returned',
-                                          'task_elapsed_time', 'run_id', 'task_id',
+                                          'run_id', 'task_id',
                                           'task_fail_count',
                                           'task_fail_history'],
                                  messages=update_messages)
@@ -326,12 +341,12 @@ class DatabaseManager(object):
                                                    interval=self.batching_interval,
                                                    threshold=self.batching_threshold)
             if messages:
-                self.logger.debug(
+                logger.debug(
                     "Got {} messages from node queue".format(len(messages)))
                 self._insert(table=NODE, messages=messages)
 
             """
-            RESOURCE_INFO messages
+            Resource info messages
 
             """
             messages = self._get_messages_in_batch(self.pending_resource_queue,
@@ -339,7 +354,7 @@ class DatabaseManager(object):
                                                    threshold=self.batching_threshold)
 
             if messages or first_messages:
-                self.logger.debug(
+                logger.debug(
                     "Got {} messages from resource queue".format(len(messages)))
                 self._insert(table=RESOURCE, messages=messages)
                 for msg in messages:
@@ -359,11 +374,11 @@ class DatabaseManager(object):
                                  messages=first_messages)
 
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
-        self.logger.info("[{}_queue_PULL_THREAD] Starting".format(queue_tag))
+        logger.info("[{}_queue_PULL_THREAD] Starting".format(queue_tag))
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
-            self.logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
-                              .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
+            logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
+                         .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
             try:
                 x, addr = logs_queue.get(timeout=0.1)
             except queue.Empty:
@@ -380,10 +395,38 @@ class DatabaseManager(object):
                     self.pending_node_queue.put(x[-1])
 
     def _update(self, table, columns, messages):
-        self.db.update(table=table, columns=columns, messages=messages)
+        try:
+            self.db.update(table=table, columns=columns, messages=messages)
+        except KeyboardInterrupt:
+            logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                logger.exception("Rollback failed")
+            raise
+        except Exception:
+            logger.exception("Got exception when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                logger.exception("Rollback failed")
 
     def _insert(self, table, messages):
-        self.db.insert(table=table, messages=messages)
+        try:
+            self.db.insert(table=table, messages=messages)
+        except KeyboardInterrupt:
+            logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                logger.exception("Rollback failed")
+            raise
+        except Exception:
+            logger.exception("Got exception when trying to insert to Table {}".format(table))
+            try:
+                self.db.rollback()
+            except Exception:
+                logger.exception("Rollback failed")
 
     def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
         messages = []
@@ -393,59 +436,48 @@ class DatabaseManager(object):
                 break
             try:
                 x = msg_queue.get(timeout=0.1)
-                # self.logger.debug("Database manager receives a message {}".format(x))
+                # logger.debug("Database manager receives a message {}".format(x))
             except queue.Empty:
-                self.logger.debug("Database manager has not received any message.")
+                logger.debug("Database manager has not received any message.")
                 break
             else:
                 messages.append(x)
         return messages
 
     def close(self):
-        if self.logger:
-            self.logger.info(
-                "Finishing all the logging and terminating Database Manager.")
+        logger.info("Database Manager cleanup initiated.")
+        if not self.workflow_end and self.workflow_start_message:
+            logger.info("Logging workflow end info to database due to abnormal exit")
+            time_completed = datetime.datetime.now()
+            msg = {'time_completed': time_completed,
+                   'workflow_duration': (time_completed - self.workflow_start_message['time_began']).total_seconds()}
+            self.workflow_start_message.update(msg)
+            self._update(table=WORKFLOW,
+                         columns=['run_id', 'time_completed',
+                                  'workflow_duration'],
+                         messages=[self.workflow_start_message])
         self.batching_interval, self.batching_threshold = float(
             'inf'), float('inf')
         self._kill_event.set()
 
 
-def start_file_logger(filename, name='database_manager', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-    Parameters
-    ---------
-    filename: string
-        Name of the file to write logs to. Required.
-    name: string
-        Logger name.
-    level: logging.LEVEL
-        Set the logging level. Default=logging.DEBUG
-        - format_string (string): Set the format string
-    format_string: string
-        Format string to use.
-    Returns
-    -------
-        None.
-    """
-    if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
-
-
-def dbm_starter(priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
-    dbm = DatabaseManager(*args, **kwargs)
-    dbm.start(priority_msgs, node_msgs, resource_msgs)
+    try:
+        dbm = DatabaseManager(*args, **kwargs)
+        logger.info("Starting dbm in dbm starter")
+        dbm.start(priority_msgs, node_msgs, resource_msgs)
+    except KeyboardInterrupt:
+        logger.exception("KeyboardInterrupt signal caught")
+        dbm.close()
+        raise
+    except Exception as e:
+        logger.exception("dbm.start exception")
+        exception_q.put(("DBM", str(e)))
+        dbm.close()
+
+    logger.info("End of dbm_starter")

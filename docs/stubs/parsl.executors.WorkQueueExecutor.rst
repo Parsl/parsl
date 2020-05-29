@@ -14,14 +14,15 @@ parsl.executors.WorkQueueExecutor
    .. autosummary::
    
       ~WorkQueueExecutor.__init__
-      ~WorkQueueExecutor.create_name_tuple
-      ~WorkQueueExecutor.create_new_name
+      ~WorkQueueExecutor.initialize_scaling
       ~WorkQueueExecutor.run_dir
       ~WorkQueueExecutor.scale_in
       ~WorkQueueExecutor.scale_out
       ~WorkQueueExecutor.scaling_enabled
+      ~WorkQueueExecutor.set_bad_state_and_fail_all
       ~WorkQueueExecutor.shutdown
       ~WorkQueueExecutor.start
+      ~WorkQueueExecutor.status
       ~WorkQueueExecutor.submit
    
    
@@ -32,7 +33,12 @@ parsl.executors.WorkQueueExecutor
 
    .. autosummary::
    
+      ~WorkQueueExecutor.bad_state_is_set
+      ~WorkQueueExecutor.executor_exception
       ~WorkQueueExecutor.hub_address
       ~WorkQueueExecutor.hub_port
+      ~WorkQueueExecutor.provider
+      ~WorkQueueExecutor.status_polling_interval
+      ~WorkQueueExecutor.tasks
    
    

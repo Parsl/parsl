@@ -26,7 +26,7 @@ Failures might occur for various reasons:
 
 Since Parsl tasks are executed asynchronously, it can be difficult to determine
 where to place exception handling code in the workflow.
-In Parsl all exceptions are associated with the task futures. 
+In Parsl all exceptions are associated with the task futures.
 These exceptions are raised only when a result is called on the future
 of a failed task. For example:
 
@@ -64,27 +64,21 @@ The following example shows how the number of retries can be set to 2:
 
 .. code-block:: python
 
-   from parsl import load
-   from parsl.tests.configs.local_threads import config
+   import parsl
+   from parsl.configs.htex_local import config
    config.retries = 2
 
-   load(config)
-
+   parsl.load(config)
 
 
 
 Lazy fail
 ---------
 
-.. warning::
-   Due to a known bug (`issue#282 <https://github.com/Parsl/parsl/issues/282>`_),
-   disabling lazy_errors with ``lazy_errors=False`` is **not** supported in Parsl 0.6.0.
-
-
 Parsl implements a lazy failure model through which a workload will continue
 to execute in the case that some tasks fail. That is, the workflow
 does not halt as soon as it encounters a failure, but continues execution of every
-app that is unaffected. 
+app that is unaffected.
 
 For example:
 
@@ -105,5 +99,3 @@ For example:
       (F)           (F)           (!F)
 
       time ----->
-
-

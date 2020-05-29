@@ -20,7 +20,7 @@ class Config(RepresentationMixin):
     ----------
     executors : list of ParslExecutor, optional
         List of executor instances to use. Possible executors include :class:`~parsl.executors.threads.ThreadPoolExecutor`,
-        :class:`~parsl.executors.ipp.IPyParallelExecutor`, or :class:`~parsl.executors.swift_t.TurbineExecutor`. Default
+        or :class:`~parsl.executors.swift_t.TurbineExecutor`. Default
         is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
     app_cache : bool, optional
         Enable app caching. Default is True.
@@ -37,9 +37,6 @@ class Config(RepresentationMixin):
         Default is 10.
     monitoring : MonitoringHub, optional
         The config to use for database monitoring. Default is None which does not log to a database.
-    lazy_errors : bool, optional
-        If True, errors from task failures will not be raised until `future.result()` is called. Otherwise, they will
-        be raised as soon as the task returns. Default is True.
     retries : int, optional
         Set the number of retries in case of failure. Default is 0.
     run_dir : str, optional
@@ -71,7 +68,6 @@ class Config(RepresentationMixin):
                  checkpoint_mode: Optional[str] = None,
                  checkpoint_period: Optional[str] = None,
                  data_management_max_threads: int = 10,
-                 lazy_errors: bool = True,
                  retries: int = 0,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
@@ -98,7 +94,6 @@ class Config(RepresentationMixin):
             checkpoint_period = "00:30:00"
         self.checkpoint_period = checkpoint_period
         self.data_management_max_threads = data_management_max_threads
-        self.lazy_errors = lazy_errors
         self.retries = retries
         self.run_dir = run_dir
         self.strategy = strategy

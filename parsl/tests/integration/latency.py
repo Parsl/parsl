@@ -30,16 +30,16 @@ Roundtrip |   Min:0.00716400146484375  Max:0.012288331985473633 Average:0.007741
 """
 import time
 
-from parsl.app.app import App
+import parsl
 
 
-@App("python")
+@parsl.python_app
 def python_app():
     import platform
     return "Hello from {0}".format(platform.uname())
 
 
-@App("python")
+@parsl.python_app
 def python_app_slow(duration):
     import platform
     import time
@@ -47,12 +47,12 @@ def python_app_slow(duration):
     return "Hello from {0}".format(platform.uname())
 
 
-@App("python")
+@parsl.python_app
 def python_noop():
     return
 
 
-@App("bash")
+@parsl.bash_app
 def bash_app(stdout=None, stderr=None):
     return 'echo "Hello from $(uname -a)" ; sleep 2'
 
@@ -79,8 +79,8 @@ def test_python_remote_slow(count=2):
         print(fu.result())
 
 
-def average(l):
-    return sum(l) / len(l)
+def average(x):
+    return sum(x) / len(x)
 
 
 def test_python(count):

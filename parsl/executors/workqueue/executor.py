@@ -7,383 +7,74 @@ import threading
 import multiprocessing
 import logging
 from concurrent.futures import Future
+from ctypes import c_bool
 
+import tempfile
+import hashlib
+import subprocess
 import os
+import socket
 import pickle
 import queue
 import inspect
+import shutil
+import itertools
 from ipyparallel.serialize import pack_apply_message
 
-from parsl.app.errors import AppFailure
-from parsl.app.errors import RemoteExceptionWrapper
+import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
-from parsl.executors.base import ParslExecutor
 from parsl.data_provider.files import File
+from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers import LocalProvider, CondorProvider
 from parsl.providers.error import OptionalModuleMissing
-from parsl.executors.workqueue import workqueue_worker
+from parsl.executors.errors import ScalingFailed
+from parsl.executors.workqueue import exec_parsl_function
+
+import typeguard
+from typing import Dict, List, Optional, Set
+from parsl.data_provider.staging import Staging
+
+from .errors import WorkQueueTaskFailure
+from .errors import WorkQueueFailure
+
+from collections import namedtuple
 
 try:
+    import work_queue as wq
     from work_queue import WorkQueue
     from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
-    from work_queue import WORK_QUEUE_INPUT
-    from work_queue import WORK_QUEUE_OUTPUT
-    from work_queue import WORK_QUEUE_RESULT_SUCCESS
-    from work_queue import WORK_QUEUE_RESULT_OUTPUT_MISSING
-    from work_queue import cctools_debug_flags_set
-    from work_queue import cctools_debug_config_file
+    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
 except ImportError:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0
 else:
     _work_queue_enabled = True
 
+package_analyze_script = shutil.which("python_package_analyze")
+package_create_script = shutil.which("python_package_create")
+package_run_script = shutil.which("python_package_run")
+
 logger = logging.getLogger(__name__)
 
 
-def WorkQueueSubmitThread(task_queue=multiprocessing.Queue(),
-                          queue_lock=threading.Lock(),
-                          launch_cmd=None,
-                          env=None,
-                          collector_queue=multiprocessing.Queue(),
-                          see_worker_output=False,
-                          data_dir=".",
-                          full=False,
-                          cancel_value=multiprocessing.Value('i', 1),
-                          port=WORK_QUEUE_DEFAULT_PORT,
-                          wq_log_dir=None,
-                          project_password=None,
-                          project_password_file=None,
-                          project_name=None):
-    """Thread to handle Parsl app submissions to the Work Queue objects.
-    Takes in Parsl functions submitted using submit(), and creates a
-    Work Queue task with the appropriate specifications, which is then
-    submitted to Work Queue. After tasks are completed, processes the
-    exit status and exit code of the task, and sends results to the
-    Work Queue collector thread.
-    """
-    logger.debug("Starting WorkQueue Submit/Wait Process")
+# Support structure to communicate parsl tasks to the work queue submit thread.
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category env_pkg map_file function_file result_file input_files output_files')
 
-    # Enable debugging flags and create logging file
-    if wq_log_dir is not None:
-        logger.debug("Setting debugging flags and creating logging file")
-        wq_debug_log = os.path.join(wq_log_dir, "debug_log")
-        cctools_debug_flags_set("all")
-        cctools_debug_config_file(wq_debug_log)
+# Support structure to communicate final status of work queue tasks to parsl
+# result is only valid if result_received is True
+# reason and status are only valid if result_received is False
+WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason status')
 
-    # Create WorkQueue queue object
-    logger.debug("Creating WorkQueue Object")
-    try:
-        logger.debug("Listening on port {}".format(port))
-        q = WorkQueue(port)
-    except Exception as e:
-        logger.error("Unable to create WorkQueue object: {}".format(e))
-        raise e
-
-    # Specify WorkQueue queue attributes
-    if project_name:
-        q.specify_name(project_name)
-    if project_password:
-        q.specify_password(project_password)
-    elif project_password_file:
-        q.specify_password_file(project_password_file)
-
-    # Only write logs when the wq_log_dir is specified, which it most likely will be
-    if wq_log_dir is not None:
-        wq_master_log = os.path.join(wq_log_dir, "master_log")
-        wq_trans_log = os.path.join(wq_log_dir, "transaction_log")
-        if full:
-            wq_resource_log = os.path.join(wq_log_dir, "resource_logs")
-            q.enable_monitoring_full(dirname=wq_resource_log)
-        q.specify_log(wq_master_log)
-        q.specify_transactions_log(wq_trans_log)
-
-    wq_tasks = set()
-    orig_ppid = os.getppid()
-    continue_running = True
-    while(continue_running):
-        # Monitor the task queue
-        ppid = os.getppid()
-        if ppid != orig_ppid:
-            logger.debug("new Process")
-            continue_running = False
-            continue
-
-        # Submit tasks
-        while task_queue.qsize() > 0:
-            if cancel_value.value == 0:
-                logger.debug("cancel value set to cancel")
-                continue_running = False
-                break
-
-            # Obtain task from task_queue
-            try:
-                item = task_queue.get(timeout=1)
-                logger.debug("Removing task from queue")
-            except queue.Empty:
-                continue
-            parsl_id = item["task_id"]
-
-            # Extract information about the task
-            function_data_loc = item["data_loc"]
-            function_data_loc_remote = function_data_loc.split("/")[-1]
-            function_result_loc = item["result_loc"]
-            function_result_loc_remote = function_result_loc.split("/")[-1]
-            input_files = item["input_files"]
-            output_files = item["output_files"]
-            std_files = item["std_files"]
-
-            full_script_name = workqueue_worker.__file__
-            script_name = full_script_name.split("/")[-1]
-
-            remapping_string = ""
-            std_string = ""
-
-            # Parse input file information
-            logger.debug("Looking at input")
-            for item in input_files:
-                if item[3] == "std":
-                    std_string += "mv " + item[1] + " " + item[0] + "; "
-                else:
-                    remapping_string += item[0] + ":" + item[1] + ","
-            logger.debug(remapping_string)
-
-            # Parse output file information
-            logger.debug("Looking at output")
-            for item in output_files:
-                remapping_string += item[0] + ":" + item[1] + ","
-            logger.debug(remapping_string)
-
-            if len(input_files) + len(output_files) > 0:
-                remapping_string = "-r " + remapping_string
-                remapping_string = remapping_string[:-1]
-
-            # Create command string
-            logger.debug(launch_cmd)
-            command_str = launch_cmd.format(input_file=function_data_loc_remote,
-                                            output_file=function_result_loc_remote,
-                                            remapping_string=remapping_string)
-            command_str = std_string + command_str
-            logger.debug(command_str)
-
-            # Create WorkQueue task for the command
-            logger.debug("Sending task {} with command: {}".format(parsl_id, command_str))
-            try:
-                t = Task(command_str)
-            except Exception as e:
-                logger.error("Unable to create task: {}".format(e))
-                continue
-
-            # Specify environment variables for the task
-            if env is not None:
-                for var in env:
-                    t.specify_environment_variable(var, env[var])
-
-            # Specify script, and data/result files for task
-            t.specify_file(full_script_name, script_name, WORK_QUEUE_INPUT, cache=True)
-            t.specify_file(function_data_loc, function_data_loc_remote, WORK_QUEUE_INPUT, cache=False)
-            t.specify_file(function_result_loc, function_result_loc_remote, WORK_QUEUE_OUTPUT, cache=False)
-            t.specify_tag(str(parsl_id))
-            logger.debug("Parsl ID: {}".format(t.id))
-
-            # Specify all input/output files for task
-            for item in input_files:
-                t.specify_file(item[0], item[1], WORK_QUEUE_INPUT, cache=item[2])
-            for item in output_files:
-                t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
-            for item in std_files:
-                t.specify_file(item[0], item[1], WORK_QUEUE_OUTPUT, cache=item[2])
-
-            # Submit the task to the WorkQueue object
-            logger.debug("Submitting task {} to WorkQueue".format(parsl_id))
-            try:
-                wq_id = q.submit(t)
-                wq_tasks.add(wq_id)
-            except Exception as e:
-                logger.error("Unable to create task: {}".format(e))
-
-                msg = {"tid": parsl_id,
-                       "result_received": False,
-                       "reason": "Workqueue Task Start Failure",
-                       "status": 1}
-
-                collector_queue.put_nowait(msg)
-                continue
-
-            logger.debug("Task {} submitted to WorkQueue with id {}".format(parsl_id, wq_id))
-
-        if cancel_value.value == 0:
-            continue_running = False
-
-        # If the queue is not empty wait on the WorkQueue queue for a task
-        task_found = True
-        if not q.empty() and continue_running:
-            while task_found is True:
-                if cancel_value.value == 0:
-                    continue_running = False
-                    task_found = False
-                    continue
-
-                # Obtain the task from the queue
-                t = q.wait(1)
-                if t is None:
-                    task_found = False
-                    continue
-                else:
-                    parsl_tid = t.tag
-                    logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, parsl_tid))
-                    status = t.return_status
-                    task_result = t.result
-                    msg = None
-
-                    # Task failure
-                    if status != 0 or (task_result != WORK_QUEUE_RESULT_SUCCESS and task_result != WORK_QUEUE_RESULT_OUTPUT_MISSING):
-                        logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}".format(status, task_result))
-                        # Wrapper script failure
-                        if status != 0:
-                            logger.debug("WorkQueue task {} failed with status {}".format(t.id, status))
-                            reason = "Wrapper Script Failure: "
-                            if status == 1:
-                                reason += "problem parsing command line options"
-                            elif status == 2:
-                                reason += "problem loading function data"
-                            elif status == 3:
-                                reason += "problem remapping file names"
-                            elif status == 4:
-                                reason += "problem writing out function result"
-                            else:
-                                reason += "unable to process wrapper script failure with status = {}".format(status)
-                            reason += "\nTrace:\n" + str(t.output)
-                            logger.debug("WorkQueue runner script failed for task {} because {}\n".format(parsl_tid, reason))
-                        # WorkQueue system failure
-                        else:
-                            reason = "WorkQueue System Failure: "
-                            if task_result == 1:
-                                reason += "missing input file"
-                            elif task_result == 2:
-                                reason += "unable to generate output file"
-                            elif task_result == 4:
-                                reason += "stdout has been truncated"
-                            elif task_result == 1 << 3:
-                                reason += "task terminated with a signal"
-                            elif task_result == 2 << 3:
-                                reason += "task used more resources than requested"
-                            elif task_result == 3 << 3:
-                                reason += "task ran past the specified end time"
-                            elif task_result == 4 << 3:
-                                reason += "result could not be classified"
-                            elif task_result == 5 << 3:
-                                reason += "task failed, but not a task error"
-                            elif task_result == 6 << 3:
-                                reason += "unable to complete after specified number of retries"
-                            elif task_result == 7 << 3:
-                                reason += "task ran for more than the specified time"
-                            elif task_result == 8 << 3:
-                                reason += "task needed more space to complete task"
-                            else:
-                                reason += "unable to process Work Queue system failure"
-
-                        msg = {"tid": parsl_tid,
-                               "result_received": False,
-                               "reason": reason,
-                               "status": status}
-
-                        collector_queue.put_nowait(msg)
-
-                    # Task Success
-                    else:
-                        # Print the output from the task
-                        if see_worker_output:
-                            print(t.output)
-
-                        # Load result into result file
-                        result_loc = os.path.join(data_dir, "task_" + str(parsl_tid) + "_function_result")
-                        logger.debug("Looking for result in {}".format(result_loc))
-                        f = open(result_loc, "rb")
-                        result = pickle.load(f)
-                        f.close()
-
-                        msg = {"tid": parsl_tid,
-                               "result_received": True,
-                               "result": result}
-                        wq_tasks.remove(t.id)
-
-                    collector_queue.put_nowait(msg)
-
-        if continue_running is False:
-            logger.debug("Exiting WorkQueue Master Thread event loop")
-            break
-
-    # Remove all WorkQueue tasks that remain in the queue object
-    for wq_task in wq_tasks:
-        logger.debug("Cancelling WorkQueue Task {}".format(wq_task))
-        q.cancel_by_taskid(wq_task)
-
-    logger.debug("Exiting WorkQueue Monitoring Process")
-    return 0
+# Support structure to report parsl filenames to work queue.
+# parsl_name is the local_name or filepath attribute of a parsl file object.
+# stage tells whether the file should be copied by work queue to the workers.
+# cache tells whether the file should be cached at workers. Only valid if stage == True
+ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-def WorkQueueCollectorThread(collector_queue=multiprocessing.Queue(),
-                             tasks={},
-                             tasks_lock=threading.Lock(),
-                             cancel_value=multiprocessing.Value('i', 1),
-                             submit_process=None,
-                             executor=None):
-    """Processes completed Parsl tasks. If an error arose while the Parsl task
-    was executed, raises the exception on the local machine.
-    """
-
-    logger.debug("Starting Collector Thread")
-
-    continue_running = True
-    while continue_running:
-        if cancel_value.value == 0:
-            continue_running = False
-            continue
-
-        # The WorkQueue process that creates task has died
-        if not submit_process.is_alive() and cancel_value.value != 0:
-            raise ExecutorError(executor, "Workqueue Submit Process is not alive")
-
-        # Get the result message from the collector_queue
-        try:
-            item = collector_queue.get(timeout=1)
-        except queue.Empty:
-            continue
-
-        parsl_tid = item["tid"]
-        received = item["result_received"]
-
-        # Obtain the future from the tasks dictionary
-        tasks_lock.acquire()
-        future = tasks[parsl_tid]
-        tasks_lock.release()
-
-        # Failed task
-        if received is False:
-            reason = item["reason"]
-            status = item["status"]
-            future.set_exception(AppFailure(reason, status))
-        # Successful task
-        else:
-            result = item["result"]
-            future_update = result["result"]
-            logger.debug("Updating Future for Parsl Task {}".format(parsl_tid))
-            if result["failure"] is False:
-                future.set_result(future_update)
-            else:
-                future_fail = pickle.loads(future_update)
-                exc = RemoteExceptionWrapper(*future_fail)
-                try:
-                    exc.reraise()
-                except Exception as e:
-                    future.set_exception(e)
-
-    logger.debug("Exiting Collector Thread")
-    return
-
-
-class WorkQueueExecutor(ParslExecutor):
+class WorkQueueExecutor(NoStatusHandlingExecutor):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -399,37 +90,50 @@ class WorkQueueExecutor(ParslExecutor):
 
         label: str
             A human readable label for the executor, unique
-            with respect to other Work Queue master programs
+            with respect to other Work Queue master programs.
+            Default is "WorkQueueExecutor".
 
         working_dir: str
             Location for Parsl to perform app delegation to the Work
-            Queue system
+            Queue system. Defaults to current directory.
 
         managed: bool
-            If this executor is managed by the DFK or externally handled
+            Whether this executor is managed by the DFK or externally handled.
+            Default is True (managed by DFK).
 
         project_name: str
-            Work Queue process name
-
-        project_password: str
-            Optional password for the Work Queue project
+            If given, Work Queue master process name. Default is None.
+            Overrides address.
 
         project_password_file: str
-            Optional password file for the work queue project
+            Optional password file for the work queue project. Default is None.
+
+        address: str
+            The ip to contact this work queue master process.
+            If not given, uses the address of the current machine as returned
+            by socket.gethostname().
+            Ignored if project_name is specified.
 
         port: int
             TCP port on Parsl submission machine for Work Queue workers
             to connect to. Workers will specify this port number when
-            trying to connect to Parsl
+            trying to connect to Parsl. Default is 9123.
 
         env: dict{str}
             Dictionary that contains the environmental variables that
-            need to be set on the Work Queue worker machine
+            need to be set on the Work Queue worker machine.
 
         shared_fs: bool
             Define if working in a shared file system or not. If Parsl
             and the Work Queue workers are on a shared file system, Work
-            Queue does not need to transfer and rename files for execution
+            Queue does not need to transfer and rename files for execution.
+            Default is False.
+
+        use_cache: bool
+            Whether workers should cache files that are common to tasks.
+            Warning: Two files are considered the same if they have the same
+            filepath name. Use with care when reusing the executor instance
+            across multiple parsl workflows. Default is False.
 
         source: bool
             Choose whether to transfer parsl app information as
@@ -437,71 +141,103 @@ class WorkQueueExecutor(ParslExecutor):
             @python_apps, but the implementation does not include
             functionality for @bash_apps, and thus source=False
             must be used for programs utilizing @bash_apps.)
+            Default is False. Set to True if pack is True
+
+        pack: bool
+            Use conda-pack to prepare a self-contained Python evironment for
+            each task. This greatly increases task latency, but does not
+            require a common environment or shared FS on execution nodes.
+            Implies source=True.
+
+        autolabel: bool
+            Use the Resource Monitor to automatically determine resource
+            labels based on observed task behavior.
+
+        autolabel_window: int
+            Set the number of tasks considered for autolabeling. Work Queue
+            will wait for a series of N tasks with steady resource
+            requirements before making a decision on labels. Increasing
+            this parameter will reduce the number of failed tasks due to
+            resource exhaustion when autolabeling, at the cost of increased
+            resources spent collecting stats.
+
+        autocategory: bool
+            Place each app in its own category by default. If all
+            invocations of an app have similar performance characteristics,
+            this will provide a reasonable set of categories automatically.
 
         init_command: str
-            Command to run before constructed Work Queue command
-
-        see_worker_output: bool
-            Prints worker standard output if true
-
-
+            Command line to run before executing a task in a worker.
+            Default is ''.
     """
 
+    @typeguard.typechecked
     def __init__(self,
-                 label="WorkQueueExecutor",
-                 working_dir=".",
-                 managed=True,
-                 project_name=None,
-                 project_password=None,
-                 project_password_file=None,
-                 port=WORK_QUEUE_DEFAULT_PORT,
-                 env=None,
-                 shared_fs=False,
-                 source=False,
-                 init_command="",
-                 full_debug=True,
-                 see_worker_output=False):
+                 label: str = "WorkQueueExecutor",
+                 provider: ExecutionProvider = LocalProvider(),
+                 working_dir: str = ".",
+                 managed: bool = True,
+                 project_name: Optional[str] = None,
+                 project_password_file: Optional[str] = None,
+                 address: Optional[str] = None,
+                 port: int = WORK_QUEUE_DEFAULT_PORT,
+                 env: Optional[Dict] = None,
+                 shared_fs: bool = False,
+                 storage_access: Optional[List[Staging]] = None,
+                 use_cache: bool = False,
+                 source: bool = False,
+                 pack: bool = False,
+                 autolabel: bool = False,
+                 autolabel_window: int = 1,
+                 autocategory: bool = False,
+                 init_command: str = "",
+                 full_debug: bool = True):
+        NoStatusHandlingExecutor.__init__(self)
+        self._provider = provider
+        self._scaling_enabled = True
+
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
         self.label = label
         self.managed = managed
-        self.task_queue = multiprocessing.Queue()
-        self.collector_queue = multiprocessing.Queue()
-        self.tasks = {}
+        self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
+        self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
+        self.blocks = {}  # type: Dict[str, str]
+        self.address = address
         self.port = port
         self.task_counter = -1
-        self.scaling_enabled = False
         self.project_name = project_name
-        self.project_password = project_password
         self.project_password_file = project_password_file
         self.env = env
         self.init_command = init_command
         self.shared_fs = shared_fs
+        self.storage_access = storage_access
+        self.use_cache = use_cache
         self.working_dir = working_dir
-        self.used_names = {}
-        self.shared_files = set()
-        self.registered_files = set()
-        self.worker_output = see_worker_output
+        self.registered_files = set()  # type: Set[str]
         self.full = full_debug
-        self.source = source
-        self.cancel_value = multiprocessing.Value('i', 1)
+        self.source = True if pack else source
+        self.pack = pack
+        self.autolabel = autolabel
+        self.autolabel_window = autolabel_window
+        self.autocategory = autocategory
+        self.should_stop = multiprocessing.Value(c_bool, False)
+        self.cached_envs = {}  # type: Dict[int, str]
 
-        # Resolve ambiguity when password and password_file are both specified
-        if self.project_password is not None and self.project_password_file is not None:
-            logger.warning("Password File and Password text specified for WorkQueue Executor, only Password Text will be used")
-            self.project_password_file = None
+        if not self.address:
+            self.address = socket.gethostname()
+
+        if self.project_password_file is not None and not os.path.exists(self.project_password_file):
+            raise WorkQueueFailure('Could not find password file: {}'.format(self.project_password_file))
+
         if self.project_password_file is not None:
             if os.path.exists(self.project_password_file) is False:
                 logger.debug("Password File does not exist, no file used")
                 self.project_password_file = None
 
         # Build foundations of the launch command
-        self.launch_cmd = ("python3 workqueue_worker.py -i {input_file} -o {output_file} {remapping_string}")
-        if self.shared_fs is True:
-            self.launch_cmd += " --shared-fs"
-        if self.source is True:
-            self.launch_cmd += " --source"
+        self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -509,104 +245,61 @@ class WorkQueueExecutor(ParslExecutor):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the Work Queue system.
         """
-        self.queue_lock = threading.Lock()
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
         self.function_data_dir = os.path.join(self.run_dir, "function_data")
+        self.package_dir = os.path.join(self.run_dir, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
         os.mkdir(self.function_data_dir)
+        os.mkdir(self.package_dir)
         os.mkdir(self.wq_log_dir)
 
         logger.debug("Starting WorkQueueExectutor")
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
-                                 "queue_lock": self.queue_lock,
                                  "launch_cmd": self.launch_cmd,
                                  "data_dir": self.function_data_dir,
                                  "collector_queue": self.collector_queue,
-                                 "see_worker_output": self.worker_output,
                                  "full": self.full,
-                                 "cancel_value": self.cancel_value,
+                                 "shared_fs": self.shared_fs,
+                                 "autolabel": self.autolabel,
+                                 "autolabel_window": self.autolabel_window,
+                                 "autocategory": self.autocategory,
+                                 "should_stop": self.should_stop,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
-                                 "project_password": self.project_password,
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name}
-        self.submit_process = multiprocessing.Process(target=WorkQueueSubmitThread,
+        self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
                                                       name="submit_thread",
                                                       kwargs=submit_process_kwargs)
 
-        # Create a process to analyze WorkQueue task completions
-        collector_thread_kwargs = {"collector_queue": self.collector_queue,
-                                   "tasks": self.tasks,
-                                   "tasks_lock": self.tasks_lock,
-                                   "cancel_value": self.cancel_value,
-                                   "submit_process": self.submit_process,
-                                   "executor": self}
-        self.collector_thread = threading.Thread(target=WorkQueueCollectorThread,
-                                                 name="wait_thread",
-                                                 kwargs=collector_thread_kwargs)
+        self.collector_thread = threading.Thread(target=self._collect_work_queue_results,
+                                                 name="wait_thread")
         self.collector_thread.daemon = True
 
         # Begin both processes
         self.submit_process.start()
         self.collector_thread.start()
 
-    def create_name_tuple(self, parsl_file_obj, in_or_out):
-        """Returns a tuple containing information about an input or output file
-        to a Parsl app. Utilized to specify input and output files for a specific
-        Work Queue task within the system.
+        # Initialize scaling for the provider
+        self.initialize_scaling()
 
-        Parameters
-        ---------
-
-        parsl_file_obj : str
-            Name of file specified as input or output file to the Parsl app
-
-        in_or_out : str
-            Specifies whether the file is an input or output file to the Parsl
-            app
+    def _path_in_task(self, task_id, *path_components):
+        """Returns a filename specific to a task.
+        It is used for the following filename's:
+            (not given): The subdirectory per task that contains function, result, etc.
+            'function': Pickled file that contains the function to be executed.
+            'result': Pickled file that (will) contain the result of the function.
+            'map': Pickled file with a dict between local parsl names, and remote work queue names.
         """
-        # Determine new_name
-        new_name = parsl_file_obj.filepath
-        if parsl_file_obj.filepath not in self.used_names:
-            if self.shared_fs is False:
-                new_name = self.create_new_name(os.path.basename(parsl_file_obj.filepath))
-                self.used_names[parsl_file_obj.filepath] = new_name
-        else:
-            new_name = self.used_names[parsl_file_obj.filepath]
-        # Determine file_is_shared
-        file_is_shared = False
-        if parsl_file_obj in self.registered_files:
-            file_is_shared = True
-            if parsl_file_obj not in self.shared_files:
-                self.shared_files.add(parsl_file_obj)
-        else:
-            self.registered_files.add(parsl_file_obj)
-        return (parsl_file_obj.filepath, new_name, file_is_shared, in_or_out)
+        task_dir = "{:04d}".format(task_id)
+        return os.path.join(self.function_data_dir, task_dir, *path_components)
 
-    def create_new_name(self, file_name):
-        """Returns a unique file name for an input file name. If the file name
-        is already unique with respect to the Parsl process, then it returns
-        the original file name
-
-        Parameters
-        ----------
-
-        file_name : str
-            Name of file that needs to be unique
-        """
-        new_name = file_name
-        index = 0
-        while new_name in self.used_names:
-            new_name = file_name + "-" + str(index)
-            index += 1
-        return new_name
-
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
         information to the task queue, to be executed using the Work Queue
         system. The args and kwargs are processed for input and output files to
@@ -626,118 +319,240 @@ class WorkQueueExecutor(ParslExecutor):
         self.task_counter += 1
         task_id = self.task_counter
 
+        # Create a per task directory for the function, result, map, and result files
+        os.mkdir(self._path_in_task(task_id))
+
         input_files = []
         output_files = []
-        std_files = []
 
-        # Add input files from the "inputs" keyword argument
-        func_inputs = kwargs.get("inputs", [])
-        for inp in func_inputs:
-            if isinstance(inp, File):
-                input_files.append(self.create_name_tuple(inp, "in"))
+        # Determine the input and output files that will exist at the workes:
+        input_files += [self._register_file(f) for f in kwargs.get("inputs", []) if isinstance(f, File)]
+        output_files += [self._register_file(f) for f in kwargs.get("outputs", []) if isinstance(f, File)]
 
-        for kwarg, inp in kwargs.items():
+        # Also consider any *arg that looks like a file as an input:
+        input_files += [self._register_file(f) for f in args if isinstance(f, File)]
+
+        for kwarg, maybe_file in kwargs.items():
             # Add appropriate input and output files from "stdout" and "stderr" keyword arguments
             if kwarg == "stdout" or kwarg == "stderr":
-                if (isinstance(inp, tuple) and len(inp) > 1 and isinstance(inp[0], str) and isinstance(inp[1], str)) or isinstance(inp, str):
-                    if isinstance(inp, tuple):
-                        inp = inp[0]
-                    if not os.path.exists(os.path.join(".", os.path.split(inp)[0])):
-                        continue
-                    # Create "std" files instead of input or output files
-                    if inp in self.registered_files:
-                        input_files.append((inp, os.path.basename(inp) + "-1", False, "std"))
-                        output_files.append((inp, os.path.basename(inp), False, "std"))
-                    else:
-                        output_files.append((inp, os.path.basename(inp), False, "std"))
-                        self.registered_files.add(inp)
-            # Add to input file if passed-in argument is a File object
-            elif isinstance(inp, File):
-                input_files.append(self.create_name_tuple(inp, "in"))
-
-        # Add to input file if passed-in argument is a File object
-        for inp in args:
-            if isinstance(inp, File):
-                input_files.append(self.create_name_tuple(inp, "in"))
-
-        # Add output files from the "outputs" keyword argument
-        func_outputs = kwargs.get("outputs", [])
-        for output in func_outputs:
-            if isinstance(output, File):
-                output_files.append(self.create_name_tuple(output, "out"))
-
-        if not self.submit_process.is_alive():
-            raise ExecutorError(self, "Workqueue Submit Process is not alive")
+                if maybe_file:
+                    output_files.append(self._std_output_to_wq(kwarg, maybe_file))
+            # For any other keyword that looks like a file, assume it is an input file
+            elif isinstance(maybe_file, File):
+                input_files.append(self._register_file(maybe_file))
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
-        self.tasks_lock.acquire()
-        self.tasks[str(task_id)] = fu
-        self.tasks_lock.release()
+        with self.tasks_lock:
+            self.tasks[str(task_id)] = fu
 
         logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
 
         # Pickle the result into object to pass into message buffer
-        function_data_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_data")
-        function_result_file = os.path.join(self.function_data_dir, "task_" + str(task_id) + "_function_result")
+        function_file = self._path_in_task(task_id, "function")
+        result_file = self._path_in_task(task_id, "result")
+        map_file = self._path_in_task(task_id, "map")
 
-        logger.debug("Creating Task {} with executable at: {}".format(task_id, function_data_file))
-        logger.debug("Creating Task {} with result to be found at: {}".format(task_id, function_result_file))
+        logger.debug("Creating Task {} with function at: {}".format(task_id, function_file))
+        logger.debug("Creating Task {} with result to be found at: {}".format(task_id, result_file))
 
-        # Obtain function information and put into dictionary
-        if self.source:
-            # Obtain function information and put into dictionary
-            source_code = inspect.getsource(func)
-            name = func.__name__
-            function_info = {"source code": source_code,
-                             "name": name,
-                             "args": args,
-                             "kwargs": kwargs}
+        self._serialize_function(function_file, func, args, kwargs)
 
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
+        if self.pack:
+            env_pkg = self._prepare_package(func)
         else:
-            # Serialize function information
-            function_info = pack_apply_message(func, args, kwargs,
-                                               buffer_threshold=1024 * 1024,
-                                               item_threshold=1024)
+            env_pkg = None
 
-            # Pack the function data into file
-            f = open(function_data_file, "wb")
-            pickle.dump(function_info, f)
-            f.close()
+        logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
+        self._construct_map_file(map_file, input_files, output_files)
+
+        if not self.submit_process.is_alive():
+            raise ExecutorError(self, "Workqueue Submit Process is not alive")
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
-        msg = {"task_id": task_id,
-               "data_loc": function_data_file,
-               "result_loc": function_result_file,
-               "input_files": input_files,
-               "output_files": output_files,
-               "std_files": std_files}
-        self.task_queue.put_nowait(msg)
+        category = func.__qualname__ if self.autocategory else 'parsl-default'
+        self.task_queue.put_nowait(ParslTaskToWq(task_id, category, env_pkg, map_file, function_file, result_file, input_files, output_files))
 
         return fu
 
-    def scale_out(self, *args, **kwargs):
-        """Scale out method. Not implemented.
+    def _construct_worker_command(self):
+        worker_command = 'work_queue_worker'
+        if self.project_password_file:
+            worker_command += ' --password {}'.format(self.project_password_file)
+        if self.project_name:
+            worker_command += ' -M {}'.format(self.project_name)
+        else:
+            worker_command += ' {} {}'.format(self.address, self.port)
+
+        logger.debug("Using worker command: {}".format(worker_command))
+        return worker_command
+
+    def _patch_providers(self):
+        # Add the worker and password file to files that the provider needs to stage.
+        # (Currently only for the CondorProvider)
+        if isinstance(self.provider, CondorProvider):
+            path_to_worker = shutil.which('work_queue_worker')
+            self.worker_command = './' + self.worker_command
+            self.provider.transfer_input_files.append(path_to_worker)
+            if self.project_password_file:
+                self.provider.transfer_input_files.append(self.project_password_file)
+
+    def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
+        """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
+        and serializes it to the file fn_path."""
+
+        # Either build a dictionary with the source of the function, or pickle
+        # the function directly:
+        if self.source:
+            function_info = {"source code": inspect.getsource(parsl_fn),
+                             "name": parsl_fn.__name__,
+                             "args": parsl_fn_args,
+                             "kwargs": parsl_fn_kwargs}
+        else:
+            function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
+                                                             buffer_threshold=1024 * 1024,
+                                                             item_threshold=1024)}
+        with open(fn_path, "wb") as f_out:
+            pickle.dump(function_info, f_out)
+
+    def _construct_map_file(self, map_file, input_files, output_files):
+        """ Map local filepath of parsl files to the filenames at the execution worker.
+        If using a shared filesystem, the filepath is mapped to its absolute filename.
+        Otherwise, to its original relative filename. In this later case, work queue
+        recreates any directory hierarchy needed."""
+        file_translation_map = {}
+        for spec in itertools.chain(input_files, output_files):
+            local_name = spec[0]
+            if self.shared_fs:
+                remote_name = os.path.abspath(local_name)
+            else:
+                remote_name = local_name
+            file_translation_map[local_name] = remote_name
+        with open(map_file, "wb") as f_out:
+            pickle.dump(file_translation_map, f_out)
+
+    def _register_file(self, parsl_file):
+        """Generates a tuple (parsl_file.filepath, stage, cache) to give to
+        work queue. cache is always False if self.use_cache is False.
+        Otherwise, it is set to True if parsl_file is used more than once.
+        stage is True if the file needs to be copied by work queue. (i.e., not
+        a URL or an absolute path)
+
+        It has the side-effect of adding parsl_file to a list of registered
+        files.
+
+        Note: The first time a file is used cache is set to False. Since
+        tasks are generated dynamically, without other information this is
+        the best we can do."""
+        to_cache = False
+        if self.use_cache:
+            to_cache = parsl_file in self.registered_files
+
+        to_stage = False
+        if parsl_file.scheme == 'file' or (parsl_file.local_path and os.path.exists(parsl_file.local_path)):
+            to_stage = not os.path.isabs(parsl_file.filepath)
+
+        self.registered_files.add(parsl_file)
+
+        return ParslFileToWq(parsl_file.filepath, to_stage, to_cache)
+
+    def _std_output_to_wq(self, fdname, stdfspec):
+        """Find the name of the file that will contain stdout or stderr and
+        return a ParslFileToWq with it. These files are never cached"""
+        fname, mode = putils.get_std_fname_mode(fdname, stdfspec)
+        to_stage = not os.path.isabs(fname)
+        return ParslFileToWq(fname, stage=to_stage, cache=False)
+
+    def _prepare_package(self, fn):
+        fn_id = id(fn)
+        fn_name = fn.__qualname__
+        if fn_id in self.cached_envs:
+            logger.debug("Skipping analysis of %s, previously got %s", fn_name, self.cached_envs[fn_id])
+            return self.cached_envs[fn_id]
+        source_code = inspect.getsource(fn).encode()
+        pkg_dir = os.path.join(tempfile.gettempdir(), "python_package-{}".format(os.geteuid()))
+        os.makedirs(pkg_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
+            logger.info("Analyzing dependencies of %s", fn_name)
+            subprocess.run([package_analyze_script, '-', spec.name], input=source_code, check=True)
+            with open(spec.name, mode='rb') as f:
+                spec_hash = hashlib.sha256(f.read()).hexdigest()
+                logger.debug("Spec hash for %s is %s", fn_name, spec_hash)
+                pkg = os.path.join(pkg_dir, "pack-{}.tar.gz".format(spec_hash))
+            if os.access(pkg, os.R_OK):
+                self.cached_envs[fn_id] = pkg
+                logger.debug("Cached package for %s found at %s", fn_name, pkg)
+                return pkg
+            (fd, tarball) = tempfile.mkstemp(dir=pkg_dir, prefix='.tmp', suffix='.tar.gz')
+            os.close(fd)
+            logger.info("Creating dependency package for %s", fn_name)
+            logger.debug("Writing deps for %s to %s", fn_name, tarball)
+            subprocess.run([package_create_script, spec.name, tarball], stdout=subprocess.DEVNULL, check=True)
+            logger.debug("Done with conda-pack; moving %s to %s", tarball, pkg)
+            os.rename(tarball, pkg)
+            self.cached_envs[fn_id] = pkg
+            return pkg
+
+    def initialize_scaling(self):
+        """ Compose the launch command and call scale out
+
+        Scales the workers to the appropriate nodes with provider
         """
-        pass
+        # Start scaling in/out
+        logger.debug("Starting WorkQueueExecutor with provider: %s", self.provider)
+        self.worker_command = self._construct_worker_command()
+        self._patch_providers()
+
+        if hasattr(self.provider, 'init_blocks'):
+            try:
+                self.scale_out(blocks=self.provider.init_blocks)
+            except Exception as e:
+                logger.debug("Scaling out failed: {}".format(e))
+                raise e
+
+    def scale_out(self, blocks=1):
+        """Scale out method.
+
+        We should have the scale out method simply take resource object
+        which will have the scaling methods, scale_out itself should be a coroutine, since
+        scaling tasks can be slow.
+        """
+        if self.provider:
+            for i in range(blocks):
+                external_block = str(len(self.blocks))
+                internal_block = self.provider.submit(self.worker_command, 1)
+                # Failed to create block with provider
+                if not internal_block:
+                    raise(ScalingFailed(self.provider.label, "Attempts to create nodes using the provider has failed"))
+                else:
+                    self.blocks[external_block] = internal_block
+        else:
+            logger.error("No execution provider available to scale")
 
     def scale_in(self, count):
         """Scale in method. Not implemented.
         """
-        pass
+        # Obtain list of blocks to kill
+        to_kill = list(self.blocks.keys())[:count]
+        kill_ids = [self.blocks[block] for block in to_kill]
+
+        # Cancel the blocks provisioned
+        if self.provider:
+            self.provider.cancel(kill_ids)
+        else:
+            logger.error("No execution provider available to scale")
 
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
-        # Set shared variable to 0 to signal shutdown
-        logger.debug("Setting value to cancel")
-        self.cancel_value.value = 0
+        self.should_stop.value = True
+
+        # Remove the workers that are still going
+        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
+        if self.provider:
+            self.provider.cancel(kill_ids)
 
         self.submit_process.join()
         self.collector_thread.join()
@@ -747,7 +562,7 @@ class WorkQueueExecutor(ParslExecutor):
     def scaling_enabled(self):
         """Specify if scaling is enabled. Not enabled in Work Queue.
         """
-        return False
+        return self._scaling_enabled
 
     def run_dir(self, value=None):
         """Path to the run directory.
@@ -755,3 +570,283 @@ class WorkQueueExecutor(ParslExecutor):
         if value is not None:
             self._run_dir = value
         return self._run_dir
+
+    def _collect_work_queue_results(self):
+        """Sets the values of tasks' futures of tasks completed by work queue.
+        """
+        logger.debug("Starting Collector Thread")
+        try:
+            while not self.should_stop.value:
+                if not self.submit_process.is_alive():
+                    raise ExecutorError(self, "Workqueue Submit Process is not alive")
+
+                # Get the result message from the collector_queue
+                try:
+                    task_report = self.collector_queue.get(timeout=1)
+                except queue.Empty:
+                    continue
+
+                # Obtain the future from the tasks dictionary
+                with self.tasks_lock:
+                    future = self.tasks[task_report.id]
+
+                logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
+                if task_report.result_received:
+                    future.set_result(task_report.result)
+                else:
+                    # If there are no results, then the task failed according to one of
+                    # work queue modes, such as resource exhaustion.
+                    future.set_exception(WorkQueueTaskFailure(task_report.reason, task_report.result))
+        finally:
+            with self.tasks_lock:
+                # set exception for tasks waiting for results that work queue did not execute
+                for fu in self.tasks.values():
+                    if not fu.done():
+                        fu.set_exception(WorkQueueFailure("work queue executor failed to execute the task."))
+        logger.debug("Exiting Collector Thread")
+
+
+def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
+                            launch_cmd=None,
+                            env=None,
+                            collector_queue=multiprocessing.Queue(),
+                            data_dir=".",
+                            full=False,
+                            shared_fs=False,
+                            autolabel=False,
+                            autolabel_window=None,
+                            autocategory=False,
+                            should_stop=None,
+                            port=WORK_QUEUE_DEFAULT_PORT,
+                            wq_log_dir=None,
+                            project_password_file=None,
+                            project_name=None):
+    """Thread to handle Parsl app submissions to the Work Queue objects.
+    Takes in Parsl functions submitted using submit(), and creates a
+    Work Queue task with the appropriate specifications, which is then
+    submitted to Work Queue. After tasks are completed, processes the
+    exit status and exit code of the task, and sends results to the
+    Work Queue collector thread.
+    To avoid python's global interpreter lock with work queue's wait, this
+    function should be launched as a process, not as a lightweight thread. This
+    means that any communication should be done using the multiprocessing
+    module capabilities, rather than shared memory.
+    """
+    logger.debug("Starting WorkQueue Submit/Wait Process")
+
+    # Enable debugging flags and create logging file
+    wq_debug_log = None
+    if wq_log_dir is not None:
+        logger.debug("Setting debugging flags and creating logging file")
+        wq_debug_log = os.path.join(wq_log_dir, "debug_log")
+
+    # Create WorkQueue queue object
+    logger.debug("Creating WorkQueue Object")
+    try:
+        logger.debug("Listening on port {}".format(port))
+        q = WorkQueue(port, debug_log=wq_debug_log)
+    except Exception as e:
+        logger.error("Unable to create WorkQueue object: {}".format(e))
+        raise e
+
+    # Specify WorkQueue queue attributes
+    if project_name:
+        q.specify_name(project_name)
+
+    if project_password_file:
+        q.specify_password_file(project_password_file)
+
+    if autolabel:
+        q.enable_monitoring()
+        if autolabel_window is not None:
+            q.tune('category-steady-n-tasks', autolabel_window)
+
+    # Only write logs when the wq_log_dir is specified, which it most likely will be
+    if wq_log_dir is not None:
+        wq_master_log = os.path.join(wq_log_dir, "master_log")
+        wq_trans_log = os.path.join(wq_log_dir, "transaction_log")
+        if full:
+            wq_resource_log = os.path.join(wq_log_dir, "resource_logs")
+            q.enable_monitoring_full(dirname=wq_resource_log)
+        q.specify_log(wq_master_log)
+        q.specify_transactions_log(wq_trans_log)
+
+    orig_ppid = os.getppid()
+
+    result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
+
+    while not should_stop.value:
+        # Monitor the task queue
+        ppid = os.getppid()
+        if ppid != orig_ppid:
+            logger.debug("new Process")
+            break
+
+        # Submit tasks
+        while task_queue.qsize() > 0 and not should_stop.value:
+            # Obtain task from task_queue
+            try:
+                task = task_queue.get(timeout=1)
+                logger.debug("Removing task from queue")
+            except queue.Empty:
+                continue
+
+            pkg_pfx = ""
+            if task.env_pkg is not None:
+                pkg_pfx = "./{} -e {} ".format(os.path.basename(package_run_script),
+                                               os.path.basename(task.env_pkg))
+
+            # Create command string
+            logger.debug(launch_cmd)
+            command_str = launch_cmd.format(package_prefix=pkg_pfx,
+                                            mapping=os.path.basename(task.map_file),
+                                            function=os.path.basename(task.function_file),
+                                            result=os.path.basename(task.result_file))
+            logger.debug(command_str)
+
+            # Create WorkQueue task for the command
+            logger.debug("Sending task {} with command: {}".format(task.id, command_str))
+            try:
+                t = Task(command_str)
+            except Exception as e:
+                logger.error("Unable to create task: {}".format(e))
+                collector_queue.put_nowait(WqTaskToParsl(id=task.id,
+                                                         result_received=False,
+                                                         result=None,
+                                                         reason="task could not be created by work queue",
+                                                         status=-1))
+                continue
+
+            t.specify_category(task.category)
+            if autolabel:
+                q.specify_category_mode(task.category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+
+            # Specify environment variables for the task
+            if env is not None:
+                for var in env:
+                    t.specify_environment_variable(var, env[var])
+
+            if task.env_pkg is not None:
+                t.specify_input_file(package_run_script, cache=True)
+                t.specify_input_file(task.env_pkg, cache=True)
+
+            # Specify script, and data/result files for task
+            t.specify_input_file(exec_parsl_function.__file__, cache=True)
+            t.specify_input_file(task.function_file, cache=False)
+            t.specify_input_file(task.map_file, cache=False)
+            t.specify_output_file(task.result_file, cache=False)
+            t.specify_tag(str(task.id))
+            result_file_of_task_id[str(task.id)] = task.result_file
+
+            logger.debug("Parsl ID: {}".format(task.id))
+
+            # Specify input/output files that need to be staged.
+            # Absolute paths are assumed to be in shared filesystem, and thus
+            # not staged by work queue.
+            if not shared_fs:
+                for spec in task.input_files:
+                    if spec.stage:
+                        t.specify_input_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
+                for spec in task.output_files:
+                    if spec.stage:
+                        t.specify_output_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
+
+            # Submit the task to the WorkQueue object
+            logger.debug("Submitting task {} to WorkQueue".format(task.id))
+            try:
+                wq_id = q.submit(t)
+            except Exception as e:
+                logger.error("Unable to submit task to work queue: {}".format(e))
+                collector_queue.put_nowait(WqTaskToParsl(id=task.id,
+                                                         result_received=False,
+                                                         result=None,
+                                                         reason="task could not be submited to work queue",
+                                                         status=-1))
+                continue
+            logger.debug("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
+
+        # If the queue is not empty wait on the WorkQueue queue for a task
+        task_found = True
+        if not q.empty():
+            while task_found and not should_stop.value:
+                # Obtain the task from the queue
+                t = q.wait(1)
+                if t is None:
+                    task_found = False
+                    continue
+                # When a task is found:
+                parsl_id = t.tag
+                logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, t.tag))
+                result_file = result_file_of_task_id.pop(t.tag)
+
+                # A tasks completes 'succesfully' if it has result file,
+                # and it can be loaded. This may mean that the 'success' is
+                # an exception.
+                logger.debug("Looking for result in {}".format(result_file))
+                try:
+                    with open(result_file, "rb") as f_in:
+                        result = pickle.load(f_in)
+                    logger.debug("Found result in {}".format(result_file))
+                    collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
+                                                             result_received=True,
+                                                             result=result,
+                                                             reason=None,
+                                                             status=t.return_status))
+                # If a result file could not be generated, explain the
+                # failure according to work queue error codes. We generate
+                # an exception and wrap it with RemoteExceptionWrapper, to
+                # match the positive case.
+                except Exception as e:
+                    reason = _explain_work_queue_result(t)
+                    logger.debug("Did not find result in {}".format(result_file))
+                    logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
+                                 .format(t.return_status, t.result))
+                    logger.debug("Task with id parsl {} / wq {} failed because:\n{}"
+                                 .format(parsl_id, t.id, reason))
+                    collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
+                                                             result_received=False,
+                                                             result=e,
+                                                             reason=reason,
+                                                             status=t.return_status))
+    logger.debug("Exiting WorkQueue Monitoring Process")
+    return 0
+
+
+def _explain_work_queue_result(wq_task):
+    """Returns a string with the reason why a task failed according to work queue."""
+
+    wq_result = wq_task.result
+
+    reason = "work queue result: "
+    if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS:
+        reason += "succesful execution with exit code {}".format(wq_task.return_status)
+    elif wq_result == wq.WORK_QUEUE_RESULT_OUTPUT_MISSING:
+        reason += "The result file was not transfered from the worker.\n"
+        reason += "This usually means that there is a problem with the python setup,\n"
+        reason += "or the wrapper that executes the function."
+        reason += "\nTrace:\n" + str(wq_task.output)
+    elif wq_result == wq.WORK_QUEUE_RESULT_INPUT_MISSING:
+        reason += "missing input file"
+    elif wq_result == wq.WORK_QUEUE_RESULT_STDOUT_MISSING:
+        reason += "stdout has been truncated"
+    elif wq_result == wq.WORK_QUEUE_RESULT_SIGNAL:
+        reason += "task terminated with a signal"
+    elif wq_result == wq.WORK_QUEUE_RESULT_RESOURCE_EXHAUSTION:
+        reason += "task used more resources than requested"
+    elif wq_result == wq.WORK_QUEUE_RESULT_TASK_TIMEOUT:
+        reason += "task ran past the specified end time"
+    elif wq_result == wq.WORK_QUEUE_RESULT_UNKNOWN:
+        reason += "result could not be classified"
+    elif wq_result == wq.WORK_QUEUE_RESULT_FORSAKEN:
+        reason += "task failed, but not a task error"
+    elif wq_result == wq.WORK_QUEUE_RESULT_MAX_RETRIES:
+        reason += "unable to complete after specified number of retries"
+    elif wq_result == wq.WORK_QUEUE_RESULT_TASK_MAX_RUN_TIME:
+        reason += "task ran for more than the specified time"
+    elif wq_result == wq.WORK_QUEUE_RESULT_DISK_ALLOC_FULL:
+        reason += "task needed more space to complete task"
+    elif wq_result == wq.WORK_QUEUE_RESULT_RMONITOR_ERROR:
+        reason += "task failed because the monitor did not produce an output"
+    else:
+        reason += "unable to process Work Queue system failure"
+    return reason

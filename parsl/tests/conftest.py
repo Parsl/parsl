@@ -1,10 +1,12 @@
 import importlib.util
 import logging
 import os
-import shutil
-import subprocess
 from glob import glob
 from itertools import chain
+import signal
+import sys
+import threading
+import traceback
 
 import pytest
 import _pytest.runner as runner
@@ -14,6 +16,25 @@ from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger('parsl')
+
+
+def dumpstacks(sig, frame):
+    s = ''
+    try:
+        thread_names = {thread.ident: thread.name for thread in threading.enumerate()}
+        tf = sys._current_frames()
+        for thread_id, frame in tf.items():
+            s += '\n\nThread: %s (%d)' % (thread_names[thread_id], thread_id)
+            s += ''.join(traceback.format_stack(frame))
+    except Exception:
+        s = traceback.format_exc()
+    with open(os.getenv('HOME') + '/parsl_stack_dump.txt', 'w') as f:
+        f.write(s)
+    print(s)
+
+
+def pytest_sessionstart(session):
+    signal.signal(signal.SIGUSR1, dumpstacks)
 
 
 def pytest_addoption(parser):
@@ -67,38 +88,6 @@ def pytest_configure(config):
         'markers',
         'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
     )
-
-
-@pytest.fixture(scope='session')
-def setup_docker():
-    """Set up containers for docker tests.
-
-    Rather than installing Parsl from PyPI, the current state of the source is
-    copied into the container. In this way we ensure that what we are testing
-    stays synced with the current state of the code.
-    """
-    if shutil.which('docker') is not None:
-        subprocess.call(['docker', 'pull', 'python'])
-        pdir = os.path.join(os.path.dirname(os.path.dirname(parsl.__file__)))
-        template = """
-        FROM python:3.6
-        WORKDIR {home}
-        COPY ./parsl .
-        COPY ./requirements.txt .
-        COPY ./setup.py .
-        RUN python3 setup.py install
-        {add}
-        """
-        with open(os.path.join(pdir, 'docker', 'Dockerfile'), 'w') as f:
-            print(template.format(home=os.environ['HOME'], add=''), file=f)
-        cmd = ['docker', 'build', '-t', 'parslbase_v0.1', '-f', 'docker/Dockerfile', '.']
-        subprocess.call(cmd, cwd=pdir)
-        for app in ['app1', 'app2']:
-            with open(os.path.join(pdir, 'docker', app, 'Dockerfile'), 'w') as f:
-                add = 'ADD ./docker/{}/{}.py {}'.format(app, app, os.environ['HOME'])
-                print(template.format(home=os.environ['HOME'], add=add), file=f)
-            cmd = ['docker', 'build', '-t', '{}_v0.1'.format(app), '-f', 'docker/{}/Dockerfile'.format(app), '.']
-            subprocess.call(cmd, cwd=pdir)
 
 
 @pytest.fixture(autouse=True, scope='session')
@@ -265,6 +254,21 @@ def setup_data():
         f.write("1\n")
     with open("data/test2.txt", 'w') as f:
         f.write("2\n")
+
+
+@pytest.fixture(autouse=True, scope='function')
+def wait_for_task_completion(pytestconfig):
+    """If we're in a config-file based mode, wait for task completion between
+       each test. This will detect early on (by hanging) if particular test
+       tasks are not finishing, rather than silently falling off the end of
+       the test run with tasks still in progress.
+       In local mode, this fixture does nothing, as there isn't anything
+       reasonable to assume about DFK behaviour here.
+    """
+    config = pytestconfig.getoption('config')[0]
+    yield
+    if config != 'local':
+        parsl.dfk().wait_for_current_tasks()
 
 
 def pytest_make_collect_report(collector):

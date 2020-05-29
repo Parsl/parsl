@@ -14,11 +14,12 @@ Parsl is available on `PyPI <https://pypi.org/project/parsl/>`_ and `conda-forge
 
 Parsl has been tested on Linux and MacOS.
 
+
 Installation using Pip
 ^^^^^^^^^^^^^^^^^^^^^^
 
 While ``pip`` and ``pip3`` can be used to install Parsl we suggest the following approach
-for reliable installation when many Python environments are avaialble.
+for reliable installation when many Python environments are available.
 
 1. Install Parsl::
 
@@ -38,9 +39,9 @@ Installation using Conda
 2. Install Parsl::
 
      $ python3 -m pip install parsl
-     
+
      or
-     
+
      $ conda config --add channels conda-forge
      $ conda install parsl
 

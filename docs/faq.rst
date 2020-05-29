@@ -81,24 +81,23 @@ right address or network interface to use.
 
 
 
-For `IPyParallelExecutor` the address is specified in the :class:`~parsl.config.Config`
+For `HighThroughputExecutor` the address is specified in the :class:`~parsl.config.Config`
 as shown below :
 
 .. code-block:: python
 
     # THIS IS A CONFIG FRAGMENT FOR ILLUSTRATION
     from parsl.config import Config
-    from parsl.executors import IPyParallelExecutor
-    from parsl.executors.ipp_controller import Controller
+    from parsl.executors import HighThroughputExecutor
     from parsl.addresses import address_by_route, address_by_query, address_by_hostname
     config = Config(
         executors=[
-            IPyParallelExecutor(
+            HighThroughputExecutor(
                 label='ALCF_theta_local',
-                controller=Controller(public_ip='<AA.BB.CC.DD>')          # specify public ip here
-                # controller=Controller(public_ip=address_by_route())     # Alternatively you can try this
-                # controller=Controller(public_ip=address_by_query())     # Alternatively you can try this
-                # controller=Controller(public_ip=address_by_hostname())  # Alternatively you can try this
+                address='<AA.BB.CC.DD>'          # specify public ip here
+                # address=address_by_route()     # Alternatively you can try this
+                # address=address_by_query()     # Alternatively you can try this
+                # address=address_by_hostname()  # Alternatively you can try this
             )
         ],
     )
@@ -259,21 +258,21 @@ There are a few common situations in which a Parsl script might hang:
 
    * Firewall restrictions that block certain port ranges.
      If there is a certain port range that is **not** blocked, you may specify
-     that via the :class:`~parsl.executors.ipp_controller.Controller` object:
+     that via configuration:
 
      .. code-block:: python
 
         from libsubmit.providers import Cobalt
         from parsl.config import Config
-        from parsl.executors.ipp import IPyParallelExecutor
-        from parsl.executors.ipp_controller import Controller
+        from parsl.executors import HighThroughputExecutor
 
         config = Config(
             executors=[
-                IPyParallelExecutor(
+                HighThroughputExecutor(
                     label='ALCF_theta_local',
                     provider=Cobalt(),
-                    controller=Controller(port_range='50000,55000')
+                    worer_port_range=('50000,55000'),
+                    interchange_port_range=('50000,55000')
                 )
             ],
         )
@@ -304,6 +303,34 @@ Run::
    conda install nb_conda
 
 Now all available conda environments (for example, one created by following the instructions `here <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.
+
+.. _label_serialization_error:
+
+Addressing SerializationError
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As of `1.0.0` Parsl will raise a `SerializationError` when it encounters an object that Parsl cannot serialize.
+This applies to objects passed as arguments to an app, as well as objects returned from the app.
+
+Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects
+to/from functions. Therefore, Python apps can only use input and output objects that can be serialized by
+cloudpickle or pickle. For example the following data types are known to have issues with serializability :
+
+* Closures
+* Objects of complex classes with no `__dict__` or `__getstate__` methods defined
+* System objects such as file descriptors, sockets and locks (e.g threading.Lock)
+
+If Parsl raises a `SerializationError`, first identify what objects are problematic with a quick test:
+
+.. code-block:: python
+
+   import pickle
+   # If non-serializable you will get a TypeError
+   pickle.dumps(YOUR_DATA_OBJECT)
+
+If the data object simply is complex, Please refer `here <https://docs.python.org/3/library/pickle.html#handling-stateful-objects>`_ for more details,
+on adding custom mechanisms for supporting serialization.
+
 
 
 How do I cite Parsl?

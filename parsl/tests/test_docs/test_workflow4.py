@@ -1,29 +1,29 @@
 import os
 import parsl
 
-from parsl.app.app import App
+from parsl.app.app import bash_app, python_app
 from parsl.tests.configs.local_threads import config
 from parsl.data_provider.files import File
 
 # parsl.set_stream_logger()
 
 
-@App('bash')
+@bash_app
 def generate(outputs=[]):
     return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {o}".format(o=outputs[0])
 
 
-@App('bash')
+@bash_app
 def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
     return "cat {0} >> {1}".format(" ".join(map(lambda x: x.filepath, inputs)), outputs[0])
 
 
-@App('python')
+@python_app
 def total(inputs=[]):
     total = 0
     with open(inputs[0].filepath, 'r') as f:
-        for l in f:
-            total += int(l)
+        for line in f:
+            total += int(line)
     return total
 
 

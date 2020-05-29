@@ -4,7 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SimpleLauncher
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.provider_base import ExecutionProvider, JobStatus, JobState
 from parsl.providers.error import ScriptPathError
 from parsl.utils import RepresentationMixin
 
@@ -111,7 +111,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             channel_counts = {channel: 0 for channel in self.channels}
             for job_id in self.resources:
                 channel = self.resources[job_id]['channel']
-                if self.resources[job_id]['status'] == 'RUNNING':
+                if self.resources[job_id]['status'] == JobStatus(JobState.RUNNING):
                     channel_counts[channel] = channel_counts.get(channel, 0) + 1
                 else:
                     channel_counts[channel] = channel_counts.get(channel, 0)
@@ -166,7 +166,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         self._write_submit_script(wrap_command, script_path)
 
         job_id = None
-        proc = None
         remote_pid = None
         final_cmd = None
 
@@ -174,30 +173,21 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             logger.debug("Pushing start script")
             script_path = channel.push_file(script_path, channel.script_dir)
 
-        if not isinstance(channel, LocalChannel):
-            # Bash would return until the streams are closed. So we redirect to a outs file
-            final_cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
-            retcode, stdout, stderr = channel.execute_wait(final_cmd, self.cmd_timeout)
-            for line in stdout.split('\n'):
-                if line.startswith("PID:"):
-                    remote_pid = line.split("PID:")[1].strip()
-                    job_id = remote_pid
-            if job_id is None:
-                logger.warning("Channel failed to start remote command/retrieve PID")
-        else:
-            try:
-                final_cmd = 'bash {0}'.format(script_path)
-                job_id, proc = channel.execute_no_wait(final_cmd, self.cmd_timeout)
-            except Exception as e:
-                logger.debug("Channel execute failed for: {}, {}".format(channel, e))
-                raise
+        # Bash would return until the streams are closed. So we redirect to a outs file
+        final_cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
+        retcode, stdout, stderr = channel.execute_wait(final_cmd, self.cmd_timeout)
+        for line in stdout.split('\n'):
+            if line.startswith("PID:"):
+                remote_pid = line.split("PID:")[1].strip()
+                job_id = remote_pid
+        if job_id is None:
+            logger.warning("Channel failed to start remote command/retrieve PID")
 
         self.resources[job_id] = {'job_id': job_id,
-                                  'status': 'RUNNING',
+                                  'status': JobStatus(JobState.RUNNING),
                                   'cmd': final_cmd,
                                   'channel': channel,
-                                  'remote_pid': remote_pid,
-                                  'proc': proc}
+                                  'remote_pid': remote_pid}
 
         return job_id
 
@@ -211,15 +201,15 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         Returns
         -------
-        list of status strings ['PENDING', 'COMPLETED', 'FAILED']
+        list of JobStatus objects
         """
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
             status_command = "ps --pid {} | grep {}".format(self.resources[job_id]['job_id'],
                                                             self.resources[job_id]['cmd'].split()[0])
             retcode, stdout, stderr = channel.execute_wait(status_command)
-            if retcode != 0 and self.resources[job_id]['status'] == 'RUNNING':
-                self.resources[job_id]['status'] = 'FAILED'
+            if retcode != 0 and self.resources[job_id]['status'].state == JobState.RUNNING:
+                self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
 
         return [self.resources[job_id]['status'] for job_id in job_ids]
 
@@ -245,7 +235,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 rets.append(True)
             else:
                 rets.append(False)
-            self.resources[job_id]['status'] = 'COMPLETED'
+            self.resources[job_id]['status'] = JobStatus(JobState.COMPLETED)
         return rets
 
     @property
@@ -255,3 +245,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
     @property
     def label(self):
         return self._label
+
+    @property
+    def status_polling_interval(self):
+        return 10

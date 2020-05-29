@@ -25,7 +25,7 @@ extras_require = {
     'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
-    'azure' : ['azure', 'msrestazure'],
+    'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
 }
 extras_require['all'] = sum(extras_require.values(), [])
@@ -46,7 +46,7 @@ setup(
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
-               'parsl/executors/workqueue/workqueue_worker.py',
+               'parsl/executors/workqueue/exec_parsl_function.py',
     ],
 
     extras_require=extras_require,

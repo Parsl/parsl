@@ -12,16 +12,15 @@ from ipyparallel.serialize import deserialize_object  # ,serialize_object
 
 from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
-from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
-from parsl.executors.base import ParslExecutor
-
+from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage, UnsupportedFeatureError
+from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
 
-class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
+class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
     """
     TODO: docstring for LowLatencyExecutor
     """
@@ -42,6 +41,8 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
                  managed=True
                  ):
         logger.debug("Initializing LowLatencyExecutor")
+
+        StatusHandlingExecutor.__init__(self, provider)
         self.label = label
         self.launch_cmd = launch_cmd
         self.provider = provider
@@ -52,7 +53,6 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = []
-        self.tasks = {}
         self.workers_per_node = workers_per_node
 
         self._task_counter = 0
@@ -156,7 +156,7 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         """ TODO: docstring """
         logger.debug("[MTHREAD] queue management worker starting")
 
-        while True:
+        while not self.bad_state_is_set:
             task_id, buf = self.incoming_q.get()  # TODO: why does this hang?
             msg = deserialize_object(buf)[0]
             # TODO: handle exceptions
@@ -189,8 +189,17 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
 
         logger.info("[MTHREAD] queue management worker finished")
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """ TODO: docstring """
+        if resource_specification:
+            logger.error("Ignoring the resource specification. "
+                         "Parsl resource specification is not supported in LowLatency Executor. "
+                         "Please check WorkQueueExecutor if resource specification is needed.")
+            raise UnsupportedFeatureError('resource specification', 'LowLatency Executor', 'WorkQueue Executor')
+
+        if self.bad_state_is_set:
+            raise self.executor_exception
+
         self._task_counter += 1
         task_id = self._task_counter
 
@@ -253,16 +262,10 @@ class LowLatencyExecutor(ParslExecutor, RepresentationMixin):
         to_kill = self.blocks[:blocks]
         if self.provider:
             r = self.provider.cancel(to_kill)
-        return r
+        return self._filter_scale_in_ids(to_kill, r)
 
-    def status(self):
-        """Return status of all blocks."""
-
-        status = []
-        if self.provider:
-            status = self.provider.status(self.blocks)
-
-        return status
+    def _get_job_ids(self):
+        return self.blocks
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.

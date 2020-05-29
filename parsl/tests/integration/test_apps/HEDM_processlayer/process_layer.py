@@ -16,7 +16,7 @@ Foreach .. from .csv
 """
 
 import parsl
-from parsl import App, DataFlowKernel, ThreadPoolExecutor
+from parsl import bash_app, python_app, DataFlowKernel, ThreadPoolExecutor
 import os
 import shutil
 import random
@@ -37,7 +37,7 @@ def create_dirs(cwd):
         for i in range(0, random.randint(1, 5)):
             rdir = '{0}/{1}'.format(rel_dir, i)
             os.makedirs(rdir)
-            with open('{0}/results'.format(rdir, i), 'w') as f:
+            with open('{0}/results'.format(rdir), 'w') as f:
                 f.write("{0} {1} - test data\n".format(i, dir))
 
     for dir in ['neb01', 'neb02', 'neb03', 'neb04']:
@@ -49,7 +49,7 @@ def create_dirs(cwd):
             f.write("{0} test data\n".format(rel_dir))
 
 
-@App('python', dfk)
+@python_app(data_flow_kernel=dfk)
 def ls(pwd, outputs=[]):
     import os
     items = os.listdir(pwd)
@@ -60,19 +60,19 @@ def ls(pwd, outputs=[]):
     return items
 
 
-@App('bash', dfk)
+@bash_app(data_flow_kernel=dfk)
 def catter(dir, dur, inputs=[], outputs=[], stdout=None, stderr=None):
     cmd_line = 'cd {0}; echo "sleeping... "; sleep {1}'
     return cmd_line
 
 
-@App('bash', dfk)
+@bash_app(data_flow_kernel=dfk)
 def light_app(dir, dur, inputs=[], outputs=[], stdout=None, stderr=None):
     cmd_line = 'cd {0}; echo "light_app" > {outputs[0]} ; sleep {1}'
     return cmd_line
 
 
-@App('bash', dfk)
+@bash_app(data_flow_kernel=dfk)
 def csv_maker(dir, count, dur, inputs=[], outputs=[], stdout=None, stderr=None):
 
     cmd_line = """cd {0};
