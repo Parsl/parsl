@@ -33,6 +33,9 @@ user_opts = {
     'summit': {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },
+    'bluewaters': {
+        'worker_init': 'source ~/setup_parsl_test_env.sh;',
+    },
     'midway': {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },

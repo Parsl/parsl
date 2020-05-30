@@ -42,6 +42,11 @@ def fresh_config():
         from parsl.tests.configs.midway import fresh_config
         config = fresh_config()
 
+    elif 'h2ologin' in hostname:
+        print("Loading Blue Waters config")
+        from parsl.tests.configs.bluewaters import fresh_config
+        config = fresh_config()
+
     elif 'in2p3' in socket.getfqdn():
         print("Loading CC-IN2P3 config")
         from parsl.tests.configs.cc_in2p3 import fresh_config
