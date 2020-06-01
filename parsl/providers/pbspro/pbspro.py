@@ -63,7 +63,7 @@ class PBSProProvider(TorqueProvider):
                  cpus_per_node=1,
                  init_blocks=1,
                  min_blocks=0,
-                 max_blocks=100,
+                 max_blocks=1,
                  parallelism=1,
                  launcher=SingleNodeLauncher(),
                  walltime="00:20:00",
