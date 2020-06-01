@@ -24,7 +24,7 @@ def fresh_config():
                     scheduler_options='',
                     # Command to be run before starting a worker, such as:
                     # 'module load Anaconda; source activate parsl_env'.
-                    worker_init=user_opts['bluewaters']['worker_init'],  
+                    worker_init=user_opts['bluewaters']['worker_init'],
                     init_blocks=1,
                     max_blocks=1,
                     min_blocks=1,
