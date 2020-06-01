@@ -17,7 +17,7 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
 
 
 @pytest.mark.usefixtures('setup_data')
-@pytest.mark.issue363
+@pytest.mark.staging_required
 def test_files():
 
     if os.path.exists('cat_out.txt'):
