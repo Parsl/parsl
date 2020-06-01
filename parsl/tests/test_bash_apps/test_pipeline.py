@@ -37,7 +37,7 @@ def cleanup_work(depth):
             os.remove(fn)
 
 
-@pytest.mark.issue363
+@pytest.mark.staging_required
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """
@@ -82,7 +82,7 @@ def test_increment(depth=5):
     cleanup_work(depth)
 
 
-@pytest.mark.issue363
+@pytest.mark.staging_required
 def test_increment_slow(depth=5, dur=0.5):
     """Test simple pipeline slow (sleep.5) A->B...->N
     """

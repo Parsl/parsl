@@ -55,7 +55,7 @@ def test_fut_case_1():
     return True
 
 
-@pytest.mark.issue363
+@pytest.mark.staging_required
 def test_fut_case_2():
     """Testing the behavior of DataFutures where there are no dependencies
     """
@@ -99,7 +99,7 @@ def test_fut_case_3():
     return True
 
 
-@pytest.mark.issue363
+@pytest.mark.staging_required
 def test_fut_case_4():
     """Testing the behavior of DataFutures where there are dependencies
 
