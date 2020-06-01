@@ -59,7 +59,7 @@ def test_regression_200():
         assert "Hello World" in data, "Missed data"
 
 
-@pytest.mark.issue363
+@pytest.mark.staging_required
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """
