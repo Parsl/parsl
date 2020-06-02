@@ -21,6 +21,7 @@ def sort_strings(inputs=[], outputs=[]):
                 s.write(e)
 
 
+@pytest.mark.cleannet
 def test_implicit_staging_https():
     """Test implicit staging for an ftp file
 
@@ -48,6 +49,7 @@ def sort_strings_kw(x=None, outputs=[]):
                 s.write(e)
 
 
+@pytest.mark.cleannet
 def test_implicit_staging_https_kwargs():
 
     # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
@@ -71,6 +73,7 @@ def sort_strings_arg(x, outputs=[]):
                 s.write(e)
 
 
+@pytest.mark.cleannet
 def test_implicit_staging_https_args():
 
     # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
@@ -94,6 +97,7 @@ def sort_strings_additional_executor(inputs=[], outputs=[]):
                 s.write(e)
 
 
+@pytest.mark.cleannet
 @pytest.mark.local
 def test_implicit_staging_https_additional_executor():
     """Test implicit staging for an ftp file
