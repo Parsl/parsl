@@ -13,6 +13,7 @@ Same applies to datafutures, and we need to know the behavior wrt.
 """
 import argparse
 import os
+import pytest
 
 import parsl
 from parsl.app.app import python_app
@@ -54,6 +55,7 @@ def test_fut_case_1():
     return True
 
 
+@pytest.mark.staging_required
 def test_fut_case_2():
     """Testing the behavior of DataFutures where there are no dependencies
     """
@@ -97,6 +99,7 @@ def test_fut_case_3():
     return True
 
 
+@pytest.mark.staging_required
 def test_fut_case_4():
     """Testing the behavior of DataFutures where there are dependencies
 

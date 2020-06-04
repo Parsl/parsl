@@ -67,7 +67,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
-                 max_blocks=10,
+                 max_blocks=1,
                  parallelism=1,
                  walltime="00:10:00",
                  scheduler_options='',
