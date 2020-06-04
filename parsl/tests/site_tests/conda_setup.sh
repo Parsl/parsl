@@ -158,6 +158,18 @@ EOF
         echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
         echo "cd $PWD"                                   >> ~/setup_parsl_test_env.sh
 
+    elif [[ $PARSL_HOSTNAME == "aws" ]]
+    then
+	rm -rf Miniconda3-latest-Linux-x86_64.sh
+	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+	bash Miniconda3-latest-Linux-x86_64.sh -f -b -p $PWD/miniconda3 # $HOME/miniconda
+	source $PWD/miniconda3/bin/activate
+        conda create -p $CONDA_TARGET python=3.7 --yes --force
+        conda activate $PWD/$CONDA_TARGET
+	conda install psutil --yes
+        echo "source $PWD/miniconda3/bin/activate;"     >  ~/setup_parsl_test_env.sh
+        echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
+
     else
         echo "Unknown site"
         exit -1
