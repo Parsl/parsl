@@ -52,9 +52,10 @@ create_conda() {
     then
         echo "On Summit"
         module load ibm-wml-ce
-        conda create -p $CONDA_TARGET --yes --force
+        conda create -p $CONDA_TARGET python=3.7 --yes --force
         conda activate $PWD/$CONDA_TARGET
         conda install paramiko>=2.7.1 pip numpy psutil pandas --yes
+        pip install paramiko>=2.7.1
         # conda install --file requirements.txt --yes
         echo "module load ibm-wml-ce"                    >  ~/setup_parsl_test_env.sh
         echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
