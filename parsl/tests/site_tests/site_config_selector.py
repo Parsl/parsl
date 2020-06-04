@@ -57,11 +57,6 @@ def fresh_config():
         from parsl.tests.configs.petrelkube import fresh_config
         config = fresh_config()
 
-    elif 'aws' in hostname:
-        print("on AWS, loading ec2 config")
-        from parsl.tests.configs.ec2 import fresh_config
-        config = fresh_config()
-
     else:
         print("Loading Local HTEX config")
         from parsl.tests.configs.htex_local import fresh_config
