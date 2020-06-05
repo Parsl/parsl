@@ -121,7 +121,7 @@ create_conda() {
 	conda install pip --yes
 	cat <<'EOF' > ~/setup_parsl_test_env.sh
 export PATH=/pbs/throng/lsst/software/anaconda/anaconda3-5.0.1/bin:$PATH
-export SHARED_FS_OPTIONS='-k "not issue363"'
+export SHARED_FS_OPTIONS='-k "not issue363 and not staging_required"'
 EOF
         echo "source activate $PWD/$CONDA_TARGET"            >> ~/setup_parsl_test_env.sh
 
