@@ -20,6 +20,15 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     executable = None
 
+    app_kwargs = kwargs.copy()
+
+    # TODO: should pass these through if 'func' declares that it will take them
+    # otherwise silently discard.
+    if 'stdout' in app_kwargs:
+        del app_kwargs['stdout']
+    if 'stderr' in app_kwargs:
+        del app_kwargs['stderr']
+
     # Try to run the func to compose the commandline
     try:
         # Execute the func to get the commandline
