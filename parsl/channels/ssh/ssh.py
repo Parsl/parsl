@@ -209,8 +209,9 @@ class SSHChannel(Channel, RepresentationMixin):
 
         return local_dest
 
-        return self.ssh_client.close()
     def close(self) -> bool:
+        self.ssh_client.close()
+        return True
 
     def isdir(self, path: str) -> bool:
         """Return true if the path refers to an existing directory.
