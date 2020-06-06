@@ -1,5 +1,6 @@
 import getpass
 import logging
+from typing import Optional, Dict
 
 import paramiko
 from parsl.channels.ssh.ssh import SSHChannel
@@ -13,7 +14,8 @@ class SSHInteractiveLoginChannel(SSHChannel):
     keys are not set up.
     """
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None):
+    def __init__(self, hostname: str, username: Optional[str] = None, password: Optional[str] =None,
+                 script_dir: Optional[str] = None, envs: Dict[str, str] = {}):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 

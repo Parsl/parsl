@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import subprocess
+from typing import Dict, Optional, List, Union, Mapping, Tuple
 
 from parsl.channels.base import Channel
 from parsl.channels.errors import FileCopyException
@@ -15,8 +16,8 @@ class LocalChannel(Channel, RepresentationMixin):
     ''' This is not even really a channel, since opening a local shell is not heavy
     and done so infrequently that they do not need a persistent channel
     '''
-
-    def __init__(self, userhome=".", envs={}, script_dir=None):
+    def __init__(self, userhome: str = ".", envs: Dict[str, str] = {},
+                 script_dir: Optional[str] = None):
         ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
@@ -30,9 +31,10 @@ class LocalChannel(Channel, RepresentationMixin):
         local_env = os.environ.copy()
         self._envs = copy.deepcopy(local_env)
         self._envs.update(envs)
-        self.script_dir = script_dir
+        self.script_dir = script_dir  # type: Optional[str]
 
-    def execute_wait(self, cmd, walltime=None, envs={}):
+    def execute_wait(self, cmd: str, walltime: Optional[int] = None, envs: Dict[str, str] = {},
+                     *args: object, **kwargs: object) -> Tuple[int, str, str]:
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
@@ -79,7 +81,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
-    def push_file(self, source, dest_dir):
+    def push_file(self, source: str, dest_dir: str) -> str:
         ''' If the source files dirpath is the same as dest_dir, a copy
         is not necessary, and nothing is done. Else a copy is made.
 
@@ -110,10 +112,10 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return local_dest
 
-    def pull_file(self, remote_source, local_dir):
+    def pull_file(self, remote_source: str, local_dir: str) -> str:
         return self.push_file(remote_source, local_dir)
 
-    def close(self):
+    def close(self) -> bool:
         ''' There's nothing to close here, and this really doesn't do anything
 
         Returns:
@@ -121,7 +123,7 @@ class LocalChannel(Channel, RepresentationMixin):
         '''
         return False
 
-    def isdir(self, path):
+    def isdir(self, path: str) -> bool:
         """Return true if the path refers to an existing directory.
 
         Parameters
@@ -132,7 +134,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return os.path.isdir(path)
 
-    def makedirs(self, path, mode=511, exist_ok=False):
+    def makedirs(self, path: str, mode: int = 511, exist_ok: bool = False) -> None:
         """Create a directory.
 
         If intermediate directories do not exist, they will be created.
@@ -149,7 +151,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return os.makedirs(path, mode, exist_ok)
 
-    def abspath(self, path):
+    def abspath(self, path: str) -> str:
         """Return the absolute path.
 
         Parameters
@@ -160,11 +162,11 @@ class LocalChannel(Channel, RepresentationMixin):
         return os.path.abspath(path)
 
     @property
-    def script_dir(self):
+    def script_dir(self) -> Optional[str]:
         return self._script_dir
 
     @script_dir.setter
-    def script_dir(self, value):
+    def script_dir(self, value: Optional[str]) -> None:
         if value is not None:
             value = self.abspath(value)
         self._script_dir = value

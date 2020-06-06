@@ -1,4 +1,6 @@
 import logging
+from typing import Optional, Dict, Tuple
+
 import paramiko
 import socket
 
@@ -21,7 +23,8 @@ class OAuthSSHChannel(SSHChannel):
     accessible via ssh. This channel uses Globus based OAuth tokens for authentication.
     """
 
-    def __init__(self, hostname, username=None, script_dir=None, envs=None, port=22):
+    def __init__(self, hostname: str, username: Optional[str] = None,
+                 script_dir: Optional[str] = None, envs: Dict[str, str] = {}, port: int = 22):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -65,7 +68,8 @@ class OAuthSSHChannel(SSHChannel):
 
         self.sftp_client = paramiko.SFTPClient.from_transport(self.transport)
 
-    def execute_wait(self, cmd, walltime=60, envs={}):
+    def execute_wait(self, cmd: str, walltime: Optional[int] = 60, envs: Dict[str, str] = {},
+                     *args: object, **kwargs: object) -> Tuple[int, str, str]:
         ''' Synchronously execute a commandline string on the shell.
 
         This command does *NOT* honor walltime currently.
@@ -106,5 +110,5 @@ class OAuthSSHChannel(SSHChannel):
 
         return exit_status, stdout, stderr
 
-    def close(self):
         return self.transport.close()
+    def close(self) -> bool:

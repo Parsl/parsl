@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
+from typing import Dict, Tuple, Union, List, Optional
 
 
 class Channel(metaclass=ABCMeta):
@@ -26,7 +27,8 @@ class Channel(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def execute_wait(self, cmd, walltime=None, envs={}, *args, **kwargs):
+    def execute_wait(self, cmd: str, walltime: Optional[int] = None, envs: Dict[str, str] = {},
+                     *args: object, **kwargs: object) -> Tuple[int, str, str]:
         ''' Executes the cmd, with a defined walltime.
 
         Args:
@@ -44,7 +46,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractproperty
-    def script_dir(self):
+    def script_dir(self) -> Optional[str]:
         ''' This is a property. Returns the directory assigned for storing all internal scripts such as
         scheduler submit scripts. This is usually where error logs from the scheduler would reside on the
         channel destination side.
@@ -58,7 +60,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def push_file(self, source, dest_dir):
+    def push_file(self, source: str, dest_dir: str) -> str:
         ''' Channel will take care of moving the file from source to the destination
         directory
 
@@ -72,7 +74,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def pull_file(self, remote_source, local_dir):
+    def pull_file(self, remote_source: str, local_dir: str) -> str:
         ''' Transport file on the remote side to a local directory
 
         Args:
@@ -86,7 +88,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def close(self):
+    def close(self) -> bool:
         ''' Closes the channel. Clean out any auth credentials.
 
         Args:
@@ -99,7 +101,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def makedirs(self, path, mode=511, exist_ok=False):
+    def makedirs(self, path: str, mode: int = 511, exist_ok: bool = False) -> None:
         """Create a directory.
 
         If intermediate directories do not exist, they will be created.
@@ -116,7 +118,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def isdir(self, path):
+    def isdir(self, path: str) -> bool:
         """Return true if the path refers to an existing directory.
 
         Parameters
@@ -127,7 +129,7 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def abspath(self, path):
+    def abspath(self, path: str) -> str:
         """Return the absolute path.
 
         Parameters
