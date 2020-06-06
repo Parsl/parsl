@@ -1,3 +1,5 @@
+from typing import List
+
 from parsl.app.errors import ParslError
 
 
@@ -5,7 +7,7 @@ class OptionalModuleMissing(ParslError):
     ''' Error raised when a required module is missing for a optional/extra component
     '''
 
-    def __init__(self, module_names, reason):
+    def __init__(self, module_names: List[str], reason: str):
         self.module_names = module_names
         self.reason = reason
 
