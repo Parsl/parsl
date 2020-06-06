@@ -149,7 +149,7 @@ class LocalChannel(Channel, RepresentationMixin):
             If False, raise an OSError if the target directory already exists.
         """
 
-        return os.makedirs(path, mode, exist_ok)
+        os.makedirs(path, mode, exist_ok)
 
     def abspath(self, path: str) -> str:
         """Return the absolute path.
