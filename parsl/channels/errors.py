@@ -8,7 +8,7 @@ class ChannelError(Exception):
 
     Only to be invoked when only a more specific error is not available.
     """
-    def __init__(self, reason: str, e: Exception, hostname: str):
+    def __init__(self, reason: str, e: Optional[Exception], hostname: str):
         self.reason = reason
         self.e = e
         self.hostname = hostname
@@ -30,7 +30,7 @@ class BadHostKeyException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e: Exception, hostname: str):
+    def __init__(self, e: Optional[Exception], hostname: str):
         super().__init__("SSH channel could not be created since server's host keys could not be "
                          "verified", e, hostname)
 
@@ -44,7 +44,7 @@ class BadScriptPath(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e: Exception, hostname: str):
+    def __init__(self, e: Optional[Exception], hostname: str):
         super().__init__("Inaccessible remote script dir. Specify script_dir", e, hostname)
 
 
@@ -57,7 +57,7 @@ class BadPermsScriptPath(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e: Exception, hostname: str):
+    def __init__(self, e: Optional[Exception], hostname: str):
         super().__init__("User does not have permissions to access the script_dir", e, hostname)
 
 
@@ -71,7 +71,7 @@ class FileExists(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e: Exception, hostname: str, filename: Optional[str] = None):
+    def __init__(self, e: Optional[Exception], hostname: str, filename: Optional[str] = None):
         super().__init__("File name collision in channel transport phase: {}".format(filename),
                          e, hostname)
 
@@ -85,7 +85,7 @@ class AuthException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e: Exception, hostname: str):
+    def __init__(self, e: Optional[Exception], hostname: str):
         super().__init__("Authentication to remote server failed", e, hostname)
 
 
@@ -98,7 +98,7 @@ class SSHException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e: Exception, hostname: str):
+    def __init__(self, e: Optional[Exception], hostname: str):
         super().__init__("Error connecting or establishing an SSH session", e, hostname)
 
 
@@ -111,5 +111,5 @@ class FileCopyException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e: Exception, hostname: str):
+    def __init__(self, e: Optional[Exception], hostname: str):
         super().__init__("File copy failed due to {0}".format(e), e, hostname)
