@@ -1,7 +1,7 @@
 .. _label-workflow:
 
-Example Patterns
-================
+Example parallel patterns
+=========================
 
 Parsl can be used to implement a wide range of programs, from bag of tasks
 through to nested workflows. Parsl implicitly assembles a dataflow-based
@@ -22,7 +22,7 @@ to note that this set of examples is by no means comprehensive.
 Bag of Tasks
 ------------
 Parsl can be used to execute a large bag of tasks.  In this case, Parsl
-is repsonsible for assembling the list of tasks and managing their concurrent
+is responsible for assembling the list of tasks and managing their concurrent
 execution on connected resources. 
 
 .. code-block:: python
@@ -95,6 +95,10 @@ Simple sequential workflows can be created by passing an AppFuture from one task
 
 .. code-block:: python
 
+      from parsl import python_app
+    
+		  parsl.load()
+		
       # Generate a random number
       @python_app
       def generate(limit):
@@ -121,7 +125,11 @@ Parallel workflows
 Parallel execution occurs automatically in Parsl, respecting dependencies among app executions. In the following example, three instances of the `wait_sleep_double` app are created. The first two execute concurrently, as they have no dependencies; the third must wait until the first two complete and thus futures `doubled_x` and `doubled_y` have values. Note that this sequencing occurs even though `wait_sleep_double` does not in fact use its second and third arguments.
 
 .. code-block:: python
-
+      
+			from parsl import python_app
+    
+		  parsl.load()
+			
       @python_app
       def wait_sleep_double(x, foo_1, foo_2):
            import time
@@ -149,6 +157,10 @@ A common approach to executing Parsl apps in parallel is via loops. The followin
 
 .. code-block:: python
 
+    from parsl import python_app
+    
+		parsl.load()
+			
     @python_app
     def generate(limit):
         from random import randint
@@ -166,6 +178,10 @@ In the preceding example, the execution of different tasks is coordinated by pas
 
 .. code-block:: python
 
+      from parsl import python_app, bash_app
+    
+		  parsl.load()
+			
       @bash_app
       def generate(outputs=[]):
           return 'echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {}'.format(outputs[0])
