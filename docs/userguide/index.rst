@@ -16,4 +16,5 @@ User guide
    configuring
    modularizing
    monitoring
+	 performance
    usage_tracking
