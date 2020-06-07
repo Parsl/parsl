@@ -1,13 +1,91 @@
 .. _label-workflow:
 
-Composing a workflow
-====================
+Example Patterns
+================
 
-Workflows in Parsl are created implicitly based on the passing of control or data between apps. The flexibility of this model allows for the implementation of a wide range of workflow patterns, from sequential to complex nested, parallel workflows. 
+Parsl can be used to implement a wide range of programs, from bag of tasks
+through to nested workflows. Parsl implicitly assembles a dataflow-based
+dependency graph that is based on passing of control or data between apps. 
+The flexibility of this model allows for the implementation of a wide range 
+of parallel programming and workflow patterns, from sequential to complex 
+nested, parallel workflows. 
 
-Parsl is also designed to address broad execution requirements, from workflows that run many small tasks to those that run few long running tasks. In each case, Parsl can be configured to optimize deployment towards performance or fault tolerance.
+Parsl is also designed to address broad execution requirements, from programs
+that run many small tasks to those that run few long running tasks. 
+In each case, Parsl can be configured to optimize deployment towards performance 
+or fault tolerance.
 
-Below we illustrate a range of workflow patterns. It is important to note that this set of examples is by no means comprehensive.
+Below we illustrate a range of parallel and workflow patterns. It is important 
+to note that this set of examples is by no means comprehensive.
+
+
+Bag of Tasks
+------------
+Parsl can be used to execute a large bag of tasks.  In this case, Parsl
+is repsonsible for assembling the list of tasks and managing their concurrent
+execution on connected resources. 
+
+.. code-block:: python
+
+    from parsl import python_app
+    
+		parsl.load()
+
+    # Map function that returns double the input integer
+    @python_app
+    def app_random():
+        import random
+        return random.random()
+
+    results =  []
+    for i in range(0, 10):
+        x = app_random()
+        mapped_results.append(x)
+
+    for r in results: 
+        print(r.result())
+
+
+MapReduce
+---------
+The following example demonstrates how Parsl can be used to specify a MapReduce computation.
+
+.. code-block:: python
+
+    from parsl import python_app
+    
+		parsl.load()
+
+    # Map function that returns double the input integer
+    @python_app
+    def app_double(x):
+        return x*2
+
+    # Reduce function that returns the sum of a list
+    @python_app
+    def app_sum(inputs=[]):
+        return sum(inputs)
+
+    # Create a list of integers
+    items = range(0,4)
+
+    # Map phase: apply the double *app* function to each item in list
+    mapped_results = []
+    for i in items:
+        x = app_double(i)
+        mapped_results.append(x)
+
+    # Reduce phase: apply the sum *app* function to the set of results
+    total = app_sum(inputs=mapped_results)
+
+    print(total.result())
+
+The program first defines two Parsl apps, `app_double` and `app_sum`,
+It then makes four calls to the `app_double` app and one call to the `app_sum` app;
+these execute concurrently, synchronized  by `mapped_result` variable.
+The following figure shows the resulting task graph. 
+
+.. image:: ../images/MapReduce.png
 
 
 Sequential workflows
