@@ -290,8 +290,12 @@ service. These services are accessible to any task.
 Environment Summary
 ^^^^^^^^^^^^^^^^^^^
 
-The following table outlines the differences between Python and Parsl executors
-when considering the memory, file system, and service environment.
+As we summarize in the table, if tasks execute with the `ThreadPoolExecutor`, 
+they share the memory and file system environment of the parent task. If they
+execute with any other executor, they have a separate memory environment, and
+may or may not share their file system environment with other tasks, depending
+on where they are placed. All tasks typically have access to the same network
+services.
 
 +--------------------+--------------------+--------------------+---------------------------+------------------+
 |                    | Share memory       | Share file system  | Share file system         | Share service    |
