@@ -76,7 +76,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Parsl'
-copyright = '2018, University of Chicago'
+copyright = '2018--2020, University of Chicago'
 author = 'The Parsl Project'
 
 # The version info for the project you're documenting, acts as replacement for
