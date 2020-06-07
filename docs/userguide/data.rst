@@ -17,14 +17,14 @@ Parsl abstracts not only parallel execution but also execution location. That is
 
        double(x)
 
-Achieving this location independence requires data location abstraction, so that a Parsl app receives the same input arguments, and can access files, in the same manner reqardless of its execution location.
+Achieving this location independence requires data location abstraction, so that a Parsl app receives the same input arguments, and can access files, in the same manner regardless of its execution location.
 To this end, Parsl:
 
 * Orchestrates the movement of data passed as input arguments to a app, such as `x` in the above example, to whichever location is selected for that app's execution;
 
 * Orchestrates the return value of any Python object returned by a Parsl Python object
 
-* Implements a flexible file abstraction that can be used to reference data irrespective of its location. At present this model supports local files as well as files accessible on the submit-side filesystem
+* Implements a flexible file abstraction that can be used to reference data irrespective of its location. At present this model supports local files as well as files accessible on the submit-side file system
 or via FTP, HTTP, HTTPS, and `Globus <https://globus.org>`_.
 
 In a workflow, file handling is split into two pieces: files are named in an
@@ -46,7 +46,7 @@ Input files can be passed as regular arguments, or a list of them may be
 specified in the special `inputs` keyword argument to an app invocation.
 
 Inside an app, the `filepath` attribute of a `File` can be read to determine
-where on the execution-side filesystem the input file has been placed.
+where on the execution-side file system the input file has been placed.
 
 Output file objects must also be passed in at app invocation, through the
 outputs parameter. Inside an app, the `filepath` attribute of an output
@@ -202,7 +202,7 @@ However, in most cases, ``endpoint_path`` and ``local_path`` are the same.
 Globus Authorization
 """"""""""""""""""""
 
-In order to interact with Globus, you must be authorised. The first time that
+In order to interact with Globus, you must be authorized. The first time that
 you use Globus with Parsl, prompts will take you through an authorization
 procedure involving your web browser. You can authorize without having to
 run a script (for example, if you are running your script in a batch system
@@ -255,7 +255,7 @@ underlying `rsync` command. This command must be correctly authorized to connect
 the submitting system. The form of this authorization will depend on the systems in 
 question.
 
-The following example installs an ssh key from the submit side filesystem and turns off host key 
+The following example installs an ssh key from the submit side file system and turns off host key 
 checking, in the `worker_init` initialization of an EC2 instance. The ssh key must have 
 sufficient privileges to run `rsync` over ssh on the submitting system.
 
