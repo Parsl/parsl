@@ -65,8 +65,8 @@ in the ``ignore_for_cache`` app decorator parameter:
        return 'echo {}'.format(msg)
 
 
-Limitations
-^^^^^^^^^^^
+Caveats
+^^^^^^^
 
 It is important to consider several important issues when using app caching:
 
