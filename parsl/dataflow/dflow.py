@@ -34,6 +34,7 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.providers.provider_base import JobStatus, JobState
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 
+from parsl.monitoring.marker import MonitorSubprocesses
 from parsl.monitoring.message_type import MessageType
 
 logger = logging.getLogger(__name__)
@@ -505,7 +506,8 @@ class DataFlowKernel(object):
                                                          self.run_id,
                                                          wrapper_logging_level,
                                                          self.monitoring.resource_monitoring_interval,
-                                                         executor.radio_mode)
+                                                         executor.radio_mode,
+                                                         isinstance(executor, MonitorSubprocesses))
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)

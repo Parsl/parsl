@@ -23,15 +23,17 @@ from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
+from parsl.monitoring.marker import MonitorSubprocesses
 from parsl.process_loggers import wrap_with_logs
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
+
 logger = logging.getLogger(__name__)
 
 
-class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
+class HighThroughputExecutor(StatusHandlingExecutor, MonitorSubprocesses, RepresentationMixin):
     """Executor designed for cluster-scale
 
     The HighThroughputExecutor system has the following components:

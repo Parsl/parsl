@@ -45,6 +45,9 @@ class ParslExecutor(metaclass=ABCMeta):
               invariant, not co-variant, and it looks like @typeguard cannot be
               persuaded otherwise. So if you're implementing an executor and want to
               @typeguard the constructor, you'll have to use List[Any] here.
+
+    Executors may subclass the MonitorSubprocess marker class to indicate that their
+    tasks can be monitoring by parsl's resource monitoring system.
     """
 
     label: str

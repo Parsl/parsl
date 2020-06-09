@@ -388,7 +388,8 @@ class MonitoringHub(RepresentationMixin):
                         run_id: str,
                         logging_level: int,
                         sleep_dur: float,
-                        radio_mode: str) -> Callable:
+                        radio_mode: str,
+                        monitor_resources: bool) -> Callable:
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
@@ -400,25 +401,30 @@ class MonitoringHub(RepresentationMixin):
                                run_id,
                                radio_mode)
 
-            # create the monitor process and start
-            p = Process(target=monitor,
-                        args=(os.getpid(),
-                              try_id,
-                              task_id,
-                              monitoring_hub_url,
-                              run_id,
-                              radio_mode,
-                              logging_level,
-                              sleep_dur),
-                        name="Monitor-Wrapper-{}".format(task_id))
-            p.start()
+            if monitor_resources:
+                # create the monitor process and start
+                p: Optional[Process]
+                p = Process(target=monitor,
+                            args=(os.getpid(),
+                                  try_id,
+                                  task_id,
+                                  monitoring_hub_url,
+                                  run_id,
+                                  radio_mode,
+                                  logging_level,
+                                  sleep_dur),
+                            name="Monitor-Wrapper-{}".format(task_id))
+                p.start()
+            else:
+                p = None
 
             try:
                 return f(*args, **kwargs)
             finally:
                 # There's a chance of zombification if the workers are killed by some signals
-                p.terminate()
-                p.join()
+                if p:
+                    p.terminate()
+                    p.join()
         return wrapped
 
 
