@@ -97,7 +97,7 @@ There are several options for following the tutorial:
 Usage Tracking
 --------------
 
-To help support the Parsl project we ask that users opt-in to anonymized usage tracking
+To help support the Parsl project, we ask that users opt-in to anonymized usage tracking
 whenever possible. Usage tracking allows us to measure usage, identify bugs, and improve
 usability, reliability, and performance. Only aggregate usage statistics will be used
 for reporting purposes. 
