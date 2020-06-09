@@ -67,7 +67,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
-                 max_blocks=10,
+                 max_blocks=1,
                  parallelism=1,
                  walltime="00:10:00",
                  scheduler_options='',
@@ -181,9 +181,9 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
             if parts and parts[0].lower().lower() != 'job-id' \
                     and not parts[0].startswith('----'):
                 job_id = parts[0]
-                status = translate_table.get(parts[4].lower(), JobState.UNKNOWN)
+                state = translate_table.get(parts[4].lower(), JobState.UNKNOWN)
                 if job_id in self.resources:
-                    self.resources[job_id]['status'] = status
+                    self.resources[job_id]['status'] = JobStatus(state)
                     jobs_missing.remove(job_id)
 
         # Filling in missing blanks for jobs that might have gone missing

@@ -7,6 +7,8 @@ from typing import Any, List, Optional
 
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
+from parsl.executors.errors import UnsupportedFeatureError
+
 
 logger = logging.getLogger(__name__)
 
@@ -55,17 +57,20 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def submit(self, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """Submits work to the thread pool.
 
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         """
-        logger.debug("Submitting to threadpool executor")
-        r = self.executor.submit(*args, **kwargs)
-        logger.debug("Ended submitting to threadpool executor")
-        return r
+        if resource_specification:
+            logger.error("Ignoring the resource specification. "
+                         "Parsl resource specification is not supported in ThreadPool Executor. "
+                         "Please check WorkQueue Executor if resource specification is needed.")
+            raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', 'WorkQueue Executor')
+
+        return self.executor.submit(func, *args, **kwargs)
 
     def scale_out(self, workers=1):
         """Scales out the number of active workers by 1.

@@ -15,6 +15,8 @@ AUTO_LOGNAME
 
 """
 import logging
+import os
+import platform
 
 from parsl.version import VERSION
 from parsl.app.app import bash_app, python_app
@@ -70,3 +72,6 @@ class NullHandler(logging.Handler):
 
 
 logging.getLogger('parsl').addHandler(NullHandler())
+
+if platform.system() == 'Darwin':
+    os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
