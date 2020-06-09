@@ -109,9 +109,29 @@ README file.
     File('file://home/parsl/data.txt')
     File('https://github.com/Parsl/parsl/blob/master/README.rst')
 
-As described below, the method by which this files are transferred
-depends on the scheme and the staging providers specified in the configuration.
 
+Parsl automatically translates the file's location relative to the 
+environment in which it is accessed (e.g., the Parsl program or an app). 
+The following example shows how a remote file can be accessed transparently
+in the app.
+
+.. code-block:: python
+
+    @python_app
+    def print_file(inputs=[]):
+        with open(inputs[0].filepath, 'r') as inp:
+            content = inp.read()
+            return(content)
+
+    # create an remote Parsl file
+    f = File('https://github.com/Parsl/parsl/blob/master/README.rst')
+
+    # call the print_file app with the Parsl file
+    f = print_file(inputs=[f])
+
+As described below, the method by which this files are transferred
+depends on the scheme and the staging providers specified in the Parsl
+configuration.
 
 Staging providers
 -----------------
