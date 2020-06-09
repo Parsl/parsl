@@ -112,8 +112,8 @@ README file.
 
 Parsl automatically translates the file's location relative to the 
 environment in which it is accessed (e.g., the Parsl program or an app). 
-The following example shows how a remote file can be accessed transparently
-in the app.
+The following example shows how a file can be accessed in the app
+irrespective of where that app executes.
 
 .. code-block:: python
 
@@ -159,7 +159,7 @@ uses a wrapper that is executed around the Parsl task and thus
 occurs on the resource on which the task is executed. Separate
 task staging inserts a new Parsl task in the graph and associates
 a dependency between the staging task and the task that depends
-on that data. 
+on that file. 
 
 NoOpFileStaging for Local/Shared File Systems
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -245,7 +245,7 @@ between two Globus endpoints.
 Globus Configuration
 ^^^^^^^^^^^^^^^^^^^^
 
-In order to manage where data are staged, users may configure the default ``working_dir`` on a remote location. This information is specified in the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
+In order to manage where files are staged, users may configure the default ``working_dir`` on a remote location. This information is specified in the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
 
 .. code-block:: python
 
@@ -288,7 +288,7 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
 Globus Authorization
 """"""""""""""""""""
 
-In order to transfer data with Globus, the user must first authenticate. 
+In order to transfer files with Globus, the user must first authenticate. 
 The first time that Globus is used with Parsl on a computer, the program 
 will prompt the user to follow an authentication and authorization
 procedure involving a web browser. Users can authorize out of band by
