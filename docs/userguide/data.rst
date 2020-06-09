@@ -14,15 +14,13 @@ computer.
 Achieving location independence requires data location abstraction, so that a Parsl app receives the same input arguments, and can access files, in the same manner regardless of its execution location.
 To this end, Parsl:
 
-* Orchestrates the movement of Python parameters or files passed as input arguments to an app, 
-to whichever location is selected for that app's execution;
+* Orchestrates the movement of Python parameters or files passed as input arguments to an app, to whichever location is selected for that app's execution;
 
-* Orchestrates the return value of any Python object orexception returned by a Parsl app; 
+* Orchestrates the return value of any Python object or exception returned by a Parsl app; 
 
 * Serializes and deserializes Python data types, objects, and exceptions;
 
-* Implements a flexible file abstraction that can be used to reference files irrespective of their locations. At present this model supports local files as well as files accessible on the submit-side file system
-or via FTP, HTTP, HTTPS, and `Globus <https://globus.org>`_;
+* Implements a flexible file abstraction that can be used to reference files irrespective of their locations. At present this model supports local files as well as files accessible on the submit-side file system or via FTP, HTTP, HTTPS, and `Globus <https://globus.org>`_;
 
 * Translates file paths to location-specific paths relative to the location in which the app executes.
 
