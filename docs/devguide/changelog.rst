@@ -17,19 +17,20 @@ Lyle Hayhurst @lhayhurst, Mihael Hategan @hategan, Rajini Wijayawardana @rajiniw
 Tim Shaffer @trshaffer, Tom Glanzman @TomGlanzman, Yadu Nand Babuji @yadudoc and,
 Zhuozhao Li @ZhuozhaoLi
 
+Deprecated and Removed features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* **Python3.5** is now marked for deprecation, and will not be tested on or supported next release onwards.
+  Python3.6 will be the earliest Python3 version supported in the next release.
+
+* **App** decorator deprecated in 0.8 is now removed `issue#1539 <https://github.com/Parsl/parsl/issues/1539>`_
+  `bash_app` and `python_app` are the only supported App decorators in this release.
+
+* **IPyParallelExecutor** is no longer a supported executor `issue#1565 <https://github.com/Parsl/parsl/issues/1565>`_
+
+
 New Functionality
 ^^^^^^^^^^^^^^^^^
-
-* **Deprecated** and removed features:
-
-  * **Python3.5** is now marked for deprecation, and will not be tested on or supported next release onwards.
-    Python3.6 will be the oldest Python3 version supported in the next release.
-
-  * **App** decorator deprecated in 0.8 is now removed `issue#1539 <https://github.com/Parsl/parsl/issues/1539>`_
-    `bash_app` and `python_app` are the only supported App decorators in this release.
-
-  * **IPyParallelExecutor** is no longer a supported executor `issue#1565 <https://github.com/Parsl/parsl/issues/1565>`_
-
 
 * `WorkQueueExecutor` introduced in `v0.9.0` is now in `Beta`. `WorkQueueExecutor` is designed as a drop-in replacement for `HighThroughputExecutor`. Here are some key features:
   * Support for packaging the python environment and shipping it to the worker side. This mechanism addresses propagating python environments in  grid-like systems that lack shared-filesystems or cloud environments.
@@ -44,7 +45,7 @@ New Functionality
   not counted for memoization.
 
 * Special keyword args: `inputs`, `outputs` that are used to specify files no longer supports strings
-  and now require `File` objects. For eq, the following snippet works is no longer supported in `v1.0.0`:
+  and now require `File` objects. For example, the following snippet works is no longer supported in `v1.0.0`:
 
    .. code-block:: python
 
@@ -68,7 +69,7 @@ New Functionality
       concat = cat(inputs=[File('hello-0.txt')],
                    outputs=[File('hello-1.txt')])
 
-    Since filenames are no longer passed to apps are strings, and the string filepath is required, it can
+    Since filenames are no longer passed to apps as strings, and the string filepath is required, it can
     be accessed from the File object using the `filepath` attribute.
 
    .. code-block:: python
