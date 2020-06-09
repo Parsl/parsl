@@ -14,7 +14,7 @@ Why are we doing this?
 The Parsl development team receives support from government funding agencies. For the team to continue to
 receive such funding, and for the agencies themselves to argue for funding, both the team and the agencies
 must be able to demonstrate that the scientific community is benefiting from these investments. To this end,
-we want to provide generic usage data about such things as the following:
+it is important that we provide aggregate usage data about such things as the following:
 
 * How many people use Parsl
 * Average job length
@@ -28,8 +28,6 @@ Opt-In
 
 We have chosen opt-in collection rather than opt-out with the hope that developers and researchers
 will choose to send us this information. The reason is that we need this data - it is a requirement for funding.
-We believe by leaving the decision to the users, we set a good balance between the benefits to the project and
-respecting the privacy of our users.
 
 By opting-in, and allowing these statistics to be reported back, you are explicitly supporting the
 further development of Parsl.
