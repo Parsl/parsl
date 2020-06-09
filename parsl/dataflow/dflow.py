@@ -34,6 +34,8 @@ from parsl.utils import get_version, get_std_fname_mode
 
 from parsl.monitoring.message_type import MessageType
 
+from parsl.executors.high_throughput.executor import HighThroughputExecutor
+
 logger = logging.getLogger(__name__)
 
 
@@ -488,7 +490,7 @@ class DataFlowKernel(object):
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
-        if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+        if self.monitoring is not None and self.monitoring.resource_monitoring_enabled and isinstance(executor, HighThroughputExecutor):
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             try_id = self.tasks[task_id]['fail_count']
             executable = self.monitoring.monitor_wrapper(executable, try_id, task_id,
