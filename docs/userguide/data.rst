@@ -150,8 +150,26 @@ schemes defined above. By default Parsl executors are created with
 three common staging providers: 
 the NoOpFileStaging provider for local and shared file systems
 and the HTTP(S) and FTP staging providers for transferring
-files to and from remote storage locations.
+files to and from remote storage locations. The following 
+example shows how to explicitly set the default staging providers.
 
+.. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.data_provider.data_manager import default_staging
+
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                storage_access=default_staging,
+                # equivalent to the following
+                # storage_access=[NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()],
+            )
+        ]
+    )
+				
+		
 Parsl further differentiates when staging occurs relative to 
 the app invocation that requires or produces files. 
 Staging either occurs with the executing task (*in-task staging*)
@@ -162,24 +180,53 @@ occurs on the resource on which the task is executed. Separate
 task staging inserts a new Parsl task in the graph and associates
 a dependency between the staging task and the task that depends
 on that file.  Separate task staging may occur on either the submit-side
-(e.g., when using Globus) or on the exectuion-side (e.g., HTTPS, FTP).
+(e.g., when using Globus) or on the execution-side (e.g., HTTPS, FTP).
+
 
 NoOpFileStaging for Local/Shared File Systems
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The NoOpFileStaging provider assumes that files specified either
 with a path or with the ``file`` URL scheme are available both
-on the submit and execution side - this occurs, for example, when there is a
-shared file system.  In this case, files are not moved, and the 
+on the submit and execution side. This occurs, for example, when there is a
+shared file system. In this case, files will not moved, and the 
 File object simply presents the same file path to the Parsl program
-and any executing tasks.
+and any executing tasks. 
+
+Files defined as follows will be handled by the NoOpFileStaging provider.
+
+.. code-block:: python
+
+    File('file://home/parsl/data.txt')
+    File('/home/parsl/data.txt')
+
+
+The NoOpFileStaging provider is enabled by default on all
+executors. It can be explicitly set as the only
+staging provider as follows.
+
+.. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.data_provider.file_noop import NoOpFileStaging
+
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                storage_access=[NoOpFileStaging()]
+            )
+        ]
+    )
+
 
 FTP, HTTP, HTTPS: separate task staging
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Files named with the ``ftp``, ``http`` or ``https`` URL scheme will be
-staged in using HTTP GET or anonymous FTP executed as a separate
-Parsl task that will complete before the corresponding App
+staged in using HTTP GET or anonymous FTP commands. These commands
+will be executed as a separate
+Parsl task that will complete before the corresponding app
 executes. These providers cannot be used to stage out output files.
 
 The following example defines a file accessible on a remote FTP server. 
@@ -209,6 +256,23 @@ The following example illustrates how the remote file is implicitly downloaded f
     # call the convert app with the Parsl file
     f = convert(inputs=[inp], outputs=[out])
     f.result()
+		
+HTTP and FTP separate task staging providers can be configured as follows. 
+
+.. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.data_provider.http import HTTPSeparateTaskStaging
+    from parsl.data_provider.ftp import FTPSeparateTaskStaging
+    
+		config = Config(
+        executors=[
+            HighThroughputExecutor(
+                storage_access=[HTTPSeparateTaskStaging(), FTPSeparateTaskStaging()]
+            )
+        ]
+    )
 
 FTP, HTTP, HTTPS: in-task staging
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -223,6 +287,23 @@ a file system visible to the app.
 
 A downside of this staging approach is that the staging tasks are less visible 
 to Parsl, as they are not performed as separate Parsl tasks.
+
+In-task staging providers can be configured as follows. 
+
+.. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.data_provider.http import HTTPInTaskStaging
+    from parsl.data_provider.ftp import FTPInTaskStaging
+
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                storage_access=[HTTPInTaskStaging(), FTPInTaskStaging()]
+            )
+        ]
+    )
 
 
 Globus
@@ -239,7 +320,7 @@ endpoint and a path to the file on the endpoint, for example:
 
         File('globus://037f054a-15cf-11e8-b611-0ac6873fc732/unsorted.txt')
 
-Note: a Globus endpoint's UUID can be found in the Globus `Manage Endpoints <https://www.globus.org/app/endpoints>`_ page.
+Note: a Globus endpoint's UUID can be found in the Globus `Manage Endpoints <https://app.globus.org/endpoints>`_ page.
 
 There must also be a Globus endpoint available with access to a
 execute-side file system, because Globus file transfers happen
