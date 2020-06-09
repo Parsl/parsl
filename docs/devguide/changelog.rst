@@ -66,7 +66,7 @@ New Functionality
     when the workers connect back to the parsl master. An address can be configured manually using the
     `HighThroughputExecutor(address=<address_string>)` kwarg option.
 
-  * Support for Mac OS.
+  * Support for Mac OS. (`pull#1469 <https://github.com/Parsl/parsl/pull/1469>`_, `pull#1738 <https://github.com/Parsl/parsl/pull/1738>`_)
 
   * Cleaner reporting of version mismatches and automatic suppression of non-critical errors.
 
