@@ -21,7 +21,7 @@ to whichever location is selected for that app's execution;
 
 * Serializes and deserializes Python data types, objects, and exceptions;
 
-* Implements a flexible file abstraction that can be used to reference data irrespective of its location. At present this model supports local files as well as files accessible on the submit-side file system
+* Implements a flexible file abstraction that can be used to reference files irrespective of their locations. At present this model supports local files as well as files accessible on the submit-side file system
 or via FTP, HTTP, HTTPS, and `Globus <https://globus.org>`_;
 
 * Translates file paths to location-specific paths relative to the location in which the app executes.
@@ -99,6 +99,7 @@ or a URL to an external file.
 
 The scheme defines the protocol via which the file may be accessed. 
 Parsl supports the following schemes: file, ftp, http, https.
+If no scheme is specified Parsl will default to the file scheme.
 
 The following example shows creation of two files with different
 schemes: a locally accessible data.txt file and an HTTPS accessible
@@ -153,13 +154,15 @@ files to and from remote storage locations.
 
 Parsl further differentiates when staging occurs relative to 
 the app invocation that requires or produces files. 
-Staging either occurs in the executing task (*in-task staging*)
-or as a separate task (*separate task staging*).  In-task staging
+Staging either occurs with the executing task (*in-task staging*)
+or as a separate task (*separate task staging*) before app execution.  
+In-task staging
 uses a wrapper that is executed around the Parsl task and thus
 occurs on the resource on which the task is executed. Separate
 task staging inserts a new Parsl task in the graph and associates
 a dependency between the staging task and the task that depends
-on that file. 
+on that file.  Separate task staging may occur on either the submit-side
+(e.g., when using Globus) or on the exectuion-side (e.g., HTTPS, FTP).
 
 NoOpFileStaging for Local/Shared File Systems
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
