@@ -16,7 +16,7 @@ Parsl requires Python3.5+ and has been tested on Linux and macOS.
 Installation using Pip
 ^^^^^^^^^^^^^^^^^^^^^^
 
-While ``pip`` can be used to install Parsl we suggest the following approach
+While ``pip`` can be used to install Parsl, we suggest the following approach
 for reliable installation when many Python environments are available.
 
 1. Install Parsl::
@@ -97,7 +97,7 @@ There are several options for following the tutorial:
 Usage Tracking
 --------------
 
-To help support the Parsl project we ask that users opt-in to anonymized usage tracking
+To help support the Parsl project, we ask that users opt-in to anonymized usage tracking
 whenever possible. Usage tracking allows us to measure usage, identify bugs, and improve
 usability, reliability, and performance. Only aggregate usage statistics will be used
 for reporting purposes. 
@@ -117,7 +117,7 @@ Parsl is an open source community that encourages contributions from users
 and developers. A guide for `contributing <https://github.com/Parsl/parsl/blob/master/CONTRIBUTING.rst>`_ 
 to Parsl is available in the `Parsl GitHub repository <https://github.com/Parsl/parsl>`_.
 
-The following instructions outline how to setup Parsl from source.
+The following instructions outline how to set up Parsl from source.
 
 1. Download Parsl::
 
