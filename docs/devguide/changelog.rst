@@ -23,6 +23,7 @@ New Functionality
 * **Deprecated** and removed features:
 
   * **Python3.5** is now marked for deprecation, and will not be tested on or supported next release onwards.
+    Python3.6 will be the oldest Python3 version supported in the next release.
 
   * **App** decorator deprecated in 0.8 is now removed `issue#1539 <https://github.com/Parsl/parsl/issues/1539>`_
     `bash_app` and `python_app` are the only supported App decorators in this release.
@@ -30,10 +31,9 @@ New Functionality
   * **IPyParallelExecutor** is no longer a supported executor `issue#1565 <https://github.com/Parsl/parsl/issues/1565>`_
 
 
-* `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
-
-  * WorkQueueExecutor is now in Beta.
-  * WorkQueueExecutor now supports function tagging and resource specification
+* `WorkQueueExecutor` introduced in `v0.9.0` is now in `Beta`. `WorkQueueExecutor` is designed as a drop-in replacement for `HighThroughputExecutor`. Here are some key features:
+  * Support for packaging the python environment and shipping it to the worker side. This mechanism addresses propagating python environments in  grid-like systems that lack shared-filesystems or cloud environments.
+  * `WorkQueueExecutor` supports resource function tagging and resource specification
   * Support for resource specification kwarg `issue#1675 <https://github.com/Parsl/parsl/issues/1675>`_
 
 
@@ -42,9 +42,45 @@ New Functionality
 
 * Improvements to caching mechanism <Ask ben for help> including ability to mark certain arguments to be
   not counted for memoization.
-* `File` objects.
 
-* A new general overview in our `docs <KYLE TO UPDATE URL>`_
+* Special keyword args: `inputs`, `outputs` that are used to specify files no longer supports strings
+  and now require `File` objects. For eq, the following snippet works is no longer supported in `v1.0.0`:
+
+   .. code-block:: python
+
+      @bash_app
+      def cat(inputs=[], outputs=[]):
+           return 'cat {} > {}'.format(inputs[0], outputs[0])
+
+      concat = cat(inputs=['hello-0.txt'],
+                   outputs=['hello-1.txt'])
+
+   This is the new syntax:
+
+   .. code-block:: python
+
+      from parsl import File
+
+      @bash_app
+      def cat(inputs=[], outputs=[]):
+           return 'cat {} > {}'.format(inputs[0], outputs[0])
+
+      concat = cat(inputs=[File('hello-0.txt')],
+                   outputs=[File('hello-1.txt')])
+
+    Since filenames are no longer passed to apps are strings, and the string filepath is required, it can
+    be accessed from the File object using the `filepath` attribute.
+
+   .. code-block:: python
+
+      from parsl import File
+
+      @bash_app
+      def cat(inputs=[], outputs=[]):
+           return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
+
+
+* A new general overview is now in our `docs <KYLE TO UPDATE URL>`_
 
 * New launcher: `WrappedLauncher` for launching tasks inside containers.
 
