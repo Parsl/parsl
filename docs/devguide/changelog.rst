@@ -2,6 +2,73 @@ Changelog
 =========
 
 
+Parsl 1.0.0
+-----------
+
+Released on June <FILL>th, 2020
+
+Parsl v1.0.0 includes 57 closed issues and 232 pull requests with contributions (code, tests, reviews and reports) from:
+
+Akila Ravihansa Perera @ravihansa3000, Aymen Alsaadi @AymenFJA, Anna Woodard @annawoodard,
+Ben Clifford @benclifford, Ben Glick @benhg, Benjamin Tovar @btovar, Daniel S. Katz @danielskatz,
+Daniel Smith @dgasmith, Douglas Thain @dthain, Eric Jonas @ericmjonas, Geoffrey Lentner @glentner,
+Ian Foster @ianfoster, Kalpani Ranasinghe @kalpanibhagya, Lindsey Gray @lgray, Logan Ward @WardLT,
+Lyle Hayhurst @lhayhurst, Mihael Hategan @hategan, Rajini Wijayawardana @rajiniw95, @saktar-unr,
+Tim Shaffer @trshaffer, Tom Glanzman @TomGlanzman, Yadu Nand Babuji @yadudoc and,
+Zhuozhao Li @ZhuozhaoLi
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
+
+  * WorkQueueExecutor is now in Beta.
+  * WorkQueueExecutor now supports function tagging and resource specification
+  * Support for resource specification kwarg `issue#1675 <https://github.com/Parsl/parsl/issues/1675>`_
+
+* `HighThroughputExecutor` will expose worker information via environment variables: `PARSL_WORKER_RANK` and `PARSL_WORKER_COUNT`
+* Separate htex worker log directories by block id `issue#1508 <https://github.com/Parsl/parsl/issues/1508>`_
+* Remove App decorator deprecated in 0.8 `issue#1539 <https://github.com/Parsl/parsl/issues/1539>`_
+* Significant progress in an ongoing effort to add type-checking to Parsl internal components.
+* IPyParallelExecutor is no longer a supported executor `issue#1565 <https://github.com/Parsl/parsl/issues/1565>`_
+* Improvements to caching mechanism <Ask ben for help> including ability to mark certain arguments to be
+  not counted for memoization.
+* `File` objects.
+* Updates to documentation
+  * <KYLE> anything we want to call out ?
+* New launcher: `WrappedLauncher` for launching tasks inside containers.
+* Add key_filename parameter to SSHChannel `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
+* Repo now uses a Makefile to wrap several frequent operations such as:
+  * make test -> run the test-suite
+  * make install -> install Parsl
+* New `JobStatus` class for better monitoring of Jobs submitted to batch schedulers.
+* The `HighThroughputExecutor` no longer supports the `address` option and will raise an error when used.
+  The executor will by default use heuristics to detect and try all addresses. The addresses can be manually
+  tweaked using the `HighThroughputExecutor(addresses=[<List of addresses>])` kwarg option.
+* The `HighThroughputExecutor` will now support Mac OS.
+* Support for garbage collection to limit memory consumption in long-lived scripts.
+* `HighThroughputExecutor` kwarg option `suppress_failures` is now removed.
+* All cluster providers now use `max_blocks=1` by default `issue#1730 <https://github.com/Parsl/parsl/issues/1730>`_ to avoid over-provisioning.
+
+Bug Fixes
+^^^^^^^^^
+
+* Ignore AUTO_LOGNAME for caching `issue#1642 <https://github.com/Parsl/parsl/issues/1642>`_
+* Add batch jobs to PBS/torque job status table `issue#1650 <https://github.com/Parsl/parsl/issues/1650>`_
+* Use higher default buffer threshold for serialization `issue#1654 <https://github.com/Parsl/parsl/issues/1654>`_
+* Do not pass mutable default to ignore_for_cache `issue#1656 <https://github.com/Parsl/parsl/issues/1656>`_
+* Several improvements and fixes to Monitoring
+* Fix sites/test_ec2 failure when aws user opts specified `issue#1375 <https://github.com/Parsl/parsl/issues/1375>`_
+* Fix LocalProvider to kill the right processes, rather than all processes owned by user `issue#1447 <https://github.com/Parsl/parsl/issues/1447>`_
+* Exit htex probe loop with first working address `issue#1479 <https://github.com/Parsl/parsl/issues/1479>`_
+* Allow slurm partition to be optional `issue#1501 <https://github.com/Parsl/parsl/issues/1501>`_
+* Fix race condition with wait_for_tasks vs task completion `issue#1607 <https://github.com/Parsl/parsl/issues/1607>`_
+* Fix Torque job_id truncation `issue#1583 <https://github.com/Parsl/parsl/issues/1583>`_
+* Cleaner reporting for Serialization Errors `issue#1355 <https://github.com/Parsl/parsl/issues/1355>`_
+* Results from zombie managers do not crash the system, but will be ignored `issue#1665 <https://github.com/Parsl/parsl/issues/1665>`_
+* Guarantee monitoring will send out at least one message `issue#1446 <https://github.com/Parsl/parsl/issues/1446>`_
+* Fix monitoring ctrlc hang `issue#1670 <https://github.com/Parsl/parsl/issues/1670>`_
+
 
 Parsl 0.9.0
 -----------
