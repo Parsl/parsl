@@ -200,7 +200,7 @@ print_answer function accesses the global variable "answer", and we see as outpu
 	answer = 42
 
 	def print_answer():
-			print('the answer is', answer)
+      print('the answer is', answer)
 
 	print_answer()
 
@@ -226,7 +226,7 @@ not known to the function.
 
 	@python_app
 	def ambiguous_double(x):
-				return x * random.random() * factor
+      return x * random.random() * factor
 
 	print(ambiguous_double(42))
  
@@ -241,8 +241,8 @@ passed as an argument, as follows.
 
 	@python_app
 	def good_double(factor, x):
-				import random
-				return x * random.random() * factor
+      import random
+      return x * random.random() * factor
 
 	print(good_double(factor, 42))
 
@@ -260,12 +260,12 @@ statement outputs "the answer is 42."
 .. code-block:: python
 
 	def print_answer_file():
-			with open(‘answer.txt','r') as f:
-					print(‘the answer is’,  f.read())
+      with open('answer.txt','r') as f:
+          print('the answer is',  f.read())
 
-	with open(‘answer.txt','w') as f:
-			f.write('42')
-			f.close()
+	with open('answer.txt','w') as f:
+      f.write('42')
+      f.close()
 
 	print_answer_file()
 

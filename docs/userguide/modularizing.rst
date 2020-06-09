@@ -1,7 +1,7 @@
 .. _codebases
 
-Modularizing Parsl programs
-----------------------------
+Structuring Parsl programs
+--------------------------
 
 Parsl programs can be developed in many ways. When developing a simple program it is
 often convenient to include the app definitions and control logic in a single script.
