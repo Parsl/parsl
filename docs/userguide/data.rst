@@ -127,7 +127,8 @@ in the app.
     f = File('https://github.com/Parsl/parsl/blob/master/README.rst')
 
     # call the print_file app with the Parsl file
-    f = print_file(inputs=[f])
+    r = print_file(inputs=[f])
+		r.result()
 
 As described below, the method by which this files are transferred
 depends on the scheme and the staging providers specified in the Parsl
