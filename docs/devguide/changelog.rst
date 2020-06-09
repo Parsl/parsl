@@ -20,35 +20,63 @@ Zhuozhao Li @ZhuozhaoLi
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
+* **Deprecated** and removed features:
+
+  * **Python3.5** is now marked for deprecation, and will not be tested on or supported next release onwards.
+
+  * **App** decorator deprecated in 0.8 is now removed `issue#1539 <https://github.com/Parsl/parsl/issues/1539>`_
+    `bash_app` and `python_app` are the only supported App decorators in this release.
+
+  * **IPyParallelExecutor** is no longer a supported executor `issue#1565 <https://github.com/Parsl/parsl/issues/1565>`_
+
+
 * `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
 
   * WorkQueueExecutor is now in Beta.
   * WorkQueueExecutor now supports function tagging and resource specification
   * Support for resource specification kwarg `issue#1675 <https://github.com/Parsl/parsl/issues/1675>`_
 
-* `HighThroughputExecutor` will expose worker information via environment variables: `PARSL_WORKER_RANK` and `PARSL_WORKER_COUNT`
-* Separate htex worker log directories by block id `issue#1508 <https://github.com/Parsl/parsl/issues/1508>`_
-* Remove App decorator deprecated in 0.8 `issue#1539 <https://github.com/Parsl/parsl/issues/1539>`_
-* Significant progress in an ongoing effort to add type-checking to Parsl internal components.
-* IPyParallelExecutor is no longer a supported executor `issue#1565 <https://github.com/Parsl/parsl/issues/1565>`_
+
+* Limited type-checking in Parsl internal components (as part of an ongoing effort)
+
+
 * Improvements to caching mechanism <Ask ben for help> including ability to mark certain arguments to be
   not counted for memoization.
 * `File` objects.
-* Updates to documentation
-  * <KYLE> anything we want to call out ?
+
+* A new general overview in our `docs <KYLE TO UPDATE URL>`_
+
 * New launcher: `WrappedLauncher` for launching tasks inside containers.
-* Add key_filename parameter to SSHChannel `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
-* Repo now uses a Makefile to wrap several frequent operations such as:
-  * make test -> run the test-suite
-  * make install -> install Parsl
-* New `JobStatus` class for better monitoring of Jobs submitted to batch schedulers.
-* The `HighThroughputExecutor` no longer supports the `address` option and will raise an error when used.
-  The executor will by default use heuristics to detect and try all addresses. The addresses can be manually
-  tweaked using the `HighThroughputExecutor(addresses=[<List of addresses>])` kwarg option.
-* The `HighThroughputExecutor` will now support Mac OS.
+
+* `SSHChannel` now supports a `key_filename` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
+
+* Newly added Makefile wraps several frequent developer operations such as:
+
+  * Run the test-suite: `make test`
+
+  * Install parsl: `make install`
+
+  * Create a virtualenv: `make virtualenv`
+
+  * Tag release and push to release channels: `make deploy`
+
+* Several updates to the `HighThroughputExecutor`:
+
+  * By default, the `HighThroughputExecutor` will now use heuristics to detect and try all addresses
+    when the workers connect back to the parsl master. An address can be configured manually using the
+    `HighThroughputExecutor(address=<address_string>)` kwarg option.
+
+  * Support for Mac OS.
+
+  * Cleaner reporting of version mismatches and automatic suppression of non-critical errors.
+
+  * Separate worker log directories by block id `issue#1508 <https://github.com/Parsl/parsl/issues/1508>`_
+
 * Support for garbage collection to limit memory consumption in long-lived scripts.
-* `HighThroughputExecutor` kwarg option `suppress_failures` is now removed.
+
 * All cluster providers now use `max_blocks=1` by default `issue#1730 <https://github.com/Parsl/parsl/issues/1730>`_ to avoid over-provisioning.
+
+* New `JobStatus` class for better monitoring of Jobs submitted to batch schedulers.
 
 Bug Fixes
 ^^^^^^^^^
