@@ -5,13 +5,13 @@ An **app** is a Parsl construct for representing a fragment of Python code
 or external Bash shell code that can be asynchronously executed.
 
 A Parsl app is defined by annotating a Python function with a decorator: 
-a **Python app**, with the ``@python_app`` decorator, and a **Bash app**, with the ``@bash_app`` decorator. 
+the ``@python_app`` decorator for a **Python app**, and the ``@bash_app`` decorator for a **Bash app**. 
 Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts.
 
 Python Apps
 -----------
 
-The following code snippet shows a Python function ``double(x: int)``, used to double the input
+The following code snippet shows a Python function ``double(x: int)``, which returns double the input
 value. 
 The ``@python_app`` decorator defines the function as a Parsl Python app.  
 
@@ -60,7 +60,7 @@ files, and other complex types that can be serialized (e.g., numpy array,
 scikit-learn model). They may also be passed a Parsl `Future` (see :ref:`label-futures`) 
 returned by another Parsl app.
 In this case, Parsl will establish a dependency between the two apps and will not 
-execute an app until all dependent futures are resolved.
+execute the dependent app until all dependent futures are resolved.
 Further detail is provided in :ref:`label-futures`.
 
 A Python app may also act upon files. In order to make Parsl aware of these files, they must be specified by using the ``inputs`` and/or ``outputs`` keyword arguments, as in following code snippet, which copies the contents of one file (`in.txt`) to another (`out.txt`).
@@ -94,8 +94,8 @@ Returns
 ^^^^^^^
 
 A Python app returns an AppFuture (see :ref:`label-futures`) as a proxy for the results that will be returned by the
-app once it is executed. This future can be inspected to obtain task status, 
-be used to wait for the result, and when complete, present the output Python object(s) returned by the app.
+app once it is executed. This future can be inspected to obtain task status; 
+and it can be used to wait for the result, and when complete, present the output Python object(s) returned by the app.
 In case of an error or app failure, the future holds the exception raised by the app.
 
 Limitations
@@ -128,7 +128,7 @@ This string will be executed by Parsl as a Bash command.
            return 'echo "Hello World!"'
 
        # echo_hello() when called will execute the shell command and
-			 # create a std.out file with the contents "Hello World!"
+       # create a std.out file with the contents "Hello World!"
        echo_hello()
 
 
@@ -145,7 +145,7 @@ Special Keywords
 In addition to the ``inputs``, ``outputs``, and ``walltime`` keyword arguments
 described above, a Bash app can accept the following keywords:
 
-4. stdout: (string, tuple or `parsl.AUTO_LOGNAME`) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory. If set to a tuple `(filename, mode)` then standard output will be redirected to the named file, opened with the specified mode as used by the Python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
+4. stdout: (string, tuple or `parsl.AUTO_LOGNAME`) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory. If set to a tuple `(filename, mode)`, standard output will be redirected to the named file, opened with the specified mode as used by the Python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
 5. stderr: (string or `parsl.AUTO_LOGNAME`) Like stdout, but for the standard error stream.
 6. label: (string) If the app is invoked with `stdout=parsl.AUTO_LOGNAME` or `stderr=parsl.AUTO_LOGNAME`, this arugment will be appended to the log name.
 
@@ -170,16 +170,16 @@ Returns
 
 A Bash app, like a Python app, returns an AppFuture, which can be used to obtain
 task status, determine when the app has completed (e.g., via `future.result()` as in the preceding code fragment), and access exceptions.
-As a Bash app can only return results via files specified via ``outputs``, ``stderr``, or ``stdout``  the value returned by the AppFuture has no meaning.
+As a Bash app can only return results via files specified via ``outputs``, ``stderr``, or ``stdout``; the value returned by the AppFuture has no meaning.
 
 If the Bash app exits with Unix exit code 0, then the AppFuture will complete. If the Bash app
-exits with any other code, Parsl will treat this ass a failure, and the AppFuture will instead
+exits with any other code, Parsl will treat this as a failure, and the AppFuture will instead
 contain an `BashExitFailure` exception. The Unix exit code can be accessed through the
 `exitcode` attribute of that `BashExitFailure`.
 
 Limitations
 ^^^^^^^^^^^
 
-The following limitations apply to Bash apps:
+The following limitation applies to Bash apps:
 
-1. Environment variables are not yet supported.
+1. Environment variables are not supported.
