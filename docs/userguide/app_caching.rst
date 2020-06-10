@@ -77,7 +77,7 @@ It is important to consider several important issues when using app caching:
 
 - Timing: If several identical calls to an app are made concurrently having
   not yet cached a result, many instances of the app will be launched.
-	Once one invocation completes and the result is cached
+  Once one invocation completes and the result is cached
   all subsequent calls will return immediately with the cached result.
 
 - Performance: If app caching is enabled, there may be some performance
