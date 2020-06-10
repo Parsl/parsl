@@ -18,7 +18,7 @@ def fresh_config():
                 address=address_by_hostname(),
                 provider=TorqueProvider(
                     queue='normal',
-                    launcher=AprunLauncher(),
+                    launcher=AprunLauncher(overrides="-b -- bwpy-environ --"),
                     # string to prepend to #SBATCH blocks in the submit
                     # script to the scheduler eg: '#SBATCH --constraint=knl,quad,cache'
                     scheduler_options='',
