@@ -44,7 +44,7 @@ New Functionality
 * Improvements to caching mechanism <Ask ben for help> including ability to mark certain arguments to be
   not counted for memoization.
 
-* Special keyword args: `inputs`, `outputs` that are used to specify files no longer supports strings
+* Special keyword args: `inputs`, `outputs` that are used to specify files no longer support strings
   and now require `File` objects. For example, the following snippet works is no longer supported in `v1.0.0`:
 
    .. code-block:: python
