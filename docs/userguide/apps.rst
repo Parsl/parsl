@@ -57,7 +57,7 @@ The following alternative formulation is valid Parsl.
 
 Python apps may be passed any Python input argument, including primitive types, 
 files, and other complex types that can be serialized (e.g., numpy array,
-scikit-learn model). They may also be passed Parsl `Future` (see :ref:`label-futures`) 
+scikit-learn model). They may also be passed a Parsl `Future` (see :ref:`label-futures`) 
 returned by another Parsl app.
 In this case, Parsl will establish a dependency between the two apps and will not 
 execute an app until all dependent futures are resolved.
