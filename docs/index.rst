@@ -18,7 +18,7 @@ Parsl includes an extensible and scalable runtime that allows it to efficiently 
 Parsl programs on one or many processors. Parsl programs are portable, enabling them
 to be easily moved between different execution resources: from laptops to supercomputers. 
 When executing a Parsl program, developers must define (or import) a Python 
-configuration object which outlines where and how to execute tasks. Parsl supports
+configuration object that outlines where and how to execute tasks. Parsl supports
 various target resources including clouds (e.g., Amazon Web Services and Google
 Cloud), clusters (e.g., using Slurm, Torque/PBS, HTCondor, Cobalt), and container
 orchestration systems (e.g., Kubernetes). Parsl scripts can scale from several
