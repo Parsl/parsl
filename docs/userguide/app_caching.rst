@@ -4,7 +4,7 @@ App caching
 ----------
 
 There are many situations in which a program may be re-executed
-over time. Often large fragments of the program will not have changed, 
+over time. Often, large fragments of the program will not have changed 
 and therefore, re-execution of apps will waste valuable time and 
 computation resources. Parsl's app caching solves this problem by 
 storing results from apps that have successfully completed
