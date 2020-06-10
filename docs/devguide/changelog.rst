@@ -20,7 +20,7 @@ Zhuozhao Li @ZhuozhaoLi
 Deprecated and Removed features
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* **Python3.5** is now marked for deprecation, and will not be tested on or supported next release onwards.
+* **Python3.5** is now marked for deprecation, and will not be supported after this release.
   Python3.6 will be the earliest Python3 version supported in the next release.
 
 * **App** decorator deprecated in 0.8 is now removed `issue#1539 <https://github.com/Parsl/parsl/issues/1539>`_
@@ -41,11 +41,16 @@ New Functionality
 * Limited type-checking in Parsl internal components (as part of an ongoing effort)
 
 
-* Improvements to caching mechanism <Ask ben for help> including ability to mark certain arguments to be
-  not counted for memoization.
+* Improvements to caching mechanism including ability to mark certain arguments to be  not counted for memoization.
+
+  * Normalize known types for memoization, and reject unknown types (#1291). This means that previous unreliable
+    behaviour for some complex types such as dicts will become more reliable; and that other previous unreliable
+    behaviour for other unknown complex types will now cause an error. Handling can be added for those types using
+    parsl.memoization.id_for_memo.
+  * Add ability to label some arguments in an app invocation as not memoized using the ignore_for_cache app keyword (PR 1568)
 
 * Special keyword args: `inputs`, `outputs` that are used to specify files no longer support strings
-  and now require `File` objects. For example, the following snippet works is no longer supported in `v1.0.0`:
+  and now require `File` objects. For example, the following snippet is no longer supported in `v1.0.0`:
 
    .. code-block:: python
 
@@ -80,8 +85,6 @@ New Functionality
       def cat(inputs=[], outputs=[]):
            return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
 
-
-* A new general overview is now in our `docs <KYLE TO UPDATE URL>`_
 
 * New launcher: `WrappedLauncher` for launching tasks inside containers.
 
