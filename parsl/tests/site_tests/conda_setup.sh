@@ -143,7 +143,7 @@ EOF
     elif [[ "$(hostname -f)" =~ .*h2ologin.* ]]
     then
         echo "On Blue Waters"
-        module load bwpy/2.0.2
+        module load bwpy
         python_version=3.6
         export EPYTHON="python$python_version"
         mkdir -p parsl_$PARSL_GITHASH.py$python_version
