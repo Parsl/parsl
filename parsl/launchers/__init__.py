@@ -11,4 +11,6 @@ __all__ = ['SimpleLauncher',
            'JsrunLauncher',
            'GnuParallelLauncher',
            'MpiExecLauncher',
-           'MpiRunLauncher']
+           'MpiRunLauncher',
+           'WrappedLauncher']
+
