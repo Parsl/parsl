@@ -135,9 +135,9 @@ which checkpoint file(s) to use.
 Checkpoint files are stored in the ``runinfo/RUNID/checkpoint`` directory.
 
 The example below shows how to resume using all available checkpoints. 
-Here the program re-executes the same calls to the `slow_double` app
-as above and instead of waiting for results to be computed, they are
-immediately returned from the checkpoint file.
+Here, the program re-executes the same calls to the `slow_double` app
+as above and instead of waiting for results to be computed, the values
+from the checkpoint file are are immediately returned.
 
 .. code-block:: python
 
