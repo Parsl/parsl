@@ -5,16 +5,16 @@ Configuration
 
 Parsl separates program logic from execution configuration, enabling
 programs to be developed entirely independently from their execution
-envrionemnt. Configuration is described by a Python object (:class:`~parsl.config.Config`) 
+environemnt. Configuration is described by a Python object (:class:`~parsl.config.Config`) 
 so that developers can 
 introspect permissible options, validate settings, and retrieve/edit
-configurations dynamically during execution. A configuration specifies 
+configurations dynamically during execution. A configuration object specifies 
 details of the provider, executors, connection channel, allocation size, 
 queues, durations, and data management options. 
 
-The following example shows how a basic configuration for the Frontera
+The following example shows a basic configuration object (config) for the Frontera
 supercomputer at TACC.
-This configuration uses the HighThroughputExecutor to submit
+This config uses the HighThroughputExecutor to submit
 tasks from a login node (LocalChannel). It requests an allocation of
 128 nodes, deploying 1 worker for each of the 56 cores per node, from the normal partition.
 The config uses the `address_by_hostname()` helper function to determine
@@ -65,7 +65,7 @@ Aspects to consider include:
 3) should Parsl request multiple nodes in an individual scheduler job; and
 4) where will the main Parsl program run and how will it communicate with the apps.
 
-Stepping through the following question should help formulate a suitable configuration.
+Stepping through the following question should help formulate a suitable configuration object.
 
 1. Where should apps be executed?
 
@@ -124,14 +124,14 @@ Stepping through the following question should help formulate a suitable configu
 .. [*] Assuming 32 workers per node. If there are fewer workers launched
        per node, a larger number of nodes could be supported.
 
-.. [*] 8000 nodes with 32 workers (256,000 workers) is the maximum scale at which
+.. [*] 8,000 nodes with 32 workers (256,000 workers) is the maximum scale at which
        the `ExtremeScaleExecutor` has been tested.
 
 .. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.
 
 .. warning:: `IPyParallelExecutor` is  deprecated as of Parsl v0.8.0. `HighThroughputExecutor`
-   as the recommended replacement.
+   is the recommended replacement.
 
 
 3. Should Parsl request multiple nodes in an individual scheduler job? 
