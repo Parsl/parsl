@@ -210,7 +210,7 @@ The program first defines two Parsl apps, `app_double` and `app_sum`,
 It then makes calls to the `app_double` app with a set of input
 values. It then passes the results from `app_double` to the `app_sum` app
 to aggregate values into a single result. 
-These tasks execute concurrently, synchronized  by `mapped_result` variable.
+These tasks execute concurrently, synchronized  by `mapped_results` variable.
 The following figure shows the resulting task graph. 
 
 .. image:: ../images/MapReduce.png
