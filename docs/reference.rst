@@ -59,6 +59,7 @@ Reference guide
     parsl.launchers.GnuParallelLauncher
     parsl.launchers.MpiExecLauncher
     parsl.launchers.JsrunLauncher
+    parsl.launchers.WrappedLauncher
     parsl.monitoring.MonitoringHub
 
 .. autosummary::
