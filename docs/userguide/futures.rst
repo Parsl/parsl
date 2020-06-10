@@ -11,7 +11,7 @@ The function can then execute concurrently with that other computation.
 
 Concurrency can be used to enhance performance when independent activities
 can execute on different cores or nodes in parallel. The following
-code fragment demonstrates this idea showing that overall execution time
+code fragment demonstrates this idea, showing that overall execution time
 may be reduced if the two function calls are executed concurrently. 
 
    .. code-block:: python
@@ -140,7 +140,7 @@ completed. The input argument will then be replaced with an appropriate
 File object.
 
 The following code snippet shows how DataFutures are used. In this
-example the call to the echo Bash app specifies that the results
+example, the call to the echo Bash app specifies that the results
 should be written to an output file ("hello1.txt"). The main
 program inspects the status of the output file (via the future's
 `outputs` attribute) and then blocks waiting for the file to 
