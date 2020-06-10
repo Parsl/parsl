@@ -29,7 +29,7 @@ To update a previously installed parsl to a newer version, use: ``python3 -m pip
 Installation using Conda
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. Create an activate a new conda environment::
+1. Create and activate a new conda environment::
 
      $ conda create --name parsl_py36 python=3.6
      $ source activate parsl_py36
