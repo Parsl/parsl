@@ -56,7 +56,7 @@ New Functionality
 
       @bash_app
       def cat(inputs=[], outputs=[]):
-           return 'cat {} > {}'.format(inputs[0], outputs[0])
+           return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
 
       concat = cat(inputs=['hello-0.txt'],
                    outputs=['hello-1.txt'])
@@ -69,7 +69,7 @@ New Functionality
 
       @bash_app
       def cat(inputs=[], outputs=[]):
-           return 'cat {} > {}'.format(inputs[0], outputs[0])
+           return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
 
       concat = cat(inputs=[File('hello-0.txt')],
                    outputs=[File('hello-1.txt')])
