@@ -87,8 +87,8 @@ Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_a
    will be produced by the app. For each file thus listed, Parsl will create a future,
    track the file, and ensure that it is correctly created. The future 
    can then be passed to other apps as an input argument.
-3. walltime: (int) This keyword argument places a limit on the app
-s runtime in seconds. If the walltime is exceed, Parsl will raise an `parsl.app.errors.AppTimeout` exception.
+3. walltime: (int) This keyword argument places a limit on the app's
+   runtime in seconds. If the walltime is exceed, Parsl will raise an `parsl.app.errors.AppTimeout` exception.
 
 Returns
 ^^^^^^^
