@@ -100,7 +100,7 @@ Parsl supports the following schemes: file, ftp, http, https.
 If no scheme is specified Parsl will default to the file scheme.
 
 The following example shows creation of two files with different
-schemes: a locally accessible data.txt file and an HTTPS accessible
+schemes: a locally-accessible data.txt file and an https-accessible
 README file.
 
 .. code-block:: python
@@ -144,7 +144,7 @@ location. This list should be supplied as the `storage_access`
 parameter to an executor when it is constructed. 
 
 Parsl includes several staging providers for moving files using the 
-schemes defined above. By default Parsl executors are created with
+schemes defined above. By default, Parsl executors are created with
 three common staging providers: 
 the NoOpFileStaging provider for local and shared file systems
 and the HTTP(S) and FTP staging providers for transferring
