@@ -19,7 +19,7 @@ The ``@python_app`` decorator defines the function as a Parsl Python app.
 
        @python_app
        def double(x):
-             return x * 2
+           return x * 2
 
        double(42)
 
@@ -37,7 +37,7 @@ variable `factor`.
 
        @python_app
        def bad_double(x):
-             return x * random.random() * factor
+           return x * random.random() * factor
 
        print(bad_double(42))
        
@@ -50,8 +50,8 @@ The following alternative formulation is valid Parsl.
 
        @python_app
        def good_double(x, f):
-             import random
-             return x * random.random() * f
+           import random
+           return x * random.random() * f
 
        print(good_double(42, factor))
 
@@ -69,8 +69,8 @@ A Python app may also act upon files. In order to make Parsl aware of these file
 
        @python_app
        def echo(inputs=[], outputs=[]):
-             with open(inputs[0], 'r') as in_file, open(outputs[0], 'w') as out_file:
-                 out_file.write(in_file.readline())
+           with open(inputs[0], 'r') as in_file, open(outputs[0], 'w') as out_file:
+               out_file.write(in_file.readline())
 
        echo(inputs=[in.txt], outputs=[out.txt])
 

@@ -197,12 +197,12 @@ print_answer function accesses the global variable "answer", and we see as outpu
 
 .. code-block:: python
 
-	answer = 42
+    answer = 42
 
-	def print_answer():
-      print('the answer is', answer)
+    def print_answer():
+        print('the answer is', answer)
 
-	print_answer()
+    print_answer()
 
 
 In Parsl (except when using the `ThreadPoolExecutor`) a Parsl app is executed
@@ -221,30 +221,31 @@ not known to the function.
 
 .. code-block:: python
 
-	import random
-	factor = 5
+    import random
+    factor = 5
 
-	@python_app
-	def ambiguous_double(x):
-      return x * random.random() * factor
+    @python_app
+    def ambiguous_double(x):
+        return x * random.random() * factor
 
-	print(ambiguous_double(42))
+    print(ambiguous_double(42))
  
+
 To allow this program to run correctly with all Parsl executors, the random 
 library must be imported within the app, and the factor variable must be
 passed as an argument, as follows.
 
 .. code-block:: python
 
-	import random
-	factor = 5
+    import random
+    factor = 5
 
-	@python_app
-	def good_double(factor, x):
-      import random
-      return x * random.random() * factor
+    @python_app
+    def good_double(factor, x):
+        import random
+        return x * random.random() * factor
 
-	print(good_double(factor, 42))
+    print(good_double(factor, 42))
 
 
 File system environment 
@@ -259,15 +260,16 @@ statement outputs "the answer is 42."
 
 .. code-block:: python
 
-	def print_answer_file():
-      with open('answer.txt','r') as f:
-          print('the answer is',  f.read())
+    def print_answer_file():
+        with open('answer.txt','r') as f:
+            print('the answer is',  f.read())
 
-	with open('answer.txt','w') as f:
-      f.write('42')
-      f.close()
+    with open('answer.txt','w') as f:
+        f.write('42')
+        f.close()
 
-	print_answer_file()
+    print_answer_file()
+
 
 The question of which file system environment is accessible to a Parsl app
 depends on where the app executes. If two tasks run on nodes that share a 
