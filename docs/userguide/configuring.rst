@@ -5,22 +5,22 @@ Configuration
 
 Parsl separates program logic from execution configuration, enabling
 programs to be developed entirely independently from their execution
-environemnt. Configuration is described by a Python object (:class:`~parsl.config.Config`) 
+environment. Configuration is described by a Python object (:class:`~parsl.config.Config`) 
 so that developers can 
 introspect permissible options, validate settings, and retrieve/edit
 configurations dynamically during execution. A configuration object specifies 
 details of the provider, executors, connection channel, allocation size, 
 queues, durations, and data management options. 
 
-The following example shows a basic configuration object (config) for the Frontera
+The following example shows a basic configuration object (:class:`~parsl.config.Config`) for the Frontera
 supercomputer at TACC.
-This config uses the HighThroughputExecutor to submit
-tasks from a login node (LocalChannel). It requests an allocation of
+This config uses the `HighThroughputExecutor` to submit
+tasks from a login node (`LocalChannel`). It requests an allocation of
 128 nodes, deploying 1 worker for each of the 56 cores per node, from the normal partition.
 The config uses the `address_by_hostname()` helper function to determine
 the login node's IP address.
 
-   .. code-block:: python
+.. code-block:: python
 
     from parsl.config import Config
     from parsl.channels import LocalChannel
@@ -101,7 +101,7 @@ Stepping through the following question should help formulate a suitable configu
 | Kubernetes cluster  | * `HighThroughputExecutor`    | `KubernetesProvider`   |
 +---------------------+-------------------------------+------------------------+
 
-.. [beta] WorkQueueExecutor is available in `v1.0.0` in beta status.
+.. [beta] WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 
 
 2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
@@ -315,7 +315,7 @@ It is configured to request 2 nodes configured with 1 TaskBlock per node. Finall
 Frontera (TACC)
 ---------------
 
-.. image:: https://fronteraweb.tacc.utexas.edu/media/filer_public/e2/66/e266466f-502e-4bfe-92d6-3634d697ed99/frontera-home.jpg
+.. image:: https://frontera-portal.tacc.utexas.edu/media/filer_public/2c/fb/2cfbf6ab-818d-42c8-b4d5-9b39eb9d0a05/frontera-banner-home.jpg
 
 Deployed in June 2019, Frontera is the 5th most powerful supercomputer in the world. Frontera replaces the NSF Blue Waters system at NCSA
 and is the first deployment in the National Science Foundation's petascale computing program. The configuration below assumes that the user is
@@ -352,7 +352,7 @@ with the scheduler, and uses the `SrunLauncher` to launch workers.
 Open Science Grid
 -----------------
 
-.. image:: https://hcc-docs.unl.edu/download/attachments/11635314/Screen%20Shot%202013-03-19%20at%202.19.28%20PM.png?version=1&modificationDate=1492720049000&api=v2
+.. image:: https://www.renci.org/wp-content/uploads/2008/10/osg_logo.png
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
 The snippet below shows an example configuration for executing remotely on OSG.

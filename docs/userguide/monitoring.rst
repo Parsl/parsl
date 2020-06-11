@@ -58,25 +58,25 @@ Visualization
 -------------
 
 To view the web dashboard during or after a Parsl program has executed, you
-need to first run the `parsl-visualize` utility::
+need to first run the ``parsl-visualize`` utility::
 
    $ parsl-visualize
 
-By default, this command expects that the default `monitoring.db` database is used
+By default, this command expects that the default ``monitoring.db`` database is used
 in the current working directory. Other database can be loaded by passing
 the database URI on the command line.  For example, if the full path
-to the database is `/tmp/my_monitoring.db`, run::
+to the database is ``/tmp/my_monitoring.db``, run::
 
    $ parsl-visualize sqlite:////tmp/my_monitoring.db
 
-By default, the visualization web server listens on `127.0.0.1:8080`. If the web server is deployed on a machine with a web browser, the dashboard can be accessed in the browser at `127.0.0.1:8080`. If the web server is deployed on a remote machine, such as the login node of a cluster, you will need to use an ssh tunnel from your local machine to the cluster::
+By default, the visualization web server listens on ``127.0.0.1:8080``. If the web server is deployed on a machine with a web browser, the dashboard can be accessed in the browser at ``127.0.0.1:8080``. If the web server is deployed on a remote machine, such as the login node of a cluster, you will need to use an ssh tunnel from your local machine to the cluster::
 
    $ ssh -L 50000:127.0.0.1:8080 username@cluster_address
 
 This command will bind your local machine's port 50000 to the remote cluster's port 8080.
-The dashboard can then be accessed via the local machine's browser at `127.0.0.1:50000`. 
+The dashboard can then be accessed via the local machine's browser at ``127.0.0.1:50000``. 
 
-.. warning:: Alternatively you can deploy the visualization server on a public interface. However, first check that this is allowed by the cluster's security policy. The following example shows how to deploy the web server on a public port (i.e., open to Internet via `public_IP:55555`)::
+.. warning:: Alternatively you can deploy the visualization server on a public interface. However, first check that this is allowed by the cluster's security policy. The following example shows how to deploy the web server on a public port (i.e., open to Internet via ``public_IP:55555``)::
 
    $ parsl-visualize --listen 0.0.0.0 --port 55555
 

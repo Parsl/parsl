@@ -26,7 +26,7 @@ execution on available resources.
 
     from parsl import python_app
     
-		parsl.load()
+    parsl.load()
 
     # Map function that returns double the input integer
     @python_app
@@ -46,13 +46,13 @@ execution on available resources.
 Sequential workflows
 --------------------
 
-Sequential workflows can be created by passing an AppFuture from one task to another. For example, in the following program the `generate` app (a Python app) generates a random number that is consumed by the `save` app (a Bash app), which writes it to a file. Because `save` cannot execute until it receives the `message` produced by `generate`, the two apps execute in sequence.
+Sequential workflows can be created by passing an AppFuture from one task to another. For example, in the following program the ``generate`` app (a Python app) generates a random number that is consumed by the ``save`` app (a Bash app), which writes it to a file. Because ``save`` cannot execute until it receives the ``message`` produced by ``generate``, the two apps execute in sequence.
 
 .. code-block:: python
 
       from parsl import python_app
     
-		  parsl.load()
+      parsl.load()
 		
       # Generate a random number
       @python_app
@@ -77,7 +77,7 @@ Sequential workflows can be created by passing an AppFuture from one task to ano
 Parallel workflows
 ------------------
 
-Parallel execution occurs automatically in Parsl, respecting dependencies among app executions. In the following example, three instances of the `wait_sleep_double` app are created. The first two execute concurrently, as they have no dependencies; the third must wait until the first two complete and thus the `doubled_x` and `doubled_y` futures have values. Note that this sequencing occurs even though `wait_sleep_double` does not in fact use its second and third arguments.
+Parallel execution occurs automatically in Parsl, respecting dependencies among app executions. In the following example, three instances of the ``wait_sleep_double`` app are created. The first two execute concurrently, as they have no dependencies; the third must wait until the first two complete and thus the ``doubled_x`` and ``doubled_y`` futures have values. Note that this sequencing occurs even though ``wait_sleep_double`` does not in fact use its second and third arguments.
 
 .. code-block:: python
       
@@ -115,7 +115,7 @@ A common approach to executing Parsl apps in parallel is via loops. The followin
 
     from parsl import python_app
     
-		parsl.load()
+    parsl.load()
 			
     @python_app
     def generate(limit):
@@ -130,7 +130,7 @@ A common approach to executing Parsl apps in parallel is via loops. The followin
     # Wait for all apps to finish and collect the results
     outputs = [r.result() for r in rand_nums]
 
-In the preceding example, the execution of different tasks is coordinated by passing Python objects from producers to consumers. In other cases, it can be convenient to pass data in files, as in the following reformulation. Here, a set of files, each with a random number, is created by the `generate` app. These files are then concatenated into a single file, which is subsequently used to compute the sum of all numbers. 
+In the preceding example, the execution of different tasks is coordinated by passing Python objects from producers to consumers. In other cases, it can be convenient to pass data in files, as in the following reformulation. Here, a set of files, each with a random number, is created by the ``generate`` app. These files are then concatenated into a single file, which is subsequently used to compute the sum of all numbers. 
 
 .. code-block:: python
 
@@ -180,7 +180,7 @@ the sum of those results.
 
     from parsl import python_app
     
-		parsl.load()
+    parsl.load()
 
     # Map function that returns double the input integer
     @python_app
@@ -206,11 +206,11 @@ the sum of those results.
 
     print(total.result())
 
-The program first defines two Parsl apps, `app_double` and `app_sum`.
-It then makes calls to the `app_double` app with a set of input
-values. It then passes the results from `app_double` to the `app_sum` app
+The program first defines two Parsl apps, ``app_double`` and ``app_sum``.
+It then makes calls to the ``app_double`` app with a set of input
+values. It then passes the results from ``app_double`` to the ``app_sum`` app
 to aggregate values into a single result. 
-These tasks execute concurrently, synchronized  by the `mapped_results` variable.
+These tasks execute concurrently, synchronized  by the ``mapped_results`` variable.
 The following figure shows the resulting task graph. 
 
 .. image:: ../images/MapReduce.png
