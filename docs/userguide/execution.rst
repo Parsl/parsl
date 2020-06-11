@@ -103,8 +103,7 @@ inside a single job and for specifying the
 resources and task placement information needed to execute that
 application at launch time. Common mechanisms include
 `srun <https://slurm.schedmd.com/srun.html>`_ (for Slurm), 
-`aprun <https://cug.org/5-publications/proceedings_attendee_lists/2006CD/S06_Proceedings/pages/Authors/Karo-4C/Karo_alps_paper.pdf>`_ (for Crays), and 
- `mpirun <https://www.open-mpi.org/doc/v2.0/man1/mpirun.1.php>`_ (for MPI). 
+`aprun <https://cug.org/5-publications/proceedings_attendee_lists/2006CD/S06_Proceedings/pages/Authors/Karo-4C/Karo_alps_paper.pdf>`_ (for Crays), and `mpirun <https://www.open-mpi.org/doc/v2.0/man1/mpirun.1.php>`_ (for MPI). 
 Thus, to run Parsl programs on such systems, we typically want first to 
 request a large number of nodes and then to *launch* "pilot job" or 
 **worker** processes using the system launchers. 
@@ -125,8 +124,8 @@ Parsl currently supports the following set of launchers:
 Additionally, the launcher interface can be used to implement specialized behaviors
 in custom environments (for example, to
 launch node processes inside containers with customized environments). 
-For example, the following launcher uses Srun to launch `worker-wrapper`, passing the
-command to be run as parameters to `worker-wrapper`. It is the responsibility of `worker-wrapper`
+For example, the following launcher uses Srun to launch ``worker-wrapper``, passing the
+command to be run as parameters to ``worker-wrapper``. It is the responsibility of ``worker-wrapper``
 to launch the command it is given inside the appropriate environment.
 
 .. code:: python
@@ -266,7 +265,7 @@ For example:
 Configuration
 ^^^^^^^^^^^^^
 
-The example below shows how elasticity and parallelism can be configured. Here, a HighThroughputExecutor
+The example below shows how elasticity and parallelism can be configured. Here, a `HighThroughputExecutor`
 is used with a minimum of 1 block and a maximum of 2 blocks, where each block may host
 up to 2 workers per node. Thus this setup is capable of servicing 2 tasks concurrently. 
 Parallelism of 0.5 means that when more than 2 * the total task capacity (i.e., 4 tasks) are queued a new
