@@ -10,7 +10,7 @@ The flexibility of this model allows for the implementation of a wide range
 of parallel programming and workflow patterns. 
 
 Parsl is also designed to address broad execution requirements, from programs
-that run many small tasks to those that run few long running tasks. 
+that run many short tasks to those that run a few long tasks. 
 
 Below we illustrate a range of parallel programming and workflow patterns. It is important 
 to note that this set of examples is by no means comprehensive.
@@ -77,7 +77,7 @@ Sequential workflows can be created by passing an AppFuture from one task to ano
 Parallel workflows
 ------------------
 
-Parallel execution occurs automatically in Parsl, respecting dependencies among app executions. In the following example, three instances of the `wait_sleep_double` app are created. The first two execute concurrently, as they have no dependencies; the third must wait until the first two apps complete and thus  `doubled_x` and `doubled_y` future have values. Note that this sequencing occurs even though `wait_sleep_double` does not in fact use its second and third arguments.
+Parallel execution occurs automatically in Parsl, respecting dependencies among app executions. In the following example, three instances of the `wait_sleep_double` app are created. The first two execute concurrently, as they have no dependencies; the third must wait until the first two complete and thus the `doubled_x` and `doubled_y` futures have values. Note that this sequencing occurs even though `wait_sleep_double` does not in fact use its second and third arguments.
 
 .. code-block:: python
       
@@ -170,7 +170,7 @@ In the preceding example, the execution of different tasks is coordinated by pas
 
 MapReduce
 ---------
-MapReduce is a common pattern used in data analytics composed of a map phase
+MapReduce is a common pattern used in data analytics. It is composed of a map phase
 that filters values and a reduce phase that aggregates values.
 The following example demonstrates how Parsl can be used to specify a MapReduce computation
 in which the map phase doubles a set of input integers and the reduce phase computes
@@ -206,11 +206,11 @@ the sum of those results.
 
     print(total.result())
 
-The program first defines two Parsl apps, `app_double` and `app_sum`,
+The program first defines two Parsl apps, `app_double` and `app_sum`.
 It then makes calls to the `app_double` app with a set of input
 values. It then passes the results from `app_double` to the `app_sum` app
 to aggregate values into a single result. 
-These tasks execute concurrently, synchronized  by `mapped_results` variable.
+These tasks execute concurrently, synchronized  by the `mapped_results` variable.
 The following figure shows the resulting task graph. 
 
 .. image:: ../images/MapReduce.png
