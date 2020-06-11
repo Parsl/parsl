@@ -17,9 +17,9 @@ Parsl follows an incremental checkpointing model, where each checkpoint file con
 all results that have been updated since the last checkpoint.
 
 When a Parsl program loads a checkpoint file and is executed, it will use 
-check checkpointed results for any apps that have been previously executed. 
+checkpointed results for any apps that have been previously executed. 
 Like app caching, checkpoints
-use the app name, hash, and input parameters to identify previously computed
+use the hash of the app and the invocation input parameters to identify previously computed
 results. If multiple checkpoints exist for an app (with the same hash)
 the most recent entry will be used.
 
