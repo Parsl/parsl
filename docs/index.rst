@@ -9,8 +9,8 @@ Parsl - Parallel Scripting Library
 Parsl is a flexible and scalable parallel programming library for Python. 
 Parsl augments Python with simple constructs for encoding parallelism. Developers annotate
 Python functions to specify opportunities for concurrent execution. These annotated
-functions, called `apps`, may represent pure Python functions or calls to external
-applications. Parsl further allows invocations of these apps, called `tasks`, to be 
+functions, called ``apps``, may represent pure Python functions or calls to external
+applications. Parsl further allows invocations of these apps, called ``tasks``, to be 
 connected by shared input/output data (e.g., Python objects or files) via which Parsl 
 constructs a dynamic dependency graph of tasks to manage concurrent task execution where possible.
 
