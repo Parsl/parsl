@@ -96,11 +96,11 @@ Thus a file may represent an absolute path on the submit-side file system
 or a URL to an external file.
 
 The scheme defines the protocol via which the file may be accessed. 
-Parsl supports the following schemes: file, ftp, http, https.
+Parsl supports the following schemes: file, ftp, http, https, or globus.
 If no scheme is specified Parsl will default to the file scheme.
 
 The following example shows creation of two files with different
-schemes: a locally-accessible data.txt file and an https-accessible
+schemes: a locally-accessible data.txt file and an HTTPS-accessible
 README file.
 
 .. code-block:: python
@@ -327,7 +327,7 @@ between two Globus endpoints.
 Globus Configuration
 ^^^^^^^^^^^^^^^^^^^^
 
-In order to manage where files are staged, users may configure the default ``working_dir`` on a remote location. This information is specified in the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
+In order to manage where files are staged, users must configure the default ``working_dir`` on a remote location. This information is specified in the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
 
 .. code-block:: python
 

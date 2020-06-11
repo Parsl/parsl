@@ -145,9 +145,9 @@ Special Keywords
 In addition to the ``inputs``, ``outputs``, and ``walltime`` keyword arguments
 described above, a Bash app can accept the following keywords:
 
-4. stdout: (string, tuple or `parsl.AUTO_LOGNAME`) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory. If set to a tuple `(filename, mode)`, standard output will be redirected to the named file, opened with the specified mode as used by the Python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
-5. stderr: (string or `parsl.AUTO_LOGNAME`) Like stdout, but for the standard error stream.
-6. label: (string) If the app is invoked with `stdout=parsl.AUTO_LOGNAME` or `stderr=parsl.AUTO_LOGNAME`, this arugment will be appended to the log name.
+1. stdout: (string, tuple or `parsl.AUTO_LOGNAME`) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory. If set to a tuple `(filename, mode)`, standard output will be redirected to the named file, opened with the specified mode as used by the Python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
+2. stderr: (string or `parsl.AUTO_LOGNAME`) Like stdout, but for the standard error stream.
+3. label: (string) If the app is invoked with `stdout=parsl.AUTO_LOGNAME` or `stderr=parsl.AUTO_LOGNAME`, this arugment will be appended to the log name.
 
 A Bash app can construct the Bash command string to be executed from arguments passed
 to the decorated function.
