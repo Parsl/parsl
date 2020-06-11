@@ -48,11 +48,11 @@ In contrast, the Parsl execution model is inherently concurrent. Whenever a
 program calls an app, a separate thread of execution is created, and the main
 program continues without pausing. Thus in the example shown in the figure
 below. There is initially a single task: the main program (black). The first
-call to `double` creates a second task (red) and the second call to `double` 
+call to ``double`` creates a second task (red) and the second call to ``double`` 
 creates a third task (orange). The second and third task terminate as the
 function that they execute returns. (The dashed lines represent the start and
 finish of the tasks). The calling program will only block (wait) when it is
-explicitly told to do so (in this case by calling `result()`)
+explicitly told to do so (in this case by calling ``result()``)
 
 .. image:: ../images/overview/parsl-concurrency.png
 
@@ -71,7 +71,7 @@ We have now seen that Parsl tasks are executed concurrently alongside the main
 Python program and other Parsl tasks. We now turn to the question of how and
 where are those tasks executed. Given the range of computers on which parallel
 programs may be executed, Parsl allows tasks to be executed using different 
-`executors`. Executors are responsible for taking a queue of tasks and executing 
+executors (:py:class:`parsl.executors`). Executors are responsible for taking a queue of tasks and executing 
 them on local or remote resources.
 
 We briefly describe two of Parsl's most commonly used executors. 
@@ -81,7 +81,7 @@ The `HighThroughputExecutor` (HTEX) implements a *pilot job model* that enables
 fine-grain task execution using across one or more provisioned nodes. 
 HTEX can be used on a single node (e.g., a laptop) and will make use of 
 multiple processes for concurrent execution.
-As shown in the following figure, HTEX uses Parsl's `Provider` abstraction to 
+As shown in the following figure, HTEX uses Parsl's provider abstraction (:py:class:`parsl.providers`) to 
 communicate with a resource manager (e.g., batch scheduler or cloud API) to 
 provision a set of nodes (e.g., Parsl will use Slurm’s qsub command to request
 nodes on a Slurm cluster) for the duration of execution. 
@@ -123,7 +123,7 @@ Parameter Passing
 ^^^^^^^^^^^^^^^^^
 
 The figure above illustrates communication via parameter passing. 
-The call `double(3)` to the app `double` in the main program creates a new task
+The call ``double(3)`` to the app ``double`` in the main program creates a new task
 and passes the parameter value, 3, to that new task. When the task completes
 execution, its return value, 6, is returned to the main program. Similarly, the
 second task is passed the value 5 and returns the value 10. In this case, the
@@ -138,7 +138,7 @@ Files may be used in place of parameter passing for many reasons, such as for
 apps are designed to support files, when data to be exchanged are large, 
 or when data cannot be easily serialized into Python objects. 
 As Parsl tasks may be executed on remote nodes, without shared file systems, 
-Parsl offers a Parsl `file` construct for location-independent reference 
+Parsl offers a Parsl :py:class:`parsl.data_provider.files.File` construct for location-independent reference 
 to files. Parsl will translate file objects to worker-accessible paths
 when executing dependent apps.
 Parsl is also able to transfer files in, out, and between Parsl
@@ -146,7 +146,7 @@ apps using one of several methods (e.g., FTP, HTTP(S), Globus and rsync).
 To accommodate the asynchronous nature of file transfer, Parsl treats 
 data movement like a Parsl app, adding a dependency to the execution graph
 and waiting for transfers to complete before executing dependent apps. 
-More information is provided in :ref:`_label-data`.
+More information is provided in  :ref:`label-data`).
 
 Futures
 ^^^^^^^
@@ -216,7 +216,7 @@ run without errors when using the `ThreadPoolExecutor`.
 Similarly, the same scoping rules apply to import statements, and thus 
 the following program will run without errors with the `ThreadPoolExecutor`, 
 but raise errors when run with any other executor, because the return statement 
-in ambiguous_double refers to a variable (factor) and a module (random) that are 
+in ``ambiguous_double`` refers to a variable (factor) and a module (random) that are 
 not known to the function.
 
 .. code-block:: python

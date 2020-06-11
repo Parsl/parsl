@@ -62,13 +62,13 @@ provides support to automatically transfer (stage) files between
 the main Parsl program, worker nodes, or external data storage systems. 
 
 Input files can be passed as regular arguments, or a list of them may be
-specified in the special `inputs` keyword argument to an app invocation.
+specified in the special ``inputs`` keyword argument to an app invocation.
 
-Inside an app, the `filepath` attribute of a `File` can be read to determine
+Inside an app, the ``filepath`` attribute of a `File` can be read to determine
 where on the execution-side file system the input file has been placed.
 
 Output file objects must also be passed in at app invocation, through the
-outputs parameter. Inside an app, the `filepath` attribute of an output
+outputs parameter. Inside an app, the ``filepath`` attribute of an output
 `File` provides the path at which the corresponding output file should be
 placed so that Parsl can find it after execution.
 
@@ -127,7 +127,7 @@ irrespective of where that app executes.
 
     # call the print_file app with the Parsl file
     r = print_file(inputs=[f])
-		r.result()
+        r.result()
 
 As described below, the method by which this files are transferred
 depends on the scheme and the staging providers specified in the Parsl
@@ -140,7 +140,7 @@ Parsl is able to transparently stage files between at-rest locations and
 execution locations by specifying a list of
 :py:class:`~parsl.data_provider.staging.Staging` instances for an executor. 
 These staging instances define how to transfer files in and out of an execution
-location. This list should be supplied as the `storage_access`
+location. This list should be supplied as the ``storage_access``
 parameter to an executor when it is constructed. 
 
 Parsl includes several staging providers for moving files using the 
@@ -327,7 +327,7 @@ between two Globus endpoints.
 Globus Configuration
 ^^^^^^^^^^^^^^^^^^^^
 
-In order to manage where files are staged, users must configure the default ``working_dir`` on a remote location. This information is specified in the :class:`~parsl.executors.ParslExecutor` via the `working_dir` parameter in the :class:`~parsl.config.Config` instance. For example:
+In order to manage where files are staged, users must configure the default ``working_dir`` on a remote location. This information is specified in the :class:`~parsl.executors.base.ParslExecutor` via the ``working_dir`` parameter in the :class:`~parsl.config.Config` instance. For example:
 
 .. code-block:: python
 
@@ -388,16 +388,16 @@ when running a Parsl program in a batch system where it will be unattended.
 rsync
 ^^^^^
 
-The `rsync` utility can be used to transfer files in the `file:` scheme in configurations where
+The ``rsync`` utility can be used to transfer files in the ``file`` scheme in configurations where
 workers cannot access the submit-side file system directly, such as when executing
-on an AWS EC2 instance or on a cluster without a shared file syste. 
+on an AWS EC2 instance or on a cluster without a shared file system. 
 However, the submit-side file system must be exposed using rsync.
 
 rsync Configuration
 """""""""""""""""""
 
-`rsync` must be installed on both the submit and worker side. It can usually be installed
-by using the operating system package manager: for example, by `apt-get install rsync`.
+``rsync`` must be installed on both the submit and worker side. It can usually be installed
+by using the operating system package manager: for example, by ``apt-get install rsync``.
 
 An `RSyncStaging` option must then be added to the Parsl configuration file, as in the following.
 The parameter to RSyncStaging should describe the prefix to be passed to each rsync
@@ -420,13 +420,13 @@ rsync Authorization
 """""""""""""""""""
 
 The rsync staging provider delegates all authentication and authorization to the 
-underlying `rsync` command. This command must be correctly authorized to connect back to 
+underlying ``rsync`` command. This command must be correctly authorized to connect back to 
 the submit-side system. The form of this authorization will depend on the systems in 
 question.
 
 The following example installs an ssh key from the submit-side file system and turns off host key 
-checking, in the `worker_init` initialization of an EC2 instance. The ssh key must have 
-sufficient privileges to run `rsync` over ssh on the submit-side system.
+checking, in the ``worker_init`` initialization of an EC2 instance. The ssh key must have 
+sufficient privileges to run ``rsync`` over ssh on the submit-side system.
 
 .. code-block:: python
 
