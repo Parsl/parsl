@@ -31,8 +31,20 @@ during development. Using app caching will ensure that only modified apps are re
 App equivalence 
 ^^^^^^^^^^^^^^^
 
-Two app invocations are treated as the same by the caching mechanism if their
-input arguments are the same. This equivalence is determined by hashing the app's input
+Parsl determines app equivalence by storing the a hash
+of the app function. Thus, any changes to the app code (e.g., 
+its signature, its body, or even the docstring within the body)
+will invalidate cached values. 
+Further, Parsl does not traverse imported modules, and thus
+changes to modules used by an app will not invalidate cached
+values.
+
+
+Invocation equivalence 
+^^^^^^^^^^^^^^^^^^^^^^
+
+Two app invocations are determined to be equivalent if their
+input arguments are identical. This equivalence is determined by hashing the input
 arguments, and comparing hashes. 
 
 Of course, this approach can only be applied to data types for which a 
@@ -40,7 +52,7 @@ deterministic hash can be computed.
 
 By default Parsl can compute sensible hashes for basic data types:
 str, int, float, None, as well as more some complex types:
-functions, and dicts and lists containing hashable types.
+functions, and dictionaries and lists containing hashable types.
 
 Attempting to cache apps invoked with other, non-hashable, data types will 
 lead to an exception at invocation.
