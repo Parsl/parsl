@@ -3,59 +3,76 @@
 Configuration
 =============
 
-Parsl workflows are developed completely independently from their execution environment.
-There are very many different execution environments in which Parsl programs and their apps can run, and
-many of these environments have multiple options of how those Parsl programs and apps run, which makes
-configuration somewhat complex, and also makes determining how to set up Parsl's configuration
-for a particular set of choices fairly complex, though we think the actual configuration
-itself is reasonable simple.
+Parsl separates program logic from execution configuration, enabling
+programs to be developed entirely independently from their execution
+environment. Configuration is described by a Python object (:class:`~parsl.config.Config`) 
+so that developers can 
+introspect permissible options, validate settings, and retrieve/edit
+configurations dynamically during execution. A configuration object specifies 
+details of the provider, executors, connection channel, allocation size, 
+queues, durations, and data management options. 
 
-Parsl offers an extensible configuration model through which the execution environment and
-communication within that environment is configured. Parsl is configured
-using :class:`~parsl.config.Config` object. For more information, see
-the :class:`~parsl.config.Config` class documentation. The following shows how the
-configuration can be specified.
+The following example shows a basic configuration object (:class:`~parsl.config.Config`) for the Frontera
+supercomputer at TACC.
+This config uses the `HighThroughputExecutor` to submit
+tasks from a login node (`LocalChannel`). It requests an allocation of
+128 nodes, deploying 1 worker for each of the 56 cores per node, from the normal partition.
+The config uses the `address_by_hostname()` helper function to determine
+the login node's IP address.
 
-   .. code-block:: python
+.. code-block:: python
 
-      import parsl
-      from parsl.config import Config
-      from parsl.executors.threads import ThreadPoolExecutor
+    from parsl.config import Config
+    from parsl.channels import LocalChannel
+    from parsl.providers import SlurmProvider
+    from parsl.executors import HighThroughputExecutor
+    from parsl.launchers import SrunLauncher
+    from parsl.addresses import address_by_hostname
 
-      config = Config(
-          executors=[ThreadPoolExecutor()]
-      )
-      parsl.load(config)
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                label="frontera_htex",
+                address=address_by_hostname(),
+                max_workers=56,
+                provider=SlurmProvider(
+                    channel=LocalChannel(),
+                    nodes_per_block=128,
+                    init_blocks=1,
+                    partition='normal',                                 
+                    launcher=SrunLauncher(),
+                ),
+            )
+        ],
+    )
 
 .. contents:: Configuration How-To and Examples:
 
 .. note::
-   Please note that all configuration examples below require customization for your account,
-   allocation, Python environment, etc.
+   All configuration examples below must be customized for the user's 
+   allocation, Python environment, file system, etc.
 
 How to Configure
 ----------------
 
-The configuration provided to Parsl tells Parsl what resources to use to run the Parsl
-program and apps, and how to use them.
-Therefore it is important to carefully evaluate certain aspects of the Parsl program and apps,
-and the planned compute resources, to determine an ideal configuration match. These aspects are:
+The configuration specifies what, and how, resources are to be used for executing
+the Parsl program and its apps.
+It is important to carefully consider the needs of the Parsl program and its apps,
+and the characteristics of the compute resources, to determine an ideal configuration. 
+Aspects to consider include:
 1) where the Parsl apps will execute;
 2) how many nodes will be used to execute the apps, and how long the apps will run;
-3) should the scheduler allocate multiple nodes at one time; and
-4) where will the main parsl program run and how will it communicate with the apps.
+3) should Parsl request multiple nodes in an individual scheduler job; and
+4) where will the main Parsl program run and how will it communicate with the apps.
 
-Stepping through the following question should help you formulate a suitable configuration.
-In addition, examples for some specific configurations follow.
+Stepping through the following question should help formulate a suitable configuration object.
 
-
-1. Where would you like the apps in the Parsl program to run?
+1. Where should apps be executed?
 
 +---------------------+-------------------------------+------------------------+
 | Target              | Executor                      | Provider               |
 +=====================+===============================+========================+
-| Laptop/Workstation  | * `ExtremeScaleExecutor`      | `LocalProvider`        |
-|                     | * `HighThroughputExecutor`    |                        |
+| Laptop/Workstation  | * `HighThroughputExecutor`    | `LocalProvider`        |
 |                     | * `ThreadPoolExecutor`        |                        |
 |                     | * `WorkQueueExecutor` beta_   |                        |
 +---------------------+-------------------------------+------------------------+
@@ -84,45 +101,41 @@ In addition, examples for some specific configurations follow.
 | Kubernetes cluster  | * `HighThroughputExecutor`    | `KubernetesProvider`   |
 +---------------------+-------------------------------+------------------------+
 
-.. [beta] WorkQueueExecutor is available in `v1.0.0` in beta status.
+.. [beta] WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 
 
-2. How many nodes will you use to run them? What task durations give good performance on different executors?
+2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
 
 
-+--------------------------+----------------------+------------------------------------+
-| Executor                 | Number of Nodes [*]_ | Task duration for good performance |
-+==========================+======================+====================================+
-| `ThreadPoolExecutor`     | 1 (Only local)       |  Any                               |
-+--------------------------+----------------------+------------------------------------+
-| `LowLatencyExecutor`     | <=10                 |  10ms+                             |
-+--------------------------+----------------------+------------------------------------+
-| `IPyParallelExecutor`    | <=128                |  50ms+                             |
-+--------------------------+----------------------+------------------------------------+
-| `HighThroughputExecutor` | <=2000               |  Task duration(s)/#nodes >= 0.01   |
-|                          |                      | longer tasks needed at higher scale|
-+--------------------------+----------------------+------------------------------------+
-| `ExtremeScaleExecutor`   | >1000, <=8000 [*]_   |  >minutes                          |
-+--------------------------+----------------------+------------------------------------+
-| `WorkQueueExecutor`      | <=20000 [*]_         |  10s+                              |
-+--------------------------+----------------------+------------------------------------+
++--------------------------+----------------------+-------------------------------------+
+| Executor                 | Number of Nodes [*]_ | Task duration for good performance  |
++==========================+======================+=====================================+
+| `ThreadPoolExecutor`     | 1 (Only local)       | Any                                 |
++--------------------------+----------------------+-------------------------------------+
+| `HighThroughputExecutor` | <=2000               | Task duration(s)/#nodes >= 0.01     |
+|                          |                      | longer tasks needed at higher scale |
++--------------------------+----------------------+-------------------------------------+
+| `ExtremeScaleExecutor`   | >1000, <=8000 [*]_   | >minutes                            |
++--------------------------+----------------------+-------------------------------------+
+| `WorkQueueExecutor`      | <=1000 [*]_          | 10s+                                |
++--------------------------+----------------------+-------------------------------------+
 
 
-.. [*] We assume that each node has 32 workers. If there are fewer workers launched
-       per node, a higher number of nodes could be supported.
+.. [*] Assuming 32 workers per node. If there are fewer workers launched
+       per node, a larger number of nodes could be supported.
 
-.. [*] 8000 nodes with 32 workers each totalling 256000 workers is the maximum scale at which
-       we've tested the `ExtremeScaleExecutor`.
+.. [*] 8,000 nodes with 32 workers (256,000 workers) is the maximum scale at which
+       the `ExtremeScaleExecutor` has been tested.
 
-.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10000 GPU cores and
-       20000 CPU cores.
+.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10,000 GPU cores and
+       20,000 CPU cores.
 
-.. warning:: `IPyParallelExecutor` is  deprecated as of Parsl v0.8.0, with `HighThroughputExecutor`
-   as the recommended replacement.
+.. warning:: `IPyParallelExecutor` is  deprecated as of Parsl v0.8.0. `HighThroughputExecutor`
+   is the recommended replacement.
 
 
-3. If you are running on a cluster or supercomputer, will you request multiple nodes per batch (scheduler) job?
-(Here we use the term block to be equivalent to a batch job.)
+3. Should Parsl request multiple nodes in an individual scheduler job? 
+(Here the term block is equivalent to a single scheduler job.)
 
 +----------------------------------------------------------------------------+
 | ``nodes_per_block = 1``                                                    |
@@ -133,7 +146,6 @@ In addition, examples for some specific configurations follow.
 | use Aprun           |                          | * `SimpleLauncher`        |
 +---------------------+--------------------------+---------------------------+
 | Aprun based systems | Any                      | * `AprunLauncher`         |
-|                     |                          |                           |
 +---------------------+--------------------------+---------------------------+
 
 +-------------------------------------------------------------------------------------+
@@ -150,19 +162,18 @@ In addition, examples for some specific configurations follow.
 |                     |                          | * `AprunLauncher`, otherwise       |
 +---------------------+--------------------------+------------------------------------+
 
-.. note:: If you are on a Cray system, you most likely need the `AprunLauncher` to launch workers unless you
+.. note:: If using a Cray system, you most likely need to use the `AprunLauncher` to launch workers unless you
           are on a **native Slurm** system like :ref:`configuring_nersc_cori`
 
 
-4. Where will you run the main Parsl program, given that you already have determined where the apps will run?
-(This is needed to determine how to communicate between the Parsl program and the apps.)
+4) Where will the main Parsl program run and how will it communicate with the apps?
 
 +------------------------+--------------------------+------------------------------------+
 | Parsl program location | App execution target     | Suitable channel                   |
 +========================+==========================+====================================+
 | Laptop/Workstation     | Laptop/Workstation       | `LocalChannel`                     |
 +------------------------+--------------------------+------------------------------------+
-| Laptop/Workstation     | Cloud Resources          | None                               |
+| Laptop/Workstation     | Cloud Resources          | No channel is needed               |
 +------------------------+--------------------------+------------------------------------+
 | Laptop/Workstation     | Clusters with no 2FA     | `SSHChannel`                       |
 +------------------------+--------------------------+------------------------------------+
@@ -175,8 +186,8 @@ In addition, examples for some specific configurations follow.
 Ad-Hoc Clusters
 ---------------
 
-Any collection of compute nodes without a scheduler setup for task scheduling can be considered an
-ad-hoc cluster. Often these machines have a shared filesystem such as NFS or Lustre.
+Any collection of compute nodes without a scheduler can be considered an
+ad-hoc cluster. Often these machines have a shared file system such as NFS or Lustre.
 In order to use these resources with Parsl, they need to set-up for password-less SSH access.
 
 To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
@@ -200,13 +211,13 @@ Amazon Web Services
 .. image:: ./aws_image.png
 
 .. note::
-   Please note that **boto3** library is a requirement to use AWS with Parsl.
+   Please note that **boto3** library must be installed to use AWS with Parsl.
    This can be installed via ``python3 -m pip install parsl[aws]``
 
-Amazon Web Services is a commercial cloud service which allows you to rent a range of computers and other computing services.
-The snippet below shows an example configuration for provisioning nodes from the Elastic Compute Cloud (EC2) service.
-The first run would configure a Virtual Private Cloud and other networking and security infrastructure that will be
-re-used in subsequent runs. The configuration uses the `AWSProvider` to connect to AWS.
+Amazon Web Services is a commercial cloud service which allows users to rent a range of computers and other computing services.
+The following snippet shows how Parsl can be configured to provision nodes from the Elastic Compute Cloud (EC2) service.
+The first time this configuration is used, Parsl will configure a Virtual Private Cloud and other networking and security infrastructure that will be
+re-used in subsequent executions. The configuration uses the `AWSProvider` to connect to AWS.
 
 .. literalinclude:: ../../parsl/configs/ec2.py
 
@@ -304,7 +315,7 @@ It is configured to request 2 nodes configured with 1 TaskBlock per node. Finall
 Frontera (TACC)
 ---------------
 
-.. image:: https://fronteraweb.tacc.utexas.edu/media/filer_public/e2/66/e266466f-502e-4bfe-92d6-3634d697ed99/frontera-home.jpg
+.. image:: https://frontera-portal.tacc.utexas.edu/media/filer_public/2c/fb/2cfbf6ab-818d-42c8-b4d5-9b39eb9d0a05/frontera-banner-home.jpg
 
 Deployed in June 2019, Frontera is the 5th most powerful supercomputer in the world. Frontera replaces the NSF Blue Waters system at NCSA
 and is the first deployment in the National Science Foundation's petascale computing program. The configuration below assumes that the user is
@@ -341,7 +352,7 @@ with the scheduler, and uses the `SrunLauncher` to launch workers.
 Open Science Grid
 -----------------
 
-.. image:: https://hcc-docs.unl.edu/download/attachments/11635314/Screen%20Shot%202013-03-19%20at%202.19.28%20PM.png?version=1&modificationDate=1492720049000&api=v2
+.. image:: https://www.renci.org/wp-content/uploads/2008/10/osg_logo.png
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
 The snippet below shows an example configuration for executing remotely on OSG.
