@@ -10,7 +10,7 @@ executed on remote machines.
 Installation
 ------------
 
-Parsl's monitoring system is implemented as a lightweight service with associated
+Parsl's monitoring system is implemented as a lightweight service with an associated
 database for capturing monitoring information and a graphical web-based dashboard
 for viewing and exploring monitoring information.  By default, a local SQLite 
 database is used to store monitoring information in a file.
@@ -23,7 +23,7 @@ Parsl monitoring is only supported with the `HighThroughputExecutor`.
 
 The following example shows how to enable monitoring in the Parsl
 configuration. Here the `MonitoringHub` is specified to use port
-55055 to recieve monitoring messages from workers every 10 seconds.
+55055 to receive monitoring messages from workers every 10 seconds.
 
 .. code-block:: python
 
