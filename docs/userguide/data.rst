@@ -96,7 +96,7 @@ Thus a file may represent an absolute path on the submit-side file system
 or a URL to an external file.
 
 The scheme defines the protocol via which the file may be accessed. 
-Parsl supports the following schemes: file, ftp, http, https, or globus.
+Parsl supports the following schemes: file, ftp, http, https, and globus.
 If no scheme is specified Parsl will default to the file scheme.
 
 The following example shows creation of two files with different
