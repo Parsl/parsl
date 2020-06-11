@@ -143,19 +143,16 @@ EOF
     elif [[ "$(hostname -f)" =~ .*h2ologin.* ]]
     then
         echo "On Blue Waters"
-        if [[ -d ~/anaconda3 ]]
-        then
-            echo "Loading anaconda3 from ~/anaconda3"
-            source ~/anaconda3/bin/activate
-        else
-            echo "Please install conda to your home dir at ~/anaconda3"
-        fi
-        echo $CONDA_TARGET
-        conda create -p $CONDA_TARGET python=3.7 --yes --force
-        conda activate $PWD/$CONDA_TARGET
-        echo "source ~/anaconda3/bin/activate;"          >  ~/setup_parsl_test_env.sh
-        echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
-        echo "cd $PWD"                                   >> ~/setup_parsl_test_env.sh
+        module load bwpy
+        python_version=3.6
+        export EPYTHON="python$python_version"
+        mkdir -p parsl_$PARSL_GITHASH.py$python_version
+        virtualenv --system-site-packages $PWD/parsl_$PARSL_GITHASH.py$python_version
+        source $PWD/parsl_$PARSL_GITHASH.py$python_version/bin/activate
+        pip install --upgrade pip
+        echo "module load bwpy;"                                                         >  ~/setup_parsl_test_env.sh
+        echo "cd $PWD;"                                                                  >> ~/setup_parsl_test_env.sh
+        echo "source $PWD/parsl_$PARSL_GITHASH.py$python_version/bin/activate;"          >> ~/setup_parsl_test_env.sh
 
     else
         echo "Unknown site"

@@ -15,7 +15,7 @@ Parsl can be used to implement various parallel computing paradigms:
 * Dynamic workflows in which the workflow is determined during execution
 * Interactive parallel programming through notebooks or another interactive mechanism
 
-The latest Parsl version available on PyPi is v0.9.0.
+The latest Parsl version available on PyPi is v1.0.0.
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
