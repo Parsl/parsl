@@ -151,8 +151,9 @@ class GoogleCloudProvider():
         statuses = []
         for job_id in job_ids:
             instance = self.client.instances().get(instance=job_id, project=self.project_id, zone=self.zone).execute()
-            self.resources[job_id]['status'] = JobStatus(translate_table[instance['status']])
-            statuses.append(translate_table[instance['status']])
+            job_status = JobStatus(translate_table[instance['status']])
+            self.resources[job_id]['status'] = job_status
+            statuses.append(job_status)
         return statuses
 
     def cancel(self, job_ids):
