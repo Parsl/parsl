@@ -5,16 +5,16 @@ Changelog
 Parsl 1.0.0
 -----------
 
-Released on June <FILL>th, 2020
+Released on June 11'th, 2020
 
-Parsl v1.0.0 includes 57 closed issues and 232 pull requests with contributions (code, tests, reviews and reports) from:
+Parsl v1.0.0 includes 59 closed issues and 243 pull requests with contributions (code, tests, reviews and reports) from:
 
 Akila Ravihansa Perera @ravihansa3000, Aymen Alsaadi @AymenFJA, Anna Woodard @annawoodard,
 Ben Clifford @benclifford, Ben Glick @benhg, Benjamin Tovar @btovar, Daniel S. Katz @danielskatz,
 Daniel Smith @dgasmith, Douglas Thain @dthain, Eric Jonas @ericmjonas, Geoffrey Lentner @glentner,
-Ian Foster @ianfoster, Kalpani Ranasinghe @kalpanibhagya, Lindsey Gray @lgray, Logan Ward @WardLT,
-Lyle Hayhurst @lhayhurst, Mihael Hategan @hategan, Rajini Wijayawardana @rajiniw95, @saktar-unr,
-Tim Shaffer @trshaffer, Tom Glanzman @TomGlanzman, Yadu Nand Babuji @yadudoc and,
+Ian Foster @ianfoster, Kalpani Ranasinghe @kalpanibhagya, Kyle Chard @kylechard, Lindsey Gray @lgray,
+Logan Ward @WardLT, Lyle Hayhurst @lhayhurst, Mihael Hategan @hategan, Rajini Wijayawardana @rajiniw95,
+@saktar-unr, Tim Shaffer @trshaffer, Tom Glanzman @TomGlanzman, Yadu Nand Babuji @yadudoc and,
 Zhuozhao Li @ZhuozhaoLi
 
 Deprecated and Removed features
