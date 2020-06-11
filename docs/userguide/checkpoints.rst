@@ -62,7 +62,7 @@ Parsl provides four checkpointing modes:
 
 In all cases the checkpoint file is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 
-.. Note:: Checkpoint modes `periodic`, `dfk_exit`, and `manual` can interfere with garbage collection.
+.. Note:: Checkpoint modes ``periodic``, ``dfk_exit``, and ``manual`` can interfere with garbage collection.
           In these modes task information will be retained after completion, until checkpointing events are triggered.
 
 
@@ -72,7 +72,7 @@ Creating a checkpoint
 Automated checkpointing must be explicitly enabled in the Parsl configuration.
 There is no need to modify a Parsl  program as checkpointing will occur transparently.
 In the following example, checkpointing is enabled at task exit. The results of
-each invocation of the `slow_double` app will be stored in the checkpoint file.
+each invocation of the ``slow_double`` app will be stored in the checkpoint file.
 
 .. code-block:: python
 
@@ -98,8 +98,8 @@ each invocation of the `slow_double` app will be stored in the checkpoint file.
 
 Alternatively, manual checkpointing can be used to explictly specify when the checkpoint
 file should be saved. The following example shows how manual checkpointing can be used.
-Here, the `dfk.checkpoint()` function will save the results of the prior invocations 
-of the `slow_double` app.
+Here, the ``dfk.checkpoint()`` function will save the results of the prior invocations 
+of the ``slow_double`` app.
 
 .. code-block:: python
 
@@ -135,7 +135,7 @@ which checkpoint file(s) to use.
 Checkpoint files are stored in the ``runinfo/RUNID/checkpoint`` directory.
 
 The example below shows how to resume using all available checkpoints. 
-Here, the program re-executes the same calls to the `slow_double` app
+Here, the program re-executes the same calls to the ``slow_double`` app
 as above and instead of waiting for results to be computed, the values
 from the checkpoint file are are immediately returned.
 
