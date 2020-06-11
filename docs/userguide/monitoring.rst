@@ -1,24 +1,29 @@
 Monitoring
 ==========
 
-Parsl aims to make the task of running parallel workflows easy by providing monitoring and diagnostic
-capabilities to help track the state of your workflow, down to the individual applications being
-executed on remote machines. To enable Parsl's monitoring feature for your workflow, you will need
-a few additional packages.
+Parsl includes a flexible monitoring system to capture program and task state as well 
+as resource usage over time. The Parsl monitoring system aims to provide detailed
+information and diagnostic
+capabilities to help track the state of your programs, down to the individual apps that are
+executed on remote machines. 
 
 Installation
 ------------
 
-Parsl's monitoring model relies on writing workflow progress to a sqlite database and using separate tools
-that query this database to create a web-based dashboard for the workflow.
+Parsl's monitoring system is implemented as a lightweight service with an associated
+database for capturing monitoring information and a graphical web-based dashboard
+for viewing and exploring monitoring information.  By default, a local SQLite 
+database is used to store monitoring information in a file.
 
 
 Monitoring configuration
 ------------------------
 
-Parsl monitoring is only supported with the `HighThroughputExecutor`.
+Parsl monitoring is only supported with the `HighThroughputExecutor`. 
 
-Here's an example configuration that logs monitoring information to a local sqlite database:
+The following example shows how to enable monitoring in the Parsl
+configuration. Here the `MonitoringHub` is specified to use port
+55055 to receive monitoring messages from workers every 10 seconds.
 
 .. code-block:: python
 
@@ -49,66 +54,68 @@ Here's an example configuration that logs monitoring information to a local sqli
    )
 
 
-
-
-
 Visualization
 -------------
 
-Run the `parsl-visualize` utility::
+To view the web dashboard during or after a Parsl program has executed, you
+need to first run the ``parsl-visualize`` utility::
 
    $ parsl-visualize
 
-If your monitoring database is not the default of `monitoring.db` in the current working directory,
-you can specify a different database URI on the command line.  For example, if the full path
-to your `monitoring.db` is `/tmp/monitoring.db`, run::
+By default, this command expects that the default ``monitoring.db`` database is used
+in the current working directory. Other database can be loaded by passing
+the database URI on the command line.  For example, if the full path
+to the database is ``/tmp/my_monitoring.db``, run::
 
-   $ parsl-visualize sqlite:////tmp/monitoring.db
+   $ parsl-visualize sqlite:////tmp/my_monitoring.db
 
-By default, the visualization web server listens on `127.0.0.1:8080`. If you are running on a machine with a web browser, you can access viz_server in the browser via `127.0.0.1:8080`. If you are running on the login node of a cluster, to access viz_server in a local machine's browser, you can use an ssh tunnel from your local machine to the cluster::
+By default, the visualization web server listens on ``127.0.0.1:8080``. If the web server is deployed on a machine with a web browser, the dashboard can be accessed in the browser at ``127.0.0.1:8080``. If the web server is deployed on a remote machine, such as the login node of a cluster, you will need to use an ssh tunnel from your local machine to the cluster::
 
    $ ssh -L 50000:127.0.0.1:8080 username@cluster_address
 
-This binds your local machine's port 50000 to the remote cluster's port 8080. This allows you to access viz_server directly on your local machine's browser via `127.0.0.1:50000`. 
+This command will bind your local machine's port 50000 to the remote cluster's port 8080.
+The dashboard can then be accessed via the local machine's browser at ``127.0.0.1:50000``. 
 
-.. warning:: Below is an alternative to host the viz_server on a cluster, which may violate the cluster's security policy. Please check with your cluster admin before doing this.
-If the cluster allows you to host a web server on its public IP address with a specific port (i.e., open to Internet via `public_IP:55555`), you can run::
+.. warning:: Alternatively you can deploy the visualization server on a public interface. However, first check that this is allowed by the cluster's security policy. The following example shows how to deploy the web server on a public port (i.e., open to Internet via ``public_IP:55555``)::
 
    $ parsl-visualize --listen 0.0.0.0 --port 55555
+
 
 Workflows Page
 ^^^^^^^^^^^^^^
 
-The workflows page lists all instances of a Parsl workflow that has been executed with monitoring turned on.
-It also gives a high level overview of workflow runs as a table as shown below:
+The workflows page lists all Parsl workflows that have been executed with monitoring enabled
+with the selected database.
+It provides a high level summary of workflow state as shown below:
 
 .. image:: ../images/mon_workflows_page.png
 
-Throughout the visualization pages, all blue elements are clickable. For eg, clicking a specific worklow
+Throughout the dashboard, all blue elements are clickable. For example, clicking a specific worklow
 name from the table takes you to the Workflow Summary page described in the next section.
 
 Workflow Summary
 ^^^^^^^^^^^^^^^^
 
+The workflow summary page captures the run level details of a workflow, including start and end times
+as well as task summary statistics. The workflow summary section is followed by the *App Summary* that lists
+the various apps and invocation count for each. 
+
 .. image:: ../images/mon_workflow_summary.png
 
-The above screenshot of the workflow summary page captures the run level details such as start and end times
-as well as task summary statistics. The workflow summary section is followed by the *App Summary* that lists
-the various apps and count of invocations each. This is followed by three different views of the workflow:
 
-* Workflow DAG - colors grouped by apps: This visualization is useful to visually inspect the dependency
-  structure of the workflow DAG. Hovering over the nodes in the DAG shows a tooltip for the app that the
-  node represents and it's task ID.
+The workflow summary also presents three different views of the workflow:
+
+* Workflow DAG - with apps differentiated by colors: This visualization is useful to visually inspect the dependency
+  structure of the workflow. Hovering over the nodes in the DAG shows a tooltip for the app represented by the node and it's task ID.
 
 .. image:: ../images/mon_task_app_grouping.png
 
-* Workflow DAG - colors grouped by task states: This visualization is useful to identify what stages
-  in the workflow are complete and what stages are pending.
+* Workflow DAG - with task states differentiated by colors: This visualization is useful to identify what tasks have been completed, failed, or are currently pending.
 
 .. image:: ../images/mon_task_state_grouping.png
 
 * Workflow resource usage: This visualization provides resource usage information at the workflow level.
-  For eg, cumulative CPU/Memory utilization across workers over time.
+  For example, cumulative CPU/Memory utilization across workers over time.
 
 .. image:: ../images/mon_resource_summary.png
 
