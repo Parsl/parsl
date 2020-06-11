@@ -182,6 +182,100 @@ Stepping through the following question should help formulate a suitable configu
 | Login node             | Cluster/Supercomputer    | `LocalChannel`                     |
 +------------------------+--------------------------+------------------------------------+
 
+Heterogeneous Resources
+-----------------------
+
+In some cases, it can be difficult to specify the resource requirements for running a workflow.
+For example, if the compute nodes a site provides are not uniform, there is no "correct" resource configuration;
+the amount of parallelism depends on which node (large or small) each job runs on.
+In addition, the software and filesystem setup can vary from node to node.
+A Condor cluster may not provide shared filesystem access at all,
+and may include nodes with a variety of Python versions and available libraries.
+
+The `WorkQueueExecutor` provides several features to work with heterogeneous resources.
+By default, Parsl only runs one app at a time on each worker node.
+However, it is possible to specify the requirements for a particular app,
+and Work Queue will automatically run as many parallel instances as possible on each node.
+Work Queue automatically detects the amount of cores, memory, and other resources available on each execution node.
+To activate this feature, add resource specifications to your apps:
+
+   .. code-block:: python
+
+      @python_app
+      def compute(x, parsl_resource_specification={'cores': 1, 'memory': '1GiB', 'disk': '1GiB'}):
+          return x*2
+
+This special keyword argument will inform Work Queue about the resources this app requires.
+When placing instances of ``compute(x)``, Work Queue will run as many parallel instances as possible based on each worker node's available resources.
+If an app's resource requirements are not known in advance,
+Work Queue has an auto-labeling feature that measures the actual resource usage of your apps and automatically chooses resource labels for you.
+With auto-labeling, it is not necessary to provide ``parsl_resource_specification``;
+Work Queue collects stats in the background and updates resource labels as your workflow runs.
+To activate this feature, add the following flags to your executor config:
+
+   .. code-block:: python
+
+      config = Config(
+          executors=[
+              WorkQueueExecutor(
+                  # ...other options go here
+                  autolabel=True,
+                  autocategory=True
+              )
+          ]
+      )
+
+The ``autolabel`` flag tells Work Queue to automatically generate resource labels.
+By default, these labels are shared across all apps in your workflow.
+The ``autocategory`` flag puts each app into a different category,
+so that Work Queue will choose separate resource requirements for each app.
+This is important if e.g. some of your apps use a single core and some apps require multiple cores.
+Unless you know that all apps have uniform resource requirements,
+you should turn on ``autocategory`` when using ``autolabel``.
+
+The Work Queue executor can also help deal with sites that have non-uniform software environments across nodes.
+Parsl assumes that the Parsl program and the compute nodes all use the same Python version.
+In addition, any packages your apps import must be available on compute nodes.
+If no shared filesystem is available or if node configuration varies,
+this can lead to difficult-to-trace execution problems.
+
+If your Parsl program is running in a Conda environment,
+the Work Queue executor can automatically scan the imports in your apps,
+create a self-contained software package,
+transfer the software package to worker nodes,
+and run your code inside the packaged and uniform environment.
+First, make sure that the Conda environment is active and you have the required packages installed (via either ``pip`` or ``conda``):
+
+- ``python``
+- ``parsl``
+- ``ndcctools``
+- ``conda-pack``
+
+Then add the following to your config:
+
+   .. code-block:: python
+
+      config = Config(
+          executors=[
+              WorkQueueExecutor(
+                  # ...other options go here
+                  pack=True
+              )
+          ]
+      )
+
+.. note::
+   There will be a noticeable delay the first time Work Queue sees an app;
+   it is creating and packaging a complete Python environment.
+   This packaged environment is cached, so subsequent app invocations should be much faster.
+
+Using this approach, it is possible to run Parsl applications on nodes that don't have Python available at all.
+The packaged environment includes a Python interpreter,
+and Work Queue does not require Python to run.
+
+.. note::
+   The automatic packaging feature only supports packages installed via ``pip`` or ``conda``.
+   Importing from other locations (e.g. via ``$PYTHONPATH``) or importing other modules in the same directory is not supported.
 
 Ad-Hoc Clusters
 ---------------
@@ -261,20 +355,26 @@ CCL (Notre Dame, with Work Queue)
 
 .. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
 
-The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large. This examples uses the `WorkQueueExecutor` to schedule tasks locally, and assumes that Work Queue workers have been externally connected to the master using the `work_queue_worker` or `condor_submit_workers` command line utilities from CCTools. For more information the process of submitting tasks and workers to Work Queue, please refer to the `CCTools Work Queue documentation <https://cctools.readthedocs.io/en/latest/work_queue/>`.
-
-.. literalinclude::  ../../parsl/configs/wqex_local.py
-
-To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment (instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`):
+To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment
+(instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_):
 
 .. code-block:: bash
 
-   $ conda create -y --name <environment> python=<version>
+   $ conda create -y --name <environment> python=<version> conda-pack
    $ conda activate <environment>
-   $ conda install -y -c conda-forge cctools
+   $ conda install -y -c conda-forge cctools parsl
 
 This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
 
+The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large.
+This examples uses the `WorkQueueExecutor` to schedule tasks locally,
+and assumes that Work Queue workers have been externally connected to the master using the
+`work_queue_factory <https://cctools.readthedocs.io/en/latest/man_pages/work_queue_factory/>`_ or
+`condor_submit_workers <https://cctools.readthedocs.io/en/latest/man_pages/condor_submit_workers/>`_ command line utilities from CCTools.
+For more information on using Work Queue or to get help with running applications using CCTools,
+visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
+
+.. literalinclude::  ../../parsl/configs/wqex_local.py
 
 Comet (SDSC)
 ------------
