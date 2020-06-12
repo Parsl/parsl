@@ -39,7 +39,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  launcher=SingleNodeLauncher(),
                  init_blocks=4,
                  min_blocks=0,
-                 max_blocks=10,
+                 max_blocks=1,
                  walltime="00:15:00",
                  worker_init='',
                  cmd_timeout=30,
