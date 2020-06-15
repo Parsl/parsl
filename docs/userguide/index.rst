@@ -7,13 +7,14 @@ User guide
    overview
    apps
    futures
-   workflow
    data
    execution
    exceptions
    app_caching
    checkpoints
    configuring
-   modularizing
    monitoring
+   workflow
+   modularizing
+   performance
    usage_tracking

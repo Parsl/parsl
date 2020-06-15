@@ -14,7 +14,7 @@ Why are we doing this?
 The Parsl development team receives support from government funding agencies. For the team to continue to
 receive such funding, and for the agencies themselves to argue for funding, both the team and the agencies
 must be able to demonstrate that the scientific community is benefiting from these investments. To this end,
-we want to provide generic usage data about such things as the following:
+it is important that we provide aggregate usage data about such things as the following:
 
 * How many people use Parsl
 * Average job length
@@ -26,10 +26,8 @@ The data sent is as generic as possible and is anonymized (see :ref:`What is sen
 Opt-In
 ------
 
-We have chosen opt-in collection rather than opt-out with the hope that workflow developers and researchers
-would choose to send us this information. The reason is that we need this data - it is a requirement for funding.
-We believe by leaving the decision to the users, we set a good balance between the benefits to the project and
-respecting the privacy of our users.
+We have chosen opt-in collection rather than opt-out with the hope that developers and researchers
+will choose to send us this information. The reason is that we need this data - it is a requirement for funding.
 
 By opting-in, and allowing these statistics to be reported back, you are explicitly supporting the
 further development of Parsl.
@@ -49,7 +47,7 @@ What is sent?
 * Parsl exit code
 * Number of executors used
 * Number of failures
-* Parsl, libsubmit, Python version info
+* Parsl and Python version
 * OS and OS version
 
 
@@ -76,13 +74,11 @@ The data will be used for reporting purposes to answer questions such as:
 
 We will also use this information to improve Parsl by identifying software faults.
 
-* What percentage of the jobs run complete successfully?
-* Of the ones that fail, what is the most common fault code returned?
+* What percentage of tasks complete successfully?
+* Of the tasks that fail, what is the most common fault code returned?
 
 Feedback
 --------
 
 Please send us your feedback at parsl@googlegroups.com. Feedback from our user communities will be
-useful in determining our path forward with usage tracking in the future. We do ask that if you have concerns
-or objections, please be specific in your feedback.
-
+useful in determining our path forward with usage tracking in the future.

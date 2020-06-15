@@ -17,7 +17,7 @@ def cat(inputs=[], outputs=[], stdout=None, stderr=None):
 
 
 @pytest.mark.usefixtures('setup_data')
-@pytest.mark.issue363
+@pytest.mark.staging_required
 def test_files():
 
     if os.path.exists('cat_out.txt'):
@@ -41,6 +41,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
 
 
 @pytest.mark.usefixtures('setup_data')
+@pytest.mark.staging_required
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """

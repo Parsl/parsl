@@ -58,6 +58,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS.
     scheduler_options : str
         String to prepend to the #PBS blocks in the submit script to the scheduler.
+        WARNING: scheduler_options should only be given #PBS strings, and should not have trailing newlines.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
@@ -75,7 +76,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
-                 max_blocks=100,
+                 max_blocks=1,
                  parallelism=1,
                  launcher=AprunLauncher(),
                  walltime="00:20:00",
