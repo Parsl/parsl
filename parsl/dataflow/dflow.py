@@ -770,6 +770,10 @@ class DataFlowKernel(object):
         task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
+        if self.monitoring is not None:
+            task_log_info = self._create_task_log_info(task_id)
+            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.
 
