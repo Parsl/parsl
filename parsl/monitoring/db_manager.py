@@ -406,7 +406,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
             raise
         except Exception:
-            logger.exception("Got exception when trying to update Table {}".format(table))
+            logger.exception("Got exception when trying to update table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
@@ -423,7 +423,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
             raise
         except Exception:
-            logger.exception("Got exception when trying to insert to Table {}".format(table))
+            logger.exception("Got exception when trying to insert to table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
