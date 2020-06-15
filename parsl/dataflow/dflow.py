@@ -276,6 +276,7 @@ class DataFlowKernel(object):
 
             if task_record['status'] == States.dep_fail:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
+                task_record['time_returned'] = datetime.datetime.now()
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -288,6 +289,7 @@ class DataFlowKernel(object):
                                                                                  self._config.retries))
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
+                task_record['time_returned'] = datetime.datetime.now()
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
