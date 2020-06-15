@@ -1,17 +1,16 @@
 .. _codebases
 
-Modularizing Parsl workflows
-----------------------------
+Structuring Parsl programs
+--------------------------
 
-Parsl workflows can be developed in many ways. When developing a simple workflow it is
+Parsl programs can be developed in many ways. When developing a simple program it is
 often convenient to include the app definitions and control logic in a single script.
-However, as a workflow inevitably grows and changes, like any code, there are significant
-benefits to be obtained by modularizing the workflow, including:
+However, as a program inevitably grows and changes, like any code, there are significant
+benefits to be obtained by modularizing the program, including:
 
    1. Better readability
    2. Logical separation of components (e.g., apps, config, and control logic)
    3. Ease of reuse of components
-
 
 The following example illustrates how a Parsl project can be organized into modules.
 
@@ -27,7 +26,7 @@ grouped by functionality.
 
 .. literalinclude:: examples/library.py
 
-Finally, the control logic for the Parsl application can then be implemented in a
+Finally, the control logic for the Parsl program can then be implemented in a
 separate file (e.g., ``run_increment.py``). This file must the import the
 configuration from ``config.py`` before calling the ``increment`` app from
 ``library.py``:

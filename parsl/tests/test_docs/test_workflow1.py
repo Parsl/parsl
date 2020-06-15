@@ -1,4 +1,5 @@
 import os
+import pytest
 import parsl
 
 from parsl.app.app import bash_app, python_app
@@ -21,6 +22,7 @@ def save(message, outputs=[]):
     return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
 
 
+@pytest.mark.staging_required
 def test_procedural(N=2):
     """Procedural workflow example from docs on
     Composing a workflow

@@ -1,8 +1,6 @@
 import pytest
-
 import parsl
-
-from parsl.tests.configs.midway_htex import config
+from parsl.tests.configs.midway import config
 
 
 local_config = config
@@ -17,6 +15,7 @@ def python_app():
     return "Hello from {0}:{1}".format(os.getpid(), platform.uname())
 
 
+@pytest.mark.skip('We shouldnt run tests on midway on CI local env')
 @pytest.mark.local
 def test_python(N=5):
     ''' Testing basic scaling|Python 0 -> 1 block on SSH.Midway  '''
