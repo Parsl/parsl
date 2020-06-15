@@ -447,7 +447,6 @@ class DataFlowKernel(object):
                             # executor or memoization hash function.
 
                             logger.debug("Got an exception launching task", exc_info=True)
-                            self.tasks[task_id]['retries_left'] = 0
                             exec_fu = Future()
                             exec_fu.set_exception(e)
             else:
