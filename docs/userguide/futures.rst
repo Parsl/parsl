@@ -110,7 +110,7 @@ when calling the future's ``result()`` function.
     try:
         doubled_x.result()
     except ZeroDivisionError as ze:
-        print('Oops! You tried to divide by 0 ')
+        print('Oops! You tried to divide by 0')
     except Exception as e:
         print('Oops! Something really bad happened')
 

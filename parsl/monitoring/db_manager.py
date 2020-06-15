@@ -308,7 +308,7 @@ class DatabaseManager:
                             inserted_tasks.add(msg['task_id'])
                             insert_messages.append(msg)
 
-                            # check if there is an left_message for this task
+                            # check if there is a left_message for this task
                             if msg['task_id'] in left_messages:
                                 first_messages.append(
                                     left_messages.pop(msg['task_id']))

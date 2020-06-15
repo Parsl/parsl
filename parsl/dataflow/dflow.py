@@ -252,7 +252,7 @@ class DataFlowKernel(object):
         structure.
 
         Args:
-             task_id (string) : Task id which is a uuid string
+             task_id (string) : Task id
              future (Future) : The future object corresponding to the task which
              makes this callback
         """
@@ -457,7 +457,7 @@ class DataFlowKernel(object):
         targeted at those specific executors.
 
         Args:
-            task_id (uuid string) : A uuid string that uniquely identifies the task
+            task_id (string) : A string that uniquely identifies the task
             executable (callable) : A callable object
             args (list of positional args)
             kwargs (arbitrary keyword arguments)
@@ -603,7 +603,7 @@ class DataFlowKernel(object):
         it, and will (most likely) result in a type error.
 
         Args:
-             task_id (uuid str) : Task id
+             task_id (str) : Task id
              func (Function) : App function
              args (List) : Positional args to app function
              kwargs (Dict) : Kwargs to app function

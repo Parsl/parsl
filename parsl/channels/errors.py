@@ -8,7 +8,7 @@ class ChannelError(Exception):
     Only to be invoked when only a more specific error is not available.
     """
     def __repr__(self):
-        return "Hostname:{0}, Reason:{1}".format(self.hostname, self.reason)
+        return "Hostname: {0}, Reason: {1}".format(self.hostname, self.reason)
 
     def __str__(self):
         return self.__repr__()

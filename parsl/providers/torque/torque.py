@@ -20,8 +20,8 @@ translate_table = {
     'H': JobState.HELD,  # Held
     'Q': JobState.PENDING,  # Queued, and eligible to run
     'W': JobState.PENDING,  # Job is waiting for it's execution time (-a option) to be reached
-    'S': JobState.HELD
-}  # Suspended
+    'S': JobState.HELD  # Suspended
+}
 
 
 class TorqueProvider(ClusterProvider, RepresentationMixin):
