@@ -58,6 +58,7 @@ script:
     # 'monitoring.db' needs to exist and have some interesting content in it
     # which at time of writing comes from the htex_local_alternative test
     # run.
+    - sudo apt-get install -y graphviz
     - pip install .[monitoring]
     - parsl-visualize &
     # now wait for this to become responsive to connections
