@@ -328,7 +328,8 @@ class DatabaseManager:
                                           'tasks_completed_count'],
                                  messages=update_messages)
                     self._update(table=TASK,
-                                 columns=['task_time_returned',
+                                 columns=['task_time_submitted',
+                                          'task_time_returned',
                                           'run_id', 'task_id',
                                           'task_fail_count',
                                           'task_fail_history'],
@@ -407,7 +408,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
             raise
         except Exception:
-            logger.exception("Got exception when trying to update Table {}".format(table))
+            logger.exception("Got exception when trying to update table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
@@ -424,7 +425,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
             raise
         except Exception:
-            logger.exception("Got exception when trying to insert to Table {}".format(table))
+            logger.exception("Got exception when trying to insert to table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
