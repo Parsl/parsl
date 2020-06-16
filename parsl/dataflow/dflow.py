@@ -327,6 +327,7 @@ class DataFlowKernel(object):
                 task_record['time_returned'] = datetime.datetime.now()
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
+                task_record['time_returned'] = datetime.datetime.now()
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -813,6 +814,10 @@ class DataFlowKernel(object):
         app_fu.add_done_callback(partial(self.handle_app_update, task_id))
         task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
+
+        if self.monitoring is not None:
+            task_log_info = self._create_task_log_info(self.tasks[task_id])
+            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.

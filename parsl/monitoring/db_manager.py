@@ -467,7 +467,8 @@ class DatabaseManager:
                     # which would become less aware of the nuances of the connection
                     # between the DB schema and what is happening in the DFK.
                     self._update(table=TASK,
-                                 columns=['task_time_returned',
+                                 columns=['task_time_submitted',
+                                          'task_time_returned',
                                           'run_id', 'task_id',
                                           'task_fail_count'],
                                  messages=task_info_update_messages)
