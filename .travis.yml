@@ -54,11 +54,6 @@ script:
     - bash -c '! grep ERROR runinfo*/*/database_manager.log'
     - bash -c '! grep ERROR runinfo*/*/hub.log'
 
-    # check that 'all' install target works, even though we aren't doing any further
-    # testing of what is installed
-    - pip install .[all]
-
-
     # Check that parsl-visualize does not give errors.
     # 'monitoring.db' needs to exist and have some interesting content in it
     # which at time of writing comes from the htex_local_alternative test
@@ -71,6 +66,9 @@ script:
     - wget http://127.0.0.1:8080/ --recursive --no-verbose --page-requisites --level=inf -e robots=off
     - killall --wait parsl-visualize
 
+    # check that 'all' install target works, even though we aren't doing any further
+    # testing of what is installed
+    - pip install .[all]
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
