@@ -49,7 +49,6 @@ def pytest_addoption(parser):
         required=True,
         help="run with parsl CONFIG; use 'local' to run locally-defined config"
     )
-    parser.addoption('--bodge-dfk-per-test', action='store_true')
 
 
 def pytest_configure(config):
@@ -104,49 +103,6 @@ def load_dfk_session(request, pytestconfig):
     """
 
     config = pytestconfig.getoption('config')[0]
-
-    if pytestconfig.getoption('bodge_dfk_per_test'):
-        yield
-        return
-
-    if config != 'local':
-        spec = importlib.util.spec_from_file_location('', config)
-        try:
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
-
-            if DataFlowKernelLoader._dfk is not None:
-                raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
-
-            dfk = parsl.load(module.config)
-
-            yield
-
-            if(parsl.dfk() != dfk):
-                raise ValueError("DFK changed unexpectedly during test")
-            dfk.cleanup()
-            parsl.clear()
-        except KeyError:
-            pytest.skip('options in user_opts.py not configured for {}'.format(config))
-    else:
-        yield
-
-
-@pytest.fixture(autouse=True, scope='function')
-def load_dfk_bodge_per_test_for_workqueue(request, pytestconfig):
-    """Load a dfk around entire test suite, except in local mode.
-
-    The special path `local` indicates that configuration will not come
-    from a pytest managed configuration file; in that case, see
-    load_dfk_local_module for module-level configuration management.
-    """
-
-    config = pytestconfig.getoption('config')[0]
-
-    if not pytestconfig.getoption('bodge_dfk_per_test'):
-        yield
-        return
 
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
