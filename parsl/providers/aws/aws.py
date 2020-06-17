@@ -558,8 +558,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             for i in r['Instances']:
                 instance_id = i['InstanceId']
                 instance_state = translate_table.get(i['State']['Name'], JobState.UNKNOWN)
-                self.resources[instance_id]['status'] = JobStatus(instance_state)
-                all_states.extend([instance_state])
+                instance_status = JobStatus(instance_state)
+                self.resources[instance_id]['status'] = instance_status
+                all_states.extend([instance_status])
 
         return all_states
 

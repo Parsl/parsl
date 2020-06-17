@@ -210,7 +210,9 @@ class DatabaseManager:
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level, name="database_manager")
+        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
+                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
+                        name="database_manager")
 
         logger.debug("Initializing Database Manager process")
 
@@ -326,7 +328,8 @@ class DatabaseManager:
                                           'tasks_completed_count'],
                                  messages=update_messages)
                     self._update(table=TASK,
-                                 columns=['task_time_returned',
+                                 columns=['task_time_submitted',
+                                          'task_time_returned',
                                           'run_id', 'task_id',
                                           'task_fail_count',
                                           'task_fail_history'],
@@ -346,7 +349,7 @@ class DatabaseManager:
                 self._insert(table=NODE, messages=messages)
 
             """
-            RESOURCE_INFO messages
+            Resource info messages
 
             """
             messages = self._get_messages_in_batch(self.pending_resource_queue,
@@ -374,7 +377,7 @@ class DatabaseManager:
                                  messages=first_messages)
 
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
-        logger.info("[{}_queue_PULL_THREAD] Starting".format(queue_tag))
+        logger.info("Starting processing for queue {}".format(queue_tag))
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
             logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
@@ -405,7 +408,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
             raise
         except Exception:
-            logger.exception("Got exception when trying to update Table {}".format(table))
+            logger.exception("Got exception when trying to update table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
@@ -422,7 +425,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
             raise
         except Exception:
-            logger.exception("Got exception when trying to insert to Table {}".format(table))
+            logger.exception("Got exception when trying to insert to table {}".format(table))
             try:
                 self.db.rollback()
             except Exception:
@@ -467,9 +470,9 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
-    dbm = DatabaseManager(*args, **kwargs)
-    logger.info("Starting dbm in dbm starter")
     try:
+        dbm = DatabaseManager(*args, **kwargs)
+        logger.info("Starting dbm in dbm starter")
         dbm.start(priority_msgs, node_msgs, resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
