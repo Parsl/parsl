@@ -305,8 +305,7 @@ Amazon Web Services
 .. image:: ./aws_image.png
 
 .. note::
-   Dependencies for using AWS with Parsl can be
-   installed via ``python3 -m pip install parsl[aws]``
+   To use AWS with Parsl, install Parsl with AWS dependencies via ``python3 -m pip install parsl[aws]``
 
 Amazon Web Services is a commercial cloud service which allows users to rent a range of computers and other computing services.
 The following snippet shows how Parsl can be configured to provision nodes from the Elastic Compute Cloud (EC2) service.
