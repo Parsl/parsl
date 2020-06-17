@@ -17,6 +17,9 @@ from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger('parsl')
 
+pytest_plugins = [
+    "parsl.tests.statefixtures"
+]
 
 def dumpstacks(sig, frame):
     s = ''
