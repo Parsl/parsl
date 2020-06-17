@@ -21,6 +21,7 @@ pytest_plugins = [
     "parsl.tests.statefixtures"
 ]
 
+
 def dumpstacks(sig, frame):
     s = ''
     try:

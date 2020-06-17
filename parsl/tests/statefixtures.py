@@ -3,6 +3,7 @@ import pytest
 
 from parsl.dataflow.states import FINAL_STATES
 
+
 @pytest.fixture(autouse=True)
 def prohibit_active_tasks():
     yield
@@ -15,4 +16,4 @@ def prohibit_active_tasks():
             else:
                 raise RuntimeError("parsl test environment prohibits active tasks between tests, but task {} is active".format(task_record['id']))
     else:
-        pass # if there's no global DFK then we don't care
+        pass  # if there's no global DFK then we don't care
