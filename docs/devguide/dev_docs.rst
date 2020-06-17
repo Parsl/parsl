@@ -397,6 +397,12 @@ SrunMPILauncher
 .. autoclass:: parsl.launchers.SrunMPILauncher
    :members:
 
+WrappedLauncher
+---------------
+
+.. autoclass:: parsl.launchers.WrappedLauncher
+   :members:
+
 
 Flow Control
 ============

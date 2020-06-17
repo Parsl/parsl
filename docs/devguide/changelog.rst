@@ -2,6 +2,141 @@ Changelog
 =========
 
 
+Parsl 1.0.0
+-----------
+
+Released on June 11th, 2020
+
+Parsl v1.0.0 includes 59 closed issues and 243 pull requests with contributions (code, tests, reviews and reports) from:
+
+Akila Ravihansa Perera @ravihansa3000, Aymen Alsaadi @AymenFJA, Anna Woodard @annawoodard,
+Ben Clifford @benclifford, Ben Glick @benhg, Benjamin Tovar @btovar, Daniel S. Katz @danielskatz,
+Daniel Smith @dgasmith, Douglas Thain @dthain, Eric Jonas @ericmjonas, Geoffrey Lentner @glentner,
+Ian Foster @ianfoster, Kalpani Ranasinghe @kalpanibhagya, Kyle Chard @kylechard, Lindsey Gray @lgray,
+Logan Ward @WardLT, Lyle Hayhurst @lhayhurst, Mihael Hategan @hategan, Rajini Wijayawardana @rajiniw95,
+@saktar-unr, Tim Shaffer @trshaffer, Tom Glanzman @TomGlanzman, Yadu Nand Babuji @yadudoc and,
+Zhuozhao Li @ZhuozhaoLi
+
+Deprecated and Removed features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* **Python3.5** is now marked for deprecation, and will not be supported after this release.
+  Python3.6 will be the earliest Python3 version supported in the next release.
+
+* **App** decorator deprecated in 0.8 is now removed `issue#1539 <https://github.com/Parsl/parsl/issues/1539>`_
+  `bash_app` and `python_app` are the only supported App decorators in this release.
+
+* **IPyParallelExecutor** is no longer a supported executor `issue#1565 <https://github.com/Parsl/parsl/issues/1565>`_
+
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* `WorkQueueExecutor` introduced in `v0.9.0` is now in `Beta`. `WorkQueueExecutor` is designed as a drop-in replacement for `HighThroughputExecutor`. Here are some key features:
+  * Support for packaging the python environment and shipping it to the worker side. This mechanism addresses propagating python environments in  grid-like systems that lack shared-filesystems or cloud environments.
+  * `WorkQueueExecutor` supports resource function tagging and resource specification
+  * Support for resource specification kwarg `issue#1675 <https://github.com/Parsl/parsl/issues/1675>`_
+
+
+* Limited type-checking in Parsl internal components (as part of an ongoing effort)
+
+
+* Improvements to caching mechanism including ability to mark certain arguments to be  not counted for memoization.
+
+  * Normalize known types for memoization, and reject unknown types (#1291). This means that previous unreliable
+    behaviour for some complex types such as dicts will become more reliable; and that other previous unreliable
+    behaviour for other unknown complex types will now cause an error. Handling can be added for those types using
+    parsl.memoization.id_for_memo.
+  * Add ability to label some arguments in an app invocation as not memoized using the ignore_for_cache app keyword (PR 1568)
+
+* Special keyword args: `inputs`, `outputs` that are used to specify files no longer support strings
+  and now require `File` objects. For example, the following snippet is no longer supported in `v1.0.0`:
+
+   .. code-block:: python
+
+      @bash_app
+      def cat(inputs=[], outputs=[]):
+           return 'cat {} > {}'.format(inputs[0], outputs[0])
+
+      concat = cat(inputs=['hello-0.txt'],
+                   outputs=['hello-1.txt'])
+
+   This is the new syntax:
+
+   .. code-block:: python
+
+      from parsl import File
+
+      @bash_app
+      def cat(inputs=[], outputs=[]):
+           return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
+
+      concat = cat(inputs=[File('hello-0.txt')],
+                   outputs=[File('hello-1.txt')])
+
+    Since filenames are no longer passed to apps as strings, and the string filepath is required, it can
+    be accessed from the File object using the `filepath` attribute.
+
+   .. code-block:: python
+
+      from parsl import File
+
+      @bash_app
+      def cat(inputs=[], outputs=[]):
+           return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
+
+
+* New launcher: `WrappedLauncher` for launching tasks inside containers.
+
+* `SSHChannel` now supports a `key_filename` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
+
+* Newly added Makefile wraps several frequent developer operations such as:
+
+  * Run the test-suite: `make test`
+
+  * Install parsl: `make install`
+
+  * Create a virtualenv: `make virtualenv`
+
+  * Tag release and push to release channels: `make deploy`
+
+* Several updates to the `HighThroughputExecutor`:
+
+  * By default, the `HighThroughputExecutor` will now use heuristics to detect and try all addresses
+    when the workers connect back to the parsl master. An address can be configured manually using the
+    `HighThroughputExecutor(address=<address_string>)` kwarg option.
+
+  * Support for Mac OS. (`pull#1469 <https://github.com/Parsl/parsl/pull/1469>`_, `pull#1738 <https://github.com/Parsl/parsl/pull/1738>`_)
+
+  * Cleaner reporting of version mismatches and automatic suppression of non-critical errors.
+
+  * Separate worker log directories by block id `issue#1508 <https://github.com/Parsl/parsl/issues/1508>`_
+
+* Support for garbage collection to limit memory consumption in long-lived scripts.
+
+* All cluster providers now use `max_blocks=1` by default `issue#1730 <https://github.com/Parsl/parsl/issues/1730>`_ to avoid over-provisioning.
+
+* New `JobStatus` class for better monitoring of Jobs submitted to batch schedulers.
+
+Bug Fixes
+^^^^^^^^^
+
+* Ignore AUTO_LOGNAME for caching `issue#1642 <https://github.com/Parsl/parsl/issues/1642>`_
+* Add batch jobs to PBS/torque job status table `issue#1650 <https://github.com/Parsl/parsl/issues/1650>`_
+* Use higher default buffer threshold for serialization `issue#1654 <https://github.com/Parsl/parsl/issues/1654>`_
+* Do not pass mutable default to ignore_for_cache `issue#1656 <https://github.com/Parsl/parsl/issues/1656>`_
+* Several improvements and fixes to Monitoring
+* Fix sites/test_ec2 failure when aws user opts specified `issue#1375 <https://github.com/Parsl/parsl/issues/1375>`_
+* Fix LocalProvider to kill the right processes, rather than all processes owned by user `issue#1447 <https://github.com/Parsl/parsl/issues/1447>`_
+* Exit htex probe loop with first working address `issue#1479 <https://github.com/Parsl/parsl/issues/1479>`_
+* Allow slurm partition to be optional `issue#1501 <https://github.com/Parsl/parsl/issues/1501>`_
+* Fix race condition with wait_for_tasks vs task completion `issue#1607 <https://github.com/Parsl/parsl/issues/1607>`_
+* Fix Torque job_id truncation `issue#1583 <https://github.com/Parsl/parsl/issues/1583>`_
+* Cleaner reporting for Serialization Errors `issue#1355 <https://github.com/Parsl/parsl/issues/1355>`_
+* Results from zombie managers do not crash the system, but will be ignored `issue#1665 <https://github.com/Parsl/parsl/issues/1665>`_
+* Guarantee monitoring will send out at least one message `issue#1446 <https://github.com/Parsl/parsl/issues/1446>`_
+* Fix monitoring ctrlc hang `issue#1670 <https://github.com/Parsl/parsl/issues/1670>`_
+
 
 Parsl 0.9.0
 -----------

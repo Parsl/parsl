@@ -3,8 +3,10 @@
 Checkpointing
 -------------
 
-Large scale workflows are prone to errors due to node failures, application or environment errors, and myriad other issues. 
-Parsl's checkpointing model provides workflow resilience and fault tolerance.
+Large-scale Parsl programs are likely to encounter errors due to node failures, 
+application or environment errors, and myriad other issues. Parsl offers an
+application-level checkpointing model to improve resilience, fault tolerance, and
+efficiency.
 
 .. note::
    Checkpointing is *only* possible for apps which have app caching enabled.
@@ -14,9 +16,10 @@ Parsl's checkpointing model provides workflow resilience and fault tolerance.
 Parsl follows an incremental checkpointing model, where each checkpoint file contains
 all results that have been updated since the last checkpoint.
 
-When loading a checkpoint file the Parsl script will use checkpointed results for
-any apps that have been previously executed. Like app caching, checkpoints
-use the app name, hash, and input parameters to locate previously computed
+When a Parsl program loads a checkpoint file and is executed, it will use 
+checkpointed results for any apps that have been previously executed. 
+Like app caching, checkpoints
+use the hash of the app and the invocation input parameters to identify previously computed
 results. If multiple checkpoints exist for an app (with the same hash)
 the most recent entry will be used.
 
@@ -31,7 +34,8 @@ Parsl provides four checkpointing modes:
 
 
 2. ``periodic``: a checkpoint is created periodically using a user-specified
-   checkpointing interval.
+   checkpointing interval. Results will be saved to the checkpoint file for
+	 all tasks that have completed during this period.
 
    >>> from parsl.configs.local_threads import config
    >>> config.checkpoint_mode = 'periodic'
@@ -39,15 +43,15 @@ Parsl provides four checkpointing modes:
 
 3. ``dfk_exit``: checkpoints are created when Parsl is
    about to exit. This reduces the risk of losing results due to
-   premature workflow termination from exceptions, terminate signals, etc. However
-   it is still possible that information might be lost if the workflow is
+   premature program termination from exceptions, terminate signals, etc. However
+   it is still possible that information might be lost if the program is
    terminated abruptly (machine failure, SIGKILL, etc.)
 
    >>> from parsl.configs.local_threads import config
    >>> config.checkpoint_mode = 'dfk_exit'
 
 4. Manual: in addition to these automated checkpointing modes, it is also possible to manually initiate a checkpoint
-   by calling ``DataFlowKernel.checkpoint()`` in the workflow code.
+   by calling ``DataFlowKernel.checkpoint()`` in the Parsl program code.
 
 
    >>> import parsl
@@ -58,16 +62,44 @@ Parsl provides four checkpointing modes:
 
 In all cases the checkpoint file is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 
-.. Note:: Checkpoint modes `periodic`, `dfk_exit`, and `manual` can interfere with garbage collection.
+.. Note:: Checkpoint modes ``periodic``, ``dfk_exit``, and ``manual`` can interfere with garbage collection.
           In these modes task information will be retained after completion, until checkpointing events are triggered.
 
 
 Creating a checkpoint
 ^^^^^^^^^^^^^^^^^^^^^
 
-When using automated checkpointing there is no need to modify a Parsl 
-script as checkpointing will be conducted transparently.
-The following example shows how manual checkpointing can be invoked in a Parsl script.
+Automated checkpointing must be explicitly enabled in the Parsl configuration.
+There is no need to modify a Parsl  program as checkpointing will occur transparently.
+In the following example, checkpointing is enabled at task exit. The results of
+each invocation of the ``slow_double`` app will be stored in the checkpoint file.
+
+.. code-block:: python
+
+    import parsl
+    from parsl.app.app import python_app
+    from parsl.configs.local_threads import config
+
+    config.checkpoint_mode = 'task_exit'
+
+    parsl.load(config)
+
+    @python_app(cache=True)
+    def slow_double(x):
+        import time
+        time.sleep(5)
+        return x * 2
+
+    d = []
+    for i in range(5):
+        d.append(slow_double(i))
+
+    print([d[i].result() for i in range(5)])
+
+Alternatively, manual checkpointing can be used to explictly specify when the checkpoint
+file should be saved. The following example shows how manual checkpointing can be used.
+Here, the ``dfk.checkpoint()`` function will save the results of the prior invocations 
+of the ``slow_double`` app.
 
 .. code-block:: python
 
@@ -96,12 +128,16 @@ The following example shows how manual checkpointing can be invoked in a Parsl s
 
 
 Resuming from a checkpoint
-^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When resuming a workflow from a checkpoint Parsl allows the user to select
-which checkpoint file(s) to be used. 
-As mentioned above, checkpoint files are stored in the ``runinfo/RUNID/checkpoint`` directory.
-The example below shows how to resume using from all available checkpoints:
+When resuming a program from a checkpoint Parsl allows the user to select
+which checkpoint file(s) to use. 
+Checkpoint files are stored in the ``runinfo/RUNID/checkpoint`` directory.
+
+The example below shows how to resume using all available checkpoints. 
+Here, the program re-executes the same calls to the ``slow_double`` app
+as above and instead of waiting for results to be computed, the values
+from the checkpoint file are are immediately returned.
 
 .. code-block:: python
 
@@ -112,3 +148,11 @@ The example below shows how to resume using from all available checkpoints:
     config.checkpoint_files = get_all_checkpoints()
 
     parsl.load(config)
+		
+		# Rerun the same workflow
+    d = []
+    for i in range(5):
+        d.append(slow_double(i))
+
+    # wait for results
+    print([d[i].result() for i in range(5)])

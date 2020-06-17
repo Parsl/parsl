@@ -1,5 +1,5 @@
 import os
-
+import pytest
 from parsl.app.app import bash_app
 
 
@@ -9,6 +9,7 @@ def foo(z=2, stdout=None):
     """.format(val=z)
 
 
+@pytest.mark.issue363
 def test_command_format_1():
     """Testing command format for BashApps
     """
