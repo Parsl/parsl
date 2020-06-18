@@ -81,9 +81,6 @@ class DataFlowKernel(object):
 
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
 
-        if sys.version_info < (3, 6):
-            logger.warning("Support for python versions < 3.6 is deprecated and will be removed after parsl 0.10")
-
         logger.info("Parsl version: {}".format(get_version()))
 
         self.checkpoint_lock = threading.Lock()
