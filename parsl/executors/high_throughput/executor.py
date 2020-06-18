@@ -5,7 +5,8 @@ import threading
 import queue
 import pickle
 from multiprocessing import Process, Queue
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict  # noqa F401 (used in type annotation)
+from typing import List, Optional, Tuple, Union, Any
 import math
 
 from ipyparallel.serialize import pack_apply_message
@@ -281,6 +282,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        # TODO: why is this a provider property?
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
@@ -573,6 +575,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
+        if not self.provider:
+            raise (ScalingFailed("No execution provider available"))
         r = []
         for i in range(blocks):
             external_block_id = str(len(self.blocks))
@@ -594,6 +598,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             raise(ScalingFailed(self.provider.label,
                                 "Attempts to provision nodes via provider has failed"))
         return internal_block
+
     def scale_in(self, blocks=None, block_ids=[]):
         """Scale in the number of active blocks by specified amount.
 

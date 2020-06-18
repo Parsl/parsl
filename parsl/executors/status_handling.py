@@ -5,6 +5,7 @@ from abc import abstractmethod
 from concurrent.futures import Future
 from typing import List, Any, Dict
 
+import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 
@@ -95,6 +96,18 @@ class StatusHandlingExecutor(ParslExecutor):
         return self._executor_exception
 
     @property
+    def error_management_enabled(self):
+        return True
+
+    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+                      status: Dict[Any, JobStatus]) -> bool:
+        init_blocks = 3
+        if hasattr(self.provider, 'init_blocks'):
+            init_blocks = self.provider.init_blocks  # type: ignore
+        error_handler.simple_error_handler(self, status, init_blocks)
+        return True
+
+    @property
     def tasks(self) -> Dict[object, Future]:
         return self._tasks
 
@@ -124,6 +137,10 @@ class NoStatusHandlingExecutor(ParslExecutor):
         return False
 
     @property
+    def error_management_enabled(self):
+        return False
+
+    @property
     def executor_exception(self):
         return None
 
@@ -132,6 +149,10 @@ class NoStatusHandlingExecutor(ParslExecutor):
 
     def status(self):
         return {}
+
+    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+                      status: Dict[Any, JobStatus]) -> bool:
+        return False
 
     @property
     def tasks(self) -> Dict[object, Future]:
