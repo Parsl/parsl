@@ -11,7 +11,7 @@ import threading
 import sys
 import datetime
 from getpass import getuser
-from typing import Optional
+from typing import Any, Dict, List, Optional, Sequence
 from uuid import uuid4
 from socket import gethostname
 from concurrent.futures import Future
@@ -85,7 +85,8 @@ class DataFlowKernel(object):
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
 
         if sys.version_info < (3, 6):
-            logger.warning("Support for python versions < 3.6 is deprecated and will be removed after parsl 0.10")
+            logger.error("Support for python versions < 3.6 stopped after parsl 1.0.0")
+            raise RuntimeError("Support for python versions < 3.6 stopped after parsl 1.0.0")
 
         logger.info("Parsl version: {}".format(get_version()))
 
@@ -233,7 +234,7 @@ class DataFlowKernel(object):
         task_log_info['task_depends'] = None
         if task_record['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t.tid) for t in task_record['depends']
-                                                      if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
+                                                      if isinstance(t, AppFuture) or isinstance(t, DataFuture)]) # TODO: all these instances... implement a protocol/marker class for "HasTaskId"? There's also a bug here that the tid is scoped by DFK and users can pass futures *between* DFKs... we can only express that dependency if the two futures are associated with the same DFK. At least open an issue on that second bug? (it's not a "correctness of output" bug, but it's a "correctness of monitoring/provenance/logging" bug)
         return task_log_info
 
     def _count_deps(self, depends):
@@ -596,24 +597,24 @@ class DataFlowKernel(object):
                 app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
         return func
 
-    def _gather_all_deps(self, args, kwargs):
-        """Count the number of unresolved futures on which a task depends.
+    def _gather_all_deps(self, args: Sequence[Any], kwargs: Dict[str, Any]) -> List[Future]:
+        """Assemble a list of all Futures passed as arguments, kwargs or in the inputs kwarg.
 
         Args:
-            - args (List[args]) : The list of args list to the fn
-            - kwargs (Dict{kwargs}) : The dict of all kwargs passed to the fn
+            - args: The list of args pass to the app
+            - kwargs: The dict of all kwargs passed to the app
 
         Returns:
-            - count, [list of dependencies]
+            - list of dependencies
 
         """
-        # Check the positional args
-        depends = []
+        depends: List[Future] = []
 
         def check_dep(d):
             if isinstance(d, Future):
                 depends.extend([d])
 
+        # Check the positional args
         for dep in args:
             check_dep(dep)
 
