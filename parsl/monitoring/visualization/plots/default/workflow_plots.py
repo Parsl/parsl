@@ -5,7 +5,6 @@ import plotly.graph_objs as go
 import plotly.figure_factory as ff
 from plotly.offline import plot
 import networkx as nx
-import datetime
 
 from parsl.monitoring.visualization.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
 
@@ -22,7 +21,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
 
     parsl_tasks = []
     for i, task in df_task.iterrows():
-        task_id=task['task_id']
+        task_id = task['task_id']
 
         description = "Task ID: {}, app: {}".format(task['task_id'], task['task_func_name'])
 
@@ -31,24 +30,22 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
         last_status = None
         for j, status in statuses.iterrows():
             if last_status is not None:
-                last_status_bar = { 'Task': description,
-                                    'Start': last_status['timestamp'],
-                                    'Finish': status['timestamp'],
-                                    'Resource': last_status['task_status_name']
+                last_status_bar = {'Task': description,
+                                   'Start': last_status['timestamp'],
+                                   'Finish': status['timestamp'],
+                                   'Resource': last_status['task_status_name']
                                   }
                 parsl_tasks.extend([last_status_bar])
             last_status = status
 
         # TODO: factor with above?
         if last_status is not None:
-            last_status_bar = { 'Task': description,
-                                'Start': last_status['timestamp'],
-                                'Finish': time_completed,
-                                'Resource': last_status['task_status_name']
+            last_status_bar = {'Task': description,
+                               'Start': last_status['timestamp'],
+                               'Finish': time_completed,
+                               'Resource': last_status['task_status_name']
                               }
             parsl_tasks.extend([last_status_bar])
-
-
 
     # colours must assign a colour value for every state name defined
     # in parsl/dataflow/states.py
