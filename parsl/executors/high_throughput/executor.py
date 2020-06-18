@@ -576,16 +576,24 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         r = []
         for i in range(blocks):
             external_block_id = str(len(self.blocks))
-            launch_cmd = self.launch_cmd.format(block_id=external_block_id)
-            internal_block = self.provider.submit(launch_cmd, 1)
-            logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
-            if not internal_block:
-                raise(ScalingFailed(self.provider.label,
-                                    "Attempts to provision nodes via provider has failed"))
-            r.extend([external_block_id])
-            self.blocks[external_block_id] = internal_block
+            try:
+                self.blocks[external_block_id] = self._launch_block(external_block_id)
+                r.append(external_block_id)
+            except Exception as ex:
+                self._fail_job_async(external_block_id,
+                                     "Failed to start block {}: {}".format(external_block_id, ex))
         return r
 
+    def _launch_block(self, external_block_id: str) -> Any:
+        if self.launch_cmd is None:
+            raise ScalingFailed(self.provider.label, "No launch command")
+        launch_cmd = self.launch_cmd.format(block_id=external_block_id)
+        internal_block = self.provider.submit(launch_cmd, 1)
+        logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
+        if not internal_block:
+            raise(ScalingFailed(self.provider.label,
+                                "Attempts to provision nodes via provider has failed"))
+        return internal_block
     def scale_in(self, blocks=None, block_ids=[]):
         """Scale in the number of active blocks by specified amount.
 
