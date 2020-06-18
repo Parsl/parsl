@@ -3,9 +3,8 @@ import time
 import math
 from typing import List
 
-from parsl.dataflow.task_status_poller import ExecutorStatus
+from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors import HighThroughputExecutor, ExtremeScaleExecutor
-
 from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
