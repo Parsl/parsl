@@ -1,9 +1,11 @@
 import logging
-import parsl
+import parsl  # noqa F401 (used in string type annotation)
 import time
-from typing import Dict, List, Sequence
+from typing import Dict, Sequence
+from typing import List  # noqa F401 (used in type annotation)
 
 from parsl.dataflow.executor_status import ExecutorStatus
+from parsl.dataflow.job_error_handler import JobErrorHandler
 from parsl.dataflow.strategy import Strategy
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus, JobState
@@ -57,10 +59,12 @@ class TaskStatusPoller(object):
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._poll_items = []  # type: List[PollItem]
         self._strategy = Strategy(dfk)
+        self._error_handler = JobErrorHandler()
 
     def poll(self, tasks=None, kind=None):
         logger.debug("Polling")
         self._update_state()
+        self._error_handler.run(self._poll_items)
         self._strategy.strategize(self._poll_items, tasks)
 
     def _update_state(self):

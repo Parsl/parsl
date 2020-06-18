@@ -4,6 +4,8 @@ from typing import Any, Callable, Dict, Optional, List
 
 from parsl.providers.provider_base import JobStatus
 
+import parsl  # noqa F401
+
 
 class ParslExecutor(metaclass=ABCMeta):
     """Define the strict interface for all Executor classes.
@@ -117,6 +119,47 @@ class ParslExecutor(metaclass=ABCMeta):
 
         :return: the number of seconds to wait between calls to status() or zero if no polling
         should be done
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def error_management_enabled(self) -> bool:
+        """Indicates whether worker error management is supported by this executor. Worker error
+        management is done externally to the executor. However, the executor must implement
+        certain methods that allow this to function. These methods are:
+
+        Status Handling Methods
+        -----------------------
+        :method:handle_errors
+        :method:set_bad_state_and_fail_all
+
+        The basic idea of worker error management is that an external entity maintains a view of
+        the state of the workers by calling :method:status() which is then processed to detect
+        abnormal conditions. This can be done externally, as well as internally, through
+        :method:handle_errors. If an entity external to the executor detects an abnormal condition,
+        it can notify the executor using :method:set_bad_state_and_fail_all(exception).
+
+        Some of the scaffolding needed for implementing error management inside executors,
+        including implementations for the status handling methods above, is available in
+        :class:parsl.executors.status_handling.StatusHandlingExecutor, which, interested executors,
+        should inherit from. Noop versions of methods that are related to status handling and
+        running parsl tasks through workers are implemented by
+        :class:parsl.executors.status_handling.NoStatusHandlingExecutor.
+        """
+        pass
+
+    @abstractmethod
+    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+                      status: Dict[Any, JobStatus]) -> bool:
+        """This method is called by the error management infrastructure after a status poll. The
+        executor implementing this method is then responsible for detecting abnormal conditions
+        based on the status of submitted jobs. If the executor does not implement any special
+        error handling, this method should return False, in which case a generic error handling
+        scheme will be used.
+        :param error_handler: a reference to the generic error handler calling this method
+        :param status: status of all jobs launched by this executor
+        :return: True if this executor implements custom error handling, or False otherwise
         """
         pass
 
