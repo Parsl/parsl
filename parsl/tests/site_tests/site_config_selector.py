@@ -52,6 +52,11 @@ def fresh_config():
         from parsl.tests.configs.cc_in2p3 import fresh_config
         config = fresh_config()
 
+    elif 'bridges' in socket.getfqdn():
+        print("Loading bridges config")
+        from parsl.tests.configs.bridges import fresh_config
+        config = fresh_config()
+
     elif 'cooley' in hostname:
         print("on Cooley, loading PetrelKube config")
         from parsl.tests.configs.petrelkube import fresh_config
