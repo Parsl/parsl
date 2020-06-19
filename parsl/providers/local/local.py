@@ -84,11 +84,23 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             # Script path should point to remote path if _should_move_files() is True
             script_path = job_dict['script_path']
 
+            alive = self._is_alive(job_dict)
             str_ec = self._read_job_file(script_path, '.ec').strip()
 
             status = None
             if str_ec == '-':
-                status = JobStatus(JobState.RUNNING)
+                if alive:
+                    status = JobStatus(JobState.RUNNING)
+                else:
+                    # not alive but didn't get to write an exit code
+                    if 'cancelled' in job_dict:
+                        # because we cancelled it
+                        status = JobStatus(JobState.CANCELLED)
+                    else:
+                        # we didn't cancel it, so it must have been killed by something outside
+                        # parsl; we don't have a state for this, but we'll use CANCELLED with
+                        # a specific message
+                        status = JobStatus(JobState.CANCELLED, message='Killed')
             else:
                 try:
                     # TODO: ensure that these files are only read once and clean them
@@ -107,6 +119,18 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             job_dict['status'] = status
 
         return [self.resources[jid]['status'] for jid in job_ids]
+
+    def _is_alive(self, job_dict):
+        retcode, stdout, stderr = self.channel.execute_wait(
+            'ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
+                job_dict['remote_pid']), self.cmd_timeout)
+        for line in stdout.split('\n'):
+            if line.startswith("STATUS:"):
+                status = line.split("STATUS:")[1].strip()
+                if status == "0":
+                    return True
+                else:
+                    return False
 
     def _read_job_file(self, script_path: str, suffix: str) -> str:
         path = '{0}{1}'.format(script_path, suffix)
@@ -236,11 +260,13 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         '''
         for job in job_ids:
+            job_dict = self.resources[job]
+            job_dict['cancelled'] = True
             logger.debug("Terminating job/proc_id: {0}".format(job))
-            cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
+            cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(job_dict['remote_pid'])
             retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
             if retcode != 0:
-                logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
+                logger.warning("Failed to kill PID: {} and child processes on {}".format(job_dict['remote_pid'],
                                                                                          self.label))
 
         rets = [True for i in job_ids]
