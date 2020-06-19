@@ -47,7 +47,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  move_files=None):
         self.channel = channel
         self._label = 'local'
-        self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
         self.worker_init = worker_init
