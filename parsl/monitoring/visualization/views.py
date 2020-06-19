@@ -29,7 +29,7 @@ def format_time(value):
 def format_duration(value):
     (start, end) = value
     if start and end:
-        return format_time(end-start)
+        return format_time(end - start)
     else:
         return "-"
 
