@@ -1,4 +1,5 @@
 import os
+import pathlib
 import random
 import shutil
 import socket
@@ -79,13 +80,9 @@ def test_ssh_channel():
         sshd_thread, priv_key, server_port = _start_sshd(config_dir)
         try:
             with tempfile.TemporaryDirectory() as remote_script_dir:
-                # run this once so we add host keys and whatnot
-                p = subprocess.run(['ssh', '-v', '-i', priv_key, '-oStrictHostKeyChecking=no',
-                                    '-oUserKnownHostsFile={}/known.hosts'.format(config_dir),
-                                    '-p', str(server_port), '127.0.0.1'], check=False, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, input='')
-                if p.returncode != 0:
-                    raise Exception('SSH failed: {}, {}, {}'.format(p.returncode, p.stdout, p.stderr))
+                # The SSH library fails to add the new host key to the file if the file does not
+                # already exist, so create it here.
+                pathlib.Path('{}/known.hosts'.format(config_dir)).touch(mode=0o600)
                 script_dir = tempfile.mkdtemp()
                 p = LocalProvider(channel=SSHChannel('127.0.0.1', port=server_port,
                                                      script_dir=remote_script_dir,
