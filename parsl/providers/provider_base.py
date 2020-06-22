@@ -26,7 +26,7 @@ class JobState(bytes, Enum):
 class JobStatus(object):
     """Encapsulates a job state together with other details, presently a (error) message"""
 
-    def __init__(self, state: JobState, message: str = None, exit_code: int = -1,
+    def __init__(self, state: JobState, message: str = None, exit_code: Optional[int] = None,
                  stdout: str = None, stderr: str = None):
         self.state = state
         self.message = message
