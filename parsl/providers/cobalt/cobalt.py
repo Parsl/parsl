@@ -151,10 +151,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
 
         """
 
-        if self.provisioned_blocks >= self.max_blocks:
-            logger.warning("[%s] at capacity, cannot add more blocks now", self.label)
-            return None
-
         account_opt = '-A {}'.format(self.account) if self.account is not None else ''
 
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
