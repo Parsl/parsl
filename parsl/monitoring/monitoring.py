@@ -269,7 +269,7 @@ class MonitoringHub(RepresentationMixin):
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.info("Either Hub or DBM process got exception.")
+                self.logger.error("Either Hub or DBM process got exception.")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -277,7 +277,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.info("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
+                    self.logger.error("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
