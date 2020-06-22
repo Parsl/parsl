@@ -78,7 +78,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         for job_id in self.resources:
             # This job dict should really be a class on its own
             job_dict = self.resources[job_id]
-            if job_dict['status'] is not None and job_dict['status'].terminal:
+            if job_dict['status'] and job_dict['status'].terminal:
                 # We already checked this and it can't change after that
                 continue
             # Script path should point to remote path if _should_move_files() is True
