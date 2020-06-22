@@ -105,13 +105,14 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 try:
                     # TODO: ensure that these files are only read once and clean them
                     ec = int(str_ec)
-                    out = self._read_job_file(script_path, '.out')
-                    err = self._read_job_file(script_path, '.err')
+                    stdout_path = self._job_file_path(script_path, '.out')
+                    stderr_path = self._job_file_path(script_path, '.err')
                     if ec == 0:
                         state = JobState.COMPLETED
                     else:
                         state = JobState.FAILED
-                    status = JobStatus(state, exit_code=ec, stdout=out, stderr=err)
+                    status = JobStatus(state, exit_code=ec,
+                                       stdout_path=stdout_path, stderr_path=stderr_path)
                 except Exception:
                     status = JobStatus(JobState.FAILED,
                                        'Cannot parse exit code: {}'.format(str_ec))
@@ -132,10 +133,14 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 else:
                     return False
 
-    def _read_job_file(self, script_path: str, suffix: str) -> str:
+    def _job_file_path(self, script_path: str, suffix: str) -> str:
         path = '{0}{1}'.format(script_path, suffix)
         if self._should_move_files():
             path = self.channel.pull_file(path, self.script_dir)
+        return path
+
+    def _read_job_file(self, script_path: str, suffix: str) -> str:
+        path = self._job_file_path(script_path, suffix)
 
         with open(path, 'r') as f:
             return f.read()

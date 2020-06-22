@@ -27,12 +27,12 @@ class JobStatus(object):
     """Encapsulates a job state together with other details, presently a (error) message"""
 
     def __init__(self, state: JobState, message: str = None, exit_code: Optional[int] = None,
-                 stdout: str = None, stderr: str = None):
+                 stdout_path: str = None, stderr_path: str = None):
         self.state = state
         self.message = message
         self.exit_code = exit_code
-        self.stdout = stdout
-        self.stderr = stderr
+        self.stdout_path = stdout_path
+        self.stderr_path = stderr_path
 
     @property
     def terminal(self):
@@ -43,6 +43,21 @@ class JobStatus(object):
             return "{} ({})".format(self.state, self.message)
         else:
             return "{}".format(self.state)
+
+    @property
+    def stdout(self):
+        return self._read_file(self.stdout_path)
+
+    @property
+    def stderr(self):
+        return self._read_file(self.stderr_path)
+
+    def _read_file(self, path):
+        try:
+            with open(path, 'r') as f:
+                return f.read()
+        except Exception:
+            return None
 
 
 class ExecutionProvider(metaclass=ABCMeta):
