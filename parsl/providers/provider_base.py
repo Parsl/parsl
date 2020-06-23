@@ -1,3 +1,4 @@
+import os
 from abc import ABCMeta, abstractmethod, abstractproperty
 from enum import Enum
 from typing import Any, List, Optional
@@ -25,6 +26,7 @@ class JobState(bytes, Enum):
 
 class JobStatus(object):
     """Encapsulates a job state together with other details, presently a (error) message"""
+    SUMMARY_TRUNCATION_THRESHOLD = 2048
 
     def __init__(self, state: JobState, message: str = None, exit_code: Optional[int] = None,
                  stdout_path: str = None, stderr_path: str = None):
@@ -58,6 +60,28 @@ class JobStatus(object):
                 return f.read()
         except Exception:
             return None
+
+    @property
+    def stdout_summary(self):
+        return self._read_summary(self.stdout_path)
+
+    @property
+    def stderr_summary(self):
+        return self._read_summary(self.stderr_path)
+
+    def _read_summary(self, path):
+        with open(path, 'r') as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(0, os.SEEK_SET)
+            if size > JobStatus.SUMMARY_TRUNCATION_THRESHOLD:
+                head = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                f.seek(size - JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2, os.SEEK_SET)
+                tail = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                return head + '\n...\n' + tail
+            else:
+                f.seek(0, os.SEEK_SET)
+                return f.read()
 
 
 class ExecutionProvider(metaclass=ABCMeta):
