@@ -24,7 +24,7 @@
         <td>{{ w.workflow_version }}</td>
         <td>{{ w.user }}</td>
         <td>{{ w.status }}</td>
-        <td>{{ w.workflow_duration | timeformat }}</td>
+        <td>{{ (w.time_began, w.time_completed) | durationformat }}</td>
         <td>
              <span class="task task-complete">{{ w['tasks_completed_count'] }}</span>
              <span class="task task-failed">{{ w['tasks_failed_count'] }}</span>
