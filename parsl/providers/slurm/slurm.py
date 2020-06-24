@@ -175,10 +175,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             If at capacity, returns None; otherwise, a string identifier for the job
         """
 
-        if self.provisioned_blocks >= self.max_blocks:
-            logger.warning("Slurm provider '{}' is at capacity (no more blocks will be added)".format(self.label))
-            return None
-
         scheduler_options = self.scheduler_options
         worker_init = self.worker_init
         if self.mem_per_node is not None:

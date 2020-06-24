@@ -10,7 +10,7 @@
 <ul>
     <li><b>Started:</b>  {{ workflow_details['time_began'] | timeformat }}</li>
     <li><b>Completed:</b>  {{ workflow_details['time_completed'] | timeformat }}</li>
-    <li><b>Workflow duration:</b>  {{ workflow_details['workflow_duration'] | timeformat }}</li>
+    <li><b>Workflow duration:</b>  {{ (workflow_details['time_began'], workflow_details['time_completed']) | durationformat }}</li>
     <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
     <li><b>Host:</b>  {{ workflow_details['host'] }}</li>
     <li><b>Run directory:</b>  {{ workflow_details['rundir'] }}</li>
@@ -20,7 +20,7 @@
 
 <a href="dag_group_by_apps">View workflow DAG -- colored by apps</a>
 <br><a href="dag_group_by_states">View workflow DAG -- colored by task states</a>
-<br><a href="/workflow/{{ workflow_details['run_id'] }} ">View workflow task summary</a>
+<br><a href="/workflow/{{ workflow_details['run_id'] }}/">View workflow task summary</a>
 
 
 <h5>Worker usage</h5>
