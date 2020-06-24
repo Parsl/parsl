@@ -47,7 +47,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  move_files=None):
         self.channel = channel
         self._label = 'local'
-        self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
         self.worker_init = worker_init
@@ -78,7 +77,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         for job_id in self.resources:
             # This job dict should really be a class on its own
             job_dict = self.resources[job_id]
-            if job_dict['status'] is not None and job_dict['status'].terminal:
+            if job_dict['status'] and job_dict['status'].terminal:
                 # We already checked this and it can't change after that
                 continue
             # Script path should point to remote path if _should_move_files() is True
@@ -105,13 +104,14 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 try:
                     # TODO: ensure that these files are only read once and clean them
                     ec = int(str_ec)
-                    out = self._read_job_file(script_path, '.out')
-                    err = self._read_job_file(script_path, '.err')
+                    stdout_path = self._job_file_path(script_path, '.out')
+                    stderr_path = self._job_file_path(script_path, '.err')
                     if ec == 0:
                         state = JobState.COMPLETED
                     else:
                         state = JobState.FAILED
-                    status = JobStatus(state, exit_code=ec, stdout=out, stderr=err)
+                    status = JobStatus(state, exit_code=ec,
+                                       stdout_path=stdout_path, stderr_path=stderr_path)
                 except Exception:
                     status = JobStatus(JobState.FAILED,
                                        'Cannot parse exit code: {}'.format(str_ec))
@@ -132,10 +132,14 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 else:
                     return False
 
-    def _read_job_file(self, script_path: str, suffix: str) -> str:
+    def _job_file_path(self, script_path: str, suffix: str) -> str:
         path = '{0}{1}'.format(script_path, suffix)
         if self._should_move_files():
             path = self.channel.pull_file(path, self.script_dir)
+        return path
+
+    def _read_job_file(self, script_path: str, suffix: str) -> str:
+        path = self._job_file_path(script_path, suffix)
 
         with open(path, 'r') as f:
             return f.read()
@@ -229,8 +233,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         # We need to do the >/dev/null 2>&1 so that bash closes stdout, otherwise
         # channel.execute_wait hangs reading the process stdout until all the
         # background commands complete.
-        cmd = 'echo - >{0}.ec && {{ {{ bash {0} 1>{0}.out 2>{0}.err ; ' \
-              'echo $? > {0}.ec ; }} >/dev/null 2>&1 & echo "PID:$!" ; }}'.format(script_path)
+        cmd = '/bin/bash -c \'echo - >{0}.ec && {{ {{ bash {0} 1>{0}.out 2>{0}.err ; ' \
+              'echo $? > {0}.ec ; }} >/dev/null 2>&1 & echo "PID:$!" ; }}\''.format(script_path)
         retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
         if retcode != 0:
             raise SubmitException(job_name, "Launch command exited with code {0}".format(retcode),

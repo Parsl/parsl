@@ -84,8 +84,8 @@ class SingleNodeLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        fail_on_any_num = bool_to_num(self.fail_on_any)
-        debug_num = bool_to_num(self.debug)
+        fail_on_any_num = int(self.fail_on_any)
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
@@ -149,7 +149,7 @@ class GnuParallelLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        debug_num = bool_to_num(self.debug)
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
@@ -213,7 +213,7 @@ class MpiExecLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        debug_num = bool_to_num(self.debug)
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
@@ -265,7 +265,7 @@ class MpiRunLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        debug_num = bool_to_num(self.debug)
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
@@ -312,7 +312,7 @@ class SrunLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        debug_num = bool_to_num(self.debug)
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$SLURM_CPUS_ON_NODE
@@ -364,7 +364,7 @@ class SrunMPILauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        debug_num = bool_to_num(self.debug)
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$SLURM_CPUS_ON_NODE
@@ -438,7 +438,7 @@ class AprunLauncher(Launcher):
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block
-        debug_num = bool_to_num(self.debug)
+        debug_num = int(self.debug)
 
         x = '''set -e
 WORKERCOUNT={tasks_per_block}
@@ -486,7 +486,7 @@ class JsrunLauncher(Launcher):
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block
-        debug_num = bool_to_num(self.debug)
+        debug_num = int(self.debug)
 
         x = '''set -e
 WORKERCOUNT={tasks_per_block}
