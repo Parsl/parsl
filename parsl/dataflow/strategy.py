@@ -387,7 +387,6 @@ class Strategy(object):
 
             elif active_slots == 0 and active_tasks > 0:
                 # Case 4
-                # Check if slots are being lost quickly ?
                 logger.debug("Requesting single slot")
                 if active_blocks < max_blocks:
                     executor.scale_out(1)
@@ -395,12 +394,10 @@ class Strategy(object):
             # Case 4
             # More slots than tasks
             elif active_slots > 0 and active_slots > active_tasks:
-                logger.warning("YADU: More slots than tasks")
+                logger.debug("More slots than tasks")
                 if isinstance(executor, HighThroughputExecutor):
-                    blocks = {}
                     if active_blocks > min_blocks:
                         executor.scale_in(1, force=False, max_idletime=self.max_idletime)
-                    logger.debug("[STRATEGY] CASE:4 Block slots:{}".format(blocks.keys()))
             # Case 3
             # tasks ~ slots
             else:
