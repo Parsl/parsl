@@ -67,7 +67,7 @@ def test_scale_out():
     fus[3].result()
     time.sleep(10)
     [x.result() for x in fus]
-    # assert len(dfk.executors['htex_local'].connected_managers) == 1 , "Expected 1 manager cleaning up"
+    assert len(dfk.executors['htex_local'].connected_managers) == 1 , "Expected 1 manager cleaning up"
     print("After")
     print("Managers   : ", dfk.executors['htex_local'].connected_managers)
     print("Outstanding: ", dfk.executors['htex_local'].outstanding)
