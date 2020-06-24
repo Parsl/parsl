@@ -619,26 +619,25 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             block_ids_to_kill = block_ids
         else:
             managers = self.connected_managers
-            blks = {}
+            block_info = {}
             for manager in managers:
                 if not manager['active']:
                     continue
                 b_id = manager['block_id']
-                if b_id not in blks:
-                    blks[b_id] = [0, float('inf')]
-                blks[b_id][0] += manager['tasks']
-                blks[b_id][1] = min(blks[b_id][1], manager['idle_duration'])
+                if b_id not in block_info:
+                    block_info[b_id] = [0, float('inf')]
+                block_info[b_id][0] += manager['tasks']
+                block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
-            sorted_blks = sorted(blks.items(), key=lambda item: (item[1][1], item[1][0]))
-            logger.warning("YADU: sorted_block : {}".format(sorted_blks))
+            sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
             if force is True:
-                block_ids_to_kill = [x[0] for x in sorted_blks[:blocks]]
+                block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
             else:
                 if not max_idletime:
-                    block_ids_to_kill = [x[0] for x in sorted_blks[:blocks] if x[1][0] == 0]
+                    block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks] if x[1][0] == 0]
                 else:
                     block_ids_to_kill = []
-                    for x in sorted_blks:
+                    for x in sorted_blocks:
                         if x[1][1] > max_idletime and x[1][0] == 0:
                             block_ids_to_kill.append(x[0])
                             if len(block_ids_to_kill) == blocks:
