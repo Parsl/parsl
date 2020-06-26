@@ -2,7 +2,6 @@ from parsl.config import Config
 from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_interface
 from .user_opts import user_opts
 
 
@@ -16,7 +15,7 @@ def fresh_config():
                 # address=address_by_interface('bond0.144'),
                 max_workers=1,
                 provider=SlurmProvider(
-                    user_opts['bridges']['partition'], # Partition / QOS
+                    user_opts['bridges']['partition'],  # Partition / QOS
                     nodes_per_block=2,
                     init_blocks=1,
                     # string to prepend to #SBATCH blocks in the submit
