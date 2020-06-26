@@ -19,11 +19,23 @@ def format_time(value):
         return str(datetime.timedelta(seconds=round(value)))
     elif isinstance(value, datetime.datetime):
         return value.replace(microsecond=0)
+    elif isinstance(value, datetime.timedelta):
+        rounded_timedelta = datetime.timedelta(days=value.days, seconds=value.seconds)
+        return rounded_timedelta
     else:
         return "Incorrect time format found (neither float nor datetime.datetime object)"
 
 
+def format_duration(value):
+    (start, end) = value
+    if start and end:
+        return format_time(end - start)
+    else:
+        return "-"
+
+
 app.jinja_env.filters['timeformat'] = format_time
+app.jinja_env.filters['durationformat'] = format_duration
 
 
 @app.route('/')
