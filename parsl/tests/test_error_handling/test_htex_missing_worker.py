@@ -4,8 +4,6 @@ import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.htex_local import fresh_config
 
-from parsl.executors.high_throughput.errors import WorkerLost
-
 
 def local_setup():
     config = fresh_config()
