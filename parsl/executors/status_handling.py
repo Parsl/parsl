@@ -104,6 +104,8 @@ class StatusHandlingExecutor(ParslExecutor):
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
             init_blocks = self.provider.init_blocks  # type: ignore
+        if init_blocks < 1:
+            init_blocks = 1
         error_handler.simple_error_handler(self, status, init_blocks)
         return True
 
