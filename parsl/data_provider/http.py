@@ -77,6 +77,7 @@ def _http_stage_in(working_dir, parent_fut=None, outputs=[], staging_inhibit_out
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
+    logger.warning("BENC file.url is {}".format(file.url))
     resp = requests.get(file.url, stream=True)
     with open(file.local_path, 'wb') as f:
         for chunk in resp.iter_content(chunk_size=1024):
