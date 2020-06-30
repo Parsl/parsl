@@ -53,6 +53,15 @@ def _run_tests(p: LocalProvider):
     assert status.stdout == ''
     assert status.stderr == 'magic'
 
+    # status is invoked every 100ms, so this would trigger #1785
+    # One can check that it does so by passing overwrite_ok=False to the .ec file transfer
+    # in providers.local.local.status() and running this test, which should then fail.
+    status = _run(p, '/bin/sleep 1')
+    assert status.state == JobState.COMPLETED
+    assert status.exit_code == 0
+    assert status.stdout == ''
+    assert status.stderr == ''
+
 
 def test_local_channel():
     with tempfile.TemporaryDirectory() as script_dir:
