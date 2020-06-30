@@ -58,13 +58,22 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def push_file(self, source, dest_dir):
+    def push_file(self, source, dest_dir, overwrite_ok=False):
         ''' Channel will take care of moving the file from source to the destination
         directory
 
         Args:
             source (string) : Full filepath of the file to be moved
             dest_dir (string) : Absolute path of the directory to move to
+            overwrite_ok (bool): if True, allow this call to overwrite an existing file; if False
+            attempt to detect if the destination file already exists and throw an exception. Note
+            that, in many cases, it cannot be guaranteed that a file overwrite will not happen.
+            This is due to the fact that the check for file existence and the actual implementation
+            of the file transfer are part of separate calls; a separate thread or process could
+            very well create the destination file between the time the check is made and the time
+            the actual transfer is started. Implementing the check can also be complicated by the
+            details of the underlying channel implementation. Consequently, immpelemting the
+            existing file check is left at the discretion of the channel implementation.
 
         Returns:
             destination_path (string)
@@ -72,12 +81,15 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def pull_file(self, remote_source, local_dir):
+    def pull_file(self, remote_source, local_dir, overwrite_ok=False):
         ''' Transport file on the remote side to a local directory
 
         Args:
             remote_source (string): remote_source
             local_dir (string): Local directory to copy to
+            overwrite_ok (bool): if True, allow this call to overwrite an existing file; if False
+            and the destination file already exists, throw an exception. The "existing file" check
+            is not generally guaranteed (see push_file)
 
 
         Returns:

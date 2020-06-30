@@ -79,7 +79,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
-    def push_file(self, source, dest_dir):
+    def push_file(self, source, dest_dir, overwrite_ok=False):
         ''' If the source files dirpath is the same as dest_dir, a copy
         is not necessary, and nothing is done. Else a copy is made.
 
@@ -110,8 +110,8 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return local_dest
 
-    def pull_file(self, remote_source, local_dir):
-        return self.push_file(remote_source, local_dir)
+    def pull_file(self, remote_source, local_dir, overwrite_ok=False):
+        return self.push_file(remote_source, local_dir, overwrite_ok=overwrite_ok)
 
     def close(self):
         ''' There's nothing to close here, and this really doesn't do anything

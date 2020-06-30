@@ -128,7 +128,7 @@ class SSHChannel(Channel, RepresentationMixin):
         exit_status = stdout.channel.recv_exit_status()
         return exit_status, stdout.read().decode("utf-8"), stderr.read().decode("utf-8")
 
-    def push_file(self, local_source, remote_dir):
+    def push_file(self, local_source, remote_dir, overwrite_ok=False):
         ''' Transport a local file to a directory on a remote machine
 
         Args:
@@ -168,7 +168,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
         return remote_dest
 
-    def pull_file(self, remote_source, local_dir):
+    def pull_file(self, remote_source, local_dir, overwrite_ok=False):
         ''' Transport file on the remote side to a local directory
 
         Args:
@@ -195,7 +195,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
         # Easier to check this than to waste time trying to pull file and
         # realize there's a problem.
-        if os.path.exists(local_dest):
+        if not overwrite_ok and os.path.exists(local_dest):
             logger.exception("Remote file copy will overwrite a local file:{0}".format(local_dest))
             raise FileExists(None, self.hostname, filename=local_dest)
 
