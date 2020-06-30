@@ -84,7 +84,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             script_path = job_dict['script_path']
 
             alive = self._is_alive(job_dict)
-            str_ec = self._read_job_file(script_path, '.ec').strip()
+            str_ec = self._read_job_file(script_path, '.ec', overwrite_ok=True).strip()
 
             status = None
             if str_ec == '-':
@@ -104,8 +104,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 try:
                     # TODO: ensure that these files are only read once and clean them
                     ec = int(str_ec)
-                    stdout_path = self._job_file_path(script_path, '.out')
-                    stderr_path = self._job_file_path(script_path, '.err')
+                    stdout_path = self._job_file_path(script_path, '.out', overwrite_ok=False)
+                    stderr_path = self._job_file_path(script_path, '.err', overwrite_ok=False)
                     if ec == 0:
                         state = JobState.COMPLETED
                     else:
@@ -132,14 +132,14 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                 else:
                     return False
 
-    def _job_file_path(self, script_path: str, suffix: str) -> str:
+    def _job_file_path(self, script_path: str, suffix: str, overwrite_ok: bool = False) -> str:
         path = '{0}{1}'.format(script_path, suffix)
         if self._should_move_files():
-            path = self.channel.pull_file(path, self.script_dir)
+            path = self.channel.pull_file(path, self.script_dir, overwrite_ok=overwrite_ok)
         return path
 
-    def _read_job_file(self, script_path: str, suffix: str) -> str:
-        path = self._job_file_path(script_path, suffix)
+    def _read_job_file(self, script_path: str, suffix: str, overwrite_ok: bool = False) -> str:
+        path = self._job_file_path(script_path, suffix, overwrite_ok=overwrite_ok)
 
         with open(path, 'r') as f:
             return f.read()
