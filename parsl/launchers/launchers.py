@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 class Launcher(RepresentationMixin, metaclass=ABCMeta):
     """ Launcher base class to enforce launcher interface
     """
+    def __init__(self, debug: bool = True):
+        self.debug = debug
+
     @abstractmethod
     def __call__(self, command, tasks_per_node, nodes_per_block):
         """ Wraps the command with the Launcher calls.
@@ -19,6 +22,8 @@ class Launcher(RepresentationMixin, metaclass=ABCMeta):
 class SimpleLauncher(Launcher):
     """ Does no wrapping. Just returns the command as-is
     """
+    def __init_(self, debug: bool = True):
+        super().__init__(debug=debug)
 
     def __call__(self, command, tasks_per_node, nodes_per_block):
         """
@@ -36,14 +41,15 @@ class WrappedLauncher(Launcher):
     As an example, the wrapped launcher can be used to launch a command
     inside a docker contain by prepending the proper docker invocation"""
 
-    def __init__(self, prepend: str):
+    def __init__(self, prepend: str, debug: bool = True):
         """
         Args:
              prepend (str): Command to use before the launcher (e.g., ``time``)
         """
+        super().__init__(debug=debug)
         self.prepend = prepend
 
-    def __call__(self, command, tasks_per_node, nodes_per_block):
+    def __call__(self, command, tasks_per_node, nodes_per_block, debug=True):
         if tasks_per_node > 1:
             logger.warning('WrappedLauncher ignores the number of tasks per node. '
                            'You may be getting fewer workers than expected')
@@ -60,7 +66,11 @@ class SingleNodeLauncher(Launcher):
     task_blocks to an integer or to a bash expression the number of invocations
     of the command to be launched can be controlled.
     """
-    def __call__(self, command, tasks_per_node, nodes_per_block, fail_on_any=False):
+    def __init__(self, debug: bool = True, fail_on_any: bool = False):
+        super().__init__(debug=debug)
+        self.fail_on_any = fail_on_any
+
+    def __call__(self, command, tasks_per_node, nodes_per_block):
         """
         Args:
         - command (string): The command string to be launched
@@ -70,58 +80,44 @@ class SingleNodeLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
-        if fail_on_any:
-            fail_on_any_num = 1
-        else:
-            fail_on_any_num = 0
+        fail_on_any_num = int(self.fail_on_any)
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
-echo "Found cores : $CORES"
-WORKERCOUNT={1}
-FAILONANY={2}
-RET=0
-
-declare -a EXITCODES
-
-FAILONANY() {{
-    for I in $(seq 1 1 $WORKERCOUNT); do
-        if [ "$EXITCODES[$I]" != "0" ]; then
-            RET=1
-            break
-        fi
-    done
-}}
-
-FAILONALL() {{
-    RET=1
-    for I in $(seq 1 1 $WORKERCOUNT); do
-        if [ "$EXITCODES[$I]" == "0" ]; then
-            RET=0
-            break
-        fi
-    done
-}}
+[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
+WORKERCOUNT={task_blocks}
+FAILONANY={fail_on_any}
 
 CMD() {{
-{0}
-EXITCODES[$1]=$?
+{command}
 }}
 for COUNT in $(seq 1 1 $WORKERCOUNT); do
-    echo "Launching worker: $COUNT"
+    [[ "{debug}" == "1" ]] && echo "Launching worker: $COUNT"
     CMD $COUNT &
 done
 
-wait
+ALLFAILED=1
+ANYFAILED=0
+for COUNT in $(seq 1 1 $WORKERCOUNT); do
+    wait -n
+    if [ "$?" != "0" ]; then
+        ANYFAILED=1
+    else
+        ALLFAILED=0
+    fi
+done
 
+[[ "{debug}" == "1" ]] && echo "All workers done"
 if [ "$FAILONANY" == "1" ]; then
-    FAILONANY
+    exit $ANYFAILED
 else
-    FAILONALL
+    exit $ALLFAILED
 fi
-echo "All workers done"
-exit $RET
-'''.format(command, task_blocks, fail_on_any_num)
+'''.format(command=command,
+           task_blocks=task_blocks,
+           debug=debug_num,
+           fail_on_any=fail_on_any_num)
         return x
 
 
@@ -138,6 +134,9 @@ class GnuParallelLauncher(Launcher):
       target nodes.
     - The provider makes available the $PBS_NODEFILE environment variable
     """
+    def __init__(self, debug: bool = True):
+        super().__init__(debug=debug)
+
     def __call__(self, command, tasks_per_node, nodes_per_block):
         """
         Args:
@@ -146,10 +145,11 @@ class GnuParallelLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
-echo "Found cores : $CORES"
+[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
 # Deduplicate the nodefile
@@ -179,8 +179,11 @@ done
 parallel --env _ --joblog "$JOBNAME.sh.parallel.log" \
     --sshloginfile $SSHLOGINFILE --jobs {tasks_per_node} < $PFILE
 
-echo "All workers done"
-'''.format(command=command, tasks_per_node=tasks_per_node, task_blocks=task_blocks)
+[[ "{debug}" == "1" ]] && echo "All workers done"
+'''.format(command=command,
+           tasks_per_node=tasks_per_node,
+           task_blocks=task_blocks,
+           debug=debug_num)
         return x
 
 
@@ -195,6 +198,9 @@ class MpiExecLauncher(Launcher):
     - mpiexec is installed and can be located in $PATH
     - The provider makes available the $PBS_NODEFILE environment variable
     """
+    def __init__(self, debug: bool = True):
+        super().__init__(debug=debug)
+
     def __call__(self, command, tasks_per_node, nodes_per_block):
         """
         Args:
@@ -203,10 +209,11 @@ class MpiExecLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
-echo "Found cores : $CORES"
+[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
 # Deduplicate the nodefile
@@ -224,8 +231,10 @@ chmod u+x cmd_$JOBNAME.sh
 
 mpiexec --bind-to none -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
 
-echo "All workers done"
-'''.format(command=command, task_blocks=task_blocks)
+[[ "{debug}" == "1" ]] && echo "All workers done"
+'''.format(command=command,
+           task_blocks=task_blocks,
+           debug=debug_num)
         return x
 
 
@@ -240,7 +249,8 @@ class MpiRunLauncher(Launcher):
     - mpirun is installed and can be located in $PATH
     - The provider makes available the $PBS_NODEFILE environment variable
     """
-    def __init__(self, bash_location='/bin/bash'):
+    def __init__(self, debug: bool = True, bash_location: str = '/bin/bash'):
+        super().__init__(debug=debug)
         self.bash_location = bash_location
 
     def __call__(self, command, tasks_per_node, nodes_per_block):
@@ -251,10 +261,11 @@ class MpiRunLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
+        debug_num = int(self.debug)
 
         x = '''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
-echo "Found cores : $CORES"
+[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
 cat << MPIRUN_EOF > cmd_$JOBNAME.sh
@@ -264,8 +275,11 @@ chmod u+x cmd_$JOBNAME.sh
 
 mpirun -np $WORKERCOUNT {bash_location} cmd_$JOBNAME.sh
 
-echo "All workers done"
-'''.format(command=command, task_blocks=task_blocks, bash_location=self.bash_location)
+[[ "{debug}" == "1" ]] && echo "All workers done"
+'''.format(command=command,
+           task_blocks=task_blocks,
+           bash_location=self.bash_location,
+           debug=debug_num)
         return x
 
 
@@ -274,7 +288,7 @@ class SrunLauncher(Launcher):
     to launch multiple cmd invocations in parallel on a single job allocation.
     """
 
-    def __init__(self, overrides=''):
+    def __init__(self, debug: bool = True, overrides: str = ''):
         """
         Parameters
         ----------
@@ -282,6 +296,8 @@ class SrunLauncher(Launcher):
         overrides: str
              This string will be passed to the srun launcher. Default: ''
         """
+
+        super().__init__(debug=debug)
         self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block):
@@ -292,25 +308,28 @@ class SrunLauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
+        debug_num = int(self.debug)
+
         x = '''set -e
 export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
-echo "Found cores : $CORES"
-echo "Found nodes : $NODES"
-WORKERCOUNT={1}
+[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
+[[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
+WORKERCOUNT={task_blocks}
 
 cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
-{0}
+{command}
 SLURM_EOF
 chmod a+x cmd_$SLURM_JOB_NAME.sh
 
-TASKBLOCKS={1}
+srun --ntasks {task_blocks} -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
 
-srun --ntasks $TASKBLOCKS -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
-
-echo "Done"
-'''.format(command, task_blocks, overrides=self.overrides)
+[[ "{debug}" == "1" ]] && echo "Done"
+'''.format(command=command,
+           task_blocks=task_blocks,
+           overrides=self.overrides,
+           debug=debug_num)
         return x
 
 
@@ -321,7 +340,7 @@ class SrunMPILauncher(Launcher):
     at the same time. Workers should be launched with independent Srun calls so as to setup the
     environment for MPI application launch.
     """
-    def __init__(self, overrides=''):
+    def __init__(self, debug: bool = True, overrides: str = ''):
         """
         Parameters
         ----------
@@ -329,6 +348,8 @@ class SrunMPILauncher(Launcher):
         overrides: str
              This string will be passed to the launcher. Default: ''
         """
+
+        super().__init__(debug=debug)
         self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block):
@@ -339,25 +360,27 @@ class SrunMPILauncher(Launcher):
 
         """
         task_blocks = tasks_per_node * nodes_per_block
+        debug_num = int(self.debug)
+
         x = '''set -e
 export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
-echo "Found cores : $CORES"
-echo "Found nodes : $NODES"
-WORKERCOUNT={1}
+[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
+[[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
+WORKERCOUNT={task_blocks}
 
 cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
-{0}
+{command}
 SLURM_EOF
 chmod a+x cmd_$SLURM_JOB_NAME.sh
 
-TASKBLOCKS={1}
+TASKBLOCKS={task_blocks}
 
 # If there are more taskblocks to be launched than nodes use
 if (( "$TASKBLOCKS" > "$NODES" ))
 then
-    echo "TaskBlocks:$TASKBLOCKS > Nodes:$NODES"
+    [[ "{debug}" == "1" ]] && echo "TaskBlocks:$TASKBLOCKS > Nodes:$NODES"
     CORES_PER_BLOCK=$(($NODES * $CORES / $TASKBLOCKS))
     for blk in $(seq 1 1 $TASKBLOCKS):
     do
@@ -366,7 +389,7 @@ then
     wait
 else
     # A Task block could be integer multiples of Nodes
-    echo "TaskBlocks:$TASKBLOCKS <= Nodes:$NODES"
+    [[ "{debug}" == "1" ]] && echo "TaskBlocks:$TASKBLOCKS <= Nodes:$NODES"
     NODES_PER_BLOCK=$(( $NODES / $TASKBLOCKS ))
     for blk in $(seq 1 1 $TASKBLOCKS):
     do
@@ -377,8 +400,11 @@ else
 fi
 
 
-echo "Done"
-'''.format(command, task_blocks, overrides=self.overrides)
+[[ "{debug}" == "1" ]] && echo "Done"
+'''.format(command=command,
+           task_blocks=task_blocks,
+           overrides=self.overrides,
+           debug=debug_num)
         return x
 
 
@@ -387,7 +413,7 @@ class AprunLauncher(Launcher):
     to launch multiple cmd invocations in parallel on a single job allocation
 
     """
-    def __init__(self, overrides=''):
+    def __init__(self, debug: bool = True, overrides: str = ''):
         """
         Parameters
         ----------
@@ -395,6 +421,7 @@ class AprunLauncher(Launcher):
         overrides: str
              This string will be passed to the aprun launcher. Default: ''
         """
+        super().__init__(debug=debug)
         self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block):
@@ -407,22 +434,25 @@ class AprunLauncher(Launcher):
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block
+        debug_num = int(self.debug)
+
         x = '''set -e
-WORKERCOUNT={1}
+WORKERCOUNT={tasks_per_block}
 
 cat << APRUN_EOF > cmd_$JOBNAME.sh
-{0}
+{command}
 APRUN_EOF
 chmod a+x cmd_$JOBNAME.sh
 
 aprun -n {tasks_per_block} -N {tasks_per_node} {overrides} /bin/bash cmd_$JOBNAME.sh &
 wait
 
-echo "Done"
-'''.format(command, tasks_per_block,
+[[ "{debug}" == "1" ]] && echo "Done"
+'''.format(command=command,
            tasks_per_block=tasks_per_block,
            tasks_per_node=tasks_per_node,
-           overrides=self.overrides)
+           overrides=self.overrides,
+           debug=debug_num)
         return x
 
 
@@ -431,7 +461,7 @@ class JsrunLauncher(Launcher):
     to launch multiple cmd invocations in parallel on a single job allocation
 
     """
-    def __init__(self, overrides=''):
+    def __init__(self, debug: bool = True, overrides: str = ''):
         """
         Parameters
         ----------
@@ -439,6 +469,7 @@ class JsrunLauncher(Launcher):
         overrides: str
              This string will be passed to the JSrun launcher. Default: ''
         """
+        super().__init__(debug=debug)
         self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block):
@@ -451,22 +482,25 @@ class JsrunLauncher(Launcher):
         """
 
         tasks_per_block = tasks_per_node * nodes_per_block
+        debug_num = int(self.debug)
+
         x = '''set -e
-WORKERCOUNT={1}
+WORKERCOUNT={tasks_per_block}
 
 cat << JSRUN_EOF > cmd_$JOBNAME.sh
-{0}
+{command}
 JSRUN_EOF
 chmod a+x cmd_$JOBNAME.sh
 
 jsrun -n {tasks_per_block} -r {tasks_per_node} {overrides} /bin/bash cmd_$JOBNAME.sh &
 wait
 
-echo "Done"
-'''.format(command, tasks_per_block,
+[[ "{debug}" == "1" ]] && echo "Done"
+'''.format(command=command,
            tasks_per_block=tasks_per_block,
            tasks_per_node=tasks_per_node,
-           overrides=self.overrides)
+           overrides=self.overrides,
+           debug=debug_num)
         return x
 
 

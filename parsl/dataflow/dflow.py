@@ -135,7 +135,6 @@ class DataFlowKernel(object):
                 'parsl_version': get_version(),
                 "time_began": self.time_began,
                 'time_completed': None,
-                'workflow_duration': None,
                 'run_id': self.run_id,
                 'workflow_name': self.workflow_name,
                 'workflow_version': self.workflow_version,
@@ -942,7 +941,6 @@ class DataFlowKernel(object):
                                   'tasks_completed_count': self.tasks_completed_count,
                                   "time_began": self.time_began,
                                   'time_completed': self.time_completed,
-                                  'workflow_duration': (self.time_completed - self.time_began).total_seconds(),
                                   'run_id': self.run_id, 'rundir': self.run_dir})
 
             self.monitoring.close()
