@@ -606,7 +606,18 @@ class DataFlowKernel(object):
         # Replace item in args
         new_args = []
         for dep in args:
-            if isinstance(dep, Future):
+            if isinstance(dep, list) or isinstance(dep, tuple):
+                new_sub_args = []
+                for sub_dep in dep:
+                    if isinstance(sub_dep, Future):
+                        try:
+                            new_sub_args.extend([sub_dep.result()])
+                        except Exception as e:
+                            dep_failures.extend([e])
+                    else:
+                        new_sub_args.extend([sub_dep])
+                new_args.extend([new_sub_args])
+            elif isinstance(dep, Future):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
