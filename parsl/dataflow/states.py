@@ -7,9 +7,9 @@ class States(IntEnum):
     pending = 0
 
     running = 2
-    # this state is special - a task record never goes into
-    # this state, but monitoring may represent a task in
-    # this state because the monitoring DB contains different information
+    # this state is special - a DFK task record never goes to States.running
+    # state; but the monitoring database may represent a task in this state
+    # based on non-DFK information received from monitor_wrapper.
 
     exec_done = 3
     failed = 4

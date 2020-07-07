@@ -84,10 +84,6 @@ class DataFlowKernel(object):
 
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
 
-        if sys.version_info < (3, 6):
-            logger.error("Support for python versions < 3.6 stopped after parsl 1.0.0")
-            raise RuntimeError("Support for python versions < 3.6 stopped after parsl 1.0.0")
-
         logger.info("Parsl version: {}".format(get_version()))
 
         self.checkpoint_lock = threading.Lock()
@@ -322,8 +318,9 @@ class DataFlowKernel(object):
                 logger.info("Task {} marked for retry".format(task_id))
 
             else:
-                logger.error("Task {} failed after {} retry attempts. Last exception was: {}".format(task_id,
+                logger.error("Task {} failed after {} retry attempts. Last exception was: {}: {}".format(task_id,
                                                                                                      self._config.retries,
+                                                                                                     type(e).__name__,
                                                                                                      e))
                 task_record['time_returned'] = datetime.datetime.now()
                 task_record['status'] = States.failed

@@ -5,7 +5,7 @@ import time
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
-from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
+from parsl.providers.error import SchedulerMissingArgs, ScriptPathError, SubmitException
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  move_files=None):
         self.channel = channel
         self._label = 'local'
-        self.provisioned_blocks = 0
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
         self.worker_init = worker_init
@@ -76,18 +75,74 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
+            # This job dict should really be a class on its own
+            job_dict = self.resources[job_id]
+            if job_dict['status'] and job_dict['status'].terminal:
+                # We already checked this and it can't change after that
+                continue
+            # Script path should point to remote path if _should_move_files() is True
+            script_path = job_dict['script_path']
 
-            retcode, stdout, stderr = self.channel.execute_wait('ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
-                self.resources[job_id]['remote_pid']), self.cmd_timeout)
-            for line in stdout.split('\n'):
-                if line.startswith("STATUS:"):
-                    status = line.split("STATUS:")[1].strip()
-                    if status == "0":
-                        self.resources[job_id]['status'] = JobStatus(JobState.RUNNING)
+            alive = self._is_alive(job_dict)
+            str_ec = self._read_job_file(script_path, '.ec').strip()
+
+            status = None
+            if str_ec == '-':
+                if alive:
+                    status = JobStatus(JobState.RUNNING)
+                else:
+                    # not alive but didn't get to write an exit code
+                    if 'cancelled' in job_dict:
+                        # because we cancelled it
+                        status = JobStatus(JobState.CANCELLED)
                     else:
-                        self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
+                        # we didn't cancel it, so it must have been killed by something outside
+                        # parsl; we don't have a state for this, but we'll use CANCELLED with
+                        # a specific message
+                        status = JobStatus(JobState.CANCELLED, message='Killed')
+            else:
+                try:
+                    # TODO: ensure that these files are only read once and clean them
+                    ec = int(str_ec)
+                    stdout_path = self._job_file_path(script_path, '.out')
+                    stderr_path = self._job_file_path(script_path, '.err')
+                    if ec == 0:
+                        state = JobState.COMPLETED
+                    else:
+                        state = JobState.FAILED
+                    status = JobStatus(state, exit_code=ec,
+                                       stdout_path=stdout_path, stderr_path=stderr_path)
+                except Exception:
+                    status = JobStatus(JobState.FAILED,
+                                       'Cannot parse exit code: {}'.format(str_ec))
+
+            job_dict['status'] = status
 
         return [self.resources[jid]['status'] for jid in job_ids]
+
+    def _is_alive(self, job_dict):
+        retcode, stdout, stderr = self.channel.execute_wait(
+            'ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
+                job_dict['remote_pid']), self.cmd_timeout)
+        for line in stdout.split('\n'):
+            if line.startswith("STATUS:"):
+                status = line.split("STATUS:")[1].strip()
+                if status == "0":
+                    return True
+                else:
+                    return False
+
+    def _job_file_path(self, script_path: str, suffix: str) -> str:
+        path = '{0}{1}'.format(script_path, suffix)
+        if self._should_move_files():
+            path = self.channel.pull_file(path, self.script_dir)
+        return path
+
+    def _read_job_file(self, script_path: str, suffix: str) -> str:
+        path = self._job_file_path(script_path, suffix)
+
+        with open(path, 'r') as f:
+            return f.read()
 
     def _write_submit_script(self, script_string, script_filename):
         '''
@@ -158,25 +213,46 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         job_id = None
         remote_pid = None
-        if (self.move_files is None and not isinstance(self.channel, LocalChannel)) or (self.move_files):
+        if self._should_move_files():
             logger.debug("Pushing start script")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
         logger.debug("Launching in remote mode")
-        # Bash would return until the streams are closed. So we redirect to a outs file
-        cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
+        # We need to capture the exit code and the streams, so we put them in files. We also write
+        # '-' to the exit code file to isolate potential problems with writing to files in the
+        # script directory
+        #
+        # The basic flow is:
+        #   1. write "-" to the exit code file. If this fails, exit
+        #   2. Launch the following sequence in the background:
+        #      a. the command to run
+        #      b. write the exit code of the command from (a) to the exit code file
+        #   3. Write the PID of the background sequence on stdout. The PID is needed if we want to
+        #      cancel the task later.
+        #
+        # We need to do the >/dev/null 2>&1 so that bash closes stdout, otherwise
+        # channel.execute_wait hangs reading the process stdout until all the
+        # background commands complete.
+        cmd = '/bin/bash -c \'echo - >{0}.ec && {{ {{ bash {0} 1>{0}.out 2>{0}.err ; ' \
+              'echo $? > {0}.ec ; }} >/dev/null 2>&1 & echo "PID:$!" ; }}\''.format(script_path)
         retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+        if retcode != 0:
+            raise SubmitException(job_name, "Launch command exited with code {0}".format(retcode),
+                                  stdout, stderr)
         for line in stdout.split('\n'):
             if line.startswith("PID:"):
                 remote_pid = line.split("PID:")[1].strip()
                 job_id = remote_pid
         if job_id is None:
-            logger.warning("Channel failed to start remote command/retrieve PID")
+            raise SubmitException(job_name, "Channel failed to start remote command/retrieve PID")
 
         self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.RUNNING),
-                                  'remote_pid': remote_pid}
+                                  'remote_pid': remote_pid, 'script_path': script_path}
 
         return job_id
+
+    def _should_move_files(self):
+        return (self.move_files is None and not isinstance(self.channel, LocalChannel)) or (self.move_files)
 
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
@@ -188,11 +264,13 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         '''
         for job in job_ids:
+            job_dict = self.resources[job]
+            job_dict['cancelled'] = True
             logger.debug("Terminating job/proc_id: {0}".format(job))
-            cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job]['remote_pid'])
+            cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(job_dict['remote_pid'])
             retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
             if retcode != 0:
-                logger.warning("Failed to kill PID: {} and child processes on {}".format(self.resources[job]['remote_pid'],
+                logger.warning("Failed to kill PID: {} and child processes on {}".format(job_dict['remote_pid'],
                                                                                          self.label))
 
         rets = [True for i in job_ids]

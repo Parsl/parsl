@@ -52,13 +52,13 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
 
     colors = {'unsched': 'rgb(240, 240, 240)',
               'pending': 'rgb(168, 168, 168)',
-              'launched': 'rgb(100, 100, 100)',
+              'launched': 'rgb(100, 255, 255)',
               'running': 'rgb(0, 0, 255)',
               'dep_fail': 'rgb(255, 128, 255)',
-              'failed': 'rgb(255, 128, 128)',
-              'exec_done': 'rgb(128, 255, 128)',
-              'memo_done': 'rgb(240, 255, 128)',
-              'fail_retryable': 'rgb(255, 168,168)'
+              'failed': 'rgb(200, 0, 0)',
+              'exec_done': 'rgb(0, 200, 0)',
+              'memo_done': 'rgb(64, 200, 64)',
+              'fail_retryable': 'rgb(200, 128,128)'
              }
 
     fig = ff.create_gantt(parsl_tasks,

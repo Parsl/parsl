@@ -131,7 +131,7 @@ def worker_efficiency(task, node):
                              yaxis=dict(title='Number of workers'),
                              title="Worker efficiency"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
-    except Exception as e:
+    except Exception:
         raise
         # print(e)
         # return "The worker efficiency plot cannot be generated due to missing data."
