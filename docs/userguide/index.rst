@@ -16,5 +16,6 @@ User guide
    monitoring
    workflow
    modularizing
+   joins
    performance
    usage_tracking
