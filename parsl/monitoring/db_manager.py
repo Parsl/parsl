@@ -394,7 +394,8 @@ class DatabaseManager:
                                               'task_time_returned',
                                               'run_id', 'task_id',
                                               'task_fail_count',
-                                              'task_hashsum'],
+                                              'task_hashsum',
+                                              'depends'],
                                      messages=task_info_update_messages)
                     logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
 
