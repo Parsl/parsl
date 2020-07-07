@@ -17,6 +17,7 @@ class States(IntEnum):
     launched = 7
     fail_retryable = 8
     memo_done = 9
+    joining = 10
 
 
 # states from which we will never move to another state

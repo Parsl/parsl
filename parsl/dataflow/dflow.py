@@ -311,19 +311,36 @@ class DataFlowKernel(object):
                     task_record['app_fu'].set_exception(e)
 
         else:
-            if task_record['from_memo']:
-                task_record['status'] = States.memo_done
-                self.tasks_memo_completed_count += 1
-                logger.info("Task {} completed by memoization".format(task_id))
-            else:
-                task_record['status'] = States.exec_done
-                self.tasks_completed_count += 1
-                logger.info("Task {} completed by execution".format(task_id))
+            if not task_record['join']:
+                if task_record['from_memo']:
+                    task_record['status'] = States.memo_done
+                    self.tasks_memo_completed_count += 1
+                    logger.info("Task {} completed by memoization".format(task_id))
+                else:
+                    task_record['status'] = States.exec_done
+                    self.tasks_completed_count += 1
+                    logger.info("Task {} completed by execution".format(task_id))
 
-            task_record['time_returned'] = datetime.datetime.now()
+                task_record['time_returned'] = datetime.datetime.now()
 
-            with task_record['app_fu']._update_lock:
-                task_record['app_fu'].set_result(future.result())
+                with task_record['app_fu']._update_lock:
+                    task_record['app_fu'].set_result(future.result())
+            else:  # is a join
+                # now what do we do?
+                # something like a retry, but with updated dependencies? (so States.joining is like States.pending?) waiting on future...
+                inner_future = future.result()
+                # the result of the executor future will be an AppFuture which
+                # will retry/be monitored/etc by parsl as normal as a
+                # separate task. then when that task completes, we want to use
+                # its result as the result for this future.
+
+                task_record['status'] = States.joining
+                task_record['depends'].append(inner_future)
+                # not sure if this is the right way to represent this
+                # dependency, or to add it into depends? it's a different kind
+                # of dependency to a regular DAG dependency though...
+
+                inner_future.add_done_callback(partial(self.handle_join_update, task_id))
 
         if task_record['app_fu'].stdout is not None:
             logger.info("Standard output for task {} available at {}".format(task_id, task_record['app_fu'].stdout))
@@ -337,6 +354,48 @@ class DataFlowKernel(object):
         # pending - in which case, we should consider ourself for relaunch
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_id)
+
+    def handle_join_update(self, outer_task_id, inner_app_future):
+        # Use the result of the inner_app_future as the final result of
+        # the outer app future. no retry handling.
+        # There is duplication with handle_exec_update and maybe they should be merged?
+
+        task_record = self.tasks[outer_task_id]
+
+        try:
+            res = inner_app_future.result()
+            if isinstance(res, RemoteExceptionWrapper):
+                res.reraise()
+
+        except Exception as e:
+            logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
+            # We keep the history separately, since the future itself could be
+            # tossed.
+            task_record['fail_history'].append(str(e))
+            task_record['fail_count'] += 1
+
+            task_record['status'] = States.failed
+            self.tasks_failed_count += 1
+            task_record['time_returned'] = datetime.datetime.now()
+            with task_record['app_fu']._update_lock:
+                task_record['app_fu'].set_exception(e)
+
+        else:
+            task_record['status'] = States.exec_done
+            self.tasks_completed_count += 1
+
+            logger.info("Task {} completed by execution join".format(outer_task_id))
+            task_record['time_returned'] = datetime.datetime.now()
+
+            with task_record['app_fu']._update_lock:
+                task_record['app_fu'].set_result(res)
+
+        if task_record['app_fu'].stdout is not None:
+            logger.info("Standard output for task {} available at {}".format(outer_task_id, task_record['app_fu'].stdout))
+        if task_record['app_fu'].stderr is not None:
+            logger.info("Standard error for task {} available at {}".format(outer_task_id, task_record['app_fu'].stderr))
+
+        self._send_task_log_info(task_record)
 
     def handle_app_update(self, task_id, future):
         """This function is called as a callback when an AppFuture
@@ -672,7 +731,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}, join=False):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -746,6 +805,7 @@ class DataFlowKernel(object):
                     'fail_history': [],
                     'from_memo': None,
                     'ignore_for_cache': ignore_for_cache,
+                    'join': join,
                     'status': States.unsched,
                     'try_id': 0,
                     'id': task_id,

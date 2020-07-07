@@ -19,7 +19,7 @@ import os
 import platform
 
 from parsl.version import VERSION
-from parsl.app.app import bash_app, python_app
+from parsl.app.app import bash_app, join_app, python_app
 from parsl.executors import ThreadPoolExecutor
 from parsl.executors import IPyParallelExecutor
 from parsl.executors import HighThroughputExecutor
@@ -41,6 +41,7 @@ __all__ = [
     # decorators
     'bash_app',
     'python_app',
+    'join_app',
 
     # core
     'DataFlowKernel',
