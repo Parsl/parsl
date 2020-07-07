@@ -643,11 +643,6 @@ class DataFlowKernel(object):
         list of executors. If the app task specifies a particular set of
         executors, it will be targeted at the specified executors.
 
-        >>> IF all deps are met:
-        >>>   send to the runnable queue and launch the task
-        >>> ELSE:
-        >>>   post the task in the pending queue
-
         Args:
             - func : A function object
 
