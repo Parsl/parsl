@@ -401,7 +401,6 @@ class DataFlowKernel(object):
                             # executor or memoization hash function.
 
                             logger.debug("Got an exception launching task", exc_info=True)
-                            self.tasks[task_id]['retries_left'] = 0
                             exec_fu = Future()
                             exec_fu.set_exception(e)
             else:
@@ -415,7 +414,6 @@ class DataFlowKernel(object):
                     task_log_info = self._create_task_log_info(task_record)
                     self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-                self.tasks[task_id]['retries_left'] = 0
                 exec_fu = Future()
                 exec_fu.set_exception(DependencyError(exceptions,
                                                       task_id))
@@ -484,8 +482,6 @@ class DataFlowKernel(object):
             task_log_info = self._create_task_log_info(self.tasks[task_id])
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-        self.tasks[task_id]['retries_left'] = self._config.retries - \
-            self.tasks[task_id]['fail_count']
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
         return exec_fu
 
