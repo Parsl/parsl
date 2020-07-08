@@ -5,7 +5,12 @@ class States(IntEnum):
     """Map states for tasks to an int."""
     unsched = -1
     pending = 0
+
     running = 2
+    # this state is special - a DFK task record never goes to States.running
+    # state; but the monitoring database may represent a task in this state
+    # based on non-DFK information received from monitor_wrapper.
+
     done = 3
     failed = 4
     dep_fail = 5
