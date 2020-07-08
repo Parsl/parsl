@@ -1,5 +1,6 @@
 import os
 import pathlib
+import pytest
 import random
 import shutil
 import socket
@@ -54,6 +55,7 @@ def _run_tests(p: LocalProvider):
     assert status.stderr == 'magic'
 
 
+@pytest.mark.local
 def test_local_channel():
     with tempfile.TemporaryDirectory() as script_dir:
         script_dir = tempfile.mkdtemp()
@@ -75,6 +77,7 @@ Subsystem sftp {sftp_path}
 
 # It would probably be better, when more formalized site testing comes into existence, to
 # use a site-testing provided server/configuration instead of the current scheme
+@pytest.mark.local
 def test_ssh_channel():
     with tempfile.TemporaryDirectory() as config_dir:
         sshd_thread, priv_key, server_port = _start_sshd(config_dir)
