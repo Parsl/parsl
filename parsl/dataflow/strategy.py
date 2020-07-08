@@ -217,9 +217,9 @@ class Strategy(object):
             # calculate slot ratio here so i can log it
             logger.debug("Slot ratio calculation: active_slots = {}, active_tasks = {}".format(active_slots, active_tasks))
             if active_tasks > 0:
-                slot_ratio =  (float(active_slots) / active_tasks)
+                slot_ratio = (float(active_slots) / active_tasks)
                 logger.debug("slot_ratio = {}, parallelism = {}".format(slot_ratio, parallelism))
-            else: 
+            else:
                 logger.debug("not computing slot_ratio because active_tasks = 0")
 
             # Case 1
@@ -255,7 +255,8 @@ class Strategy(object):
                         exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
-                        logger.debug("1.2.2 Idle time {} is less than max_idletime {}s for executor {}; not scaling in".format(time.time() - idle_since, self.max_idletime, label))
+                        logger.debug("1.2.2 Idle time {} is less than max_idletime {}s for executor {}; not scaling in".format(time.time() - idle_since,
+                                                                                                                               self.max_idletime, label))
                         pass
                         # logger.debug("Strategy: Case.1b. Waiting for timer : {0}".format(idle_since))
 
@@ -288,7 +289,7 @@ class Strategy(object):
                     exec_status.scale_out(1)
                 else:
                     logger.debug("3.2 ... active_blocks ({}) >= max_blocks ({}) so not requesting a new block".format(active_blocks, max_blocks))
-            # Case 4 
+            # Case 4
             # tasks ~ slots
             else:
                 logger.debug("4. do-nothing strategy case: no changes necessary to current load")

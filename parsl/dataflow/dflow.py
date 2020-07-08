@@ -230,7 +230,7 @@ class DataFlowKernel(object):
         task_log_info['task_depends'] = None
         if task_record['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t.tid) for t in task_record['depends']
-                                                      if isinstance(t, AppFuture) or isinstance(t, DataFuture)]) # TODO: all these instances... implement a protocol/marker class for "HasTaskId"? There's also a bug here that the tid is scoped by DFK and users can pass futures *between* DFKs... we can only express that dependency if the two futures are associated with the same DFK. At least open an issue on that second bug? (it's not a "correctness of output" bug, but it's a "correctness of monitoring/provenance/logging" bug)
+                                                      if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
         return task_log_info
 
     def _count_deps(self, depends):
@@ -319,9 +319,9 @@ class DataFlowKernel(object):
 
             else:
                 logger.error("Task {} failed after {} retry attempts. Last exception was: {}: {}".format(task_id,
-                                                                                                     self._config.retries,
-                                                                                                     type(e).__name__,
-                                                                                                     e))
+                                                                                                         self._config.retries,
+                                                                                                         type(e).__name__,
+                                                                                                         e))
                 task_record['time_returned'] = datetime.datetime.now()
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
@@ -330,21 +330,37 @@ class DataFlowKernel(object):
                     task_record['app_fu'].set_exception(e)
 
         else:
-            if task_record['from_memo']:
-                task_record['status'] = States.memo_done
-                self.tasks_memo_completed_count += 1
-                logger.info("Task {} completed by memoization".format(task_id))
-            else:
-                task_record['status'] = States.exec_done
-                self.tasks_completed_count += 1
-                logger.info("Task {} completed by execution".format(task_id))
+            if not task_record['join']:
+                if task_record['from_memo']:
+                    task_record['status'] = States.memo_done
+                    self.tasks_memo_completed_count += 1
+                    logger.info("Task {} completed by memoization".format(task_id))
+                else:
+                    task_record['status'] = States.exec_done
+                    self.tasks_completed_count += 1
+                    logger.info("Task {} completed by execution".format(task_id))
 
-            task_record['time_returned'] = datetime.datetime.now()
+                logger.info("Task {} completed".format(task_id))
+                task_record['time_returned'] = datetime.datetime.now()
 
-            with task_record['app_fu']._update_lock:
-                task_record['app_fu'].set_result(future.result())
+                with task_record['app_fu']._update_lock:
+                    task_record['app_fu'].set_result(future.result())
+            else:  # is a join
+                # now what do we do?
+                # something like a retry, but with updated dependencies? (so States.joining is like States.pending?) waiting on future...
+                inner_future = future.result()
+                # the result of the executor future will be an AppFuture which
+                # will retry/be monitored/etc by parsl as normal as a
+                # separate task. then when that task completes, we want to use
+                # its result as the result for this future.
 
-            # record final state for successful execution
+                task_record['status'] = States.joining
+                task_record['depends'].append(inner_future)
+                # not sure if this is the right way to represent this
+                # dependency, or to add it into depends? it's a different kind
+                # of dependency to a regular DAG dependency though...
+
+                inner_future.add_done_callback(partial(self.handle_join_update, task_id))
 
         if task_record['app_fu'].stdout is not None:
             logger.info("Standard output for task {} available at {}".format(task_id, task_record['app_fu'].stdout))
@@ -358,6 +374,48 @@ class DataFlowKernel(object):
         # pending - in which case, we should consider ourself for relaunch
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_id)
+
+    def handle_join_update(self, outer_task_id, inner_app_future):
+        # Use the result of the inner_app_future as the final result of
+        # the outer app future. no retry handling.
+        # There is duplication with handle_exec_update and maybe they should be merged?
+
+        task_record = self.tasks[outer_task_id]
+
+        try:
+            res = inner_app_future.result()
+            if isinstance(res, RemoteExceptionWrapper):
+                res.reraise()
+
+        except Exception as e:
+            logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
+            # We keep the history separately, since the future itself could be
+            # tossed.
+            task_record['fail_history'].append(str(e))
+            task_record['fail_count'] += 1
+
+            task_record['status'] = States.failed
+            self.tasks_failed_count += 1
+            task_record['time_returned'] = datetime.datetime.now()
+            with task_record['app_fu']._update_lock:
+                task_record['app_fu'].set_exception(e)
+
+        else:
+            task_record['status'] = States.exec_done
+            self.tasks_completed_count += 1
+
+            logger.info("Task {} completed join".format(outer_task_id))
+            task_record['time_returned'] = datetime.datetime.now()
+
+            with task_record['app_fu']._update_lock:
+                task_record['app_fu'].set_result(res)
+
+        if task_record['app_fu'].stdout is not None:
+            logger.info("Standard output for task {} available at {}".format(outer_task_id, task_record['app_fu'].stdout))
+        if task_record['app_fu'].stderr is not None:
+            logger.info("Standard error for task {} available at {}".format(outer_task_id, task_record['app_fu'].stderr))
+
+        self._send_task_log_info(task_record)
 
     def handle_app_update(self, task_id, future):
         """This function is called as a callback when an AppFuture
@@ -680,18 +738,13 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}):
+    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}, join=False):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
         the task will be launched on a randomly selected executor from the
         list of executors. If the app task specifies a particular set of
         executors, it will be targeted at the specified executors.
-
-        >>> IF all deps are met:
-        >>>   send to the runnable queue and launch the task
-        >>> ELSE:
-        >>>   post the task in the pending queue
 
         Args:
             - func : A function object
@@ -759,6 +812,7 @@ class DataFlowKernel(object):
                     'fail_history': [],
                     'from_memo': None,
                     'ignore_for_cache': ignore_for_cache,
+                    'join': join,
                     'from_memo': None,
                     'status': States.unsched,
                     'try_id': 0,
@@ -813,9 +867,7 @@ class DataFlowKernel(object):
         task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
-        if self.monitoring is not None:
-            task_log_info = self._create_task_log_info(self.tasks[task_id])
-            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+        self._send_task_log_info(task_def)
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.
@@ -939,16 +991,16 @@ class DataFlowKernel(object):
             if task_id not in self.tasks:
                 logger.debug("Task {} no longer in task list".format(task_id))
             else:
-                task_record = self.tasks[task_id] # still a race condition with the above self.tasks if-statement
+                task_record = self.tasks[task_id]  # still a race condition with the above self.tasks if-statement
                 fut = task_record['app_fu']
                 if not fut.done():
                     logger.debug("Waiting for task {} to complete AppFuture".format(task_id))
                     fut.exception()
-                logger.debug("App future completed - now fast-polling for DFK state to change") # which still might not be enough?
+                logger.debug("App future completed - now fast-polling for DFK state to change")  # which still might not be enough?
                 while task_record['status'] not in FINAL_STATES:
                     logger.debug("Waiting for task {} to complete. State now is {}".format(task_id, task_record['status']))
-                    time.sleep(0.1) # ugh sleep - is there a blocking form of this loop?
-                    
+                    time.sleep(0.1)  # ugh sleep - is there a blocking form of this loop?
+
         logger.info("All remaining tasks completed")
 
     def cleanup(self):

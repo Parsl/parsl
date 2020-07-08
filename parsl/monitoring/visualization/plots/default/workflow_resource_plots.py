@@ -197,7 +197,5 @@ def resource_efficiency(resource, node, label='CPU'):
                              yaxis=dict(title=yaxis),
                              title=title))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
-    except Exception as e:
+    except Exception:
         raise
-        # print(e)
-        # return "The resource efficiency plot cannot be generated because of exception {}.".format(e)

@@ -75,7 +75,7 @@ class AppBase(metaclass=ABCMeta):
         pass
 
 
-def python_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
+def python_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, join=False):
     """Decorator function for making python apps.
 
     Parameters
@@ -92,6 +92,9 @@ def python_app(function=None, data_flow_kernel=None, cache=False, executors='all
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
         Enable caching of the app call. Default is False.
+    join : bool
+        Perform a monadic join, where the python app returns a Future (rather than a regular value),
+        and the corresponding AppFuture completes what that inner future completes.
     """
     from parsl.app.python import PythonApp
 
@@ -101,7 +104,8 @@ def python_app(function=None, data_flow_kernel=None, cache=False, executors='all
                              data_flow_kernel=data_flow_kernel,
                              cache=cache,
                              executors=executors,
-                             ignore_for_cache=ignore_for_cache)
+                             ignore_for_cache=ignore_for_cache,
+                             join=join)
         return wrapper(func)
     if function is not None:
         return decorator(function)

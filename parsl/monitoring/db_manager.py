@@ -367,8 +367,7 @@ class DatabaseManager:
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
-        # the case of multiple messages to defer. I've added in a test that
-        # will give an ERROR log line if there is already an entry.
+        # the case of multiple messages to defer.
         deferred_resource_messages = {}  # type: Dict[str, Any]
 
         while (not self._kill_event.is_set() or
@@ -389,7 +388,7 @@ class DatabaseManager:
             # processed (corresponding by task id)
             reprocessable_first_resource_messages = []
 
-            # Get a batch of priority messages (TODO: clarify "priority" meaning)
+            # Get a batch of priority messages
             priority_messages = self._get_messages_in_batch(self.pending_priority_queue,
                                                             interval=self.batching_interval,
                                                             threshold=self.batching_threshold)
@@ -470,10 +469,9 @@ class DatabaseManager:
                                  columns=['task_time_submitted',
                                           'task_time_returned',
                                           'run_id', 'task_id',
-                                          'task_fail_count'],
+                                          'task_fail_count', 'depends'],
                                  messages=task_info_update_messages)
-
-                logger.debug("Inserting {} task_info_all_messages into into status table".format(len(task_info_all_messages)))
+                logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
 
                 self._insert(table=STATUS, messages=task_info_all_messages)
 
@@ -513,28 +511,14 @@ class DatabaseManager:
                                                             interval=self.batching_interval,
                                                             threshold=self.batching_threshold)
 
-            # this block can be split into two, i think, one for resource messages and
-            # one for reprocessible resource messages. As this changes logic, it should
-            # move into a subsequent patch, though?
             if resource_messages:
                 logger.debug(
                     "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
-                # these RESOURCE INSERTs don't need task rows to exist because
-                # the resource table doesn't have a foreign key constraint on
-                # the TASK table.
-                # TODO: that's a modelling inconsistency: what's good for
-                # RESOURCE should be good for STATUS? (or vice versa?)
-                #   - open an issue to discuss that.
-                # deferral also happens because the first resource message is
-                # used to set the task_time_running value. Maybe this should
-                # come from the STATUS table? then maybe this deferral mechanism
-                # can be removed entirely?
                 self._insert(table=RESOURCE, messages=resource_messages)
                 for msg in resource_messages:
                     task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                     if msg['first_msg']:
 
-                        # TODO: these facts should come from the reporter, rather than being stated by the database manager?
                         msg['task_status_name'] = States.running.name
                         msg['task_time_running'] = msg['timestamp']
 
