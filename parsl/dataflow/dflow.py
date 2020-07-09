@@ -5,6 +5,7 @@ import pathlib
 import pickle
 import random
 import time
+import traceback
 import typeguard
 import inspect
 import threading
@@ -322,6 +323,7 @@ class DataFlowKernel(object):
                                                                                                          self._config.retries,
                                                                                                          type(e).__name__,
                                                                                                          e))
+                logger.debug("Task {} traceback: {}".format(task_id, traceback.format_tb(e.__traceback__)))
                 task_record['time_returned'] = datetime.datetime.now()
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
@@ -340,7 +342,6 @@ class DataFlowKernel(object):
                     self.tasks_completed_count += 1
                     logger.info("Task {} completed by execution".format(task_id))
 
-                logger.info("Task {} completed".format(task_id))
                 task_record['time_returned'] = datetime.datetime.now()
 
                 with task_record['app_fu']._update_lock:
@@ -404,7 +405,7 @@ class DataFlowKernel(object):
             task_record['status'] = States.exec_done
             self.tasks_completed_count += 1
 
-            logger.info("Task {} completed join".format(outer_task_id))
+            logger.info("Task {} completed by execution join".format(outer_task_id))
             task_record['time_returned'] = datetime.datetime.now()
 
             with task_record['app_fu']._update_lock:
