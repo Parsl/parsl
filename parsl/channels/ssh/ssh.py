@@ -4,7 +4,7 @@ import os
 
 import paramiko
 from parsl.channels.base import Channel
-from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException, FileExists
+from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -192,12 +192,6 @@ class SSHChannel(Channel, RepresentationMixin):
             if e.errno != errno.EEXIST:
                 logger.exception("Failed to create local_dir: {0}".format(local_dir))
                 raise BadScriptPath(e, self.hostname)
-
-        # Easier to check this than to waste time trying to pull file and
-        # realize there's a problem.
-        if os.path.exists(local_dest):
-            logger.exception("Remote file copy will overwrite a local file:{0}".format(local_dest))
-            raise FileExists(None, self.hostname, filename=local_dest)
 
         try:
             self.sftp_client.get(remote_source, local_dest)
