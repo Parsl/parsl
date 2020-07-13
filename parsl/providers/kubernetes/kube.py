@@ -70,6 +70,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     persistent_volumes: list[(str, str)]
         List of tuples describing persistent volumes to be mounted in the pod.
         The tuples consist of (PVC Name, Mount Directory).
+    n_gpus : int
+        number of CUDA-enabled GPUs to assign to pod
     """
     @typeguard.typechecked
     def __init__(self,
@@ -90,6 +92,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  group_id: Optional[str] = None,
                  run_as_non_root: bool = False,
                  secret: Optional[str] = None,
+                 n_gpus: Optional[int] = 0,
                  persistent_volumes: List[Tuple[str, str]] = []) -> None:
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
@@ -116,6 +119,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.persistent_volumes = persistent_volumes
 
         self.kube_client = client.CoreV1Api()
+
+        #adding support for gpu kubernetes clusters
+        self.n_gpus = n_gpus
 
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}  # type: Dict[str, Dict[str, Any]]
@@ -150,7 +156,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                          pod_name=pod_name,
                          job_name=job_name,
                          cmd_string=formatted_cmd,
-                         volumes=self.persistent_volumes)
+                         volumes=self.persistent_volumes,
+                         n_gpus = self.n_gpus)
         self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
 
         return pod_name
@@ -206,7 +213,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                     job_name,
                     port=80,
                     cmd_string=None,
-                    volumes=[]):
+                    volumes=[],
+                    n_gpus = 0):
         """ Create a kubernetes pod for the job.
         Args:
               - image (string) : Docker image to launch
@@ -235,9 +243,11 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
                                                       name=volume[0]))
         resources = client.V1ResourceRequirements(limits={'cpu': str(self.max_cpu),
-                                                          'memory': self.max_mem},
+                                                          'memory': self.max_mem,
+                                                          'nvidia.com/gpu': str(self.n_gpus)},
                                                   requests={'cpu': str(self.init_cpu),
-                                                            'memory': self.init_mem}
+                                                            'memory': self.init_mem,
+                                                            'nvidia.com/gpu': str(self.n_gpus)}
                                                   )
         # Configure Pod template container
         container = client.V1Container(
