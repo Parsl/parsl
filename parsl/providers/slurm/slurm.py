@@ -86,7 +86,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     @typeguard.typechecked
     def __init__(self,
                  partition: Optional[str],
-                 account: Optional[str],
+                 account: Optional[str] = None,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
