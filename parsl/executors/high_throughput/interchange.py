@@ -89,18 +89,23 @@ class VersionMismatch(Exception):
 
 @functools.total_ordering
 class PriorityQueueEntry:
-    """ This class is needed because msg will be a dict, and dicts are not comparable to each other (and if they were, this would be an unnecessary expense because the queue only cares about priority)"""
+    """ This class is needed because msg will be a dict, and dicts are not comparable to each other (and if they were, this would be an unnecessary expense because the queue only cares about priority). It provides ordering of the priority ignoring the message content, and implements an ordering that places None behind all other orderings, for use as a default value"""
     def __init__(self, pri, msg):
         self.pri = pri
         self.msg = msg
 
     def __eq__(self, other):
-        # TODO: this will explode if compared with non-PriorityQueueEntries
+        if type(self) != type(other):
+            return NotImplemented
         return self.pri == other.pri
 
     def __lt__(self, other):
         # this is deliberately inverted, so that largest priority number comes out of the queue first
-        return self.pri > other.pri
+        if type(self) != type(other):
+            return NotImplemented
+        if self.pri is None: # special case so that None is always less than every other value
+            return False # we are more than populated priorities, and equal to None, the inverse of <
+        return self.pri.__gt__(other.pri)
      
 
 class Interchange(object):

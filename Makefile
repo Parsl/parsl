@@ -73,6 +73,7 @@ workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex conf
 
 .PHONY: config_local_test
 config_local_test: ## run all tests with workqueue_ex config
+	echo "$(MPI)"
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
 	pip3 install ".[extreme_scale]"
 	PYTHONPATH=. pytest parsl -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
