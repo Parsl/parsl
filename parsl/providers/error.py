@@ -68,3 +68,21 @@ class ScriptPathError(ExecutionProviderException):
 
     def __repr__(self):
         return "Unable to write submit script:{0} Reason:{1}".format(self.script_path, self.reason)
+
+
+class SubmitException(ExecutionProviderException):
+    '''Raised by the submit() method of a provider if there is an error in launching a task.
+    '''
+
+    def __init__(self, task_name, message, stdout=None, stderr=None):
+        self.task_name = task_name
+        self.message = message
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def __repr__(self):
+        # TODO: make this more user-friendly
+        return "Cannot launch task {0}: {1}; stdout={2}, stderr={3}".format(self.task_name,
+                                                                            self.message,
+                                                                            self.stdout,
+                                                                            self.stderr)
