@@ -507,6 +507,9 @@ class DataFlowKernel(object):
         self._send_task_log_info(self.tasks[task_id])
 
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
+
+        self._log_std_streams(self.tasks[task_id])
+
         return exec_fu
 
     def _add_input_deps(self, executor, args, kwargs, func):
