@@ -43,6 +43,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     ----------
     partition : str
         Slurm partition to request blocks from. If none, no partition slurm directive will be specified.
+    account : str
+        Slurm account to which to charge resources used by the job. If none, the job will use the
+        user's default account.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
@@ -77,12 +80,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
-     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
+    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
     @typeguard.typechecked
     def __init__(self,
                  partition: Optional[str],
+                 account: Optional[str] = None,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
@@ -115,11 +119,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.mem_per_node = mem_per_node
         self.exclusive = exclusive
         self.move_files = move_files
+        self.account = account
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
         if partition:
             self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
+        if account:
+            self.scheduler_options += "#SBATCH --account={}\n".format(account)
         self.worker_init = worker_init + '\n'
 
     def _status(self):
