@@ -6,10 +6,6 @@ from parsl.utils import RepresentationMixin
 logger = logging.getLogger(__name__)
 
 
-def bool_to_num(b: bool):
-    return 1 if b else 0
-
-
 class Launcher(RepresentationMixin, metaclass=ABCMeta):
     """ Launcher base class to enforce launcher interface
     """
