@@ -88,6 +88,7 @@ export CORES=$(getconf _NPROCESSORS_ONLN)
 [[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 FAILONANY={fail_on_any}
+PIDS=""
 
 CMD() {{
 {command}
@@ -95,12 +96,13 @@ CMD() {{
 for COUNT in $(seq 1 1 $WORKERCOUNT); do
     [[ "{debug}" == "1" ]] && echo "Launching worker: $COUNT"
     CMD $COUNT &
+    PIDS="$PIDS $!"
 done
 
 ALLFAILED=1
 ANYFAILED=0
-for COUNT in $(seq 1 1 $WORKERCOUNT); do
-    wait -n
+for PID in $PIDS ; do
+    wait $PID
     if [ "$?" != "0" ]; then
         ANYFAILED=1
     else
