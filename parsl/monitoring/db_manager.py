@@ -537,9 +537,6 @@ class DatabaseManager:
                                       'hostname'],
                              messages=reprocessable_first_resource_messages)
 
-    # this function is specialised on queue tag, and reformats the messages expecting
-    # a different format inside each one. that might not be the clearest way to implement
-    # this.
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
         logger.info("Starting processing for queue {}".format(queue_tag))
 
@@ -547,7 +544,7 @@ class DatabaseManager:
             logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
                          .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
             try:
-                x, addr = logs_queue.get(timeout=0.1)   # addr is unused... could be tidied?
+                x, addr = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
@@ -557,7 +554,7 @@ class DatabaseManager:
                     else:
                         self.pending_priority_queue.put(x)
                 elif queue_tag == 'resource':
-                    self.pending_resource_queue.put(x[-1])  # put last element of data (the message) ignoring the other fields (id, time)
+                    self.pending_resource_queue.put(x[-1])
                 elif queue_tag == 'node':
                     self.pending_node_queue.put(x[-1])
 
