@@ -157,7 +157,6 @@ class BashApp(AppBase):
         app_fut = dfk.submit(self.wrapped_remote_function,
                              app_args=args,
                              executors=self.executors,
-                             fn_hash=self.func_hash,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
                              app_kwargs=invocation_kwargs)

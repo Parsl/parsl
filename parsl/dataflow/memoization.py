@@ -1,5 +1,6 @@
 import hashlib
 from functools import singledispatch
+from inspect import getsource
 import logging
 from parsl.serialize import serialize
 import types
@@ -44,7 +45,6 @@ def id_for_memo(obj, output_ref=False):
 @id_for_memo.register(str)
 @id_for_memo.register(int)
 @id_for_memo.register(float)
-@id_for_memo.register(types.FunctionType)
 @id_for_memo.register(type(None))
 def id_for_memo_serialize(obj, output_ref=False):
     return serialize(obj)
@@ -93,6 +93,25 @@ def id_for_memo_dict(denormalized_dict, output_ref=False):
         normalized_list.append(id_for_memo(k))
         normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
     return serialize(normalized_list)
+
+
+@id_for_memo.register(types.FunctionType)
+def id_for_memo_function(function, output_ref=False):
+    """This produces function hash material using the source definition of the
+       function.
+
+       The standard serialize_object based approach cannot be used as it is
+       too sensitive to irrelevant facts such as the source line, meaning
+       a whitespace line added at the top of a source file will cause the hash
+       to change.
+    """
+    logger.debug("serialising id_for_memo_function for function {}, type {}".format(function, type(function)))
+    try:
+        fn_source = getsource(function)
+    except Exception as e:
+        logger.warning("Unable to get source code for app caching. Recommend creating module. Exception was: {}".format(e))
+        fn_source = function.__name__
+    return serialize(fn_source.encode('utf-8'))
 
 
 class Memoizer(object):
@@ -180,8 +199,7 @@ class Memoizer(object):
             t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
 
         t = t + [id_for_memo(filtered_kw)]
-        t = t + [id_for_memo(task['func_name']),
-                 id_for_memo(task['fn_hash']),
+        t = t + [id_for_memo(task['func']),
                  id_for_memo(task['args'])]
 
         x = b''.join(t)

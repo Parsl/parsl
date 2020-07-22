@@ -193,7 +193,7 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
+        info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'status',
                            'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
@@ -740,7 +740,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}, join=False):
+    def submit(self, func, app_args, executors='all', cache=False, ignore_for_cache=None, app_kwargs={}, join=False):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -755,8 +755,6 @@ class DataFlowKernel(object):
             - app_args : Args to the function
             - executors (list or string) : List of executors this call could go to.
                     Default='all'
-            - fn_hash (Str) : Hash of the function and inputs
-                    Default=None
             - cache (Bool) : To enable memoization or not
             - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
@@ -806,7 +804,6 @@ class DataFlowKernel(object):
         task_def = {'depends': None,
                     'executor': executor,
                     'func_name': func.__name__,
-                    'fn_hash': fn_hash,
                     'memoize': cache,
                     'hashsum': None,
                     'exec_fu': None,
