@@ -295,20 +295,9 @@ class DataFlowKernel(object):
                     task_record['app_fu'].set_exception(e)
 
             elif task_record['fail_count'] <= self._config.retries:
+
                 # record the final state for this try before we mutate for retries
-
-                # status needs setting because otherwise it is still
-                # `launched`, which gives weird state table entries as the
-                # monitoring DB has ghosted-up a `running` state entry that
-                # isn't reflected in the DFK state table - that is, the DFK
-                # state table is not a reflection of the true task state,
-                # which exists in only distributed form. (!)
-                # But as I shift to 'status' representing the DFK state, and
-                # 'try' representing individual execution attempts, that
-                # running timestamp might be better stored only in the try
-                # table?
                 task_record['status'] = States.fail_retryable
-
                 self._send_task_log_info(task_record)
 
                 task_record['try_id'] += 1
