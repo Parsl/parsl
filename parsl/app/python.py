@@ -73,7 +73,6 @@ class PythonApp(AppBase):
 
         app_fut = dfk.submit(func, app_args=args,
                              executors=self.executors,
-                             fn_hash=self.func_hash,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
                              app_kwargs=kwargs)

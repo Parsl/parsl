@@ -148,7 +148,6 @@ class BashApp(AppBase):
         app_fut = dfk.submit(wrap_error(update_wrapper(remote_side_bash_executor, self.func)),
                              app_args=(self.func, *args),
                              executors=self.executors,
-                             fn_hash=self.func_hash,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
                              app_kwargs=invocation_kwargs)
