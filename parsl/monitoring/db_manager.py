@@ -68,52 +68,33 @@ class Database:
         Session = sessionmaker(bind=self.eng)
         self.session = Session()
 
-    # BUG?: is this default None for messages a type error? None is not iterable,
-    # but _generate_mappings iterates over it. and if so, why am I not
-    # discovering this in the mypy branch?
     def update(self, table=None, columns=None, messages=None):
-        logger.debug("Generating mappings for update of table {} for {} messages".format(table, len(messages)))
         table = self.meta.tables[table]
         mappings = self._generate_mappings(table, columns=columns,
                                            messages=messages)
         mapper = get_mapper(table)
         self.session.bulk_update_mappings(mapper, mappings)
         self.session.commit()
-        logger.debug("Generated mappings for table {} for {} messages".format(table, len(messages)))
 
     def insert(self, table=None, messages=None):
-        logger.debug("Generating mappings for insert into table {} for {} messages".format(table, len(messages)))
         table = self.meta.tables[table]
         mappings = self._generate_mappings(table, messages=messages)
         mapper = get_mapper(table)
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
-        logger.debug("Generated mappings for table {} for {} messages".format(table, len(messages)))
 
-    # TODO: this call, the calls to commit, and the related exception handling
-    # should be moved into a `with` context manager (see @contextmanager decoration)
-    # but also check ... does this rollback do sqlite3 ROLLBACK? and if so,
-    # is a transaction actually started that this can meaningfully
-    # rollback? looks like with sqlalchemy, transaction begins are implicit, so
-    # "yes" but I could check. Could also assert/log that we aren't inside a
-    # transaction at the point that we begin, so that we can detect if a
-    # rollback will rollback further than expected.
     def rollback(self):
         self.session.rollback()
 
     def _generate_mappings(self, table, columns=None, messages=[]):
-        logger.debug("starting _generate_mappings for table {}".format(table))
         mappings = []
         for msg in messages:
-            logger.debug("Generating mapping for message {}, table {}".format(msg, table))
             m = {}
             if columns is None:
                 columns = table.c.keys()
             for column in columns:
                 m[column] = msg.get(column, None)
-            logger.debug("Mapping is {}".format(m))
             mappings.append(m)
-        logger.debug("ending _generate_mappings for table {}".format(table))
         return mappings
 
     class Workflow(Base):
@@ -347,9 +328,6 @@ class DatabaseManager:
                 for msg_type, msg in priority_messages:
                     if msg_type.value == MessageType.WORKFLOW_INFO.value:
                         if "python_version" in msg:   # workflow start message
-                            # TODO: the start message should be indicated by a proper
-                            # flag or test if we have seen the workflow before, not a
-                            # magic other field that is about something else
                             logger.debug(
                                 "Inserting workflow start info to WORKFLOW table")
                             self._insert(table=WORKFLOW, messages=[msg])
@@ -394,7 +372,6 @@ class DatabaseManager:
                              messages=task_info_all_messages)
 
                 if task_info_insert_messages:
-                    logger.debug("Inserting {} TASK_INFO to task table".format(len(task_info_insert_messages)))
                     self._insert(table=TASK, messages=task_info_insert_messages)
                     logger.debug(
                         "There are {} inserted task records".format(len(inserted_tasks)))
