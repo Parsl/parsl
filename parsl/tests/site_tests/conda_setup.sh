@@ -154,6 +154,15 @@ EOF
         echo "cd $PWD;"                                                                  >> ~/setup_parsl_test_env.sh
         echo "source $PWD/parsl_$PARSL_GITHASH.py$python_version/bin/activate;"          >> ~/setup_parsl_test_env.sh
 
+    elif [[ "$(hostname -f)" =~ .*bridges.* ]]
+    then
+        echo "On bridges"
+        module load anaconda3
+        conda create -p $CONDA_TARGET python=3.7 --yes --force
+        source activate $PWD/$CONDA_TARGET
+        echo "module load anaconda3"                     >  ~/setup_parsl_test_env.sh
+        echo "source activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
+
     else
         echo "Unknown site"
         exit -1

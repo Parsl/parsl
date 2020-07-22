@@ -338,6 +338,19 @@ with the scheduler, and uses the `AprunLauncher` to launch workers.
 .. literalinclude:: ../../parsl/configs/bluewaters.py
 
 
+Bridges (PSC)
+-------------
+
+.. image:: https://insidehpc.com/wp-content/uploads/2016/08/Bridges_FB1b.jpg
+
+The following snippet shows an example configuration for executing on the Bridges supercomputer at the Pittsburgh Supercomputing Center.
+The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
+with the scheduler, and uses the `SrunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/bridges.py
+
+
+
 CC-IN2P3
 --------
 
@@ -362,7 +375,7 @@ To utilize Work Queue with Parsl, please install the full CCTools software packa
 
    $ conda create -y --name <environment> python=<version> conda-pack
    $ conda activate <environment>
-   $ conda install -y -c conda-forge cctools parsl
+   $ conda install -y -c conda-forge ndcctools parsl
 
 This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
 
