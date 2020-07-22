@@ -1,5 +1,7 @@
 import hashlib
 from functools import singledispatch
+from hashlib import md5
+from inspect import getsource
 import logging
 from parsl.executors.serialize.serialize import serialize_object
 import types
@@ -174,10 +176,13 @@ class Memoizer(object):
             del filtered_kw['outputs']
             t = t + [b'outputs', id_for_memo(outputs, output_ref=True)]   # TODO: use append?
 
+        logger.info("id_for_memo on func_name = {}".format(task['func_name']))
+        logger.info("id_for_memo on filtered_kw = {}".format(filtered_kw))
+        logger.info("id_for_memo on args = {}".format(task['args']))
+        logger.info("id_for_memo for args = {}".format(id_for_memo(task['args'])))
         t = t + [id_for_memo(filtered_kw)]
 
-        t = t + [id_for_memo(task['func_name']),
-                 id_for_memo(task['fn_hash']),
+        t = t + [id_for_memo(task['func']),
                  id_for_memo(task['args'])]
 
         x = b''.join(t)

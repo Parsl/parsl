@@ -198,7 +198,7 @@ class DataFlowKernel(object):
         Create the dictionary that will be included in the log.
         """
 
-        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
+        info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'status',
                            'id', 'time_submitted', 'time_returned', 'try_time_returned', 'executor']
 
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
@@ -740,7 +740,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}, join=False):
+    def submit(self, func, app_args, executors='all', cache=False, ignore_for_cache=None, app_kwargs={}, join=False):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -755,8 +755,6 @@ class DataFlowKernel(object):
             - app_args : Args to the function
             - executors (list or string) : List of executors this call could go to.
                     Default='all'
-            - fn_hash (Str) : Hash of the function and inputs
-                    Default=None
             - cache (Bool) : To enable memoization or not
             - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
@@ -806,7 +804,6 @@ class DataFlowKernel(object):
         task_def = {'depends': None,
                     'executor': executor,
                     'func_name': func.__name__,
-                    'fn_hash': fn_hash,
                     'memoize': cache,
                     'hashsum': None,
                     'exec_fu': None,
@@ -815,7 +812,6 @@ class DataFlowKernel(object):
                     'from_memo': None,
                     'ignore_for_cache': ignore_for_cache,
                     'join': join,
-                    'from_memo': None,
                     'status': States.unsched,
                     'try_id': 0,
                     'id': task_id,
@@ -910,7 +906,6 @@ class DataFlowKernel(object):
         keytasks = {state: 0 for state in States}
 
         for tid in self.tasks:
-            logger.debug("Accumulating task id {}".format(tid))
             keytasks[self.tasks[tid]['status']] += 1
         # Fetch from counters since tasks get wiped
         keytasks[States.exec_done] = self.tasks_completed_count
@@ -987,7 +982,6 @@ class DataFlowKernel(object):
 
         logger.info("Waiting for all remaining tasks to complete")
         for task_id in list(self.tasks):
-            logger.debug("Waiting for task id {}".format(task_id))
             # .exception() is a less exception throwing way of
             # waiting for completion than .result()
             if task_id not in self.tasks:
@@ -996,12 +990,10 @@ class DataFlowKernel(object):
                 task_record = self.tasks[task_id]  # still a race condition with the above self.tasks if-statement
                 fut = task_record['app_fu']
                 if not fut.done():
-                    logger.debug("Waiting for task {} to complete AppFuture".format(task_id))
                     fut.exception()
-                logger.debug("App future completed - now fast-polling for DFK state to change")  # which still might not be enough?
+                # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
                 while task_record['status'] not in FINAL_STATES:
-                    logger.debug("Waiting for task {} to complete. State now is {}".format(task_id, task_record['status']))
-                    time.sleep(0.1)  # ugh sleep - is there a blocking form of this loop?
+                    time.sleep(0.1)
 
         logger.info("All remaining tasks completed")
 
