@@ -337,7 +337,7 @@ class Interchange(object):
                 continue
 
     def start(self, poll_period=None):
-        """ Start the NeedNameQeueu
+        """ Start the interchange
 
         Parameters:
         ----------
