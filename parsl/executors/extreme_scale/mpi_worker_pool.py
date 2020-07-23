@@ -19,8 +19,11 @@ from mpi4py import MPI
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.version import VERSION as PARSL_VERSION
-from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
-from ipyparallel.serialize import serialize_object
+
+from parsl.serialize import ParslSerializer
+parsl_serializer = ParslSerializer()
+unpack_apply_message = parsl_serializer.unpack_apply_message
+serialize_object = parsl_serializer.serialize
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
