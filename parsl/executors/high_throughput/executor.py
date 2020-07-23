@@ -380,19 +380,19 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
                         if tid == -1 and 'exception' in msg:
                             logger.warning("Executor shutting down due to exception from interchange")
-                            exception, _ = deserialize_object(msg['exception'])
+                            exception = deserialize_object(msg['exception'])
                             self.set_bad_state_and_fail_all(exception)
                             break
 
                         task_fut = self.tasks[tid]
 
                         if 'result' in msg:
-                            result, _ = deserialize_object(msg['result'])
+                            result = deserialize_object(msg['result'])
                             task_fut.set_result(result)
 
                         elif 'exception' in msg:
                             try:
-                                s, _ = deserialize_object(msg['exception'])
+                                s = deserialize_object(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
                                 if isinstance(s, RemoteExceptionWrapper):
                                     try:
