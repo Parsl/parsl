@@ -31,7 +31,7 @@ else:
 # from ipyparallel.serialize import serialize_object
 
 from parsl.serialize import ParslSerializer
-parsl_serializer = ParslSerializer
+parsl_serializer = ParslSerializer()
 unpack_apply_message = parsl_serializer.unpack_apply_message
 serialize_object = parsl_serializer.serialize
 
