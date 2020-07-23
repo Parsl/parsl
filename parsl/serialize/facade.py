@@ -1,4 +1,4 @@
-#  from parsl.serialize.concretes import *
+from parsl.serialize.concretes import *  # noqa: F403,F401
 from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE
 import logging
 
@@ -65,7 +65,9 @@ class ParslSerializer(object):
         item_threshold: Ignored
             This kwarg is provided only to match the interface to ipyparallel.serialize
         """
-        b_func, b_args, b_kwargs = self.serialize(func), self.serialize(args), self.serialize(kwargs)
+        b_func = self.serialize(func)
+        b_args = self.serialize(args)
+        b_kwargs = self.serialize(kwargs)
         packed_buffer = self.pack_buffers([b_func, b_args, b_kwargs])
         return packed_buffer
 
@@ -75,27 +77,48 @@ class ParslSerializer(object):
         """
         return [self.deserialize(buf) for buf in self.unpack_buffers(packed_buffer)]
 
-    def serialize(self, data):
-        serialized = None
+    def serialize(self, obj, buffer_threshold=1e6):
+        """ Try available serialization methods one at a time
 
-        if callable(data):
+        If all serialization methods fail we raise a TypeError. Ideally we should
+        reraise the exception from the methods we tried which might have more
+        useful info into why the object cannot be serialized
+        TODO ^
+        """
+        serialized = None
+        serialized_flag = False
+        kind = None
+        if callable(obj):
+            kind = 'callable'
             for method in self.methods_for_code.values():
                 try:
-                    serialized = method.serialize(data)
+                    serialized = method.serialize(obj)
+                    # We attempt a deserialization to make sure both work.
+                    method.deserialize(serialized)
                 except Exception:
                     logger.exception(f"Serialization method: {method} did not work")
                     continue
+                else:
+                    serialized_flag = True
+                    break
         else:
+            kind = 'data'
             for method in self.methods_for_data.values():
                 try:
-                    serialized = method.serialize(data)
+                    serialized = method.serialize(obj)
                 except Exception:
                     logger.exception(f"Serialization method {method} did not work")
                     continue
+                else:
+                    serialized_flag = True
+                    break
 
-        if serialized is None:
+        if serialized_flag is False:
             # TODO : Replace with a SerializationError
-            raise Exception("None of serialization methods were able to serialize {}".format(data))
+            raise TypeError(f"Serializing {kind} object: {obj} failed")
+
+        if len(serialized) > buffer_threshold:
+            raise TypeError(f"Serialized object is too large and exceeds buffer threshold of {buffer_threshold} bytes")
         return serialized
 
     def deserialize(self, payload):
