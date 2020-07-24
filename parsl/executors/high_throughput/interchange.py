@@ -14,7 +14,6 @@ import threading
 import json
 
 from parsl.version import VERSION as PARSL_VERSION
-# from ipyparallel.serialize import serialize_object
 from parsl.serialize import ParslSerializer
 serialize_object = ParslSerializer().serialize
 

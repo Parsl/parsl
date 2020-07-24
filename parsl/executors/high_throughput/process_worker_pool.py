@@ -27,9 +27,6 @@ if platform.system() == 'Darwin':
 else:
     from multiprocessing import Queue as mpQueue
 
-# from ipyparallel.serialize import unpack_apply_message  # pack_apply_message,
-# from ipyparallel.serialize import serialize_object
-
 from parsl.serialize import ParslSerializer
 parsl_serializer = ParslSerializer()
 unpack_apply_message = parsl_serializer.unpack_apply_message

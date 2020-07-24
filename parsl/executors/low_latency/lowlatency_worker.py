@@ -7,8 +7,10 @@ import uuid
 # import zmq
 from multiprocessing import Process
 
-from ipyparallel.serialize import unpack_apply_message
-from ipyparallel.serialize import serialize_object
+from parsl.serialize import ParslSerializer
+parsl_serializer = ParslSerializer()
+unpack_apply_message = parsl_serializer.unpack_apply_message
+serialize_object = parsl_serializer.serialize
 
 from parsl.executors.low_latency import zmq_pipes
 

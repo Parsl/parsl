@@ -7,8 +7,10 @@ import threading
 import queue
 from multiprocessing import Process, Queue
 
-from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
-from ipyparallel.serialize import deserialize_object  # ,serialize_object
+from parsl.serialize import ParslSerializer
+parsl_serializer = ParslSerializer()
+pack_apply_message = parsl_serializer.pack_apply_message
+deserialize_object = parsl_serializer.deserialize
 
 from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange

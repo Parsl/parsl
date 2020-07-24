@@ -11,8 +11,13 @@ import threading
 import queue
 import multiprocessing as mp
 
-from ipyparallel.serialize import pack_apply_message, unpack_apply_message
-from ipyparallel.serialize import serialize_object, deserialize_object
+from parsl.serialize import ParslSerializer
+parsl_serializer = ParslSerializer()
+
+pack_apply_message = parsl_serializer.pack_apply_message
+unpack_apply_message = parsl_serializer.unpack_apply_message
+serialize_object = parsl_serializer.serialize
+deserialize_object = parsl_serializer.deserialize
 
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 

@@ -8,8 +8,6 @@ from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple, Union
 import math
 
-# from ipyparallel.serialize import pack_apply_message
-# from ipyparallel.serialize import deserialize_object
 from parsl.serialize import ParslSerializer
 parsl_serializer = ParslSerializer()
 pack_apply_message = parsl_serializer.pack_apply_message
