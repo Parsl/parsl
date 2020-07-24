@@ -15,7 +15,6 @@ typeguard>=2.5
 paramiko
 dill
 tblib
-ipyparallel
 psutil>=5.5.1
 globus-sdk
 twine
