@@ -19,7 +19,7 @@ LOG=/root/userdata.logs
 echo "Userdata logs " > $LOG
 apt-get update  &>> $LOG
 yes | aptdcon --hide-terminal --install python3-pip &>> $LOG
-pip3 install jupyter ipyparallel parsl &>> $LOG
+pip3 install jupyter parsl &>> $LOG
 cat <<EOF > ipcontroller-engine.json
 {engine_config}
 EOF
