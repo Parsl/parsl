@@ -5,35 +5,60 @@ import plotly.graph_objs as go
 import plotly.figure_factory as ff
 from plotly.offline import plot
 import networkx as nx
-import datetime
 
 from parsl.monitoring.visualization.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
 
 
-def task_gantt_plot(df_task, time_completed=None):
+def task_gantt_plot(df_task, df_status, time_completed=None):
 
-    df_task = df_task.sort_values(by=['task_time_submitted'], ascending=False)
+    # if the workflow is not recorded as completed, then assume
+    # that tasks should continue in their last state until now,
+    # rather than the workflow end time.
+    if not time_completed:
+        time_completed = df_status['timestamp'].max()
+
+    df_task = df_task.sort_values(by=['task_id'], ascending=False)
 
     parsl_tasks = []
     for i, task in df_task.iterrows():
-        time_running, time_returned = task['task_time_running'], task['task_time_returned']
-        if task['task_time_returned'] is None:
-            time_returned = datetime.datetime.now()
-            if time_completed is not None:
-                time_returned = time_completed
-        if task['task_time_submitted'] is not None:
-            time_submitted = task['task_time_submitted']
-        else:
-            time_submitted = time_returned
-        if task['task_time_running'] is None:
-            time_running = time_submitted
+        task_id = task['task_id']
+
         description = "Task ID: {}, app: {}".format(task['task_id'], task['task_func_name'])
-        dic1 = dict(Task=description, Start=time_submitted,
-                    Finish=time_running, Resource="Pending")
-        dic2 = dict(Task=description, Start=time_running,
-                    Finish=time_returned, Resource="Running")
-        parsl_tasks.extend([dic1, dic2])
-    colors = {'Pending': 'rgb(168, 168, 168)', 'Running': 'rgb(0, 0, 255)'}
+
+        statuses = df_status.loc[df_status['task_id'] == task_id].sort_values(by=['timestamp'])
+
+        last_status = None
+        for j, status in statuses.iterrows():
+            if last_status is not None:
+                last_status_bar = {'Task': description,
+                                   'Start': last_status['timestamp'],
+                                   'Finish': status['timestamp'],
+                                   'Resource': last_status['task_status_name']
+                                  }
+                parsl_tasks.extend([last_status_bar])
+            last_status = status
+
+        # TODO: factor with above?
+        if last_status is not None:
+            last_status_bar = {'Task': description,
+                               'Start': last_status['timestamp'],
+                               'Finish': time_completed,
+                               'Resource': last_status['task_status_name']
+                              }
+            parsl_tasks.extend([last_status_bar])
+
+    # colours must assign a colour value for every state name defined
+    # in parsl/dataflow/states.py
+
+    colors = {'unsched': 'rgb(240, 240, 240)',
+              'pending': 'rgb(168, 168, 168)',
+              'launched': 'rgb(100, 255, 255)',
+              'running': 'rgb(0, 0, 255)',
+              'dep_fail': 'rgb(255, 128, 255)',
+              'failed': 'rgb(200, 0, 0)',
+              'done': 'rgb(0, 200, 0)'
+             }
+
     fig = ff.create_gantt(parsl_tasks,
                           title="",
                           colors=colors,

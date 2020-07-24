@@ -30,6 +30,24 @@ Ranks launched = tasks_per_node={} X nodes_per_block={}".format(self.tasks_per_n
                                                                 self.nodes_per_block)
 
 
+class UnsupportedFeatureError(ExecutorError):
+    """Error raised when attemping to use unsupported feature in an Executor"""
+
+    def __init__(self, feature, current_executor, target_executor):
+        self.feature = feature
+        self.current_executor = current_executor
+        self.target_executor = target_executor
+
+    def __repr__(self):
+        return "The {} feature is unsupported in {}. \
+Please checkout {} for this feature".format(self.feature,
+                                            self.current_executor,
+                                            self.target_executor)
+
+    def __str__(self):
+        return self.__repr__()
+
+
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 
@@ -60,6 +78,22 @@ class DeserializationError(ExecutorError):
 
     def __repr__(self):
         return "Failed to deserialize return objects. Reason:{}".format(self.reason)
+
+
+class SerializationError(ExecutorError):
+    """ Failure to serialize data arguments for the tasks
+    """
+
+    def __init__(self, fname):
+        self.fname = fname
+        self.troubleshooting = "https://parsl.readthedocs.io/en/latest/faq.html#addressing-serializationerror"
+
+    def __repr__(self):
+        return "Failed to serialize data objects for {}. Refer {} ".format(self.fname,
+                                                                           self.troubleshooting)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class BadMessage(ExecutorError):

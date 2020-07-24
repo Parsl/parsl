@@ -61,7 +61,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                  nodes_per_block=1,
                  init_blocks=0,
                  min_blocks=0,
-                 max_blocks=10,
+                 max_blocks=1,
                  parallelism=1,
                  walltime="00:10:00",
                  account=None,
@@ -150,10 +150,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
              - job_id: (string) Identifier for the job
 
         """
-
-        if self.provisioned_blocks >= self.max_blocks:
-            logger.warning("[%s] at capacity, cannot add more blocks now", self.label)
-            return None
 
         account_opt = '-A {}'.format(self.account) if self.account is not None else ''
 

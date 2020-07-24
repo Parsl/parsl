@@ -1,9 +1,10 @@
 import argparse
 import os
+import pytest
 
 import parsl
+from parsl import File
 from parsl.app.app import bash_app
-from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
 
 
@@ -12,6 +13,10 @@ def fail_on_presence(outputs=[]):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
 
 
+# This test is an oddity that requires a shared-FS and simply
+# won't work if there's a staging provider.
+# @pytest.mark.sharedFS_required
+@pytest.mark.issue363
 def test_bash_memoization(n=2):
     """Testing bash memoization
     """
@@ -20,6 +25,8 @@ def test_bash_memoization(n=2):
 
     if os.path.exists(temp_filename):
         os.remove(temp_filename)
+
+    temp_file = File(temp_filename)
 
     print("Launching: ", n)
     x = fail_on_presence(outputs=[temp_file])
@@ -38,6 +45,10 @@ def fail_on_presence_kw(outputs=[], foo={}):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
 
 
+# This test is an oddity that requires a shared-FS and simply
+# won't work if there's a staging provider.
+# @pytest.mark.sharedFS_required
+@pytest.mark.issue363
 def test_bash_memoization_keywords(n=2):
     """Testing bash memoization
     """
@@ -46,6 +57,8 @@ def test_bash_memoization_keywords(n=2):
 
     if os.path.exists(temp_filename):
         os.remove(temp_filename)
+
+    temp_file = File(temp_filename)
 
     print("Launching: ", n)
     x = fail_on_presence_kw(outputs=[temp_file], foo={"a": 1, "b": 2})

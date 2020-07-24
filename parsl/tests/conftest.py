@@ -49,7 +49,6 @@ def pytest_addoption(parser):
         required=True,
         help="run with parsl CONFIG; use 'local' to run locally-defined config"
     )
-    parser.addoption('--bodge-dfk-per-test', action='store_true')
 
 
 def pytest_configure(config):
@@ -88,6 +87,10 @@ def pytest_configure(config):
         'markers',
         'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
     )
+    config.addinivalue_line(
+        'markers',
+        'staging_required: Marks tests that require a staging provider, when there is no sharedFS)'
+    )
 
 
 @pytest.fixture(autouse=True, scope='session')
@@ -101,69 +104,23 @@ def load_dfk_session(request, pytestconfig):
 
     config = pytestconfig.getoption('config')[0]
 
-    if pytestconfig.getoption('bodge_dfk_per_test'):
-        yield
-        return
-
     if config != 'local':
         spec = importlib.util.spec_from_file_location('', config)
-        try:
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
 
-            if DataFlowKernelLoader._dfk is not None:
-                raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
+        if DataFlowKernelLoader._dfk is not None:
+            raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
 
-            dfk = parsl.load(module.config)
+        dfk = parsl.load(module.config)
 
-            yield
-
-            if(parsl.dfk() != dfk):
-                raise ValueError("DFK changed unexpectedly during test")
-            dfk.cleanup()
-            parsl.clear()
-        except KeyError:
-            pytest.skip('options in user_opts.py not configured for {}'.format(config))
-    else:
         yield
 
-
-@pytest.fixture(autouse=True, scope='function')
-def load_dfk_bodge_per_test_for_workqueue(request, pytestconfig):
-    """Load a dfk around entire test suite, except in local mode.
-
-    The special path `local` indicates that configuration will not come
-    from a pytest managed configuration file; in that case, see
-    load_dfk_local_module for module-level configuration management.
-    """
-
-    config = pytestconfig.getoption('config')[0]
-
-    if not pytestconfig.getoption('bodge_dfk_per_test'):
-        yield
-        return
-
-    if config != 'local':
-        spec = importlib.util.spec_from_file_location('', config)
-        try:
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
-
-            if DataFlowKernelLoader._dfk is not None:
-                raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
-
-            dfk = parsl.load(module.config)
-
-            yield
-
-            if(parsl.dfk() != dfk):
-                raise ValueError("DFK changed unexpectedly during test")
-            dfk.cleanup()
-            parsl.clear()
-        except KeyError:
-            pytest.skip('options in user_opts.py not configured for {}'.format(config))
+        if(parsl.dfk() != dfk):
+            raise ValueError("DFK changed unexpectedly during test")
+        dfk.cleanup()
+        parsl.clear()
     else:
         yield
 
@@ -254,6 +211,21 @@ def setup_data():
         f.write("1\n")
     with open("data/test2.txt", 'w') as f:
         f.write("2\n")
+
+
+@pytest.fixture(autouse=True, scope='function')
+def wait_for_task_completion(pytestconfig):
+    """If we're in a config-file based mode, wait for task completion between
+       each test. This will detect early on (by hanging) if particular test
+       tasks are not finishing, rather than silently falling off the end of
+       the test run with tasks still in progress.
+       In local mode, this fixture does nothing, as there isn't anything
+       reasonable to assume about DFK behaviour here.
+    """
+    config = pytestconfig.getoption('config')[0]
+    yield
+    if config != 'local':
+        parsl.dfk().wait_for_current_tasks()
 
 
 def pytest_make_collect_report(collector):

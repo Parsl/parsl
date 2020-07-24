@@ -15,7 +15,7 @@ Parsl can be used to implement various parallel computing paradigms:
 * Dynamic workflows in which the workflow is determined during execution
 * Interactive parallel programming through notebooks or another interactive mechanism
 
-The latest Parsl version available on PyPi is v0.9.0.
+The latest Parsl version available on PyPi is v1.0.0.
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
@@ -30,7 +30,7 @@ The latest Parsl version available on PyPi is v0.9.0.
 QuickStart
 ==========
 
-Parsl is now available on PyPI, but first make sure you have Python3.5+ ::
+Parsl is now available on PyPI, but first make sure you have Python3.6+ ::
 
     $ python3 --version
 
@@ -42,7 +42,7 @@ To run the Parsl tutorial notebooks you will need to install Jupyter::
 
     $ pip3 install jupyter
 
-Detailed information about setting up Jupyter with Python3.5 is available `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
+Detailed information about setting up Jupyter with Python is available `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
 
 Note: Parsl uses an opt-in model to collect anonymous usage statistics for reporting and improvement purposes. To understand what stats are collected and enable collection please refer to the `usage tracking guide <http://parsl.readthedocs.io/en/stable/userguide/usage_tracking.html>`__
 
@@ -61,17 +61,27 @@ For Developers
 
     $ git clone https://github.com/Parsl/parsl
 
-2. Install::
+
+2. Build and Test::
+
+    $ make   # show all available makefile targets
+    $ make virtualenv # create a virtual environment
+    $ source .venv/bin/activate # activate the virtual environment
+    $ make deps # install python dependencies from test-requirements.txt
+    $ make test # make (all) tests. Run "make config_local_test" for a faster, smaller test set.
+    $ make clean # remove virtualenv and all test and build artifacts
+
+3. Install::
 
     $ cd parsl
     $ python3 setup.py install
 
-3. Use Parsl!
+4. Use Parsl!
 
 Requirements
 ============
 
-Parsl is supported in Python 3.5+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
+Parsl is supported in Python 3.6+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
 
 Code of Conduct
 ============

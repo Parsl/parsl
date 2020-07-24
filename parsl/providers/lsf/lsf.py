@@ -71,7 +71,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
-                 max_blocks=10,
+                 max_blocks=1,
                  parallelism=1,
                  walltime="00:10:00",
                  scheduler_options='',
@@ -146,10 +146,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         None or str
             If at capacity, returns None; otherwise, a string identifier for the job
         """
-
-        if self.provisioned_blocks >= self.max_blocks:
-            logger.warning("LSF provider '{}' is at capacity (no more blocks will be added)".format(self.label))
-            return None
 
         job_name = "{0}.{1}".format(job_name, time.time())
 

@@ -63,7 +63,7 @@ class PBSProProvider(TorqueProvider):
                  cpus_per_node=1,
                  init_blocks=1,
                  min_blocks=0,
-                 max_blocks=100,
+                 max_blocks=1,
                  parallelism=1,
                  launcher=SingleNodeLauncher(),
                  walltime="00:20:00",
@@ -105,10 +105,6 @@ class PBSProProvider(TorqueProvider):
         job_id : str
             Identifier for the job
         """
-
-        if self.provisioned_blocks >= self.max_blocks:
-            logger.warning("[%s] at capacity, cannot add more blocks now", self.label)
-            return None
 
         job_name = "{0}.{1}".format(job_name, time.time())
 

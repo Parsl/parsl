@@ -19,7 +19,7 @@ class AppBase(metaclass=ABCMeta):
 
     """
 
-    def __init__(self, func, data_flow_kernel=None, executors='all', cache=False, ignore_for_cache=[]):
+    def __init__(self, func, data_flow_kernel=None, executors='all', cache=False, ignore_for_cache=None):
         """Construct the App object.
 
         Args:
@@ -75,7 +75,7 @@ class AppBase(metaclass=ABCMeta):
         pass
 
 
-def python_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=[]):
+def python_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
     """Decorator function for making python apps.
 
     Parameters
@@ -108,7 +108,7 @@ def python_app(function=None, data_flow_kernel=None, cache=False, executors='all
     return decorator
 
 
-def bash_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=[]):
+def bash_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
     """Decorator function for making bash apps.
 
     Parameters

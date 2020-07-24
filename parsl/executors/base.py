@@ -32,6 +32,16 @@ class ParslExecutor(metaclass=ABCMeta):
               @typeguard the constructor, you'll have to use List[Any] here.
     """
 
+    # This __init__ method exists to provide a python 3.5 compatible type declaration
+    # for the `label` attribute. If/when python 3.5 is deprecated (see parsl issue #1553)
+    # this could be replaced with a python 3.6 style attribute type declaration.
+    #   label: str
+    # and __init__ removed.
+
+    @abstractmethod
+    def __init__(self) -> None:
+        self.label = ""  # type: str
+
     @abstractmethod
     def start(self) -> None:
         """Start the executor.
@@ -41,7 +51,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def submit(self, func: Callable, *args: Any, **kwargs: Any) -> Future:
+    def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """Submit.
         """
         pass
