@@ -1,7 +1,5 @@
 import hashlib
 from functools import singledispatch
-from hashlib import md5
-from inspect import getsource
 import logging
 from parsl.executors.serialize.serialize import serialize_object
 import types
@@ -88,7 +86,7 @@ def id_for_memo_func(f, output_ref=False):
     The intention is to allow the function to be modified in source file without
     causing memoization invalidation.
     """
-    return ["types.FunctionType", f.__name__, f.__module__]
+    return serialize_object(["types.FunctionType", f.__name__, f.__module__])[0]
 
 
 class Memoizer(object):

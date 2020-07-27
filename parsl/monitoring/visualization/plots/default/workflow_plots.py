@@ -228,7 +228,13 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
         groups_list = {app: (i, None) for i, app in enumerate(
             df_tasks['task_func_name'].unique())}
     else:
-        groups_list = {'Pending': (0, 'gray'), "Running": (1, 'blue'), 'Completed': (2, 'green'), 'Unknown': (3, 'red')}
+        groups_list = {"unsched": (0, 'gray'),
+                       "pending": (1, 'gray'),
+                       "running": (2, 'blue'),
+                       "dep_fail": (3, 'red'),
+                       "failed": (4, 'red'),
+                       "done": (5, 'green')
+                      }
 
     node_traces = [...] * len(groups_list)
 
@@ -258,14 +264,7 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
         if group_by_apps:
             name = dic['task_func_name'][node]
         else:
-            if dic['task_time_returned'][node] is not None:
-                name = 'Completed'
-            elif dic['task_time_running'][node] is not None:
-                name = "Running"
-            elif dic['task_time_submitted'][node] is not None:
-                name = "Pending"
-            else:
-                name = "Unknown"
+            name = dic['task_status_name'][node]
         index, _ = groups_list[name]
         node_traces[index]['x'] += tuple([x])
         node_traces[index]['y'] += tuple([y])
