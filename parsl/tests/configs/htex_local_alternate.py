@@ -54,7 +54,7 @@ config = Config(
             ),
         )
     ],
-    strategy='simple',
+    strategy='htex',
     app_cache=True, checkpoint_mode='task_exit',
     retries=2,
     monitoring=MonitoringHub(
@@ -62,5 +62,6 @@ config = Config(
                     hub_port=55055,
                     monitoring_debug=False,
                     resource_monitoring_interval=1,
-    )
+    ),
+    max_idletime = 1
 )
