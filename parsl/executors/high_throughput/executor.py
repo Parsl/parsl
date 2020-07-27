@@ -593,7 +593,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             self.blocks[external_block_id] = internal_block
         return r
 
-    def scale_in(self, blocks=None, block_ids=[]):
+    def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -606,6 +606,15 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         blocks : int
              Number of blocks to terminate and scale_in by
 
+        force : Bool
+             Used along with blocks to indicate whether blocks should be terminated by force.
+             When force = True, we will kill blocks regardless of the blocks being busy
+             When force = False, we will kill only idle blocks
+
+        max_idletime: float
+             A time to indicate how long a block can be idle.
+             Used along with force = False to kill blocks that have been idle for that long.
+
         block_ids : list
              List of specific block ids to terminate. Optional
 
@@ -616,14 +625,41 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         if block_ids:
             block_ids_to_kill = block_ids
         else:
-            block_ids_to_kill = list(self.blocks.keys())[:blocks]
+            managers = self.connected_managers
+            block_info = {}
+            for manager in managers:
+                if not manager['active']:
+                    continue
+                b_id = manager['block_id']
+                if b_id not in block_info:
+                    block_info[b_id] = [0, float('inf')]
+                block_info[b_id][0] += manager['tasks']
+                block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
+            sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+            if force is True:
+                block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
+            else:
+                if not max_idletime:
+                    block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks] if x[1][0] == 0]
+                else:
+                    block_ids_to_kill = []
+                    for x in sorted_blocks:
+                        if x[1][1] > max_idletime and x[1][0] == 0:
+                            block_ids_to_kill.append(x[0])
+                            if len(block_ids_to_kill) == blocks:
+                                break
+                logger.warning("Selecting block ids to kill since they are idle : {}".format(
+                    block_ids_to_kill))
+
+        logger.warning("CUrrent blocks : {}".format(self.blocks))
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
 
         # Now kill via provider
-        to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill]
+        # Potential issue with multiple threads trying to remove the same blocks
+        to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill if bid in self.blocks]
 
         r = self.provider.cancel(to_kill)
 
