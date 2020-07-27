@@ -11,7 +11,11 @@ def double(x, parsl_resource_specification={}):
     return x * 2
 
 
-@pytest.mark.skip("this test does not accomodate running the test suite on executors which *do* support resource specifications but are not the workqueue executor. In general, it is incorrect to assume that an arbitrary non-workqueue executor will raise the expected exceptionm")
+@pytest.mark.skip("this test does not accomodate running the test suite"
+                  " on executors which *do* support resource specifications"
+                  " but are not the workqueue executor. In general, it is"
+                  " incorrect to assume that an arbitrary non-workqueue"
+                  " executor will raise the expected exceptionm")
 def test_resource(n=2):
     spec = {'cores': 2, 'memory': '1GiB'}
     fut = double(n, parsl_resource_specification=spec)
