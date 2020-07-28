@@ -140,53 +140,6 @@ SSHILChannel
    :members:  __init__, execute_wait, push_file, pull_file, script_dir, close
 
 
-
-Launchers
-=========
-
-Launchers are basically wrappers for user submitted scripts as they are submitted to
-a specific execution resource.
-
-SimpleLauncher
---------------
-
-.. autoclass:: parsl.launchers.SimpleLauncher
-   :members:
-
-
-
-SingleNodeLauncher
-------------------
-
-.. autoclass:: parsl.launchers.SingleNodeLauncher
-   :members:
-
-AprunLauncher
-------------------
-
-.. autoclass:: parsl.launchers.AprunLauncher
-   :members:
-
-
-SrunLauncher
-------------
-
-.. autoclass:: parsl.launchers.SrunLauncher
-   :members:
-
-SrunMPILauncher
----------------
-
-.. autoclass:: parsl.launchers.SrunMPILauncher
-   :members:
-
-WrappedLauncher
----------------
-
-.. autoclass:: parsl.launchers.WrappedLauncher
-   :members:
-
-
 Flow Control
 ============
 
