@@ -1,9 +1,9 @@
-import codecs
 import json
 import dill
 import pickle
-import inspect
 import logging
+import functools
+import inspect
 
 logger = logging.getLogger(__name__)
 from parsl.serialize.base import fxPicker_shared
@@ -11,37 +11,37 @@ from parsl.serialize.base import fxPicker_shared
 
 class pickle_base64(fxPicker_shared):
 
-    _identifier = '10\n'
+    _identifier = b'10\n'
     _for_code = False
 
     def __init__(self):
         super().__init__()
 
     def serialize(self, data):
-        x = codecs.encode(pickle.dumps(data), 'base64').decode()
+        x = pickle.dumps(data)
         return self.identifier + x
 
     def deserialize(self, payload):
         chomped = self.chomp(payload)
-        data = pickle.loads(codecs.decode(chomped.encode(), 'base64'))
+        data = pickle.loads(chomped)
         return data
 
 
 class dill_base64(fxPicker_shared):
 
-    _identifier = '11\n'
+    _identifier = b'11\n'
     _for_code = False
 
     def __init__(self):
         super().__init__()
 
     def serialize(self, data):
-        x = codecs.encode(dill.dumps(data), 'base64').decode()
+        x = dill.dumps(data)
         return self.identifier + x
 
     def deserialize(self, payload):
         chomped = self.chomp(payload)
-        data = dill.loads(codecs.decode(chomped.encode(), 'base64'))
+        data = dill.loads(chomped)
         return data
 
 
@@ -67,19 +67,19 @@ class json_base64(fxPicker_shared):
 
 class code_pickle(fxPicker_shared):
 
-    _identifier = '00\n'
+    _identifier = b'00\n'
     _for_code = True
 
     def __init__(self):
         super().__init__()
 
+    @functools.lru_cache(maxsize=100)
     def serialize(self, data):
-        x = codecs.encode(pickle.dumps(data), 'base64').decode()
-        return self.identifier + x
+        return self.identifier + pickle.dumps(data)
 
     def deserialize(self, payload):
         chomped = self.chomp(payload)
-        data = pickle.loads(codecs.decode(chomped.encode(), 'base64'))
+        data = pickle.loads(chomped)
         return data
 
 
@@ -89,19 +89,20 @@ class code_dill(fxPicker_shared):
     is then returned by name.
     """
 
-    _identifier = '01\n'
+    _identifier = b'01\n'
     _for_code = True
 
     def __init__(self):
         super().__init__()
 
+    @functools.lru_cache(maxsize=100)
     def serialize(self, data):
-        x = codecs.encode(dill.dumps(data), 'base64').decode()
+        x = dill.dumps(data)
         return self.identifier + x
 
     def deserialize(self, payload):
         chomped = self.chomp(payload)
-        fn = dill.loads(codecs.decode(chomped.encode(), 'base64'))
+        fn = dill.loads(chomped)
         return fn
 
 
@@ -111,21 +112,22 @@ class code_text_inspect(fxPicker_shared):
     is then returned by name.
     """
 
-    _identifier = '02\n'
+    _identifier = b'02\n'
     _for_code = True
 
     def __init__(self):
         super().__init__()
 
+    @functools.lru_cache(maxsize=100)
     def serialize(self, data):
         name = data.__name__
         body = inspect.getsource(data)
-        x = codecs.encode(pickle.dumps((name, body)), 'base64').decode()
+        x = pickle.dumps((name, body))
         return self.identifier + x
 
     def deserialize(self, payload):
         chomped = self.chomp(payload)
-        name, body = pickle.loads(codecs.decode(chomped.encode(), 'base64'))
+        name, body = pickle.loads(chomped)
         exec(body)
         return locals()[name]
 
@@ -136,20 +138,21 @@ class code_text_dill(fxPicker_shared):
     is then returned by name.
     """
 
-    _identifier = '03\n'
+    _identifier = b'03\n'
     _for_code = True
 
     def __init__(self):
         super().__init__()
 
+    @functools.lru_cache(maxsize=100)
     def serialize(self, data):
         name = data.__name__
         body = dill.source.getsource(data)
-        x = codecs.encode(pickle.dumps((name, body)), 'base64').decode()
+        x = pickle.dumps((name, body))
         return self.identifier + x
 
     def deserialize(self, payload):
         chomped = self.chomp(payload)
-        name, body = pickle.loads(codecs.decode(chomped.encode(), 'base64'))
+        name, body = pickle.loads(chomped)
         exec(body)
         return locals()[name]

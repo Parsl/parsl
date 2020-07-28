@@ -145,9 +145,11 @@ class ParslSerializer(object):
         ----------
         buffers : list of \n terminated strings
         """
-        packed = ''
+        packed = b''
         for buf in buffers:
-            s_length = str(len(buf)) + '\n'
+            s_length = bytes(str(len(buf)) + '\n', 'utf-8')
+            print("buf type : ", type(buf))
+            print("s_lenght type : ", type(s_length))
             packed += s_length + buf
 
         return packed
@@ -160,8 +162,8 @@ class ParslSerializer(object):
         """
         unpacked = []
         while packed_buffer:
-            s_length, buf = packed_buffer.split('\n', 1)
-            i_length = int(s_length)
+            s_length, buf = packed_buffer.split(b'\n', 1)
+            i_length = int(s_length.decode('utf-8'))
             current, packed_buffer = buf[:i_length], buf[i_length:]
             unpacked.extend([current])
 
@@ -175,8 +177,8 @@ class ParslSerializer(object):
         """
         unpacked = []
         while packed_buffer:
-            s_length, buf = packed_buffer.split('\n', 1)
-            i_length = int(s_length)
+            s_length, buf = packed_buffer.split(b'\n', 1)
+            i_length = int(s_length.decode('utf-8'))
             current, packed_buffer = buf[:i_length], buf[i_length:]
             deserialized = self.deserialize(current)
             unpacked.extend([deserialized])

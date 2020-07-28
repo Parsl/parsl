@@ -173,8 +173,9 @@ class Memoizer(object):
                  id_for_memo(task['fn_hash']),
                  id_for_memo(task['args'])]
 
-        x = ''.join(t)
-        hashedsum = hashlib.md5(x.encode('utf-8')).hexdigest()
+        x = b''.join(t)
+        # hashedsum = hashlib.md5(x.encode('utf-8')).hexdigest()
+        hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
 
     def check_memo(self, task_id, task):

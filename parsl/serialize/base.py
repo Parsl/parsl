@@ -67,8 +67,8 @@ class fxPicker_shared(object):
         payload : str
             Payload blob
         """
-        s_id, payload = payload.split('\n', 1)
-        if (s_id + '\n') != self.identifier:
+        s_id, payload = payload.split(b'\n', 1)
+        if (s_id + b'\n') != self.identifier:
             raise DeserializationError("Buffer does not start with identifier:{}".format(self.identifier))
         return payload
 
