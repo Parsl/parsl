@@ -69,27 +69,6 @@ DataFutures
    :noindex:
 
 
-Exceptions
-==========
-
-.. autoclass:: parsl.app.errors.ParslError
-
-.. autoclass:: parsl.app.errors.NotFutureError
-
-.. autoclass:: parsl.app.errors.AppException
-
-.. autoclass:: parsl.app.errors.AppBadFormatting
-
-.. autoclass:: parsl.app.errors.BashExitFailure
-
-.. autoclass:: parsl.app.errors.MissingOutputs
-
-.. autoclass:: parsl.dataflow.error.DataFlowException
-
-.. autoclass:: parsl.dataflow.error.DependencyError
-
-.. autoclass:: parsl.dataflow.error.DuplicateTaskError
-
 DataFlowKernel
 ==============
 
