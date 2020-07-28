@@ -85,7 +85,16 @@ class JobStatus(object):
 
 
 class ExecutionProvider(metaclass=ABCMeta):
-    """ Define the strict interface for all Execution Providers
+    """Execution providers are responsible for managing execution resources
+    that have a Local Resource Manager (LRM). For instance, campus clusters
+    and supercomputers generally have LRMs (schedulers) such as Slurm,
+    Torque/PBS, Condor and Cobalt. Clouds, on the other hand, have API
+    interfaces that allow much more fine-grained composition of an execution
+    environment. An execution provider abstracts these types of resources and
+    provides a single uniform interface to them.
+
+    The providers abstract away the interfaces provided by various systems to
+    request, monitor, and cancel compute resources.
 
     .. code:: python
 
