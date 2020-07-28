@@ -85,7 +85,9 @@ class JobStatus(object):
 
 
 class ExecutionProvider(metaclass=ABCMeta):
-    """ Define the strict interface for all Execution Providers
+    """An execution provider is basically an adapter to various types of
+    execution resources.  The providers abstract away the interfaces provided
+    by various systems to request, monitor, and cancel compute resources.
 
     .. code:: python
 
