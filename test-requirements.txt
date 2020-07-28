@@ -19,3 +19,4 @@ psutil>=5.5.1
 globus-sdk
 twine
 wheel
+pyzmq>=17.1.2
