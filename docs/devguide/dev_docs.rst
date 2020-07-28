@@ -4,12 +4,6 @@ Developer Guide
 .. automodule:: parsl
    :no-undoc-members:
 
-.. autofunction:: set_stream_logger
-   :noindex:
-
-.. autofunction:: set_file_logger
-   :noindex:
-
 Apps
 ====
 
