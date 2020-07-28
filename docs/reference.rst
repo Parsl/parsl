@@ -1,8 +1,8 @@
 API Reference guide
 *******************
 
-Miscellaneous
-=============
+Core
+====
 
 .. autosummary::
     :toctree: stubs
