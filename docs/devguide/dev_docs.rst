@@ -1,9 +1,6 @@
 Developer Guide
 ****************
 
-.. automodule:: parsl
-   :no-undoc-members:
-
 Apps
 ====
 
