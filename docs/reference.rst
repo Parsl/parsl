@@ -1,22 +1,54 @@
-Reference guide
-***************
+API Reference guide
+*******************
+
+Miscellaneous
+=============
 
 .. autosummary::
     :toctree: stubs
     :nosignatures:
 
+    parsl.app.app.python_app
+    parsl.app.app.bash_app
+    parsl.dataflow.futures.AppFuture
+    parsl.dataflow.dflow.DataFlowKernelLoader
+    parsl.monitoring.MonitoringHub
+
+Configuration
+=============
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.config.Config
     parsl.set_stream_logger
     parsl.set_file_logger
     parsl.addresses.address_by_hostname
     parsl.addresses.address_by_interface
     parsl.addresses.address_by_query
     parsl.addresses.address_by_route
-    parsl.app.app.python_app
-    parsl.app.app.bash_app
+
+Channels
+========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.channels.LocalChannel
+    parsl.channels.SSHChannel
+    parsl.channels.OAuthSSHChannel
+    parsl.channels.SSHInteractiveLoginChannel
+
+Data management
+===============
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
     parsl.app.futures.DataFuture
-    parsl.config.Config
-    parsl.dataflow.futures.AppFuture
-    parsl.dataflow.dflow.DataFlowKernelLoader
     parsl.data_provider.data_manager.DataManager
     parsl.data_provider.data_manager.Staging
     parsl.data_provider.files.File
@@ -27,16 +59,45 @@ Reference guide
     parsl.data_provider.http.HTTPSeparateTaskStaging
     parsl.data_provider.http.HTTPInTaskStaging
     parsl.data_provider.rsync.RSyncStaging
+
+Executors
+=========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
     parsl.executors.base.ParslExecutor
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.ExtremeScaleExecutor
     parsl.executors.swift_t.TurbineExecutor
-    parsl.channels.LocalChannel
-    parsl.channels.SSHChannel
-    parsl.channels.OAuthSSHChannel
-    parsl.channels.SSHInteractiveLoginChannel
+
+Launchers
+=========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.launchers.SimpleLauncher
+    parsl.launchers.SingleNodeLauncher
+    parsl.launchers.SrunLauncher
+    parsl.launchers.AprunLauncher
+    parsl.launchers.SrunMPILauncher
+    parsl.launchers.GnuParallelLauncher
+    parsl.launchers.MpiExecLauncher
+    parsl.launchers.JsrunLauncher
+    parsl.launchers.WrappedLauncher
+
+Providers
+=========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
     parsl.providers.AdHocProvider
     parsl.providers.AWSProvider
     parsl.providers.CobaltProvider
@@ -51,16 +112,9 @@ Reference guide
     parsl.providers.TorqueProvider
     parsl.providers.KubernetesProvider
     parsl.providers.PBSProProvider
-    parsl.launchers.SimpleLauncher
-    parsl.launchers.SingleNodeLauncher
-    parsl.launchers.SrunLauncher
-    parsl.launchers.AprunLauncher
-    parsl.launchers.SrunMPILauncher
-    parsl.launchers.GnuParallelLauncher
-    parsl.launchers.MpiExecLauncher
-    parsl.launchers.JsrunLauncher
-    parsl.launchers.WrappedLauncher
-    parsl.monitoring.MonitoringHub
+
+Exceptions
+==========
 
 .. autosummary::
     :toctree: stubs
