@@ -35,7 +35,7 @@ Parsl provides four checkpointing modes:
 
 2. ``periodic``: a checkpoint is created periodically using a user-specified
    checkpointing interval. Results will be saved to the checkpoint file for
-	 all tasks that have completed during this period.
+   all tasks that have completed during this period.
 
    >>> from parsl.configs.local_threads import config
    >>> config.checkpoint_mode = 'periodic'
