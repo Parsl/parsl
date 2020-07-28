@@ -98,63 +98,6 @@ DataFlowKernel
    :special-members:
 
 
-
-Executors
-=========
-
-Executors are abstractions that represent available compute resources to which you
-could submit arbitrary App tasks. An executor initialized with an Execution Provider
-can dynamically scale with the resources requirements of the workflow.
-
-We currently have thread pools for local execution, remote workers from `ipyparallel <https://ipyparallel.readthedocs.io/en/latest/>`_ for executing on high throughput
-systems such as campus clusters, and a Swift/T executor for HPC systems.
-
-ParslExecutor (Abstract Base Class)
------------------------------------
-
-.. autoclass:: parsl.executors.base.ParslExecutor
-   :members:  __init__, submit, scale_out, scale_in, scaling_enabled
-
-
-ThreadPoolExecutor
-------------------
-
-.. autoclass:: parsl.executors.threads.ThreadPoolExecutor
-   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled
-
-HighThroughputExecutor
-----------------------
-
-.. autoclass:: parsl.executors.HighThroughputExecutor
-   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd,
-              _start_queue_management_thread, _start_local_queue_process,
-              hold_worker, outstanding, connected_workers
-
-WorkQueueExecutor
-----------------------
-
-.. autoclass:: parsl.executors.WorkQueueExecutor
-   :members:  __init__, start, submit, scale_out, scale_in,
-              shutdown, scaling_enabled, run_dir, create_new_name, create_name_tuple
-
-ExtremeScaleExecutor
---------------------
-
-.. autoclass:: parsl.executors.ExtremeScaleExecutor
-   :members:  __init__, start, submit, scale_out, scale_in, scaling_enabled, compose_launch_cmd,
-              _start_queue_management_thread, _start_local_queue_process,
-              hold_worker, outstanding, connected_workers
-
-
-Swift/Turbine Executor
-----------------------
-
-.. autoclass:: parsl.executors.swift_t.TurbineExecutor
-   :members: _queue_management_worker, _start_queue_management_thread, shutdown, __init__, submit, scale_out, scale_in
-
-.. autofunction:: parsl.executors.swift_t.runner
-
-
 Execution Providers
 ===================
 
