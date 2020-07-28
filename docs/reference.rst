@@ -36,6 +36,7 @@ Channels
     :toctree: stubs
     :nosignatures:
 
+    parsl.channels.base.Channel
     parsl.channels.LocalChannel
     parsl.channels.SSHChannel
     parsl.channels.OAuthSSHChannel
