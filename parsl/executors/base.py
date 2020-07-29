@@ -6,7 +6,8 @@ from parsl.providers.provider_base import JobStatus
 
 
 class ParslExecutor(metaclass=ABCMeta):
-    """Define the strict interface for all Executor classes.
+    """Executors are abstractions that represent available compute resources
+    to which you could submit arbitrary App tasks.
 
     This is a metaclass that only enforces concrete implementations of
     functionality by the child classes.
