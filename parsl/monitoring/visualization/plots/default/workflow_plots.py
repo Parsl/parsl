@@ -84,7 +84,7 @@ def task_per_app_plot(task, status, time_completed):
             task['task_try_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = int(task['epoch_time_running'].min())
 
-        end = int(task['epoch_time_returned'].max())
+        end = int(task['epoch_try_time_returned'].max())
         # should we take the max of this and time_completed here?
         # because they might not align just right, and cause array overflows
         # later in this plot? probably yes.  - need to get a notion of
