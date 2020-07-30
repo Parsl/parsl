@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from six import reraise
 import logging
 
 logger = logging.getLogger(__name__)
@@ -69,37 +68,5 @@ class fxPicker_shared(object):
         """
         s_id, payload = payload.split(b'\n', 1)
         if (s_id + b'\n') != self.identifier:
-            raise DeserializationError("Buffer does not start with identifier:{}".format(self.identifier))
+            raise TypeError("Buffer does not start with parsl.serialize identifier:{}".format(self.identifier))
         return payload
-
-    def check(self, payload):
-
-        try:
-            x = self.serialize(payload)
-            self.deserialize(x)
-
-        except Exception as e:
-            raise SerializerError("Serialize-Deserialize combo failed due to {}".format(e))
-
-
-class SerializerError:
-    def __init__(self, reason):
-        self.reason = reason
-
-    def __str__(self):
-        return self.reason
-
-    def __repr__(self):
-        return self.__str__()
-
-
-class RemoteExceptionWrapper:
-    def __init__(self, e_type, e_value, traceback):
-
-        self.e_type = e_type
-        self.e_value = e_value
-        self.e_traceback = traceback
-
-    def reraise(self):
-        logger.debug("Reraising exception of type {}".format(self.e_type))
-        reraise(self.e_type, self.e_value, self.e_traceback)
