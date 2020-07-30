@@ -36,6 +36,8 @@ class ParslSerializer(object):
 
         for key in METHODS_MAP_CODE:
             self.methods_for_code[key] = METHODS_MAP_CODE[key]()
+            self.methods_for_code[key].enable_caching(maxsize=128)
+
         for key in METHODS_MAP_DATA:
             self.methods_for_data[key] = METHODS_MAP_DATA[key]()
 

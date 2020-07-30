@@ -1,24 +1,12 @@
 from abc import ABCMeta, abstractmethod
 import logging
+import functools
 
 logger = logging.getLogger(__name__)
 
 # GLOBALS
 METHODS_MAP_CODE = {}
 METHODS_MAP_DATA = {}
-
-
-class DeserializationError(Exception):
-    """ Base class for all deserialization errors
-    """
-    def __init__(self, reason):
-        self.reason = reason
-
-    def __repr__(self):
-        return "Deserialization failed due to {}".format(self.reason)
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class fxPicker_enforcer(metaclass=ABCMeta):
@@ -45,7 +33,7 @@ class fxPicker_shared(object):
         super().__init_subclass__(*args, **kwargs)
         if cls._for_code:
             METHODS_MAP_CODE[cls._identifier] = cls
-        else:
+        if cls._for_data:
             METHODS_MAP_DATA[cls._identifier] = cls
 
     @property
@@ -70,3 +58,11 @@ class fxPicker_shared(object):
         if (s_id + b'\n') != self.identifier:
             raise TypeError("Buffer does not start with parsl.serialize identifier:{}".format(self.identifier))
         return payload
+
+    def enable_caching(self, maxsize=128):
+        """ Add functools.lru_cache onto the serialize, deserialize methods
+        """
+
+        self.serialize = functools.lru_cache(maxsize=maxsize)(self.serialize)
+        self.deserialize = functools.lru_cache(maxsize=maxsize)(self.deserialize)
+        return
