@@ -110,7 +110,10 @@ class PriorityQueueEntry:
             return NotImplemented
         if self.pri is None:  # special case so that None is always less than every other value
             return False  # we are more than populated priorities, and equal to None, the inverse of <
-        return self.pri.__gt__(other.pri)
+        elif self.pri is not None and other.pri is None:
+            return True
+        else: # self/other both not None
+            return self.pri.__gt__(other.pri)
 
 
 class Interchange(object):

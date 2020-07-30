@@ -54,6 +54,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
               'pending': 'rgb(168, 168, 168)',
               'launched': 'rgb(100, 255, 255)',
               'running': 'rgb(0, 0, 255)',
+              'joining': 'rgb(128, 128, 255)',
               'dep_fail': 'rgb(255, 128, 255)',
               'failed': 'rgb(200, 0, 0)',
               'exec_done': 'rgb(0, 200, 0)',
@@ -83,7 +84,7 @@ def task_per_app_plot(task, status, time_completed):
             task['task_try_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = int(task['epoch_time_running'].min())
 
-        end = int(task['epoch_time_returned'].max())
+        end = int(task['epoch_try_time_returned'].max())
         # should we take the max of this and time_completed here?
         # because they might not align just right, and cause array overflows
         # later in this plot? probably yes.  - need to get a notion of
@@ -231,9 +232,10 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
         groups_list = {"unsched": (0, 'gray'),
                        "pending": (1, 'gray'),
                        "running": (2, 'blue'),
-                       "dep_fail": (3, 'red'),
-                       "failed": (4, 'red'),
-                       "done": (5, 'green')
+                       "joining": (3, 'blue'),
+                       "dep_fail": (4, 'red'),
+                       "failed": (5, 'red'),
+                       "done": (6, 'green')
                       }
 
     node_traces = [...] * len(groups_list)

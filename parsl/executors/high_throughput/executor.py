@@ -558,7 +558,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             priority = resource_specification["priority"]
             logger.debug("Priority {} found in resource specification".format(priority))
         else:
-            priority = 0
+            priority = None
 
         msg = {"task_id": task_id,
                "buffer": fn_buf,
