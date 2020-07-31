@@ -105,7 +105,6 @@ Providers
     parsl.providers.CondorProvider
     parsl.providers.GoogleCloudProvider
     parsl.providers.GridEngineProvider
-    parsl.providers.JetstreamProvider
     parsl.providers.LocalProvider
     parsl.providers.LSFProvider
     parsl.providers.GridEngineProvider
