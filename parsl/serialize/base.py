@@ -9,20 +9,7 @@ METHODS_MAP_CODE = {}
 METHODS_MAP_DATA = {}
 
 
-class fxPicker_enforcer(metaclass=ABCMeta):
-    """ Ensure that any concrete class will have the serialize and deserialize methods
-    """
-
-    @abstractmethod
-    def serialize(self, data):
-        pass
-
-    @abstractmethod
-    def deserialize(self, payload):
-        pass
-
-
-class fxPicker_shared(object):
+class SerializerBase(object):
     """ Adds shared functionality for all serializer implementations
     """
 
@@ -66,3 +53,11 @@ class fxPicker_shared(object):
         self.serialize = functools.lru_cache(maxsize=maxsize)(self.serialize)
         self.deserialize = functools.lru_cache(maxsize=maxsize)(self.deserialize)
         return
+
+    @abstractmethod
+    def serialize(self, data):
+        pass
+
+    @abstractmethod
+    def deserialize(self, payload):
+        pass

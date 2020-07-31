@@ -4,10 +4,10 @@ import pickle
 import logging
 
 logger = logging.getLogger(__name__)
-from parsl.serialize.base import fxPicker_shared
+from parsl.serialize.base import SerializerBase
 
 
-class PickleSerializer(fxPicker_shared):
+class PickleSerializer(SerializerBase):
     """ Pickle serialization covers most python objects, with some notable exceptions:
 
     * functions defined in a interpretor/notebook
@@ -33,7 +33,7 @@ class PickleSerializer(fxPicker_shared):
         return data
 
 
-class DillSerializer(fxPicker_shared):
+class DillSerializer(SerializerBase):
     """ Dill serialization works on a superset of object including the ones covered by pickle.
     However for most cases pickle is faster. For most callable objects the additional overhead
     of dill can be amortized with an lru_cache. Here's items that dill handles that pickle
