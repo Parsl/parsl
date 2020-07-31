@@ -60,30 +60,3 @@ class DillSerializer(fxPicker_shared):
         chomped = self.chomp(payload)
         data = dill.loads(chomped)
         return data
-
-
-class JsonSerializer(fxPicker_shared):
-    """ Json based serialization does not guarantee consistency on tuple/list types
-    Should be lower priority that pickle/dill. This is here for legacy reasons.
-    In the funcX + automate case the automate service requires json serialization,
-    and cannot handle pickle/dill.
-
-    Unlike pickle and dill, json is a string based serializer. For consistency
-    this class will do utf-8 encoding of the json-serialized strings to bytes for
-    consistency
-    """
-
-    _identifier = b'03\n'
-    _for_code = False
-    _for_data = True
-
-    def __init__(self):
-        super().__init__()
-
-    def serialize(self, data):
-        x = json.dumps(data).encode('utf-8')
-        return self.identifier + x
-
-    def deserialize(self, payload):
-        x = json.loads(self.chomp(payload).decode('utf-8'))
-        return x
