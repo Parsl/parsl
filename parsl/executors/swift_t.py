@@ -11,14 +11,8 @@ import threading
 import queue
 import multiprocessing as mp
 
-from parsl.serialize import ParslSerializer
-parsl_serializer = ParslSerializer()
-
-pack_apply_message = parsl_serializer.pack_apply_message
-unpack_apply_message = parsl_serializer.unpack_apply_message
-serialize_object = parsl_serializer.serialize
-deserialize_object = parsl_serializer.deserialize
-
+from parsl.serialize import serialize, deserialize
+from parsl.serialize import pack_apply_message, unpack_apply_message
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 
 logger = logging.getLogger(__name__)
@@ -136,15 +130,15 @@ def runner(incoming_q, outgoing_q):
                 try:
                     response_obj = execute_task(msg['buffer'])
                     response = {"task_id": msg["task_id"],
-                                "result": serialize_object(response_obj)}
+                                "result": serialize(response_obj)}
 
                     logger.debug("[RUNNER] Returing result: {}".format(
-                                   deserialize_object(response["result"])))
+                                   deserialize(response["result"])))
 
                 except Exception as e:
                     logger.debug("[RUNNER] Caught task exception: {}".format(e))
                     response = {"task_id": msg["task_id"],
-                                "exception": serialize_object(e)}
+                                "exception": serialize(e)}
 
                 outgoing_q.put(response)
 
@@ -263,11 +257,11 @@ class TurbineExecutor(NoStatusHandlingExecutor):
                     logger.debug("[MTHREAD] Received message: {}".format(msg))
                     task_fut = self.tasks[msg['task_id']]
                     if 'result' in msg:
-                        result, _ = deserialize_object(msg['result'])
+                        result, _ = deserialize(msg['result'])
                         task_fut.set_result(result)
 
                     elif 'exception' in msg:
-                        exception, _ = deserialize_object(msg['exception'])
+                        exception, _ = deserialize(msg['exception'])
                         task_fut.set_exception(exception)
 
             if not self.is_alive:

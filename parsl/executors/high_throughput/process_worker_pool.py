@@ -27,10 +27,7 @@ if platform.system() == 'Darwin':
 else:
     from multiprocessing import Queue as mpQueue
 
-from parsl.serialize import ParslSerializer
-parsl_serializer = ParslSerializer()
-unpack_apply_message = parsl_serializer.unpack_apply_message
-serialize_object = parsl_serializer.serialize
+from parsl.serialize import unpack_apply_message, serialize
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
@@ -356,7 +353,7 @@ class Manager(object):
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
                             logger.info("[WORKER_WATCHDOG_THREAD] Putting exception for task {} in the pending result queue".format(task['task_id']))
-                            result_package = {'task_id': task['task_id'], 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                            result_package = {'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
@@ -516,10 +513,10 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         try:
             result = execute_task(req['buffer'])
-            serialized_result = serialize_object(result, buffer_threshold=1e6)
+            serialized_result = serialize(result, buffer_threshold=1e6)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
-            result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+            result_package = {'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
@@ -530,8 +527,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         except Exception:
             logger.exception("Caught exception while trying to pickle the result package")
             pkl_package = pickle.dumps({'task_id': tid,
-                                        'exception': serialize_object(
-                                            RemoteExceptionWrapper(*sys.exc_info()))
+                                        'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))
             })
 
         result_queue.put(pkl_package)

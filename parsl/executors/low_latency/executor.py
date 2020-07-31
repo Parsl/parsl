@@ -7,11 +7,7 @@ import threading
 import queue
 from multiprocessing import Process, Queue
 
-from parsl.serialize import ParslSerializer
-parsl_serializer = ParslSerializer()
-pack_apply_message = parsl_serializer.pack_apply_message
-deserialize_object = parsl_serializer.deserialize
-
+from parsl.serialize import pack_apply_message, deserialize
 from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
 from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage, UnsupportedFeatureError
@@ -160,7 +156,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         while not self.bad_state_is_set:
             task_id, buf = self.incoming_q.get()  # TODO: why does this hang?
-            msg = deserialize_object(buf)[0]
+            msg = deserialize(buf)[0]
             # TODO: handle exceptions
             task_fut = self.tasks[task_id]
             logger.debug("Got response for task id {}".format(task_id))
@@ -174,7 +170,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
             elif 'exception' in msg:
                 logger.warning("Task: {} has returned with an exception")
                 try:
-                    s, _ = deserialize_object(msg['exception'])
+                    s = deserialize(msg['exception'])
                     exception = ValueError("Remote exception description: {}".format(s))
                     task_fut.set_exception(exception)
                 except Exception as e:

@@ -8,11 +8,7 @@ from multiprocessing import Process, Queue
 from typing import Dict, List, Optional, Tuple, Union
 import math
 
-from parsl.serialize import ParslSerializer
-parsl_serializer = ParslSerializer()
-pack_apply_message = parsl_serializer.pack_apply_message
-deserialize_object = parsl_serializer.deserialize
-
+from parsl.serialize import pack_apply_message, deserialize
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
@@ -378,19 +374,19 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
                         if tid == -1 and 'exception' in msg:
                             logger.warning("Executor shutting down due to exception from interchange")
-                            exception = deserialize_object(msg['exception'])
+                            exception = deserialize(msg['exception'])
                             self.set_bad_state_and_fail_all(exception)
                             break
 
                         task_fut = self.tasks[tid]
 
                         if 'result' in msg:
-                            result = deserialize_object(msg['result'])
+                            result = deserialize(msg['result'])
                             task_fut.set_result(result)
 
                         elif 'exception' in msg:
                             try:
-                                s = deserialize_object(msg['exception'])
+                                s = deserialize(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
                                 if isinstance(s, RemoteExceptionWrapper):
                                     try:

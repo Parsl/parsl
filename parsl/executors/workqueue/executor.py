@@ -20,10 +20,7 @@ import inspect
 import shutil
 import itertools
 
-from parsl.serialize import ParslSerializer
-parsl_serializer = ParslSerializer()
-pack_apply_message = parsl_serializer.pack_apply_message
-
+from parsl.serialize import pack_apply_message
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File

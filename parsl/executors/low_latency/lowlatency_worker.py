@@ -7,11 +7,7 @@ import uuid
 # import zmq
 from multiprocessing import Process
 
-from parsl.serialize import ParslSerializer
-parsl_serializer = ParslSerializer()
-unpack_apply_message = parsl_serializer.unpack_apply_message
-serialize_object = parsl_serializer.serialize
-
+from parsl.serialize import unpack_apply_message, serialize
 from parsl.executors.low_latency import zmq_pipes
 
 logger = logging.getLogger(__name__)
@@ -109,7 +105,7 @@ def worker(worker_id, task_url, debug=True, logdir="workers", uid="1"):
         logger.debug("Worker {} completed task {}".format(worker_id, task_id))
 
         reply = {"result": result, "worker_id": worker_id}
-        message_q.put(task_id, serialize_object(reply))
+        message_q.put(task_id, serialize(reply))
         logger.debug("Result sent")
 
 

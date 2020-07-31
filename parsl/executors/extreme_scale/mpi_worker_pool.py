@@ -19,11 +19,7 @@ from mpi4py import MPI
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.version import VERSION as PARSL_VERSION
-
-from parsl.serialize import ParslSerializer
-parsl_serializer = ParslSerializer()
-unpack_apply_message = parsl_serializer.unpack_apply_message
-serialize_object = parsl_serializer.serialize
+from parsl.serialize import unpack_apply_message, serialize
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
@@ -408,10 +404,10 @@ def worker(comm, rank):
         try:
             result = execute_task(req['buffer'])
         except Exception as e:
-            result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+            result_package = {'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
             logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
-            result_package = {'task_id': tid, 'result': serialize_object(result)}
+            result_package = {'task_id': tid, 'result': serialize(result)}
             logger.debug("Result: {}".format(result))
 
         pkl_package = pickle.dumps(result_package)
