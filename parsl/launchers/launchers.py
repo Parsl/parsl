@@ -7,7 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 class Launcher(RepresentationMixin, metaclass=ABCMeta):
-    """ Launcher base class to enforce launcher interface
+    """Launchers are basically wrappers for user submitted scripts as they
+    are submitted to a specific execution resource.
     """
     def __init__(self, debug: bool = True):
         self.debug = debug
