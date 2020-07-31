@@ -6,24 +6,17 @@ logger = logging.getLogger(__name__)
 
 
 class ParslSerializer(object):
+    """ ParslSerializer gives you one interface to multiple serialization libraries
     """
-    Information that we want to be able to ship around:
+    __singleton_instance = None
 
-
-    * Function run information ->
-    * Function id <---> Container id ? (is there a 1-1 mapping here?)
-    * Container id
-    * Endpoint id
-
-    * Function body
-    * Potentially in a byte compiled form ?
-    * All parameters ->
-    * Args  + Kwargs
-
-
-    From the client side. At function invocation we need to capture
-
-    """
+    def __new__(cls, *args, **kwargs):
+        """ Make ParslSerializer a singleton using the fact that there's only one instance
+        of a class variable
+        """
+        if ParslSerializer.__singleton_instance is None:
+            ParslSerializer.__singleton_instance = object.__new__(cls, *args, **kwargs)
+        return ParslSerializer.__singleton_instance
 
     def __init__(self):
         """ Instantiate the appropriate classes
