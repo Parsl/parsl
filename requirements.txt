@@ -3,7 +3,6 @@ typeguard>=2.5
 globus-sdk
 dill
 tblib
-ipykernel
 requests
 paramiko
 psutil>=5.5.1
