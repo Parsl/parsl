@@ -77,27 +77,27 @@ class ParslSerializer(object):
         """
         serialized = None
         serialized_flag = False
-        kind = None
+        last_exception = None
         if callable(obj):
-            kind = 'callable'
             for method in self.methods_for_code.values():
                 try:
                     serialized = method.serialize(obj)
                     # We attempt a deserialization to make sure both work.
                     method.deserialize(serialized)
-                except Exception:
+                except Exception as e:
                     logger.exception(f"Serialization method: {method} did not work")
+                    last_exception = e
                     continue
                 else:
                     serialized_flag = True
                     break
         else:
-            kind = 'data'
             for method in self.methods_for_data.values():
                 try:
                     serialized = method.serialize(obj)
-                except Exception:
+                except Exception as e:
                     logger.exception(f"Serialization method {method} did not work")
+                    last_exception = e
                     continue
                 else:
                     serialized_flag = True
@@ -105,7 +105,7 @@ class ParslSerializer(object):
 
         if serialized_flag is False:
             # TODO : Replace with a SerializationError
-            raise TypeError(f"Serializing {kind} object: {obj} failed")
+            raise last_exception
 
         if len(serialized) > buffer_threshold:
             raise TypeError(f"Serialized object is too large and exceeds buffer threshold of {buffer_threshold} bytes")
