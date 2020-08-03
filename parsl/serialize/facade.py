@@ -38,8 +38,7 @@ class ParslSerializer(object):
         return self.methods_for_code, self.methods_for_data
 
     def pack_apply_message(self, func, args, kwargs,
-                           buffer_threshold=None,
-                           item_threshold=None):
+                           buffer_threshold=1e6)
         """Serialize and pack function and parameters
 
         Parameters
@@ -55,14 +54,11 @@ class ParslSerializer(object):
             Dict containing named parameters
 
         buffer_threshold: Ignored
-            This kwarg is provided only to match the interface to ipyparallel.serialize
-
-        item_threshold: Ignored
-            This kwarg is provided only to match the interface to ipyparallel.serialize
+            Limits buffer to specified size in bytes. Default is 1e6 bytes.
         """
-        b_func = self.serialize(func)
-        b_args = self.serialize(args)
-        b_kwargs = self.serialize(kwargs)
+        b_func = self.serialize(func, buffer_threshold=buffer_threshold)
+        b_args = self.serialize(args, buffer_threshold=buffer_threshold)
+        b_kwargs = self.serialize(kwargs, buffer_threshold=buffer_threshold)
         packed_buffer = self.pack_buffers([b_func, b_args, b_kwargs])
         return packed_buffer
 
