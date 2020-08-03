@@ -29,8 +29,7 @@ def simple_executor(f_all, args_all, kwargs_all, num_tasks):
         start_time = time.time()
         buf = pack_apply_message(f=next(f_all), args=next(args_all),
                                  kwargs=next(kwargs_all),
-                                 buffer_threshold=1024 * 1024,
-                                 item_threshold=1024)
+                                 buffer_threshold=1024 * 1024)
         serialization_times.append(time.time() - start_time)
 
         start_time = time.time()
@@ -82,8 +81,7 @@ def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
             start_time = time.time()
             buf = pack_apply_message(f=next(f_all), args=next(args_all),
                                      kwargs=next(kwargs_all),
-                                     buffer_threshold=1024 * 1024,
-                                     item_threshold=1024)
+                                     buffer_threshold=1024 * 1024)
             serialization_times.append(time.time() - start_time)
 
             logger.debug("Manager sending task {}".format(task_id))

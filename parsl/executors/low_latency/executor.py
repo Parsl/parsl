@@ -207,8 +207,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.tasks[task_id] = Future()
 
         fn_buf = pack_apply_message(func, args, kwargs,
-                                    buffer_threshold=1024 * 1024,
-                                    item_threshold=1024)
+                                    buffer_threshold=1024 * 1024)
 
         # Post task to the the outgoing queue
         self.outgoing_q.put(task_id, fn_buf)

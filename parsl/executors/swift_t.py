@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 BUFFER_THRESHOLD = 1024 * 1024
-ITEM_THRESHOLD = 1024
 
 
 def runner(incoming_q, outgoing_q):
@@ -323,8 +322,7 @@ class TurbineExecutor(NoStatusHandlingExecutor):
         self.tasks[task_id] = Future()
 
         fn_buf = pack_apply_message(func, args, kwargs,
-                                    buffer_threshold=1024 * 1024,
-                                    item_threshold=1024)
+                                    buffer_threshold=1024 * 1024)
 
         msg = {"task_id": task_id,
                "buffer": fn_buf}
