@@ -212,14 +212,14 @@ class GlobusStaging(Staging, RepresentationMixin):
         globus_provider = _get_globus_provider(dm.dfk, executor)
         globus_provider._update_local_path(file, executor, dm.dfk)
         stage_in_app = globus_provider._globus_stage_in_app(executor=executor, dfk=dm.dfk)
-        app_fut = stage_in_app(outputs=[file], staging_inhibit_output=True, parent_fut=parent_fut)
+        app_fut = stage_in_app(outputs=[file], _parsl_staging_inhibit=True, parent_fut=parent_fut)
         return app_fut._outputs[0]
 
     def stage_out(self, dm, executor, file, app_fu):
         globus_provider = _get_globus_provider(dm.dfk, executor)
         globus_provider._update_local_path(file, executor, dm.dfk)
         stage_out_app = globus_provider._globus_stage_out_app(executor=executor, dfk=dm.dfk)
-        return stage_out_app(app_fu, inputs=[file])
+        return stage_out_app(app_fu, _parsl_staging_inhibit=True, inputs=[file])
 
     @typeguard.typechecked
     def __init__(self, endpoint_uuid: str, endpoint_path: Optional[str] = None, local_path: Optional[str] = None):
@@ -271,7 +271,7 @@ class GlobusStaging(Staging, RepresentationMixin):
 # this cannot be a class method, but must be a function, because I want
 # to be able to use partial() on it - and partial() does not work on
 # class methods
-def _globus_stage_in(provider, executor, parent_fut=None, outputs=[], staging_inhibit_output=True):
+def _globus_stage_in(provider, executor, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
     globus_ep = provider._get_globus_endpoint(executor)
     file = outputs[0]
     dst_path = os.path.join(
@@ -284,7 +284,7 @@ def _globus_stage_in(provider, executor, parent_fut=None, outputs=[], staging_in
             file.path, dst_path)
 
 
-def _globus_stage_out(provider, executor, app_fu, inputs=[]):
+def _globus_stage_out(provider, executor, app_fu, inputs=[], _parsl_staging_inhibit=True):
     """
     Although app_fu isn't directly used in the stage out code,
     it is needed as an input dependency to ensure this code

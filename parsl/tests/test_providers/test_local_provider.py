@@ -1,3 +1,4 @@
+import logging
 import os
 import pathlib
 import pytest
@@ -13,6 +14,8 @@ from parsl.channels import LocalChannel, SSHChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers import LocalProvider
 from parsl.providers.provider_base import JobState
+
+logger = logging.getLogger(__name__)
 
 
 def _run_tests(p: LocalProvider):
@@ -77,7 +80,7 @@ Subsystem sftp {sftp_path}
 
 # It would probably be better, when more formalized site testing comes into existence, to
 # use a site-testing provided server/configuration instead of the current scheme
-@pytest.mark.local
+@pytest.mark.skip("BENC")
 def test_ssh_channel():
     with tempfile.TemporaryDirectory() as config_dir:
         sshd_thread, priv_key, server_port = _start_sshd(config_dir)
@@ -130,6 +133,7 @@ class SSHDThread(threading.Thread):
                                                                       p.stderr.read()))
                     break
         except Exception as ex:
+            logger.exception("SSHDThread encountered an exception")
             self.error = ex
 
     def stop(self):
