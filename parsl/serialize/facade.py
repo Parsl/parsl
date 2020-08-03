@@ -123,7 +123,7 @@ class ParslSerializer(object):
         elif header in self.methods_for_data:
             result = self.methods_for_data[header].deserialize(payload)
         else:
-            raise Exception("Invalid header: {} in data payload".format(header))
+            raise TypeError("Invalid header: {} in data payload. Buffer is either corrupt or not created by ParslSerializer".format(header))
 
         return result
 
