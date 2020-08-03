@@ -70,10 +70,8 @@ class ParslSerializer(object):
     def serialize(self, obj, buffer_threshold=1e6):
         """ Try available serialization methods one at a time
 
-        If all serialization methods fail we raise a TypeError. Ideally we should
-        reraise the exception from the methods we tried which might have more
-        useful info into why the object cannot be serialized
-        TODO ^
+        Individual serialization methods might raise a TypeError (eg. if objects are non serializable)
+        This method will raise the exception from the last method that was tried, if all methods fail.
         """
         serialized = None
         serialized_flag = False
