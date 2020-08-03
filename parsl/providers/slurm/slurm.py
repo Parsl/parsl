@@ -175,7 +175,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         tasks_per_node : int
             Command invocations to be launched per node
         job_name : str
-            Name for the job (must be unique).
+            Name for the job
         Returns
         -------
         None or str
