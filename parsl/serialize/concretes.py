@@ -19,9 +19,6 @@ class PickleSerializer(SerializerBase):
     _for_code = True
     _for_data = True
 
-    def __init__(self):
-        super().__init__()
-
     def serialize(self, data):
         x = pickle.dumps(data)
         return self.identifier + x
@@ -47,9 +44,6 @@ class DillSerializer(SerializerBase):
     _identifier = b'02\n'
     _for_code = True
     _for_data = True
-
-    def __init__(self):
-        super().__init__()
 
     def serialize(self, data):
         x = dill.dumps(data)
