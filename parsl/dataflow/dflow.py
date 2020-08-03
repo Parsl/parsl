@@ -164,7 +164,7 @@ class DataFlowKernel(object):
 
         self.executors = {}
         self.data_manager = DataManager(self)
-        data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='data_manager')
+        data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='_parsl_internal')
         self.add_executors(config.executors + [data_manager_executor])
 
         if self.checkpoint_mode == "periodic":
@@ -705,7 +705,7 @@ class DataFlowKernel(object):
         task_id = self.task_count
         self.task_count += 1
         if isinstance(executors, str) and executors.lower() == 'all':
-            choices = list(e for e in self.executors if e != 'data_manager')
+            choices = list(e for e in self.executors if e != '_parsl_internal')
         elif isinstance(executors, list):
             choices = executors
         else:
