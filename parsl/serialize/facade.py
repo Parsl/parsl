@@ -143,8 +143,6 @@ class ParslSerializer(object):
         packed = b''
         for buf in buffers:
             s_length = bytes(str(len(buf)) + '\n', 'utf-8')
-            print("buf type : ", type(buf))
-            print("s_lenght type : ", type(s_length))
             packed += s_length + buf
 
         return packed
