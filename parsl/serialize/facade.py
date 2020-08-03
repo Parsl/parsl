@@ -37,8 +37,7 @@ class ParslSerializer(object):
     def _list_methods(self):
         return self.methods_for_code, self.methods_for_data
 
-    def pack_apply_message(self, func, args, kwargs,
-                           buffer_threshold=1e6)
+    def pack_apply_message(self, func, args, kwargs, buffer_threshold=1e6):
         """Serialize and pack function and parameters
 
         Parameters
