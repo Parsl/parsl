@@ -1,7 +1,6 @@
 import hashlib
 from functools import singledispatch
 import logging
-# from parsl.executors.serialize.serialize import serialize_object
 from parsl.serialize import serialize
 import types
 
@@ -172,7 +171,6 @@ class Memoizer(object):
                  id_for_memo(task['args'])]
 
         x = b''.join(t)
-        # hashedsum = hashlib.md5(x.encode('utf-8')).hexdigest()
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
 
