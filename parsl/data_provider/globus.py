@@ -231,12 +231,12 @@ class GlobusStaging(Staging, RepresentationMixin):
     def _globus_stage_in_app(self, executor, dfk):
         executor_obj = dfk.executors[executor]
         f = partial(_globus_stage_in, self, executor_obj)
-        return python_app(executors=['data_manager'], data_flow_kernel=dfk)(f)
+        return python_app(executors=['_parsl_internal'], data_flow_kernel=dfk)(f)
 
     def _globus_stage_out_app(self, executor, dfk):
         executor_obj = dfk.executors[executor]
         f = partial(_globus_stage_out, self, executor_obj)
-        return python_app(executors=['data_manager'], data_flow_kernel=dfk)(f)
+        return python_app(executors=['_parsl_internal'], data_flow_kernel=dfk)(f)
 
     # could this happen at __init__ time?
     def initialize_globus(self):
