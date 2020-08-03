@@ -129,10 +129,17 @@ def task(workflow_id, task_id):
 @app.route('/workflow/<workflow_id>/dag_<path:path>')
 def workflow_dag_details(workflow_id, path='group_by_apps'):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
-    df_tasks = pd.read_sql_query("""SELECT task_id, task_func_name, task_depends,
-                                 task_time_submitted, task_time_returned, task_time_running
-                                 FROM task WHERE run_id='%s' """
-                                 % (workflow_id), db.engine)
+    query = """SELECT task.task_id, task.task_func_name, task.task_depends, status.task_status_name
+               FROM task LEFT JOIN status
+               ON task.task_id = status.task_id
+               AND task.run_id = status.run_id
+               AND status.timestamp = (SELECT MAX(status.timestamp)
+                                       FROM status
+                                       WHERE status.task_id = task.task_id and status.run_id = task.run_id
+                                      )
+               WHERE task.run_id='%s'""" % (workflow_id)
+
+    df_tasks = pd.read_sql_query(query, db.engine)
 
     group_by_apps = (path == "group_by_apps")
     return render_template('dag.html',
