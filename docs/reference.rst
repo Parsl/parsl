@@ -1,22 +1,55 @@
-Reference guide
-***************
+API Reference guide
+*******************
+
+Core
+====
 
 .. autosummary::
     :toctree: stubs
     :nosignatures:
 
+    parsl.app.app.python_app
+    parsl.app.app.bash_app
+    parsl.dataflow.futures.AppFuture
+    parsl.dataflow.dflow.DataFlowKernelLoader
+    parsl.monitoring.MonitoringHub
+
+Configuration
+=============
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.config.Config
     parsl.set_stream_logger
     parsl.set_file_logger
     parsl.addresses.address_by_hostname
     parsl.addresses.address_by_interface
     parsl.addresses.address_by_query
     parsl.addresses.address_by_route
-    parsl.app.app.python_app
-    parsl.app.app.bash_app
+
+Channels
+========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.channels.base.Channel
+    parsl.channels.LocalChannel
+    parsl.channels.SSHChannel
+    parsl.channels.OAuthSSHChannel
+    parsl.channels.SSHInteractiveLoginChannel
+
+Data management
+===============
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
     parsl.app.futures.DataFuture
-    parsl.config.Config
-    parsl.dataflow.futures.AppFuture
-    parsl.dataflow.dflow.DataFlowKernelLoader
     parsl.data_provider.data_manager.DataManager
     parsl.data_provider.data_manager.Staging
     parsl.data_provider.files.File
@@ -27,30 +60,28 @@ Reference guide
     parsl.data_provider.http.HTTPSeparateTaskStaging
     parsl.data_provider.http.HTTPInTaskStaging
     parsl.data_provider.rsync.RSyncStaging
+
+Executors
+=========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
     parsl.executors.base.ParslExecutor
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.ExtremeScaleExecutor
     parsl.executors.swift_t.TurbineExecutor
-    parsl.channels.LocalChannel
-    parsl.channels.SSHChannel
-    parsl.channels.OAuthSSHChannel
-    parsl.channels.SSHInteractiveLoginChannel
-    parsl.providers.AdHocProvider
-    parsl.providers.AWSProvider
-    parsl.providers.CobaltProvider
-    parsl.providers.CondorProvider
-    parsl.providers.GoogleCloudProvider
-    parsl.providers.GridEngineProvider
-    parsl.providers.JetstreamProvider
-    parsl.providers.LocalProvider
-    parsl.providers.LSFProvider
-    parsl.providers.GridEngineProvider
-    parsl.providers.SlurmProvider
-    parsl.providers.TorqueProvider
-    parsl.providers.KubernetesProvider
-    parsl.providers.PBSProProvider
+
+Launchers
+=========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher
@@ -60,7 +91,30 @@ Reference guide
     parsl.launchers.MpiExecLauncher
     parsl.launchers.JsrunLauncher
     parsl.launchers.WrappedLauncher
-    parsl.monitoring.MonitoringHub
+
+Providers
+=========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.providers.AdHocProvider
+    parsl.providers.AWSProvider
+    parsl.providers.CobaltProvider
+    parsl.providers.CondorProvider
+    parsl.providers.GoogleCloudProvider
+    parsl.providers.GridEngineProvider
+    parsl.providers.LocalProvider
+    parsl.providers.LSFProvider
+    parsl.providers.GridEngineProvider
+    parsl.providers.SlurmProvider
+    parsl.providers.TorqueProvider
+    parsl.providers.KubernetesProvider
+    parsl.providers.PBSProProvider
+
+Exceptions
+==========
 
 .. autosummary::
     :toctree: stubs
@@ -102,3 +156,19 @@ Reference guide
     parsl.channels.errors.SSHException
     parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
+
+Internal
+========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.app.app.AppBase
+    parsl.app.bash.BashApp
+    parsl.app.python.PythonApp
+    parsl.dataflow.dflow.DataFlowKernel
+    parsl.dataflow.flow_control.FlowControl
+    parsl.dataflow.memoization.Memoizer
+    parsl.dataflow.strategy.Strategy
+    parsl.dataflow.flow_control.Timer

@@ -66,7 +66,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
         :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,
-        :class:`~parsl.providers.jetstream.jetstream.Jetstream`,
         :class:`~parsl.providers.local.local.Local`,
         :class:`~parsl.providers.sge.sge.GridEngine`,
         :class:`~parsl.providers.slurm.slurm.Slurm`, or

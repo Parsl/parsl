@@ -3,7 +3,7 @@ Where to start
 
 We welcome contributions of any type (e.g., bug fixes, new features, reporting issues, documentation, etc).  If you're looking for a good place to get started you might like to peruse our current Git issues (those marked with `help wanted <https://github.com/Parsl/parsl/labels/help%20wanted>`_ are a good place to start).
 
-Please be aware of `Parsl's Code of Conduct<https://github.com/Parsl/parsl/blob/master/CoC.md>`_. 
+Please be aware of `Parsl's Code of Conduct<https://github.com/Parsl/parsl/blob/master/CODE_OF_CONDUCT.md>`_. 
 
 Coding conventions
 ------------------

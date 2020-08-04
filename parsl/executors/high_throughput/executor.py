@@ -9,9 +9,7 @@ from typing import Dict  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union, Any
 import math
 
-from ipyparallel.serialize import pack_apply_message
-from ipyparallel.serialize import deserialize_object
-
+from parsl.serialize import pack_apply_message, deserialize
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
@@ -30,9 +28,6 @@ from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
-
-BUFFER_THRESHOLD = 1024 * 1024
-ITEM_THRESHOLD = 1024
 
 
 class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
@@ -80,7 +75,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
         :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,
-        :class:`~parsl.providers.jetstream.jetstream.Jetstream`,
         :class:`~parsl.providers.local.local.Local`,
         :class:`~parsl.providers.sge.sge.GridEngine`,
         :class:`~parsl.providers.slurm.slurm.Slurm`, or
@@ -378,19 +372,19 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
                         if tid == -1 and 'exception' in msg:
                             logger.warning("Executor shutting down due to exception from interchange")
-                            exception, _ = deserialize_object(msg['exception'])
+                            exception = deserialize(msg['exception'])
                             self.set_bad_state_and_fail_all(exception)
                             break
 
                         task_fut = self.tasks[tid]
 
                         if 'result' in msg:
-                            result, _ = deserialize_object(msg['result'])
+                            result = deserialize(msg['result'])
                             task_fut.set_result(result)
 
                         elif 'exception' in msg:
                             try:
-                                s, _ = deserialize_object(msg['exception'])
+                                s = deserialize(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
                                 if isinstance(s, RemoteExceptionWrapper):
                                     try:
@@ -551,8 +545,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         try:
             fn_buf = pack_apply_message(func, args, kwargs,
-                                        buffer_threshold=1024 * 1024,
-                                        item_threshold=1024)
+                                        buffer_threshold=1024 * 1024)
         except TypeError:
             raise SerializationError(func.__name__)
 
