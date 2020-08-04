@@ -630,7 +630,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
             else:
                 if not max_idletime:
-                    block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks] if x[1][0] == 0]
+                    block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
                 else:
                     block_ids_to_kill = []
                     for x in sorted_blocks:
