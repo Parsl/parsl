@@ -595,7 +595,9 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         force : Bool
              Used along with blocks to indicate whether blocks should be terminated by force.
              When force = True, we will kill blocks regardless of the blocks being busy
-             When force = False, we will kill only idle blocks
+             When force = False, Only idle blocks will be terminated.
+             If the # of `idle_blocks` < `blocks`, the list of jobs marked for termination
+             will be in the range: 0 -`blocks`.
 
         max_idletime: float
              A time to indicate how long a block can be idle.
@@ -604,8 +606,9 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         block_ids : list
              List of specific block ids to terminate. Optional
 
-        Raises:
-             NotImplementedError
+        Returns
+        -------
+        List of job_ids marked for termination
         """
 
         if block_ids:
@@ -635,10 +638,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                             block_ids_to_kill.append(x[0])
                             if len(block_ids_to_kill) == blocks:
                                 break
-                logger.warning("Selecting block ids to kill since they are idle : {}".format(
+                logger.debug("Selecting block ids to kill since they are idle : {}".format(
                     block_ids_to_kill))
 
-        logger.warning("CUrrent blocks : {}".format(self.blocks))
+        logger.debug("Current blocks : {}".format(self.blocks))
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
