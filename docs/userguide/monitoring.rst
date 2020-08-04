@@ -1,19 +1,15 @@
 Monitoring
 ==========
 
-Parsl includes a flexible monitoring system to capture program and task state as well 
-as resource usage over time. The Parsl monitoring system aims to provide detailed
-information and diagnostic
-capabilities to help track the state of your programs, down to the individual apps that are
-executed on remote machines. 
+Parsl includes a monitoring system to capture task state as well as resource
+usage over time. The Parsl monitoring system aims to provide detailed
+information and diagnostic capabilities to help track the state of your
+programs, down to the individual apps that are executed on remote machines.
 
-Installation
-------------
-
-Parsl's monitoring system is implemented as a lightweight service with an associated
-database for capturing monitoring information and a graphical web-based dashboard
-for viewing and exploring monitoring information.  By default, a local SQLite 
-database is used to store monitoring information in a file.
+The monitoring system records information to an SQLite database while a
+workflow runs. This information can then be visualised in a web dashboard
+using the `parsl-visualize` tool, or queried using SQL using regular
+SQLite tools.
 
 
 Monitoring configuration
@@ -57,13 +53,13 @@ configuration. Here the `MonitoringHub` is specified to use port
 Visualization
 -------------
 
-To view the web dashboard during or after a Parsl program has executed, you
+To view the web dashboard while or after a Parsl program has executed, you
 need to first run the ``parsl-visualize`` utility::
 
    $ parsl-visualize
 
 By default, this command expects that the default ``monitoring.db`` database is used
-in the current working directory. Other database can be loaded by passing
+in the current working directory. Other databases can be loaded by passing
 the database URI on the command line.  For example, if the full path
 to the database is ``/tmp/my_monitoring.db``, run::
 

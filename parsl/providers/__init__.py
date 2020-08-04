@@ -15,7 +15,6 @@ from parsl.providers.ad_hoc.ad_hoc import AdHocProvider
 # Cloud Providers
 from parsl.providers.aws.aws import AWSProvider
 from parsl.providers.googlecloud.googlecloud import GoogleCloudProvider
-from parsl.providers.jetstream.jetstream import JetstreamProvider
 from parsl.providers.azure.azure import AzureProvider
 
 # Kubernetes
@@ -32,6 +31,5 @@ __all__ = ['LocalProvider',
            'PBSProProvider',
            'AWSProvider',
            'GoogleCloudProvider',
-           'JetstreamProvider',
            'KubernetesProvider',
            'AzureProvider']
