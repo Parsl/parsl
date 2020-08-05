@@ -14,6 +14,7 @@ parsl.executors.ThreadPoolExecutor
    .. autosummary::
    
       ~ThreadPoolExecutor.__init__
+      ~ThreadPoolExecutor.handle_errors
       ~ThreadPoolExecutor.scale_in
       ~ThreadPoolExecutor.scale_out
       ~ThreadPoolExecutor.set_bad_state_and_fail_all
@@ -31,6 +32,7 @@ parsl.executors.ThreadPoolExecutor
    .. autosummary::
    
       ~ThreadPoolExecutor.bad_state_is_set
+      ~ThreadPoolExecutor.error_management_enabled
       ~ThreadPoolExecutor.executor_exception
       ~ThreadPoolExecutor.hub_address
       ~ThreadPoolExecutor.hub_port
