@@ -1,13 +1,11 @@
 from parsl.config import Config
 from parsl.providers import AWSProvider
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_query
 
 config = Config(
     executors=[
         HighThroughputExecutor(
             label='ec2_single_node',
-            address=address_by_query(),
             provider=AWSProvider(
                 # Specify your EC2 AMI id
                 'YOUR_AMI_ID',
