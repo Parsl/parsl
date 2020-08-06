@@ -25,7 +25,6 @@ class PollItem(ExecutorStatus):
 
     def poll(self, now: float):
         if self._should_poll(now):
-            logger.debug("Polling {}".format(self._executor.label))
             self._status = self._executor.status()
             self._last_poll_time = now
 
@@ -62,7 +61,6 @@ class TaskStatusPoller(object):
         self._error_handler = JobErrorHandler()
 
     def poll(self, tasks=None, kind=None):
-        logger.debug("Polling")
         self._update_state()
         self._error_handler.run(self._poll_items)
         self._strategy.strategize(self._poll_items, tasks)
