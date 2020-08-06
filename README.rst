@@ -26,6 +26,9 @@ The latest Parsl version available on PyPi is v1.0.0.
 .. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=stable
    :target: http://parsl.readthedocs.io/en/stable/?badge=stable
    :alt: Documentation Status
+.. |NSF-1550588| image:: https://img․shields․io/badge/NSF-1550588-blue.svg
+   :target: https://nsf․gov/awardsearch/showAward?AWD_ID=1550588
+   :alt: NFS Grant Number 1550588
 
 QuickStart
 ==========

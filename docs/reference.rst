@@ -112,6 +112,8 @@ Providers
     parsl.providers.TorqueProvider
     parsl.providers.KubernetesProvider
     parsl.providers.PBSProProvider
+    parsl.providers.ExecutionProvider
+    parsl.Providers.ClusterProvider
 
 Exceptions
 ==========
