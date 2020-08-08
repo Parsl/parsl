@@ -1,6 +1,5 @@
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_hostname
 from parsl.launchers import AprunLauncher
 from parsl.providers import TorqueProvider
 
@@ -15,7 +14,6 @@ def fresh_config():
                 cores_per_worker=1,
                 worker_debug=False,
                 max_workers=1,
-                address=address_by_hostname(),
                 provider=TorqueProvider(
                     queue='normal',
                     launcher=AprunLauncher(overrides="-b -- bwpy-environ --"),

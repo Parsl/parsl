@@ -1,7 +1,6 @@
 from parsl.providers import AdHocProvider
 from parsl.channels import SSHChannel
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_query
 from parsl.config import Config
 
 user_opts = {'adhoc':
@@ -16,7 +15,6 @@ config = Config(
         HighThroughputExecutor(
             label='remote_htex',
             max_workers=2,
-            address=address_by_query(),
             worker_logdir_root=user_opts['adhoc']['script_dir'],
             provider=AdHocProvider(
                 # Command to be run before starting a worker, such as:
