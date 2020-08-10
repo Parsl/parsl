@@ -315,7 +315,7 @@ class MonitoringHub(RepresentationMixin):
                     return f(*args, **kwargs)
                 finally:
                     try:
-                        msg = command_q.get(timeout=1)
+                        command_q.get(timeout=1)
                     except queue.Empty:
                         pass
             finally:
@@ -482,7 +482,6 @@ def monitor(pid,
 
     import logging
     import time
-    import queue
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
@@ -558,7 +557,7 @@ def monitor(pid,
             logging.debug("sending message")
             radio.send(d)
             if first_msg:
-                msg = command_q.put("First message sent")
+                command_q.put("First message sent")
             first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
