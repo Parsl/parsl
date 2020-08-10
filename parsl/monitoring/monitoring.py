@@ -314,8 +314,10 @@ class MonitoringHub(RepresentationMixin):
                 try:
                     return f(*args, **kwargs)
                 finally:
-                    command_q.put("Finished")
-                    p.join()
+                    try:
+                        msg = command_q.get(timeout=1)
+                    except queue.Empty:
+                        pass
             finally:
                 # There's a chance of zombification if the workers are killed by some signals
                 p.terminate()
@@ -555,17 +557,13 @@ def monitor(pid,
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
             radio.send(d)
+            if first_msg:
+                msg = command_q.put("First message sent")
             first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
 
-        try:
-            msg = command_q.get(block=False)
-            if msg == "Finished":
-                logging.info("Received task finished message. Ending the monitoring loop now.")
-                break
-        except queue.Empty:
-            logging.debug("Have not received any message.")
-
         logging.debug("sleeping")
         time.sleep(sleep_dur)
+
+    logger.info("Monitor exiting")
