@@ -73,7 +73,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         '''
 
-        logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
             # This job dict should really be a class on its own
             job_dict = self.resources[job_id]
