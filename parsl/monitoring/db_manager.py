@@ -106,7 +106,6 @@ class Database:
         host = Column(Text, nullable=False)
         user = Column(Text, nullable=False)
         rundir = Column(Text, nullable=False)
-
         tasks_failed_count = Column(Integer, nullable=False)
         tasks_completed_count = Column(Integer, nullable=False)
 
