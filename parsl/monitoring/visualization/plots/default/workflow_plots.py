@@ -210,7 +210,8 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
                        "running": (3, 'rgb(0, 0, 255)'),
                        "dep_fail": (4, 'rgb(255, 128, 255)'),
                        "failed": (5, 'rgb(200, 0, 0)'),
-                       "done": (6, 'rgb(0, 200, 0)')
+                       "done": (6, 'rgb(0, 200, 0)'),
+                       "fail_retryable": (7, 'rgb(200, 128,128)')
                       }
 
     node_traces = [...] * len(groups_list)
