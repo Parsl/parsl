@@ -33,7 +33,7 @@ else:
 
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
-TRY = 'try'
+TRY = 'try'              # Try table includes information about each attempt to run a task
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
