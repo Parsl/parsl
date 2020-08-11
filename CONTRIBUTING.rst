@@ -5,6 +5,9 @@ We welcome contributions of any type (e.g., bug fixes, new features, reporting i
 
 Please be aware of `Parsl's Code of Conduct<https://github.com/Parsl/parsl/blob/master/CODE_OF_CONDUCT.md>`_. 
 
+If you are not familiar with GitHub pull requests, the main mechanism to contribute changes to our code, there is `documentation available  <https://opensource.com/article/19/7/create-pull-request-github>`_.
+
+
 Coding conventions
 ------------------
 
