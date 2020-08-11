@@ -1,4 +1,4 @@
-"""WorkQueueExecutor utilizes the Work Queue distributed framework developed by the
+""" WorkQueueExecutor utilizes the Work Queue distributed framework developed by the
 Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
@@ -19,8 +19,8 @@ import queue
 import inspect
 import shutil
 import itertools
-from ipyparallel.serialize import pack_apply_message
 
+from parsl.serialize import pack_apply_message
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
@@ -169,6 +169,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         init_command: str
             Command line to run before executing a task in a worker.
             Default is ''.
+
+        worker_options: str
+            Extra options passed to work_queue_worker. Default is ''.
     """
 
     @typeguard.typechecked
@@ -191,6 +194,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  autolabel_window: int = 1,
                  autocategory: bool = False,
                  init_command: str = "",
+                 worker_options: str = "",
                  full_debug: bool = True):
         NoStatusHandlingExecutor.__init__(self)
         self._provider = provider
@@ -224,6 +228,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.autocategory = autocategory
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
+        self.worker_options = worker_options
 
         if not self.address:
             self.address = socket.gethostname()
@@ -380,6 +385,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         worker_command = 'work_queue_worker'
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
+        if self.worker_options:
+            worker_command += ' {}'.format(self.worker_options)
         if self.project_name:
             worker_command += ' -M {}'.format(self.project_name)
         else:
@@ -411,8 +418,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                              "kwargs": parsl_fn_kwargs}
         else:
             function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
-                                                             buffer_threshold=1024 * 1024,
-                                                             item_threshold=1024)}
+                                                             buffer_threshold=1024 * 1024)}
+
         with open(fn_path, "wb") as f_out:
             pickle.dump(function_info, f_out)
 

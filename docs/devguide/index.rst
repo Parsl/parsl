@@ -8,5 +8,4 @@ Developer documentation
    changelog
    design
    roadmap
-   dev_docs
    packaging

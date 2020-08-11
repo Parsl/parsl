@@ -14,6 +14,7 @@ parsl.executors.HighThroughputExecutor
    .. autosummary::
    
       ~HighThroughputExecutor.__init__
+      ~HighThroughputExecutor.handle_errors
       ~HighThroughputExecutor.hold_worker
       ~HighThroughputExecutor.initialize_scaling
       ~HighThroughputExecutor.scale_in
@@ -36,6 +37,7 @@ parsl.executors.HighThroughputExecutor
       ~HighThroughputExecutor.bad_state_is_set
       ~HighThroughputExecutor.connected_managers
       ~HighThroughputExecutor.connected_workers
+      ~HighThroughputExecutor.error_management_enabled
       ~HighThroughputExecutor.executor_exception
       ~HighThroughputExecutor.hub_address
       ~HighThroughputExecutor.hub_port
