@@ -6,7 +6,6 @@ from parsl.providers import LocalProvider
 from parsl.app.app import python_app
 from parsl.launchers import SrunLauncher
 from parsl.providers.slurm.slurm import SlurmProvider
-from parsl.addresses import address_by_hostname
 
 
 config = Config(
@@ -80,7 +79,6 @@ if __name__ == "__main__":
             label="midway_htex",
             # worker_debug=True,
             cores_per_worker=1,
-            address=address_by_hostname(),
             provider=SlurmProvider(
                 'broadwl',
                 launcher=SrunLauncher(),

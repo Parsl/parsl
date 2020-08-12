@@ -3,7 +3,6 @@ from parsl.channels import LocalChannel
 from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SrunLauncher
-from parsl.addresses import address_by_hostname
 
 from .user_opts import user_opts
 """ This config assumes that it is used to launch parsl tasks from the login nodes
@@ -16,7 +15,6 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label="frontera_htex",
-                address=address_by_hostname(),
                 max_workers=1,
                 provider=SlurmProvider(
                     cmd_timeout=60,     # Add extra time for slow scheduler responses
