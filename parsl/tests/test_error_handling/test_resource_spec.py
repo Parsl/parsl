@@ -31,7 +31,7 @@ def test_resource(n=2):
         assert isinstance(e, ExecutorError)
 
     # Specify resources with wrong types
-    # cpus is incorrect
+    # 'cpus' is incorrect, should be 'cores'
     spec = {'cpus': 2, 'memory': 1000, 'disk': 1000}
     fut = double(n, parsl_resource_specification=spec)
     try:
