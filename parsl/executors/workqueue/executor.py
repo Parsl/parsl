@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category env_pkg map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -321,6 +321,32 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         kwargs : dict
             Keyword arguments to the Parsl app
         """
+        cores = None
+        memory = None
+        disk = None
+        if resource_specification and isinstance(resource_specification, dict):
+            logger.debug("Got resource specification: {}".format(resource_specification))
+
+            acceptable_resource_types = ['cores', 'memory', 'disk']
+            keys = list(resource_specification.keys())
+            if len(keys) != 3:
+                logger.error("Task resource specification requires "
+                             "three resources to be specified simultaneously: cores, memory, and disk")
+                raise ExecutorError(self, "Task resource specification requires "
+                                          "three resources to be specified simultaneously: cores, memory, and disk, "
+                                          "and only takes these three resource types.")
+
+            if not all(k.lower() in acceptable_resource_types for k in keys):
+                logger.error("Task resource specification only accepts "
+                             "three types of resources: cores, memory, and disk")
+                raise ExecutorError(self, "Task resource specification requires "
+                                          "three resources to be specified simultaneously: cores, memory, and disk, "
+                                          "and only takes these three resource types.")
+
+            cores = resource_specification['cores']
+            memory = resource_specification['memory']
+            disk = resource_specification['disk']
+
         self.task_counter += 1
         task_id = self.task_counter
 
@@ -377,7 +403,17 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
-        self.task_queue.put_nowait(ParslTaskToWq(task_id, category, env_pkg, map_file, function_file, result_file, input_files, output_files))
+        self.task_queue.put_nowait(ParslTaskToWq(task_id,
+                                                 category,
+                                                 cores,
+                                                 memory,
+                                                 disk,
+                                                 env_pkg,
+                                                 map_file,
+                                                 function_file,
+                                                 result_file,
+                                                 input_files,
+                                                 output_files))
 
         return fu
 
@@ -727,6 +763,13 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             t.specify_category(task.category)
             if autolabel:
                 q.specify_category_mode(task.category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+
+            if task.cores is not None:
+                t.specify_cores(task.cores)
+            if task.memory is not None:
+                t.specify_memory(task.memory)
+            if task.disk is not None:
+                t.specify_disk(task.disk)
 
             # Specify environment variables for the task
             if env is not None:
