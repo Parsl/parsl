@@ -1,6 +1,6 @@
 import parsl
 from parsl.app.app import python_app
-#from parsl.tests.configs.local_threads import config
+# from parsl.tests.configs.local_threads import config
 # from parsl.tests.configs.htex_local import config
 from parsl.tests.configs.workqueue_ex import config
 from parsl.executors.errors import UnsupportedFeatureError, ExecutorError
@@ -25,11 +25,9 @@ def test_resource(n=2):
     fut = double(n, parsl_resource_specification=spec)
     try:
         fut.result()
-    except UnsupportedFeatureError as e:
-        print(e)
+    except UnsupportedFeatureError:
         assert not isinstance(executor, WorkQueueExecutor)
     except Exception as e:
-        print(e)
         assert isinstance(e, ExecutorError)
 
     # Specify resources with wrong types
@@ -38,11 +36,9 @@ def test_resource(n=2):
     fut = double(n, parsl_resource_specification=spec)
     try:
         fut.result()
-    except UnsupportedFeatureError as e:
-        print(e)
+    except UnsupportedFeatureError:
         assert not isinstance(executor, WorkQueueExecutor)
     except Exception as e:
-        print(e)
         assert isinstance(e, ExecutorError)
 
     # Correct specification
@@ -50,8 +46,7 @@ def test_resource(n=2):
     fut = double(n, parsl_resource_specification=spec)
     try:
         fut.result()
-    except UnsupportedFeatureError as e:
-        print(e)
+    except UnsupportedFeatureError:
         assert not isinstance(executor, WorkQueueExecutor)
     else:
         assert isinstance(executor, WorkQueueExecutor)
