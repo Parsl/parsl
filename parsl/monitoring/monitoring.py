@@ -299,25 +299,31 @@ class MonitoringHub(RepresentationMixin):
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            command_q = Queue(maxsize=10)
+            # Send first message to monitoring router
+            try:
+                monitor(os.getpid(),
+                        task_id,
+                        monitoring_hub_url,
+                        run_id,
+                        logging_level,
+                        sleep_dur,
+                        first_message=True)
+            except Exception:
+                pass
+
+            # create the monitor process and start
             p = Process(target=monitor,
                         args=(os.getpid(),
                               task_id,
                               monitoring_hub_url,
                               run_id,
-                              command_q,
                               logging_level,
                               sleep_dur),
                         name="Monitor-Wrapper-{}".format(task_id))
             p.start()
+
             try:
-                try:
-                    return f(*args, **kwargs)
-                finally:
-                    try:
-                        command_q.get(timeout=1)
-                    except queue.Empty:
-                        pass
+                return f(*args, **kwargs)
             finally:
                 # There's a chance of zombification if the workers are killed by some signals
                 p.terminate()
@@ -471,25 +477,36 @@ def monitor(pid,
             task_id,
             monitoring_hub_url,
             run_id,
-            command_q,
             logging_level=logging.INFO,
-            sleep_dur=10):
+            sleep_dur=10,
+            first_message=False):
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
-    import psutil
     import platform
-
-    import logging
     import time
+
+    radio = UDPRadio(monitoring_hub_url,
+                     source_id=task_id)
+
+    if first_message:
+        msg = {'run_id': run_id,
+               'task_id': task_id,
+               'hostname': platform.node(),
+               'first_msg': first_message,
+               'timestamp': datetime.datetime.now()
+        }
+        radio.send(msg)
+        return
+
+    import psutil
+    import logging
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
         logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
-    logging.debug("start of monitor")
 
-    radio = UDPRadio(monitoring_hub_url,
-                     source_id=task_id)
+    logging.debug("start of monitor")
 
     # these values are simple to log. Other information is available in special formats such as memory below.
     simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
@@ -556,9 +573,6 @@ def monitor(pid,
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
             radio.send(d)
-            if first_msg:
-                command_q.put("First message sent")
-            first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
 
