@@ -234,13 +234,16 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
         r = []
         for i in range(blocks):
             if self.provider:
-                block = self.provider.submit(
-                    self.launch_cmd, self.workers_per_node)
-                logger.debug("Launched block {}:{}".format(i, block))
-                if not block:
-                    raise(ScalingFailed(self.provider.label,
-                                        "Attempts to provision nodes via provider has failed"))
-                self.blocks.extend([block])
+                try:
+                    block = self.provider.submit(
+                        self.launch_cmd, self.workers_per_node)
+                    logger.debug("Launched block {}:{}".format(i, block))
+                    # TODO: use exceptions for this
+                    if not block:
+                        self._fail_job_async(None, "Failed to launch block")
+                    self.blocks.extend([block])
+                except Exception as ex:
+                    self._fail_job_async(None, "Failed to launch block: {}".format(ex))
             else:
                 logger.error("No execution provider available")
                 r = None

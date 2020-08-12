@@ -14,6 +14,7 @@ parsl.executors.base.ParslExecutor
    .. autosummary::
    
       ~ParslExecutor.__init__
+      ~ParslExecutor.handle_errors
       ~ParslExecutor.scale_in
       ~ParslExecutor.scale_out
       ~ParslExecutor.set_bad_state_and_fail_all
@@ -31,6 +32,7 @@ parsl.executors.base.ParslExecutor
    .. autosummary::
    
       ~ParslExecutor.bad_state_is_set
+      ~ParslExecutor.error_management_enabled
       ~ParslExecutor.executor_exception
       ~ParslExecutor.hub_address
       ~ParslExecutor.hub_port

@@ -5,7 +5,8 @@ import threading
 import queue
 import pickle
 from multiprocessing import Process, Queue
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict  # noqa F401 (used in type annotation)
+from typing import List, Optional, Tuple, Union, Any
 import math
 
 from parsl.serialize import pack_apply_message, deserialize
@@ -275,6 +276,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        # TODO: why is this a provider property?
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
@@ -566,18 +568,29 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
+        if not self.provider:
+            raise (ScalingFailed("No execution provider available"))
         r = []
         for i in range(blocks):
             external_block_id = str(len(self.blocks))
-            launch_cmd = self.launch_cmd.format(block_id=external_block_id)
-            internal_block = self.provider.submit(launch_cmd, 1)
-            logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
-            if not internal_block:
-                raise(ScalingFailed(self.provider.label,
-                                    "Attempts to provision nodes via provider has failed"))
-            r.extend([external_block_id])
-            self.blocks[external_block_id] = internal_block
+            try:
+                self.blocks[external_block_id] = self._launch_block(external_block_id)
+                r.append(external_block_id)
+            except Exception as ex:
+                self._fail_job_async(external_block_id,
+                                     "Failed to start block {}: {}".format(external_block_id, ex))
         return r
+
+    def _launch_block(self, external_block_id: str) -> Any:
+        if self.launch_cmd is None:
+            raise ScalingFailed(self.provider.label, "No launch command")
+        launch_cmd = self.launch_cmd.format(block_id=external_block_id)
+        internal_block = self.provider.submit(launch_cmd, 1)
+        logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
+        if not internal_block:
+            raise(ScalingFailed(self.provider.label,
+                                "Attempts to provision nodes via provider has failed"))
+        return internal_block
 
     def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
