@@ -516,7 +516,6 @@ def monitor(pid,
     pm = psutil.Process(pid)
     pm.cpu_percent()
 
-    first_msg = True
     children_user_time = {}
     children_system_time = {}
     total_children_user_time = 0.0
@@ -529,7 +528,7 @@ def monitor(pid,
             d["task_id"] = task_id
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
-            d['first_msg'] = first_msg
+            d['first_msg'] = first_message
             d['timestamp'] = datetime.datetime.now()
 
             logging.debug("getting children")
