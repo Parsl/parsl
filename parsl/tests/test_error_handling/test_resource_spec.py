@@ -1,8 +1,8 @@
 import parsl
 from parsl.app.app import python_app
 # from parsl.tests.configs.local_threads import config
-# from parsl.tests.configs.htex_local import config
-from parsl.tests.configs.workqueue_ex import config
+from parsl.tests.configs.htex_local import config
+# from parsl.tests.configs.workqueue_ex import config
 from parsl.executors.errors import UnsupportedFeatureError, ExecutorError
 from parsl.executors import WorkQueueExecutor
 
