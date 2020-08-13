@@ -343,9 +343,13 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                           "three resources to be specified simultaneously: cores, memory, and disk, "
                                           "and only takes these three resource types.")
 
-            cores = resource_specification['cores']
-            memory = resource_specification['memory']
-            disk = resource_specification['disk']
+            for k in keys:
+                if k.lower() == 'cores':
+                    cores = resource_specification[k]
+                elif k.lower() == 'memory':
+                    memory = resource_specification[k]
+                elif k.lower() == 'disk':
+                    disk = resource_specification[k]
 
         self.task_counter += 1
         task_id = self.task_counter
