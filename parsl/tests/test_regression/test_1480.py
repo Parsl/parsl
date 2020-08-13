@@ -17,7 +17,7 @@ def test_1480(size=10**6):
 
     # Before PR#1841 this would have raised a TypeError
     # Now, with the threshold increased this should not trigger any error
-    assert sum(range(0, size)) == int(x.result()), "Sums do not match"
+    assert len(x.result()) == size, "Lengths do not match"
 
 
 if __name__ == "__main__":
