@@ -202,11 +202,31 @@ To activate this feature, add resource specifications to your apps:
    .. code-block:: python
 
       @python_app
-      def compute(x, parsl_resource_specification={'cores': 1, 'memory': '1GiB', 'disk': '1GiB'}):
+      def compute(x, parsl_resource_specification={'cores': 1, 'memory': '1000', 'disk': '1000'}):
           return x*2
 
-This special keyword argument will inform Work Queue about the resources this app requires.
+Note that ``cores``, ``memory``, and ``disk`` must be specified simultaneously if you want to use this feature,
+and ``parsl_resource_specification`` only supports specifying these three types of resources (case-insensitive) currently.
+The explanations and units for these three types of resources are listed below:
+
+    .. code-block:: JSON
+
+        {
+            "cores": "the number of cores",
+            "memory": "memory size in MB", 
+            "disk": "disk size in MB"
+        }
+
+Besides, you can also specify the resources when invoking your apps. Take the ``compute(x)`` as an example:
+
+   .. code-block:: python
+
+      spec = {'cores': 1, 'memory': '500', 'disk': '500'}
+      future = compute(x, parsl_resource_specification=spec)
+
+This ``parsl_resource_specification`` special keyword argument will inform Work Queue about the resources this app requires.
 When placing instances of ``compute(x)``, Work Queue will run as many parallel instances as possible based on each worker node's available resources.
+
 If an app's resource requirements are not known in advance,
 Work Queue has an auto-labeling feature that measures the actual resource usage of your apps and automatically chooses resource labels for you.
 With auto-labeling, it is not necessary to provide ``parsl_resource_specification``;
