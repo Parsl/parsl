@@ -5,12 +5,11 @@ import threading
 import queue
 import pickle
 from multiprocessing import Process, Queue
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict  # noqa F401 (used in type annotation)
+from typing import List, Optional, Tuple, Union, Any
 import math
 
-from ipyparallel.serialize import pack_apply_message
-from ipyparallel.serialize import deserialize_object
-
+from parsl.serialize import pack_apply_message, deserialize
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
@@ -29,9 +28,6 @@ from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
-
-BUFFER_THRESHOLD = 1024 * 1024
-ITEM_THRESHOLD = 1024
 
 
 class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
@@ -79,7 +75,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
         :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,
-        :class:`~parsl.providers.jetstream.jetstream.Jetstream`,
         :class:`~parsl.providers.local.local.Local`,
         :class:`~parsl.providers.sge.sge.GridEngine`,
         :class:`~parsl.providers.slurm.slurm.Slurm`, or
@@ -281,6 +276,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+        # TODO: why is this a provider property?
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
@@ -376,19 +372,19 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
                         if tid == -1 and 'exception' in msg:
                             logger.warning("Executor shutting down due to exception from interchange")
-                            exception, _ = deserialize_object(msg['exception'])
+                            exception = deserialize(msg['exception'])
                             self.set_bad_state_and_fail_all(exception)
                             break
 
                         task_fut = self.tasks[tid]
 
                         if 'result' in msg:
-                            result, _ = deserialize_object(msg['result'])
+                            result = deserialize(msg['result'])
                             task_fut.set_result(result)
 
                         elif 'exception' in msg:
                             try:
-                                s, _ = deserialize_object(msg['exception'])
+                                s = deserialize(msg['exception'])
                                 # s should be a RemoteExceptionWrapper... so we can reraise it
                                 if isinstance(s, RemoteExceptionWrapper):
                                     try:
@@ -549,8 +545,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         try:
             fn_buf = pack_apply_message(func, args, kwargs,
-                                        buffer_threshold=1024 * 1024,
-                                        item_threshold=1024)
+                                        buffer_threshold=1024 * 1024)
         except TypeError:
             raise SerializationError(func.__name__)
 
@@ -573,18 +568,29 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         Raises:
              NotImplementedError
         """
+        if not self.provider:
+            raise (ScalingFailed("No execution provider available"))
         r = []
         for i in range(blocks):
             external_block_id = str(len(self.blocks))
-            launch_cmd = self.launch_cmd.format(block_id=external_block_id)
-            internal_block = self.provider.submit(launch_cmd, 1)
-            logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
-            if not internal_block:
-                raise(ScalingFailed(self.provider.label,
-                                    "Attempts to provision nodes via provider has failed"))
-            r.extend([external_block_id])
-            self.blocks[external_block_id] = internal_block
+            try:
+                self.blocks[external_block_id] = self._launch_block(external_block_id)
+                r.append(external_block_id)
+            except Exception as ex:
+                self._fail_job_async(external_block_id,
+                                     "Failed to start block {}: {}".format(external_block_id, ex))
         return r
+
+    def _launch_block(self, external_block_id: str) -> Any:
+        if self.launch_cmd is None:
+            raise ScalingFailed(self.provider.label, "No launch command")
+        launch_cmd = self.launch_cmd.format(block_id=external_block_id)
+        internal_block = self.provider.submit(launch_cmd, 1)
+        logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
+        if not internal_block:
+            raise(ScalingFailed(self.provider.label,
+                                "Attempts to provision nodes via provider has failed"))
+        return internal_block
 
     def scale_in(self, blocks=None, block_ids=[]):
         """Scale in the number of active blocks by specified amount.

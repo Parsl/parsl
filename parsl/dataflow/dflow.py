@@ -606,7 +606,11 @@ class DataFlowKernel(object):
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    dep_failures.extend([e])
+                    if hasattr(dep, 'task_def'):
+                        tid = dep.task_def['id']
+                    else:
+                        tid = None
+                    dep_failures.extend([(e, tid)])
             else:
                 new_args.extend([dep])
 
@@ -617,7 +621,11 @@ class DataFlowKernel(object):
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    dep_failures.extend([e])
+                    if hasattr(dep, 'task_def'):
+                        tid = dep.task_def['id']
+                    else:
+                        tid = None
+                    dep_failures.extend([(e, tid)])
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
@@ -627,7 +635,11 @@ class DataFlowKernel(object):
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        dep_failures.extend([e])
+                        if hasattr(dep, 'task_def'):
+                            tid = dep.task_def['id']
+                        else:
+                            tid = None
+                        dep_failures.extend([(e, tid)])
 
                 else:
                     new_inputs.extend([dep])
@@ -642,11 +654,6 @@ class DataFlowKernel(object):
         the task will be launched on a randomly selected executor from the
         list of executors. If the app task specifies a particular set of
         executors, it will be targeted at the specified executors.
-
-        >>> IF all deps are met:
-        >>>   send to the runnable queue and launch the task
-        >>> ELSE:
-        >>>   post the task in the pending queue
 
         Args:
             - func : A function object

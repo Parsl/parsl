@@ -1,7 +1,6 @@
 from parsl.config import Config
 from parsl.providers import CondorProvider
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_query
 from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
@@ -15,7 +14,6 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='OSG_HTEX',
-            address=address_by_query(),
             max_workers=1,
             provider=CondorProvider(
                 nodes_per_block=1,

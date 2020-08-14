@@ -14,6 +14,7 @@ parsl.executors.ExtremeScaleExecutor
    .. autosummary::
    
       ~ExtremeScaleExecutor.__init__
+      ~ExtremeScaleExecutor.handle_errors
       ~ExtremeScaleExecutor.hold_worker
       ~ExtremeScaleExecutor.initialize_scaling
       ~ExtremeScaleExecutor.scale_in
@@ -36,6 +37,7 @@ parsl.executors.ExtremeScaleExecutor
       ~ExtremeScaleExecutor.bad_state_is_set
       ~ExtremeScaleExecutor.connected_managers
       ~ExtremeScaleExecutor.connected_workers
+      ~ExtremeScaleExecutor.error_management_enabled
       ~ExtremeScaleExecutor.executor_exception
       ~ExtremeScaleExecutor.hub_address
       ~ExtremeScaleExecutor.hub_port

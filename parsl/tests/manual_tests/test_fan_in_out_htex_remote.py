@@ -4,7 +4,6 @@ from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import AprunLauncher
 from parsl.providers import CobaltProvider
-from parsl.addresses import address_by_hostname
 
 import logging
 from parsl.app.app import python_app
@@ -17,7 +16,6 @@ def local_setup():
                 label="theta_htex",
                 # worker_debug=True,
                 cores_per_worker=4,
-                address=address_by_hostname(),
                 provider=CobaltProvider(
                     queue='debug-flat-quad',
                     account='CSC249ADCD01',
@@ -33,7 +31,6 @@ def local_setup():
             )
         ],
         monitoring=MonitoringHub(
-            hub_address=address_by_hostname(),
             hub_port=55055,
             logging_level=logging.DEBUG,
             resource_monitoring_interval=10),

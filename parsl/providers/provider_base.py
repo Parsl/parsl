@@ -70,22 +70,39 @@ class JobStatus(object):
         return self._read_summary(self.stderr_path)
 
     def _read_summary(self, path):
-        with open(path, 'r') as f:
-            f.seek(0, os.SEEK_END)
-            size = f.tell()
-            f.seek(0, os.SEEK_SET)
-            if size > JobStatus.SUMMARY_TRUNCATION_THRESHOLD:
-                head = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
-                f.seek(size - JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2, os.SEEK_SET)
-                tail = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
-                return head + '\n...\n' + tail
-            else:
+        if not path:
+            # can happen for synthetic job failures
+            return None
+        try:
+            with open(path, 'r') as f:
+                f.seek(0, os.SEEK_END)
+                size = f.tell()
                 f.seek(0, os.SEEK_SET)
-                return f.read()
+                if size > JobStatus.SUMMARY_TRUNCATION_THRESHOLD:
+                    head = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                    f.seek(size - JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2, os.SEEK_SET)
+                    tail = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                    return head + '\n...\n' + tail
+                else:
+                    f.seek(0, os.SEEK_SET)
+                    return f.read()
+        except FileNotFoundError:
+            # When output is redirected to a file, but the process does not produce any output
+            # bytes, no file is actually created. This handles that case.
+            return None
 
 
 class ExecutionProvider(metaclass=ABCMeta):
-    """ Define the strict interface for all Execution Providers
+    """Execution providers are responsible for managing execution resources
+    that have a Local Resource Manager (LRM). For instance, campus clusters
+    and supercomputers generally have LRMs (schedulers) such as Slurm,
+    Torque/PBS, Condor and Cobalt. Clouds, on the other hand, have API
+    interfaces that allow much more fine-grained composition of an execution
+    environment. An execution provider abstracts these types of resources and
+    provides a single uniform interface to them.
+
+    The providers abstract away the interfaces provided by various systems to
+    request, monitor, and cancel compute resources.
 
     .. code:: python
 
