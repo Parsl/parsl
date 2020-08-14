@@ -197,7 +197,10 @@ By default, Parsl only runs one app at a time on each worker node.
 However, it is possible to specify the requirements for a particular app,
 and Work Queue will automatically run as many parallel instances as possible on each node.
 Work Queue automatically detects the amount of cores, memory, and other resources available on each execution node.
-To activate this feature, add resource specifications to your apps:
+To activate this feature, add a resource specification to your apps. A resource specification is a dictionary with
+the following three (case-insensitive) keys: ``cores`` (an integer corresponding to the number of cores required by the task),
+``memory`` (an integer corresponding to the task's memory requirement in MB), and ``disk`` (an integer corresponding to
+the task's disk requirement in MB), passed to an app via the special keyword argument ``parsl_resource_specification``. The specification can be set for all app invocations via a default, for example:
 
    .. code-block:: python
 
@@ -205,19 +208,8 @@ To activate this feature, add resource specifications to your apps:
       def compute(x, parsl_resource_specification={'cores': 1, 'memory': 1000, 'disk': 1000}):
           return x*2
 
-Note that ``cores``, ``memory``, and ``disk`` must be specified simultaneously if you want to use this feature,
-and ``parsl_resource_specification`` only supports specifying these three types of resources (case-insensitive) currently.
-The explanations and units for these three types of resources are listed below:
 
-    .. code-block:: JSON
-
-        {
-            "cores": "the number of cores, type is int",
-            "memory": "memory size in MB, type is int", 
-            "disk": "disk size in MB, type is int"
-        }
-
-Besides, you can also specify the resources when invoking your apps. Take the ``compute(x)`` as an example:
+or updated when the app is invocated:
 
    .. code-block:: python
 
