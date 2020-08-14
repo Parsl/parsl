@@ -202,7 +202,7 @@ To activate this feature, add resource specifications to your apps:
    .. code-block:: python
 
       @python_app
-      def compute(x, parsl_resource_specification={'cores': 1, 'memory': '1000', 'disk': '1000'}):
+      def compute(x, parsl_resource_specification={'cores': 1, 'memory': 1000, 'disk': 1000}):
           return x*2
 
 Note that ``cores``, ``memory``, and ``disk`` must be specified simultaneously if you want to use this feature,
@@ -212,16 +212,16 @@ The explanations and units for these three types of resources are listed below:
     .. code-block:: JSON
 
         {
-            "cores": "the number of cores",
-            "memory": "memory size in MB", 
-            "disk": "disk size in MB"
+            "cores": "the number of cores, type is int",
+            "memory": "memory size in MB, type is int", 
+            "disk": "disk size in MB, type is int"
         }
 
 Besides, you can also specify the resources when invoking your apps. Take the ``compute(x)`` as an example:
 
    .. code-block:: python
 
-      spec = {'cores': 1, 'memory': '500', 'disk': '500'}
+      spec = {'cores': 1, 'memory': 500, 'disk': 500}
       future = compute(x, parsl_resource_specification=spec)
 
 This ``parsl_resource_specification`` special keyword argument will inform Work Queue about the resources this app requires.
