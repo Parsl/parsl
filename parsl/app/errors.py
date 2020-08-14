@@ -48,7 +48,7 @@ class BashExitFailure(AppException):
     exitcode(int)
     """
 
-    def __init__(self, reason: str, exitcode: int):
+    def __init__(self, reason: str, exitcode: int) -> None:
         self.reason = reason
         self.exitcode = exitcode
 
@@ -65,7 +65,7 @@ class BashAppNoReturn(AppException):
     reason(string)
     """
 
-    def __init__(self, reason: str):
+    def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
 
@@ -78,7 +78,7 @@ class MissingOutputs(ParslError):
     outputs(List of strings/files..)
     """
 
-    def __init__(self, reason: str, outputs: List[Union[str, File]]):
+    def __init__(self, reason: str, outputs: List[Union[str, File]]) -> None:
         super().__init__(reason, outputs)
         self.reason = reason
         self.outputs = outputs
@@ -100,7 +100,7 @@ class BadStdStreamFile(ParslError):
     # are two spots where this constructor is called from:
     #   - parsl.utils.get_std_fname_mode: invoked as __init__(message, exception)
     #   - parsl.app.bash.open_std_fd: invoked as __init__(filename, exception)
-    def __init__(self, outputs: List[Union[str, File]], exception: Exception):
+    def __init__(self, outputs: List[Union[str, File]], exception: Exception) -> None:
         super().__init__(outputs, exception)
         self._outputs = outputs
         self._exception = exception
@@ -114,7 +114,7 @@ class BadStdStreamFile(ParslError):
 
 
 class RemoteExceptionWrapper:
-    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType):
+    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType) -> None:
 
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
