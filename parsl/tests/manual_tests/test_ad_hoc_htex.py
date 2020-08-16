@@ -6,7 +6,6 @@ from parsl.providers import AdHocProvider
 from parsl.channels import SSHChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_query
 
 remotes = ['midway2-login2.rcc.uchicago.edu', 'midway2-login1.rcc.uchicago.edu']
 
@@ -15,7 +14,6 @@ config = Config(
         HighThroughputExecutor(
             label='AdHoc',
             max_workers=2,
-            address=address_by_query(),
             worker_logdir_root="/scratch/midway2/yadunand/parsl_scripts",
             provider=AdHocProvider(
                 worker_init="source /scratch/midway2/yadunand/parsl_env_setup.sh",

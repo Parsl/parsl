@@ -46,10 +46,9 @@ Parsl currently supports the following providers:
 6. `TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler.
 7. `AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
 8. `GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
-9. `JetstreamProvider`: This provider allows you to provision and manage cloud nodes from Jetstream (NSF Cloud).
-10. `KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
-11. `AdHocProvider`: This provider allows you manage execution over a collection of nodes to form an ad-hoc cluster.
-12. `LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler
+9. `KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
+10. `AdHocProvider`: This provider allows you manage execution over a collection of nodes to form an ad-hoc cluster.
+11. `LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler
 
 
 Executors

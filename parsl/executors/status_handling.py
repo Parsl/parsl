@@ -5,9 +5,9 @@ from abc import abstractmethod
 from concurrent.futures import Future
 from typing import List, Any, Dict
 
+import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
-from parsl.providers.provider_base import JobStatus, ExecutionProvider
-
+from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +15,14 @@ logger = logging.getLogger(__name__)
 class StatusHandlingExecutor(ParslExecutor):
     def __init__(self, provider):
         super().__init__()
-        self._provider = provider
+        self._provider = provider  # type: ExecutionProvider
+        # errors can happen during the sumbit call to the provider; this is used
+        # to keep track of such errors so that they can be handled in one place
+        # together with errors reported by status()
+        self._simulated_status = {}
         self._executor_bad_state = threading.Event()
         self._executor_exception = None
+        self._generated_job_id_counter = 1
         self._tasks = {}  # type: Dict[object, Future]
 
     def _make_status_dict(self, job_ids: List[Any], status_list: List[JobStatus]) -> Dict[Any, JobStatus]:
@@ -51,6 +56,15 @@ class StatusHandlingExecutor(ParslExecutor):
         raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
                                   "_get_job_ids()")
 
+    def _fail_job_async(self, job_id: Any, message: str):
+        """Marks a job that has failed to start but would not otherwise be included in status()
+        as failed and report it in status()
+        """
+        if job_id is None:
+            job_id = "failed-block-{}".format(self._generated_job_id_counter)
+            self._generated_job_id_counter += 1
+        self._simulated_status[job_id] = JobStatus(JobState.FAILED, message)
+
     def status(self) -> Dict[object, JobStatus]:
         """Return status of all blocks."""
 
@@ -59,6 +73,7 @@ class StatusHandlingExecutor(ParslExecutor):
             status = self._make_status_dict(job_ids, self._provider.status(job_ids))
         else:
             status = {}
+        status.update(self._simulated_status)
 
         return status
 
@@ -79,6 +94,20 @@ class StatusHandlingExecutor(ParslExecutor):
     @property
     def executor_exception(self):
         return self._executor_exception
+
+    @property
+    def error_management_enabled(self):
+        return True
+
+    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+                      status: Dict[Any, JobStatus]) -> bool:
+        init_blocks = 3
+        if hasattr(self.provider, 'init_blocks'):
+            init_blocks = self.provider.init_blocks  # type: ignore
+        if init_blocks < 1:
+            init_blocks = 1
+        error_handler.simple_error_handler(self, status, init_blocks)
+        return True
 
     @property
     def tasks(self) -> Dict[object, Future]:
@@ -110,6 +139,10 @@ class NoStatusHandlingExecutor(ParslExecutor):
         return False
 
     @property
+    def error_management_enabled(self):
+        return False
+
+    @property
     def executor_exception(self):
         return None
 
@@ -118,6 +151,10 @@ class NoStatusHandlingExecutor(ParslExecutor):
 
     def status(self):
         return {}
+
+    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+                      status: Dict[Any, JobStatus]) -> bool:
+        return False
 
     @property
     def tasks(self) -> Dict[object, Future]:

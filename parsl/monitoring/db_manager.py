@@ -5,6 +5,8 @@ import os
 import time
 import datetime
 
+from typing import Any, Dict, Set
+
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
@@ -223,7 +225,7 @@ class DatabaseManager:
         self.pending_node_queue = queue.Queue()
         self.pending_resource_queue = queue.Queue()
 
-    def start(self, priority_queue, node_queue, resource_queue):
+    def start(self, priority_queue, node_queue, resource_queue) -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -251,21 +253,27 @@ class DatabaseManager:
         self._resource_queue_pull_thread.start()
 
         """
-        maintain a set to track the tasks that are already INSERTED into database
+        maintain a set to track the tasks that are already INSERTed into database
         to prevent race condition that the first resource message (indicate 'running' state)
-        arrives before the first task message.
-        If race condition happens, add to left_messages and operate them later
+        arrives before the first task message. In such a case, the resource table
+        primary key would be violated.
+        If that happens, the message will be added to deferred_resource_messages and processed later.
 
         """
-        inserted_tasks = set()
-        left_messages = {}
+        inserted_tasks = set()  # type: Set[object]
+
+        # for any task ID, we can defer exactly one message, which is the
+        # assumed-to-be-unique first message (with first message flag set).
+        # The code prior to this patch will discard previous message in
+        # the case of multiple messages to defer.
+        deferred_resource_messages = {}  # type: Dict[str, Any]
 
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
                priority_queue.qsize() != 0 or resource_queue.qsize() != 0):
 
             """
-            WORKFLOW_INFO and TASK_INFO messages
+            WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
 
             """
             logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}""".format(
@@ -273,18 +281,20 @@ class DatabaseManager:
                               self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
                               priority_queue.qsize() != 0, resource_queue.qsize() != 0))
 
-            # This is the list of first resource messages indicating that task starts running
-            first_messages = []
+            # This is the list of resource messages which can be reprocessed as if they
+            # had just arrived because the corresponding first task message has been
+            # processed (corresponding by task id)
+            reprocessable_first_resource_messages = []
 
             # Get a batch of priority messages
-            messages = self._get_messages_in_batch(self.pending_priority_queue,
-                                                   interval=self.batching_interval,
-                                                   threshold=self.batching_threshold)
-            if messages:
+            priority_messages = self._get_messages_in_batch(self.pending_priority_queue,
+                                                            interval=self.batching_interval,
+                                                            threshold=self.batching_threshold)
+            if priority_messages:
                 logger.debug(
-                    "Got {} messages from priority queue".format(len(messages)))
-                update_messages, insert_messages, all_messages = [], [], []
-                for msg_type, msg in messages:
+                    "Got {} messages from priority queue".format(len(priority_messages)))
+                task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
+                for msg_type, msg in priority_messages:
                     if msg_type.value == MessageType.WORKFLOW_INFO.value:
                         if "python_version" in msg:   # workflow start message
                             logger.debug(
@@ -301,78 +311,83 @@ class DatabaseManager:
                             self.workflow_end = True
 
                     else:                             # TASK_INFO message
-                        all_messages.append(msg)
+                        task_info_all_messages.append(msg)
                         if msg['task_id'] in inserted_tasks:
-                            update_messages.append(msg)
+                            task_info_update_messages.append(msg)
                         else:
                             inserted_tasks.add(msg['task_id'])
-                            insert_messages.append(msg)
+                            task_info_insert_messages.append(msg)
 
                             # check if there is an left_message for this task
-                            if msg['task_id'] in left_messages:
-                                first_messages.append(
-                                    left_messages.pop(msg['task_id']))
+                            if msg['task_id'] in deferred_resource_messages:
+                                reprocessable_first_resource_messages.append(
+                                    deferred_resource_messages.pop(msg['task_id']))
 
                 logger.debug(
                     "Updating and inserting TASK_INFO to all tables")
 
-                if insert_messages:
-                    self._insert(table=TASK, messages=insert_messages)
+                if task_info_insert_messages:
+                    self._insert(table=TASK, messages=task_info_insert_messages)
                     logger.debug(
                         "There are {} inserted task records".format(len(inserted_tasks)))
-                if update_messages:
+                if task_info_update_messages:
                     self._update(table=WORKFLOW,
                                  columns=['run_id', 'tasks_failed_count',
                                           'tasks_completed_count'],
-                                 messages=update_messages)
+                                 messages=task_info_update_messages)
                     self._update(table=TASK,
                                  columns=['task_time_submitted',
                                           'task_time_returned',
                                           'run_id', 'task_id',
                                           'task_fail_count',
                                           'task_fail_history'],
-                                 messages=update_messages)
-                self._insert(table=STATUS, messages=all_messages)
+                                 messages=task_info_update_messages)
+                self._insert(table=STATUS, messages=task_info_all_messages)
 
             """
             NODE_INFO messages
 
             """
-            messages = self._get_messages_in_batch(self.pending_node_queue,
-                                                   interval=self.batching_interval,
-                                                   threshold=self.batching_threshold)
-            if messages:
+            node_info_messages = self._get_messages_in_batch(self.pending_node_queue,
+                                                             interval=self.batching_interval,
+                                                             threshold=self.batching_threshold)
+            if node_info_messages:
                 logger.debug(
-                    "Got {} messages from node queue".format(len(messages)))
-                self._insert(table=NODE, messages=messages)
+                    "Got {} messages from node queue".format(len(node_info_messages)))
+                self._insert(table=NODE, messages=node_info_messages)
 
             """
             Resource info messages
 
             """
-            messages = self._get_messages_in_batch(self.pending_resource_queue,
-                                                   interval=self.batching_interval,
-                                                   threshold=self.batching_threshold)
+            resource_messages = self._get_messages_in_batch(self.pending_resource_queue,
+                                                            interval=self.batching_interval,
+                                                            threshold=self.batching_threshold)
 
-            if messages or first_messages:
+            if resource_messages:
                 logger.debug(
-                    "Got {} messages from resource queue".format(len(messages)))
-                self._insert(table=RESOURCE, messages=messages)
-                for msg in messages:
+                    "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
+                self._insert(table=RESOURCE, messages=resource_messages)
+                for msg in resource_messages:
                     if msg['first_msg']:
+
                         msg['task_status_name'] = States.running.name
                         msg['task_time_running'] = msg['timestamp']
+
                         if msg['task_id'] in inserted_tasks:
-                            first_messages.append(msg)
+                            reprocessable_first_resource_messages.append(msg)
                         else:
-                            left_messages[msg['task_id']] = msg
-                if first_messages:
-                    self._insert(table=STATUS, messages=first_messages)
-                    self._update(table=TASK,
-                                 columns=['task_time_running',
-                                          'run_id', 'task_id',
-                                          'hostname'],
-                                 messages=first_messages)
+                            if msg['task_id'] in deferred_resource_messages:
+                                logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
+                            deferred_resource_messages[msg['task_id']] = msg
+
+            if reprocessable_first_resource_messages:
+                self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
+                self._update(table=TASK,
+                             columns=['task_time_running',
+                                      'run_id', 'task_id',
+                                      'hostname'],
+                             messages=reprocessable_first_resource_messages)
 
     def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
         logger.info("Starting processing for queue {}".format(queue_tag))

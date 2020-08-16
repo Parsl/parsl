@@ -2,7 +2,6 @@
 
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_hostname
 from parsl.launchers import MpiRunLauncher
 from parsl.providers import CobaltProvider
 from parsl.tests.utils import get_rundir
@@ -20,7 +19,6 @@ config = Config(
             label="cooley_htex",
             worker_debug=False,
             cores_per_worker=1,
-            address=address_by_hostname(),
             provider=CobaltProvider(
                 queue='debug',
                 account=user_opts['cooley']['account'],
