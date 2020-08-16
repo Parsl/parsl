@@ -96,18 +96,13 @@ class BadStdStreamFile(ParslError):
        exception object
     """
 
-    # TODO: [typing] This exception is never constructed with the first argument as a list. There
-    # are two spots where this constructor is called from:
-    #   - parsl.utils.get_std_fname_mode: invoked as __init__(message, exception)
-    #   - parsl.app.bash.open_std_fd: invoked as __init__(filename, exception)
-    def __init__(self, outputs: List[Union[str, File]], exception: Exception) -> None:
-        super().__init__(outputs, exception)
-        self._outputs = outputs
+    def __init__(self, reason: str, exception: Exception) -> None:
+        super().__init__(reason, exception)
+        self._reason = reason
         self._exception = exception
 
     def __repr__(self) -> str:
-        return "FilePath: [{}] Exception: {}".format(self._outputs,
-                                                     self._exception)
+        return "Bad Stream File: {} Exception: {}".format(self._reason, self._exception)
 
     def __str__(self) -> str:
         return self.__repr__()
