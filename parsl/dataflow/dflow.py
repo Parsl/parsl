@@ -189,9 +189,8 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-
         info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
-                           'id', 'time_submitted', 'time_returned', 'try_time_returned', 'executor']
+                           'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
@@ -292,7 +291,7 @@ class DataFlowKernel(object):
 
                 task_record['try_id'] += 1
                 task_record['status'] = States.pending
-                task_record['time_submitted'] = None
+                task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
 
@@ -469,7 +468,7 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
-        self.tasks[task_id]['time_submitted'] = datetime.datetime.now()
+        self.tasks[task_id]['try_time_launched'] = datetime.datetime.now()
 
         memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if memo_fu:
@@ -739,8 +738,9 @@ class DataFlowKernel(object):
                     'status': States.unsched,
                     'try_id': 0,
                     'id': task_id,
-                    'time_submitted': None,
+                    'time_invoked': datetime.datetime.now(),
                     'time_returned': None,
+                    'try_time_launched': None,
                     'try_time_returned': None,
                     'resource_specification': resource_specification}
 

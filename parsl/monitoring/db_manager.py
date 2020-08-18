@@ -137,6 +137,9 @@ class Database:
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
 
+        task_time_invoked = Column(
+            'task_time_invoked', DateTime, nullable=True)
+
         task_time_returned = Column(
             'task_time_returned', DateTime, nullable=True)
 
@@ -156,11 +159,11 @@ class Database:
 
         task_executor = Column('task_executor', Text, nullable=False)
 
-        task_time_submitted = Column(
-            'task_time_submitted', DateTime, nullable=True)
+        task_try_time_launched = Column(
+            'task_try_time_launched', DateTime, nullable=True)
 
-        task_time_running = Column(
-            'task_time_running', DateTime, nullable=True)
+        task_try_time_running = Column(
+            'task_try_time_running', DateTime, nullable=True)
 
         task_try_time_returned = Column(
             'task_try_time_returned', DateTime, nullable=True)
@@ -378,7 +381,7 @@ class DatabaseManager:
                 if task_info_update_messages:
                     logger.debug("Updating {} TASK_INFO into task table".format(len(task_info_update_messages)))
                     self._update(table=TASK,
-                                 columns=['task_time_submitted',
+                                 columns=['task_time_invoked',
                                           'task_time_returned',
                                           'run_id', 'task_id',
                                           'task_fail_count'],
@@ -396,10 +399,10 @@ class DatabaseManager:
                 if try_update_messages:
                     logger.debug("Updating {} TASK_INFO into try table".format(len(try_update_messages)))
                     self._update(table=TRY,
-                                 columns=['task_time_returned',
+                                 columns=['task_try_time_returned',
                                           'run_id', 'task_id', 'try_id',
                                           'task_fail_history',
-                                          'task_time_submitted',
+                                          'task_try_time_launched',
                                           'task_try_time_returned'],
                                  messages=try_update_messages)
 
@@ -432,7 +435,7 @@ class DatabaseManager:
                     if msg['first_msg']:
 
                         msg['task_status_name'] = States.running.name
-                        msg['task_time_running'] = msg['timestamp']
+                        msg['task_try_time_running'] = msg['timestamp']
 
                         if task_try_id in inserted_tries:  # TODO: needs to become task_id and try_id, and check against inserted_tries
                             reprocessable_first_resource_messages.append(msg)
@@ -444,7 +447,7 @@ class DatabaseManager:
             if reprocessable_first_resource_messages:
                 self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
                 self._update(table=TRY,
-                             columns=['task_time_running',
+                             columns=['task_try_time_running',
                                       'run_id', 'task_id', 'try_id',
                                       'hostname'],
                              messages=reprocessable_first_resource_messages)
