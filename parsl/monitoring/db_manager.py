@@ -117,7 +117,6 @@ class Database:
         timestamp = Column(DateTime, nullable=False)
         run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
         try_id = Column('try_id', Integer, nullable=False)
-        hostname = Column('hostname', Text, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id',
                                  'task_status_name', 'timestamp'),
