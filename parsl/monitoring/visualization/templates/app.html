@@ -27,8 +27,6 @@
         <th>Name</th>
         <th>Task ID</th>
         <th>Dependencies</th>
-        <th>Executor</th>
-        <th>Started</th>
         <th>Completed</th>
       </tr>
     </thead>
@@ -46,8 +44,6 @@
             None
         {% endif %}
         </td>
-        <td>{{ t['task_executor'] }}</td>
-        <td>{{ t['task_time_submitted'] | timeformat }}</td>
         <td> {{ t['task_time_returned'] | timeformat }}</td>
       </tr>
     {% endfor %}
