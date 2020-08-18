@@ -399,8 +399,7 @@ class DatabaseManager:
                 if try_update_messages:
                     logger.debug("Updating {} TASK_INFO into try table".format(len(try_update_messages)))
                     self._update(table=TRY,
-                                 columns=['task_try_time_returned',
-                                          'run_id', 'task_id', 'try_id',
+                                 columns=['run_id', 'task_id', 'try_id',
                                           'task_fail_history',
                                           'task_try_time_launched',
                                           'task_try_time_returned'],
