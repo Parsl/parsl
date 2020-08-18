@@ -62,7 +62,7 @@ def workflow(workflow_id):
                                 WHERE run_id='%s'"""
                                 % (workflow_id), db.engine)
     df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
-                                      task_time_running, task_time_returned from task, try
+                                      task_try_time_running, task_try_time_returned from task, try
                                       WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
                                       % (workflow_id, workflow_id), db.engine)
     task_summary = db.engine.execute(
@@ -166,6 +166,10 @@ def workflow_resources(workflow_id):
 
     df_task = pd.read_sql_query(
         "SELECT * FROM task WHERE run_id='%s'" % (workflow_id), db.engine)
+    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+                                      task_try_time_launched, task_try_time_running, task_try_time_returned from task, try
+                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
+                                      % (workflow_id, workflow_id), db.engine)
     df_node = pd.read_sql_query(
         "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
 
@@ -180,5 +184,5 @@ def workflow_resources(workflow_id):
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='max'),
                            cpu_efficiency=resource_efficiency(df_resources, df_node, label='CPU'),
                            memory_efficiency=resource_efficiency(df_resources, df_node, label='mem'),
-                           worker_efficiency=worker_efficiency(df_task, df_node),
+                           worker_efficiency=worker_efficiency(df_task_tries, df_node),
                            )

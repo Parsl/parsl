@@ -103,7 +103,7 @@ def worker_efficiency(task, node):
         task['epoch_time_running'] = (pd.to_datetime(
             task['task_try_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
-            task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            task['task_try_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = int(min(task['epoch_time_start'].min(), node['epoch_time'].min()))
         end = int(task['epoch_time_returned'].max())
 
