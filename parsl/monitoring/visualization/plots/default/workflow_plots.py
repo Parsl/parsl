@@ -56,7 +56,8 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
               'running': 'rgb(0, 0, 255)',
               'dep_fail': 'rgb(255, 128, 255)',
               'failed': 'rgb(200, 0, 0)',
-              'done': 'rgb(0, 200, 0)'
+              'done': 'rgb(0, 200, 0)',
+              'fail_retryable': 'rgb(200, 128,128)'
              }
 
     fig = ff.create_gantt(parsl_tasks,
@@ -76,7 +77,7 @@ def task_per_app_plot(task, status):
 
     try:
         task['epoch_time_running'] = (pd.to_datetime(
-            task['task_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            task['task_try_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
             task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = int(task['epoch_time_running'].min())
@@ -209,7 +210,8 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
                        "running": (3, 'rgb(0, 0, 255)'),
                        "dep_fail": (4, 'rgb(255, 128, 255)'),
                        "failed": (5, 'rgb(200, 0, 0)'),
-                       "done": (6, 'rgb(0, 200, 0)')
+                       "done": (6, 'rgb(0, 200, 0)'),
+                       "fail_retryable": (7, 'rgb(200, 128,128)')
                       }
 
     node_traces = [...] * len(groups_list)
