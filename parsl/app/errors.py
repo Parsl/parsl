@@ -9,7 +9,7 @@ from tblib import Traceback
 
 from six import reraise
 
-from parsl import File
+from parsl.data_provider.files import File
 
 logger = logging.getLogger(__name__)
 
